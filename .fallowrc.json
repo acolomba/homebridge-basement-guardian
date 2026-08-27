@@ -1,0 +1,17 @@
+{
+  "entry": ["src/index.ts"],
+  "production": false,
+  "health": {
+    "maxCyclomatic": 20,
+    "maxCognitive": 15,
+    "maxUnitSize": 60,
+    "maxCrap": 0
+  },
+  "duplicates": {
+    "threshold": 3
+  },
+  "includeEntryExports": true,
+  "rules": {
+    "private-type-leaks": "error"
+  }
+}

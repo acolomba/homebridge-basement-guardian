@@ -1,14 +1,10 @@
 declare module 'homebridge-lib/EveHomeKitTypes' {
   export class EveHomeKitTypes {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    constructor(homebridge: any);
+    constructor(homebridge: import('homebridge').API);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Characteristics: Record<string, any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Services: Record<string, any>;
+    Characteristics: Record<string, unknown>;
+    Services: Record<string, unknown>;
   }
 }
 
-declare module 'homebridge-lib' {
-}
+declare module 'homebridge-lib' {}

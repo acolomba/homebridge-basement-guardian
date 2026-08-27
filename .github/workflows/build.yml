@@ -25,6 +25,18 @@ jobs:
       - name: Lint the project
         run: npm run lint
 
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Check types
+        run: npm run typecheck
+
+      - name: Check code health
+        run: npm run fallow
+
+      - name: Run tests
+        run: npm test
+
       - name: Build the project
         run: npm run build
 

@@ -23,6 +23,12 @@ npm run lint
 npm run build
 ```
 
+Run the complete quality gate--including type checking, linting, code-health analysis, format verification, build, and tests--with:
+
+```shell
+npm run check
+```
+
 Link the plugin to a local Homebridge installation:
 
 ```shell

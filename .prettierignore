@@ -1,0 +1,13 @@
+.agents/
+.claude/
+.codex/
+.opencode/
+.pi/
+.planning/
+.worktrees/
+build/
+coverage/
+dist/
+docs/research/
+node_modules/
+tmp/

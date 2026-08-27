@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "DOM",
-      "ES2022"
-    ],
+    "lib": ["DOM", "ES2022"],
     "rootDir": "src",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
     "declaration": true,
     "skipLibCheck": true,
     "outDir": "dist",
@@ -17,9 +22,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "eslint.config.js",
-    "homebridge-ui",
-    "src"
-  ]
+  "include": ["eslint.config.js", "homebridge-ui", "src"]
 }
