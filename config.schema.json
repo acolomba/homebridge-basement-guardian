@@ -1,0 +1,18 @@
+{
+  "pluginAlias": "BasementGuardian",
+  "pluginType": "platform",
+  "singular": true,
+  "strictValidation": false,
+  "schema": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Basement Guardian"
+      }
+    }
+  }
+}
