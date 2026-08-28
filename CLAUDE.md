@@ -4,6 +4,15 @@
 
 Before editing any file, read it first. Before modifying a function, trace its callers. Research before you edit.
 
+### External Reference Documentation
+
+Consult these primary sources when a task depends on Homebridge or Cucumber.js behavior:
+
+- [Homebridge Plugin Documentation](https://developers.homebridge.io/#/) -- Homebridge APIs, plugin lifecycle, configuration schemas, and HAP services and characteristics.
+- [Cucumber.js Documentation](https://github.com/cucumber/cucumber-js/tree/main/docs) -- Configuration, profiles, ESM and TypeScript support, hooks, World objects, step definitions, and CLI behavior.
+
+Read only the pages that apply to the task. Compare current documentation with the pinned package versions and installed TypeScript definitions. If they differ, follow the pinned version and record the difference.
+
 ### Git
 
 - NEVER commit to the main branch.
