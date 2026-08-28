@@ -103,22 +103,22 @@ repos:
         entry: npm run lint
         language: system
         pass_filenames: false
-        files: '^(eslint\.config\.js|tsconfig\.json|(src|tests)/.*\.(mjs|ts)|package(-lock)?\.json)$'
+        files: '^(eslint\.config\.js|tsconfig\.json|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json)$'
       - id: npm-format-check
         name: npm format check
         entry: npm run format:check
         language: system
         pass_filenames: false
-        files: '^(\.prettierrc\.json|\.prettierignore|eslint\.config\.js|(src|tests)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
+        files: '^(\.prettierrc\.json|\.prettierignore|eslint\.config\.js|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
       - id: npm-typecheck
         name: npm typecheck
         entry: npm run typecheck
         language: system
         pass_filenames: false
-        files: '^((src|tests)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
+        files: '^((src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
       - id: npm-fallow
         name: npm fallow
         entry: npm run fallow
         language: system
         pass_filenames: false
-        files: '^(\.fallowrc\.json|tsconfig\.json|eslint\.config\.js|(src|tests)/.*\.(mjs|ts)|package(-lock)?\.json)$'
+        files: '^(\.fallowrc\.json|tsconfig\.json|eslint\.config\.js|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json)$'

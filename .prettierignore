@@ -8,6 +8,7 @@
 build/
 coverage/
 dist/
+dist-test/
 docs/research/
 node_modules/
 tmp/
