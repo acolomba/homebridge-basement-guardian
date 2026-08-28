@@ -1,0 +1,8 @@
+{
+  "apiUrl": "https://api.iot8020.com",
+  "clientId": "6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs",
+  "auth0Domain": "connectsense-staging.auth0.com",
+  "auth0Realm": "wayne-water",
+  "awsRegion": "us-east-1",
+  "protocol": "wss"
+}
