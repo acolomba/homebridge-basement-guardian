@@ -6,6 +6,7 @@ import { mock, verify, when } from 'strong-mock';
 import { BasementGuardianPlatform } from '../src/platform.js';
 import { PLATFORM_NAME } from '../src/settings.js';
 
+import type { BasementGuardianPlatformAccessory } from '../src/platform.js';
 import type { API, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 
 // Logging is a callable interface with seven members, so a silent stub is a
@@ -52,7 +53,8 @@ describe('configureAccessory', () => {
 
     // assert
     assert.deepStrictEqual([...platform.accessories.keys()], ['accessory-uuid-1']);
-    assert.strictEqual(platform.accessories.get('accessory-uuid-1'), restoredAccessory);
+    const cachedAccessory: BasementGuardianPlatformAccessory | undefined = platform.accessories.get('accessory-uuid-1');
+    assert.strictEqual(cachedAccessory, restoredAccessory);
     verify(restoredAccessory);
     verify(api);
   });
