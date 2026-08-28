@@ -10,7 +10,7 @@ HomeKit must promptly show trustworthy basement-protection conditions while clea
 
 ## Success Metric
 
-An npm-ready v1 release candidate passes repository quality checks on Node.js 22 and 24 and supported Homebridge 1.x/2.x runtimes, with hardware and real-home gates G-001, G-002, and G-003 closed before `1.0.0` can be published.
+An npm-ready v1 release candidate passes repository quality checks on Node.js 22 and 24 and supported Homebridge 1.x/2.x runtimes, with hardware and real-home gates G-001, G-002, G-003, and G-004 closed before `1.0.0` can be published.
 
 ## Requirements
 
@@ -59,11 +59,11 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 - **Identity**: Vendor `deviceId` is the immutable Homebridge UUID seed; `deviceTypeId` selects an adapter and never changes physical identity.
 - **Privacy**: Credentials, tokens, temporary AWS credentials, raw responses, account identifiers, and local-network data cannot enter public artifacts, accessory context, or logs.
 - **Persistence**: Auth0 tokens live under `api.user.storagePath()`; accessory-scoped observation data lives in typed `accessory.context` and is explicitly persisted.
-- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
+- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, G-004, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
 
 ## ADR-Locked Decisions
 
-The following blocks preserve all 40 locked decisions from the [ingested decision record](./intel/decisions.md). Validation-gated findings G-001 through G-003 and F-001 through F-004 inform requirements but are not labeled as locked.
+The following blocks preserve all 40 locked decisions from the [ingested decision record](./intel/decisions.md). Validation-gated findings G-001 through G-004 and F-001 through F-004 inform requirements but are not labeled as locked.
 
 <decisions status="locked" source=".planning/intel/decisions.md" scope="product-and-family">
 

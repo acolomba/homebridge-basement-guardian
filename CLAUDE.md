@@ -64,7 +64,7 @@ Basement Guardian is a safety-first Homebridge dynamic-platform plugin for owner
 - **Identity**: Vendor `deviceId` is the immutable Homebridge UUID seed; `deviceTypeId` selects an adapter and never changes physical identity.
 - **Privacy**: Credentials, tokens, temporary AWS credentials, raw responses, account identifiers, and local-network data cannot enter public artifacts, accessory context, or logs.
 - **Persistence**: Auth0 tokens live under `api.user.storagePath()`; accessory-scoped observation data lives in typed `accessory.context` and is explicitly persisted.
-- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
+- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, G-004, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
 
 <!-- GSD:project-end -->
 

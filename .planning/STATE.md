@@ -74,6 +74,12 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 - G-003: Validate both pump Contact Sensors in an eligible real Apple home before release.
 - G-004: Validate `Sump Pit Flood` Leak Sensor notification delivery in a real eligible Apple home with a current home hub and the current Home architecture, and confirm that no documentation claims a Critical Alerts guarantee.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At | Milestone |
