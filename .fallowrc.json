@@ -1,5 +1,6 @@
 {
   "entry": ["src/index.ts"],
+  "ignoreDependencies": ["aedes", "homebridge-lib", "mqtt", "strong-mock", "ws"],
   "production": false,
   "health": {
     "maxCyclomatic": 20,
