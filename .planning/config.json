@@ -11,11 +11,11 @@
   "perplexity": false,
   "jina": false,
   "git": {
-    "branching_strategy": "none",
+    "branching_strategy": "phase",
     "create_tag": false,
-    "phase_branch_template": "gsd/phase-{phase}-{slug}",
-    "milestone_branch_template": "gsd/{milestone}-{slug}",
-    "quick_branch_template": null
+    "phase_branch_template": "features/phase-{phase}-{slug}",
+    "milestone_branch_template": "features/{milestone}-{slug}",
+    "quick_branch_template": "features/quick-{slug}"
   },
   "workflow": {
     "research": true,
@@ -60,13 +60,13 @@
   "project_code": null,
   "phase_naming": "sequential",
   "agent_skills": {},
-  "claude_md_path": "./.claude/CLAUDE.md",
+  "claude_md_path": "CLAUDE.md",
   "plan_review": {
     "source_grounding": true,
     "source_grounding_authority": "grep"
   },
   "resolve_model_ids": "omit",
-  "runtime": "codex",
+  "runtime": "claude",
   "intel": {
     "enabled": false
   },
@@ -76,5 +76,5 @@
   },
   "mode": "interactive",
   "granularity": "standard",
-  "context_window": 272000
+  "context_window": 1000000
 }
