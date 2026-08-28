@@ -32,7 +32,21 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
   2. Missing configuration leaves the plugin idle with a clear log message; valid configuration authenticates without exposing credentials or tokens.
   3. REST snapshots and partial shadow updates produce one current state per device without omitted or desired fields corrupting previously accepted values.
   4. Full-shadow refresh, REST reconciliation, credential rotation, retry, and shutdown can run repeatedly without duplicate loops, leaked work, or unhandled errors.
-**Plans**: TBD
+**Plans**: 11 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Toolchain, packaging, and template teardown
+- [ ] 01-02-PLAN.md — Tracer: configure, authenticate, discover, store, shut down
+- [ ] 01-03-PLAN.md — Canonical snapshot store and architecture scaffolds
+- [ ] 01-04-PLAN.md — Settings form, configuration refusal, and redacted logging
+- [ ] 01-05-PLAN.md — Auth token cache and authentication failure policy
+- [ ] 01-06-PLAN.md — Typed REST surface and wire-type predicates
+- [ ] 01-07-PLAN.md — SigV4 presigner and retry policy, behind the transport decision gate
+- [ ] 01-08-PLAN.md — Fake cloud transport harness
+- [ ] 01-09-PLAN.md — Shadow client: topics, watermark, and reconnect
+- [ ] 01-10-PLAN.md — Account runtime orchestration and lifecycle
+- [ ] 01-11-PLAN.md — Phase scenarios and changelog
+
 **UI hint**: yes
 
 ### Phase 2: Safe Gemini Discovery and Identity
@@ -103,7 +117,7 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 0/TBD | Not started | - |
+| 1. Secure Cloud Foundation | 0/11 | Planned | - |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
