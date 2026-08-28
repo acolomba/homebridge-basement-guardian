@@ -1,11 +1,14 @@
 ---
-gsd_state_version: '1.0'
+gsd_state_version: 1.0
+current_phase: 1
+current_phase_name: Secure Cloud Foundation
 status: planning
+stopped_at: Planning setup created; Phase 1 is ready for detailed planning
+last_updated: "2026-08-28T13:09:12.912Z"
+last_activity: 2026-08-28
+last_activity_desc: "Refined planning artifacts against ingested intel: release-only gates, three new requirements, gate G-004"
+state_head: 4e46bd10e7e9fbd2c03972f33903a279a53f2b2b
 progress:
-  total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
   percent: 0
 ---
 
@@ -30,6 +33,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0.0 hours
@@ -41,6 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: Not available
 
@@ -61,7 +66,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 ### Pending Todos
 
 - Backup-battery fault adapter: decide during Phase 3 discussion whether `battery_health == 32` (NotDetected) earns a sixth Apple Home fault adapter. Recorded as an open proposal in PROJECT.md.
-- `package.json` declares `version: "1.0.0"` with `private: true`, which contradicts the `D-026` staged `0.x` prerelease plan. Resolve in Phase 6.
+- `package.json` keeps `private: true` as an accidental-publish guard. Remove it in Phase 6 when the first `0.x` prerelease goes to the npm `next` tag under `D-026`. The version now reads `0.1.0`.
 - `package.json` declares `license: "Apache-2.0"`, which contradicts the `D-035` `SEE LICENSE IN LICENSE` metadata rule. Resolve in Phase 6.
 - `homebridge-lib` is still a runtime dependency and `config.schema.json` still carries `strictValidation: false`. Resolve the schema flag in Phase 1 and the dependency removal in Phase 6.
 
@@ -79,6 +84,7 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
+| 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 | — |
 
 ## Deferred Items
 
