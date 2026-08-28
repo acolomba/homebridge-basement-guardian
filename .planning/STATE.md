@@ -23,7 +23,7 @@ See: .planning/PROJECT.md (updated 2026-08-27)
 Phase: 1 of 6 (Secure Cloud Foundation)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-08-27 - Completed quick task 260827-twb: Import approved General, Git, and Versioning guidelines into CLAUDE.md
+Last activity: 2026-08-27 - Initialized GSD planning from seven research documents
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -67,12 +67,6 @@ None yet.
 - G-001: Validate Gemini alarm-mute acknowledgement, state changes, duration, latency, and failure behavior before mute implementation.
 - G-002: Validate all Gemini water-level codes and the flood threshold during a natural cycle.
 - G-003: Validate both pump Contact Sensors in an eligible real Apple home before release.
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260827-twb | Import approved General, Git, and Versioning guidelines into CLAUDE.md | 2026-08-27 | 6bc27e2 | [260827-twb-import-approved-general-git-and-versioni](./quick/260827-twb-import-approved-general-git-and-versioni/) |
 
 ## Deferred Items
 
