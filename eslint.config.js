@@ -18,6 +18,7 @@ export default tseslint.config(
       'build/**',
       'coverage/**',
       'dist/**',
+      'dist-test/**',
       'docs/research/**',
       'node_modules/**',
       'tmp/**',
@@ -80,9 +81,17 @@ export default tseslint.config(
     files: ['**/*.ts'],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    // node:test's test() returns a promise at every call site, which
+    // strictTypeChecked reports as a floating promise under --max-warnings=0.
+    files: ['test/**/*.ts', 'features/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
   {

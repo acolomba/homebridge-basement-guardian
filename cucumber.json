@@ -1,0 +1,13 @@
+{
+  "default": {
+    "paths": ["features/**/*.feature"],
+    "import": ["dist-test/features/**/*.js"],
+    "format": ["summary"]
+  },
+  "real": {
+    "paths": ["features/real-pump/**/*.feature"],
+    "import": ["dist-test/features/**/*.js"],
+    "tags": "@real and @read-only",
+    "format": ["summary"]
+  }
+}
