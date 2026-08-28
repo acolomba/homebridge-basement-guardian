@@ -1,0 +1,26 @@
+{
+  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/README.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Basement Guardian design research",
+  "summary": "Index of sanitized design inputs for the Basement Guardian Homebridge plugin, with document authority, validation status, and publication rules.",
+  "scope": [
+    "Basement Guardian",
+    "Homebridge plugin",
+    "design research",
+    "validation gates",
+    "publication rules"
+  ],
+  "cross_refs": [
+    "DECISIONS.md",
+    "API.md",
+    "OPERATIONS.md",
+    "HOMEKIT.md",
+    "PLUGIN.md",
+    "ARCHITECTURE.md"
+  ],
+  "locked": false,
+  "precedence": 60,
+  "notes": ""
+}

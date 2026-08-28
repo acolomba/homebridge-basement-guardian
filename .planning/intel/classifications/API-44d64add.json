@@ -1,0 +1,27 @@
+{
+  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/API.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Basement Guardian protocol reference",
+  "summary": "Defines the cloud protocol, authentication, REST routes, AWS IoT device shadow, device models, commands, telemetry, and fault vocabulary used by the Homebridge plugin.",
+  "scope": [
+    "Auth0 authentication",
+    "REST API",
+    "AWS IoT device shadow",
+    "Gemini device model",
+    "HALO device model",
+    "device commands",
+    "telemetry",
+    "Gemini email rules",
+    "fault inventory",
+    "local access"
+  ],
+  "cross_refs": [
+    "OPERATIONS.md",
+    "HOMEKIT.md"
+  ],
+  "locked": false,
+  "precedence": 10,
+  "notes": ""
+}

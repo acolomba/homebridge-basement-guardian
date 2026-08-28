@@ -1,0 +1,30 @@
+{
+  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/DECISIONS.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Basement Guardian product and architecture decisions",
+  "summary": "Authoritative decision log for the Basement Guardian plugin's product requirements, implementation architecture, HomeKit representation, configuration, monitoring, command behavior, and release policy.",
+  "scope": [
+    "Basement Guardian plugin",
+    "product decisions",
+    "implementation architecture",
+    "HomeKit representation",
+    "configuration",
+    "monitoring",
+    "command behavior",
+    "release policy"
+  ],
+  "cross_refs": [
+    "./OPERATIONS.md",
+    "./API.md",
+    "docs/research/API.md",
+    "docs/research/OPERATIONS.md",
+    "docs/research/HOMEKIT.md",
+    "docs/research/PLUGIN.md",
+    "docs/research/ARCHITECTURE.md"
+  ],
+  "locked": false,
+  "precedence": 0,
+  "notes": ""
+}
