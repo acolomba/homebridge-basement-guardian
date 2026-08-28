@@ -4,10 +4,10 @@ current_phase: 1
 current_phase_name: Secure Cloud Foundation
 status: planning
 stopped_at: Planning setup created; Phase 1 is ready for detailed planning
-last_updated: "2026-08-28T13:09:12.912Z"
+last_updated: "2026-08-28T17:57:50.000Z"
 last_activity: 2026-08-28
-last_activity_desc: "Refined planning artifacts against ingested intel: release-only gates, three new requirements, gate G-004"
-state_head: 4e46bd10e7e9fbd2c03972f33903a279a53f2b2b
+last_activity_desc: "Recorded constructor dependency injection as a revisitable preference"
+state_head: b0543e2
 progress:
   percent: 0
 ---
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-27)
 Phase: 1 of 6 (Secure Cloud Foundation)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-08-28 - Refined planning artifacts against ingested intel: release-only gates, three new requirements, gate G-004
+Last activity: 2026-08-28 - Recorded constructor dependency injection as a revisitable preference
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -63,6 +63,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 4]: Only self-test and boolean alarm mute are writable; reported state remains authoritative. Validation gates no longer block phase completion; they block only the `1.0.0` release.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
+- [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
 
 ### Pending Todos
 
@@ -86,6 +87,7 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 |---|-------------|------|--------|-----------|
 | 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
 | 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 | — |
+| 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
 
 ## Deferred Items
 
