@@ -65,12 +65,13 @@
 ### Release Quality, Privacy, and Distribution
 
 - [ ] **REL-01**: Package engines and CI validate Node.js `^22.10.0 || ^24.0.0` with Homebridge `^1.8.0 || ^2.0.0`, including minimum/latest Homebridge 1.x and current Homebridge 2.x combinations, without a runtime `homebridge-lib` or direct HAP-NodeJS import.
-- [ ] **REL-02**: Deterministic automated tests with recorded sanitized fixtures cover reducer/decoder, family, event, health, reconciliation, commands, accessory, secret, privacy, and runtime-lifecycle policies without live credentials, hardware, or network access.
+- [ ] **REL-02**: Deterministic `node:test` unit tests and Cucumber fake-pump tests cover reducers, decoders, family adapters, events, health, reconciliation, commands, accessories, privacy, and runtime lifecycles. They use sanitized fixtures without live credentials, hardware, public network access, or stored secrets.
 - [ ] **REL-03**: Runtime traffic is limited to required vendor services; the plugin collects no analytics, crash reports, installation/usage data, tracking identifiers, or automatic diagnostics, and direct dependencies pass a telemetry review.
 - [ ] **REL-04**: Public, planning, fixture, log, and packed-package checks exclude secrets and account/local-network identifiers and use stable placeholders, while the bundled data file alone may contain required public vendor constants.
 - [ ] **REL-05**: The packed package consistently preserves MIT licensing for original standalone work, Apache 2.0 licensing and notices for template-derived material, required file headers, full license texts, and aligned `SEE LICENSE IN LICENSE` metadata while both remain.
 - [ ] **REL-06**: The repository provides best-effort current-release support through issue templates that request versions, reproduction steps, and redacted logs, directs vulnerabilities to private GitHub Security Advisories, promises no SLA, and meets current Homebridge Verified criteria without claiming approval.
 - [ ] **REL-07**: An npm-ready release candidate passes all automated and real-home checks including G-001, G-002, and G-003; prereleases use SemVer `0.x`, npm `next`, GitHub prerelease labels, safe-user warnings, and release notes, while `latest` and `1.0.0` remain blocked until the required gates pass.
+- [ ] **REL-08**: An opt-in Cucumber suite observes a real pump's discovery, initial state, heartbeats, natural updates, restart, and shutdown. The suite blocks all commands in code, uses local credentials, and never requires a natural status change.
 
 ## v2 Requirements
 
@@ -144,12 +145,13 @@
 | REL-05 | Phase 6 | Pending |
 | REL-06 | Phase 6 | Pending |
 | REL-07 | Phase 6 | Pending |
+| REL-08 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 43 total
-- Mapped to phases: 43
+- v1 requirements: 44 total
+- Mapped to phases: 44
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-27*
-*Last updated: 2026-08-27 after initial roadmap creation from ingested design synthesis*
+*Last updated: 2026-08-28 after the cross-phase test strategy decision*

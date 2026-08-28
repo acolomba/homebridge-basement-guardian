@@ -4,6 +4,8 @@
 
 Basement Guardian progresses from a secure, long-running vendor-cloud connection to stable Gemini accessory discovery, truthful HomeKit safety representation, official controls and pump records, explicit degraded-operation behavior, and finally an npm-ready release candidate. Each phase ends in an observable capability, and the last phase accepts the package only after compatibility, privacy, repository, hardware, and real-home gates pass.
 
+Each phase adds unit tests and applicable fake-pump scenarios for its behavior. Phase 6 runs the complete suites and compatibility matrix.
+
 ## Phases
 
 **Phase Numbering:**
@@ -80,12 +82,12 @@ Basement Guardian progresses from a secure, long-running vendor-cloud connection
 ### Phase 6: Validated Release Candidate
 **Goal**: Maintainer can produce an npm-ready v1 package whose compatibility, safety evidence, privacy, licensing, support, and distribution controls are complete.
 **Depends on**: Phase 5
-**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07
+**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08
 **Success Criteria** (what must be TRUE):
-  1. Repository quality checks and deterministic policy/integration tests pass across the declared Node.js 22/24 and supported Homebridge 1.x/2.x matrix without live secrets or hardware.
+  1. Repository quality checks, unit tests, and deterministic fake-pump integration tests pass across the declared Node.js and Homebridge compatibility matrix.
   2. Network, dependency, log, fixture, planning, and packed-package audits find no telemetry, automatic uploads, credentials, or private account/local-network identifiers.
   3. The packed npm artifact contains aligned metadata, complete mixed-license texts/notices, required settings assets, and only intended distributable files.
-  4. G-001, G-002, G-003, automated checks, and required real-home tests are recorded as passed before a `1.0.0` candidate is considered publishable.
+  4. G-001, G-002, G-003, automated checks, and read-only real-pump tests are recorded as passed before a `1.0.0` candidate is considered publishable.
   5. Prerelease metadata, safe-user warnings, release notes, best-effort issue templates, private security reporting, stable identities, and Homebridge Verified claim rules are ready and do not publish or claim approval prematurely.
 **Plans**: TBD
 

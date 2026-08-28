@@ -57,6 +57,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 3]: Truthful standards-first HomeKit mapping with separate actionable fault adapters.
 - [Phase 4]: Only self-test and boolean alarm mute are writable; reported state remains authoritative.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, automated checks, and real-home validation.
+- [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 
 ### Pending Todos
 
