@@ -4,10 +4,10 @@ current_phase: 1
 current_phase_name: Secure Cloud Foundation
 status: planning
 stopped_at: Planning setup created; Phase 1 is ready for detailed planning
-last_updated: "2026-08-28T17:57:50.000Z"
+last_updated: "2026-08-28T18:07:18.000Z"
 last_activity: 2026-08-28
-last_activity_desc: "Recorded constructor dependency injection as a revisitable preference"
-state_head: b0543e2
+last_activity_desc: "Added primary Homebridge and Cucumber.js references for agents"
+state_head: 91c21a1
 progress:
   percent: 0
 ---
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-08-27)
 Phase: 1 of 6 (Secure Cloud Foundation)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-08-28 - Recorded constructor dependency injection as a revisitable preference
+Last activity: 2026-08-28 - Added primary Homebridge and Cucumber.js references for agents
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -88,6 +88,7 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 | 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
 | 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 | — |
 | 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
+| 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
 
 ## Deferred Items
 
