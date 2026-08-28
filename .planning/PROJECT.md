@@ -40,7 +40,7 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 ## Context
 
-- The repository contains sanitized protocol, operations, HomeKit, plugin, and architecture research. `docs/research/DECISIONS.md` is authoritative for locked product and architecture choices.
+- The planning snapshot contains the sanitized protocol, operations, HomeKit, plugin, and architecture research. The [ingested decision record](./intel/decisions.md) is authoritative for locked product and architecture choices.
 - Hardware evidence already covers Auth0 authentication, REST discovery, AWS IoT shadow updates, self-test commands, heartbeat timing, and in-place AWS credential rotation for Gemini.
 - G-001 still requires alarm-mute acknowledgement, state, duration, latency, and failure validation before mute implementation begins.
 - G-002 still requires a natural pump cycle to validate every Gemini water-level code and the flood threshold before that mapping is releaseable.
@@ -61,9 +61,9 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 ## ADR-Locked Decisions
 
-The following blocks preserve all 40 locked decisions from `docs/research/DECISIONS.md`. Validation-gated findings G-001 through G-003 and F-001 through F-004 inform requirements but are not labeled as locked.
+The following blocks preserve all 40 locked decisions from the [ingested decision record](./intel/decisions.md). Validation-gated findings G-001 through G-003 and F-001 through F-004 inform requirements but are not labeled as locked.
 
-<decisions status="locked" source="docs/research/DECISIONS.md" scope="product-and-family">
+<decisions status="locked" source=".planning/intel/decisions.md" scope="product-and-family">
 
 - **D-001 — Safety-first monitoring with standards-compliant breadth:** Prioritize basement-protection conditions and expose only semantically truthful standard or custom HomeKit data.
 - **D-002 — Gemini-only v1:** Support every `wayneWaterGemini` on the configured account; explain and skip new HALO or unknown profiles.
@@ -74,7 +74,7 @@ The following blocks preserve all 40 locked decisions from `docs/research/DECISI
 
 </decisions>
 
-<decisions status="locked" source="docs/research/DECISIONS.md" scope="homekit-representation">
+<decisions status="locked" source=".planning/intel/decisions.md" scope="homekit-representation">
 
 - **D-005 — One accessory per system:** Put all stable services for one physical Basement Guardian system on one HomeKit accessory.
 - **D-006 — Standards first:** Use standard HAP semantics when correct and read-only vendor extensions otherwise; notification adapters are documented exceptions beside truthful domain state.
@@ -89,7 +89,7 @@ The following blocks preserve all 40 locked decisions from `docs/research/DECISI
 
 </decisions>
 
-<decisions status="locked" source="docs/research/DECISIONS.md" scope="configuration-security-and-privacy">
+<decisions status="locked" source=".planning/intel/decisions.md" scope="configuration-security-and-privacy">
 
 - **D-013 — `clientId` default and override:** Bundle the public Auth0 client ID and permit only an optional `clientId` override; keep AWS connection values and all other protocol constants internal.
 - **D-015 — Poll and offline defaults:** Poll REST about every 15 minutes and confirm offline after two successful disconnected snapshots by default; accept confirmation counts 1 through 8.
@@ -101,7 +101,7 @@ The following blocks preserve all 40 locked decisions from `docs/research/DECISI
 
 </decisions>
 
-<decisions status="locked" source="docs/research/DECISIONS.md" scope="state-commands-and-resilience">
+<decisions status="locked" source=".planning/intel/decisions.md" scope="state-commands-and-resilience">
 
 - **D-014 — Preserve untrusted state:** Retain the last family-valid values through invalid data or communication loss, mark only the truthful scope faulty/inactive, and require fresh valid input for recovery.
 - **D-018 — Self-test Switch:** Let reported `test_running` own the Switch, accept only valid on requests, reject cancellation/duplicates/stale paths, and do not invent physical eligibility rules.
@@ -116,7 +116,7 @@ The following blocks preserve all 40 locked decisions from `docs/research/DECISI
 
 </decisions>
 
-<decisions status="locked" source="docs/research/DECISIONS.md" scope="release-and-governance">
+<decisions status="locked" source=".planning/intel/decisions.md" scope="release-and-governance">
 
 - **D-025 — Best-effort current-release support:** Use public GitHub Issues without an SLA, request only versions/reproduction/redacted logs, and route vulnerabilities to private Security Advisories.
 - **D-026 — Staged releases:** Publish experimental `0.x` builds on npm `next` with GitHub prerelease labels and release notes; block `1.0.0` on all gates and tests while preserving compatible identities.

@@ -15,7 +15,7 @@ All seven classification files were consumed. Cross-reference cycle detection fo
 
 - Locked: 40
 - Proposed or validation-gated: 7
-- Locked decision source: docs/research/DECISIONS.md
+- Locked decision source: .planning/intel/decisions.md
 - Intel: .planning/intel/decisions.md
 
 ## Requirements
@@ -28,13 +28,13 @@ All seven classification files were consumed. Cross-reference cycle detection fo
 
 - Extracted: 2
 - Type breakdown: protocol 2; api-contract 0; schema 0; nfr 0
-- Sources: docs/research/API.md, docs/research/HOMEKIT.md
+- Sources: API and HomeKit specifications preserved in .planning/intel/constraints.md
 - Intel: .planning/intel/constraints.md
 
 ## Context
 
 - Topics: 4
-- Sources: docs/research/OPERATIONS.md, docs/research/ARCHITECTURE.md, docs/research/PLUGIN.md, docs/research/README.md
+- Sources: operations, architecture, plugin, and index documents preserved in .planning/intel/context.md
 - Intel: .planning/intel/context.md
 
 ## Conflicts
@@ -42,14 +42,14 @@ All seven classification files were consumed. Cross-reference cycle detection fo
 - Blockers: 0
 - Competing variants: 0
 - Auto-resolved: 3
-- Report: .planning/INGEST-CONFLICTS.md
+- Report: .planning/intel/INGEST-CONFLICTS.md
 
 ## Precedence applied
 
-- docs/research/DECISIONS.md: 0
-- docs/research/API.md: 10
-- docs/research/HOMEKIT.md: 20
-- docs/research/OPERATIONS.md: 30
-- docs/research/ARCHITECTURE.md: 40
-- docs/research/PLUGIN.md: 50
-- docs/research/README.md: 60
+- DECISIONS input, preserved in .planning/intel/decisions.md: 0
+- API input, preserved in .planning/intel/constraints.md: 10
+- HOMEKIT input, preserved in .planning/intel/constraints.md: 20
+- OPERATIONS input, preserved in .planning/intel/context.md: 30
+- ARCHITECTURE input, preserved in .planning/intel/context.md: 40
+- PLUGIN input, preserved in .planning/intel/context.md: 50
+- README input, preserved in .planning/intel/context.md: 60

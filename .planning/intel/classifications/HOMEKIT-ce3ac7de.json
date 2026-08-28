@@ -1,5 +1,5 @@
 {
-  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/HOMEKIT.md",
+  "source_path": ".planning/intel/constraints.md",
   "type": "SPEC",
   "confidence": "high",
   "manifest_override": true,
@@ -15,8 +15,7 @@
     "system self-test"
   ],
   "cross_refs": [
-    "OPERATIONS.md",
-    "PLUGIN.md"
+    ".planning/intel/context.md"
   ],
   "locked": false,
   "precedence": 20,

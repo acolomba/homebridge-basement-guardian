@@ -1,5 +1,5 @@
 {
-  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/DECISIONS.md",
+  "source_path": ".planning/intel/decisions.md",
   "type": "ADR",
   "confidence": "high",
   "manifest_override": true,
@@ -16,13 +16,8 @@
     "release policy"
   ],
   "cross_refs": [
-    "./OPERATIONS.md",
-    "./API.md",
-    "docs/research/API.md",
-    "docs/research/OPERATIONS.md",
-    "docs/research/HOMEKIT.md",
-    "docs/research/PLUGIN.md",
-    "docs/research/ARCHITECTURE.md"
+    ".planning/intel/context.md",
+    ".planning/intel/constraints.md"
   ],
   "locked": false,
   "precedence": 0,

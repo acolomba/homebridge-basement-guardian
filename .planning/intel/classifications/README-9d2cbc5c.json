@@ -1,5 +1,5 @@
 {
-  "source_path": "/home/acolomba/homebridge-basement-guardian/docs/research/README.md",
+  "source_path": ".planning/intel/context.md",
   "type": "DOC",
   "confidence": "high",
   "manifest_override": true,
@@ -13,12 +13,9 @@
     "publication rules"
   ],
   "cross_refs": [
-    "DECISIONS.md",
-    "API.md",
-    "OPERATIONS.md",
-    "HOMEKIT.md",
-    "PLUGIN.md",
-    "ARCHITECTURE.md"
+    ".planning/intel/decisions.md",
+    ".planning/intel/constraints.md",
+    ".planning/intel/context.md"
   ],
   "locked": false,
   "precedence": 60,
