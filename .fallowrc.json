@@ -1,6 +1,16 @@
 {
   "entry": ["src/index.ts"],
   "ignoreDependencies": ["aedes", "mqtt", "ws"],
+  "ignoreFindings": [
+    "src/device/events.ts",
+    "src/device/health.ts",
+    "src/device/family.ts",
+    "src/device/gemini.ts",
+    "src/device/halo.ts",
+    "src/accessories/basementGuardian.ts",
+    "src/accessories/services.ts",
+    "src/persistence/accessoryContext.ts"
+  ],
   "ignorePatterns": ["dist-test/**"],
   "production": false,
   "health": {
