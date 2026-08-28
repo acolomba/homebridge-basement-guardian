@@ -4,6 +4,15 @@
 
 Before editing any file, read it first. Before modifying a function, trace its callers. Research before you edit.
 
+### External Reference Documentation
+
+Consult these primary sources when a task depends on Homebridge or Cucumber.js behavior:
+
+- [Homebridge Plugin Documentation](https://developers.homebridge.io/#/) -- Homebridge APIs, plugin lifecycle, configuration schemas, and HAP services and characteristics.
+- [Cucumber.js Documentation](https://github.com/cucumber/cucumber-js/tree/main/docs) -- Configuration, profiles, ESM and TypeScript support, hooks, World objects, step definitions, and CLI behavior.
+
+Read only the pages that apply to the task. Compare current documentation with the pinned package versions and installed TypeScript definitions. If they differ, follow the pinned version and record the difference.
+
 ### Git
 
 - NEVER commit to the main branch.
@@ -64,7 +73,7 @@ Basement Guardian is a safety-first Homebridge dynamic-platform plugin for owner
 - **Identity**: Vendor `deviceId` is the immutable Homebridge UUID seed; `deviceTypeId` selects an adapter and never changes physical identity.
 - **Privacy**: Credentials, tokens, temporary AWS credentials, raw responses, account identifiers, and local-network data cannot enter public artifacts, accessory context, or logs.
 - **Persistence**: Auth0 tokens live under `api.user.storagePath()`; accessory-scoped observation data lives in typed `accessory.context` and is explicitly persisted.
-- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
+- **Release**: `1.0.0` is blocked until G-001, G-002, G-003, G-004, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
 
 <!-- GSD:project-end -->
 
