@@ -84,6 +84,8 @@ These were raised by `01-RESEARCH.md` and decided after research returned. They 
 
 - **D-23:** Create `CHANGELOG.md` in Phase 1 using Keep a Changelog structure with an `Unreleased` section, and record Phase 1's changes in it. Phase 1 is the first phase producing shippable code and the first to meet CLAUDE.md's pre-PR changelog rule, so later phases append rather than bootstrap. Include it in the `D-21` allowlist. — **Reversibility:** reversible.
 
+- **D-24:** Correct the `files:` pattern on all four local pre-commit hooks in `.pre-commit-config.yaml` from `(src|tests)/` to `(src|test|features)/`, in plan `01-01`. **Verified defect:** the patterns name `tests/` while this repository's directory is `test/`, and `features/` appears in no pattern, so a commit touching only `test/**` or `features/**` currently fires none of `npm-lint`, `npm-format-check`, `npm-typecheck`, or `npm-fallow`. Phase 1 writes roughly twenty mirrored test modules and the whole Cucumber support tree, so this phase is where the gap starts to matter. The plan-checker recommended capturing this rather than widening `01-01`; the user decided to fix it here, since `01-01` already rewrites the toolchain configuration and the alternative is five phases of test files committing without local gates. — **Reversibility:** reversible.
+
 ### Claude's Discretion
 
 - The injectable clock's shape and how it reaches retry, timeout, and heartbeat-age code.
