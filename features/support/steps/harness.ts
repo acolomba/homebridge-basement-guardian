@@ -7,6 +7,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
@@ -27,6 +28,8 @@ const AUTHORIZATION_HEADER = 'Bearer fake-id-token';
 const MESSAGE_DEADLINE_MS = 2000;
 
 const DEVICE_ID = 'placeholder-gemini';
+const ACCESSORY_NAME = 'Sump Guardian';
+const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 const SHADOW_VERSION = 7;
 const REJECTION_CODE = 404;
 const REPORTED_PATCH = { water_level: 1, serial_communications: true };
@@ -167,6 +170,26 @@ async function subscriberOnTopic(this: BasementGuardianWorld, topicName: string)
 
 Given('a subscriber on the {word} topic', subscriberOnTopic);
 
+async function fakeHomebridgeApi(this: BasementGuardianWorld): Promise<void> {
+  await this.homebridge();
+}
+
+Given('the fake homebridge api', fakeHomebridgeApi);
+
+async function listenerOnEachLifecycleEvent(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  homebridge.api.on('didFinishLaunching', () => {
+    this.observations.push('launched');
+  });
+
+  homebridge.api.on('shutdown', () => {
+    this.observations.push('shut down');
+  });
+}
+
+Given('a listener on each lifecycle event', listenerOnEachLifecycleEvent);
+
 async function requestIdentityToken(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
@@ -226,6 +249,22 @@ async function closeEveryConnection(this: BasementGuardianWorld): Promise<void> 
 }
 
 When('the broker closes every connection', closeEveryConnection);
+
+async function finishLaunching(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  await homebridge.emit('didFinishLaunching');
+}
+
+When('the api finishes launching', finishLaunching);
+
+async function shutDown(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  await homebridge.emit('shutdown');
+}
+
+When('the api shuts down', shutDown);
 
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
@@ -299,3 +338,36 @@ async function assertSubscriberObservesTheClose(this: BasementGuardianWorld): Pr
 }
 
 Then('the subscriber observes the close', assertSubscriberObservesTheClose);
+
+function assertObservations(this: BasementGuardianWorld, observation: string): void {
+  assert.equal(this.observations.at(-1), observation);
+}
+
+Then('the world observes that the plugin {string}', assertObservations);
+
+async function assertStoragePathIsAnEmptyDirectory(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  assert.equal(homebridge.api.user.storagePath(), homebridge.storagePath);
+  assert.deepEqual(await readdir(homebridge.storagePath), []);
+}
+
+Then('the storage path is an empty directory the scenario owns', assertStoragePathIsAnEmptyDirectory);
+
+async function assertApiExposesTheHapNamespace(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  assert.equal(typeof homebridge.api.hap, 'object');
+}
+
+Then('the api exposes the hap namespace', assertApiExposesTheHapNamespace);
+
+async function assertAccessoryCarriesTheIdentity(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  const accessory = new homebridge.api.platformAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
+
+  assert.equal(accessory.displayName, ACCESSORY_NAME);
+  assert.equal(accessory.UUID, ACCESSORY_UUID);
+}
+
+Then('the accessory carries the identity the plugin gives it', assertAccessoryCarriesTheIdentity);

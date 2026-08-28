@@ -64,3 +64,14 @@ Feature: Harness fakes
     Given a subscriber on the update-accepted topic
     When the broker closes every connection
     Then the subscriber observes the close
+
+  Scenario: The fake homebridge api answers the surface this version needs
+    Given the fake homebridge api
+    Given a listener on each lifecycle event
+    When the api finishes launching
+    Then the world observes that the plugin "launched"
+    When the api shuts down
+    Then the world observes that the plugin "shut down"
+    Then the storage path is an empty directory the scenario owns
+    Then the api exposes the hap namespace
+    Then the accessory carries the identity the plugin gives it

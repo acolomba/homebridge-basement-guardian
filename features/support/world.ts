@@ -16,10 +16,12 @@ import { After, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connectAsync } from 'mqtt';
 
 import { createFakeAuth0 } from './fakeAuth0.js';
+import { createFakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import { createFakeRestApi } from './fakeRestApi.js';
 import { createFakeShadowBroker } from './fakeShadowBroker.js';
 
 import type { FakeAuth0 } from './fakeAuth0.js';
+import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
 import type { FakeShadowBroker } from './fakeShadowBroker.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
@@ -52,6 +54,8 @@ export class BasementGuardianWorld extends World {
   private restService: FakeRestApi | undefined = undefined;
 
   private shadowBroker: FakeShadowBroker | undefined = undefined;
+
+  private homebridgeApi: FakeHomebridgeApi | undefined = undefined;
 
   private subscriber: MqttClient | undefined = undefined;
 
@@ -111,6 +115,17 @@ export class BasementGuardianWorld extends World {
     }
 
     return this.shadowBroker;
+  }
+
+  /** The Homebridge API stand-in, started on first use. */
+  async homebridge(): Promise<FakeHomebridgeApi> {
+    if (this.homebridgeApi === undefined) {
+      const homebridge = await createFakeHomebridgeApi();
+      this.own(() => homebridge.cleanup());
+      this.homebridgeApi = homebridge;
+    }
+
+    return this.homebridgeApi;
   }
 
   /** Subscribes the scenario's subscriber to a topic, connecting it on first use. */
