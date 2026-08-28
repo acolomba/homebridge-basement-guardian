@@ -306,6 +306,15 @@ Ready. Every quality gate the following plans depend on is green:
 
 Three entries remain in `.fallowrc.json`'s `ignoreDependencies`: `mqtt`, `aedes`, and `ws`. Each must be removed by the plan that first imports its package, and the list must be empty before release.
 
+## Self-Check: PASSED
+
+- All nine created files exist on disk.
+- All four files the plan deletes are absent.
+- All six commits are present in `git log`.
+- Every task `<acceptance_criteria>` was re-run and passes.
+- The plan-level `<verification>` block was re-run: `npm run check` exits 0, `npm pack --dry-run` lists 14 allowlisted files, a probe `.ts` under `test/` lints clean, `npx tsc -p tsconfig.test.json --noEmit` succeeds, and `git check-ignore test/hbConfig/config.json` succeeds.
+- No stubs, skipped tests, or unrun verification steps remain.
+
 ---
 
 *Phase: 01-secure-cloud-foundation*
