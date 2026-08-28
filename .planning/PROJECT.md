@@ -42,9 +42,11 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 - The planning snapshot contains the sanitized protocol, operations, HomeKit, plugin, and architecture research. The [ingested decision record](./intel/decisions.md) is authoritative for locked product and architecture choices.
 - Hardware evidence already covers Auth0 authentication, REST discovery, AWS IoT shadow updates, self-test commands, heartbeat timing, and in-place AWS credential rotation for Gemini.
-- G-001 still requires alarm-mute acknowledgement, state, duration, latency, and failure validation before mute implementation begins.
+- G-001 still requires alarm-mute acknowledgement, state, duration, latency, and failure validation before the `1.0.0` release.
 - G-002 still requires a natural pump cycle to validate every Gemini water-level code and the flood threshold before that mapping is releaseable.
 - G-003 still requires both bridged pump Contact Sensors to be checked in a real Apple home with a supported hub and current Home architecture.
+- G-004 still requires `Sump Pit Flood` Leak Sensor notification delivery to be validated in a real eligible Apple home with a current home hub and the current Home architecture, and confirmation that no documentation claims a Critical Alerts guarantee.
+- G-001 through G-004 block only the `1.0.0` release. They never block phase completion. Each phase delivers its implementation and marks any unvalidated constant provisional.
 - AWS IoT shadows synchronize current state rather than replaying missed events. Full-shadow refresh, REST reconciliation, and monotonic timestamps provide bounded recovery.
 - Ingest found no blockers or warnings. Three lower-authority suggestions were auto-resolved in favor of the ADR: subsystem-specific fault adapters, two-inventory removal confirmation, and the mixed MIT/Apache licensing boundary.
 
@@ -135,5 +137,9 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - Record newly discovered protocol facts as proposed until hardware or authoritative evidence closes them.
 - Never change an ADR-locked decision implicitly; revise the authoritative ADR first.
 
+### Open Proposals
+
+- **Backup-battery fault adapter — open.** The ingested constraints list `battery_health == 32` (NotDetected) as a fault-bearing signal with vendor rule `WW-GEM-ALERT-3`. `D-008` enumerates only five Apple Home fault adapters, and Apple Home does not render `StatusFault`. An undetected backup battery is a total loss of backup protection, and today that condition stays invisible in Apple Home. This proposal resolves during Phase 3 discussion. Resolving it in favor of a sixth adapter requires a revision to `D-008` in `docs/research/DECISIONS.md` first.
+
 ---
-*Last updated: 2026-08-27 after ingested-document synthesis and initial roadmap creation*
+*Last updated: 2026-08-28 after recording gate G-004, the release-only gating rule, and the backup-battery adapter proposal*
