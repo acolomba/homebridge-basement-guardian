@@ -39,3 +39,28 @@ Feature: Harness fakes
     Then the response carries status 503
     When the harness requests the device list
     Then the response carries status 200
+
+  Scenario: The fake broker delivers a reported patch
+    Given the fake shadow broker
+    Given a subscriber on the update-accepted topic
+    When the broker publishes the reported patch
+    Then the subscriber receives the reported patch
+    Then the broker holds the handshake of the subscriber
+
+  Scenario: The fake broker delivers the full shadow document
+    Given the fake shadow broker
+    Given a subscriber on the get-accepted topic
+    When the broker publishes the full shadow document
+    Then the subscriber receives the full shadow document
+
+  Scenario: The fake broker rejects the shadow request
+    Given the fake shadow broker
+    Given a subscriber on the get-rejected topic
+    When the broker rejects the shadow request
+    Then the subscriber receives the rejection
+
+  Scenario: The fake broker closes every live connection
+    Given the fake shadow broker
+    Given a subscriber on the update-accepted topic
+    When the broker closes every connection
+    Then the subscriber observes the close

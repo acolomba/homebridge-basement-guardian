@@ -10,13 +10,27 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { shadowTopic } from '../fakeShadowBroker.js';
+import { SUBSCRIBER_CLIENT_ID } from '../world.js';
+
 import type { FakeAuth0TokenRequest } from '../fakeAuth0.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../fakeRestApi.js';
+import type { ShadowTopicLeaf } from '../fakeShadowBroker.js';
 import type { BasementGuardianWorld } from '../world.js';
 import type { DataTable } from '@cucumber/cucumber';
 
 const REQUEST_DEADLINE_MS = 2000;
 const AUTHORIZATION_HEADER = 'Bearer fake-id-token';
+
+// A wrong bridge makes the broker go silent rather than fail, so the deadline is what turns that
+// silence into a named failure.
+const MESSAGE_DEADLINE_MS = 2000;
+
+const DEVICE_ID = 'placeholder-gemini';
+const SHADOW_VERSION = 7;
+const REJECTION_CODE = 404;
+const REPORTED_PATCH = { water_level: 1, serial_communications: true };
+const FULL_SHADOW = { reported: { data: { water_level: 1 }, state: { offline: false } } };
 
 const GRANT = {
   grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
@@ -47,6 +61,30 @@ const HARNESS_CREDENTIALS: AwsCredentialsResponse = {
   },
 };
 
+const TOPIC_LEAVES = new Map<string, ShadowTopicLeaf>([
+  ['update-accepted', 'update/accepted'],
+  ['get-accepted', 'get/accepted'],
+  ['get-rejected', 'get/rejected'],
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function field(document: unknown, name: string): unknown {
+  return isRecord(document) ? document[name] : undefined;
+}
+
+function topicNamed(name: string): string {
+  const leaf = TOPIC_LEAVES.get(name);
+
+  if (leaf === undefined) {
+    throw new Error(`the harness knows no ${name} topic`);
+  }
+
+  return shadowTopic(DEVICE_ID, leaf);
+}
+
 function toDevice(row: Record<string, string>): ApiDevice {
   return {
     deviceId: row.deviceId ?? '',
@@ -63,6 +101,13 @@ async function record(world: BasementGuardianWorld, url: string, init: RequestIn
   const body: unknown = await response.json();
 
   world.recordResponse(response.status, body);
+}
+
+async function receivedDocument(world: BasementGuardianWorld, topicName: string): Promise<unknown> {
+  const payload = await world.nextMessage(topicNamed(topicName), MESSAGE_DEADLINE_MS);
+  const document: unknown = JSON.parse(payload);
+
+  return document;
 }
 
 async function fakeAuth0Tenant(this: BasementGuardianWorld): Promise<void> {
@@ -110,6 +155,18 @@ async function armedRequestFailure(this: BasementGuardianWorld, status: number):
 
 Given('the service fails the next request with status {int}', armedRequestFailure);
 
+async function fakeShadowBroker(this: BasementGuardianWorld): Promise<void> {
+  await this.broker();
+}
+
+Given('the fake shadow broker', fakeShadowBroker);
+
+async function subscriberOnTopic(this: BasementGuardianWorld, topicName: string): Promise<void> {
+  await this.subscribe(topicNamed(topicName));
+}
+
+Given('a subscriber on the {word} topic', subscriberOnTopic);
+
 async function requestIdentityToken(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
@@ -138,6 +195,38 @@ async function requestTemporaryCredentials(this: BasementGuardianWorld): Promise
 
 When('the harness requests the temporary credentials', requestTemporaryCredentials);
 
+async function publishTheReportedPatch(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  broker.publishReported(DEVICE_ID, REPORTED_PATCH, SHADOW_VERSION);
+}
+
+When('the broker publishes the reported patch', publishTheReportedPatch);
+
+async function publishTheFullShadow(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  broker.publishGetAccepted(DEVICE_ID, FULL_SHADOW, SHADOW_VERSION);
+}
+
+When('the broker publishes the full shadow document', publishTheFullShadow);
+
+async function rejectTheShadowRequest(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  broker.publishGetRejected(DEVICE_ID, REJECTION_CODE);
+}
+
+When('the broker rejects the shadow request', rejectTheShadowRequest);
+
+async function closeEveryConnection(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  broker.disconnectAll();
+}
+
+When('the broker closes every connection', closeEveryConnection);
+
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
@@ -153,9 +242,7 @@ function assertResponseStatus(this: BasementGuardianWorld, status: number): void
 Then('the response carries status {int}', assertResponseStatus);
 
 function assertResponseError(this: BasementGuardianWorld, error: string): void {
-  const body = this.response().body;
-
-  assert.equal(typeof body === 'object' && body !== null && 'error' in body ? body.error : undefined, error);
+  assert.equal(field(this.response().body, 'error'), error);
 }
 
 Then('the response carries the error {string}', assertResponseError);
@@ -179,3 +266,36 @@ function assertCredentialsResponseCarriesTheConnectionFacts(this: BasementGuardi
 }
 
 Then('the credentials response carries the endpoint and the client identifier', assertCredentialsResponseCarriesTheConnectionFacts);
+
+async function assertSubscriberReceivesTheReportedPatch(this: BasementGuardianWorld): Promise<void> {
+  assert.deepEqual(await receivedDocument(this, 'update-accepted'), { state: { reported: REPORTED_PATCH }, version: SHADOW_VERSION });
+}
+
+Then('the subscriber receives the reported patch', assertSubscriberReceivesTheReportedPatch);
+
+async function assertSubscriberReceivesTheFullShadow(this: BasementGuardianWorld): Promise<void> {
+  assert.deepEqual(await receivedDocument(this, 'get-accepted'), { state: FULL_SHADOW, version: SHADOW_VERSION });
+}
+
+Then('the subscriber receives the full shadow document', assertSubscriberReceivesTheFullShadow);
+
+async function assertSubscriberReceivesTheRejection(this: BasementGuardianWorld): Promise<void> {
+  assert.equal(field(await receivedDocument(this, 'get-rejected'), 'code'), REJECTION_CODE);
+}
+
+Then('the subscriber receives the rejection', assertSubscriberReceivesTheRejection);
+
+async function assertBrokerHoldsTheHandshake(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  assert.equal(broker.handshakes.length, 1);
+  assert.deepEqual(broker.clientIds, [SUBSCRIBER_CLIENT_ID]);
+}
+
+Then('the broker holds the handshake of the subscriber', assertBrokerHoldsTheHandshake);
+
+async function assertSubscriberObservesTheClose(this: BasementGuardianWorld): Promise<void> {
+  await this.awaitSubscriberClose(MESSAGE_DEADLINE_MS);
+}
+
+Then('the subscriber observes the close', assertSubscriberObservesTheClose);
