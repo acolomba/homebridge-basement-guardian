@@ -1,6 +1,6 @@
 {
   "entry": ["src/index.ts"],
-  "ignoreDependencies": ["aedes", "homebridge-lib", "mqtt", "strong-mock", "ws"],
+  "ignoreDependencies": ["aedes", "mqtt", "ws"],
   "ignorePatterns": ["dist-test/**"],
   "production": false,
   "health": {
