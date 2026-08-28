@@ -33,7 +33,7 @@ Push the resulting commits so the PR head updates — that push is what kicks CI
 
 Sonar findings only exist **after** CI runs `sonarcloud.yml` on the pushed head, so this phase waits on CI before it can act.
 
-1. **Wait for analysis.** Poll `gh pr checks` until the SonarCloud check completes (bounded — give up after ~15 min and report). Then confirm the PR analysis is live via `list_pull_requests` (project key `acolomba_pi-claude-marketplace`) and read the gate with `get_project_quality_gate_status` (pass the PR key, not the branch name).
+1. **Wait for analysis.** Poll `gh pr checks` until the SonarCloud check completes (bounded — give up after ~15 min and report). Then confirm the PR analysis is live via `list_pull_requests` (project key `acolomba_homebridge-basement-guardian`) and read the gate with `get_project_quality_gate_status` (pass the PR key, not the branch name).
 
 2. **Read the PR-scoped findings** (fan out to subagents where it helps — one per concern):
    - Violations: `search_sonar_issues_in_projects` with the PR key.
