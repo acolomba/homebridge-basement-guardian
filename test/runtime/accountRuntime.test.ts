@@ -135,6 +135,8 @@ test('authenticates, discovers one device, and stores its canonical snapshot', a
     identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
     connectivity: { connected: true, timestamp: DEVICE_TIME },
     data: { water_level: 1, primary_pump_running: false, ac_power: true },
+    metadata: {},
+    shadowVersion: undefined,
     deviceTimestamp: DEVICE_TIME,
     receivedAt: RECEIVED_AT,
   });
