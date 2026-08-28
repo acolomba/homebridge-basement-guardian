@@ -39,7 +39,7 @@ function createRuntime(config: BgConfig, log: Logging): AccountRuntime {
   });
   const api = createCloudApi({ baseUrl: PROTOCOL.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS });
 
-  return createAccountRuntime({ api, store: createDeviceStateStore({ clock }), clock, log });
+  return createAccountRuntime({ api, store: createDeviceStateStore({ clock, log }), clock, log });
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { ApiConnectivity, ApiDevice } from '../cloud/types.js';
 import type { Clock } from '../runtime/clock.js';
+import type { Logging } from 'homebridge';
 
 /** The device facts that identify one physical system and never change. */
 export interface DeviceIdentity {
@@ -49,9 +50,20 @@ export interface ReportedPatch {
   version: number | undefined;
 }
 
+/**
+ * Receives one canonical state change for one device.
+ *
+ * `changedKeys` names the telemetry keys whose values differ, in a stable
+ * order, so a consumer filters on the list instead of comparing snapshots
+ * again. Comparing again is where duplicate activation records come from
+ * (D-19).
+ */
+export type DeviceSnapshotListener = (next: DeviceSnapshot, previous: DeviceSnapshot | undefined, changedKeys: readonly string[]) => void;
+
 /** Everything the store needs, by injection. */
 export interface DeviceStateStoreOptions {
   clock: Clock;
+  log: Logging;
 }
 
 /** Holds one immutable snapshot per device. */
@@ -66,7 +78,16 @@ export interface DeviceStateStore {
    * device enters the store through discovery alone.
    */
   applyReportedPatch(deviceId: string, patch: ReportedPatch): DeviceSnapshot | undefined;
+  /**
+   * Registers a listener for one device and returns its unsubscribe function.
+   *
+   * A change that leaves every telemetry value where it was notifies nobody,
+   * which is what keeps a repeated heartbeat silent.
+   */
+  subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
 }
+
+const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
 
 // A heartbeat carries seven of the roughly twenty reported fields, so the merge
 // runs key by key. Assigning a payload wholesale would blank pump, power,
@@ -129,6 +150,34 @@ function nextSnapshot(previous: DeviceSnapshot, patch: ReportedPatch, receivedAt
   });
 }
 
+// Shallow comparison of the merged telemetry record. Phase 1 reports which
+// keys moved and does not judge which of them matter, because no family
+// adapter exists yet to define relevance (D-19).
+function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
+  const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
+
+  return [...keys].filter((key) => !Object.is(previous[key], next[key])).sort();
+}
+
+// One listener's failure is contained: the others still run and the reducer
+// still returns. The report names no listener and repeats no state, because a
+// listener's own message can carry both.
+function notify(listeners: ReadonlySet<DeviceSnapshotListener>, log: Logging, next: DeviceSnapshot, previous: DeviceSnapshot | undefined): void {
+  const changed = changedKeys(previous === undefined ? {} : previous.data, next.data);
+
+  if (changed.length === 0) {
+    return;
+  }
+
+  for (const listener of listeners) {
+    try {
+      listener(next, previous, changed);
+    } catch {
+      log.debug('A device snapshot listener failed.');
+    }
+  }
+}
+
 /**
  * Creates the canonical device state store.
  *
@@ -138,6 +187,7 @@ function nextSnapshot(previous: DeviceSnapshot, patch: ReportedPatch, receivedAt
  */
 export function createDeviceStateStore(options: DeviceStateStoreOptions): DeviceStateStore {
   const snapshots = new Map<string, DeviceSnapshot>();
+  const listeners = new Map<string, Set<DeviceSnapshotListener>>();
 
   return {
     snapshot(deviceId: string): DeviceSnapshot | undefined {
@@ -149,8 +199,10 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     },
 
     applyDiscovery(device: ApiDevice): DeviceSnapshot {
-      const snapshot = toSnapshot(device, snapshots.get(device.deviceId), options.clock.now());
+      const previous = snapshots.get(device.deviceId);
+      const snapshot = toSnapshot(device, previous, options.clock.now());
       snapshots.set(device.deviceId, snapshot);
+      notify(listeners.get(device.deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
 
       return snapshot;
     },
@@ -164,8 +216,19 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
 
       const snapshot = nextSnapshot(previous, patch, options.clock.now());
       snapshots.set(deviceId, snapshot);
+      notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
 
       return snapshot;
+    },
+
+    subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void {
+      const registered = listeners.get(deviceId) ?? new Set<DeviceSnapshotListener>();
+      registered.add(listener);
+      listeners.set(deviceId, registered);
+
+      return () => {
+        registered.delete(listener);
+      };
     },
   };
 }

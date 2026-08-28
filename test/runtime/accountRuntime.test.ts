@@ -77,7 +77,7 @@ function createAccount(messages: string[] = []): { runtime: AccountRuntime; stor
     log,
   });
   const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000 });
-  const store = createDeviceStateStore({ clock });
+  const store = createDeviceStateStore({ clock, log });
 
   return { runtime: createAccountRuntime({ api, store, clock, log }), store };
 }
@@ -187,8 +187,9 @@ test('logs the route and the status when the vendor refuses discovery', async ()
   // arrange
   const messages: string[] = [];
   const api: CloudApi = { devices: () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices')) };
-  const store = createDeviceStateStore({ clock });
-  const accountRuntime = createAccountRuntime({ api, store, clock, log: createRecordingLog(messages) });
+  const log = createRecordingLog(messages);
+  const store = createDeviceStateStore({ clock, log });
+  const accountRuntime = createAccountRuntime({ api, store, clock, log });
 
   // act
   await accountRuntime.start();
@@ -202,8 +203,9 @@ test('logs a fixed message that repeats nothing from an unexpected discovery fai
   // arrange
   const messages: string[] = [];
   const api: CloudApi = { devices: () => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices')) };
-  const store = createDeviceStateStore({ clock });
-  const accountRuntime = createAccountRuntime({ api, store, clock, log: createRecordingLog(messages) });
+  const log = createRecordingLog(messages);
+  const store = createDeviceStateStore({ clock, log });
+  const accountRuntime = createAccountRuntime({ api, store, clock, log });
 
   // act
   await accountRuntime.start();
