@@ -6,6 +6,8 @@ Basement Guardian progresses from a secure, long-running vendor-cloud connection
 
 The hardware and real-home validation gates G-001 through G-004 block only the `1.0.0` release, not phase completion. Each phase delivers its implementation and marks any unvalidated constant provisional.
 
+Each phase adds unit tests and applicable fake-pump scenarios for its behavior. Phase 6 runs the complete suites and compatibility matrix.
+
 ## Phases
 
 **Phase Numbering:**
@@ -85,12 +87,12 @@ The hardware and real-home validation gates G-001 through G-004 block only the `
 ### Phase 6: Validated Release Candidate
 **Goal**: Maintainer can produce an npm-ready v1 package whose compatibility, safety evidence, privacy, licensing, support, and distribution controls are complete.
 **Depends on**: Phase 5
-**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08
+**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06, REL-07, REL-08, REL-09
 **Success Criteria** (what must be TRUE):
-  1. Repository quality checks and deterministic policy/integration tests pass across the declared Node.js 22/24 and supported Homebridge 1.x/2.x matrix without live secrets or hardware.
+  1. Repository quality checks, unit tests, and deterministic fake-pump integration tests pass across the declared Node.js and Homebridge compatibility matrix.
   2. Network, dependency, log, fixture, planning, and packed-package audits find no telemetry, automatic uploads, credentials, or private account/local-network identifiers.
   3. The packed npm artifact contains aligned metadata, complete mixed-license texts/notices, required settings assets, and only intended distributable files.
-  4. G-001, G-002, G-003, G-004, automated checks, and required real-home tests are recorded as passed before a `1.0.0` candidate is considered publishable.
+  4. G-001, G-002, G-003, G-004, automated checks, and read-only real-pump tests are recorded as passed before a `1.0.0` candidate is considered publishable.
   5. Prerelease metadata, safe-user warnings, release notes, best-effort issue templates, private security reporting, stable identities, and Homebridge Verified claim rules are ready and do not publish or claim approval prematurely.
   6. User-facing documentation discloses plaintext password storage, explains the child-bridge recommendation with its separate pairing and accessory re-creation consequences, marks prereleases experimental while telling users to keep the vendor alarm and notifications enabled, labels the 25/50/75/100 battery levels as estimates, and claims no Critical Alerts guarantee.
 **Plans**: TBD

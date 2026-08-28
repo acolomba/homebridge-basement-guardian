@@ -61,6 +61,47 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 - **Persistence**: Auth0 tokens live under `api.user.storagePath()`; accessory-scoped observation data lives in typed `accessory.context` and is explicitly persisted.
 - **Release**: `1.0.0` is blocked until G-001, G-002, G-003, G-004, automated tests, real-home tests, package inspection, secret scans, and compatibility checks pass.
 
+## Test Strategy
+
+Each delivery phase adds tests for the behavior that it introduces. Phase 6 collects evidence and runs the complete release gates.
+
+### Unit Tests
+
+- Use `node:test` for unit tests.
+- Store unit tests under `test/` in a directory structure that mirrors `src/`.
+- Name unit-test files `*.test.ts` after the TypeScript test setup replaces the initial JavaScript smoke test.
+- Isolate one production unit with small stubs, builders, spies, and fake clocks.
+- Classify a test as integration when it starts the complete plugin harness or combines several production components.
+
+### Fake-Pump Integration Tests
+
+- Use Cucumber.js with TypeScript step definitions.
+- Store feature files, step definitions, and test-only support code under `features/`.
+- Simulate the vendor Auth0, REST, and AWS IoT contracts because the pump has no supported local API.
+- Change simulated pump state and observe the plugin and HomeKit output.
+- Send HomeKit control requests and observe the requests that the simulator receives.
+- Keep device-reported state authoritative. A command request must not cause an optimistic state change.
+- Include partial, omitted, invalid, delayed, duplicate, and out-of-order data.
+- Include authentication errors, credential rotation, reconnects, late acknowledgements, timeouts, and shutdown.
+- Run this deterministic suite in CI without live credentials, hardware, or public network access.
+
+### Real-Pump Integration Tests
+
+- Use a separate Cucumber profile with `@real` and `@read-only` tags.
+- Store these scenarios under `features/real-pump/`.
+- Observe discovery, initial REST state, full shadow state, heartbeats, natural updates, restart, and shutdown.
+- Do not require a natural status change for a successful test run.
+- Block all command paths in the test transport. Do not depend on operator discipline for read-only behavior.
+- Run this suite only when a maintainer selects it. Do not run it in public CI.
+- Keep credentials in ignored local files or environment variables. Do not save raw responses or private identifiers in test artifacts.
+
+### Cucumber Support Code
+
+- Keep step definitions as thin adapters between Gherkin and typed test helpers.
+- Give each scenario a new typed `World` with the simulator, fake HAP, plugin harness, clock, observations, and cleanup.
+- Keep the fake cloud, fake HAP, and plugin harness under `features/support/`.
+- Move a small helper into shared unit-test support only after both suites use it.
+
 ## ADR-Locked Decisions
 
 The following blocks preserve all 40 locked decisions from the [ingested decision record](./intel/decisions.md). Validation-gated findings G-001 through G-004 and F-001 through F-004 inform requirements but are not labeled as locked.
