@@ -1,0 +1,26 @@
+{
+  "source_path": ".planning/intel/context.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Building the Homebridge plugin",
+  "summary": "Implementation guide for building the Basement Guardian dynamic platform plugin for Homebridge, including configuration, lifecycle, HomeKit services, publishing, and multi-device-family support.",
+  "scope": [
+    "Homebridge plugin",
+    "DynamicPlatformPlugin",
+    "configuration schema",
+    "accessory lifecycle",
+    "HomeKit services",
+    "publishing",
+    "device families"
+  ],
+  "cross_refs": [
+    "api/characteristic-warnings.md",
+    ".github/ISSUE_TEMPLATE/{bug-report,feature-request,support-request}.md",
+    "getting-started.md",
+    "config-screen/schema.md"
+  ],
+  "locked": false,
+  "precedence": 50,
+  "notes": ""
+}

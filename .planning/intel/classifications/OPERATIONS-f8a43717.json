@@ -1,0 +1,20 @@
+{
+  "source_path": ".planning/intel/context.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Basement Guardian operational behavior",
+  "summary": "Defines runtime behavior affecting a long-running Homebridge integration, including heartbeat, AWS credentials, system tests, liveness, latency, and runtime requirements.",
+  "scope": [
+    "Homebridge integration",
+    "heartbeat",
+    "AWS credentials",
+    "Gemini system test",
+    "liveness",
+    "runtime requirements"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 30,
+  "notes": ""
+}

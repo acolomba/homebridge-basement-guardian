@@ -1,0 +1,23 @@
+{
+  "source_path": ".planning/intel/constraints.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Mapping a sump pump onto HomeKit",
+  "summary": "Technical specification for mapping Basement Guardian sump-pump states, controls, faults, and recovery behavior onto standard and custom HomeKit services.",
+  "scope": [
+    "HomeKit",
+    "Basement Guardian",
+    "sump pumps",
+    "HomeKit services and characteristics",
+    "fault notification adapters",
+    "backup battery",
+    "system self-test"
+  ],
+  "cross_refs": [
+    ".planning/intel/context.md"
+  ],
+  "locked": false,
+  "precedence": 20,
+  "notes": ""
+}

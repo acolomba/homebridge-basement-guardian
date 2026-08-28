@@ -1,0 +1,22 @@
+{
+  "source_path": ".planning/intel/context.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Architectural lessons from popular Homebridge plugins",
+  "summary": "Design guidance applying architectural lessons from homebridge-nest and homebridge-unifi-protect to Basement Guardian's state, lifecycle, command, configuration, and testing architecture.",
+  "scope": [
+    "Basement Guardian",
+    "homebridge-nest",
+    "homebridge-unifi-protect",
+    "AccountRuntime",
+    "DeviceStateStore",
+    "HomeKit accessory lifecycle",
+    "command path",
+    "test architecture"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 40,
+  "notes": ""
+}

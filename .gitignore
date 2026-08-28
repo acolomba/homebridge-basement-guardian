@@ -3,6 +3,7 @@ dist
 
 # ------------- Defaults ------------- #
 .DS_Store
+._*
 
 # Logs
 logs
@@ -151,7 +152,6 @@ dist
 /.claude/scripts/*
 /.claude/skills/spike-findings-*/
 /.codex/.gsd-profile
-/.codex/config.toml
 /.codex/agents/gsd-*
 /.codex/commands/gsd-*
 /.codex/gsd-core/*

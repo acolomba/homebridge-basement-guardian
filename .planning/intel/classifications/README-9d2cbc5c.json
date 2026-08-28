@@ -1,0 +1,23 @@
+{
+  "source_path": ".planning/intel/context.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Basement Guardian design research",
+  "summary": "Index of sanitized design inputs for the Basement Guardian Homebridge plugin, with document authority, validation status, and publication rules.",
+  "scope": [
+    "Basement Guardian",
+    "Homebridge plugin",
+    "design research",
+    "validation gates",
+    "publication rules"
+  ],
+  "cross_refs": [
+    ".planning/intel/decisions.md",
+    ".planning/intel/constraints.md",
+    ".planning/intel/context.md"
+  ],
+  "locked": false,
+  "precedence": 60,
+  "notes": ""
+}
