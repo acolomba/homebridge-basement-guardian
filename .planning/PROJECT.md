@@ -182,5 +182,9 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 
 - **Backup-battery fault adapter — open.** The ingested constraints list `battery_health == 32` (NotDetected) as a fault-bearing signal with vendor rule `WW-GEM-ALERT-3`. `D-008` enumerates only five Apple Home fault adapters, and Apple Home does not render `StatusFault`. An undetected backup battery is a total loss of backup protection, and today that condition stays invisible in Apple Home. This proposal resolves during Phase 3 discussion. Resolving it in favor of a sixth adapter requires a revision to `D-008` in `docs/research/DECISIONS.md` first.
 
+### Open Implementation Preferences
+
+- **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
+
 ---
-*Last updated: 2026-08-28 after recording gate G-004, the release-only gating rule, and the backup-battery adapter proposal*
+*Last updated: 2026-08-28 after recording gate G-004, the release-only gating rule, the backup-battery adapter proposal, and the constructor injection preference*
