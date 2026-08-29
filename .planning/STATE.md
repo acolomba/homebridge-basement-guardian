@@ -6,7 +6,7 @@ status: planning
 stopped_at: Phase 2 context gathered
 last_updated: "2026-08-29T15:55:00.000Z"
 last_activity: 2026-08-29
-last_activity_desc: Phase 2 context gathered
+last_activity_desc: Quick task 260829-gx6 — vendor REST wire-shape fix
 state_head: 95c8a51939db4175eb0767e0a23d72120072167b
 progress:
   total_phases: 6
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-27)
 Phase: 02 (Safe Gemini Discovery and Identity) — READY FOR PLANNING
 Plan: none yet — 02-CONTEXT.md written
 Status: Phase 2 context gathered; discussion closed
-Last activity: 2026-08-29 — Phase 2 context gathered
+Last activity: 2026-08-29 — Completed quick task 260829-gx6: vendor REST wire-shape fix
 
 Phase 01 is implementation-complete and gate-complete (17/17 plans, review closed,
 verification human_needed 19/20, nyquist validated, threats_open 0) but is NOT marked
@@ -102,12 +102,13 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
-| 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 | — |
-| 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
-| 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260829-gx6 | Fix vendor REST wire-shape defects in device discovery | 2026-08-29 | 6826afd | Verified | [260829-gx6-fix-vendor-rest-wire-shape-defects-in-de](./quick/260829-gx6-fix-vendor-rest-wire-shape-defects-in-de/) |
+| 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd |  | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
+| 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 |  | — |
+| 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 |  | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
+| 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 |  | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
 
 ## Deferred Items
 
