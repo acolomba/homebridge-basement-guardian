@@ -227,6 +227,13 @@ None - no external service configuration required.
 - **Carried assumption (from the plan's flagged assumptions).** `config.schema.json` and `validateConfig` are two hand-maintained copies of one contract. `test/configSchema.test.ts` pins the schema side and `test/config.test.ts` pins the runtime side, but nothing mechanically proves the two agree. A change to either bound must be mirrored.
 - `.fallowrc.json` was not touched, as required. No shared planning artifact (`STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`) was modified.
 
+## Self-Check: PASSED
+
+All nine claimed files exist on disk. All six claimed commits exist in the branch history
+(`956b001`, `be8b68b`, `552a551`, `f02d72a`, `39c3b47`, `6992032`). The working tree is clean,
+no tracked file was deleted, and `npm run check` exits 0 with 170 unit tests, 10 Cucumber
+scenarios, and 61 steps passing.
+
 ---
 
 *Phase: 01-secure-cloud-foundation*
