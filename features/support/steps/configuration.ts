@@ -52,3 +52,17 @@ function assertNoAccessory(this: BasementGuardianWorld): void {
 }
 
 Then('the plugin holds no accessory', assertNoAccessory);
+
+// The email comes from the settings the scenario gave rather than a constant, so the assertion
+// stays true when a scenario changes the value. An account email is an account identifier, and no
+// refusal may carry one into the log.
+function assertNoLoggedAccountEmail(this: BasementGuardianWorld): void {
+  const email = String(this.settings.email);
+
+  assert.deepEqual(
+    this.logged.filter((line) => line.includes(email)),
+    [],
+  );
+}
+
+Then('no logged line contains the configured account email', assertNoLoggedAccountEmail);

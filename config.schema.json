@@ -6,12 +6,14 @@
   "headerDisplay": "Sign in with your Basement Guardian account. Homebridge stores the password in plain text in `config.json` and includes it in backups. The plugin sends the password only to the vendor Auth0 tenant.",
   "schema": {
     "type": "object",
-    "required": ["name", "email", "password"],
+    "required": ["email", "password"],
     "properties": {
       "name": {
         "title": "Name",
         "type": "string",
         "default": "Basement Guardian",
+        "minLength": 1,
+        "pattern": "\\S",
         "description": "Shown in the Homebridge log. Not the accessory name."
       },
       "email": {
@@ -25,12 +27,14 @@
         "type": "string",
         "widget": "password",
         "minLength": 1,
+        "pattern": "\\S",
         "description": "The form masks this field. Homebridge stores the value in plain text in `config.json` and in backups."
       },
       "clientId": {
         "title": "Authentication client ID",
         "type": "string",
         "minLength": 1,
+        "pattern": "\\S",
         "description": "Optional override for the bundled public Auth0 client ID. Leave this unset unless the vendor changes the client ID."
       },
       "pollInterval": {

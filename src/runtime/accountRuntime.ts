@@ -19,7 +19,7 @@ import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnect
 import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
 import type { BgConfig } from '../config.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
-import type { RedactingLogger } from '../logging.js';
+import type { RedactingLogger, SecretRole } from '../logging.js';
 import type { ProtocolConstants } from '../protocol.js';
 import type { Logging } from 'homebridge';
 
@@ -90,8 +90,13 @@ export interface AccountRuntimeOptions {
   /** The floor a rotation delay is held at, so a response already inside the lead window still waits. */
   minRotationDelayMs: number;
   failures: FailureLog;
-  /** Registers credential material with the redacting logger as it arrives (AUTH-02). */
-  registerSecret: (secret: string) => void;
+  /**
+   * Registers credential material with the redacting logger as it arrives.
+   *
+   * A rotated value carries its role, so it replaces the value that role held
+   * rather than joining it (AUTH-02).
+   */
+  registerSecret: (secret: string, role?: SecretRole) => void;
   clock: Clock;
   log: Logging;
 }
@@ -297,10 +302,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     try {
       const response = await options.api.awsCredentials(root.signal);
       // Every one of the three values is credential material the moment it
-      // arrives, so each is registered before anything can quote it (AUTH-02).
-      options.registerSecret(response.credentials.AccessKeyId);
-      options.registerSecret(response.credentials.SecretAccessKey);
-      options.registerSecret(response.credentials.SessionToken);
+      // arrives, so each is registered before anything can quote it. Each
+      // carries its role, so this set replaces the one the previous rotation
+      // registered instead of adding to it (AUTH-02).
+      options.registerSecret(response.credentials.AccessKeyId, 'aws-access-key-id');
+      options.registerSecret(response.credentials.SecretAccessKey, 'aws-secret-access-key');
+      options.registerSecret(response.credentials.SessionToken, 'aws-session-token');
 
       const cache = credentials;
 
@@ -501,8 +508,11 @@ export interface AccountRuntimeDeps {
  * them costs nothing until the runtime starts.
  */
 export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): AccountRuntime {
-  const registerSecret = (secret: string): void => {
-    deps.log.registerSecret(secret);
+  // The auth client registers one value that must be kept for the life of the
+  // process, so it calls this with no role and keeps its own single-argument
+  // signature.
+  const registerSecret = (secret: string, role?: SecretRole): void => {
+    deps.log.registerSecret(secret, role);
   };
 
   const auth = createAuthClient({

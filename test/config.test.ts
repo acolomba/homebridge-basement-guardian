@@ -8,6 +8,10 @@ import { PLATFORM_NAME } from '../src/settings.js';
 import type { BgConfig, ConfigAccepted, ConfigRefused } from '../src/config.js';
 import type { PlatformConfig } from 'homebridge';
 
+// The refusal names the field and the rule and quotes no value, because an account email is an
+// account identifier and the refusal is logged before anything is registered as a secret.
+const MALFORMED_EMAIL_REFUSAL = 'the account email must be an email address.';
+
 const POLL_INTERVAL_REFUSAL = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is';
 const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number of polls from 1 to 8, but it is';
 
@@ -51,20 +55,22 @@ test('refuses a configuration whose account email is empty', () => {
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
-test('CONF-05 refuses an account email that is not an email address', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account email must be an email address, but it is not-an-email.' };
+for (const email of ['not-an-email', 'jane.doe@company', 'jane doe@example.test']) {
+  test(`CONF-05 refuses an account email of ${JSON.stringify(email)} without quoting any part of it`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };
 
-  // act
-  const configResult = validateConfig(accountConfig({ email: 'not-an-email' }));
+    // act
+    const configResult = validateConfig(accountConfig({ email }));
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
 test('CONF-05 reports the first failing field in a fixed order when several fields are wrong', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account email must be an email address, but it is not-an-email.' };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };
 
   // act
   const configResult = validateConfig(accountConfig({ email: 'not-an-email', pollInterval: 1 }));
@@ -84,27 +90,31 @@ test('refuses a configuration that omits the account password', () => {
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
-test('refuses a configuration whose account password is empty', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account password is missing.' };
+for (const password of ['', ' ']) {
+  test(`refuses an account password of ${JSON.stringify(password)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account password is missing.' };
 
-  // act
-  const configResult = validateConfig(accountConfig({ password: '' }));
+    // act
+    const configResult = validateConfig(accountConfig({ password }));
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
-test('refuses a configuration whose platform name is supplied but empty', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the platform name must not be empty when it is set.' };
+for (const name of ['', ' ']) {
+  test(`refuses a supplied platform name of ${JSON.stringify(name)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: 'the platform name must not be empty when it is set.' };
 
-  // act
-  const configResult = validateConfig(accountConfig({ name: '   ' }));
+    // act
+    const configResult = validateConfig(accountConfig({ name }));
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
 test('resolves the bundled client identifier and the documented defaults when the optional fields are absent', () => {
   // act
@@ -130,7 +140,7 @@ test('CONF-04 resolves a supplied client identifier over the bundled one', () =>
   assert.deepStrictEqual(configResult, acceptedConfig({ clientId: 'supplied-client-id' }));
 });
 
-for (const clientId of ['', '   ']) {
+for (const clientId of ['', ' ']) {
   test(`CONF-04 refuses a client identifier of ${JSON.stringify(clientId)}`, () => {
     // arrange
     const expectedRefusal: ConfigRefused = { ok: false, reason: 'clientId must not be empty when it is set.' };

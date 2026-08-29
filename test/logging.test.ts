@@ -6,6 +6,7 @@ import { mock, verify, when } from 'strong-mock';
 
 import { createRedactingLogger } from '../src/logging.js';
 
+import type { RedactingLogger } from '../src/logging.js';
 import type { Logging } from 'homebridge';
 
 const PREFIX = 'basement guardian';
@@ -22,6 +23,12 @@ const AWS_SESSION_CREDENTIAL_FIELDS = ['AccessKeyId', 'SecretAccessKey', 'Sessio
 
 const PRESIGNED_URL_PARAMETERS = ['X-Amz-Credential', 'X-Amz-Security-Token', 'X-Amz-Signature'];
 
+const ID_TOKEN = 'id-token-value';
+
+// Enough rotations that a list keeping every registered value would hold three
+// hundred of them, which is roughly four days of the vendor's hourly cadence.
+const ROTATION_COUNT = 100;
+
 // The wrapper reads the delegate's prefix once while it is built, so every case
 // promises that one property read.
 function createDelegate(): Logging {
@@ -29,6 +36,13 @@ function createDelegate(): Logging {
   when(() => delegate.prefix).thenReturn(PREFIX);
 
   return delegate;
+}
+
+// Registers one rotated credential set, the way the credential refresh does.
+function rotate(log: RedactingLogger, generation: number): void {
+  log.registerSecret(`access-key-${String(generation)}`, 'aws-access-key-id');
+  log.registerSecret(`secret-key-${String(generation)}`, 'aws-secret-access-key');
+  log.registerSecret(`session-token-${String(generation)}`, 'aws-session-token');
 }
 
 test('carries the prefix, the seven log members, and the secret registration hook', () => {
@@ -137,13 +151,31 @@ test('substitutes a registered secret inside an Error parameter and keeps its cl
   verify(delegate);
 });
 
-test('names the class of a parameter that cannot be serialized', () => {
+test('describes a parameter that cannot be serialized', () => {
   // arrange
   const delegate = createDelegate();
   const snapshot: Record<string, unknown> = { deviceId: 'device-1' };
   snapshot.self = snapshot;
   when(() => {
-    delegate.warn('the snapshot was refused', '[unserializable Object]');
+    delegate.warn('the snapshot was refused', '[unserializable object]');
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.warn('the snapshot was refused', snapshot);
+
+  // assert
+  verify(delegate);
+});
+
+test('WR-10 describes an unserializable parameter that has no prototype rather than raising', () => {
+  // arrange
+  const delegate = createDelegate();
+  // Object.create answers `any`; the assertion restores the type the case works through.
+  const snapshot = Object.create(null) as Record<string, unknown>;
+  snapshot.self = snapshot;
+  when(() => {
+    delegate.warn('the snapshot was refused', '[unserializable object]');
   }).thenReturn(undefined);
   const log = createRedactingLogger({ delegate, secrets: [] });
 
@@ -242,8 +274,8 @@ test('substitutes a secret registered after the wrapper was built', () => {
   const log = createRedactingLogger({ delegate, secrets: [] });
 
   // act
-  log.registerSecret('id-token-value');
-  log.info('the token id-token-value expires soon');
+  log.registerSecret(ID_TOKEN);
+  log.info(`the token ${ID_TOKEN} expires soon`);
 
   // assert
   verify(delegate);
@@ -261,6 +293,80 @@ test('registers nothing for an empty or whitespace-only secret', () => {
   log.registerSecret('');
   log.registerSecret('   ');
   log.info('discovered two devices');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 substitutes a value registered under a rotated role', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`the connection signed with ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.registerSecret('access-key-0', 'aws-access-key-id');
+  log.info('the connection signed with access-key-0');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 drops a rotated value once a fresh one is registered under the same role', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`access-key-0 gave way to ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.registerSecret('access-key-0', 'aws-access-key-id');
+  log.registerSecret('access-key-1', 'aws-access-key-id');
+  log.info('access-key-0 gave way to access-key-1');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 holds one value per rotated role however many rotations follow', () => {
+  // arrange
+  const current = String(ROTATION_COUNT - 1);
+  const expired = 'access-key-0 secret-key-0 session-token-0';
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`the expired set was ${expired} and the current one is ${REDACTED} ${REDACTED} ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  for (let generation = 0; generation < ROTATION_COUNT; generation += 1) {
+    rotate(log, generation);
+  }
+
+  log.info(`the expired set was ${expired} and the current one is access-key-${current} secret-key-${current} session-token-${current}`);
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 keeps the password and the bearer token redacted however many rotations follow', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`the grant used ${REDACTED} and cached ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [ACCOUNT_PASSWORD] });
+  log.registerSecret(ID_TOKEN);
+
+  // act
+  for (let generation = 0; generation < ROTATION_COUNT; generation += 1) {
+    rotate(log, generation);
+  }
+
+  log.info(`the grant used ${ACCOUNT_PASSWORD} and cached ${ID_TOKEN}`);
 
   // assert
   verify(delegate);

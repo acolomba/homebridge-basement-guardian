@@ -32,3 +32,14 @@ Feature: Account configuration
     Then the plugin refuses to start because "pollInterval must be a whole number of seconds from 300 to 3600, but it is 60."
     Then the plugin registers no lifecycle listener
     Then no request reaches the fake cloud
+
+  Scenario: The plugin starts nothing when the account email is not an email address
+    Given the fake cloud
+    Given these account settings:
+      | email    | jane.doe@company     |
+      | password | placeholder-password |
+    When the plugin loads
+    Then the plugin refuses to start because "the account email must be an email address."
+    Then the plugin registers no lifecycle listener
+    Then no logged line contains the configured account email
+    Then no request reaches the fake cloud

@@ -129,6 +129,21 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('AUTH-02 logs the malformed-email refusal without the account email it rejected', () => {
+    // arrange
+    const messages: string[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const refusedReason = 'the account email must be an email address.';
+
+    // act
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, email: 'jane.doe@company' }, api);
+
+    // assert
+    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
+    assert.deepStrictEqual(platform.accessories, new Map());
+    verify(api);
+  });
+
   test('AUTH-02 registers the account password as a secret once the configuration is accepted', async (t) => {
     // arrange
     t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
