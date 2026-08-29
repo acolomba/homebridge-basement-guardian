@@ -36,7 +36,7 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
   3. REST snapshots and partial shadow updates produce one current state per device without omitted or desired fields corrupting previously accepted values.
   4. Full-shadow refresh, REST reconciliation, credential rotation, retry, and shutdown can run repeatedly without duplicate loops, leaked work, or unhandled errors.
 
-**Plans**: 11/11 plans executed
+**Plans**: 11/11 executed, plus 6 gap-closure plans from verification
 
 Plans:
 **Wave 1**
@@ -70,6 +70,24 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 
 - [x] 01-11-PLAN.md — Phase scenarios and changelog
+
+**Gap closure Wave 1** *(from 01-VERIFICATION.md; blocked on Wave 7 completion)*
+
+- [ ] 01-12-PLAN.md — Acceptance-gate determinism and injected rotation timing
+
+**Gap closure Wave 2** *(blocked on Gap closure Wave 1)*
+
+- [ ] 01-14-PLAN.md — Shadow connection generation and transport deadlines
+- [ ] 01-15-PLAN.md — Account-identifier privacy, logger bounds, form agreement
+- [ ] 01-16-PLAN.md — REST and auth client robustness
+
+**Gap closure Wave 3** *(blocked on Gap closure Wave 2)*
+
+- [ ] 01-13-PLAN.md — Merge reducer: false freshness, source ownership, change detection
+
+**Gap closure Wave 4** *(blocked on Gap closure Wave 3)*
+
+- [ ] 01-17-PLAN.md — Monitoring path contract, dead state, and shutdown windows
 
 **Cross-cutting constraints:**
 
