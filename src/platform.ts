@@ -45,8 +45,16 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     readonly config: PlatformConfig,
     readonly api: API,
   ) {
-    // Installed before anything else can log: the refusal below quotes the
-    // configuration value it rejected (T-01-16).
+    // Installed before anything else can log, so no secret reaches the
+    // delegate unredacted. The refusal below quotes no configured value: it is
+    // logged before any secret is registered, and an account email is an
+    // account identifier the Privacy constraint keeps out of the log (WR-01).
+    // Registering the configured email as a secret first was considered and
+    // rejected, because it would hold the raw identifier in the secret list
+    // for the life of the process and still leave a marker where a value was.
+    // Recording an exception to the Privacy constraint was considered and
+    // rejected too: it would weaken a constraint to keep one diagnostic that
+    // the settings form's own email format already gives.
     this.log = createRedactingLogger({ delegate: log, secrets: [] });
 
     const validated = validateConfig(this.config);

@@ -101,8 +101,11 @@ function firstRefusal(fields: Record<string, unknown>): string | undefined {
     return 'the account email is missing.';
   }
 
+  // Alone among these refusals this one names the field and the rule and
+  // quotes nothing: an account email is an account identifier, and the Privacy
+  // constraint keeps identifiers out of the log (WR-01, AUTH-02).
   if (!EMAIL_PATTERN.test(email)) {
-    return `the account email must be an email address, but it is ${email}.`;
+    return 'the account email must be an email address.';
   }
 
   if (!isConfiguredText(password)) {
