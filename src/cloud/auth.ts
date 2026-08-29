@@ -1,4 +1,8 @@
-import { AuthRejectedError, AuthThrottledError } from './errors.js';
+import { createHash } from 'node:crypto';
+import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from './errors.js';
 import { isRecord } from './types.js';
 
 import type { ProtocolConstants } from '../protocol.js';
@@ -7,8 +11,48 @@ import type { Logging } from 'homebridge';
 
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
+const GRANT_ROUTE = 'POST /oauth/token';
 const TOO_MANY_ATTEMPTS = 429;
+const CLIENT_ERROR = 400;
+const SERVER_ERROR = 500;
 const MILLISECONDS_PER_SECOND = 1_000;
+
+// A network failure carries no HTTP status, and zero is the conventional
+// stand-in for one that never arrived.
+const NO_HTTP_STATUS = 0;
+
+// A throttling response is retried on this interval rather than on the usual
+// capped backoff, because it may mean the account is blocked and every attempt
+// extends that block (D-22).
+const THROTTLED_RETRY_MS = 1_800_000;
+
+const REJECTION_ADVICE =
+  'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings); saving there restarts the plugin.';
+const REJECTION_FINALITY = 'No further attempt will be made, because each one extends the vendor block on the account.';
+
+const THROTTLE_WARNING =
+  'Authentication answered HTTP 429: the vendor is throttling it. The plugin will try again in 30 minutes. ' +
+  'If the account is genuinely blocked, the block lifts only 30 days after the last attempt, so every retry postpones it. ' +
+  'Disable this plugin, or remove its platform block from config.json, to let a real block clear.';
+
+const RECOVERED = 'Authentication recovered.';
+const HALTED = 'authentication stopped after the vendor refused the account credentials.';
+
+// Only the owner may read the cache: it holds a bearer token for the account
+// (AUTH-02).
+const OWNER_ONLY_MODE = 0o600;
+
+// A token is renewed this long before it expires, so no request is sent with a
+// token that lapses while it is in flight (AUTH-01).
+const TOKEN_RENEWAL_MARGIN_MS = 3_600_000;
+
+const CACHE_UNUSABLE = 'The cached token could not be read; authenticating again.';
+const CACHE_OTHER_ACCOUNT = 'The cached token belongs to a different account; authenticating again.';
+const CACHE_STALE = 'The cached token is at or inside its renewal margin; authenticating again.';
+const CACHE_NOT_WRITTEN = 'The token cache could not be written; the token is held in memory only.';
+
+/** The cache file's name inside the Homebridge storage directory. */
+export const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
 
 /** Everything the authentication client needs, by injection. */
 export interface AuthClientOptions {
@@ -17,8 +61,12 @@ export interface AuthClientOptions {
   clientId: string;
   email: string;
   password: string;
+  /** The Homebridge storage directory; the token cache lives there and nowhere else. */
+  storagePath: string;
   requestTimeoutMs: number;
   clock: Clock;
+  /** Supplies the salt the cached fingerprint is computed over. */
+  createSalt: () => string;
   log: Logging;
 }
 
@@ -30,6 +78,139 @@ export interface AuthClient {
 interface CachedToken {
   idToken: string;
   expiresAtMs: number;
+}
+
+// What one client remembers about its failures: the code that stopped it for
+// good, and the kind of the last transient failure it reported.
+interface FailurePolicy {
+  haltedReason: string | undefined;
+  lastTransient: string | undefined;
+}
+
+// A failure worth trying again, described once so the log line, the error, and
+// the repeat detection all agree.
+interface TransientFailure {
+  kind: string;
+  status: number;
+  message: string;
+}
+
+/** The payload the cache file carries between runs. */
+interface TokenCacheFile {
+  idToken: string;
+  expiresAt: number;
+  emailFingerprint: string;
+  salt: string;
+}
+
+function cachePath(options: AuthClientOptions): string {
+  return join(options.storagePath, TOKEN_CACHE_FILENAME);
+}
+
+// The cache file is untrusted input like any other stored JSON, so it is
+// narrowed by a hand-written predicate rather than assumed.
+function isTokenCacheFile(value: unknown): value is TokenCacheFile {
+  return (
+    isRecord(value) &&
+    typeof value.idToken === 'string' &&
+    typeof value.expiresAt === 'number' &&
+    typeof value.emailFingerprint === 'string' &&
+    typeof value.salt === 'string'
+  );
+}
+
+// The cache names its account by digest, so a changed account email invalidates
+// it without the file ever holding the email itself (D-08, T-01-23).
+function fingerprint(salt: string, email: string): string {
+  return createHash('sha256').update(`${salt}${email}`).digest('hex');
+}
+
+function isCurrent(expiresAtMs: number, clock: Clock): boolean {
+  return expiresAtMs - TOKEN_RENEWAL_MARGIN_MS > clock.now();
+}
+
+async function parseCacheFile(path: string): Promise<unknown> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(path, 'utf8'));
+
+    return parsed;
+  } catch {
+    // Unreadable and malformed are the same answer: there is no usable cache.
+    return undefined;
+  }
+}
+
+async function readCacheFile(options: AuthClientOptions): Promise<TokenCacheFile | undefined> {
+  const path = cachePath(options);
+  // A first start has no cache file, which is ordinary and says nothing. Every
+  // other unusable cache is a debug note and never a failure (D-08).
+  const present = await access(path).then(
+    () => true,
+    () => false,
+  );
+
+  if (!present) {
+    return undefined;
+  }
+
+  const parsed = await parseCacheFile(path);
+
+  if (isTokenCacheFile(parsed)) {
+    return parsed;
+  }
+
+  options.log.debug(CACHE_UNUSABLE);
+
+  return undefined;
+}
+
+async function readCachedToken(options: AuthClientOptions): Promise<CachedToken | undefined> {
+  const cache = await readCacheFile(options);
+
+  if (cache === undefined) {
+    return undefined;
+  }
+
+  if (cache.emailFingerprint !== fingerprint(cache.salt, options.email)) {
+    options.log.debug(CACHE_OTHER_ACCOUNT);
+
+    return undefined;
+  }
+
+  if (!isCurrent(cache.expiresAt, options.clock)) {
+    options.log.debug(CACHE_STALE);
+
+    return undefined;
+  }
+
+  return { idToken: cache.idToken, expiresAtMs: cache.expiresAt };
+}
+
+// The mode is applied only when the file is created, so a fresh file is written
+// and renamed over the target; writing the target in place would leave a
+// drifted mode untouched and the token readable by every local user (AUTH-02,
+// T-01-21). The rename is atomic, so an interrupted write cannot truncate the
+// cache into an avoidable authentication. The temporary name carries the
+// process id, so two Homebridge processes cannot collide on it.
+async function writeCachedToken(options: AuthClientOptions, token: CachedToken): Promise<void> {
+  const target = cachePath(options);
+  const temporary = `${target}.${String(process.pid)}.tmp`;
+  const salt = options.createSalt();
+  const cache: TokenCacheFile = {
+    idToken: token.idToken,
+    expiresAt: token.expiresAtMs,
+    emailFingerprint: fingerprint(salt, options.email),
+    salt,
+  };
+
+  try {
+    await writeFile(temporary, JSON.stringify(cache), { mode: OWNER_ONLY_MODE });
+    await rename(temporary, target);
+  } catch {
+    // The token itself is usable, so a cache that cannot be written costs one
+    // grant on the next start rather than this one.
+    options.log.debug(CACHE_NOT_WRITTEN);
+  }
 }
 
 // The whole request body is a secret: the account password is in it. It is
@@ -51,14 +232,77 @@ function readErrorCode(body: unknown): string {
   return typeof code === 'string' ? code : 'unknown_error';
 }
 
-function grantFailure(status: number, body: unknown): Error {
+function rejectionLog(status: number): string {
+  return `Authentication stopped after HTTP ${String(status)}: the vendor refused the account credentials. ${REJECTION_ADVICE} ${REJECTION_FINALITY}`;
+}
+
+function transientLog(kind: string): string {
+  return `Authentication could not be completed (${kind}); the plugin will try again.`;
+}
+
+function httpFailure(status: number): TransientFailure {
+  return { kind: `HTTP ${String(status)}`, status, message: `${GRANT_ROUTE} failed with HTTP ${String(status)}.` };
+}
+
+function unusableFailure(status: number): TransientFailure {
+  return { kind: 'an unusable response', status, message: `${GRANT_ROUTE} returned a response the plugin cannot read.` };
+}
+
+const NETWORK_FAILURE: TransientFailure = {
+  kind: 'a network error',
+  status: NO_HTTP_STATUS,
+  message: `${GRANT_ROUTE} could not be reached.`,
+};
+
+// A transient failure is reported once at warn and its immediate repeat drops
+// to debug, so a failure that persists across a poll cycle cannot flood the log
+// (D-14). The reminder cadence belongs to the account runtime, which sees the
+// whole failure stream.
+function reportTransient(options: AuthClientOptions, policy: FailurePolicy, failure: TransientFailure): CloudRequestError {
+  if (policy.lastTransient === failure.kind) {
+    options.log.debug(transientLog(failure.kind));
+  } else {
+    options.log.warn(transientLog(failure.kind));
+  }
+
+  policy.lastTransient = failure.kind;
+
+  return new CloudRequestError(failure.message, failure.status, GRANT_ROUTE);
+}
+
+function reportRecovery(options: AuthClientOptions, policy: FailurePolicy): void {
+  if (policy.lastTransient !== undefined) {
+    options.log.info(RECOVERED);
+    policy.lastTransient = undefined;
+  }
+}
+
+async function deleteCachedToken(options: AuthClientOptions): Promise<void> {
+  await rm(cachePath(options), { force: true });
+}
+
+async function grantFailure(options: AuthClientOptions, policy: FailurePolicy, status: number, body: unknown): Promise<Error> {
   const reason = readErrorCode(body);
 
   if (status === TOO_MANY_ATTEMPTS) {
-    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`);
+    options.log.warn(THROTTLE_WARNING);
+
+    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`, THROTTLED_RETRY_MS);
   }
 
-  return new AuthRejectedError(`the vendor rejected the account credentials with HTTP ${String(status)} (${reason}).`, reason);
+  // The vendor does not publish the code it returns for a wrong password, so
+  // every client error that is not a throttle is read as a refusal. Stopping on
+  // a recoverable one costs a restart; retrying into a block costs thirty days
+  // measured from the last attempt (D-13).
+  if (status >= CLIENT_ERROR && status < SERVER_ERROR) {
+    policy.haltedReason = reason;
+    options.log.error(rejectionLog(status));
+    await deleteCachedToken(options);
+
+    return new AuthRejectedError(`the vendor rejected the account credentials with HTTP ${String(status)} (${reason}).`, reason);
+  }
+
+  return reportTransient(options, policy, httpFailure(status));
 }
 
 function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
@@ -76,28 +320,52 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
   return { idToken, expiresAtMs: clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND };
 }
 
-async function requestGrant(options: AuthClientOptions, signal: AbortSignal): Promise<CachedToken> {
-  const response = await fetch(`https://${options.constants.auth0Domain}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: grantBody(options),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(options.requestTimeoutMs)]),
-  });
-  const body: unknown = await response.json();
+async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
+  try {
+    return await fetch(`https://${options.constants.auth0Domain}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: grantBody(options),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(options.requestTimeoutMs)]),
+    });
+  } catch (error: unknown) {
+    // A shutdown is not a failure, so an abort the caller asked for travels on
+    // untouched and says nothing.
+    if (signal.aborted) {
+      throw error;
+    }
+
+    throw reportTransient(options, policy, NETWORK_FAILURE);
+  }
+}
+
+async function readBody(response: Response): Promise<unknown> {
+  try {
+    const body: unknown = await response.json();
+
+    return body;
+  } catch {
+    // A gateway in front of the tenant can answer with an error page. That body
+    // carries nothing the status does not already say.
+    return undefined;
+  }
+}
+
+async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
+  const response = await fetchGrant(options, policy, signal);
+  const body = await readBody(response);
 
   if (!response.ok) {
-    options.log.error(`Authentication failed with HTTP ${String(response.status)}.`);
-
-    throw grantFailure(response.status, body);
+    throw await grantFailure(options, policy, response.status, body);
   }
 
   const grant = readGrant(body, options.clock);
 
   if (grant === undefined) {
-    options.log.error('Authentication returned a response the plugin cannot read.');
-
-    throw new AuthRejectedError('the vendor authentication response carried no usable token.', 'malformed_response');
+    throw reportTransient(options, policy, unusableFailure(response.status));
   }
+
+  reportRecovery(options, policy);
 
   return grant;
 }
@@ -105,20 +373,53 @@ async function requestGrant(options: AuthClientOptions, signal: AbortSignal): Pr
 /**
  * Creates the vendor authentication client.
  *
- * The grant is the Auth0 password-realm grant, and the resulting ID token is
- * held in memory until it expires (AUTH-01). Creating the client performs no
- * request; only `idToken` does.
+ * The grant is the Auth0 password-realm grant. The resulting ID token is held
+ * in memory and cached under the Homebridge storage directory, so a restart
+ * reuses a token that is still current instead of authenticating again
+ * (AUTH-01). The cache is read once per client and rewritten after every grant.
+ * Creating the client reads no file and performs no request; only `idToken`
+ * does.
+ *
+ * Each failure class gets the one answer that is safe for it. A refused
+ * credential stops this client for good, because the vendor lifts a brute-force
+ * block only thirty days after the last attempt (D-13). A throttling response
+ * is tried again on a long interval instead (D-22). Anything else is transient
+ * and leaves both the cache and the client intact.
+ *
+ * Stated assumption: the vendor's published error codes do not name the code it
+ * returns for a wrong password, so every client error that is not a throttle is
+ * read as a refusal. If that reading is wrong, the plugin stops on a failure it
+ * could have retried, which a restart clears. The opposite mistake would retry
+ * into a thirty-day block that no restart clears.
  */
 export function createAuthClient(options: AuthClientOptions): AuthClient {
+  const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
   let cached: CachedToken | undefined;
+  let cacheRead = false;
+
+  async function currentToken(signal: AbortSignal): Promise<CachedToken> {
+    if (policy.haltedReason !== undefined) {
+      throw new AuthHaltedError(HALTED, policy.haltedReason);
+    }
+
+    if (!cacheRead) {
+      cacheRead = true;
+      cached = await readCachedToken(options);
+    }
+
+    if (cached !== undefined && isCurrent(cached.expiresAtMs, options.clock)) {
+      return cached;
+    }
+
+    const granted = await requestGrant(options, policy, signal);
+    await writeCachedToken(options, granted);
+
+    return granted;
+  }
 
   return {
     async idToken(signal: AbortSignal): Promise<string> {
-      if (cached !== undefined && cached.expiresAtMs > options.clock.now()) {
-        return cached.idToken;
-      }
-
-      cached = await requestGrant(options, signal);
+      cached = await currentToken(signal);
 
       return cached.idToken;
     },

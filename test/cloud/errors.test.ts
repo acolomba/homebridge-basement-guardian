@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
+import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
+
+const THIRTY_MINUTES_MS = 1_800_000;
 
 test('a cloud request failure carries the HTTP status and the route label', () => {
   // act
@@ -35,22 +37,37 @@ test('an authentication rejection carries the parsed vendor error code', () => {
   assert.strictEqual(rejection instanceof Error, true);
 });
 
-test('an authentication throttling response carries its message', () => {
+test('an authentication throttling response carries the interval to wait before trying again', () => {
   // act
-  const throttling = new AuthThrottledError('the vendor authentication service answered HTTP 429 (too_many_attempts).');
+  const throttling = new AuthThrottledError('the vendor authentication service answered HTTP 429 (too_many_attempts).', THIRTY_MINUTES_MS);
 
   // assert
   assert.strictEqual(throttling.name, 'AuthThrottledError');
   assert.strictEqual(throttling.message, 'the vendor authentication service answered HTTP 429 (too_many_attempts).');
+  assert.strictEqual(throttling.retryAfterMs, THIRTY_MINUTES_MS);
   assert.strictEqual(throttling instanceof Error, true);
 });
 
-test('distinguishes a rejected grant from a throttled one by class', () => {
+test('a halted authentication carries the vendor error code that stopped it', () => {
+  // act
+  const halt = new AuthHaltedError('authentication stopped after the vendor refused the account credentials.', 'invalid_grant');
+
+  // assert
+  assert.strictEqual(halt.name, 'AuthHaltedError');
+  assert.strictEqual(halt.message, 'authentication stopped after the vendor refused the account credentials.');
+  assert.strictEqual(halt.reason, 'invalid_grant');
+  assert.strictEqual(halt instanceof Error, true);
+});
+
+test('distinguishes a rejected grant, a throttled one, and a halted client by class', () => {
   // arrange
   const rejection = new AuthRejectedError('rejected.', 'invalid_grant');
-  const throttling = new AuthThrottledError('throttled.');
+  const throttling = new AuthThrottledError('throttled.', THIRTY_MINUTES_MS);
+  const halt = new AuthHaltedError('halted.', 'invalid_grant');
 
   // act & assert
   assert.strictEqual(rejection instanceof AuthThrottledError, false);
   assert.strictEqual(throttling instanceof AuthRejectedError, false);
+  assert.strictEqual(halt instanceof AuthRejectedError, false);
+  assert.strictEqual(rejection instanceof AuthHaltedError, false);
 });

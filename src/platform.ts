@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import { createCloudApi } from './cloud/api.js';
 import { createAuthClient } from './cloud/auth.js';
 import { validateConfig } from './config.js';
@@ -15,6 +17,9 @@ import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformCo
 /** Deadline applied to each vendor request. */
 const REQUEST_TIMEOUT_MS = 10_000;
 
+/** Length of the salt the token cache fingerprints the account email with. */
+const SALT_BYTES = 16;
+
 /**
  * Observation data that Homebridge persists alongside one restored accessory.
  * The device fields arrive with the accessory adapters.
@@ -28,15 +33,17 @@ export type BasementGuardianPlatformAccessory = PlatformAccessory<BasementGuardi
 // Manual constructor injection: every collaborator is built here and nowhere
 // else. None of these factories opens a connection, reads a file, or starts a
 // timer, so building them costs nothing until the runtime starts.
-function createRuntime(config: BgConfig, log: Logging): AccountRuntime {
+function createRuntime(config: BgConfig, storagePath: string, log: Logging): AccountRuntime {
   const clock = systemClock;
   const auth = createAuthClient({
     constants: PROTOCOL,
     clientId: config.clientId,
     email: config.email,
     password: config.password,
+    storagePath,
     requestTimeoutMs: REQUEST_TIMEOUT_MS,
     clock,
+    createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
     log,
   });
   const api = createCloudApi({ baseUrl: PROTOCOL.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS });
@@ -79,7 +86,10 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
     this.log.registerSecret(validated.config.password);
 
-    const runtime = createRuntime(validated.config, this.log);
+    // The token cache is written under the Homebridge storage directory, so the
+    // path comes from Homebridge itself rather than from any configured value
+    // (AUTH-02).
+    const runtime = createRuntime(validated.config, this.api.user.storagePath(), this.log);
 
     // Both handlers discard their promise: neither start nor stop rejects, so
     // nothing floats and no exception escapes into Homebridge.

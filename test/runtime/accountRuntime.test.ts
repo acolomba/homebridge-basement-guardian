@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { createCloudApi } from '../../src/cloud/api.js';
@@ -64,16 +67,25 @@ function createRecordingLog(messages: string[]): Logging {
 }
 
 // Wires the real authentication client, REST client, and store behind the
-// runtime, so only the network boundary is replaced.
-function createAccount(messages: string[] = []): { runtime: AccountRuntime; store: DeviceStateStore } {
+// runtime, so only the network boundary is replaced. The token cache lands in
+// this case's own storage directory, which is removed when the case ends.
+async function createAccount(t: TestContext, messages: string[] = []): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
+  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
+
+  t.after(async () => {
+    await rm(storagePath, { recursive: true, force: true });
+  });
+
   const log = createRecordingLog(messages);
   const auth = createAuthClient({
     constants: testConstants,
     clientId: 'client-id-1',
     email: 'account@example.test',
     password: 'account-password',
+    storagePath,
     requestTimeoutMs: 1_000,
     clock,
+    createSalt: () => 'salt-1',
     log,
   });
   const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000 });
@@ -124,7 +136,7 @@ function stubHangingCloud(t: TestContext): void {
 test('authenticates, discovers one device, and stores its canonical snapshot', async (t) => {
   // arrange
   const requests = stubCloud(t, [geminiDevice()]);
-  const { runtime, store } = createAccount();
+  const { runtime, store } = await createAccount(t);
 
   // act
   await runtime.start();
@@ -149,7 +161,7 @@ test('authenticates, discovers one device, and stores its canonical snapshot', a
 test('resolves a second stop without raising', async (t) => {
   // arrange
   stubCloud(t, [geminiDevice()]);
-  const { runtime } = createAccount();
+  const { runtime } = await createAccount(t);
   await runtime.start();
 
   // act & assert
@@ -160,7 +172,7 @@ test('resolves a second stop without raising', async (t) => {
 test('performs no request when start runs after stop', async (t) => {
   // arrange
   const requests = stubCloud(t, [geminiDevice()]);
-  const { runtime } = createAccount();
+  const { runtime } = await createAccount(t);
 
   // act
   await runtime.stop();
@@ -173,7 +185,7 @@ test('performs no request when start runs after stop', async (t) => {
 test('resolves start with no unhandled rejection when a shutdown interrupts discovery', async (t) => {
   // arrange
   stubHangingCloud(t);
-  const { runtime } = createAccount();
+  const { runtime } = await createAccount(t);
 
   // act
   const started = runtime.start();
@@ -218,7 +230,7 @@ test('reports how many devices the account holds', async (t) => {
   // arrange
   const messages: string[] = [];
   stubCloud(t, [geminiDevice()]);
-  const { runtime } = createAccount(messages);
+  const { runtime } = await createAccount(t, messages);
 
   // act
   await runtime.start();
