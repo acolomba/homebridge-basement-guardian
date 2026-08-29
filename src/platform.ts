@@ -2,12 +2,17 @@ import { randomBytes } from 'node:crypto';
 
 import { connect } from 'mqtt';
 
+import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
 import { validateConfig } from './config.js';
+import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
 import { PROTOCOL } from './protocol.js';
 import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
+import type { FamilyRegistry } from './device/registry.js';
+import type { DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
@@ -16,13 +21,60 @@ const SALT_BYTES = 16;
 
 /**
  * Observation data that Homebridge persists alongside one restored accessory.
- * The device fields arrive with the accessory adapters.
+ *
+ * `device` is optional so an accessory restored from before this field
+ * existed does not fail its structural type; the platform sets it on every
+ * accessory it creates from now on.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- named extension point; it is equivalent to its supertype until the device fields land
-export interface BasementGuardianAccessoryContext extends UnknownContext {}
+export interface BasementGuardianAccessoryContext extends UnknownContext {
+  device?: { deviceId: string; deviceTypeId: string };
+}
 
 /** A Homebridge accessory carrying this plugin's context. */
 export type BasementGuardianPlatformAccessory = PlatformAccessory<BasementGuardianAccessoryContext>;
+
+/** Everything registering newly discovered devices needs. */
+export interface DiscoveryContext {
+  api: API;
+  accessories: Map<string, BasementGuardianPlatformAccessory>;
+  registry: FamilyRegistry;
+  log: Logging;
+}
+
+/**
+ * Registers one HomeKit accessory for every discovered device this platform
+ * has not already registered.
+ *
+ * The accessory UUID is seeded only from `deviceId`, never a mutable field
+ * (C-002), so a `deviceId` already present in `accessories` is left
+ * untouched here: only a genuinely new physical device gets a new accessory.
+ * Exported so the harness that proves this end to end drives the identical
+ * logic a real platform runs, rather than a parallel copy of it.
+ */
+export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: readonly string[], store: DeviceStateStore): void {
+  for (const deviceId of deviceIds) {
+    const uuid = context.api.hap.uuid.generate(deviceId);
+
+    if (context.accessories.has(uuid)) {
+      continue;
+    }
+
+    const snapshot = store.snapshot(deviceId);
+
+    if (snapshot === undefined) {
+      continue;
+    }
+
+    const accessory = new context.api.platformAccessory<BasementGuardianAccessoryContext>(snapshot.identity.name, uuid);
+    accessory.context.device = { deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
+
+    const basementGuardianAccessory = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+    basementGuardianAccessory.update(snapshot);
+
+    context.accessories.set(uuid, accessory);
+    context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+  }
+}
 
 /**
  * Composition root of the dynamic platform.
@@ -39,6 +91,8 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
   /** The only logger this plugin writes through, so no secret can reach the log. */
   readonly log: RedactingLogger;
+
+  private readonly registry: FamilyRegistry = createFamilyRegistry();
 
   constructor(
     log: Logging,
@@ -78,6 +132,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       log: this.log,
       connect,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
+      onTrustworthyInventory: (deviceIds: readonly string[]): void => {
+        registerDiscoveredDevices({ api: this.api, accessories: this.accessories, registry: this.registry, log: this.log }, deviceIds, runtime.store);
+      },
     });
 
     // The cloud work begins on the launch event, never in this constructor, and

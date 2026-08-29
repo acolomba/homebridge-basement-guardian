@@ -65,6 +65,9 @@ export interface ShadowRuntimeOptions {
   onDisconnected: (reason: ShadowDisconnectReason) => void;
 }
 
+/** Every deviceId a trustworthy inventory response named, for a discovery-time listener. */
+export type TrustworthyInventoryListener = (deviceIds: readonly string[]) => void;
+
 /** Everything the account runtime needs, by injection. */
 export interface AccountRuntimeOptions {
   api: CloudApi;
@@ -92,6 +95,15 @@ export interface AccountRuntimeOptions {
    * rather than joining it (AUTH-02).
    */
   registerSecret: (secret: string, role?: SecretRole) => void;
+  /**
+   * Reports every deviceId a trustworthy inventory response named, right after
+   * each one has been applied to the store.
+   *
+   * A trustworthy response is HTTP 200 with a schema-valid envelope, including
+   * a valid empty list; a failed or malformed response never reaches this
+   * listener (D-029).
+   */
+  onTrustworthyInventory: TrustworthyInventoryListener;
   clock: Clock;
   log: Logging;
 }
@@ -210,6 +222,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     for (const device of devices) {
       options.store.applyDiscovery(device);
     }
+
+    options.onTrustworthyInventory(devices.map((device) => device.deviceId));
   }
 
   // Which sources are feeding canonical state, derived from what is working
@@ -586,6 +600,8 @@ export interface AccountRuntimeDeps {
   rotationLeadMs?: number;
   /** The floor a rotation delay is held at. Bundled floor when absent. */
   minRotationDelayMs?: number;
+  /** Reports every deviceId a trustworthy inventory response named. A no-op when absent. */
+  onTrustworthyInventory?: TrustworthyInventoryListener;
 }
 
 /**
@@ -635,6 +651,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     minRotationDelayMs: deps.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret,
+    onTrustworthyInventory: deps.onTrustworthyInventory ?? (() => undefined),
     clock: deps.clock,
     log: deps.log,
   });

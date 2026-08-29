@@ -33,6 +33,31 @@ const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 const SHADOW_VERSION = 7;
 const REJECTION_CODE = 404;
 const REPORTED_PATCH = { water_level: 1, serial_communications: true };
+
+const DEFAULT_DEVICE_TYPE_ID = 'wayneWaterGemini';
+
+// A full, legal Gemini telemetry payload, so a scenario's device validates without stating all 16
+// required fields itself. `toDevice` uses this only for the default `wayneWaterGemini` type; a
+// scenario naming a different `deviceTypeId` gets no telemetry, because Gemini's fields carry no
+// meaning for another family.
+const VALID_GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
+  water_level: 1,
+  primary_pump_running: false,
+  primary_pump_fault: false,
+  backup_pump_running: false,
+  backup_pump_fault: false,
+  backup_pump_fuse_blown: false,
+  ac_power: true,
+  battery_charging: false,
+  battery_voltage_low: false,
+  battery_health: 8,
+  hours_of_protection: 8,
+  water_sensor_fault: false,
+  serial_communications: true,
+  alarm_audio_muted: false,
+  test_running: false,
+  offline: false,
+};
 const FULL_SHADOW = { reported: { data: { water_level: 1 }, state: { offline: false } } };
 
 const GRANT = {
@@ -103,13 +128,15 @@ function topicNamed(name: string): string {
 }
 
 function toDevice(row: Record<string, string>): ApiDevice {
+  const deviceTypeId = row.deviceTypeId ?? DEFAULT_DEVICE_TYPE_ID;
+
   return {
     deviceId: row.deviceId ?? '',
-    deviceTypeId: 'wayneWaterGemini',
+    deviceTypeId,
     name: row.name ?? '',
     serialNumber: 'placeholder-serial-number',
     connectivity: { connected: true, timestamp: 0 },
-    data: {},
+    data: deviceTypeId === DEFAULT_DEVICE_TYPE_ID ? VALID_GEMINI_TELEMETRY : {},
   };
 }
 
@@ -394,3 +421,38 @@ async function assertAccessoryCarriesTheIdentity(this: BasementGuardianWorld): P
 }
 
 Then('the accessory carries the identity the plugin gives it', assertAccessoryCarriesTheIdentity);
+
+const EXPECTED_MANUFACTURER = 'Wayne';
+const EXPECTED_MODEL = 'Gemini';
+const EXPECTED_SERIAL_NUMBER = 'placeholder-serial-number';
+const EXPECTED_FIRMWARE_REVISION = 'unknown';
+
+async function assertOneAccessoryWithTruthfulAccessoryInformation(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  assert.equal(homebridge.registerPlatformAccessoryCalls.length, 1);
+
+  const call = homebridge.registerPlatformAccessoryCalls[0];
+  const accessories = call?.accessories ?? [];
+
+  assert.equal(accessories.length, 1);
+
+  const accessoryInformation = accessories[0]?.getService(homebridge.api.hap.Service.AccessoryInformation);
+
+  assert.deepEqual(
+    {
+      manufacturer: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.Manufacturer),
+      model: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.Model),
+      serialNumber: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.SerialNumber),
+      firmwareRevision: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.FirmwareRevision),
+    },
+    {
+      manufacturer: EXPECTED_MANUFACTURER,
+      model: EXPECTED_MODEL,
+      serialNumber: EXPECTED_SERIAL_NUMBER,
+      firmwareRevision: EXPECTED_FIRMWARE_REVISION,
+    },
+  );
+}
+
+Then('the plugin registers one accessory with a truthful accessory information service', assertOneAccessoryWithTruthfulAccessoryInformation);

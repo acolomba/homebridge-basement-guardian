@@ -244,6 +244,8 @@ interface Harness {
   registrations: string[];
   shadows: ShadowRecorder[];
   calls: string[];
+  /** One entry per trustworthy inventory response, the deviceIds it named. */
+  trustworthyInventories: string[][];
   advance: (ms: number) => Promise<void>;
 }
 
@@ -266,6 +268,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const registrations: string[] = [];
   const shadows: ShadowRecorder[] = [];
   const calls: string[] = [];
+  const trustworthyInventories: string[][] = [];
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
@@ -321,6 +324,9 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     registerSecret: (secret: string, role?: SecretRole): void => {
       registrations.push(`${String(role)} ${secret}`);
     },
+    onTrustworthyInventory: (deviceIds: readonly string[]): void => {
+      trustworthyInventories.push([...deviceIds]);
+    },
     clock,
     log,
   });
@@ -338,6 +344,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     registrations,
     shadows,
     calls,
+    trustworthyInventories,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
@@ -403,6 +410,28 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual({ connections: shadows.length, subscribed: shadows[0]?.subscribed }, { connections: 1, subscribed: [[DEVICE_ID]] });
+  });
+
+  test('reports the discovered deviceIds to the trustworthy-inventory listener', async (t) => {
+    // arrange
+    const { runtime, trustworthyInventories } = harness(t);
+
+    // act
+    await runtime.start();
+
+    // assert
+    assert.deepStrictEqual(trustworthyInventories, [[DEVICE_ID]]);
+  });
+
+  test('reports an empty list to the trustworthy-inventory listener on a valid empty response', async (t) => {
+    // arrange
+    const { runtime, trustworthyInventories } = harness(t, { devices: [() => Promise.resolve([])] });
+
+    // act
+    await runtime.start();
+
+    // assert
+    assert.deepStrictEqual(trustworthyInventories, [[]]);
   });
 
   test('AUTH-02 registers every temporary credential value under its own rotated role', async (t) => {
@@ -1315,6 +1344,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     minRotationDelayMs: MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret: () => undefined,
+    onTrustworthyInventory: () => undefined,
     clock,
     log,
   });
