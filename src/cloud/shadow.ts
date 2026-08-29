@@ -15,6 +15,7 @@ import { isRecord } from './types.js';
 import type { MqttClientIdentity, MqttConnect, MqttTransport, MqttTransportOptions } from './mqttTransport.js';
 import type { ReportedPatch } from '../device/state.js';
 import type { Clock } from '../runtime/clock.js';
+import type { RetryPolicy } from '../runtime/retryPolicy.js';
 import type { Logging } from 'homebridge';
 
 const BROKER_PATH = '/mqtt';
@@ -63,13 +64,19 @@ export interface ShadowClientOptions {
   credentials: CredentialCache;
   clock: Clock;
   log: Logging;
+  /** Owns reconnect timing, capped and guarded against duplicate chains. */
+  retry: RetryPolicy;
   createTransport: (options: MqttTransportOptions) => MqttTransport;
   connect: MqttConnect;
   onReportedPatch: (deviceId: string, patch: ReportedPatch) => void;
+  onConnected: () => void;
+  /** Receives a short classification, never a URL and never credential material. */
+  onDisconnected: (reason: string) => void;
 }
 
 /** One connection serving every device shadow on the account. */
 export interface ShadowClient {
+  readonly connected: boolean;
   start(deviceIds: readonly string[]): Promise<void>;
   requestFullShadow(deviceId: string): Promise<void>;
   close(): Promise<void>;
@@ -223,6 +230,8 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   }
 
   return {
+    connected: false,
+
     start(deviceIds: readonly string[]): Promise<void> {
       devices = [...deviceIds];
       fillRoutes(routes, devices);

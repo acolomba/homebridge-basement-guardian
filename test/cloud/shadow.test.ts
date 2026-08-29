@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
+import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { createShadowClient, SHADOW_TOPICS } from '../../src/cloud/shadow.js';
+import { createRetryPolicy } from '../../src/runtime/retryPolicy.js';
 
 import type { MqttTransport, MqttTransportOptions } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient, ShadowClientOptions, ShadowCredentials } from '../../src/cloud/shadow.js';
 import type { ReportedPatch } from '../../src/device/state.js';
+import type { RetryPolicy } from '../../src/runtime/retryPolicy.js';
 import type { LogLevel, Logging } from 'homebridge';
 
 const DEVICE_A = 'account-1_serial-a';
@@ -24,6 +27,8 @@ interface TransportRecorder {
   options: MqttTransportOptions;
   connect: () => void;
   message: (topic: string, payload: Buffer) => void;
+  error: (failure: Error) => void;
+  close: () => void;
   subscribed: string[][];
   published: { topic: string; payload: string }[];
   ends: () => number;
@@ -34,6 +39,9 @@ interface Harness {
   transports: TransportRecorder[];
   patches: PatchRecord[];
   logged: string[];
+  lifecycle: string[];
+  retry: RetryPolicy;
+  rotate: (next: ShadowCredentials) => void;
 }
 
 function credentials(): ShadowCredentials {
@@ -43,6 +51,16 @@ function credentials(): ShadowCredentials {
     accessKeyId: 'test-access-key-id',
     secretAccessKey: 'test-secret-access-key',
     sessionToken: 'test-session-token',
+  };
+}
+
+function rotatedCredentials(): ShadowCredentials {
+  return {
+    endpoint: 'broker-two.invalid',
+    clientId: 'client-second',
+    accessKeyId: 'test-next-access-key-id',
+    secretAccessKey: 'test-next-secret-access-key',
+    sessionToken: 'test-next-session-token',
   };
 }
 
@@ -75,7 +93,9 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
   const published: { topic: string; payload: string }[] = [];
   const noop = (): void => undefined;
   let connect = noop;
+  let close = noop;
   let message: (topic: string, payload: Buffer) => void = noop;
+  let error: (failure: Error) => void = noop;
   let ends = 0;
 
   const transport: MqttTransport = {
@@ -85,8 +105,12 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
     onMessage: (handler: (topic: string, payload: Buffer) => void): void => {
       message = handler;
     },
-    onError: noop,
-    onClose: noop,
+    onError: (handler: (failure: Error) => void): void => {
+      error = handler;
+    },
+    onClose: (handler: () => void): void => {
+      close = handler;
+    },
     subscribe: (topics: readonly string[]): Promise<void> => {
       subscribed.push([...topics]);
 
@@ -113,6 +137,12 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
     message: (topic: string, payload: Buffer) => {
       message(topic, payload);
     },
+    error: (failure: Error) => {
+      error(failure);
+    },
+    close: () => {
+      close();
+    },
     subscribed,
     published,
     ends: () => ends,
@@ -123,13 +153,17 @@ function harness(failures: { subscribe?: Error; publish?: Error } = {}): Harness
   const transports: TransportRecorder[] = [];
   const patches: PatchRecord[] = [];
   const logged: string[] = [];
+  const lifecycle: string[] = [];
+  const retry = createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: 30_000, log: recordingLog([]) });
+  let cached = credentials();
 
   const clientOptions: ShadowClientOptions = {
     scheme: 'wss',
     region: 'us-east-1',
-    credentials: { current: () => credentials() },
+    credentials: { current: () => cached },
     clock,
     log: recordingLog(logged),
+    retry,
     createTransport: (transportOptions: MqttTransportOptions): MqttTransport => {
       const recorder = fakeTransport(transportOptions, failures);
       transports.push(recorder);
@@ -142,18 +176,32 @@ function harness(failures: { subscribe?: Error; publish?: Error } = {}): Harness
     onReportedPatch: (deviceId: string, patch: ReportedPatch): void => {
       patches.push({ deviceId, patch });
     },
+    onConnected: (): void => {
+      lifecycle.push('connected');
+    },
+    onDisconnected: (reason: string): void => {
+      lifecycle.push(`disconnected ${reason}`);
+    },
   };
 
-  return { client: createShadowClient(clientOptions), transports, patches, logged };
+  return {
+    client: createShadowClient(clientOptions),
+    transports,
+    patches,
+    logged,
+    lifecycle,
+    retry,
+    rotate: (next: ShadowCredentials) => {
+      cached = next;
+    },
+  };
 }
 
 // Drains the promise chain the connect notification starts, so the subscription
 // and the shadow request have both settled before the assertions run.
 async function connected(recorder: TransportRecorder | undefined): Promise<void> {
   recorder?.connect();
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
+  await nextEventLoopTurn();
 }
 
 function body(document: unknown): Buffer {
@@ -455,4 +503,219 @@ describe('close', () => {
     // assert
     assert.deepStrictEqual(transports, []);
   });
+
+  test('ends the transport once and schedules no reconnect when closed twice', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    await client.close();
+    await client.close();
+    transports[0]?.close();
+    t.mock.timers.tick(30_000);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ ends: transports[0]?.ends(), connections: transports.length }, { ends: 1, connections: 1 });
+  });
+});
+
+describe('the connection lifecycle', () => {
+  test('reports connected between the connect notification and the close that follows it', async () => {
+    // arrange
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+
+    // act
+    await connected(transports[0]);
+    const whileUp = client.connected;
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual({ whileUp, afterClose: client.connected }, { whileUp: true, afterClose: false });
+  });
+
+  test('reports each connection and each close outward', async () => {
+    // arrange
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+
+    // act
+    await connected(transports[0]);
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(lifecycle, ['connected', 'disconnected transport-closed']);
+  });
+
+  test('leaves the live connection alone when the cached credentials are replaced', async () => {
+    // arrange
+    const { client, transports, rotate } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    rotate(rotatedCredentials());
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual(
+      { connections: transports.length, ends: transports[0]?.ends(), subscriptions: transports[0]?.subscribed.length },
+      { connections: 1, ends: 0, subscriptions: 1 },
+    );
+  });
+
+  test('signs the next handshake from the freshly cached credentials and the new client identifier', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, rotate } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    rotate(rotatedCredentials());
+
+    // act
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    const live = { options: { clientId: 'client-stale' } };
+    const signed = new URL(transports[1]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        url: transports[1]?.options.url,
+        clientId: transports[1]?.options.clientId,
+        origin: signed.origin,
+        credential: signed.searchParams.get('X-Amz-Credential'),
+        token: signed.searchParams.get('X-Amz-Security-Token'),
+        refreshed: live.options.clientId,
+      },
+      {
+        url: 'wss://broker-two.invalid/mqtt',
+        clientId: 'client-second',
+        origin: 'wss://broker-two.invalid',
+        credential: 'test-next-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
+        token: 'test-next-session-token',
+        refreshed: 'client-second',
+      },
+    );
+  });
+
+  test('makes one reconnect attempt for the error and the close reporting a single failure', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.error(new Error('socket failed'));
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.strictEqual(transports.length, 2);
+  });
+
+  test('restores the first backoff step after a connection succeeds', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, retry } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // act
+    await connected(transports[1]);
+
+    // assert
+    assert.deepStrictEqual({ attempt: retry.attempt, delayMs: retry.nextDelayMs() }, { attempt: 1, delayMs: 500 });
+  });
+
+  test('re-subscribes and re-requests every shadow after a reconnect', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A, DEVICE_B]);
+    await connected(transports[0]);
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // act
+    await connected(transports[1]);
+
+    // assert
+    assert.deepStrictEqual(
+      { subscribed: transports[1]?.subscribed, published: transports[1]?.published },
+      {
+        subscribed: [
+          [
+            `$aws/things/${DEVICE_A}/shadow/get/accepted`,
+            `$aws/things/${DEVICE_A}/shadow/get/rejected`,
+            `$aws/things/${DEVICE_A}/shadow/update/accepted`,
+            `$aws/things/${DEVICE_B}/shadow/get/accepted`,
+            `$aws/things/${DEVICE_B}/shadow/get/rejected`,
+            `$aws/things/${DEVICE_B}/shadow/update/accepted`,
+          ],
+        ],
+        published: [
+          { topic: `$aws/things/${DEVICE_A}/shadow/get`, payload: '' },
+          { topic: `$aws/things/${DEVICE_B}/shadow/get`, payload: '' },
+        ],
+      },
+    );
+  });
+
+  test('reports a close with no preceding error at debug, as routine reconnection', async () => {
+    // arrange
+    const { client, transports, logged } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(logged, ['debug The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.']);
+  });
+
+  test('reports a close that follows an error at warn rather than as routine', async () => {
+    // arrange
+    const { client, transports, logged } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.error(new Error('socket failed'));
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(logged, ['warn The shadow connection failed and will reconnect.']);
+  });
+
+  for (const secret of ['broker.invalid', 'wss://', 'accessKeyId', 'secretAccessKey', 'sessionToken', 'clientId', 'test-session-token']) {
+    test(`keeps ${secret} out of the reason reported to the disconnect handler`, async () => {
+      // arrange
+      const { client, transports, lifecycle } = harness();
+      await client.start([DEVICE_A]);
+      await connected(transports[0]);
+
+      // act
+      transports[0]?.error(new Error('socket to wss://broker.invalid/mqtt?X-Amz-Security-Token=test-session-token failed'));
+      transports[0]?.close();
+
+      // assert
+      assert.deepStrictEqual(
+        lifecycle.filter((entry) => entry.includes(secret)),
+        [],
+      );
+    });
+  }
 });
