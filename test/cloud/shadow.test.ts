@@ -765,4 +765,86 @@ describe('the connection lifecycle', () => {
       );
     });
   }
+
+  test('reports not connected before any connection is opened', () => {
+    // arrange
+    const { client } = harness();
+
+    // act & assert
+    assert.strictEqual(client.connected, false);
+  });
+
+  test('stays connected when a connection it has replaced closes', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.error(new Error('socket failed'));
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(
+      { connected: client.connected, lifecycle },
+      { connected: true, lifecycle: ['connected', 'disconnected transport-error', 'connected'] },
+    );
+  });
+
+  test('schedules no reconnect when a connection it has replaced fails', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.error(new Error('socket failed'));
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    transports[0]?.error(new Error('socket failed again'));
+    t.mock.timers.tick(30_000);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.strictEqual(transports.length, 2);
+  });
+
+  test('ends the connection it replaces when it opens the replacement', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ ends: transports[0]?.ends(), connections: transports.length }, { ends: 1, connections: 2 });
+  });
+
+  test('opens no connection when a reconnect wait elapses after shutdown', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.close();
+
+    // act
+    await client.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ connections: transports.length, ends: transports[0]?.ends() }, { connections: 1, ends: 1 });
+  });
 });
