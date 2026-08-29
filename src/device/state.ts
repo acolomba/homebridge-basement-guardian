@@ -87,6 +87,15 @@ export interface DeviceStateStore {
    */
   applyReportedPatch(deviceId: string, patch: ReportedPatch): DeviceSnapshot | undefined;
   /**
+   * Drops the stored snapshot and every registered listener for `deviceId`.
+   *
+   * A `deviceId` the store never held is a no-op. This is what lets a later
+   * `applyDiscovery` for the same `deviceId` start a fresh observation epoch
+   * (D-020): with no previous snapshot, `toSnapshot` takes the same
+   * `previous === undefined` branch a brand-new device takes.
+   */
+  remove(deviceId: string): void;
+  /**
    * Registers a listener for one device and returns its unsubscribe function.
    *
    * A change that leaves every telemetry value where it was notifies nobody,
@@ -306,6 +315,11 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
 
       return snapshot;
+    },
+
+    remove(deviceId: string): void {
+      snapshots.delete(deviceId);
+      listeners.delete(deviceId);
     },
 
     // Nobody is notified: clearing the watermark moves no telemetry key, and a
