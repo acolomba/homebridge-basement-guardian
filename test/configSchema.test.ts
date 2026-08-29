@@ -14,6 +14,8 @@ interface SettingsFormField {
   widget?: string;
   placeholder?: string;
   default?: unknown;
+  minLength?: number;
+  pattern?: string;
 }
 
 /** The six fields the settings form offers, and no others. */
@@ -79,13 +81,26 @@ test('CONF-02 states in the form header that Homebridge stores the password in p
   assert.ok(settingsSchema.headerDisplay.includes('includes it in backups'));
 });
 
-test('requires the account name, email, and password', () => {
+test('CONF-02 requires the account email and password, the two fields the runtime has no default for', () => {
   // act
   const settingsSchema = readSettingsSchema();
 
   // assert
-  assert.deepStrictEqual(settingsSchema.schema.required, ['name', 'email', 'password']);
+  assert.deepStrictEqual(settingsSchema.schema.required, ['email', 'password']);
 });
+
+// The form has to refuse a blank value for the same fields the validator refuses one for, or it
+// saves a configuration the plugin then refuses to start on. A minimum length alone accepts a
+// single space, which the validator trims away.
+for (const field of ['name', 'password', 'clientId'] as const) {
+  test(`CONF-02 gives ${field} the non-blank rule the runtime enforces`, () => {
+    // act
+    const { [field]: formField } = readSettingsSchema().schema.properties;
+
+    // assert
+    assert.deepStrictEqual({ minLength: formField.minLength, pattern: formField.pattern }, { minLength: 1, pattern: '\\S' });
+  });
+}
 
 test('CONF-02 masks the password field and validates the email field as an address', () => {
   // act

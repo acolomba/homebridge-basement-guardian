@@ -90,27 +90,31 @@ test('refuses a configuration that omits the account password', () => {
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
-test('refuses a configuration whose account password is empty', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account password is missing.' };
+for (const password of ['', ' ']) {
+  test(`refuses an account password of ${JSON.stringify(password)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account password is missing.' };
 
-  // act
-  const configResult = validateConfig(accountConfig({ password: '' }));
+    // act
+    const configResult = validateConfig(accountConfig({ password }));
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
-test('refuses a configuration whose platform name is supplied but empty', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the platform name must not be empty when it is set.' };
+for (const name of ['', ' ']) {
+  test(`refuses a supplied platform name of ${JSON.stringify(name)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: 'the platform name must not be empty when it is set.' };
 
-  // act
-  const configResult = validateConfig(accountConfig({ name: '   ' }));
+    // act
+    const configResult = validateConfig(accountConfig({ name }));
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
 test('resolves the bundled client identifier and the documented defaults when the optional fields are absent', () => {
   // act
@@ -136,7 +140,7 @@ test('CONF-04 resolves a supplied client identifier over the bundled one', () =>
   assert.deepStrictEqual(configResult, acceptedConfig({ clientId: 'supplied-client-id' }));
 });
 
-for (const clientId of ['', '   ']) {
+for (const clientId of ['', ' ']) {
   test(`CONF-04 refuses a client identifier of ${JSON.stringify(clientId)}`, () => {
     // arrange
     const expectedRefusal: ConfigRefused = { ok: false, reason: 'clientId must not be empty when it is set.' };
