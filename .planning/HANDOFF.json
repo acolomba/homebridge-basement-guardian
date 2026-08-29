@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-08-29T18:00:00.000Z",
+  "phase": "2",
+  "phase_name": "Safe Gemini Discovery and Identity",
+  "phase_dir": ".planning/phases/02-safe-gemini-discovery-and-identity",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "Phase 2 discuss — four decisions made, 02-CONTEXT.md written", "status": "done", "commit": "fa448a1" },
+    { "id": 2, "name": "UAT 3 + UAT 2 run against the real vendor account — both PASS", "status": "done", "commit": "cbd9811" },
+    { "id": 3, "name": "Quick 260829-gx6 — vendor REST wire-shape fix, verified 10/10", "status": "done", "commit": "32fece7" },
+    { "id": 4, "name": "Quick 260829-idd — intel corrected to the measured shape", "status": "done", "commit": "88ba8f8" },
+    { "id": 5, "name": "pre-commit install — hooks now fire automatically for the first time", "status": "done", "commit": null }
+  ],
+  "remaining_tasks": [
+    { "id": 6, "name": "UAT 1 — Homebridge settings form; last item blocking Phase 1", "status": "not_started" },
+    { "id": 7, "name": "/gsd-verify-work 1, then mark Phase 1 complete", "status": "not_started" },
+    { "id": 8, "name": "/gsd-plan-phase 2", "status": "not_started" },
+    { "id": 9, "name": "Rule on the StatusFault conflict (Phase 3 discussion)", "status": "not_started" },
+    { "id": 10, "name": "Decide push / merge strategy for 173 unpushed commits", "status": "not_started" }
+  ],
+  "blockers": [
+    {
+      "description": "UAT 1 is the only item still blocking Phase 1 completion. It needs a running Homebridge instance and a human looking at the settings form. A repacked tarball WITH the wire-shape fix was produced; the earlier one contains the broken client and must not be used.",
+      "type": "human_action",
+      "workaround": "none — re-pack with `npm pack` if the tarball is gone"
+    }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {
+      "action": "Run UAT 1 — Homebridge settings form",
+      "context": "Install the packed plugin, open Plugins -> Basement Guardian -> Settings. Check five things: exactly one account block (singular: true); the plaintext-storage warning in the header; the password field renders MASKED; a malformed email is refused by the form; saving a valid account starts the plugin. Watch item 3 — the schema masks via `\"widget\": \"password\"`, and it is unconfirmed whether ng-formworks honours that rather than `x-schema-form`. If it renders in the clear that is a real defect.",
+      "blocking": true
+    },
+    {
+      "action": "Rule on the StatusFault conflict",
+      "context": "Three positions. context.md:1459 says fault EVERY service. The Phase 2 decision (02-CONTEXT.md:103-104) sets StatusActive false and leaves StatusFault at NO_FAULT. D-014 forbids faulting every service. Nuance found by the executor: D-014 and the Phase 2 decision agree on scope but differ on WHICH characteristic — D-014 sets GENERAL_FAULT for a lost controller link, Phase 2 leaves NO_FAULT for a plugin-side validation failure. Correcting context.md naively would create a second conflict. Recorded in 260829-idd-SUMMARY.md; nothing edited.",
+      "blocking": false
+    },
+    {
+      "action": "Decide push / merge strategy",
+      "context": "173 commits, never pushed, never merged. Branches are STACKED not parallel: features/phase-02-... was cut from features/phase-01-..., so Phase 1 cannot merge to main independently. main is at 95f999b and contains no src/ at all. User confirmed the feature-branch setup is fine as-is.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    { "decision": "The vendor deviceId is NOT sensitive; it may enter accessory context and runtime logs", "rationale": "User call 2026-08-29, then confirmed by measurement: <account-id> is an opaque 24-char lowercase hex key, not an email. D-027 still keeps it out of public artifacts.", "phase": "2" },
+    { "decision": "A valid empty inventory list COUNTS toward confirmed removal", "rationale": "User chose this over the recommendation, and it is the more conservative call on the axis that matters — it keeps D-029 exactly as locked, where only FAILED inventories never count.", "phase": "2" },
+    { "decision": "Build the full capability-descriptor family registry per DEV-02", "rationale": "User choice over a minimal interface. Extends the DeviceFamily seam already in src/device/family.ts.", "phase": "2" },
+    { "decision": "Degraded accessories set StatusActive false and leave StatusFault at NO_FAULT", "rationale": "User asked for this decided in Phase 2 rather than deferred. StatusActive=false says the plugin cannot vouch for the value, which is true; StatusFault=GENERAL_FAULT would assert a device fault the plugin has no basis for. Verified against the pinned hap-nodejs definitions. Apple Home visibility of that state is a recorded Phase 3 concern.", "phase": "2" },
+    { "decision": "Quick-task branching and worktree isolation both skipped for branch reasons", "rationale": "GSD wants to fork quick-task branches off origin/main, but main has no src/. Executors ran in worktrees forked from local HEAD, each guarded by an explicit precondition halt check.", "phase": "2" }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Ask whether to run UAT 1 (needs their Homebridge) or start /gsd-plan-phase 2. 02-CONTEXT.md is written and ready; Phase 1 is blocked only on UAT 1.",
+  "context_notes": "Working tree clean, 173 commits on features/phase-02-safe-gemini-discovery-and-identity, nothing pushed, main untouched at 95f999b.\n\nThe defining event of this session: pointing the plugin at the real vendor API found that the shipped REST client could not talk to it AT ALL. GET /devices returns { devices: [...] } not a bare array, GET /devices/{id} returns { device: {...} } under a different singular key, and serialNumber lives at attributes.serialNumber. 464 unit tests and 35 Cucumber scenarios passed against that client, through code review, verification, Nyquist validation and a security audit reaching threats_open 0 — because the fixtures AND the Cucumber fake were built from the same wrong assumption as the production code. Fixed and verified 10/10 in quick task 260829-gx6.\n\nThe same lesson recurred one level up: a plan's failing-scenario grep was derived by reading the Cucumber formatter source and independently 'confirmed' by a reviewer reading the same source. Both wrong — it matched 0 of 16 real failures and would have reported a red gate as green. The executor caught it by running Cucumber.\n\nUAT 2 and 3 now PASS with recorded evidence: heartbeat on shadow/update/accepted at exactly 898s (RES-01's two-missed-heartbeat rule now rests on a measurement), and a real SigV4 handshake with 0 errors (the fake broker accepts every signature, so the suite structurally could not test it).\n\npre-commit hooks were installed for the first time — .git/hooks previously held only .sample files, so every prior commit including all 153 from Phase 1 went in with no automatic enforcement. Both stages now fire; gitlint passes on all recent messages. Note this is local-only and does not survive a fresh clone.\n\nLive API probes preserved at ~/bg-uat-probes/ with a README; credentials at ~/.gs-uat.env (gs, not bg).\n\nProcess note for the next session: an isolated executor CANNOT see untracked files from the shared checkout — worktrees share the object database and refs, not working-tree files. Commit the PLAN before dispatching, which is what the worktree-pre-dispatch-commit step exists for. Skipping it cost one halted dispatch."
+}

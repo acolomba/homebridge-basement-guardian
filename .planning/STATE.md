@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 current_phase: 02
 current_phase_name: Safe Gemini Discovery and Identity
 status: planning
-stopped_at: Phase 2 context gathered
+stopped_at: Session paused; UAT 2+3 passed, wire-shape fix shipped, ready for UAT 1 or Phase 2 planning
 last_updated: "2026-08-29T15:55:00.000Z"
 last_activity: 2026-08-29
 last_activity_desc: Quick task 260829-idd — vendor API intel correction
@@ -121,5 +121,5 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 ## Session Continuity
 
 Last session: 2026-08-29T15:55:00.000Z
-Stopped at: Phase 2 discussion closed, 02-CONTEXT.md written, ready for /gsd-plan-phase 2
-Resume file: .planning/phases/02-safe-gemini-discovery-and-identity/02-CONTEXT.md
+Stopped at: UAT 2+3 passed and recorded; vendor wire-shape defect found and fixed; intel corrected. Phase 1 blocked only on UAT 1. Phase 2 ready to plan.
+Resume file: .planning/HANDOFF.json (then 02-CONTEXT.md)
