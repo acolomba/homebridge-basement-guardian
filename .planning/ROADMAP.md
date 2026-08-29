@@ -109,7 +109,29 @@ Plans:
   5. Each accessory carries truthful manufacturer, model, serial-number, and firmware metadata sourced only from validated vendor identity fields, and the vendor `deviceId` never becomes a user-visible value.
   6. A profile or payload that stops validating after publication degrades the accessory in place, keeping its identity and last valid values and disabling commands, instead of unregistering it.
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Tracer: one valid Gemini becomes one published accessory with AccessoryInformation; complete Gemini field validation/decoding/commands
+- [ ] 02-02-PLAN.md — Reconciliation state machine and `DeviceStateStore.remove`
+
+**Wave 2** *(blocked on 02-01)*
+
+- [ ] 02-03-PLAN.md — Family registry three-way outcome and mixed-inventory dispatch
+
+**Wave 3** *(blocked on 02-03)*
+
+- [ ] 02-04-PLAN.md — Accessory identity unification and vendor-rename adoption
+
+**Wave 4** *(blocked on 02-04 and 02-02)*
+
+- [ ] 02-05-PLAN.md — Two-confirmation-plus-final-check removal wiring
+
+**Wave 5** *(blocked on 02-05)*
+
+- [ ] 02-06-PLAN.md — Degrade-in-place
 
 ### Phase 3: Safety Monitoring in HomeKit
 
@@ -179,7 +201,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
-| 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
+| 2. Safe Gemini Discovery and Identity | 0/6 | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
 | 5. Degraded Operation and Recovery | 0/TBD | Not started | - |
