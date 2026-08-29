@@ -17,6 +17,13 @@ const DEVICE_C = 'account-1_serial-c';
 
 const clock = { now: () => Date.parse('2026-08-28T12:00:00.000Z') };
 
+interface TransportFailures {
+  subscribe?: Error;
+  publish?: Error;
+  /** Leaves the subscribe pending, so a case can refuse it at its own moment. */
+  holdSubscribe?: boolean;
+}
+
 interface PatchRecord {
   deviceId: string;
   patch: ReportedPatch;
@@ -29,6 +36,7 @@ interface TransportRecorder {
   message: (topic: string, payload: Buffer) => void;
   error: (failure: Error) => void;
   close: () => void;
+  refuseSubscription: (failure: Error) => void;
   subscribed: string[][];
   published: { topic: string; payload: string }[];
   ends: () => number;
@@ -87,8 +95,9 @@ function recordingLog(recorded: string[]): Logging {
 }
 
 // One connection's worth of transport behavior. The failures decide whether the
-// subscribe and publish calls resolve or reject.
-function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Error; publish?: Error }): TransportRecorder {
+// subscribe and publish calls resolve or reject, and whether the subscribe is
+// left pending for the case to refuse at a moment of its choosing.
+function fakeTransport(options: MqttTransportOptions, failures: TransportFailures): TransportRecorder {
   const subscribed: string[][] = [];
   const published: { topic: string; payload: string }[] = [];
   const noop = (): void => undefined;
@@ -96,6 +105,7 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
   let close = noop;
   let message: (topic: string, payload: Buffer) => void = noop;
   let error: (failure: Error) => void = noop;
+  let refuse: (failure: Error) => void = noop;
   let ends = 0;
 
   const transport: MqttTransport = {
@@ -113,6 +123,12 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
     },
     subscribe: (topics: readonly string[]): Promise<void> => {
       subscribed.push([...topics]);
+
+      if (failures.holdSubscribe === true) {
+        return new Promise<void>((_resolve, reject) => {
+          refuse = reject;
+        });
+      }
 
       return failures.subscribe === undefined ? Promise.resolve() : Promise.reject(failures.subscribe);
     },
@@ -143,13 +159,16 @@ function fakeTransport(options: MqttTransportOptions, failures: { subscribe?: Er
     close: () => {
       close();
     },
+    refuseSubscription: (failure: Error) => {
+      refuse(failure);
+    },
     subscribed,
     published,
     ends: () => ends,
   };
 }
 
-function harness(failures: { subscribe?: Error; publish?: Error } = {}): Harness {
+function harness(failures: TransportFailures = {}): Harness {
   const transports: TransportRecorder[] = [];
   const patches: PatchRecord[] = [];
   const logged: string[] = [];
@@ -295,11 +314,60 @@ describe('start', () => {
       {
         published: [],
         logged: ['debug The shadow subscription could not be established, so the connection will be retried.'],
-        lifecycle: ['connected', 'disconnected subscription-refused'],
+        lifecycle: ['disconnected subscription-refused'],
         ends: 1,
       },
     );
   });
+
+  test('supplies the transport a deadline for the operations it answers', async () => {
+    // arrange
+    const { client, transports } = harness();
+
+    // act
+    await client.start([DEVICE_A]);
+
+    // assert
+    assert.strictEqual(transports[0]?.options.deadlineMs, 10_000);
+  });
+
+  test('reports nothing connected while the subscription of an open socket is unanswered', async () => {
+    // arrange
+    const { client, transports, lifecycle } = harness({ holdSubscribe: true });
+
+    // act
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // assert
+    assert.deepStrictEqual({ connected: client.connected, lifecycle }, { connected: false, lifecycle: [] });
+  });
+
+  for (const { character, deviceId } of [
+    { character: 'a single-level wildcard', deviceId: 'account-1_serial+b' },
+    { character: 'a multi-level wildcard', deviceId: 'account-1_serial#b' },
+  ]) {
+    test(`leaves a device identifier carrying ${character} out of the subscription and the routing table`, async () => {
+      // arrange
+      const { client, transports, logged } = harness();
+
+      // act
+      await client.start([DEVICE_A, deviceId]);
+      await connected(transports[0]);
+
+      // assert
+      assert.deepStrictEqual(
+        { subscribed: transports[0]?.subscribed, published: transports[0]?.published, logged },
+        {
+          subscribed: [
+            [`$aws/things/${DEVICE_A}/shadow/get/accepted`, `$aws/things/${DEVICE_A}/shadow/get/rejected`, `$aws/things/${DEVICE_A}/shadow/update/accepted`],
+          ],
+          published: [{ topic: `$aws/things/${DEVICE_A}/shadow/get`, payload: '' }],
+          logged: ['warn A device identifier cannot be used as a shadow topic, so the poll is the only source for that device.'],
+        },
+      );
+    });
+  }
 
   test('reports not connected after a refused subscription rather than a healthy monitoring path', async () => {
     // arrange
@@ -765,4 +833,145 @@ describe('the connection lifecycle', () => {
       );
     });
   }
+
+  test('reports not connected before any connection is opened', () => {
+    // arrange
+    const { client } = harness();
+
+    // act & assert
+    assert.strictEqual(client.connected, false);
+  });
+
+  test('stays connected when a connection it has replaced closes', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.error(new Error('socket failed'));
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(
+      { connected: client.connected, lifecycle },
+      { connected: true, lifecycle: ['connected', 'disconnected transport-error', 'connected'] },
+    );
+  });
+
+  test('schedules no reconnect when a connection it has replaced fails', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.error(new Error('socket failed'));
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    transports[0]?.error(new Error('socket failed again'));
+    t.mock.timers.tick(30_000);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.strictEqual(transports.length, 2);
+  });
+
+  test('ends the connection it replaces when it opens the replacement', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ ends: transports[0]?.ends(), connections: transports.length }, { ends: 1, connections: 2 });
+  });
+
+  test('ignores a connect notification from a connection it has replaced', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    await connected(transports[0]);
+
+    // assert
+    assert.deepStrictEqual(
+      { subscriptions: transports[0]?.subscribed.length, lifecycle },
+      { subscriptions: 1, lifecycle: ['connected', 'disconnected transport-closed', 'connected'] },
+    );
+  });
+
+  test('routes no message arriving on a connection it has replaced', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, patches } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+    await connected(transports[1]);
+
+    // act
+    transports[0]?.message(`$aws/things/${DEVICE_A}/shadow/update/accepted`, body({ state: { reported: { data: { water_level: 9 } } }, version: 9 }));
+
+    // assert
+    assert.deepStrictEqual(patches, []);
+  });
+
+  test('reports nothing when a subscription belonging to a replaced connection is refused', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports, lifecycle } = harness({ holdSubscribe: true });
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.error(new Error('socket failed'));
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // act
+    transports[0]?.refuseSubscription(new Error('subscribe refused'));
+    await nextEventLoopTurn();
+    t.mock.timers.tick(30_000);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ connections: transports.length, lifecycle }, { connections: 2, lifecycle: ['disconnected transport-error'] });
+  });
+
+  test('opens no connection when a reconnect wait elapses after shutdown', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    transports[0]?.close();
+
+    // act
+    await client.close();
+    t.mock.timers.tick(500);
+    await nextEventLoopTurn();
+
+    // assert
+    assert.deepStrictEqual({ connections: transports.length, ends: transports[0]?.ends() }, { connections: 1, ends: 1 });
+  });
 });
