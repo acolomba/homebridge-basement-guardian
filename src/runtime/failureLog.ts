@@ -39,7 +39,32 @@ export interface FailureLog {
  * matter of advancing the injected clock.
  */
 export function createFailureLog(options: FailureLogOptions): FailureLog {
-  void options;
+  // Each failing kind maps to the clock value of the warning it last produced.
+  // A kind absent from the map is not currently failing, which is also what
+  // makes the next failure of a recovered kind warn again.
+  const warnedAt = new Map<string, number>();
 
-  throw new Error('not implemented');
+  return {
+    recordFailure(kind: string, reason: string): void {
+      const now = options.clock.now();
+      const lastWarnedAt = warnedAt.get(kind);
+
+      if (lastWarnedAt === undefined || now - lastWarnedAt >= options.reminderIntervalMs) {
+        warnedAt.set(kind, now);
+        options.log.warn(reason);
+
+        return;
+      }
+
+      options.log.debug(reason);
+    },
+
+    recordSuccess(kind: string): void {
+      // Deleting reports whether the kind was failing, so the recovery line and
+      // the state change cannot disagree.
+      if (warnedAt.delete(kind)) {
+        options.log.info(`${kind} recovered.`);
+      }
+    },
+  };
 }
