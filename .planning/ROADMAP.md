@@ -87,7 +87,7 @@ Plans:
 
 **Gap closure Wave 4** *(blocked on Gap closure Wave 3)*
 
-- [ ] 01-17-PLAN.md — Monitoring path contract, dead state, and shutdown windows
+- [x] 01-17-PLAN.md — Monitoring path contract, dead state, and shutdown windows
 
 **Cross-cutting constraints:**
 
@@ -178,7 +178,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 16/17 | In Progress|  |
+| 1. Secure Cloud Foundation | 17/17 | In Progress|  |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
