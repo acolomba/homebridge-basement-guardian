@@ -33,7 +33,7 @@ created: 2026-08-28
 
 - **After every task commit:** `npm run build:test && node --test dist-test/test/<module touched>.test.js`, plus `npx eslint <changed files> --max-warnings=0`
 - **After every plan wave:** `npm test` (both suites, per `D-12`)
-- **Before `/gsd-verify-work`:** `npm run check` fully green — `typecheck`, `lint`, `fallow` (all three sub-commands), `format:check`, `test` — plus an `npm pack --dry-run` inspection confirming the `D-21` allowlist holds: `dist/` (including the `D-07` JSON constants file) and `config.schema.json` present; `features/`, `.claude/`, `.pi/`, and `research.tar.gz` absent
+- **Before `/gsd-verify-work`:** `npm run check` fully green — `typecheck`, `lint`, `fallow` (all three sub-commands), `format:check`, `test` — the `D-21` allowlist is now asserted by `test/packedArtifact.test.ts` inside `npm test`, so no separate inspection step is required: every packed path must be under `dist/` (including the `D-07` JSON constants file) or one of the five allowlisted root files, and all five must be present
 - **Max feedback latency:** under 30 seconds for the per-task quick run
 
 ---
@@ -77,7 +77,7 @@ Task IDs are plan-level. Each row carries the plan that owns the requirement, ta
 | 01-17 | 17 | 4 | SYNC-05 | — | Shutdown during in-flight retry wait, in-flight fetch, and open socket produces no unhandled rejection | cucumber | `cucumber-js features/lifecycle.feature` | ✅ | ✅ green |
 | 01-17 | 17 | 4 | D-15 | — | Shadow connect failure leaves runtime up on REST only, logs degraded path once | cucumber | `cucumber-js features/degradedOperation.feature` | ✅ | ✅ green |
 | 01-11 | 11 | 7 | D-14 | — | Sustained transient failure warns once, drops to debug, reminds every 15 min, logs recovery at info | unit (fake clock) | `node --test dist-test/test/runtime/accountRuntime.test.js` | ✅ | ✅ green |
-| 01-02 | 02 | 2 | D-21 | — | `npm pack --dry-run` lists only allowlisted files; `.claude/`, `.pi/`, `features/`, `research.tar.gz` absent | manual (packaging inspection) | `npm pack --dry-run --json` inspection | n/a | ⬜ manual |
+| 01-19 | 19 | 1 | D-21 | T-01-60 | `npm pack --dry-run` lists only allowlisted files; `.claude/`, `.pi/`, `features/`, `research.tar.gz` absent | unit | `node --test dist-test/test/packedArtifact.test.js` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -139,3 +139,16 @@ Adversarial audit of the two prohibition properties no case asserted: the closed
 **Gaps found:** 2 · **Resolved:** 2 · **Escalated:** 0 · **Routed to Manual-Only:** 1 (child bridge)
 
 No implementation file was changed. `npm run check` exits 0: 462 unit tests, 35 Cucumber scenarios / 299 steps. `src/cloud/api.ts` keeps 100% direct line, branch, and function coverage.
+
+## Validation Audit 2026-08-29 (amendment)
+
+The D-21 packing check moved from manual to automated after the original audit was signed
+off. `test/packedArtifact.test.ts` landed with plan 01-19, closing security threat T-01-60,
+and asserts the packed file list positively inside `npm test`. The per-task row above was
+corrected from `manual` to `unit`; `nyquist_compliant` is unaffected, the row moved in the
+safe direction.
+
+| Metric | Count |
+|--------|-------|
+| Rows corrected | 1 |
+| Manual-only rows remaining | 3 |
