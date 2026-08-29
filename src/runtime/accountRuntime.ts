@@ -1,15 +1,32 @@
 import timers from 'node:timers/promises';
 
+import { createCloudApi } from '../cloud/api.js';
+import { createAuthClient } from '../cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../cloud/errors.js';
+import { createMqttTransport } from '../cloud/mqttTransport.js';
+import { createShadowClient } from '../cloud/shadow.js';
+import { createDeviceStateStore } from '../device/state.js';
+
+import { createFailureLog, FAILURE_REMINDER_MS } from './failureLog.js';
+import { createRetryPolicy, MAX_BACKOFF_MS } from './retryPolicy.js';
 
 import type { Clock } from './clock.js';
 import type { FailureLog } from './failureLog.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
+import type { MqttConnect } from '../cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient, ShadowCredentials } from '../cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
+import type { BgConfig } from '../config.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
+import type { RedactingLogger } from '../logging.js';
+import type { ProtocolConstants } from '../protocol.js';
 import type { Logging } from 'homebridge';
+
+/** Deadline applied to each vendor request. */
+const REQUEST_TIMEOUT_MS = 10_000;
+
+const MILLISECONDS_PER_SECOND = 1_000;
 
 /** How long before a credential expiry the rotation refreshes the cache. */
 export const ROTATION_LEAD_MS = 600_000;
@@ -195,18 +212,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   }
 
   // Opens the connection once there is both a credential cache to sign from and
-  // a device to subscribe for. A later poll re-enters here after a failure and
-  // never opens a second connection.
-  //
-  // What to do about a refusal is passed in rather than read from the enclosing
-  // scope: opening and retrying would otherwise form a declaration cycle, and
-  // the parameter names the one decision a caller actually makes here.
-  async function openShadow(onRefused: () => void): Promise<void> {
+  // a device to subscribe for, and reports whether it was refused so the caller
+  // can decide whether a retry chain needs starting.
+  async function attemptShadow(): Promise<boolean> {
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
     if (stopped || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
-      return;
+      return false;
     }
 
     try {
@@ -221,38 +234,43 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       });
       await client.start(deviceIds);
       shadow = client;
+
+      return false;
     } catch {
       // The polling path is already the reconciliation backstop, so a shadow
       // outage costs latency rather than correctness. The runtime stays up and
       // says so once (D-15).
       options.failures.recordFailure(SHADOW, SHADOW_DEGRADED);
-      onRefused();
+
+      return true;
     }
   }
 
-  // The retry runs on its own loop rather than re-entering the policy from
-  // inside work the policy is running: the pending guard clears only once that
-  // work settles, so a schedule issued from within it would be dropped and the
-  // chain would stop after one attempt. The policy still owns the capped shape
-  // of the delays.
+  // The chain is its own schedule rather than work handed back to the policy:
+  // the policy clears its pending guard only after the work it is running
+  // settles, so a retry scheduled from inside that work would be dropped and
+  // the chain would stop after one attempt. The policy still owns the capped
+  // shape of the delays.
   async function retryShadow(): Promise<void> {
-    if (retryingShadow) {
-      return;
-    }
-
     retryingShadow = true;
 
     while (shadow === undefined && !stopped && (await waitFor(connectRetry.nextDelayMs()))) {
-      // A refusal inside this loop needs no further scheduling: the loop is the
-      // schedule.
-      await openShadow(() => undefined);
+      await attemptShadow();
     }
 
     retryingShadow = false;
   }
 
-  function beginShadowRetry(): void {
-    void retryShadow();
+  // A pending chain owns reconnecting, so a poll landing in the middle of one
+  // neither opens a competing attempt nor starts a second chain.
+  async function openShadow(): Promise<void> {
+    if (retryingShadow) {
+      return;
+    }
+
+    if (await attemptShadow()) {
+      void retryShadow();
+    }
   }
 
   async function refreshCredentials(): Promise<number> {
@@ -268,7 +286,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       if (cache === undefined) {
         credentials = createCredentialCache(toShadowCredentials(response));
-        await openShadow(beginShadowRetry);
+        await openShadow();
       } else {
         cache.replace(toShadowCredentials(response));
       }
@@ -302,7 +320,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     try {
       applyDevices(await options.api.devices(root.signal));
       options.failures.recordSuccess(POLLING);
-      await openShadow(beginShadowRetry);
+      await openShadow();
     } catch (error: unknown) {
       if (root.signal.aborted) {
         return;
@@ -423,4 +441,71 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
     },
   };
+}
+
+/**
+ * Everything the composition seam builds the runtime from.
+ *
+ * `constants` is an injected dependency rather than an import inside the seam:
+ * production passes the bundled values, and the transport-level harness passes
+ * its own so it can point the runtime at a local fake cloud. That is a genuine
+ * dependency made explicit, not a hook added for testing, and it is what keeps
+ * the harness from needing a production escape hatch.
+ */
+export interface AccountRuntimeDeps {
+  config: BgConfig;
+  constants: ProtocolConstants;
+  /** The Homebridge storage directory; the token cache lives there and nowhere else. */
+  storagePath: string;
+  clock: Clock;
+  log: RedactingLogger;
+  connect: MqttConnect;
+  createSalt: () => string;
+}
+
+/**
+ * Builds one account's runtime and every collaborator it needs.
+ *
+ * This is the only place the real adapters are wired together. None of these
+ * factories opens a connection, reads a file, or starts a timer, so building
+ * them costs nothing until the runtime starts.
+ */
+export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): AccountRuntime {
+  const registerSecret = (secret: string): void => {
+    deps.log.registerSecret(secret);
+  };
+
+  const auth = createAuthClient({
+    constants: deps.constants,
+    clientId: deps.config.clientId,
+    email: deps.config.email,
+    password: deps.config.password,
+    storagePath: deps.storagePath,
+    requestTimeoutMs: REQUEST_TIMEOUT_MS,
+    clock: deps.clock,
+    createSalt: deps.createSalt,
+    registerSecret,
+    log: deps.log,
+  });
+
+  return createAccountRuntime({
+    api: createCloudApi({ baseUrl: deps.constants.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS }),
+    store: createDeviceStateStore({ clock: deps.clock, log: deps.log }),
+    createShadow: (shadowOptions: ShadowRuntimeOptions) =>
+      createShadowClient({
+        ...shadowOptions,
+        scheme: deps.constants.protocol,
+        region: deps.constants.awsRegion,
+        createTransport: createMqttTransport,
+        connect: deps.connect,
+        clock: deps.clock,
+        log: deps.log,
+      }),
+    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: deps.log }),
+    pollIntervalMs: deps.config.pollIntervalSeconds * MILLISECONDS_PER_SECOND,
+    failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    registerSecret,
+    clock: deps.clock,
+    log: deps.log,
+  });
 }

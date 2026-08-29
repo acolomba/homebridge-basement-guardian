@@ -9,13 +9,16 @@ import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
 import { AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
-import { createAccountRuntime, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
+import { createRedactingLogger } from '../../src/logging.js';
+import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
 import type { CloudApi } from '../../src/cloud/api.js';
+import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
+import type { BgConfig } from '../../src/config.js';
 import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
@@ -36,6 +39,17 @@ const ROTATION_DELAY_MS = ONE_HOUR_MS - ROTATION_LEAD_MS;
 // Device time and local receipt time are deliberately different, so a snapshot
 // that collapsed the two would fail the end-to-end case.
 const DEVICE_TIME = 1_700_000_000_000;
+
+function accountConfig(): BgConfig {
+  return {
+    name: 'Basement Guardian',
+    email: 'account@example.test',
+    password: 'account-password',
+    clientId: 'client-id-1',
+    pollIntervalSeconds: POLL_INTERVAL_MS / 1_000,
+    offlineConfirmationPollCount: 2,
+  };
+}
 
 const testConstants: ProtocolConstants = {
   apiUrl: 'https://api.example.test',
@@ -172,6 +186,7 @@ interface Script {
   shadow: readonly boolean[];
   /** Whether closing the shadow connection rejects. */
   closeFails: boolean;
+  pollIntervalMs: number;
 }
 
 interface Harness {
@@ -251,7 +266,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
       return client;
     },
     createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
-    pollIntervalMs: POLL_INTERVAL_MS,
+    pollIntervalMs: script.pollIntervalMs ?? POLL_INTERVAL_MS,
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret: (secret: string): void => {
       secrets.push(secret);
@@ -714,6 +729,87 @@ describe('the poll backstop', () => {
   });
 });
 
+describe('stop', () => {
+  test('SYNC-05 resolves both calls and closes the connection once when stop is called twice', async (t) => {
+    // arrange
+    const { runtime, shadows } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    await runtime.stop();
+    await runtime.stop();
+
+    // assert
+    assert.strictEqual(shadows[0]?.closes(), 1);
+  });
+
+  test('SYNC-05 resolves after a start that stopped at authentication', async (t) => {
+    // arrange
+    const { runtime } = harness(t, {
+      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+    });
+    await runtime.start();
+    await settle();
+
+    // act & assert
+    await assert.doesNotReject(() => runtime.stop());
+  });
+
+  test('SYNC-05 resolves after a start that failed at discovery', async (t) => {
+    // arrange
+    const { runtime } = harness(t, {
+      devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
+    });
+    await runtime.start();
+    await settle();
+
+    // act & assert
+    await assert.doesNotReject(() => runtime.stop());
+  });
+
+  test('SYNC-05 resolves when nothing was ever started', async (t) => {
+    // arrange
+    const { runtime } = harness(t);
+
+    // act & assert
+    await assert.doesNotReject(() => runtime.stop());
+  });
+
+  test('SYNC-05 cancels a pending retry wait so the attempt it was waiting for never runs', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, { shadow: [false] });
+    await runtime.start();
+    await settle();
+    const attemptsBeforeStop = calls.filter((call) => call === 'shadow').length;
+
+    // act
+    await runtime.stop();
+    await advance(MAX_BACKOFF_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { attemptsBeforeStop, attemptsAfterStop: calls.filter((call) => call === 'shadow').length },
+      { attemptsBeforeStop: 1, attemptsAfterStop: 1 },
+    );
+  });
+
+  test('SYNC-05 arms no timer that outlives it', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t);
+    await runtime.start();
+    await settle();
+    const callsBeforeStop = calls.length;
+
+    // act
+    await runtime.stop();
+    await advance(ONE_HOUR_MS);
+
+    // assert
+    assert.deepStrictEqual({ callsBeforeStop, callsAfterStop: calls.length }, { callsBeforeStop: 3, callsAfterStop: 3 });
+  });
+});
+
 describe('the degraded monitoring path', () => {
   test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
     // arrange
@@ -739,6 +835,23 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ attempts: calls.filter((call) => call === 'shadow').length, warnings: countOf(logged, 'warn') }, { attempts: 3, warnings: 1 });
+  });
+
+  test('D-15 leaves a pending retry chain to reconnect rather than attempting again from every poll', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, { shadow: [false], pollIntervalMs: 100 });
+    await runtime.start();
+    await settle();
+    const attemptsBeforePoll = calls.filter((call) => call === 'shadow').length;
+
+    // act
+    await advance(100);
+
+    // assert
+    assert.deepStrictEqual(
+      { attemptsBeforePoll, polls: calls.filter((call) => call === 'devices').length, attemptsAfterPoll: calls.filter((call) => call === 'shadow').length },
+      { attemptsBeforePoll: 1, polls: 2, attemptsAfterPoll: 1 },
+    );
   });
 
   test('D-15 restores the combined path and announces the recovery once when a later attempt succeeds', async (t) => {
@@ -923,6 +1036,72 @@ function stubCloud(t: TestContext): { url: string; authorization: string | undef
 
   return requests;
 }
+
+describe('createAccountRuntimeFromConfig', () => {
+  test('builds every collaborator without opening a connection, reading a file, or starting a timer', async (t) => {
+    // arrange
+    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
+    let sockets = 0;
+    const connect: MqttConnect = () => {
+      sockets += 1;
+
+      throw new Error('no socket expected');
+    };
+
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    // act
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      storagePath,
+      clock: { now: () => START_TIME },
+      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      connect,
+      createSalt: () => 'salt-1',
+    });
+
+    // assert
+    assert.deepStrictEqual({ path: runtime.monitoringPath, requests: requestSpy.mock.callCount(), sockets }, { path: 'rest-only', requests: 0, sockets: 0 });
+  });
+
+  test('AUTH-02 registers the bearer token and the temporary credentials with the redacting logger', async (t) => {
+    // arrange
+    const recorded: string[] = [];
+    const log = createRedactingLogger({ delegate: recordingLog(recorded), secrets: [] });
+    stubCloud(t);
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      storagePath,
+      clock: { now: () => START_TIME },
+      log,
+      connect: () => {
+        throw new Error('no socket expected');
+      },
+      createSalt: () => 'salt-1',
+    });
+    await runtime.start();
+    await settle();
+    await runtime.stop();
+
+    // act
+    log.info('the grant produced id-token-1 and the handshake used test-session-token with test-secret-access-key');
+
+    // assert
+    assert.strictEqual(recorded.at(-1), 'info the grant produced [redacted] and the handshake used [redacted] with [redacted]');
+  });
+});
 
 describe('the wired account', () => {
   test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
