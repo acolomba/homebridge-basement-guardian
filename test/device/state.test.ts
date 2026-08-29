@@ -722,6 +722,69 @@ describe('subscribe', () => {
   });
 });
 
+describe('remove', () => {
+  test('drops the snapshot and the deviceId from deviceIds', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+
+    // act
+    store.remove(DEVICE_ID);
+
+    // assert
+    assert.strictEqual(store.snapshot(DEVICE_ID), undefined);
+    assert.deepStrictEqual(store.deviceIds(), [SECOND_DEVICE_ID]);
+  });
+
+  test('is a no-op for a deviceId the store never held', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    store.remove(SECOND_DEVICE_ID);
+
+    // assert
+    assert.deepStrictEqual(store.deviceIds(), [DEVICE_ID]);
+  });
+
+  test('starts a fresh observation epoch, so a rediscovered deviceId gets no previous shadow version', () => {
+    // arrange
+    const store = versionedStore();
+
+    // act
+    store.remove(DEVICE_ID);
+    const snapshot = store.applyDiscovery(geminiDevice());
+
+    // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('drops a listener registered before removal, so it is not notified by a later rediscovery', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+    store.remove(DEVICE_ID);
+
+    // act
+    store.applyDiscovery(geminiDevice());
+
+    // assert
+    assert.deepStrictEqual(notifications, []);
+  });
+});
+
 describe('snapshot', () => {
   test('reports nothing for a device it has never seen', () => {
     // arrange
