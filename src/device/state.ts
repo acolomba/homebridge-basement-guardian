@@ -25,7 +25,13 @@ export interface DeviceSnapshot {
   data: Readonly<Record<string, unknown>>;
   /** Reported device metadata, carried opaquely and kept apart from telemetry. */
   metadata: Readonly<Record<string, unknown>>;
-  /** The highest shadow version this snapshot has applied. */
+  /**
+   * Which source owns `data`, and how far the shadow has been applied.
+   *
+   * A defined value says the shadow is currently the source of telemetry and
+   * has applied up to that version. `undefined` says it is not, which is what
+   * hands telemetry to the poll (SYNC-02, SYNC-03).
+   */
   shadowVersion: number | undefined;
   /** Device time, as the device reported it. */
   deviceTimestamp: number | undefined;
@@ -85,6 +91,22 @@ export interface DeviceStateStore {
    * which is what keeps a repeated heartbeat silent.
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
+  /**
+   * Reports that the shadow is no longer the source of telemetry.
+   *
+   * Clearing the watermark on every stored device hands telemetry back to the
+   * poll and lets the complete shadow requested after a reconnect be applied
+   * rather than refused as stale, which is what makes the reconnect refresh
+   * restore anything (SYNC-03).
+   *
+   * It also gives up out-of-order protection for the first document after a
+   * reconnect. That is bounded: the connection is opened with a clean session
+   * and no replay, so no queued backlog can arrive out of order, and a document
+   * that did arrive late still carries telemetry the device genuinely sent and
+   * merges key by key, with the next heartbeat correcting it. The alternative
+   * is a silently discarded refresh, which is a false normal.
+   */
+  releaseShadowSource(): void;
 }
 
 const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
@@ -113,10 +135,23 @@ function freeze(snapshot: DeviceSnapshot): DeviceSnapshot {
   return Object.freeze(snapshot);
 }
 
-// Copies every field out of the vendor record, so a later change to the vendor
-// object cannot reach stored state. A REST response is a full telemetry
-// snapshot and replaces `data`; it carries neither metadata nor a shadow
-// version, so a poll leaves both where the shadow last set them.
+// While the shadow owns telemetry the poll leaves `data` alone, because a
+// vendor snapshot describing an earlier moment would otherwise revert a value
+// the shadow already delivered. With no watermark held the poll is the source
+// and its body replaces telemetry, which is the reconciliation backstop a
+// shadow outage runs on (D-15, SYNC-03).
+//
+// Every field is copied out of the vendor record, so a later change to the
+// vendor object cannot reach stored state.
+function pollTelemetry(device: ApiDevice, previous: DeviceSnapshot | undefined): Readonly<Record<string, unknown>> {
+  return previous?.shadowVersion === undefined ? { ...device.data } : previous.data;
+}
+
+// A poll always refreshes reachability, identity, and device time, because
+// answering at all is what the poll is for, and it always records the receipt:
+// a successful poll is a real observation about this device even when it adds
+// no telemetry. The response carries no metadata and no shadow version, so a
+// poll leaves both where the shadow last set them.
 function toSnapshot(device: ApiDevice, previous: DeviceSnapshot | undefined, receivedAt: number): DeviceSnapshot {
   const identity: DeviceIdentity = {
     deviceId: device.deviceId,
@@ -128,7 +163,7 @@ function toSnapshot(device: ApiDevice, previous: DeviceSnapshot | undefined, rec
   return freeze({
     identity,
     connectivity: { ...device.connectivity },
-    data: { ...device.data },
+    data: pollTelemetry(device, previous),
     metadata: previous === undefined ? {} : previous.metadata,
     shadowVersion: previous?.shadowVersion,
     deviceTimestamp: device.connectivity.timestamp,
@@ -245,6 +280,15 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
 
       return snapshot;
+    },
+
+    // Nobody is notified: clearing the watermark moves no telemetry key, and a
+    // listener filtering on the change report would be handed a change that
+    // did not happen.
+    releaseShadowSource(): void {
+      for (const [deviceId, snapshot] of snapshots) {
+        snapshots.set(deviceId, freeze({ ...snapshot, shadowVersion: undefined }));
+      }
     },
 
     subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void {

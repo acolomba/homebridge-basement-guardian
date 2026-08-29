@@ -14,6 +14,7 @@ import type { FakeRestApi } from '../fakeRestApi.js';
 import type { BasementGuardianWorld } from '../world.js';
 
 const CREDENTIALS_PATH = '/credentials/aws';
+const DEVICES_PATH = '/devices';
 const SHORT_POLL_INTERVAL_SECONDS = 0.05;
 
 // A named step that fails on its deadline is what turns a silent transport stall into a report. The
@@ -37,6 +38,10 @@ function countOf(lines: readonly string[], line: string): number {
 
 function credentialRequestCount(service: FakeRestApi): number {
   return service.requests.filter((request) => request.path === CREDENTIALS_PATH).length;
+}
+
+function deviceRequestCount(service: FakeRestApi): number {
+  return service.requests.filter((request) => request.path === DEVICES_PATH).length;
 }
 
 async function fakeCloud(this: BasementGuardianWorld): Promise<void> {
@@ -154,6 +159,16 @@ async function assertVendorRequestCount(this: BasementGuardianWorld, count: numb
 }
 
 Then('the fake service holds {int} vendor request(s)', { timeout: STEP_TIMEOUT_MS }, assertVendorRequestCount);
+
+// A running poll loop has no final count, so a scenario that needs the polls to have certainly run
+// waits on a floor rather than pinning an exact number that keeps growing under it.
+async function assertPollCount(this: BasementGuardianWorld, count: number): Promise<void> {
+  const service = await this.restApi();
+
+  await this.untilTrue(() => deviceRequestCount(service) >= count, DEADLINE_MS, `the plugin polled the vendor fewer than ${String(count)} times`);
+}
+
+Then('the plugin polls the vendor at least {int} times', { timeout: STEP_TIMEOUT_MS }, assertPollCount);
 
 async function assertNoRequestReachesTheCloud(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();

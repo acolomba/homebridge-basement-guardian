@@ -446,6 +446,83 @@ describe('applyReportedPatch', () => {
   });
 });
 
+describe('releaseShadowSource', () => {
+  test('clears the watermark on every stored device and leaves the rest of each snapshot alone', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 4 }, state: { wifi_signal_dbm: -54 }, version: 90 });
+    store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
+
+    // act
+    store.releaseShadowSource();
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 4, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.strictEqual(store.snapshot(SECOND_DEVICE_ID)?.shadowVersion, undefined);
+  });
+
+  test('hands telemetry back to the poll', () => {
+    // arrange
+    const store = versionedStore();
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
+
+    // act
+    store.releaseShadowSource();
+    const snapshot = store.applyDiscovery(geminiDevice());
+
+    // assert
+    assert.deepStrictEqual(snapshot.data, { water_level: 1, primary_pump_running: false, ac_power: true });
+  });
+
+  test('applies a shadow patch at a version already seen, so a reconnect refresh is not discarded', () => {
+    // arrange
+    const store = versionedStore();
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
+    store.releaseShadowSource();
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
+
+    // assert
+    assert.strictEqual(snapshot?.data.primary_pump_running, true);
+  });
+
+  test('notifies no listener, because no telemetry key moves', () => {
+    // arrange
+    const store = versionedStore();
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.releaseShadowSource();
+
+    // assert
+    assert.deepStrictEqual(notifications, []);
+  });
+
+  test('returns a released snapshot no consumer can modify', () => {
+    // arrange
+    const store = versionedStore();
+
+    // act
+    store.releaseShadowSource();
+
+    // assert
+    assert.strictEqual(Object.isFrozen(store.snapshot(DEVICE_ID)), true);
+  });
+});
+
 describe('subscribe', () => {
   test('stops notifying a listener that unsubscribes', () => {
     // arrange

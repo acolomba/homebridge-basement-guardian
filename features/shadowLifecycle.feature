@@ -23,6 +23,22 @@ Feature: Shadow connection lifecycle
     Then the broker holds 2 handshakes
     Then the plugin publishes 2 complete shadow requests
 
+  Scenario: A poll does not revert the value the live shadow delivered
+    The poll runs on a short interval against a live shadow. A reducer that lets the vendor body
+    replace telemetry the shadow owns reports the pump as not running here.
+
+    Given these reported device fields:
+      | water_level          | 1     |
+      | primary_pump_running | false |
+    Given a short poll interval
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | primary_pump_running | true |
+    Then the canonical snapshot is at shadow version 1
+    Then the plugin polls the vendor at least 6 times
+    Then the canonical snapshot carries these fields:
+      | primary_pump_running | true |
+
   Scenario: The poll reconciles state the shadow did not carry
     Given a short poll interval
     Given the broker refuses connections

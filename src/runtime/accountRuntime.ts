@@ -230,6 +230,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // capped-backoff attempt (D-14, D-15).
   function handleShadowDisconnected(reason: ShadowDisconnectReason): void {
     path = 'rest-only';
+    // The shadow stops being the source of telemetry the moment the connection
+    // ends, whatever ended it, so the poll takes it back over until the
+    // reconnect's complete-shadow request re-establishes ownership (D-15,
+    // SYNC-03).
+    options.store.releaseShadowSource();
 
     if (reason !== 'transport-closed') {
       options.failures.recordFailure(SHADOW, SHADOW_DEGRADED);
