@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-current_phase: 01
-current_phase_name: Secure Cloud Foundation
-status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-28T21:39:42.183Z"
-last_activity: 2026-08-28
-last_activity_desc: Phase 01 execution started
+current_phase: 02
+current_phase_name: Safe Gemini Discovery and Identity
+status: planning
+stopped_at: Phase 2 context gathered
+last_updated: "2026-08-29T15:55:00.000Z"
+last_activity: 2026-08-29
+last_activity_desc: Phase 2 context gathered
 state_head: 95c8a51939db4175eb0767e0a23d72120072167b
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 11
-  completed_plans: 0
+  total_plans: 17
+  completed_plans: 17
   percent: 0
 ---
 
@@ -23,16 +23,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-27)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 01 — Secure Cloud Foundation
+**Current focus:** Phase 02 — Safe Gemini Discovery and Identity
 
 ## Current Position
 
-Phase: 01 (Secure Cloud Foundation) — EXECUTING
-Plan: 1 of 11
-Status: Executing Phase 01
-Last activity: 2026-08-28 — Phase 01 execution started
+Phase: 02 (Safe Gemini Discovery and Identity) — READY FOR PLANNING
+Plan: none yet — 02-CONTEXT.md written
+Status: Phase 2 context gathered; discussion closed
+Last activity: 2026-08-29 — Phase 2 context gathered
 
-Progress: [░░░░░░░░░░] 0%
+Phase 01 is implementation-complete and gate-complete (17/17 plans, review closed,
+verification human_needed 19/20, nyquist validated, threats_open 0) but is NOT marked
+complete. Three human UAT items in 01-UAT.md block it.
+
+Progress: [█░░░░░░░░░] Phase 1 of 6 done pending UAT
 
 ## Performance Metrics
 
@@ -63,6 +67,17 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 - [Phase 1]: One singular account; bundled Auth0 client ID; typed REST/shadow state; secrets stay in Homebridge-owned storage.
 - [Phase 2]: Gemini only in v1; family validation fails closed; `deviceId` preserves physical identity.
+- [Phase 2, decided 2026-08-29]: The vendor `deviceId` is treated as non-sensitive and may enter
+  accessory context and logs. `D-027` still keeps it out of public artifacts. Rests on
+  `<account-id>` being an opaque key, unconfirmed against a real inventory response.
+- [Phase 2, decided 2026-08-29]: A valid empty inventory list counts toward confirmed removal,
+  keeping `D-029` as locked. Accepted risk: a sustained account glitch could remove every
+  accessory, bounded by two confirmations plus a final check.
+- [Phase 2, decided 2026-08-29]: Build the full capability-descriptor family registry per `DEV-02`,
+  not a minimal interface. Gemini is the only complete implementation this milestone.
+- [Phase 2, decided 2026-08-29]: Degraded accessories set `StatusActive` false and leave
+  `StatusFault` at `NO_FAULT`. `StatusFault` stays reserved for the five vendor-reported
+  `SAFE-04` conditions. Apple Home visibility of that state is a recorded Phase 3 concern.
 - [Phase 3]: Truthful standards-first HomeKit mapping with separate actionable fault adapters; the `D-014` preserve-and-mark invariant keeps the last valid value and faults only the narrowest owning scope.
 - [Phase 4]: Only self-test and boolean alarm mute are writable; reported state remains authoritative. Validation gates no longer block phase completion; they block only the `1.0.0` release.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
@@ -103,6 +118,6 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 
 ## Session Continuity
 
-Last session: 2026-08-28T19:04:00.886Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-secure-cloud-foundation/01-CONTEXT.md
+Last session: 2026-08-29T15:55:00.000Z
+Stopped at: Phase 2 discussion closed, 02-CONTEXT.md written, ready for /gsd-plan-phase 2
+Resume file: .planning/phases/02-safe-gemini-discovery-and-identity/02-CONTEXT.md
