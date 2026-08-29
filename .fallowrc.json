@@ -9,7 +9,8 @@
     "src/device/halo.ts",
     "src/accessories/basementGuardian.ts",
     "src/accessories/services.ts",
-    "src/persistence/accessoryContext.ts"
+    "src/persistence/accessoryContext.ts",
+    "src/cloud/sigv4.ts"
   ],
   "ignorePatterns": ["dist-test/**"],
   "production": false,
