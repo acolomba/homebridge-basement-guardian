@@ -642,7 +642,12 @@ test('treats a network failure as transient rather than as a refusal', async (t)
   const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
   const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
   await writeCacheText(storagePath, earlierContents);
-  t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('connect ECONNREFUSED 203.0.113.1:443')));
+  let attempts = 0;
+  t.mock.method(globalThis, 'fetch', () => {
+    attempts += 1;
+
+    return Promise.reject(new Error('connect ECONNREFUSED 203.0.113.1:443'));
+  });
   const authClient = createAuthClient(authOptions(storagePath));
 
   // act & assert
@@ -657,7 +662,9 @@ test('treats a network failure as transient rather than as a refusal', async (t)
       return true;
     },
   );
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
+  assert.strictEqual(attempts, 2);
 });
 
 test('treats a failure body that is not JSON as transient, on the status alone', async (t) => {
