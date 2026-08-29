@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
 
-import type { CloudApiOptions } from '../../src/cloud/api.js';
+import type { CloudApi, CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { TestContext } from 'node:test';
@@ -482,4 +482,81 @@ test('abandons a command without sending it when its deadline expired before the
   // act & assert
   await assert.rejects(() => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal));
   assert.deepStrictEqual(vendorRequests, []);
+});
+
+// One invocation per operation. The `Record<keyof CloudApi, ...>` annotation is
+// the closed door: adding a fifth operation to `CloudApi` stops this file from
+// compiling until the operation is listed here, so no new vendor route can
+// reach the network without the route cases below being revisited (SYNC-01).
+function invocations(cloudApi: CloudApi): Record<keyof CloudApi, () => Promise<unknown>> {
+  return {
+    devices: () => cloudApi.devices(new AbortController().signal),
+    device: () => cloudApi.device('account-1_serial-1', new AbortController().signal),
+    awsCredentials: () => cloudApi.awsCredentials(new AbortController().signal),
+    sendCommand: () => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal),
+  };
+}
+
+// One well-formed answer per operation, so every call passes narrowing and its
+// request is recorded rather than being cut short by a rejection.
+function vendorBodies(): Record<keyof CloudApi, string> {
+  return {
+    devices: JSON.stringify([geminiDevice()]),
+    device: JSON.stringify(geminiDevice()),
+    awsCredentials: JSON.stringify(awsCredentialsResponse()),
+    sendCommand: JSON.stringify({ success: true }),
+  };
+}
+
+// Runs every operation of the client and reports what actually left the
+// process, as `METHOD /path` lines in invocation order.
+async function reachedRoutes(t: TestContext, cloudApi: CloudApi): Promise<string[]> {
+  const bodies = vendorBodies();
+  let nextBody = '';
+  const vendorRequests = stubFetch(t, () => new Response(nextBody, { status: 200 }));
+  const operations = invocations(cloudApi);
+
+  for (const [name, invoke] of Object.entries(operations)) {
+    nextBody = bodies[name as keyof CloudApi];
+    await invoke();
+  }
+
+  return vendorRequests.map((request) => `${request.method} ${new URL(request.url).pathname}`);
+}
+
+test('offers exactly four operations, so no fifth vendor route is callable (SYNC-01)', () => {
+  // arrange
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  assert.deepStrictEqual(Object.keys(cloudApi).sort(), ['awsCredentials', 'device', 'devices', 'sendCommand']);
+  assert.deepStrictEqual(Object.keys(cloudApi).sort(), Object.keys(invocations(cloudApi)).sort());
+});
+
+test('reaches only the four declared routes when every operation runs (SYNC-01)', async (t) => {
+  // arrange
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const routesReached = await reachedRoutes(t, cloudApi);
+
+  // assert
+  assert.deepStrictEqual(routesReached, ['GET /devices', 'GET /devices/account-1_serial-1', 'GET /credentials/aws', 'PUT /devices/account-1_serial-1/data']);
+});
+
+test('touches no excluded account-management path family (SYNC-01)', async (t) => {
+  // arrange
+  const excluded = ['account', 'accounts', 'users', 'firmware', 'locations', 'rules', 'contacts'];
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const routesReached = await reachedRoutes(t, cloudApi);
+
+  // assert
+  const pathFamilies = [...new Set(routesReached.map((route) => route.split('/').at(1) ?? ''))].sort();
+  assert.deepStrictEqual(pathFamilies, ['credentials', 'devices']);
+  assert.deepStrictEqual(
+    pathFamilies.filter((family) => excluded.includes(family)),
+    [],
+  );
 });
