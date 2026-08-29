@@ -8,10 +8,20 @@ import type { MqttClientEvents, MqttClientIdentity, MqttClientLike, MqttConnectO
 const BROKER_URL = 'wss://broker.invalid/mqtt';
 const SIGNED_URL = 'wss://broker.invalid/mqtt?signed=yes';
 const HOOK_URL = 'wss://broker.invalid:443/mqtt';
+const DEADLINE_MS = 5_000;
+const DEADLINE_REFUSAL = 'The broker did not answer a transport operation within its deadline.';
 
 interface ClientFailures {
   subscribe?: Error;
   publish?: Error;
+  /** Withholds the callback, as a client that went down between calls does. */
+  withhold?: boolean;
+}
+
+// The timers the process is holding open. A deadline whose loser is left to fire
+// would show up here as one more than the operation started with.
+function pendingTimers(): number {
+  return process.getActiveResourcesInfo().filter((resource: string) => resource === 'Timeout').length;
 }
 
 interface Harness {
@@ -44,11 +54,17 @@ function harness(failures: ClientFailures = {}): Harness {
     },
     subscribe: (topics: string[], callback: (error: Error | null) => void): void => {
       subscribed.push(topics);
-      callback(failures.subscribe ?? null);
+
+      if (failures.withhold !== true) {
+        callback(failures.subscribe ?? null);
+      }
     },
     publish: (topic: string, payload: string, callback: (error?: Error) => void): void => {
       published.push({ topic, payload });
-      callback(failures.publish);
+
+      if (failures.withhold !== true) {
+        callback(failures.publish);
+      }
     },
     end: (_force: boolean, callback: (error?: Error) => void): void => {
       ends += 1;
@@ -65,6 +81,7 @@ function harness(failures: ClientFailures = {}): Harness {
     },
     url: BROKER_URL,
     clientId: 'client-first',
+    deadlineMs: DEADLINE_MS,
     signUrl: (live: MqttClientIdentity): string => {
       signed.push(live);
       live.options.clientId = 'client-signed';
@@ -250,3 +267,66 @@ test('ends the client once and resolves both times when ended twice', async () =
   // assert
   assert.strictEqual(ends(), 1);
 });
+
+for (const { operation, run } of [
+  { operation: 'subscribe', run: (transport: MqttTransport): Promise<void> => transport.subscribe(['topic-a']) },
+  { operation: 'publish', run: (transport: MqttTransport): Promise<void> => transport.publish('topic-a', '') },
+]) {
+  test(`refuses a ${operation} whose callback never fires once its deadline passes`, async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { transport } = harness({ withhold: true });
+
+    // act
+    const operating = run(transport);
+    t.mock.timers.tick(DEADLINE_MS);
+
+    // assert
+    await assert.rejects(
+      () => operating,
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.strictEqual(error.message, DEADLINE_REFUSAL);
+
+        return true;
+      },
+    );
+  });
+
+  test(`holds a ${operation} open until its deadline arrives`, async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { transport } = harness({ withhold: true });
+    const settled: string[] = [];
+    const operating = run(transport).then(
+      () => {
+        settled.push('resolved');
+      },
+      () => {
+        settled.push('refused');
+      },
+    );
+
+    // act
+    t.mock.timers.tick(DEADLINE_MS - 1);
+    await Promise.resolve();
+    const beforeDeadline = [...settled];
+    t.mock.timers.tick(1);
+    await operating;
+
+    // assert
+    assert.deepStrictEqual({ beforeDeadline, settled }, { beforeDeadline: [], settled: ['refused'] });
+  });
+
+  test(`leaves no timer pending when a ${operation} settles inside its deadline`, async () => {
+    // arrange
+    const { transport } = harness();
+    const before = pendingTimers();
+
+    // act
+    await run(transport);
+
+    // assert
+    assert.strictEqual(pendingTimers(), before);
+  });
+}

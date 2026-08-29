@@ -3,6 +3,16 @@
 // and open no socket, while the transport-level scenarios drive the real
 // library against a local broker.
 
+// The default import is deliberate: the named ESM export of a builtin is a
+// snapshot binding, which the test runner's timer mocks cannot replace, so the
+// deadline would be untestable without awaiting a real timer.
+import timers from 'node:timers/promises';
+
+// The refusal names no topic, no payload, and no identifier. It travels into a
+// consumer that reports it, and a device identifier embeds the account
+// identifier (AUTH-02).
+const DEADLINE_REFUSAL = 'The broker did not answer a transport operation within its deadline.';
+
 /**
  * The part of the live client object the signing hook writes.
  *
@@ -72,26 +82,41 @@ export interface MqttTransportOptions {
   connect: MqttConnect;
   url: string;
   clientId: string;
+  /** How long one operation may go unanswered before it is refused (WR-11). */
+  deadlineMs: number;
   /** Returns the presigned URL for this handshake and refreshes the identifier. */
   signUrl: (client: MqttClientIdentity) => string;
 }
 
-function subscribeOnce(client: MqttClientLike, topics: readonly string[]): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    client.subscribe([...topics], (error: Error | null) => {
-      if (error === null) {
-        resolve();
-      } else {
-        reject(error);
-      }
-    });
-  });
-}
+// One client operation, settled by the callback the client invokes or refused by
+// the deadline, whichever comes first.
+//
+// A callback that never fires parks the caller forever with no error and no
+// close, so the connection keeps reporting healthy while nothing can arrive on
+// it. That is what a client which went down between connecting and subscribing
+// leaves behind. The deadline turns the stall into the rejection the consumer
+// already handles by giving the connection up and retrying (WR-11).
+//
+// The wait is cancelled the moment the callback settles the operation. A timer
+// left to fire holds the Node process open, which is exactly what shutdown
+// promises it does not do (SYNC-05).
+function within(deadlineMs: number, begin: (settle: (error?: Error | null) => void) => void): Promise<void> {
+  const expiry = new AbortController();
 
-function publishOnce(client: MqttClientLike, topic: string, payload: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    client.publish(topic, payload, (error?: Error) => {
-      if (error === undefined) {
+    void timers.setTimeout(deadlineMs, undefined, { signal: expiry.signal }).then(
+      () => {
+        reject(new Error(DEADLINE_REFUSAL));
+      },
+      // The wait rejects when it is cancelled, and by then the operation has
+      // already settled, so nothing is left to report.
+      () => undefined,
+    );
+
+    begin((error?: Error | null) => {
+      expiry.abort();
+
+      if (error === null || error === undefined) {
         resolve();
       } else {
         reject(error);
@@ -145,8 +170,14 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
     onClose: (handler: () => void): void => {
       client.on('close', handler);
     },
-    subscribe: (topics: readonly string[]): Promise<void> => subscribeOnce(client, topics),
-    publish: (topic: string, payload: string): Promise<void> => publishOnce(client, topic, payload),
+    subscribe: (topics: readonly string[]): Promise<void> =>
+      within(options.deadlineMs, (settle: (error?: Error | null) => void): void => {
+        client.subscribe([...topics], settle);
+      }),
+    publish: (topic: string, payload: string): Promise<void> =>
+      within(options.deadlineMs, (settle: (error?: Error | null) => void): void => {
+        client.publish(topic, payload, settle);
+      }),
     end: (): Promise<void> => {
       ending ??= endOnce(client);
 

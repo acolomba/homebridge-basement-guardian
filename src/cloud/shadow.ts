@@ -13,6 +13,14 @@ import type { Logging } from 'homebridge';
 
 const BROKER_PATH = '/mqtt';
 
+// How long one transport operation may go unanswered before the connection is
+// given up. The subscription and the complete-shadow requests are the only
+// operations, and a working broker answers each within a round trip, so ten
+// seconds is far past normal while still well inside the capped backoff. Without
+// it a client that went down between connecting and subscribing leaves the
+// operation parked forever and the connection reporting healthy (WR-11).
+const OPERATION_DEADLINE_MS = 10_000;
+
 /**
  * The complete shadow topic surface this plugin uses.
  *
@@ -408,6 +416,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
         connect: options.connect,
         url: `${options.scheme}://${current.endpoint}${BROKER_PATH}`,
         clientId: current.clientId,
+        deadlineMs: OPERATION_DEADLINE_MS,
         signUrl: signHandshake,
       }),
       established: false,

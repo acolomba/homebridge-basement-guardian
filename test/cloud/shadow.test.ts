@@ -320,6 +320,17 @@ describe('start', () => {
     );
   });
 
+  test('supplies the transport a deadline for the operations it answers', async () => {
+    // arrange
+    const { client, transports } = harness();
+
+    // act
+    await client.start([DEVICE_A]);
+
+    // assert
+    assert.strictEqual(transports[0]?.options.deadlineMs, 10_000);
+  });
+
   test('reports nothing connected while the subscription of an open socket is unanswered', async () => {
     // arrange
     const { client, transports, lifecycle } = harness({ holdSubscribe: true });
