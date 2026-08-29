@@ -2,29 +2,40 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
+import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
-import { CloudRequestError } from '../../src/cloud/errors.js';
+import { AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
-import { createAccountRuntime } from '../../src/runtime/accountRuntime.js';
+import { createAccountRuntime, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
+import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
+import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
 import type { CloudApi } from '../../src/cloud/api.js';
-import type { ApiDevice } from '../../src/cloud/types.js';
-import type { DeviceStateStore } from '../../src/device/state.js';
+import type { ShadowClient } from '../../src/cloud/shadow.js';
+import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
+import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
-import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
+import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { LogLevel, Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
 
+const DEVICE_ID = 'account-1_serial-1';
+const START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
+const ONE_HOUR_MS = 3_600_000;
+const POLL_INTERVAL_MS = 900_000;
+const THROTTLE_RETRY_MS = 1_800_000;
+
+// The rotation the fixture expiry produces: an hour of credential life, less
+// the ten-minute lead.
+const ROTATION_DELAY_MS = ONE_HOUR_MS - ROTATION_LEAD_MS;
+
 // Device time and local receipt time are deliberately different, so a snapshot
 // that collapsed the two would fail the end-to-end case.
 const DEVICE_TIME = 1_700_000_000_000;
-const RECEIVED_AT = 1_700_000_777_000;
-
-const clock: Clock = { now: () => RECEIVED_AT };
 
 const testConstants: ProtocolConstants = {
   apiUrl: 'https://api.example.test',
@@ -39,7 +50,7 @@ const testConstants: ProtocolConstants = {
 // placeholder in place of the real account identifier.
 function geminiDevice(): ApiDevice {
   return {
-    deviceId: 'account-1_serial-1',
+    deviceId: DEVICE_ID,
     deviceTypeId: 'wayneWaterGemini',
     name: 'Sump System',
     serialNumber: 'serial-1',
@@ -48,49 +59,733 @@ function geminiDevice(): ApiDevice {
   };
 }
 
-// A REST client whose discovery route answers as the case asks. Every other
-// route rejects, so a runtime that reached one would fail the case instead of
-// passing on a route it has no business calling.
-function discoveryOnlyApi(devices: () => Promise<readonly ApiDevice[]>): CloudApi {
-  const unreachable = (route: string): Promise<never> => Promise.reject(new Error(`discovery must not reach ${route}`));
-
+function credentialsAt(expiresAtMs: number): AwsCredentialsResponse {
   return {
-    devices,
-    device: () => unreachable('the device route'),
-    awsCredentials: () => unreachable('the credentials route'),
-    sendCommand: () => unreachable('the command route'),
+    endpoint: 'broker.invalid',
+    clientId: 'client-first',
+    credentials: {
+      AccessKeyId: 'test-access-key-id',
+      SecretAccessKey: 'test-secret-access-key',
+      SessionToken: 'test-session-token',
+      Expiration: new Date(expiresAtMs).toISOString(),
+    },
   };
 }
 
-function createRecordingLog(messages: string[]): Logging {
-  const record = (message: string): void => {
-    messages.push(message);
-  };
-
-  return Object.assign(record, {
-    prefix: 'basement guardian',
-    debug: record,
-    error: record,
-    info: record,
-    log: (level: LogLevel, message: string): void => {
-      messages.push(`${level} ${message}`);
+function rotatedCredentialsAt(expiresAtMs: number): AwsCredentialsResponse {
+  return {
+    endpoint: 'broker-two.invalid',
+    clientId: 'client-second',
+    credentials: {
+      AccessKeyId: 'test-next-access-key-id',
+      SecretAccessKey: 'test-next-secret-access-key',
+      SessionToken: 'test-next-session-token',
+      Expiration: new Date(expiresAtMs).toISOString(),
     },
-    success: record,
-    warn: record,
+  };
+}
+
+function recordingLog(recorded: string[]): Logging {
+  function at(level: string): (message: string) => void {
+    return (message: string): void => {
+      recorded.push(`${level} ${message}`);
+    };
+  }
+
+  return Object.assign(at('info'), {
+    prefix: 'basement guardian',
+    debug: at('debug'),
+    error: at('error'),
+    info: at('info'),
+    success: at('success'),
+    warn: at('warn'),
+    log: (level: LogLevel, message: string): void => {
+      recorded.push(`${level} ${message}`);
+    },
   });
 }
+
+// One scripted answer per call, with the final entry standing for every call
+// after it, so a case states only the answers it cares about.
+function answering<T>(answers: readonly (() => Promise<T>)[]): () => Promise<T> {
+  let calls = 0;
+
+  return (): Promise<T> => {
+    const answer = answers[Math.min(calls, answers.length - 1)];
+    calls += 1;
+
+    return answer === undefined ? Promise.reject(new Error('no answer was scripted')) : answer();
+  };
+}
+
+interface ShadowRecorder {
+  options: ShadowRuntimeOptions;
+  subscribed: readonly string[][];
+  closes: () => number;
+}
+
+// A shadow client that opens no socket. Starting it reports the connection the
+// way the real client does, from its connect notification.
+function fakeShadow(options: ShadowRuntimeOptions): { client: ShadowClient; recorder: ShadowRecorder } {
+  const subscribed: string[][] = [];
+  let closes = 0;
+  let live = false;
+
+  return {
+    client: {
+      get connected(): boolean {
+        return live;
+      },
+      start: (deviceIds: readonly string[]): Promise<void> => {
+        subscribed.push([...deviceIds]);
+        live = true;
+        options.onConnected();
+
+        return Promise.resolve();
+      },
+      requestFullShadow: (): Promise<void> => Promise.resolve(),
+      close: (): Promise<void> => {
+        closes += 1;
+        live = false;
+
+        return Promise.resolve();
+      },
+    },
+    recorder: { options, subscribed, closes: () => closes },
+  };
+}
+
+interface Script {
+  devices: readonly (() => Promise<readonly ApiDevice[]>)[];
+  credentials: readonly (() => Promise<AwsCredentialsResponse>)[];
+  /** Whether each successive connection attempt opens; the last entry repeats. */
+  shadow: readonly boolean[];
+}
+
+interface Harness {
+  runtime: AccountRuntime;
+  store: DeviceStateStore;
+  logged: string[];
+  secrets: string[];
+  shadows: ShadowRecorder[];
+  calls: string[];
+  advance: (ms: number) => Promise<void>;
+}
+
+// Drains the promise chains a timer wakes, so a scheduled fetch and everything
+// it triggers have settled before the assertions run.
+async function settle(): Promise<void> {
+  for (let turn = 0; turn < 8; turn += 1) {
+    await nextEventLoopTurn();
+  }
+}
+
+// Builds the runtime over a scripted cloud and a socket-free shadow. The
+// failure log and both retry policies are the real ones: the reminder cadence
+// and the pending guard are the behavior under test, and a hand-written double
+// would re-implement them.
+function harness(t: TestContext, script: Partial<Script> = {}): Harness {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+
+  const logged: string[] = [];
+  const secrets: string[] = [];
+  const shadows: ShadowRecorder[] = [];
+  const calls: string[] = [];
+  let time = START_TIME;
+
+  const clock: Clock = { now: () => time };
+  const log = recordingLog(logged);
+  const store = createDeviceStateStore({ clock, log: recordingLog([]) });
+
+  const nextDevices = answering(script.devices ?? [() => Promise.resolve([geminiDevice()])]);
+  const nextCredentials = answering(script.credentials ?? [() => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS))]);
+  const shadowOpens = script.shadow ?? [true];
+  let shadowAttempts = 0;
+
+  const api: CloudApi = {
+    devices: () => {
+      calls.push('devices');
+
+      return nextDevices();
+    },
+    awsCredentials: () => {
+      calls.push('credentials');
+
+      return nextCredentials();
+    },
+    device: () => Promise.reject(new Error('the runtime must not reach the device route')),
+    sendCommand: () => Promise.reject(new Error('the runtime must not reach the command route')),
+  };
+
+  const runtime = createAccountRuntime({
+    api,
+    store,
+    createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => {
+      calls.push('shadow');
+
+      // The real client opens the socket while it is being built, so a broker
+      // that refuses the handshake throws out of the factory rather than
+      // rejecting later.
+      const opens = shadowOpens[Math.min(shadowAttempts, shadowOpens.length - 1)] ?? true;
+      shadowAttempts += 1;
+
+      if (!opens) {
+        throw new Error('the broker refused the connection');
+      }
+
+      const { client, recorder } = fakeShadow(shadowOptions);
+      shadows.push(recorder);
+
+      return client;
+    },
+    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
+    pollIntervalMs: POLL_INTERVAL_MS,
+    failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    registerSecret: (secret: string): void => {
+      secrets.push(secret);
+    },
+    clock,
+    log,
+  });
+
+  // A case that leaves the runtime running would leave its timers armed, which
+  // is what a leaked timer looks like from outside.
+  t.after(async () => {
+    await runtime.stop();
+  });
+
+  return {
+    runtime,
+    store,
+    logged,
+    secrets,
+    shadows,
+    calls,
+    advance: async (ms: number): Promise<void> => {
+      time += ms;
+      t.mock.timers.tick(ms);
+      await settle();
+    },
+  };
+}
+
+function countOf(logged: readonly string[], level: string): number {
+  return logged.filter((line) => line.startsWith(`${level} `)).length;
+}
+
+describe('start', () => {
+  test('discovers every device and stores its canonical snapshot', async (t) => {
+    // arrange
+    const { runtime, store } = harness(t);
+
+    // act
+    await runtime.start();
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+  });
+
+  test('reports how many devices the account holds', async (t) => {
+    // arrange
+    const { runtime, logged } = harness(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(logged, ['info Discovered 1 device(s).']);
+  });
+
+  test('opens one shadow connection for every discovered device', async (t) => {
+    // arrange
+    const { runtime, shadows } = harness(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ connections: shadows.length, subscribed: shadows[0]?.subscribed }, { connections: 1, subscribed: [[DEVICE_ID]] });
+  });
+
+  test('AUTH-02 registers every temporary credential value as a secret', async (t) => {
+    // arrange
+    const { runtime, secrets } = harness(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(secrets, ['test-access-key-id', 'test-secret-access-key', 'test-session-token']);
+  });
+
+  test('reports the route and the status when the vendor refuses discovery', async (t) => {
+    // arrange
+    const { runtime, logged, store } = harness(t, {
+      devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))],
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { discoveryReport: logged[0], stored: store.deviceIds() },
+      { discoveryReport: 'warn Device discovery failed on GET /devices with HTTP 403.', stored: [] },
+    );
+  });
+
+  test('reports a fixed message that repeats nothing from an unexpected discovery failure', async (t) => {
+    // arrange
+    const { runtime, logged } = harness(t, {
+      devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))],
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.strictEqual(logged[0], 'warn Device discovery failed.');
+  });
+
+  test('D-13 schedules nothing at all after the vendor refuses the account credentials', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+    });
+
+    // act
+    await runtime.start();
+    await advance(ONE_HOUR_MS);
+
+    // assert
+    assert.deepStrictEqual(calls, ['devices']);
+  });
+
+  test('D-22 waits the interval a throttling response carries rather than the capped backoff', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
+    });
+
+    // act
+    await runtime.start();
+    await advance(MAX_BACKOFF_MS);
+    const afterCappedBackoff = calls.filter((call) => call === 'devices').length;
+    await advance(THROTTLE_RETRY_MS - MAX_BACKOFF_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { afterCappedBackoff, afterCarriedInterval: calls.filter((call) => call === 'devices').length },
+      { afterCappedBackoff: 1, afterCarriedInterval: 2 },
+    );
+  });
+
+  test('performs no work when start runs after stop', async (t) => {
+    // arrange
+    const { runtime, calls } = harness(t);
+
+    // act
+    await runtime.stop();
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(calls, []);
+  });
+});
+
+describe('credential rotation', () => {
+  test('SYNC-04 refreshes the credentials ten minutes before the expiry the response carries', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(ROTATION_DELAY_MS - 1);
+    const beforeDue = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
+
+    // assert
+    assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
+  });
+
+  test('holds the delay at the floor when the response already expires inside the lead window', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(credentialsAt(START_TIME + 60_000))] });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(MIN_ROTATION_DELAY_MS - 1);
+    const beforeFloor = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
+
+    // assert
+    assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 1, afterFloor: 2 });
+  });
+
+  test('SYNC-04 schedules the next rotation from the new expiry rather than the first one', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      credentials: [
+        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
+      ],
+    });
+    await runtime.start();
+    await settle();
+    await advance(ROTATION_DELAY_MS);
+
+    // act
+    await advance(ROTATION_DELAY_MS - 1);
+    const beforeSecondDue = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
+
+    // assert
+    assert.deepStrictEqual(
+      { beforeSecondDue, afterSecondDue: calls.filter((call) => call === 'credentials').length },
+      { beforeSecondDue: 2, afterSecondDue: 3 },
+    );
+  });
+
+  test('SYNC-04 arms the next rotation even after a refresh that rejects', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      credentials: [
+        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+        () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
+      ],
+    });
+    await runtime.start();
+    await settle();
+    await advance(ROTATION_DELAY_MS);
+
+    // act
+    await advance(MIN_ROTATION_DELAY_MS);
+
+    // assert
+    assert.strictEqual(calls.filter((call) => call === 'credentials').length, 3);
+  });
+
+  test('reports a failed refresh through the rate-limited discipline rather than directly', async (t) => {
+    // arrange
+    const { runtime, logged, advance } = harness(t, {
+      credentials: [
+        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(ROTATION_DELAY_MS);
+    await advance(MIN_ROTATION_DELAY_MS);
+    await advance(MIN_ROTATION_DELAY_MS);
+
+    // assert
+    assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), repeats: countOf(logged, 'debug') }, { warnings: 1, repeats: 2 });
+  });
+
+  test('SYNC-04 replaces what the next handshake reads and leaves the live connection alone', async (t) => {
+    // arrange
+    const { runtime, shadows, advance } = harness(t, {
+      credentials: [
+        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(ROTATION_DELAY_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { connections: shadows.length, closes: shadows[0]?.closes(), cached: shadows[0]?.options.credentials.current() },
+      {
+        connections: 1,
+        closes: 0,
+        cached: {
+          endpoint: 'broker-two.invalid',
+          clientId: 'client-second',
+          accessKeyId: 'test-next-access-key-id',
+          secretAccessKey: 'test-next-secret-access-key',
+          sessionToken: 'test-next-session-token',
+        },
+      },
+    );
+  });
+
+  test('SYNC-04 gives the shadow client a reconnect policy the runtime own retry has not advanced', async (t) => {
+    // arrange
+    const { runtime, shadows, advance } = harness(t, { shadow: [false, true] });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(500);
+
+    // assert
+    assert.deepStrictEqual({ connections: shadows.length, shadowAttempt: shadows[0]?.options.retry.attempt }, { connections: 1, shadowAttempt: 0 });
+  });
+});
+
+describe('the poll backstop', () => {
+  test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
+    // arrange
+    const { runtime, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 3 } }])],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 3 });
+  });
+
+  test('D-014 leaves every stored snapshot unchanged when a poll rejects', async (t) => {
+    // arrange
+    const { runtime, store, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+      ],
+    });
+    await runtime.start();
+    await settle();
+    const beforePoll: DeviceSnapshot | undefined = store.snapshot(DEVICE_ID);
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), beforePoll);
+  });
+
+  test('leaves connectivity alone when a poll rejects, because a failed request is not a device report', async (t) => {
+    // arrange
+    const { runtime, store, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.connectivity, { connected: true, timestamp: DEVICE_TIME });
+  });
+
+  test('schedules the next poll after one that rejects', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+        () => Promise.resolve([geminiDevice()]),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
+  });
+
+  test('SYNC-03 keeps the shadow metadata a later poll does not carry', async (t) => {
+    // arrange
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: { firmware: 'v9' }, version: 7 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { data: store.snapshot(DEVICE_ID)?.data, metadata: store.snapshot(DEVICE_ID)?.metadata, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
+      { data: { water_level: 4 }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
+    );
+  });
+
+  test('SYNC-03 lets a shadow document that arrives after a poll win on the keys it carries', async (t) => {
+    // arrange
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4, ac_power: true } }])],
+    });
+    await runtime.start();
+    await settle();
+    await advance(POLL_INTERVAL_MS);
+
+    // act
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 1 });
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 5, ac_power: true });
+  });
+});
+
+describe('the degraded monitoring path', () => {
+  test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
+    // arrange
+    const { runtime, advance } = harness(t, { shadow: [false] });
+
+    // act
+    await runtime.start();
+    await advance(0);
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'rest-only');
+  });
+
+  test('D-15 reports the degraded path once across three failed shadow attempts', async (t) => {
+    // arrange
+    const { runtime, logged, calls, advance } = harness(t, { shadow: [false] });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(500);
+    await advance(1_000);
+
+    // assert
+    assert.deepStrictEqual({ attempts: calls.filter((call) => call === 'shadow').length, warnings: countOf(logged, 'warn') }, { attempts: 3, warnings: 1 });
+  });
+
+  test('D-15 restores the combined path and announces the recovery once when a later attempt succeeds', async (t) => {
+    // arrange
+    const { runtime, logged, advance } = harness(t, { shadow: [false, true] });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(500);
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, recoveries: logged.filter((line) => line.endsWith('recovered.')) },
+      { path: 'rest-and-shadow', recoveries: ['info The shadow connection recovered.'] },
+    );
+  });
+
+  test('reads as the combined path once the shadow connection reports itself up', async (t) => {
+    // arrange
+    const { runtime } = harness(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'rest-and-shadow');
+  });
+
+  test('falls back to the polling-only path without reporting a fault when the connection closes', async (t) => {
+    // arrange
+    const { runtime, shadows, logged } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    shadows[0]?.options.onDisconnected('transport-closed');
+
+    // assert
+    assert.deepStrictEqual({ path: runtime.monitoringPath, warnings: countOf(logged, 'warn') }, { path: 'rest-only', warnings: 0 });
+  });
+
+  test('SYNC-04 reports no fault for the daily reconnect the provider connection ceiling forces', async (t) => {
+    // arrange
+    const { runtime, shadows, logged } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    shadows[0]?.options.onDisconnected('transport-closed');
+    shadows[0]?.options.onConnected();
+
+    // assert
+    assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'rest-and-shadow', reports: [] });
+  });
+
+  test('opens no shadow connection while discovery has returned no device', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
+    });
+
+    // act
+    await runtime.start();
+    await advance(0);
+
+    // assert
+    assert.deepStrictEqual(
+      calls.filter((call) => call === 'shadow'),
+      [],
+    );
+  });
+
+  test('opens the shadow connection once a later poll finds the account devices', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+        () => Promise.resolve([geminiDevice()]),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.strictEqual(calls.filter((call) => call === 'shadow').length, 1);
+  });
+});
 
 // Wires the real authentication client, REST client, and store behind the
 // runtime, so only the network boundary is replaced. The token cache lands in
 // this case's own storage directory, which is removed when the case ends.
-async function createAccount(t: TestContext, messages: string[] = []): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
+async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
 
   t.after(async () => {
     await rm(storagePath, { recursive: true, force: true });
   });
 
-  const log = createRecordingLog(messages);
+  const clock: Clock = { now: () => START_TIME };
+  const log = recordingLog(logged);
   const auth = createAuthClient({
     constants: testConstants,
     clientId: 'client-id-1',
@@ -105,12 +800,29 @@ async function createAccount(t: TestContext, messages: string[] = []): Promise<{
   });
   const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000 });
   const store = createDeviceStateStore({ clock, log });
+  const runtime = createAccountRuntime({
+    api,
+    store,
+    createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => fakeShadow(shadowOptions).client,
+    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+    pollIntervalMs: POLL_INTERVAL_MS,
+    failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    registerSecret: () => undefined,
+    clock,
+    log,
+  });
 
-  return { runtime: createAccountRuntime({ api, store, clock, log }), store };
+  // This case runs on real timers, so the poll and rotation timers must be
+  // released or they would hold the runner open.
+  t.after(async () => {
+    await runtime.stop();
+  });
+
+  return { runtime, store };
 }
 
-// Answers the token request and the device request, recording both.
-function stubCloud(t: TestContext, devices: unknown): { url: string; authorization: string | undefined }[] {
+// Answers the token request, the device request, and the credentials request.
+function stubCloud(t: TestContext): { url: string; authorization: string | undefined }[] {
   const requests: { url: string; authorization: string | undefined }[] = [];
 
   t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
@@ -121,135 +833,37 @@ function stubCloud(t: TestContext, devices: unknown): { url: string; authorizati
       return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
     }
 
-    return Promise.resolve(new Response(JSON.stringify(devices), { status: 200 }));
+    if (url.endsWith('/credentials/aws')) {
+      return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+    }
+
+    return Promise.resolve(new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
   });
 
   return requests;
 }
 
-// Mimics fetch's abort behavior: a request settles only when its signal aborts.
-function stubHangingCloud(t: TestContext): void {
-  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
-    const { signal } = init ?? {};
+describe('the wired account', () => {
+  test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
+    // arrange
+    const requests = stubCloud(t);
+    const { runtime, store } = await endToEndRuntime(t, []);
 
-    return new Promise<Response>((_resolve, reject) => {
-      const abort = (): void => {
-        reject(new Error('the request was aborted'));
-      };
+    // act
+    await runtime.start();
+    await settle();
 
-      if (signal?.aborted === true) {
-        abort();
-
-        return;
-      }
-
-      signal?.addEventListener('abort', abort);
-    });
+    // assert
+    assert.deepStrictEqual(
+      { requests, stored: store.deviceIds() },
+      {
+        requests: [
+          { url: 'https://tenant.example.test/oauth/token', authorization: undefined },
+          { url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1' },
+          { url: 'https://api.example.test/credentials/aws', authorization: 'Bearer id-token-1' },
+        ],
+        stored: [DEVICE_ID],
+      },
+    );
   });
-}
-
-test('authenticates, discovers one device, and stores its canonical snapshot', async (t) => {
-  // arrange
-  const requests = stubCloud(t, [geminiDevice()]);
-  const { runtime, store } = await createAccount(t);
-
-  // act
-  await runtime.start();
-
-  // assert
-  assert.deepStrictEqual(store.deviceIds(), ['account-1_serial-1']);
-  assert.deepStrictEqual(store.snapshot('account-1_serial-1'), {
-    identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: DEVICE_TIME,
-    receivedAt: RECEIVED_AT,
-  });
-  assert.deepStrictEqual(requests, [
-    { url: 'https://tenant.example.test/oauth/token', authorization: undefined },
-    { url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1' },
-  ]);
-});
-
-test('resolves a second stop without raising', async (t) => {
-  // arrange
-  stubCloud(t, [geminiDevice()]);
-  const { runtime } = await createAccount(t);
-  await runtime.start();
-
-  // act & assert
-  await assert.doesNotReject(() => runtime.stop());
-  await assert.doesNotReject(() => runtime.stop());
-});
-
-test('performs no request when start runs after stop', async (t) => {
-  // arrange
-  const requests = stubCloud(t, [geminiDevice()]);
-  const { runtime } = await createAccount(t);
-
-  // act
-  await runtime.stop();
-  await runtime.start();
-
-  // assert
-  assert.deepStrictEqual(requests, []);
-});
-
-test('resolves start with no unhandled rejection when a shutdown interrupts discovery', async (t) => {
-  // arrange
-  stubHangingCloud(t);
-  const { runtime } = await createAccount(t);
-
-  // act
-  const started = runtime.start();
-  await runtime.stop();
-
-  // assert
-  await assert.doesNotReject(() => started);
-});
-
-test('logs the route and the status when the vendor refuses discovery', async () => {
-  // arrange
-  const messages: string[] = [];
-  const api = discoveryOnlyApi(() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices')));
-  const log = createRecordingLog(messages);
-  const store = createDeviceStateStore({ clock, log });
-  const accountRuntime = createAccountRuntime({ api, store, clock, log });
-
-  // act
-  await accountRuntime.start();
-
-  // assert
-  assert.deepStrictEqual(messages, ['Device discovery failed on GET /devices with HTTP 403.']);
-  assert.deepStrictEqual(store.deviceIds(), []);
-});
-
-test('logs a fixed message that repeats nothing from an unexpected discovery failure', async () => {
-  // arrange
-  const messages: string[] = [];
-  const api = discoveryOnlyApi(() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices')));
-  const log = createRecordingLog(messages);
-  const store = createDeviceStateStore({ clock, log });
-  const accountRuntime = createAccountRuntime({ api, store, clock, log });
-
-  // act
-  await accountRuntime.start();
-
-  // assert
-  assert.deepStrictEqual(messages, ['Device discovery failed.']);
-});
-
-test('reports how many devices the account holds', async (t) => {
-  // arrange
-  const messages: string[] = [];
-  stubCloud(t, [geminiDevice()]);
-  const { runtime } = await createAccount(t, messages);
-
-  // act
-  await runtime.start();
-
-  // assert
-  assert.deepStrictEqual(messages, ['Discovered 1 device(s).']);
 });
