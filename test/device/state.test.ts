@@ -235,6 +235,17 @@ describe('applyDiscovery', () => {
     assert.strictEqual(Object.isFrozen(snapshot.data), true);
     assert.strictEqual(Object.isFrozen(snapshot.metadata), true);
   });
+
+  test('freezes a structured value nested inside the telemetry record', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+
+    // act
+    const snapshot = store.applyDiscovery({ ...geminiDevice(), data: { readings: { depth: 3 }, fault: null } });
+
+    // assert
+    assert.strictEqual(Object.isFrozen(snapshot.data.readings), true);
+  });
 });
 
 describe('applyReportedPatch', () => {
@@ -431,6 +442,18 @@ describe('applyReportedPatch', () => {
     assert.deepStrictEqual(store.deviceIds(), []);
   });
 
+  test('freezes a structured value nested inside the metadata record', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { radio: { signal: -54 } }, version: 1 });
+
+    // assert
+    assert.strictEqual(Object.isFrozen(snapshot?.metadata.radio), true);
+  });
+
   test('returns a merged snapshot no consumer can modify', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
@@ -619,6 +642,48 @@ describe('subscribe', () => {
 
     // assert
     assert.deepStrictEqual(notifications, [{ changedKeys: ['ac_power', 'primary_pump_running', 'water_level'], waterLevel: 1, previousWaterLevel: undefined }]);
+  });
+
+  test('notifies no listener when two identical polls repeat a structured value', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+
+    // assert
+    assert.deepStrictEqual(notifications, []);
+  });
+
+  test('reports a structured value that moved as the one key that changed', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 4 } } });
+
+    // assert
+    assert.deepStrictEqual(notifications, [{ changedKeys: ['readings'], waterLevel: 1, previousWaterLevel: 1 }]);
+  });
+
+  test('reports a key one record carries and the other omits as changed', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1 } });
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.applyDiscovery({ ...geminiDevice(), data: { water_level: 1, readings: { depth: 3 } } });
+
+    // assert
+    assert.deepStrictEqual(notifications, [{ changedKeys: ['readings'], waterLevel: 1, previousWaterLevel: 1 }]);
   });
 
   test('notifies no listener registered for a different device', () => {
