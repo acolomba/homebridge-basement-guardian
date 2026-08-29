@@ -660,6 +660,25 @@ test('treats a network failure as transient rather than as a refusal', async (t)
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
 });
 
+test('treats a failure body that is not JSON as transient, on the status alone', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  stubFetch(t, () => new Response('<html>gateway error</html>', { status: 502 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 502);
+      assert.strictEqual(error.message, 'POST /oauth/token failed with HTTP 502.');
+
+      return true;
+    },
+  );
+});
+
 test('treats a status that is neither a refusal nor a throttle as transient', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);

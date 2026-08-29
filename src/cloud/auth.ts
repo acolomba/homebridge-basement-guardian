@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { access, readFile, rename, writeFile } from 'node:fs/promises';
+import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { AuthRejectedError, AuthThrottledError } from './errors.js';
+import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from './errors.js';
 import { isRecord } from './types.js';
 
 import type { ProtocolConstants } from '../protocol.js';
@@ -11,8 +11,32 @@ import type { Logging } from 'homebridge';
 
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
+const GRANT_ROUTE = 'POST /oauth/token';
 const TOO_MANY_ATTEMPTS = 429;
+const CLIENT_ERROR = 400;
+const SERVER_ERROR = 500;
 const MILLISECONDS_PER_SECOND = 1_000;
+
+// A network failure carries no HTTP status, and zero is the conventional
+// stand-in for one that never arrived.
+const NO_HTTP_STATUS = 0;
+
+// A throttling response is retried on this interval rather than on the usual
+// capped backoff, because it may mean the account is blocked and every attempt
+// extends that block (D-22).
+const THROTTLED_RETRY_MS = 1_800_000;
+
+const REJECTION_ADVICE =
+  'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings); saving there restarts the plugin.';
+const REJECTION_FINALITY = 'No further attempt will be made, because each one extends the vendor block on the account.';
+
+const THROTTLE_WARNING =
+  'Authentication answered HTTP 429: the vendor is throttling it. The plugin will try again in 30 minutes. ' +
+  'If the account is genuinely blocked, the block lifts only 30 days after the last attempt, so every retry postpones it. ' +
+  'Disable this plugin, or remove its platform block from config.json, to let a real block clear.';
+
+const RECOVERED = 'Authentication recovered.';
+const HALTED = 'authentication stopped after the vendor refused the account credentials.';
 
 // Only the owner may read the cache: it holds a bearer token for the account
 // (AUTH-02).
@@ -54,6 +78,21 @@ export interface AuthClient {
 interface CachedToken {
   idToken: string;
   expiresAtMs: number;
+}
+
+// What one client remembers about its failures: the code that stopped it for
+// good, and the kind of the last transient failure it reported.
+interface FailurePolicy {
+  haltedReason: string | undefined;
+  lastTransient: string | undefined;
+}
+
+// A failure worth trying again, described once so the log line, the error, and
+// the repeat detection all agree.
+interface TransientFailure {
+  kind: string;
+  status: number;
+  message: string;
 }
 
 /** The payload the cache file carries between runs. */
@@ -193,14 +232,77 @@ function readErrorCode(body: unknown): string {
   return typeof code === 'string' ? code : 'unknown_error';
 }
 
-function grantFailure(status: number, body: unknown): Error {
+function rejectionLog(status: number): string {
+  return `Authentication stopped after HTTP ${String(status)}: the vendor refused the account credentials. ${REJECTION_ADVICE} ${REJECTION_FINALITY}`;
+}
+
+function transientLog(kind: string): string {
+  return `Authentication could not be completed (${kind}); the plugin will try again.`;
+}
+
+function httpFailure(status: number): TransientFailure {
+  return { kind: `HTTP ${String(status)}`, status, message: `${GRANT_ROUTE} failed with HTTP ${String(status)}.` };
+}
+
+function unusableFailure(status: number): TransientFailure {
+  return { kind: 'an unusable response', status, message: `${GRANT_ROUTE} returned a response the plugin cannot read.` };
+}
+
+const NETWORK_FAILURE: TransientFailure = {
+  kind: 'a network error',
+  status: NO_HTTP_STATUS,
+  message: `${GRANT_ROUTE} could not be reached.`,
+};
+
+// A transient failure is reported once at warn and its immediate repeat drops
+// to debug, so a failure that persists across a poll cycle cannot flood the log
+// (D-14). The reminder cadence belongs to the account runtime, which sees the
+// whole failure stream.
+function reportTransient(options: AuthClientOptions, policy: FailurePolicy, failure: TransientFailure): CloudRequestError {
+  if (policy.lastTransient === failure.kind) {
+    options.log.debug(transientLog(failure.kind));
+  } else {
+    options.log.warn(transientLog(failure.kind));
+  }
+
+  policy.lastTransient = failure.kind;
+
+  return new CloudRequestError(failure.message, failure.status, GRANT_ROUTE);
+}
+
+function reportRecovery(options: AuthClientOptions, policy: FailurePolicy): void {
+  if (policy.lastTransient !== undefined) {
+    options.log.info(RECOVERED);
+    policy.lastTransient = undefined;
+  }
+}
+
+async function deleteCachedToken(options: AuthClientOptions): Promise<void> {
+  await rm(cachePath(options), { force: true });
+}
+
+async function grantFailure(options: AuthClientOptions, policy: FailurePolicy, status: number, body: unknown): Promise<Error> {
   const reason = readErrorCode(body);
 
   if (status === TOO_MANY_ATTEMPTS) {
-    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`, 0);
+    options.log.warn(THROTTLE_WARNING);
+
+    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`, THROTTLED_RETRY_MS);
   }
 
-  return new AuthRejectedError(`the vendor rejected the account credentials with HTTP ${String(status)} (${reason}).`, reason);
+  // The vendor does not publish the code it returns for a wrong password, so
+  // every client error that is not a throttle is read as a refusal. Stopping on
+  // a recoverable one costs a restart; retrying into a block costs thirty days
+  // measured from the last attempt (D-13).
+  if (status >= CLIENT_ERROR && status < SERVER_ERROR) {
+    policy.haltedReason = reason;
+    options.log.error(rejectionLog(status));
+    await deleteCachedToken(options);
+
+    return new AuthRejectedError(`the vendor rejected the account credentials with HTTP ${String(status)} (${reason}).`, reason);
+  }
+
+  return reportTransient(options, policy, httpFailure(status));
 }
 
 function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
@@ -218,28 +320,52 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
   return { idToken, expiresAtMs: clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND };
 }
 
-async function requestGrant(options: AuthClientOptions, signal: AbortSignal): Promise<CachedToken> {
-  const response = await fetch(`https://${options.constants.auth0Domain}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: grantBody(options),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(options.requestTimeoutMs)]),
-  });
-  const body: unknown = await response.json();
+async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
+  try {
+    return await fetch(`https://${options.constants.auth0Domain}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: grantBody(options),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(options.requestTimeoutMs)]),
+    });
+  } catch (error: unknown) {
+    // A shutdown is not a failure, so an abort the caller asked for travels on
+    // untouched and says nothing.
+    if (signal.aborted) {
+      throw error;
+    }
+
+    throw reportTransient(options, policy, NETWORK_FAILURE);
+  }
+}
+
+async function readBody(response: Response): Promise<unknown> {
+  try {
+    const body: unknown = await response.json();
+
+    return body;
+  } catch {
+    // A gateway in front of the tenant can answer with an error page. That body
+    // carries nothing the status does not already say.
+    return undefined;
+  }
+}
+
+async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
+  const response = await fetchGrant(options, policy, signal);
+  const body = await readBody(response);
 
   if (!response.ok) {
-    options.log.error(`Authentication failed with HTTP ${String(response.status)}.`);
-
-    throw grantFailure(response.status, body);
+    throw await grantFailure(options, policy, response.status, body);
   }
 
   const grant = readGrant(body, options.clock);
 
   if (grant === undefined) {
-    options.log.error('Authentication returned a response the plugin cannot read.');
-
-    throw new AuthRejectedError('the vendor authentication response carried no usable token.', 'malformed_response');
+    throw reportTransient(options, policy, unusableFailure(response.status));
   }
+
+  reportRecovery(options, policy);
 
   return grant;
 }
@@ -253,12 +379,23 @@ async function requestGrant(options: AuthClientOptions, signal: AbortSignal): Pr
  * (AUTH-01). The cache is read once per client and rewritten after every grant.
  * Creating the client reads no file and performs no request; only `idToken`
  * does.
+ *
+ * Each failure class gets the one answer that is safe for it. A refused
+ * credential stops this client for good, because the vendor lifts a brute-force
+ * block only thirty days after the last attempt (D-13). A throttling response
+ * is tried again on a long interval instead (D-22). Anything else is transient
+ * and leaves both the cache and the client intact.
  */
 export function createAuthClient(options: AuthClientOptions): AuthClient {
+  const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
   let cached: CachedToken | undefined;
   let cacheRead = false;
 
   async function currentToken(signal: AbortSignal): Promise<CachedToken> {
+    if (policy.haltedReason !== undefined) {
+      throw new AuthHaltedError(HALTED, policy.haltedReason);
+    }
+
     if (!cacheRead) {
       cacheRead = true;
       cached = await readCachedToken(options);
@@ -268,7 +405,7 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
       return cached;
     }
 
-    const granted = await requestGrant(options, signal);
+    const granted = await requestGrant(options, policy, signal);
     await writeCachedToken(options, granted);
 
     return granted;
