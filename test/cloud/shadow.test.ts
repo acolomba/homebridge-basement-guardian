@@ -281,9 +281,9 @@ describe('start', () => {
     );
   });
 
-  test('requests no shadow and reports at debug when the subscription is refused', async () => {
+  test('requests no shadow and gives up the connection when the subscription is refused', async () => {
     // arrange
-    const { client, transports, logged } = harness({ subscribe: new Error('subscribe refused') });
+    const { client, transports, logged, lifecycle } = harness({ subscribe: new Error('subscribe refused') });
 
     // act
     await client.start([DEVICE_A]);
@@ -291,9 +291,38 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(
-      { published: transports[0]?.published, logged },
-      { published: [], logged: ['debug The shadow subscription could not be established.'] },
+      { published: transports[0]?.published, logged, lifecycle, ends: transports[0]?.ends() },
+      {
+        published: [],
+        logged: ['warn The shadow subscription could not be established, so the connection will be retried.'],
+        lifecycle: ['connected', 'disconnected subscription-refused'],
+        ends: 1,
+      },
     );
+  });
+
+  test('reports not connected after a refused subscription rather than a healthy monitoring path', async () => {
+    // arrange
+    const { client, transports } = harness({ subscribe: new Error('subscribe refused') });
+
+    // act
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // assert
+    assert.strictEqual(client.connected, false);
+  });
+
+  test('reconnects through the guarded policy after a refused subscription', async () => {
+    // arrange
+    const { client, transports, retry } = harness({ subscribe: new Error('subscribe refused') });
+
+    // act
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // assert
+    assert.deepStrictEqual({ pending: retry.pending, attempt: retry.attempt }, { pending: true, attempt: 1 });
   });
 });
 
