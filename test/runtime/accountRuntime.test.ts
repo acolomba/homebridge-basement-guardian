@@ -165,7 +165,15 @@ interface ShadowRecorder {
 
 // A shadow client that opens no socket. Starting it reports the connection the
 // way the real client does, from its connect notification.
-function fakeShadow(options: ShadowRuntimeOptions, closeFails = false): { client: ShadowClient; recorder: ShadowRecorder } {
+//
+// `whileStarting` holds the start unresolved after the connection has been
+// announced, which is the window a shutdown has to land in for the runtime to
+// see no client to close.
+function fakeShadow(
+  options: ShadowRuntimeOptions,
+  closeFails = false,
+  whileStarting?: () => Promise<void>,
+): { client: ShadowClient; recorder: ShadowRecorder } {
   const subscribed: string[][] = [];
   let closes = 0;
   let live = false;
@@ -180,7 +188,7 @@ function fakeShadow(options: ShadowRuntimeOptions, closeFails = false): { client
         live = true;
         options.onConnected();
 
-        return Promise.resolve();
+        return whileStarting === undefined ? Promise.resolve() : whileStarting();
       },
       requestFullShadow: (): Promise<void> => Promise.resolve(),
       close: (): Promise<void> => {
@@ -201,6 +209,8 @@ interface Script {
   shadow: readonly boolean[];
   /** Whether closing the shadow connection rejects. */
   closeFails: boolean;
+  /** Work the shadow start waits for, which is how a case lands a shutdown inside that window. */
+  whileShadowStarts: () => Promise<void>;
   pollIntervalMs: number;
   rotationLeadMs: number;
   minRotationDelayMs: number;
@@ -278,7 +288,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
         throw new Error('the broker refused the connection');
       }
 
-      const { client, recorder } = fakeShadow(shadowOptions, script.closeFails ?? false);
+      const { client, recorder } = fakeShadow(shadowOptions, script.closeFails ?? false, script.whileShadowStarts);
       shadows.push(recorder);
 
       return client;
@@ -867,6 +877,35 @@ describe('stop', () => {
       { attemptsBeforeStop, attemptsAfterStop: calls.filter((call) => call === 'shadow').length },
       { attemptsBeforeStop: 1, attemptsAfterStop: 1 },
     );
+  });
+
+  test('SYNC-05 closes a shadow connection whose start resolved only after the shutdown began', async (t) => {
+    // arrange
+    // The shutdown lands after the connection is open and before the runtime
+    // has recorded it, which is the window where nothing would close it.
+    const stopped = { runtime: undefined as AccountRuntime | undefined };
+    const { runtime, shadows } = harness(t, { whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    stopped.runtime = runtime;
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.strictEqual(shadows[0]?.closes(), 1);
+  });
+
+  test('SYNC-05 raises nothing when the connection opened during a shutdown cannot be closed', async (t) => {
+    // arrange
+    const stopped = { runtime: undefined as AccountRuntime | undefined };
+    const { runtime } = harness(t, { closeFails: true, whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    stopped.runtime = runtime;
+
+    // act & assert
+    await assert.doesNotReject(async () => {
+      await runtime.start();
+      await settle();
+    });
   });
 
   test('SYNC-05 schedules nothing and reports no failure when a shutdown aborts the launch', async (t) => {
