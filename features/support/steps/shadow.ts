@@ -22,12 +22,14 @@ const SERIAL_NUMBER = 'placeholder-serial-number';
 const DEVICE_TIME = 1_700_000_000_000;
 
 // A subscription that never completes makes the broker go silent rather than fail, so every wait
-// carries a deadline and reports on a named step.
+// carries a deadline and reports on a named step. The step timeout sits above the deadline, so the
+// failure names the condition that was never met rather than the runner giving up first.
 const DEADLINE_MS = 5000;
+const STEP_TIMEOUT_MS = 15_000;
 
 // The requested value a device carries while it acknowledges a command. It is not device state and
 // must never reach the canonical snapshot.
-const REQUESTED_STATE = { desired: { data: { test_running: true } } };
+const REQUESTED_STATE = { desired: { data: { alarm_muted: true } } };
 
 // A table cell reads as the JSON value the vendor would have sent, so a scenario states `false`
 // and `2` rather than the text of either.
@@ -135,10 +137,12 @@ async function publishHeartbeat(this: BasementGuardianWorld, table: DataTable): 
   const broker = await this.broker();
   await awaitSubscription(this);
 
-  broker.publishReported(theDeviceId(this), fieldsOf(table), this.nextShadowVersion());
+  // The vendor carries telemetry under `reported.data`, so a heartbeat's fields go there rather
+  // than directly under `reported`.
+  broker.publishReported(theDeviceId(this), { data: fieldsOf(table) }, this.nextShadowVersion());
 }
 
-When('the device publishes these heartbeat fields:', publishHeartbeat);
+When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishHeartbeat);
 
 async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
@@ -147,7 +151,7 @@ async function publishRequestedState(this: BasementGuardianWorld): Promise<void>
   broker.publishGetAccepted(theDeviceId(this), REQUESTED_STATE, this.nextShadowVersion());
 }
 
-When('the device publishes a requested value', publishRequestedState);
+When('the device publishes a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);
 
 async function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const fields = fieldsOf(table);
@@ -171,7 +175,7 @@ function assertSnapshotFields(this: BasementGuardianWorld, table: DataTable): Pr
   return this.untilTrue(holds, DEADLINE_MS, 'the canonical snapshot never carried the fields the scenario expects');
 }
 
-Then('the canonical snapshot carries these fields:', assertSnapshotFields);
+Then('the canonical snapshot carries these fields:', { timeout: STEP_TIMEOUT_MS }, assertSnapshotFields);
 
 function assertSnapshotOmitsField(this: BasementGuardianWorld, name: string): void {
   assert.equal(Object.hasOwn(this.snapshot(theDeviceId(this)).data, name), false);
@@ -187,7 +191,7 @@ function assertShadowVersion(this: BasementGuardianWorld, version: number): Prom
   );
 }
 
-Then('the canonical snapshot is at shadow version {int}', assertShadowVersion);
+Then('the canonical snapshot is at shadow version {int}', { timeout: STEP_TIMEOUT_MS }, assertShadowVersion);
 
 function assertCanonicalChangeCount(this: BasementGuardianWorld, count: number): void {
   assert.equal(this.changes.length, count);
@@ -204,7 +208,7 @@ async function assertCompleteShadowRequests(this: BasementGuardianWorld, count: 
   assert.equal(requested(), count);
 }
 
-Then('the plugin publishes {int} complete shadow request(s)', assertCompleteShadowRequests);
+Then('the plugin publishes {int} complete shadow request(s)', { timeout: STEP_TIMEOUT_MS }, assertCompleteShadowRequests);
 
 async function assertNoCompleteShadowRequest(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
@@ -221,7 +225,7 @@ async function assertHandshakeCount(this: BasementGuardianWorld, count: number):
   assert.equal(broker.handshakes.length, count);
 }
 
-Then('the broker holds {int} handshake(s)', assertHandshakeCount);
+Then('the broker holds {int} handshake(s)', { timeout: STEP_TIMEOUT_MS }, assertHandshakeCount);
 
 async function assertHandshakeCarriesTheRotatedCredentials(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();

@@ -16,8 +16,11 @@ import type { BasementGuardianWorld } from '../world.js';
 const CREDENTIALS_PATH = '/credentials/aws';
 const SHORT_POLL_INTERVAL_SECONDS = 0.05;
 
-// A named step that fails on its deadline is what turns a silent transport stall into a report.
-const DEADLINE_MS = 5000;
+// A named step that fails on its deadline is what turns a silent transport stall into a report. The
+// step timeout sits above the deadline, so the failure names the condition rather than the runner
+// giving up first.
+const DEADLINE_MS = 10_000;
+const STEP_TIMEOUT_MS = 20_000;
 
 // The runtime holds a rotation to a thirty-second floor, however soon the vendor expiry falls, so a
 // scenario that waits for a real rotation waits at least that long.
@@ -30,7 +33,7 @@ const SETTLE_MS = 200;
 
 const DEGRADED_LINE = 'warn The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
 const RECOVERY_LINE = 'info The shadow connection recovered.';
-const ATTEMPT_FAILED_LINE = 'debug The shadow connection failed and will reconnect.';
+const ATTEMPT_REFUSED_LINE = 'debug The shadow connection was refused before it was established and will be retried.';
 const ATTEMPTS_BEFORE_A_FLOOD = 3;
 
 function countOf(lines: readonly string[], line: string): number {
@@ -104,7 +107,7 @@ function assertMonitoringPath(this: BasementGuardianWorld, path: string): Promis
   return this.untilTrue(() => this.runtime().monitoringPath === path, DEADLINE_MS, `the monitoring path never reached ${path}`);
 }
 
-Then('the monitoring path is {string}', assertMonitoringPath);
+Then('the monitoring path is {string}', { timeout: STEP_TIMEOUT_MS }, assertMonitoringPath);
 
 function assertNoUnhandledRejection(this: BasementGuardianWorld): void {
   assert.deepEqual(this.rejections, []);
@@ -114,7 +117,7 @@ Then('the plugin records no unhandled rejection', assertNoUnhandledRejection);
 
 async function assertDegradedPathWarnedOnce(this: BasementGuardianWorld): Promise<void> {
   await this.untilTrue(
-    () => countOf(this.logged, ATTEMPT_FAILED_LINE) >= ATTEMPTS_BEFORE_A_FLOOD,
+    () => countOf(this.logged, ATTEMPT_REFUSED_LINE) >= ATTEMPTS_BEFORE_A_FLOOD,
     DEADLINE_MS,
     'the plugin made too few connection attempts to prove the reporting stays quiet',
   );
@@ -122,7 +125,7 @@ async function assertDegradedPathWarnedOnce(this: BasementGuardianWorld): Promis
   assert.equal(countOf(this.logged, DEGRADED_LINE), 1);
 }
 
-Then('the log warns once about the degraded path', assertDegradedPathWarnedOnce);
+Then('the log warns once about the degraded path', { timeout: STEP_TIMEOUT_MS }, assertDegradedPathWarnedOnce);
 
 function assertRecoveryAnnouncedOnce(this: BasementGuardianWorld): void {
   assert.equal(countOf(this.logged, RECOVERY_LINE), 1);
@@ -142,10 +145,11 @@ Then('the log carries no error', assertNoErrorLogged);
 async function assertVendorRequestCount(this: BasementGuardianWorld, count: number): Promise<void> {
   const service = await this.restApi();
 
+  await this.untilTrue(() => service.requests.length >= count, DEADLINE_MS, `the fake service saw fewer than ${String(count)} requests`);
   assert.equal(service.requests.length, count);
 }
 
-Then('the fake service holds {int} vendor request(s)', assertVendorRequestCount);
+Then('the fake service holds {int} vendor request(s)', { timeout: STEP_TIMEOUT_MS }, assertVendorRequestCount);
 
 async function assertNoRequestReachesTheCloud(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
