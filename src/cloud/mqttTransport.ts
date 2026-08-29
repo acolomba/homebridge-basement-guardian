@@ -127,9 +127,15 @@ function within(deadlineMs: number, begin: (settle: (error?: Error | null) => vo
 
 // A graceful end sends the disconnect packet rather than dropping the socket,
 // and the callback is the only report that the client has finished.
-function endOnce(client: MqttClientLike): Promise<void> {
+//
+// A client that has not connected is dropped instead. The library queues the
+// disconnect packet until a connection this client may never get, so the socket
+// is never ended, while the end still reports itself finished. Ending politely
+// there leaves a live connection behind that nothing will ever close, which is
+// exactly what a shutdown promises it does not do (SYNC-05).
+function endOnce(client: MqttClientLike, force: boolean): Promise<void> {
   return new Promise<void>((resolve) => {
-    client.end(false, () => {
+    client.end(force, () => {
       resolve();
     });
   });
@@ -156,10 +162,17 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
     transformWsUrl: (_url: string, _connectOptions: object, live: MqttClientIdentity): string => options.signUrl(live),
   });
   let ending: Promise<void> | undefined;
+  // Whether a graceful end can complete. The connect notification is where that
+  // fact arrives, so it is recorded on the way through to the consumer rather
+  // than by a second listener the client would have to carry.
+  let connected = false;
 
   return {
     onConnect: (handler: () => void): void => {
-      client.on('connect', handler);
+      client.on('connect', () => {
+        connected = true;
+        handler();
+      });
     },
     onMessage: (handler: (topic: string, payload: Buffer) => void): void => {
       client.on('message', handler);
@@ -179,7 +192,7 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
         client.publish(topic, payload, settle);
       }),
     end: (): Promise<void> => {
-      ending ??= endOnce(client);
+      ending ??= endOnce(client, !connected);
 
       return ending;
     },

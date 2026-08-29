@@ -26,11 +26,27 @@ Feature: Starting and shutting down
     When homebridge shuts down
     Then the plugin records no unhandled rejection
 
-  Scenario: Shutdown with an open shadow connection raises nothing
+  Scenario: Shutdown with an open shadow connection releases it
     Given the shadow credentials
     When the plugin starts
     Then the broker holds 1 handshake
     When homebridge shuts down
+    Then the broker holds no live connection
+    Then the plugin records no unhandled rejection
+
+  Scenario: Shutdown while a reconnect is pending leaves no live connection
+    A refused broker that starts accepting again leaves a reconnect imminent, so this covers the
+    window where a retry can open a connection after the shutdown began. The other window, where a
+    connection opens while the runtime is recording it, is a race inside one function that a
+    scenario cannot steer; a unit case covers that one.
+
+    Given the shadow credentials
+    Given the broker refuses connections
+    When the plugin starts
+    Then the log warns once about the degraded path
+    When the broker accepts connections
+    When homebridge shuts down
+    Then the broker holds no live connection
     Then the plugin records no unhandled rejection
 
   Scenario: A second shutdown completes

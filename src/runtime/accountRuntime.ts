@@ -272,6 +272,24 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
+  // Whether a shutdown has begun. It is asked through a function so that a
+  // check after an await asks again rather than reusing the answer from before
+  // it, which is the whole point of checking twice.
+  function hasStopped(): boolean {
+    return stopped;
+  }
+
+  // Closing reports nothing. A connection that fails while it is being closed
+  // has still stopped being used, and an escaping rejection during shutdown
+  // would surface as an unhandled exception in the Homebridge process (D-20).
+  async function closeQuietly(client: ShadowClient | undefined): Promise<void> {
+    try {
+      await client?.close();
+    } catch {
+      // Deliberately silent, for the reason above.
+    }
+  }
+
   // Opens the connection once there is both a credential cache to sign from and
   // a device to subscribe for, and reports whether it was refused so the caller
   // can decide whether a retry chain needs starting.
@@ -279,7 +297,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
-    if (stopped || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
+    if (hasStopped() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
       return false;
     }
 
@@ -294,6 +312,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         onDisconnected: handleShadowDisconnected,
       });
       await client.start(deviceIds);
+
+      // The start has already opened the socket, so a shutdown that landed
+      // while it was resolving found no client to close and would leave that
+      // socket with nothing to close it. It is closed here and never recorded
+      // (SYNC-05).
+      if (hasStopped()) {
+        await closeQuietly(client);
+
+        return false;
+      }
+
       shadow = client;
 
       return false;
@@ -504,6 +533,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // Aborting first cancels every wait and request before anything else is
     // released; the socket is closed last (SYNC-05). Calling this twice, or
     // after a partial start, resolves and raises nothing.
+    //
+    // Nothing releases the store's shadow source here, and nothing needs to.
+    // Closing raises no disconnection, so the store keeps the shadow as the
+    // owner of telemetry, but the abort above has already ended every wait and
+    // request: no poll follows that the ownership could hold off, and the store
+    // is discarded with the runtime. A start after a stop performs no work
+    // either, so the held ownership is unobservable (SYNC-03).
     async stop(): Promise<void> {
       if (stopped) {
         return;
@@ -511,14 +547,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       stopped = true;
       root.abort();
-
-      try {
-        await shadow?.close();
-      } catch {
-        // A connection that fails while it is being closed has still stopped
-        // being used, and an escaping rejection during shutdown would surface
-        // as an unhandled exception in the Homebridge process (D-20).
-      }
+      await closeQuietly(shadow);
     },
   };
 }
