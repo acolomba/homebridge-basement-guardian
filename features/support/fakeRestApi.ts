@@ -5,8 +5,10 @@
  * scenario can assert the authorization header and the command payload without knowing how the
  * request was sent.
  *
- * The wire shapes come from the plugin's own boundary module, so a scenario cannot pass a payload
- * the production predicates would reject.
+ * The service emits the vendor's measured wire shape: the device routes answer an envelope and
+ * carry the serial number under `attributes`. The plugin's own types describe only the normalized
+ * result, so a scenario hands this service internal records and the serializer below turns each one
+ * into the record the vendor would have sent.
  */
 
 import { LOOPBACK_ADDRESS, readBody, respondJson, startLoopbackServer } from './loopbackServer.js';
@@ -73,6 +75,28 @@ const DEFAULT_CREDENTIALS: AwsCredentialsResponse = {
   },
 };
 
+// The vendor's own account identifier appears in every wire record. This service keeps one fixed
+// placeholder while a scenario brings its own device identifiers, so the vendor's measured relation
+// between deviceId, the account identifier, and the serial number does not hold here. Nothing in the
+// plugin reads the account identifier or splits a deviceId today, so nothing depends on it; a future
+// change that did depend on the relation would not be caught by this service.
+const ACCOUNT_ID = 'fake-account-id';
+const PRODUCT_LINE = 'wayneWater';
+
+// One device as the vendor sends it: the serial number and the product line sit under `attributes`,
+// never at the top level.
+function wireDevice(device: ApiDevice): Record<string, unknown> {
+  return {
+    accountId: ACCOUNT_ID,
+    deviceId: device.deviceId,
+    deviceTypeId: device.deviceTypeId,
+    name: device.name,
+    data: device.data,
+    attributes: { productLine: PRODUCT_LINE, serialNumber: device.serialNumber },
+    connectivity: device.connectivity,
+  };
+}
+
 // Answers the device identifier a device-scoped path names, or undefined when the path is not one.
 function deviceIdIn(pathname: string, suffix: string): string | undefined {
   const prefix = `${DEVICES_PATH}/`;
@@ -95,12 +119,12 @@ function answerDevice(state: ServiceState, deviceId: string, response: ServerRes
     return;
   }
 
-  respondJson(response, 200, device);
+  respondJson(response, 200, { device: wireDevice(device) });
 }
 
 function answer(state: ServiceState, method: string, pathname: string, response: ServerResponse): void {
   if (method === 'GET' && pathname === DEVICES_PATH) {
-    respondJson(response, 200, state.devices);
+    respondJson(response, 200, { devices: state.devices.map((device) => wireDevice(device)) });
 
     return;
   }

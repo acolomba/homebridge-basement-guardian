@@ -27,6 +27,40 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// The same device as the vendor sends it on the wire, with the thirteen top-level
+// keys in the vendor's own order. The literal carries no type annotation on
+// purpose: an untyped fixture cannot be reshaped by a later edit to a plugin
+// type, so it keeps describing the vendor's shape rather than the plugin's. The
+// serial number and the product line both sit under `attributes`; the eight keys
+// the plugin never reads are here so a case can prove they do not travel inward.
+function geminiWireDevice() {
+  return {
+    accountId: 'account-1',
+    deviceId: 'account-1_serial-1',
+    deviceTypeId: 'wayneWaterGemini',
+    location: 'placeholder-location',
+    name: 'Sump System',
+    homeId: null,
+    roomId: null,
+    state: { wifi_signal_dbm: -55, mcu_firmware_version: '1.0.0' },
+    data: { water_level: 1 },
+    timestamp: 1_700_000_000_000,
+    shadow: { state: { offline: false }, data: { water_level: 1 }, timestamp: 1_700_000_000_000 },
+    attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+  };
+}
+
+// The list route wraps its records under a plural key; the single-device route
+// wraps its one record under a singular key. The two keys are not the same.
+function deviceListBody(devices: unknown[]): { devices: unknown[] } {
+  return { devices };
+}
+
+function deviceBody(): { device: unknown } {
+  return { device: geminiWireDevice() };
+}
+
 // Every field here is invented; the vendor issues these values at runtime.
 function awsCredentialsResponse(): AwsCredentialsResponse {
   return {
@@ -123,7 +157,7 @@ function stubSignalRecordingFetch(t: TestContext): (AbortSignal | null | undefin
   t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
     requestSignals.push(init?.signal);
 
-    return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   });
 
   return requestSignals;
@@ -157,7 +191,7 @@ test('waits at most 2500 milliseconds for the vendor to accept a command', () =>
 
 test('authorizes the device request with the bearer token the auth client supplies', async (t) => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -172,7 +206,7 @@ test('authorizes the device request with the bearer token the auth client suppli
 
 test('reads an empty account as an empty device list', async (t) => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify([]), { status: 200 }));
+  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -182,9 +216,39 @@ test('reads an empty account as an empty device list', async (t) => {
   assert.deepStrictEqual(devices, []);
 });
 
+test('lifts the serial number the vendor nests under attributes', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const devices = await cloudApi.devices(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(
+    devices.map((device) => device.serialNumber),
+    ['serial-1'],
+  );
+});
+
+test('carries no vendor field inward beyond the six the plugin reads', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const devices = await cloudApi.devices(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(
+    devices.map((device) => Object.keys(device).sort()),
+    [['connectivity', 'data', 'deviceId', 'deviceTypeId', 'name', 'serialNumber']],
+  );
+});
+
 test('reads one device from the device route', async (t) => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceBody()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -205,7 +269,7 @@ test('reads one device from the device route', async (t) => {
 
 test('encodes a device identifier that needs percent-encoding into the path', async (t) => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceBody()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -287,7 +351,7 @@ test('refuses a device response the vendor answered with an error status', async
 
 test('refuses a device response whose shape the plugin cannot read', async (t) => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify([{ deviceId: 'account-1_serial-1' }]), { status: 200 }));
+  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act & assert
@@ -298,6 +362,50 @@ test('refuses a device response whose shape the plugin cannot read', async (t) =
       assert.strictEqual(error.status, 200);
       assert.strictEqual(error.route, 'GET /devices');
       assert.strictEqual(error.message, 'GET /devices returned a response the plugin cannot read.');
+
+      return true;
+    },
+  );
+});
+
+// The body is the NORMALIZED record, not the wire record: serial at the top level
+// and none of the vendor's other keys. That is the only payload that
+// discriminates, because it is exactly the shape the plugin used to accept
+// unwrapped. A wire record here would be refused for the wrong reason and prove
+// nothing about the envelope.
+test('refuses a device list the vendor sent as a bare top-level array', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.devices(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 200);
+      assert.strictEqual(error.route, 'GET /devices');
+      assert.strictEqual(error.message, 'GET /devices returned a response the plugin cannot read.');
+
+      return true;
+    },
+  );
+});
+
+// The body is the NORMALIZED record for the same reason as the case above.
+test('refuses a single device the vendor sent with no envelope around it', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.device('account-1_serial-1', new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 200);
+      assert.strictEqual(error.route, 'GET /devices/{deviceId}');
+      assert.strictEqual(error.message, 'GET /devices/{deviceId} returned a response the plugin cannot read.');
 
       return true;
     },
@@ -366,7 +474,7 @@ test('keeps the token, the base URL, and the response body out of a failed reque
 test('deadlines a read route with the configured request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  stubFetch(t, () => new Response(JSON.stringify([]), { status: 200 }));
+  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -501,8 +609,8 @@ function invocations(cloudApi: CloudApi): Record<keyof CloudApi, () => Promise<u
 // request is recorded rather than being cut short by a rejection.
 function vendorBodies(): Record<keyof CloudApi, string> {
   return {
-    devices: JSON.stringify([geminiDevice()]),
-    device: JSON.stringify(geminiDevice()),
+    devices: JSON.stringify(deviceListBody([geminiWireDevice()])),
+    device: JSON.stringify(deviceBody()),
     awsCredentials: JSON.stringify(awsCredentialsResponse()),
     sendCommand: JSON.stringify({ success: true }),
   };

@@ -74,8 +74,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 function field(document: unknown, name: string): unknown {
   return isRecord(document) ? document[name] : undefined;
+}
+
+// The service answers the vendor's wire shape, so a record carries its serial number under
+// `attributes` rather than at the top level.
+function wireIdentity(wireDevice: unknown): Record<string, unknown> {
+  return {
+    deviceId: field(wireDevice, 'deviceId'),
+    name: field(wireDevice, 'name'),
+    serialNumber: field(field(wireDevice, 'attributes'), 'serialNumber'),
+  };
 }
 
 function topicNamed(name: string): string {
@@ -287,7 +301,16 @@ function assertResponseError(this: BasementGuardianWorld, error: string): void {
 Then('the response carries the error {string}', assertResponseError);
 
 function assertDeviceListHoldsTheDevices(this: BasementGuardianWorld): void {
-  assert.deepEqual(this.response().body, this.devices);
+  const wireDevices = field(this.response().body, 'devices');
+
+  if (!isUnknownArray(wireDevices)) {
+    assert.fail('the device list answer carries no devices array');
+  }
+
+  assert.deepEqual(
+    wireDevices.map((wireDevice) => wireIdentity(wireDevice)),
+    this.devices.map((device) => ({ deviceId: device.deviceId, name: device.name, serialNumber: device.serialNumber })),
+  );
 }
 
 Then('the device list holds the devices the scenario sets', assertDeviceListHoldsTheDevices);
