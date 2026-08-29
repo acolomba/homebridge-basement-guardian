@@ -169,6 +169,21 @@ test('AUTH-02 substitutes an authorization token and keeps the scheme word', () 
   verify(delegate);
 });
 
+test('AUTH-02 leaves the sentence full stop after an authorization token it substitutes', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`the request carried Bearer ${REDACTED}.`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('the request carried Bearer header.payload.signature.');
+
+  // assert
+  verify(delegate);
+});
+
 for (const field of AWS_SESSION_CREDENTIAL_FIELDS) {
   test(`AUTH-02 substitutes the temporary credential field ${field}`, () => {
     // arrange

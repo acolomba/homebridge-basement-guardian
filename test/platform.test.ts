@@ -45,6 +45,8 @@ const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
 
 const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
 
+const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
+
 // strong-mock matches a function argument only through It.matches, so the
 // matcher doubles as the capture point for the registered listener.
 function captureListener(listeners: (() => void)[]): () => void {
@@ -77,8 +79,41 @@ describe('BasementGuardianPlatform', () => {
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), emptyConfig, api);
 
     // assert
-    assert.deepStrictEqual(messages, ['Not starting: the account email is missing. Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).']);
+    assert.deepStrictEqual(messages, [`Not starting: the account email is missing. ${REFUSAL_ADVICE}`]);
     assert.deepStrictEqual(platform.accessories, new Map());
+    verify(api);
+  });
+
+  test('CONF-03 logs the refusal through the redacting wrapper, so a configuration value cannot leak', () => {
+    // arrange
+    const messages: string[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const refusedReason = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is Bearer [redacted].';
+
+    // act
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, pollInterval: 'Bearer leaked-token' }, api);
+
+    // assert
+    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
+    assert.deepStrictEqual(platform.accessories, new Map());
+    verify(api);
+  });
+
+  test('AUTH-02 registers the account password as a secret once the configuration is accepted', (t) => {
+    // arrange
+    t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
+    const messages: string[] = [];
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), accountConfig, api);
+
+    // act
+    platform.log.info('the grant used account-password');
+
+    // assert
+    assert.deepStrictEqual(messages, ['the grant used [redacted]']);
     verify(api);
   });
 
