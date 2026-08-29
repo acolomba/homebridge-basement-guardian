@@ -397,6 +397,18 @@ Re-run at the end of the plan, all from the worktree:
 - No blockers. `STATE.md` and `ROADMAP.md` were deliberately left untouched; the orchestrator owns
   them after the wave merges.
 
+## Self-Check: PASSED
+
+- All four created source and test files exist on disk.
+- All four task commits and this summary's commit are present on the branch.
+- `git diff --diff-filter=D cf37b6c..HEAD` lists no deletion.
+- The whole-plan diff touches exactly the five files the plan declares, plus this summary.
+- Every task `<acceptance_criteria>` was re-run and passes, including the plan's own
+  `.fallowrc.json` assertion verbatim.
+- The plan-level `<verification>` block was re-run: both pairs pass, direct coverage is 100 percent
+  for each pair alone, `npm run fallow` exits 0 across all three sub-commands, and `npm run check`
+  exits 0.
+
 ______________________________________________________________________
 
 *Phase: 01-secure-cloud-foundation*
