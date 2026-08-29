@@ -9,10 +9,17 @@
  * identity is what keeps a known-but-unsupported device apart from a device
  * type nobody has ever seen, which is a different message to the user.
  *
- * This module is a declaration only, and it stays that way until HALO hardware
- * supplies representative payloads. Its entry in the `ignoreFindings` list of
- * `.fallowrc.json` goes away when a production consumer arrives.
+ * The type stays declaration-only, but `HALO_DEVICE_TYPE_ID` and
+ * `HALO_DISPLAY_NAME` are runtime values: the family registry needs a value it
+ * can compare a discovered `deviceTypeId` against, which a type alone cannot
+ * do.
  */
 
 /** The vendor `deviceTypeId` the plugin recognises as a HALO. */
 export type HaloDeviceTypeId = 'wayneWaterHalo';
+
+/** The runtime value of {@link HaloDeviceTypeId}, for comparing a discovered `deviceTypeId`. */
+export const HALO_DEVICE_TYPE_ID: HaloDeviceTypeId = 'wayneWaterHalo';
+
+/** The product name the registry's `unsupported` outcome shows a user in a log line. */
+export const HALO_DISPLAY_NAME = 'Wayne Water HALO';

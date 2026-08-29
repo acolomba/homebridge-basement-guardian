@@ -11,6 +11,7 @@ import { readdir } from 'node:fs/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../../src/device/halo.js';
 import { shadowTopic } from '../fakeShadowBroker.js';
 import { SUBSCRIBER_CLIENT_ID } from '../world.js';
 
@@ -456,3 +457,22 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
 }
 
 Then('the plugin registers one accessory with a truthful accessory information service', assertOneAccessoryWithTruthfulAccessoryInformation);
+
+const HALO_ROW_DEVICE_ID = 'placeholder-halo';
+const UNKNOWN_ROW_DEVICE_ID = 'placeholder-other';
+const UNKNOWN_ROW_DEVICE_TYPE_ID = 'wayneWaterUnknown';
+
+const EXPECTED_HALO_EXPLANATION =
+  `info Skipping ${HALO_ROW_DEVICE_ID}: ${HALO_DISPLAY_NAME} (${HALO_DEVICE_TYPE_ID}) ` + 'is a recognized but unsupported device family.';
+const EXPECTED_UNKNOWN_EXPLANATION = `info Skipping ${UNKNOWN_ROW_DEVICE_ID}: ${UNKNOWN_ROW_DEVICE_TYPE_ID} is not a recognized device family.`;
+
+// Asserted after every poll a scenario forces, so a repeat proves the explanation logs once per
+// device per run rather than once per poll (D-05).
+function assertHaloAndUnknownExplainedOnceEach(this: BasementGuardianWorld): void {
+  assert.deepEqual(
+    this.logged.filter((line) => line === EXPECTED_HALO_EXPLANATION || line === EXPECTED_UNKNOWN_EXPLANATION),
+    [EXPECTED_HALO_EXPLANATION, EXPECTED_UNKNOWN_EXPLANATION],
+  );
+}
+
+Then('the plugin explains the halo and the unknown device once each', assertHaloAndUnknownExplainedOnceEach);
