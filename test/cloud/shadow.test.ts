@@ -249,6 +249,40 @@ describe('start', () => {
   });
 });
 
+describe('handshake signing', () => {
+  test('signs the handshake from the cached credentials and refreshes the client identifier', async () => {
+    // arrange
+    const { client, transports } = harness();
+    const live = { options: { clientId: 'client-stale' } };
+    await client.start([DEVICE_A]);
+
+    // act
+    const signed = new URL(transports[0]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        origin: signed.origin,
+        path: signed.pathname,
+        credential: signed.searchParams.get('X-Amz-Credential'),
+        date: signed.searchParams.get('X-Amz-Date'),
+        token: signed.searchParams.get('X-Amz-Security-Token'),
+        signatureLength: signed.searchParams.get('X-Amz-Signature')?.length,
+        clientId: live.options.clientId,
+      },
+      {
+        origin: 'wss://broker.invalid',
+        path: '/mqtt',
+        credential: 'test-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
+        date: '20260828T120000Z',
+        token: 'test-session-token',
+        signatureLength: 64,
+        clientId: 'client-first',
+      },
+    );
+  });
+});
+
 describe('requestFullShadow', () => {
   test('publishes an empty payload to the device get topic', async () => {
     // arrange
