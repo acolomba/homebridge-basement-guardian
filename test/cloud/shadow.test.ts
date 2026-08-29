@@ -635,7 +635,7 @@ describe('the connection lifecycle', () => {
     await connected(transports[1]);
 
     // assert
-    assert.deepStrictEqual({ attempt: retry.attempt, delayMs: retry.nextDelayMs() }, { attempt: 1, delayMs: 500 });
+    assert.deepStrictEqual({ attempt: retry.attempt, delayMs: retry.nextDelayMs() }, { attempt: 0, delayMs: 500 });
   });
 
   test('re-subscribes and re-requests every shadow after a reconnect', async (t) => {

@@ -156,6 +156,10 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   const routes = new Map<string, ShadowRoute>();
   let devices: readonly string[] = [];
   let transport: MqttTransport | undefined;
+  let live = false;
+  let failed = false;
+  let closing = false;
+  let ending: Promise<void> | undefined;
 
   // The signing hook cannot await, so it reads the cache the rotation timer
   // keeps fresh. Refreshing the identifier here is load-bearing: the broker
@@ -214,23 +218,79 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     }
   }
 
+  // Reconnect timing belongs to the capped, guarded policy rather than to the
+  // transport library, whose own timer is disabled. A single failure raises
+  // both an error and a close notification, and the policy's pending guard is
+  // what turns that pair into one retry chain (SYNC-04).
+  //
+  // The reopener is passed in rather than read from the enclosing scope: the
+  // handlers, the schedule, and the opener would otherwise form a declaration
+  // cycle, and the parameter names the one thing a retry actually does.
+  function scheduleReconnect(reopen: () => void): void {
+    if (closing) {
+      return;
+    }
+
+    options.retry.schedule(() => {
+      reopen();
+
+      return Promise.resolve();
+    });
+  }
+
+  function handleError(reopen: () => void): void {
+    failed = true;
+    options.log.warn('The shadow connection failed and will reconnect.');
+    scheduleReconnect(reopen);
+  }
+
+  // The provider closes a signed connection at a ceiling it does not publish a
+  // knob for, so at least one reconnect a day is expected operation. Reporting
+  // that as a fault would teach the reader to ignore the genuine ones.
+  function handleClose(reopen: () => void): void {
+    live = false;
+
+    if (!failed) {
+      options.log.debug('The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.');
+    }
+
+    options.onDisconnected(failed ? 'transport-error' : 'transport-closed');
+    scheduleReconnect(reopen);
+  }
+
+  function handleConnect(connection: MqttTransport): void {
+    live = true;
+    options.retry.reset();
+    options.onConnected();
+    void requestEveryShadow(connection);
+  }
+
   function openConnection(): void {
     const current = options.credentials.current();
-    const live = options.createTransport({
+    const connection = options.createTransport({
       connect: options.connect,
       url: `${options.scheme}://${current.endpoint}${BROKER_PATH}`,
       clientId: current.clientId,
       signUrl: signHandshake,
     });
-    transport = live;
-    live.onConnect(() => {
-      void requestEveryShadow(live);
+    transport = connection;
+    failed = false;
+    connection.onConnect(() => {
+      handleConnect(connection);
     });
-    live.onMessage(handleMessage);
+    connection.onMessage(handleMessage);
+    connection.onError(() => {
+      handleError(openConnection);
+    });
+    connection.onClose(() => {
+      handleClose(openConnection);
+    });
   }
 
   return {
-    connected: false,
+    get connected(): boolean {
+      return live;
+    },
 
     start(deviceIds: readonly string[]): Promise<void> {
       devices = [...deviceIds];
@@ -244,8 +304,13 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
       return transport === undefined ? Promise.resolve() : transport.publish(SHADOW_TOPICS.get(deviceId), '');
     },
 
+    // The flag is set before the transport is ended, so the close notification
+    // teardown produces cannot schedule a retry.
     close(): Promise<void> {
-      return transport === undefined ? Promise.resolve() : transport.end();
+      closing = true;
+      ending ??= transport === undefined ? Promise.resolve() : transport.end();
+
+      return ending;
     },
   };
 }
