@@ -1,6 +1,16 @@
 name: Build and Lint
 
-on: [push, pull_request]
+on:
+  # Scoped to the default branch and pull requests, so a feature-branch push
+  # does not spend a full matrix run before the work is ready for review.
+  # Use `workflow_dispatch` to gate a branch on demand.
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -9,7 +19,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20.x, 22.x, 24.x]
+        # D-032: Node 20 left Homebridge support in April 2026, and
+        # `engines.node` is `^22.10.0 || ^24.0.0`. Node 22 is also the version
+        # Homebridge 1.8 and 2.x both accept, so dropping 20 costs no
+        # Homebridge 1.x coverage.
+        node-version: [22.x, 24.x]
 
     steps:
       - uses: actions/checkout@v5

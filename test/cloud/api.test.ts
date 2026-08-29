@@ -513,12 +513,22 @@ test('aborts an in-flight device request when the root signal aborts', async (t)
 
 test('aborts a device request on its own deadline while the root signal stays open', async (t) => {
   // arrange
+  // The deadline is owned by the case rather than waited out. `AbortSignal.timeout`
+  // creates an unref'd timer, so a real short deadline is not a slow test, it is a
+  // race: with only a hanging fetch pending, the loop drains before the timer fires
+  // and the request never settles. The command case below already owns its deadline
+  // this way.
+  const deadlines = stubDeadlines(t);
   stubHangingFetch(t);
-  const cloudApi = createCloudApi(apiOptions({ requestTimeoutMs: 10 }));
+  const cloudApi = createCloudApi(apiOptions());
   const rootController = new AbortController();
 
-  // act & assert
-  await assert.rejects(() => cloudApi.devices(rootController.signal));
+  // act
+  const devices = cloudApi.devices(rootController.signal);
+  deadlines.expire();
+
+  // assert
+  await assert.rejects(() => devices);
   assert.strictEqual(rootController.signal.aborted, false);
 });
 
