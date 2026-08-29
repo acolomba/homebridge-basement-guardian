@@ -7,14 +7,14 @@ import type { ProtocolConstants } from '../src/protocol.js';
 
 // The six public vendor constants the plugin bundles (D-07). Declaring the list
 // against the contract type keeps it aligned with the interface.
-const constantNames: (keyof ProtocolConstants)[] = ['apiUrl', 'auth0Domain', 'auth0Realm', 'awsRegion', 'clientId', 'protocol'];
+const constantNames: (keyof ProtocolConstants)[] = ['apiUrl', 'auth0Realm', 'auth0Url', 'awsRegion', 'clientId', 'protocol'];
 
 test('bundles exactly the six public vendor protocol constants', () => {
   // act
   const bundledNames = Object.keys(PROTOCOL).sort((left, right) => left.localeCompare(right));
 
   // assert
-  assert.deepStrictEqual(bundledNames, ['apiUrl', 'auth0Domain', 'auth0Realm', 'awsRegion', 'clientId', 'protocol']);
+  assert.deepStrictEqual(bundledNames, ['apiUrl', 'auth0Realm', 'auth0Url', 'awsRegion', 'clientId', 'protocol']);
 });
 
 for (const constantName of constantNames) {

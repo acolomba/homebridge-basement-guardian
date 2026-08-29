@@ -324,7 +324,7 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
 
 async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
   try {
-    return await fetch(`https://${options.constants.auth0Domain}/oauth/token`, {
+    return await fetch(`${options.constants.auth0Url}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: grantBody(options),

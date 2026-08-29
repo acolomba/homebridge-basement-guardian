@@ -54,7 +54,7 @@ function accountConfig(): BgConfig {
 const testConstants: ProtocolConstants = {
   apiUrl: 'https://api.example.test',
   clientId: 'bundled-client-id',
-  auth0Domain: 'tenant.example.test',
+  auth0Url: 'https://tenant.example.test',
   auth0Realm: 'example-realm',
   awsRegion: 'us-east-1',
   protocol: 'wss',
