@@ -259,6 +259,35 @@ test('authenticates again once the cached token has expired', async (t) => {
   assert.strictEqual(grantRequests.length, 2);
 });
 
+test('AUTH-01 answers two callers that start together from the cache file, without authenticating', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  await writeCacheText(storagePath, JSON.stringify(cacheContents()));
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+
+  // assert
+  assert.deepStrictEqual(idTokens, ['cached-token-1', 'cached-token-1']);
+  assert.deepStrictEqual(grantRequests, []);
+});
+
+test('AUTH-01 issues one grant for two callers that start together with no current token', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+
+  // assert
+  assert.deepStrictEqual(idTokens, ['id-token-1', 'id-token-1']);
+  assert.strictEqual(grantRequests.length, 1);
+});
+
 test('AUTH-01 stores the granted token in the cache file under the storage path', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
