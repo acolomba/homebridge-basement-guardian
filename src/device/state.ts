@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util';
+
 import type { ApiConnectivity, ApiDevice } from '../cloud/types.js';
 import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
@@ -124,13 +126,29 @@ function isStalePatch(applied: number | undefined, incoming: number | undefined)
   return applied !== undefined && incoming !== undefined && incoming <= applied;
 }
 
+// Freezes one opaque record at every depth. Freezing only the top level would
+// leave a structured vendor value editable, and `notify` hands the snapshot to
+// arbitrary listeners. Both records are parsed vendor JSON, so they are acyclic
+// by construction and need no cycle tracking.
+function freezeDeep(value: unknown): void {
+  if (value === null || typeof value !== 'object') {
+    return;
+  }
+
+  Object.freeze(value);
+
+  for (const nested of Object.values(value)) {
+    freezeDeep(nested);
+  }
+}
+
 // Freezes the envelope and both opaque records, so a consumer cannot edit
-// canonical safety state in place.
+// canonical safety state in place, however deeply it reaches.
 function freeze(snapshot: DeviceSnapshot): DeviceSnapshot {
   Object.freeze(snapshot.identity);
   Object.freeze(snapshot.connectivity);
-  Object.freeze(snapshot.data);
-  Object.freeze(snapshot.metadata);
+  freezeDeep(snapshot.data);
+  freezeDeep(snapshot.metadata);
 
   return Object.freeze(snapshot);
 }
@@ -211,13 +229,21 @@ function nextSnapshot(previous: DeviceSnapshot, patch: ReportedPatch, receivedAt
   });
 }
 
-// Shallow comparison of the merged telemetry record. Phase 1 reports which
-// keys moved and does not judge which of them matter, because no family
-// adapter exists yet to define relevance (D-19).
+// Reference identity is the fast path for the scalar fields that dominate. A
+// structured value falls through to a comparison by shape, because every poll
+// re-parses the vendor body into fresh objects, so identity alone would report
+// such a value as changed on every poll even when nothing moved (WR-07).
+function isSameValue(previous: unknown, next: unknown): boolean {
+  return Object.is(previous, next) || isDeepStrictEqual(previous, next);
+}
+
+// Compares the merged telemetry record key by key. This reports which keys
+// moved and does not judge which of them matter, because no family adapter
+// exists yet to define relevance (D-19).
 function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
 
-  return [...keys].filter((key) => !Object.is(previous[key], next[key])).sort();
+  return [...keys].filter((key) => !isSameValue(previous[key], next[key])).sort();
 }
 
 // One listener's failure is contained: the others still run and the reducer
