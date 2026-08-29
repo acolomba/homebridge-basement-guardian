@@ -115,6 +115,31 @@ function stubDeadlines(t: TestContext): { requested: number[]; expire: () => voi
   };
 }
 
+// Records the signal each request carries, so a case can compare it with the
+// signal the token fetch was handed.
+function stubSignalRecordingFetch(t: TestContext): (AbortSignal | null | undefined)[] {
+  const requestSignals: (AbortSignal | null | undefined)[] = [];
+
+  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
+    requestSignals.push(init?.signal);
+
+    return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+  });
+
+  return requestSignals;
+}
+
+// Answers with a token and records the signal the token fetch was given.
+function stubRecordingAuth(tokenSignals: AbortSignal[]): AuthClient {
+  return {
+    idToken: (signal: AbortSignal): Promise<string> => {
+      tokenSignals.push(signal);
+
+      return Promise.resolve('id-token-1');
+    },
+  };
+}
+
 test('reaches exactly the four vendor routes this version uses', () => {
   // act & assert
   assert.deepStrictEqual(ROUTES, {
@@ -403,4 +428,58 @@ test('aborts a command on its own deadline while the root signal stays open', as
   // assert
   await assert.rejects(() => commandResult);
   assert.strictEqual(rootController.signal.aborted, false);
+});
+
+test('refuses a device response whose body is not JSON at all', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response('<html><body>gateway error</body></html>', { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.devices(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.deepStrictEqual(
+        { message: error.message, route: error.route, status: error.status },
+        { message: 'GET /devices returned a response the plugin cannot read.', route: 'GET /devices', status: 200 },
+      );
+
+      return true;
+    },
+  );
+});
+
+test('deadlines the token fetch with the same signal it deadlines the request with', async (t) => {
+  // arrange
+  const tokenSignals: AbortSignal[] = [];
+  const requestSignals = stubSignalRecordingFetch(t);
+  const cloudApi = createCloudApi(apiOptions({ auth: stubRecordingAuth(tokenSignals) }));
+  const rootController = new AbortController();
+
+  // act
+  await cloudApi.devices(rootController.signal);
+
+  // assert
+  assert.strictEqual(tokenSignals.length, 1);
+  assert.strictEqual(requestSignals.length, 1);
+  assert.ok(tokenSignals[0] instanceof AbortSignal);
+  assert.strictEqual(requestSignals[0], tokenSignals[0]);
+  assert.notStrictEqual(tokenSignals[0], rootController.signal);
+});
+
+test('abandons a command without sending it when its deadline expired before the token was fetched', async (t) => {
+  // arrange
+  const deadlines = stubDeadlines(t);
+  const lapsedAuth: AuthClient = {
+    idToken: (signal: AbortSignal): Promise<string> =>
+      signal.aborted ? Promise.reject(new Error('the token fetch was aborted')) : Promise.resolve('id-token-1'),
+  };
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ auth: lapsedAuth }));
+  deadlines.expire();
+
+  // act & assert
+  await assert.rejects(() => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal));
+  assert.deepStrictEqual(vendorRequests, []);
 });
