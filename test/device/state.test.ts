@@ -18,6 +18,7 @@ import type { LogLevel, Logging } from 'homebridge';
 const DEVICE_ID = 'account-1_serial-1';
 const SECOND_DEVICE_ID = 'account-1_serial-2';
 const DEVICE_TIME = 1_700_000_000_000;
+const LATER_DEVICE_TIME = 1_700_000_111_000;
 const FIRST_RECEIPT = 1_700_000_777_000;
 const SECOND_RECEIPT = 1_700_000_888_000;
 
@@ -154,6 +155,56 @@ describe('applyDiscovery', () => {
       deviceTimestamp: DEVICE_TIME,
       receivedAt: FIRST_RECEIPT,
     });
+  });
+
+  test('refreshes reachability and leaves telemetry alone while the shadow owns it', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const snapshot = store.applyDiscovery({ ...geminiDevice(), connectivity: { connected: false, timestamp: LATER_DEVICE_TIME } });
+
+    // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: false, timestamp: LATER_DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: true, ac_power: true },
+      metadata: {},
+      shadowVersion: 90,
+      deviceTimestamp: LATER_DEVICE_TIME,
+      receivedAt: SECOND_RECEIPT,
+    });
+  });
+
+  test('replaces telemetry from the vendor body while the shadow owns nothing', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: undefined });
+
+    // act
+    const snapshot = store.applyDiscovery(geminiDevice());
+
+    // assert
+    assert.deepStrictEqual(snapshot.data, { water_level: 1, primary_pump_running: false, ac_power: true });
+  });
+
+  test('replaces telemetry after a patch that reports neither section left the watermark absent', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 90 });
+
+    // act
+    const snapshot = store.applyDiscovery({ ...geminiDevice(), data: { water_level: 9 } });
+
+    // assert
+    assert.deepStrictEqual(snapshot.data, { water_level: 9 });
   });
 
   test('copies the vendor record, so a later change to it cannot reach stored state', () => {

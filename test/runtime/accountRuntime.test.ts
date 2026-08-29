@@ -997,6 +997,22 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  for (const reason of ['transport-closed', 'transport-error', 'subscription-refused', 'handshake-refused'] as const) {
+    test(`SYNC-03 hands telemetry back to the poll when the connection reports ${reason}`, async (t) => {
+      // arrange
+      const { runtime, shadows, store } = harness(t);
+      await runtime.start();
+      await settle();
+      store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 90 });
+
+      // act
+      shadows[0]?.options.onDisconnected(reason);
+
+      // assert
+      assert.strictEqual(store.snapshot(DEVICE_ID)?.shadowVersion, undefined);
+    });
+  }
+
   test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {
     // arrange
     const { runtime, shadows } = harness(t);
