@@ -303,7 +303,7 @@ for (const { description, text } of [
   });
 }
 
-test('D-08 authenticates again and notes it once at debug when the cache file cannot be read', async (t) => {
+test('D-08 authenticates and keeps serving at debug level when the cache path cannot be read or written', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   await mkdir(join(storagePath, TOKEN_CACHE_FILENAME));
@@ -317,7 +317,10 @@ test('D-08 authenticates again and notes it once at debug when the cache file ca
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.strictEqual(grantRequests.length, 1);
-  assert.deepStrictEqual(messages, ['debug The cached token could not be read; authenticating again.']);
+  assert.deepStrictEqual(messages, [
+    'debug The cached token could not be read; authenticating again.',
+    'debug The token cache could not be written; the token is held in memory only.',
+  ]);
 });
 
 test('D-08 logs nothing on a first start, when no cache file exists yet', async (t) => {
