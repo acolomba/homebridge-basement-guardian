@@ -32,6 +32,10 @@ const ONE_HOUR_MS = 3_600_000;
 const POLL_INTERVAL_MS = 900_000;
 const THROTTLE_RETRY_MS = 1_800_000;
 
+// The one actionable line a degraded monitoring path produces, restated here so
+// the case fails if the wording drifts.
+const DEGRADED_LINE = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
+
 // The rotation the fixture expiry produces: an hour of credential life, less
 // the ten-minute lead.
 const ROTATION_DELAY_MS = ONE_HOUR_MS - ROTATION_LEAD_MS;
@@ -907,6 +911,40 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'rest-and-shadow', reports: [] });
+  });
+
+  test('D-15 reports the degraded path once while the connection keeps failing', async (t) => {
+    // arrange
+    const { runtime, shadows, logged } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    shadows[0]?.options.onDisconnected('transport-error');
+    shadows[0]?.options.onDisconnected('transport-error');
+    shadows[0]?.options.onDisconnected('transport-error');
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
+      { path: 'rest-only', warnings: [`warn ${DEGRADED_LINE}`] },
+    );
+  });
+
+  test('D-15 reports the degraded path when the broker refuses the subscription', async (t) => {
+    // arrange
+    const { runtime, shadows, logged } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    shadows[0]?.options.onDisconnected('subscription-refused');
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
+      { path: 'rest-only', warnings: [`warn ${DEGRADED_LINE}`] },
+    );
   });
 
   test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {

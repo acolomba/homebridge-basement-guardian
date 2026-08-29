@@ -294,7 +294,7 @@ describe('start', () => {
       { published: transports[0]?.published, logged, lifecycle, ends: transports[0]?.ends() },
       {
         published: [],
-        logged: ['warn The shadow subscription could not be established, so the connection will be retried.'],
+        logged: ['debug The shadow subscription could not be established, so the connection will be retried.'],
         lifecycle: ['connected', 'disconnected subscription-refused'],
         ends: 1,
       },
@@ -715,7 +715,7 @@ describe('the connection lifecycle', () => {
     assert.deepStrictEqual(logged, ['debug The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.']);
   });
 
-  test('reports a close that follows an error at warn rather than as routine', async () => {
+  test('reports a close that follows an error apart from a routine one, leaving the warning to its consumer', async () => {
     // arrange
     const { client, transports, logged } = harness();
     await client.start([DEVICE_A]);
@@ -726,7 +726,7 @@ describe('the connection lifecycle', () => {
     transports[0]?.close();
 
     // assert
-    assert.deepStrictEqual(logged, ['warn The shadow connection failed and will reconnect.']);
+    assert.deepStrictEqual(logged, ['debug The shadow connection failed and will reconnect.']);
   });
 
   for (const secret of ['broker.invalid', 'wss://', 'accessKeyId', 'secretAccessKey', 'sessionToken', 'clientId', 'test-session-token']) {

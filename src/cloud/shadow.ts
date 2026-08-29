@@ -28,6 +28,17 @@ export const SHADOW_TOPICS = {
   updateAccepted: (deviceId: string): string => `$aws/things/${deviceId}/shadow/update/accepted`,
 } as const;
 
+/**
+ * Why a shadow connection ended.
+ *
+ * A clean close is routine: the provider closes a signed connection at a
+ * ceiling it publishes no knob for, so at least one reconnect a day is expected
+ * operation. The other two say the plugin is seeing less than it should, and
+ * the consumer that watches the whole failure stream decides how loudly to say
+ * so (D-14, D-15).
+ */
+export type ShadowDisconnectReason = 'transport-closed' | 'transport-error' | 'subscription-refused';
+
 /** One handshake's worth of connection facts, as the vendor issues them. */
 export interface ShadowCredentials {
   endpoint: string;
@@ -64,7 +75,7 @@ export interface ShadowClientOptions {
   onReportedPatch: (deviceId: string, patch: ReportedPatch) => void;
   onConnected: () => void;
   /** Receives a short classification, never a URL and never credential material. */
-  onDisconnected: (reason: string) => void;
+  onDisconnected: (reason: ShadowDisconnectReason) => void;
 }
 
 /** One connection serving every device shadow on the account. */
@@ -216,9 +227,13 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     });
   }
 
+  // One failed attempt is a diagnostic note here, not a warning. A refused
+  // broker produces one of these per capped-backoff attempt, and the consumer
+  // that sees the whole stream is what holds the warning down to the reminder
+  // cadence, exactly as the authentication client already does (D-14).
   function handleError(reopen: () => void): void {
     failed = true;
-    options.log.warn('The shadow connection failed and will reconnect.');
+    options.log.debug('The shadow connection failed and will reconnect.');
     scheduleReconnect(reopen);
   }
 
@@ -255,7 +270,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     } catch {
       live = false;
       failed = true;
-      options.log.warn('The shadow subscription could not be established, so the connection will be retried.');
+      options.log.debug('The shadow subscription could not be established, so the connection will be retried.');
       options.onDisconnected('subscription-refused');
       void connection.end();
       scheduleReconnect(reopen);
