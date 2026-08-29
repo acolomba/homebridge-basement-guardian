@@ -715,6 +715,24 @@ describe('the connection lifecycle', () => {
     assert.deepStrictEqual(logged, ['debug The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.']);
   });
 
+  test('D-15 reports a close that never became established as a refused handshake, not a routine one', async () => {
+    // arrange
+    const { client, transports, logged, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+
+    // act
+    transports[0]?.close();
+
+    // assert
+    assert.deepStrictEqual(
+      { logged, lifecycle },
+      {
+        logged: ['debug The shadow connection was refused before it was established and will be retried.'],
+        lifecycle: ['disconnected handshake-refused'],
+      },
+    );
+  });
+
   test('reports a close that follows an error apart from a routine one, leaving the warning to its consumer', async () => {
     // arrange
     const { client, transports, logged } = harness();
