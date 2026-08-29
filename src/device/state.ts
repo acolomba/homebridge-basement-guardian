@@ -136,17 +136,43 @@ function toSnapshot(device: ApiDevice, previous: DeviceSnapshot | undefined, rec
   });
 }
 
+// Whether the message said anything about the device at all. A document with
+// neither reported section observed nothing: the vendor publishes one on every
+// command it delivers, as the accepted update for a desired-only write.
+function carriesObservation(patch: ReportedPatch): boolean {
+  return patch.data !== undefined || patch.state !== undefined;
+}
+
+// A watermark is ordering information, so a document that observed nothing is
+// still evidence about ordering and may advance one that already exists. It may
+// never establish one: a defined watermark says the shadow owns telemetry, so a
+// document carrying no observation would take ownership from the poll on the
+// strength of having seen nothing, freezing telemetry at whatever the poll last
+// wrote (SYNC-02, D-014).
+function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch, observed: boolean): number | undefined {
+  if (!observed && previous.shadowVersion === undefined) {
+    return undefined;
+  }
+
+  return patch.version ?? previous.shadowVersion;
+}
+
 // The patch reports no device time, so `deviceTimestamp` stays where the last
-// REST response set it while `receivedAt` records this arrival.
+// REST response set it. `receivedAt` moves only when the patch carried an
+// observation: it is the snapshot's only freshness field, and a document that
+// observed nothing restamping it makes a device that has gone quiet read as
+// freshly reporting (SC-3, D-014).
 function nextSnapshot(previous: DeviceSnapshot, patch: ReportedPatch, receivedAt: number): DeviceSnapshot {
+  const observed = carriesObservation(patch);
+
   return freeze({
     identity: previous.identity,
     connectivity: previous.connectivity,
     data: mergeRecord(previous.data, patch.data),
     metadata: mergeRecord(previous.metadata, patch.state),
-    shadowVersion: patch.version ?? previous.shadowVersion,
+    shadowVersion: nextShadowVersion(previous, patch, observed),
     deviceTimestamp: previous.deviceTimestamp,
-    receivedAt,
+    receivedAt: observed ? receivedAt : previous.receivedAt,
   });
 }
 

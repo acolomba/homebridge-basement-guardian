@@ -37,10 +37,12 @@ Feature: Merging device state
       | fault_code           | 0     |
       | battery_health       | 96    |
 
-  Scenario: A requested value never becomes device state
+  Scenario: A requested value becomes neither device state nor a fresh receipt time
     When the plugin starts
+    When the scenario clock moves forward
     When the device publishes a requested value
-    Then the canonical snapshot is at shadow version 1
+    Then the canonical snapshot carries no shadow version
+    Then the canonical snapshot carries the receipt time the scenario started at
     Then the canonical snapshot carries no "alarm_muted" field
     Then the canonical snapshot carries these fields:
       | water_level          | 1    |
