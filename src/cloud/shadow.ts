@@ -433,8 +433,15 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   }
 
   return {
+    // Derived from the two facts that decide it rather than held as a flag of
+    // its own: whether the current connection can carry a shadow message, and
+    // whether the client is still using it at all. Shutdown raises no
+    // disconnection by design, so `close()` leaves `live` standing on the
+    // connection it ended; reading `closing` here is what keeps a closed client
+    // from reporting itself connected, without a second flag that could
+    // disagree with the connection's own record (SYNC-04).
     get connected(): boolean {
-      return connection?.live ?? false;
+      return !closing && (connection?.live ?? false);
     },
 
     start(deviceIds: readonly string[]): Promise<void> {
