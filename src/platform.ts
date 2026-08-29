@@ -11,7 +11,7 @@ import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
-import type { FamilyRegistry } from './device/registry.js';
+import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
 import type { DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
@@ -41,15 +41,34 @@ export interface DiscoveryContext {
   log: Logging;
 }
 
+// A HALO or unknown outcome never becomes an accessory (DEV-01), so the
+// explanation is the only trace it leaves. Distinct wording for each kind is
+// what lets a reader tell "recognized but unsupported" apart from "never
+// seen", and naming the deviceId and deviceTypeId is what makes the line
+// actionable rather than merely present.
+function explainSkippedDevice(log: Logging, deviceId: string, outcome: Exclude<FamilyOutcome<unknown>, { kind: 'implemented' }>): void {
+  if (outcome.kind === 'unsupported') {
+    log.info(`Skipping ${deviceId}: ${outcome.displayName} (${outcome.deviceTypeId}) is a recognized but unsupported device family.`);
+
+    return;
+  }
+
+  log.info(`Skipping ${deviceId}: ${outcome.deviceTypeId} is not a recognized device family.`);
+}
+
 /**
- * Registers one HomeKit accessory for every discovered device this platform
- * has not already registered.
+ * Dispatches every discovered device through the family registry, registering
+ * one HomeKit accessory for each implemented device this platform has not
+ * already registered.
  *
  * The accessory UUID is seeded only from `deviceId`, never a mutable field
  * (C-002), so a `deviceId` already present in `accessories` is left
  * untouched here: only a genuinely new physical device gets a new accessory.
- * Exported so the harness that proves this end to end drives the identical
- * logic a real platform runs, rather than a parallel copy of it.
+ * A HALO or unknown-`deviceTypeId` device is explained through the registry's
+ * log-cadence tracking and never registered (DEV-01); one device's outcome
+ * never stops the loop from dispatching the rest. Exported so the harness
+ * that proves this end to end drives the identical logic a real platform
+ * runs, rather than a parallel copy of it.
  */
 export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: readonly string[], store: DeviceStateStore): void {
   for (const deviceId of deviceIds) {
@@ -62,6 +81,16 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     const snapshot = store.snapshot(deviceId);
 
     if (snapshot === undefined) {
+      continue;
+    }
+
+    const outcome = context.registry.lookup(snapshot.identity.deviceTypeId);
+
+    if (outcome.kind !== 'implemented') {
+      if (context.registry.shouldLog(deviceId, snapshot.identity.deviceTypeId)) {
+        explainSkippedDevice(context.log, deviceId, outcome);
+      }
+
       continue;
     }
 

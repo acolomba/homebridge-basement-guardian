@@ -13,6 +13,7 @@ import { BasementGuardianPlatform, registerDiscoveredDevices } from '../src/plat
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
 import type { ApiDevice } from '../src/cloud/types.js';
+import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
 import type { BasementGuardianPlatformAccessory } from '../src/platform.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
@@ -150,6 +151,34 @@ function geminiDevice(): ApiDevice {
 
 function unknownRegistry(): FamilyRegistry {
   return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }), shouldLog: () => true };
+}
+
+// A minimal fake family, so `registerDiscoveredDevices` tests exercising the
+// `implemented` outcome need not depend on Gemini's own field shapes. Its
+// `validate()` always reports the snapshot invalid, so `decode()` never runs
+// and `update()`'s AccessoryInformation population is out of scope for these
+// dispatch-focused cases.
+const FAKE_FAMILY: DeviceFamily<unknown> = {
+  deviceTypeId: DEVICE_TYPE_ID,
+  displayName: 'Fake Family',
+  implemented: true,
+  validate: () => ({ valid: false, violations: [] }),
+  decode: () => {
+    throw new Error('decode() must not run on an invalid snapshot');
+  },
+  capabilities: () => [],
+  command: () => ({ desiredData: {} }),
+};
+
+function implementedRegistry(): FamilyRegistry {
+  return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: FAKE_FAMILY }), shouldLog: () => true };
+}
+
+function unsupportedRegistry(shouldLog: boolean): FamilyRegistry {
+  return {
+    lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unsupported', deviceTypeId, displayName: 'Wayne Water HALO' }),
+    shouldLog: () => shouldLog,
+  };
 }
 
 interface FakeApiCall {
@@ -526,7 +555,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices({ api, accessories, registry: implementedRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -575,5 +604,88 @@ describe('registerDiscoveredDevices', () => {
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 0, registerCalls: [] });
+  });
+
+  test('explains and skips an unsupported device, registering nothing for it', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+    const messages: string[] = [];
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unsupportedRegistry(true), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+
+    // assert
+    const expectedMessage = `Skipping ${DEVICE_ID}: Wayne Water HALO (${DEVICE_TYPE_ID}) is a recognized but unsupported device family.`;
+    assert.deepStrictEqual(
+      { accessoryCount: accessories.size, registerCalls, messages },
+      { accessoryCount: 0, registerCalls: [], messages: [expectedMessage] },
+    );
+  });
+
+  test('explains and skips an unknown device, registering nothing for it', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+    const messages: string[] = [];
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { accessoryCount: accessories.size, registerCalls, messages },
+      { accessoryCount: 0, registerCalls: [], messages: [`Skipping ${DEVICE_ID}: ${DEVICE_TYPE_ID} is not a recognized device family.`] },
+    );
+  });
+
+  test('says nothing for a skipped device once the registry reports it already logged', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+    const messages: string[] = [];
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unsupportedRegistry(false), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls, messages }, { accessoryCount: 0, registerCalls: [], messages: [] });
+  });
+
+  test('registers a valid device after skipping an unsupported device earlier in the same batch', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const haloDeviceId = 'halo-device';
+    store.applyDiscovery({ ...geminiDevice(), deviceId: haloDeviceId, deviceTypeId: 'wayneWaterHalo' });
+    store.applyDiscovery(geminiDevice());
+    const registry: FamilyRegistry = {
+      lookup: (deviceTypeId: string): FamilyOutcome<unknown> =>
+        deviceTypeId === DEVICE_TYPE_ID ? { kind: 'implemented', family: FAKE_FAMILY } : { kind: 'unsupported', deviceTypeId, displayName: 'Wayne Water HALO' },
+      shouldLog: () => true,
+    };
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry, log: createSilentLog() }, [haloDeviceId, DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        accessoryCount: accessories.size,
+        registeredDeviceIds: registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
+      },
+      { accessoryCount: 1, registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] },
+    );
   });
 });
