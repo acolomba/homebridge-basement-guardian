@@ -610,6 +610,20 @@ describe('the connection lifecycle', () => {
     assert.deepStrictEqual({ whileUp, afterClose: client.connected }, { whileUp: true, afterClose: false });
   });
 
+  test('reports not connected once the client itself has been closed', async () => {
+    // arrange
+    const { client, transports } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+    const whileUp = client.connected;
+
+    // act
+    await client.close();
+
+    // assert
+    assert.deepStrictEqual({ whileUp, afterClose: client.connected }, { whileUp: true, afterClose: false });
+  });
+
   test('reports each connection and each close outward', async () => {
     // arrange
     const { client, transports, lifecycle } = harness();

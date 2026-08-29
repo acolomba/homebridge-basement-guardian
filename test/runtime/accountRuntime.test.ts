@@ -921,7 +921,7 @@ describe('stop', () => {
     assert.deepStrictEqual({ calls, warnings: logged.filter((line) => line.startsWith('warn ')) }, { calls: ['devices'], warnings: [] });
   });
 
-  test('SYNC-05 leaves the monitoring path where it stood, because a shutdown is not a monitoring failure', async (t) => {
+  test('SYNC-05 reports monitoring unavailable once the runtime has stopped', async (t) => {
     // arrange
     const { runtime } = harness(t);
     await runtime.start();
@@ -932,23 +932,25 @@ describe('stop', () => {
     await runtime.stop();
 
     // assert
-    assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'shadow-and-poll' });
+    assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'unavailable' });
   });
 
-  test('SYNC-05 leaves the monitoring path alone when a shutdown aborts a poll already in flight', async (t) => {
+  test('SYNC-05 records no failure when a shutdown aborts a poll already in flight', async (t) => {
     // arrange
-    const { runtime, advance } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
+    const { runtime, logged, advance } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
     await runtime.start();
     await settle();
     await advance(POLL_INTERVAL_MS);
-    const beforeStop = runtime.monitoringPath;
 
     // act
     await runtime.stop();
     await settle();
 
     // assert
-    assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'shadow-and-poll' });
+    assert.deepStrictEqual(
+      logged.filter((line) => line.startsWith('warn ')),
+      [],
+    );
   });
 
   test('SYNC-05 arms no timer that outlives it', async (t) => {

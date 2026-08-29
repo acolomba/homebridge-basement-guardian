@@ -216,15 +216,22 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // rather than assigned wherever something changed.
   //
   // A halted runtime is unavailable whatever else once held, because nothing
-  // will be attempted again (D-13). Polling is the floor below that: it is the
-  // reconciliation backstop, so a poll that is not succeeding means the plugin
-  // cannot vouch for what it holds even while the shadow is live, and naming
-  // the combined path there would be the false normal this plugin refuses.
+  // will be attempted again (D-13). A stopped one is unavailable for the same
+  // reason and no other: the value names which sources are feeding state, not
+  // whether something went wrong, and a shutdown that has aborted every wait
+  // and request is feeding nothing. Reporting the path the runtime last held
+  // would be the false normal this plugin refuses, from the one direction the
+  // runtime cannot correct afterwards.
+  //
+  // Polling is the floor below both: it is the reconciliation backstop, so a
+  // poll that is not succeeding means the plugin cannot vouch for what it holds
+  // even while the shadow is live, and naming the combined path there would be
+  // the same false normal.
   //
   // A degraded path is not a device condition: it says the plugin is seeing
   // less, never that a device reported itself disconnected (D-15).
   function monitoringPathNow(): MonitoringPath {
-    if (halted || !polling) {
+    if (stopped || halted || !polling) {
       return 'unavailable';
     }
 
@@ -415,7 +422,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       await openShadow();
     } catch (error: unknown) {
       // A shutdown aborted the request. That is not a monitoring failure, so
-      // the path stays where it stood (SYNC-05).
+      // nothing is recorded and the poll keeps whichever answer it last gave
+      // (SYNC-05).
       if (root.signal.aborted) {
         return;
       }
