@@ -324,6 +324,17 @@ describe('start', () => {
     });
   });
 
+  test('reads canonical state from the one store it maintains', async (t) => {
+    // arrange
+    const { runtime, store } = harness(t);
+
+    // act
+    await runtime.start();
+
+    // assert
+    assert.deepStrictEqual(runtime.store.snapshot(DEVICE_ID), store.snapshot(DEVICE_ID));
+  });
+
   test('reports how many devices the account holds', async (t) => {
     // arrange
     const { runtime, logged } = harness(t);

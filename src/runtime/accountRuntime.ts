@@ -95,6 +95,13 @@ export interface AccountRuntimeOptions {
 /** One account's cloud work, started and stopped by the Homebridge lifecycle. */
 export interface AccountRuntime {
   readonly monitoringPath: MonitoringPath;
+  /**
+   * The canonical device state both sources land in.
+   *
+   * The runtime owns the single store, so whatever renders device state reads
+   * and subscribes here rather than keeping a second copy that can disagree.
+   */
+  readonly store: DeviceStateStore;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -412,6 +419,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     get monitoringPath(): MonitoringPath {
       return path;
     },
+
+    store: options.store,
 
     // Resolves once the first attempt has been made. A launch that must be
     // tried again waits in the background, so the Homebridge launch event is
