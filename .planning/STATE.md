@@ -4,14 +4,14 @@ current_phase: 02
 current_phase_name: Safe Gemini Discovery and Identity
 status: planning
 stopped_at: Phase 1 complete and verified; ready for /gsd-plan-phase 2
-last_updated: "2026-08-29T15:55:00.000Z"
+last_updated: "2026-08-29T22:07:37.089Z"
 last_activity: 2026-08-29
 last_activity_desc: Phase 1 complete; CI green; verification passed 22/22
-state_head: 95c8a51939db4175eb0767e0a23d72120072167b
+state_head: 3311818f750921058785fc63b196da5d1b4aca8a
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 17
+  total_plans: 23
   completed_plans: 17
   percent: 17
 ---
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-08-27)
 
 ## Current Position
 
-Phase: 02 (Safe Gemini Discovery and Identity) — READY FOR PLANNING
+Phase: 02 (Safe Gemini Discovery and Identity) — READY TO EXECUTE
 Plan: none yet — 02-CONTEXT.md written
 Status: Phase 2 context gathered; discussion closed
 Last activity: 2026-08-29 — Phase 1 marked complete; CI green for the first time
@@ -69,14 +69,18 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 2, decided 2026-08-29]: The vendor `deviceId` is treated as non-sensitive and may enter
   accessory context and logs. `D-027` still keeps it out of public artifacts. Rests on
   `<account-id>` being an opaque key, unconfirmed against a real inventory response.
+
 - [Phase 2, decided 2026-08-29]: A valid empty inventory list counts toward confirmed removal,
   keeping `D-029` as locked. Accepted risk: a sustained account glitch could remove every
   accessory, bounded by two confirmations plus a final check.
+
 - [Phase 2, decided 2026-08-29]: Build the full capability-descriptor family registry per `DEV-02`,
   not a minimal interface. Gemini is the only complete implementation this milestone.
+
 - [Phase 2, decided 2026-08-29]: Degraded accessories set `StatusActive` false and leave
   `StatusFault` at `NO_FAULT`. `StatusFault` stays reserved for the five vendor-reported
   `SAFE-04` conditions. Apple Home visibility of that state is a recorded Phase 3 concern.
+
 - [Phase 3]: Truthful standards-first HomeKit mapping with separate actionable fault adapters; the `D-014` preserve-and-mark invariant keeps the last valid value and faults only the narrowest owning scope.
 - [Phase 4]: Only self-test and boolean alarm mute are writable; reported state remains authoritative. Validation gates no longer block phase completion; they block only the `1.0.0` release.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
