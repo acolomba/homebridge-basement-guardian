@@ -149,7 +149,7 @@ function geminiDevice(): ApiDevice {
 }
 
 function unknownRegistry(): FamilyRegistry {
-  return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }) };
+  return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }), shouldLog: () => true };
 }
 
 interface FakeApiCall {

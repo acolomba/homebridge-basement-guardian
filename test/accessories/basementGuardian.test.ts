@@ -92,7 +92,7 @@ function silentLog(): Logging {
 }
 
 function registryWith(outcome: FamilyOutcome<unknown>): FamilyRegistry {
-  return { lookup: () => outcome };
+  return { lookup: () => outcome, shouldLog: () => true };
 }
 
 function buildSnapshot(deviceTypeId: string): DeviceSnapshot {
