@@ -33,7 +33,8 @@ interface Harness {
   signed: MqttClientIdentity[];
   subscribed: string[][];
   published: { topic: string; payload: string }[];
-  ends: () => number;
+  /** Whether each end was forceful, in the order the ends were asked for. */
+  ends: () => readonly boolean[];
 }
 
 // One connection's worth of client behavior. The failures decide whether the
@@ -45,7 +46,7 @@ function harness(failures: ClientFailures = {}): Harness {
   const subscribed: string[][] = [];
   const published: { topic: string; payload: string }[] = [];
   let connectOptions: MqttConnectOptions | undefined;
-  let ends = 0;
+  const ends: boolean[] = [];
 
   const client: MqttClientLike = {
     options: { clientId: 'client-first' },
@@ -66,8 +67,8 @@ function harness(failures: ClientFailures = {}): Harness {
         callback(failures.publish);
       }
     },
-    end: (_force: boolean, callback: (error?: Error) => void): void => {
-      ends += 1;
+    end: (force: boolean, callback: (error?: Error) => void): void => {
+      ends.push(force);
       callback();
     },
   };
@@ -91,6 +92,13 @@ function harness(failures: ClientFailures = {}): Harness {
   });
 
   return { transport, client, handlers, connectUrls, connectOptions, signed, subscribed, published, ends: () => ends };
+}
+
+// The transport records the connection on the notification's way through, so a
+// case about ending a connected client registers a handler and raises it.
+function connectTransport(harnessed: Harness): void {
+  harnessed.transport.onConnect(() => undefined);
+  harnessed.handlers.connect?.();
 }
 
 test('opens exactly one connection, to the supplied url', () => {
@@ -258,14 +266,26 @@ test('rejects with the error the publish callback reports', async () => {
 
 test('ends the client once and resolves both times when ended twice', async () => {
   // arrange
+  const harnessed = harness();
+  connectTransport(harnessed);
+
+  // act
+  await harnessed.transport.end();
+  await harnessed.transport.end();
+
+  // assert
+  assert.deepStrictEqual(harnessed.ends(), [false]);
+});
+
+test('SYNC-05 drops a client that never connected, because a graceful end would never close its socket', async () => {
+  // arrange
   const { transport, ends } = harness();
 
   // act
   await transport.end();
-  await transport.end();
 
   // assert
-  assert.strictEqual(ends(), 1);
+  assert.deepStrictEqual(ends(), [true]);
 });
 
 for (const { operation, run } of [

@@ -8,8 +8,9 @@
  * projection carries that marking, so a HomeKit handler reads trust from one
  * place instead of inferring it.
  *
- * This module is a declaration only. Its entry in the `ignoreFindings` list of
- * `.fallowrc.json` goes away when a production consumer arrives.
+ * `MonitoringPath` has a production consumer: the account runtime derives it and
+ * publishes it. The four declarations under it still have none, which is why
+ * this module keeps its entry in the `ignoreFindings` list of `.fallowrc.json`.
  */
 
 /**

@@ -15,7 +15,7 @@ Feature: Degraded monitoring
     Given a short poll interval
     Given the broker refuses connections
     When the plugin starts
-    Then the monitoring path is "rest-only"
+    Then the monitoring path is "poll-only"
     Then the log warns once about the degraded path
     When the vendor changes these device fields:
       | water_level | 3 |
@@ -26,7 +26,7 @@ Feature: Degraded monitoring
     Given the broker refuses connections
     When the plugin starts
     Then the log warns once about the degraded path
-    Then the monitoring path is "rest-only"
+    Then the monitoring path is "poll-only"
     When the broker accepts connections
-    Then the monitoring path is "rest-and-shadow"
+    Then the monitoring path is "shadow-and-poll"
     Then the log announces the recovery once

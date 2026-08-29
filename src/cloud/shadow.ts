@@ -90,7 +90,6 @@ export interface ShadowClientOptions {
 export interface ShadowClient {
   readonly connected: boolean;
   start(deviceIds: readonly string[]): Promise<void>;
-  requestFullShadow(deviceId: string): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -444,10 +443,6 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
       openConnection();
 
       return Promise.resolve();
-    },
-
-    requestFullShadow(deviceId: string): Promise<void> {
-      return connection === undefined ? Promise.resolve() : connection.transport.publish(SHADOW_TOPICS.get(deviceId), '');
     },
 
     // The flag is set before the transport is ended, so the close notification

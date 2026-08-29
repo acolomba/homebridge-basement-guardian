@@ -18,6 +18,7 @@ import type { MqttConnect } from '../cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnectReason } from '../cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
 import type { BgConfig } from '../config.js';
+import type { MonitoringPath } from '../device/health.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
 import type { RedactingLogger, SecretRole } from '../logging.js';
 import type { ProtocolConstants } from '../protocol.js';
@@ -34,14 +35,6 @@ export const ROTATION_LEAD_MS = 600_000;
 /** The floor a bundled rotation delay is held at, so a response already inside the lead window still waits. */
 export const MIN_ROTATION_DELAY_MS = 30_000;
 
-/**
- * Which sources are feeding canonical state.
- *
- * A degraded monitoring path is not a device condition: it says the plugin is
- * seeing less, never that a device reported itself disconnected.
- */
-export type MonitoringPath = 'rest-and-shadow' | 'rest-only';
-
 // What one failing activity is called. The name reads as the subject of the
 // recovery sentence the failure log writes, and each one carries its own
 // warning cadence.
@@ -53,6 +46,8 @@ const AUTHENTICATION = 'Authentication';
 const ROTATION_FAILED = 'The temporary shadow credentials could not be refreshed; the plugin will try again.';
 const SHADOW_DEGRADED = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
 const THROTTLED = 'Authentication is being throttled, so the plugin is waiting before it tries again.';
+const AUTHENTICATION_STOPPED =
+  'Monitoring has stopped because the vendor refused the account credentials. Correct the account in Homebridge to start the plugin again.';
 
 /**
  * The half of the shadow client's options the runtime owns.
@@ -187,7 +182,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const shadowRetry = options.createRetry(root.signal);
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
-  let path: MonitoringPath = 'rest-only';
+  // The three facts the monitoring path is derived from. Holding them, rather
+  // than the answer, is what keeps the derivation from depending on which
+  // assignment ran last.
+  let polling = false;
+  let shadowConnected = false;
+  let halted = false;
   let started = false;
   let stopped = false;
   let retryingShadow = false;
@@ -212,8 +212,39 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
+  // Which sources are feeding canonical state, derived from what is working
+  // rather than assigned wherever something changed.
+  //
+  // A halted runtime is unavailable whatever else once held, because nothing
+  // will be attempted again (D-13). Polling is the floor below that: it is the
+  // reconciliation backstop, so a poll that is not succeeding means the plugin
+  // cannot vouch for what it holds even while the shadow is live, and naming
+  // the combined path there would be the false normal this plugin refuses.
+  //
+  // A degraded path is not a device condition: it says the plugin is seeing
+  // less, never that a device reported itself disconnected (D-15).
+  function monitoringPathNow(): MonitoringPath {
+    if (halted || !polling) {
+      return 'unavailable';
+    }
+
+    return shadowConnected ? 'shadow-and-poll' : 'poll-only';
+  }
+
+  // Whether the poll is succeeding is one of the facts the path is derived
+  // from, so the fact and the report move together and cannot disagree.
+  function recordPollSuccess(): void {
+    polling = true;
+    options.failures.recordSuccess(POLLING);
+  }
+
+  function recordPollFailure(error: unknown): void {
+    polling = false;
+    options.failures.recordFailure(POLLING, describeFailure(error));
+  }
+
   function handleShadowConnected(): void {
-    path = 'rest-and-shadow';
+    shadowConnected = true;
     connectRetry.reset();
     options.failures.recordSuccess(SHADOW);
   }
@@ -229,7 +260,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // told once and then on the reminder cadence rather than on every
   // capped-backoff attempt (D-14, D-15).
   function handleShadowDisconnected(reason: ShadowDisconnectReason): void {
-    path = 'rest-only';
+    shadowConnected = false;
     // The shadow stops being the source of telemetry the moment the connection
     // ends, whatever ended it, so the poll takes it back over until the
     // reconnect's complete-shadow request re-establishes ownership (D-15,
@@ -241,6 +272,24 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
+  // Whether a shutdown has begun. It is asked through a function so that a
+  // check after an await asks again rather than reusing the answer from before
+  // it, which is the whole point of checking twice.
+  function hasStopped(): boolean {
+    return stopped;
+  }
+
+  // Closing reports nothing. A connection that fails while it is being closed
+  // has still stopped being used, and an escaping rejection during shutdown
+  // would surface as an unhandled exception in the Homebridge process (D-20).
+  async function closeQuietly(client: ShadowClient | undefined): Promise<void> {
+    try {
+      await client?.close();
+    } catch {
+      // Deliberately silent, for the reason above.
+    }
+  }
+
   // Opens the connection once there is both a credential cache to sign from and
   // a device to subscribe for, and reports whether it was refused so the caller
   // can decide whether a retry chain needs starting.
@@ -248,7 +297,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
-    if (stopped || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
+    if (hasStopped() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
       return false;
     }
 
@@ -263,6 +312,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         onDisconnected: handleShadowDisconnected,
       });
       await client.start(deviceIds);
+
+      // The start has already opened the socket, so a shutdown that landed
+      // while it was resolving found no client to close and would leave that
+      // socket with nothing to close it. It is closed here and never recorded
+      // (SYNC-05).
+      if (hasStopped()) {
+        await closeQuietly(client);
+
+        return false;
+      }
+
       shadow = client;
 
       return false;
@@ -351,9 +411,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function runPoll(): Promise<void> {
     try {
       applyDevices(await options.api.devices(root.signal));
-      options.failures.recordSuccess(POLLING);
+      recordPollSuccess();
       await openShadow();
     } catch (error: unknown) {
+      // A shutdown aborted the request. That is not a monitoring failure, so
+      // the path stays where it stood (SYNC-05).
       if (root.signal.aborted) {
         return;
       }
@@ -361,7 +423,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // A failed request changes no stored snapshot and marks nothing
       // disconnected: a monitoring-path failure and a device-reported
       // disconnection are separate conditions (D-014).
-      options.failures.recordFailure(POLLING, describeFailure(error));
+      recordPollFailure(error);
     }
   }
 
@@ -386,17 +448,30 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // retried on the long interval the error carries rather than on the capped
   // backoff (D-22).
   function launchFailure(error: unknown): number | undefined {
-    if (root.signal.aborted || error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
+    if (root.signal.aborted) {
       return undefined;
     }
 
+    // Nothing polls, refreshes, or connects after this, so the runtime says
+    // monitoring has stopped rather than leaving a working degraded path
+    // standing, and records the stop so the recovery discipline learns of the
+    // one failure the project treats as final (D-13).
+    if (error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
+      halted = true;
+      options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
+
+      return undefined;
+    }
+
+    // The runtime is waiting rather than finished, so nothing is marked
+    // terminal here (D-22).
     if (error instanceof AuthThrottledError) {
       options.failures.recordFailure(AUTHENTICATION, THROTTLED);
 
       return error.retryAfterMs;
     }
 
-    options.failures.recordFailure(POLLING, describeFailure(error));
+    recordPollFailure(error);
     startBackgroundWork();
 
     return undefined;
@@ -406,7 +481,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     try {
       const devices = await options.api.devices(root.signal);
       applyDevices(devices);
-      options.failures.recordSuccess(POLLING);
+      recordPollSuccess();
       options.log.info(`Discovered ${String(devices.length)} device(s).`);
     } catch (error: unknown) {
       return launchFailure(error);
@@ -433,7 +508,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
   return {
     get monitoringPath(): MonitoringPath {
-      return path;
+      return monitoringPathNow();
     },
 
     store: options.store,
@@ -458,6 +533,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // Aborting first cancels every wait and request before anything else is
     // released; the socket is closed last (SYNC-05). Calling this twice, or
     // after a partial start, resolves and raises nothing.
+    //
+    // Nothing releases the store's shadow source here, and nothing needs to.
+    // Closing raises no disconnection, so the store keeps the shadow as the
+    // owner of telemetry, but the abort above has already ended every wait and
+    // request: no poll follows that the ownership could hold off, and the store
+    // is discarded with the runtime. A start after a stop performs no work
+    // either, so the held ownership is unobservable (SYNC-03).
     async stop(): Promise<void> {
       if (stopped) {
         return;
@@ -465,14 +547,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       stopped = true;
       root.abort();
-
-      try {
-        await shadow?.close();
-      } catch {
-        // A connection that fails while it is being closed has still stopped
-        // being used, and an escaping rejection during shutdown would surface
-        // as an unhandled exception in the Homebridge process (D-20).
-      }
+      await closeQuietly(shadow);
     },
   };
 }

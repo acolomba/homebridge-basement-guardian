@@ -428,31 +428,6 @@ describe('handshake signing', () => {
   });
 });
 
-describe('requestFullShadow', () => {
-  test('publishes an empty payload to the device get topic', async () => {
-    // arrange
-    const { client, transports } = harness();
-    await client.start([DEVICE_A]);
-
-    // act
-    await client.requestFullShadow(DEVICE_A);
-
-    // assert
-    assert.deepStrictEqual(transports[0]?.published, [{ topic: `$aws/things/${DEVICE_A}/shadow/get`, payload: '' }]);
-  });
-
-  test('resolves without publishing when no connection has been opened', async () => {
-    // arrange
-    const { client, transports } = harness();
-
-    // act
-    await client.requestFullShadow(DEVICE_A);
-
-    // assert
-    assert.deepStrictEqual(transports, []);
-  });
-});
-
 describe('message routing', () => {
   test('turns an update-accepted reported data section into a patch carrying the document version', async () => {
     // arrange

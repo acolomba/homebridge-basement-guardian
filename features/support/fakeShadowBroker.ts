@@ -36,6 +36,14 @@ export interface FakeShadowBroker {
   /** Every topic a connected client published to, in arrival order. */
   readonly publishedTopics: readonly string[];
 
+  /**
+   * How many connections the broker is holding open right now.
+   *
+   * A leaked connection raises nothing, so a scenario asserting that a shutdown released
+   * everything has to ask the broker rather than read the absence of a rejection.
+   */
+  liveConnectionCount(): number;
+
   /** Publishes a device-reported patch on the update-accepted topic. */
   publishReported(deviceId: string, reported: Record<string, unknown>, version: number): void;
 
@@ -189,6 +197,9 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     handshakes,
     clientIds,
     publishedTopics,
+    liveConnectionCount(): number {
+      return server.clients.size;
+    },
     publishReported(deviceId: string, reported: Record<string, unknown>, version: number): void {
       publishJson(broker, shadowTopic(deviceId, 'update/accepted'), { state: { reported }, version });
     },
