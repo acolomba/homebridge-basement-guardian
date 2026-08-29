@@ -197,7 +197,7 @@ function grantFailure(status: number, body: unknown): Error {
   const reason = readErrorCode(body);
 
   if (status === TOO_MANY_ATTEMPTS) {
-    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`);
+    return new AuthThrottledError(`the vendor authentication service answered HTTP ${String(status)} (${reason}).`, 0);
   }
 
   return new AuthRejectedError(`the vendor rejected the account credentials with HTTP ${String(status)} (${reason}).`, reason);

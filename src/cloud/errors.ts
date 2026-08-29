@@ -32,10 +32,38 @@ export class AuthRejectedError extends Error {
   }
 }
 
-/** The vendor tenant throttled the authentication attempt. */
+/**
+ * The vendor tenant throttled the authentication attempt.
+ *
+ * `retryAfterMs` is the long interval the caller waits before trying again. It
+ * is deliberately longer than a capped backoff: a throttling response can mean
+ * the account is blocked, and each attempt extends that block (D-22).
+ */
 export class AuthThrottledError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly retryAfterMs: number,
+  ) {
     super(message);
     this.name = 'AuthThrottledError';
+  }
+}
+
+/**
+ * Authentication has stopped and will not be attempted again.
+ *
+ * The vendor lifts a brute-force block only once thirty days pass from the last
+ * failed attempt, so a plugin that keeps trying prevents the block from ever
+ * clearing. `reason` is the vendor error code that stopped it. Correcting the
+ * account in the Homebridge UI restarts the bridge, which is what clears this
+ * state (D-13).
+ */
+export class AuthHaltedError extends Error {
+  constructor(
+    message: string,
+    readonly reason: string,
+  ) {
+    super(message);
+    this.name = 'AuthHaltedError';
   }
 }

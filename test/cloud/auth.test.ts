@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createAuthClient, TOKEN_CACHE_FILENAME } from '../../src/cloud/auth.js';
-import { AuthRejectedError, AuthThrottledError } from '../../src/cloud/errors.js';
+import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 
 import type { AuthClientOptions } from '../../src/cloud/auth.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
@@ -23,6 +25,18 @@ const ACCOUNT_PASSWORD = 'account-password';
 const OWNER_ONLY_MODE = 0o600;
 const GROUP_READABLE_MODE = 0o644;
 const PERMISSION_BITS = 0o777;
+const THIRTY_MINUTES_MS = 1_800_000;
+const GRANT_ROUTE = 'POST /oauth/token';
+
+const REJECTION_LOG =
+  'Authentication stopped after HTTP 403: the vendor refused the account credentials. ' +
+  'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings); saving there restarts the plugin. ' +
+  'No further attempt will be made, because each one extends the vendor block on the account.';
+
+const THROTTLE_LOG =
+  'Authentication answered HTTP 429: the vendor is throttling it. The plugin will try again in 30 minutes. ' +
+  'If the account is genuinely blocked, the block lifts only 30 days after the last attempt, so every retry postpones it. ' +
+  'Disable this plugin, or remove its platform block from config.json, to let a real block clear.';
 
 // Stand-in constants, so the suite asserts behavior rather than restating the
 // bundled vendor values.
@@ -393,7 +407,7 @@ if (process.platform !== 'win32') {
   });
 }
 
-test('rejects the account credentials the vendor refused', async (t) => {
+test('D-13 rejects the account credentials the vendor refused', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
@@ -412,28 +426,106 @@ test('rejects the account credentials the vendor refused', async (t) => {
   );
 });
 
-test('reports a throttled grant separately from a rejected one', async (t) => {
+test('D-13 deletes the cached token when the vendor refuses the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  await writeCacheText(storagePath, JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
+  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
   const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+
+  // assert
+  const remains = await access(cachePath).then(
+    () => true,
+    () => false,
+  );
+  assert.strictEqual(remains, false);
+});
+
+test('D-13 makes no further attempt once the vendor has refused the account credentials', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
 
   // act & assert
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
-      assert.ok(error instanceof AuthThrottledError);
-      assert.strictEqual(error.message, 'the vendor authentication service answered HTTP 429 (too_many_attempts).');
+      assert.ok(error instanceof AuthHaltedError);
+      assert.strictEqual(error.reason, 'invalid_grant');
+      assert.strictEqual(error.message, 'authentication stopped after the vendor refused the account credentials.');
 
       return true;
     },
   );
+  assert.strictEqual(grantRequests.length, 1);
 });
+
+test('D-13 logs one error naming the fix when the vendor refuses the account credentials', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
+  const log = mock<Logging>({ exactParams: true, name: 'log' });
+  when(() => {
+    log.error(REJECTION_LOG);
+  }).thenReturn(undefined);
+  const authClient = createAuthClient(authOptions(storagePath, { log }));
+
+  // act
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+
+  // assert
+  verify(log);
+});
+
+test('AUTH-02 repeats no credential, request body, or response body into the log', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const messages: string[] = [];
+  const failureBody = JSON.stringify({ error: 'invalid_grant', error_description: `Wrong password for ${ACCOUNT_EMAIL}: ${ACCOUNT_PASSWORD}` });
+  stubFetch(t, () => new Response(failureBody, { status: 403 }));
+  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+
+  // act
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+
+  // assert
+  assert.deepStrictEqual(messages, [`error ${REJECTION_LOG}`]);
+});
+
+for (const { status, code } of [
+  { status: 400, code: 'invalid_request' },
+  { status: 401, code: 'unauthorized_client' },
+  { status: 403, code: 'access_denied' },
+]) {
+  test(`D-13 stops on HTTP ${String(status)}, which the vendor does not enumerate as a rejection`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    stubFetch(t, () => new Response(JSON.stringify({ error: code }), { status }));
+    const authClient = createAuthClient(authOptions(storagePath));
+
+    // act & assert
+    await assert.rejects(
+      () => authClient.idToken(new AbortController().signal),
+      (error: unknown) => {
+        assert.ok(error instanceof AuthRejectedError);
+        assert.strictEqual(error.reason, code);
+
+        return true;
+      },
+    );
+  });
+}
 
 test('names an unknown error code when the failure body carries none', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 7 }), { status: 500 }));
+  stubFetch(t, () => new Response(JSON.stringify({ error: 7 }), { status: 400 }));
   const authClient = createAuthClient(authOptions(storagePath));
 
   // act & assert
@@ -451,7 +543,7 @@ test('names an unknown error code when the failure body carries none', async (t)
 test('names an unknown error code when the failure body is not a record', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify('service unavailable'), { status: 503 }));
+  stubFetch(t, () => new Response(JSON.stringify('unauthorized'), { status: 401 }));
   const authClient = createAuthClient(authOptions(storagePath));
 
   // act & assert
@@ -460,6 +552,126 @@ test('names an unknown error code when the failure body is not a record', async 
     (error: unknown) => {
       assert.ok(error instanceof AuthRejectedError);
       assert.strictEqual(error.reason, 'unknown_error');
+
+      return true;
+    },
+  );
+});
+
+test('D-22 answers a throttled grant with the long retry interval', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof AuthThrottledError);
+      assert.strictEqual(error.retryAfterMs, THIRTY_MINUTES_MS);
+      assert.strictEqual(error.message, 'the vendor authentication service answered HTTP 429 (too_many_attempts).');
+
+      return true;
+    },
+  );
+});
+
+test('D-22 keeps trying after a throttled grant instead of stopping', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof AuthThrottledError);
+
+      return true;
+    },
+  );
+  assert.strictEqual(grantRequests.length, 2);
+});
+
+test('D-22 warns once, naming the 429, the thirty-day window, and how to stop the plugin', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const messages: string[] = [];
+  stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+
+  // act
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+
+  // assert
+  assert.deepStrictEqual(messages, [`warn ${THROTTLE_LOG}`]);
+});
+
+test('keeps the cache file and stays ready to retry when the vendor answers HTTP 500', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
+  await writeCacheText(storagePath, earlierContents);
+  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 500);
+      assert.strictEqual(error.route, GRANT_ROUTE);
+      assert.strictEqual(error.message, 'POST /oauth/token failed with HTTP 500.');
+
+      return true;
+    },
+  );
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
+  assert.strictEqual(grantRequests.length, 2);
+});
+
+test('treats a network failure as transient rather than as a refusal', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
+  await writeCacheText(storagePath, earlierContents);
+  t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('connect ECONNREFUSED 203.0.113.1:443')));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 0);
+      assert.strictEqual(error.route, GRANT_ROUTE);
+      assert.strictEqual(error.message, 'POST /oauth/token could not be reached.');
+
+      return true;
+    },
+  );
+  assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
+});
+
+test('treats a status that is neither a refusal nor a throttle as transient', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  stubFetch(t, () => new Response(JSON.stringify({ error: 'moved' }), { status: 302 }));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 302);
 
       return true;
     },
@@ -481,8 +693,9 @@ for (const { description, body } of [
     await assert.rejects(
       () => authClient.idToken(new AbortController().signal),
       (error: unknown) => {
-        assert.ok(error instanceof AuthRejectedError);
-        assert.strictEqual(error.reason, 'malformed_response');
+        assert.ok(error instanceof CloudRequestError);
+        assert.strictEqual(error.status, 200);
+        assert.strictEqual(error.message, 'POST /oauth/token returned a response the plugin cannot read.');
 
         return true;
       },
@@ -490,30 +703,70 @@ for (const { description, body } of [
   });
 }
 
-test('logs one fixed message and the status, and never a credential, body, or token', async (t) => {
+test('D-14 warns once, drops the repeat to debug, and reports the recovery at info', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant', error_description: 'Wrong email or password.' }), { status: 403 }));
+  stubFetch(t, (callIndex) => (callIndex < 2 ? new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }) : grantResponse('id-token-1')));
   const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(messages, ['error Authentication failed with HTTP 403.']);
+  assert.strictEqual(idToken, 'id-token-1');
+  assert.deepStrictEqual(messages, [
+    'warn Authentication could not be completed (HTTP 500); the plugin will try again.',
+    'debug Authentication could not be completed (HTTP 500); the plugin will try again.',
+    'info Authentication recovered.',
+  ]);
 });
 
-test('logs a fixed message when the grant response is unusable', async (t) => {
+test('D-14 warns again when a transient failure of another kind follows', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, () => new Response(JSON.stringify({ id_token: 'id-token-1' }), { status: 200 }));
+  stubFetch(t, (callIndex) =>
+    callIndex === 0 ? new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }) : new Response(JSON.stringify({}), { status: 503 }),
+  );
   const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal));
 
   // assert
-  assert.deepStrictEqual(messages, ['error Authentication returned a response the plugin cannot read.']);
+  assert.deepStrictEqual(messages, [
+    'warn Authentication could not be completed (HTTP 500); the plugin will try again.',
+    'warn Authentication could not be completed (HTTP 503); the plugin will try again.',
+  ]);
+});
+
+test('lets an abort through untouched and logs nothing for it', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const messages: string[] = [];
+  const shutdown = new AbortController();
+  t.mock.method(globalThis, 'fetch', () => {
+    shutdown.abort();
+    const aborted = new Error('This operation was aborted');
+    aborted.name = 'AbortError';
+
+    return Promise.reject(aborted);
+  });
+  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+
+  // act & assert
+  await assert.rejects(
+    () => authClient.idToken(shutdown.signal),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.strictEqual(error.name, 'AbortError');
+
+      return true;
+    },
+  );
+  assert.deepStrictEqual(messages, []);
 });
