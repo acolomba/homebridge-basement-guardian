@@ -1,116 +1,45 @@
 ---
 phase: 01-secure-cloud-foundation
-verified: 2026-08-29T10:15:47Z
-status: gaps_found
-score: 13/20 must-haves verified
+verified: 2026-08-29T13:41:43Z
+status: human_needed
+score: 19/20 must-haves verified
 behavior_unverified: 1
 overrides_applied: 0
-gaps:
-  - truth: "No account identifier reaches the Homebridge log (PROJECT.md Privacy constraint, CLAUDE.md)"
-    status: failed
-    reason: "The malformed-email refusal quotes the configured account email verbatim into an error line. Nothing is registered as a secret at that point (registerSecret for the password runs afterwards, platform.ts:60) and none of the four CREDENTIAL_PATTERNS matches a bare email in prose."
-    artifacts:
-      - path: "src/config.ts:104-106"
-        issue: "`return `the account email must be an email address, but it is ${email}.`` interpolates the raw value."
-      - path: "src/platform.ts:52-57"
-        issue: "The refusal string is logged through the redacting logger before any secret is registered. The comment at line 48-49 shows the quoting was deliberate (T-01-16), so this is a policy conflict, not an oversight."
-    missing:
-      - "Either drop the value from the message (`'the account email must be an email address.'`) or register the configured email as a redactable secret in the platform constructor before validateConfig runs."
-      - "A scenario in features/configuration.feature covering the malformed-email refusal; none exists, so nothing catches a regression."
-      - "If quoting the value is the intended trade, record it as an explicit exception to PROJECT.md's Privacy constraint rather than leaving the two documents in conflict."
-  - truth: "An omitted-field shadow document cannot corrupt a previously accepted value (SC-3, SYNC-02, D-014)"
-    status: failed
-    reason: "A shadow document with no `reported` section still lands as a snapshot: it passes the staleness guard, merges nothing, advances the version watermark, and restamps `receivedAt`. `receivedAt` is the snapshot's only freshness field and is the field `src/device/health.ts:51` declares as `lastReceivedAt`, so a dead device reads as freshly reporting. This is the false-normal shape the project's core value forbids. The vendor publishes exactly this document (`update/accepted` for a desired-only write) every time it delivers a command."
-    artifacts:
-      - path: "src/device/state.ts:141-151"
-        issue: "`nextSnapshot` sets `receivedAt` unconditionally and `shadowVersion: patch.version ?? previous.shadowVersion`, with no test for whether the patch carried any observation."
-      - path: "src/device/state.ts:210-222"
-        issue: "`applyReportedPatch` does not reject a patch whose `data` and `state` are both undefined."
-      - path: "src/cloud/shadow.ts:139-148"
-        issue: "`toReportedPatch` builds `{ data: undefined, state: undefined, version: n }` for a document with no `reported` section and hands it straight to the store."
-      - path: "features/shadowMerge.feature:44-52"
-        issue: "The scenario 'A requested value never becomes device state' asserts `the canonical snapshot is at shadow version 1` after such a document, so the accepted suite encodes the defect as correct."
-    missing:
-      - "Treat a patch with no reported content as carrying no observation: advance the watermark if ordering needs it, but leave `receivedAt` where it was."
-      - "A unit case asserting that an empty patch leaves `receivedAt` unchanged."
-      - "Amend the shadowMerge scenario so it asserts the same rather than the current behavior."
-  - truth: "REST snapshots and partial shadow updates produce one current state per device, with neither source reverting the other (SC-3, SYNC-02)"
-    status: failed
-    reason: "The REST poll path has no ordering guard of any kind, and `shadowVersion` survives the overwrite. A poll describing an earlier moment silently reverts newer shadow telemetry, and the surviving watermark then makes the shadow's re-delivery of the correct value stale, so recovery is blocked until a strictly newer version arrives. Reproduced against the built code: primary_pump_running true -> false, and the v90 re-delivery rejected."
-    artifacts:
-      - path: "src/device/state.ts:120-137"
-        issue: "`toSnapshot` replaces `data` wholesale and carries `shadowVersion: previous?.shadowVersion` forward, with no comparison of `connectivity.timestamp`, `receivedAt`, or the shadow version."
-      - path: "src/device/state.ts:101-103"
-        issue: "`isStalePatch` then rejects the shadow's re-delivery at the same version, so the reverted value cannot come back."
-      - path: "features/shadowLifecycle.feature:27-36"
-        issue: "'The poll reconciles state the shadow did not carry' runs with `the broker refuses connections`, so `shadowVersion` is undefined throughout. No scenario exercises a poll against a live shadow watermark, which is why the suite cannot see this."
-    missing:
-      - "An ordering guard on the REST path, or keep `data` shadow-sourced while `shadowVersion !== undefined` and use the poll only for connectivity and identity."
-      - "Do not leave the watermark ahead of the data after a REST write."
-      - "A case asserting that an older REST snapshot does not revert a newer shadow value, and a scenario combining a short poll interval with live shadow traffic."
-      - "Note the second-order effect: because the reconnect full-shadow refresh arrives at an unchanged version after a degraded period, `isStalePatch` discards it, so the SYNC-03 refresh restores nothing that the poll overwrote."
-  - truth: "Repeated shadow connection cycles leave no superseded connection driving live state and no connection nothing will close (SC-4, SYNC-04, SYNC-05)"
-    status: failed
-    reason: "`live`, `established`, `failed`, and `transport` are single closure variables shared by every connection the client opens, and `openConnection` neither detaches the previous connection's handlers nor ends it. Separately, the reconnect work handed to the retry policy is `openConnection`, which has no `closing` guard, and `close()` memoizes `ending` from the transport that existed when it ran. Both reproduced against the built code."
-    artifacts:
-      - path: "src/cloud/shadow.ts:301-322"
-        issue: "`openConnection` reassigns `transport` and resets `established`/`failed` without ending or detaching the previous connection, and has no `closing` guard of its own. Reproduced: with connection B live and connected, a late `close` from superseded connection A flips `connected` to false and emits `disconnected:transport-closed`, which drives `accountRuntime.handleShadowDisconnected` to `path = 'rest-only'` while B is healthy and subscribed."
-      - path: "src/cloud/shadow.ts:219-229, 343-348"
-        issue: "Reproduced: after `close()`, a retry work item whose wait had already elapsed opened a brand-new connection (1 -> 2 transports) that nothing ever ends, because `ending` was memoized from the previous transport."
-      - path: "src/runtime/accountRuntime.ts:233-263"
-        issue: "`attemptShadow` assigns `shadow = client` only after `await client.start(deviceIds)`. A `stop()` landing in that window sees `shadow === undefined`, skips `shadow?.close()`, and leaves the socket `start()` already opened with nothing to close it. Narrow window; structural all the same."
-      - path: "src/cloud/mqttTransport.ts:79-101"
-        issue: "`subscribeOnce` and `publishOnce` have no deadline, so a callback that never fires parks `requestEveryShadow` forever with `live` still true from `handleConnect` — connected and reporting the combined path with nothing subscribed."
-    missing:
-      - "A generation token on `openConnection`: ignore every callback from a non-current generation, and end the previous transport before replacing it."
-      - "A `closing` guard inside `openConnection` itself, not only at schedule time in `scheduleReconnect`."
-      - "Re-check `stopped` after `await client.start(...)` in `attemptShadow` and close the client if a shutdown landed."
-      - "Move `options.onConnected()` out of `handleConnect` and into `requestEveryShadow` after the subscription resolves, and put a deadline on `subscribeOnce`/`publishOnce`."
-      - "A scenario that shuts down while a reconnect is pending and asserts the broker holds no live connection afterwards; `fakeShadowBroker` already exposes `server.clients`."
-  - truth: "The runtime can express that monitoring has stopped, and its monitoring-path contract matches the one its declared consumer uses (phase goal: 'trustworthy')"
-    status: failed
-    reason: "`MonitoringPath` in the runtime is `'rest-and-shadow' | 'rest-only'` with no value meaning 'nothing is working'. Reproduced: after a terminal `AuthRejectedError` — the one failure the project treats as final, after which no poll, no credential refresh, and no shadow will ever run again — `runtime.monitoringPath` reads `'rest-only'`, which `src/device/health.ts:16-22` documents as 'a working degraded path, not a failure'. The terminal branch also records nothing in the failure log. Separately, the same exported name carries two disjoint value sets, so `DeviceHealth.monitoringPath` cannot be fed by `AccountRuntime.monitoringPath` at all."
-    artifacts:
-      - path: "src/runtime/accountRuntime.ts:43, 181, 372-387"
-        issue: "Two-value union, initialized to `'rest-only'`, never changed on a terminal failure; `launchFailure` returns undefined for `AuthRejectedError`/`AuthHaltedError` without calling `options.failures.recordFailure`. `AuthThrottledError` likewise leaves the path at `'rest-only'` for the whole wait."
-      - path: "src/device/health.ts:22, 47"
-        issue: "Declares `MonitoringPath` as `'shadow-and-poll' | 'poll-only' | 'unavailable'` and types `DeviceHealth.monitoringPath` with it. No member overlaps the runtime's union. This is a scaffold whose declared type is wrong, not one that is merely incomplete — plan 01-03's must-have calls these type-only contracts for the next phase."
-    missing:
-      - "One exported `MonitoringPath`, three values, imported by the runtime from `src/device/health.ts`."
-      - "Set the dead state on every path where the runtime is not receiving anything and will not retry: the terminal authentication branch, and `runPoll`'s catch once polling has failed and the shadow is not connected."
-      - "Record the terminal stop in the failure log so `recordSuccess`/`recordFailure` learn the runtime halted."
-      - "Update the Cucumber step `Then the monitoring path is \"rest-only\"` in features/degradedOperation.feature with the renamed values."
-      - "Partial overlap with Phase 5 (RES-04) noted below under Deferred Items — the user-facing surfacing belongs there, but the representable state and the type contract are this phase's."
-  - truth: "`npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both test suites (01-01, 01-11, D-12)"
-    status: failed
-    reason: "The phase-seal gate is not reliably green. `npm run check` exited 1 on the first run in this verification: 32 scenarios, 31 passed, 1 failed. Three subsequent full runs passed, so the gate is flaky rather than broken — but a flaky seal gate cannot certify the phase, and the flake sits on the one scenario proving SYNC-04 credential rotation."
-    artifacts:
-      - path: "features/support/steps/shadow.ts:246-250"
-        issue: "`assertClientIdentifiers` reads `broker.clientIds` with a bare `assert.deepEqual` and no wait, while every sibling assertion (`assertHandshakeCount`, `assertSnapshotFields`) goes through `this.untilTrue`. Observed failure: `['placeholder-shadow-client']` against the expected two."
-      - path: "features/support/fakeShadowBroker.ts:165-190"
-        issue: "`handshakes` is pushed on the WebSocket upgrade (line 181) while `clientIds` is pushed on the MQTT client connect (line 169). The preceding step waits on `handshakes`, so the assertion can run before the CONNECT packet is processed. That is the race."
-      - path: "src/runtime/accountRuntime.ts:35"
-        issue: "`MIN_ROTATION_DELAY_MS` (30 000) is a module constant `createAccountRuntime` does not accept by injection, unlike `pollIntervalMs`, so the rotation step waits 30 real seconds under a 45-second deadline. That is most of the suite's 40-second runtime and contradicts the project's own rule that scheduling be driven by an injected clock."
-    missing:
-      - "Route `assertClientIdentifiers` through `this.untilTrue` like its siblings."
-      - "Move `MIN_ROTATION_DELAY_MS` and `ROTATION_LEAD_MS` into `AccountRuntimeOptions` so a scenario can set them to milliseconds."
+re_verification:
+  previous_status: gaps_found
+  previous_score: 13/20
+  gaps_closed:
+    - "No account identifier reaches the Homebridge log"
+    - "An omitted-field shadow document cannot corrupt a previously accepted value"
+    - "REST snapshots and partial shadow updates produce one current state per device, with neither source reverting the other"
+    - "Repeated shadow connection cycles leave no superseded connection driving live state and no connection nothing will close"
+    - "The runtime can express that monitoring has stopped, and its monitoring-path contract matches the one its declared consumer uses"
+    - "`npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both test suites"
+  gaps_remaining: []
+  regressions: []
 deferred:
   - truth: "A user can tell a dead monitoring path apart from a working degraded one"
     addressed_in: "Phase 5"
-    evidence: "Phase 5 success criterion 2: 'Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path'; RES-04: 'only explicit credential rejection yields a persistent communication failure requiring user action'. Only the user-facing surfacing is deferred. The representable runtime state and the `MonitoringPath` type collision stay in this phase's gap list, because D-15's own reversibility note says the set of runtime states Phase 5 consumes is shaped here."
+    evidence: "Phase 5 SC-2: 'Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path'. The representable runtime state and the type contract are now delivered in this phase; only the user-facing surfacing defers."
+  - truth: "A heartbeat-only telemetry key survives the first poll after shadow ownership is released, marked stale rather than dropped"
+    addressed_in: "Phase 3"
+    evidence: "Phase 3 SC-6: 'An invalid, omitted, or stale field preserves the last valid value and faults or deactivates only the narrowest owning scope'. `pollTelemetry` (src/device/state.ts:164-166) still replaces telemetry wholesale when no watermark is held. Not a regression — the pre-fix code clobbered unconditionally — and marking a key stale needs the per-scope trust machinery Phase 3 owns. Recorded in 01-17's Deferral Register."
+  - truth: "A rejected complete-shadow request marks the affected device scope untrustworthy"
+    addressed_in: "Phase 3"
+    evidence: "Phase 3 SC-6, same trust machinery. `src/cloud/shadow.ts:257-261` warns and returns, leaving a per-device blind spot inside a connection the runtime still calls `shadow-and-poll`. Recorded in 01-17's Deferral Register as WR-14 item 3."
 behavior_unverified_items:
   - truth: "Administrator can install the dynamic platform and save one valid account through the Homebridge settings form, with the password-storage warning visible (SC-1, CONF-01, CONF-02)"
     test: "Install the built package into a real Homebridge instance, open Plugins -> Basement Guardian -> Settings, and save a valid account."
     expected: "The form renders one account block; the header states that Homebridge stores the password in plain text in config.json and in backups; the password field is masked; a malformed email is refused by the form; saving writes the account and the plugin starts."
     why_human: "No harness renders the Homebridge settings form (ng-formworks inside the Homebridge UI). Plan 01-11 proves the refusal behavior behind the form, not the form itself."
   - truth: "The vendor publishes device heartbeats on the update-accepted topic the client subscribes to"
-    test: "Run the plugin against real hardware for at least two heartbeat intervals (~30 minutes) and confirm partial telemetry arrives on `$aws/things/<deviceId>/shadow/update/accepted`."
-    expected: "Partial heartbeat fields merge into the canonical snapshot roughly every 898 seconds."
+    test: "Run the plugin against real hardware for at least two heartbeat intervals (~30 minutes) with debug logging on."
+    expected: "Partial telemetry arrives on `$aws/things/<deviceId>/shadow/update/accepted` roughly every 898 seconds and merges into the canonical snapshot."
     why_human: "The topic choice is an assumption the fake broker cannot falsify; only real hardware confirms where the vendor publishes."
   - truth: "The presigned AWS IoT WebSocket URL is accepted by the real broker (SYNC-04)"
-    test: "Open a shadow connection against the real AWS IoT endpoint with real temporary credentials."
+    test: "Open a shadow connection against the real AWS IoT endpoint with real temporary credentials from `GET /credentials/aws`."
     expected: "The handshake completes rather than returning HTTP 403."
-    why_human: "`features/support/fakeShadowBroker.ts:165` uses `verifyClient: () => !refusing` — the harness accepts every signature, so the integration suite would pass unchanged if `presignIotWebsocketUrl` produced garbage. The unit test in `test/cloud/sigv4.test.ts` derives the expected signature independently and is good work, but it and the harness share one reading of the spec, so nothing in the repo is an external check of this security-critical path."
+    why_human: "`features/support/fakeShadowBroker.ts:173` still uses `verifyClient: () => !refusing` — the harness accepts every signature, so the integration suite would pass unchanged if `presignIotWebsocketUrl` produced garbage. Deliberately deferred here by 01-17's Deferral Register (WR-12 item 1): a third implementation from the same reading of the specification could not falsify that reading."
 human_verification:
   - test: "Install the built package into a real Homebridge instance, open Plugins -> Basement Guardian -> Settings, and save a valid account."
     expected: "One account block; plaintext-storage warning in the header; masked password; malformed email refused by the form; saving starts the plugin."
@@ -126,60 +55,51 @@ human_verification:
 # Phase 1: Secure Cloud Foundation Verification Report
 
 **Phase Goal:** Administrator can securely connect one Basement Guardian account and the plugin can maintain trustworthy current cloud state over a long-running Homebridge lifecycle.
-**Verified:** 2026-08-29T10:15:47Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification. Phase 1 is the first phase, so there is no regression baseline.
+**Verified:** 2026-08-29T13:41:43Z
+**Status:** human_needed
+**Re-verification:** Yes — after six gap-closure plans (01-12 through 01-17). Previous run: `gaps_found`, 13/20.
 
 ## Summary
 
-Most of this phase is solid, and the parts that are solid are genuinely solid rather than
-present-and-unwired. The dynamic platform loads with `mqtt` as its only runtime dependency, the
-template scaffold is gone, configuration refusal reaches no vendor service, the redacting logger
-covers all seven `Logging` members, the token cache lives under the Homebridge storage path with a
-salted email fingerprint instead of the raw address, the REST client can construct exactly four
-routes, the hand-rolled SigV4 presigner is checked against an independently derived signature, the
-packed artifact carries six files, and the dead-code gate passes on genuine reachability with the
-`ignoreFindings` list back at exactly the eight declaration-only scaffolds. All 24 trackable CONTEXT
-decisions are honored, and all twelve requirement IDs are claimed by at least one plan.
+All six gaps close. I reproduced each fix against freshly built code with my own probes rather than
+reading the summaries, and every one behaves as claimed. The four remaining items are the three
+human checks that were already unresolvable here plus a short list of warnings, none of which is a
+must-have failure.
 
-The phase fails on the two success criteria that carry the goal's word "trustworthy". I reproduced
-each of the code review's five blockers against the built code rather than inheriting them, and I
-confirm four outright and qualify the fifth:
+The two probes the brief flagged as most likely to be wrong in a way tests would miss are the two I
+spent the most effort on, and both hold:
 
-- **CR-01 confirmed.** A shadow document with no `reported` section restamps `receivedAt` from 1000
-  to 999999 while carrying zero new telemetry. `receivedAt` is the snapshot's only freshness field.
-  The reviewer is also right that `features/shadowMerge.feature` asserts this behavior as correct,
-  which means the 32-scenario pass count is not evidence for SC-3.
-- **CR-02 confirmed, and worse than a race.** I reproduced the revert (`primary_pump_running`
-  true -> false) and the recovery lockout (the shadow's v90 re-delivery rejected). The part that
-  needs no assumption about vendor lag is the internal inconsistency: after a REST write, the
-  watermark still claims shadow content is applied. That also silently defeats the SYNC-03 reconnect
-  refresh, because a full shadow at an unchanged version is discarded — and a poll writing `data`
-  during a shadow outage is the designed behavior under D-15, not an edge case.
-- **CR-03 confirmed, with the direction qualified.** I reproduced consequence 1: with connection B
-  live and connected, a late `close` from superseded connection A flips `connected` to false and
-  drives the runtime to `rest-only`. That is a false *degraded*, which errs safe. What I did not
-  reproduce is consequence 2 (duplicate connections); the retry policy's pending guard absorbs the
-  common ordering, so it needs a subscribe callback that rejects more than a backoff later, which is
-  plausible but unproven. Consequence 3 rests on WR-11 and is the false-normal direction. The part
-  that is unconditional and belongs to SC-4's own words is that a superseded connection is never
-  detached and never ended.
-- **CR-04 confirmed, severity qualified.** After a terminal `AuthRejectedError` the runtime reads
-  `'rest-only'` and records nothing. Nothing in production consumes `monitoringPath` this phase, so
-  the false normal is latent rather than user-visible today. It is still a shipped, broken contract:
-  `health.ts` and `accountRuntime.ts` export the same type name with disjoint value sets, so the
-  scaffold plan 01-03 calls a type-only contract for the next phase cannot be satisfied by its own
-  producer.
-- **CR-05 confirmed structurally, reachability qualified.** I reproduced the reopen-after-close leak
-  with an injected transport. In production the timing is narrow: once the retry's timer resolves,
-  its continuation runs before the next macrotask, so a `stop()` from the shutdown event has little
-  room to interleave. The defect is real and the fix is one line; the exploitability claim in the
-  review is stronger than what I could demonstrate.
+- **Advance-but-never-establish is really implemented.** `nextShadowVersion`
+  (`src/device/state.ts:205-211`) returns `undefined` when a patch carries no observation and no
+  watermark exists, so an observation-free document cannot take telemetry ownership from the poll.
+  Probe A: an empty patch at v42 against a poll-only snapshot left `shadowVersion` undefined and
+  `receivedAt` at 1000, and the next poll still replaced telemetry. Probe B: the same patch against a
+  snapshot already holding v42 advanced the watermark to 50 and left `receivedAt` at 2000. That is
+  exactly the shape the plan-checker's block was about, and the shipped code is on the right side of
+  it.
+- **`releaseShadowSource()` covers every path that ends shadow ownership.** All four disconnect
+  reasons route through `release()` -> `options.onDisconnected` ->
+  `handleShadowDisconnected` -> `store.releaseShadowSource()`, and the unit suite has one case per
+  reason (`SYNC-03 hands telemetry back to the poll when the connection reports
+  transport-closed / transport-error / subscription-refused / handshake-refused`). The one
+  documented exception — nothing releases at `stop()` — is sound for the reason 01-17 gives: `close()`
+  sets `closing` before ending the transport, so the teardown close reaches nothing, and `root.abort()`
+  has already ended every wait and request, so no later poll exists for the held ownership to hold off.
+  I checked that reasoning by tracing the code rather than accepting it.
 
-One finding the review did not connect to a gate: **`npm run check` is not reliably green.** It
-exited 1 on my first run — the credential-rotation scenario's client-identifier assertion, the one
-assertion in that file that skips `untilTrue`. Three re-runs passed. The task brief states the
-measured state is exit 0; that holds only some of the time.
+D-15 survives the ownership rule (probe C: after a release the poll writes `data` again), and the
+SYNC-03 reconnect refresh is no longer silently discarded (a full shadow at an unchanged v90 now
+applies). 01-17's derivation is consistent because the path is computed from three held facts in one
+function rather than assigned wherever something changed; a failing poll reporting `unavailable` even
+with a live shadow is the deliberate direction, and it errs toward degraded rather than toward the
+false normal the project forbids. 01-16's shared-grant tradeoff is bounded as claimed — `inFlight`
+clears in a `finally`, and `fetchGrant` rethrows a caller-requested abort untouched without recording
+a transient failure — and it is unreachable this phase, because `sendCommand` has no production caller.
+
+No regression surfaced against the original eleven plans. Every truth that passed last time still
+passes, the packed artifact is unchanged at 84 files, the dead-code gate still passes on genuine
+reachability with the same eight scaffold suppressions, and all 24 trackable CONTEXT decisions are
+still honored.
 
 ## Goal Achievement
 
@@ -187,105 +107,116 @@ measured state is exit 0; that holds only some of the time.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | **SC-1** Administrator can install the dynamic platform and save one valid account through the settings form, with the password-storage warning visible | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | `config.schema.json` carries `strictValidation: true`, `singular: true`, the plaintext-storage `headerDisplay`, `widget: password`, and `format: email`; `pluginAlias` = `PLATFORM_NAME` = package `name`. No harness renders the form. |
-| 2 | **SC-2a** Missing configuration leaves the plugin idle with a clear log message | ✓ VERIFIED | `src/platform.ts:52-58` returns before registering any listener; `features/configuration.feature` three scenarios assert the refusal text, no lifecycle listener, no accessory, and no request reaching the fake cloud. |
-| 3 | **SC-2b** Valid configuration authenticates without exposing credentials or tokens | ✓ VERIFIED | `features/authentication.feature` 'No credential reaches the log' plus the write-every-registered-credential probe; `src/logging.ts` wraps all seven `Logging` members with exact-value and pattern redaction; `auth.ts:428-433` registers the bearer token on first sight. |
-| 4 | No account identifier reaches the log (PROJECT.md Privacy, CLAUDE.md) | ✗ FAILED | `src/config.ts:104-106` interpolates the raw email; `src/platform.ts:55` logs it before any secret is registered; no `CREDENTIAL_PATTERNS` entry matches a bare email. |
-| 5 | **SC-3a** A partial shadow `reported` patch merges and removes no field it omits | ✓ VERIFIED | `mergeRecord` at `src/device/state.ts:95-97`; `features/shadowMerge.feature` 'A partial heartbeat keeps the fields it omits' passes and asserts the preserved fields. |
-| 6 | **SC-3b** A `desired`/requested value never becomes reported device state | ✓ VERIFIED | `ReportedPatch` has no member able to hold it (`state.ts:44-51`); `toReportedPatch` reads only `state.reported` (`shadow.ts:139-148`); no delta or wildcard topic in `SHADOW_TOPICS`; scenario asserts no `alarm_muted` field and 0 canonical changes. |
-| 7 | **SC-3c** An omitted-field document cannot corrupt a previously accepted value | ✗ FAILED | Reproduced: empty patch at v42 restamped `receivedAt` 1000 -> 999999 and advanced the watermark. `state.ts:141-151`, `state.ts:210-222`, `shadow.ts:139-148`. Locked in by `features/shadowMerge.feature:44-52`. |
-| 8 | **SC-3d** REST snapshots and shadow updates produce one current state per device, neither reverting the other | ✗ FAILED | Reproduced: `primary_pump_running` true -> false on a poll describing an earlier moment, watermark left at 90, shadow re-delivery at v90 rejected. `state.ts:120-137`, `state.ts:101-103`. |
-| 9 | **SC-4a** A complete shadow is requested on the first connection and again after every reconnect | ✓ VERIFIED | `requestEveryShadow` in `shadow.ts:276-291` called from `handleConnect`; `features/shadowLifecycle.feature` two scenarios assert 1 then 2 complete-shadow requests across a forced reconnect. Caveat recorded under gap SC-3d: a refresh at an unchanged version is discarded. |
-| 10 | **SC-4b** Credential rotation refreshes the cache in place without disturbing the live connection, and the next handshake carries the rotated material | ✓ VERIFIED | `accountRuntime.ts:292-320` calls `cache.replace` only; `shadow.ts:169-185` re-reads the cache per handshake; `features/credentialRotation.feature` asserts 1 handshake across rotation, then rotated credentials on the next handshake. |
-| 11 | **SC-4c** Reconnect backoff is capped and a single transport failure produces exactly one retry chain | ✓ VERIFIED | `retryPolicy.ts:38-89` pending guard plus `Math.min(maxDelayMs, ...)`; `reconnectPeriod: 0` disables the library's own timer (`mqttTransport.ts:124`); `test/runtime/retryPolicy.test.ts` covers the duplicate-notification case. |
-| 12 | **SC-4d** Shutdown during an in-flight retry wait, an in-flight request, and an open shadow connection produces no unhandled rejection; `stop()` is idempotent | ✓ VERIFIED | `accountRuntime.ts:445-460` guards on `stopped`, aborts once, swallows a close rejection; `features/lifecycle.feature` five scenarios including a double shutdown and a start-after-shutdown. |
-| 13 | **SC-4e** Repeated connection cycles leave no superseded connection driving live state and no connection nothing will close | ✗ FAILED | Reproduced both: a late close from superseded connection A flipped `connected` to false while B was live; a post-`close()` retry opened a second transport nothing ends. `shadow.ts:301-322`, `shadow.ts:343-348`, `accountRuntime.ts:251-252`. |
-| 14 | The runtime can express that monitoring has stopped, and its monitoring-path contract matches its declared consumer's | ✗ FAILED | Reproduced: `monitoringPath === 'rest-only'` after a terminal `AuthRejectedError` with nothing scheduled and no failure recorded. `accountRuntime.ts:43/181/372-387` vs `health.ts:22/47`. |
-| 15 | `npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both suites | ✗ FAILED | Exit 1 on first run: 32 scenarios, 31 passed, 1 failed (`features/credentialRotation.feature:15`). Three re-runs passed. `features/support/steps/shadow.ts:246-250` asserts without `untilTrue`. |
-| 16 | `npm pack --dry-run` lists only the allowlisted files (D-21) | ✓ VERIFIED | 84 files: `dist/**`, `CHANGELOG.md`, `LICENSE`, `README.md`, `config.schema.json`, `package.json`. `dist/protocol.json` present. No `.npmignore`; `files` allowlist in `package.json`. |
-| 17 | Exactly four typed REST routes exist and no excluded route is constructible (SYNC-01) | ✓ VERIFIED | `ROUTES` closed constant at `api.ts:26-31`; the only path builders are `DEVICES_PATH`, `CREDENTIALS_PATH`, and `devicePath(..., COMMAND_SUFFIX)`; `test/cloud/api.test.ts` asserts the exact value set. |
-| 18 | The token cache lives under the Homebridge storage path with owner-only mode and a salted email fingerprint (AUTH-02, D-08) | ✓ VERIFIED | `auth.ts:108-109` joins `options.storagePath`; `OWNER_ONLY_MODE = 0o600` on a temp file renamed over the target; the file holds `idToken`, `expiresAt`, `emailFingerprint`, `salt` — never the raw email or the password. `platform.ts:68` supplies `api.user.storagePath()`. |
-| 19 | Every module of the adopted tree exists, not-yet-wired modules are declaration-only, and the dead-code gate passes on reachability (D-17) | ✓ VERIFIED | All eight scaffolds contain zero runtime declarations; `fallow dead-code --fail-on-issues` reports 0 issues over 70 entry points; `.fallowrc.json` `ignoreFindings` holds exactly the eight D-17 entries, with every transitional entry removed. |
-| 20 | The deterministic suite runs offline against transport-level fakes naming no client library (D-10, D-11) | ✓ VERIFIED | `features/support/` holds loopback Auth0, REST, MQTT broker, and Homebridge stand-ins on ephemeral ports; no scenario or step names `mqtt`; `features/harness.feature` proves each fake answers its contract. Coverage weakness recorded as WR-12 below. |
+| 1 | **SC-1** Administrator can install the dynamic platform and save one valid account through the settings form, with the password-storage warning visible | ⚠️ PRESENT_BEHAVIOR_UNVERIFIED | `config.schema.json` carries `strictValidation`, `singular`, the plaintext-storage `headerDisplay`, `widget: password`, `format: email`. The WR-13 schema/runtime disagreement is closed: `name` now carries `minLength: 1` + `pattern: "\\S"`, and `password`/`clientId` carry the same `\S` pattern the runtime's `trim().length > 0` enforces. Still no harness renders the form. |
+| 2 | **SC-2a** Missing configuration leaves the plugin idle with a clear log message | ✓ VERIFIED | `src/platform.ts:62-66` returns before registering any listener; `features/configuration.feature` now four scenarios asserting refusal text, no lifecycle listener, no accessory, no request reaching the fake cloud. |
+| 3 | **SC-2b** Valid configuration authenticates without exposing credentials or tokens | ✓ VERIFIED | `features/authentication.feature` 'No credential reaches the log'; `src/logging.ts` wraps all seven `Logging` members; `auth.ts` registers the bearer token on first sight. |
+| 4 | No account identifier reaches the log (PROJECT.md Privacy, CLAUDE.md) | ✓ VERIFIED (was FAILED) | `src/config.ts:107-109` now returns `'the account email must be an email address.'` with no interpolation; `src/platform.ts:48-57` records why quoting was rejected rather than leaving the documents in conflict. New scenario `features/configuration.feature:36-45` asserts `no logged line contains the configured account email`. |
+| 5 | **SC-3a** A partial shadow `reported` patch merges and removes no field it omits | ✓ VERIFIED | `mergeRecord` at `state.ts:119-121`; `features/shadowMerge.feature` 'A partial heartbeat keeps the fields it omits'. |
+| 6 | **SC-3b** A `desired`/requested value never becomes reported device state | ✓ VERIFIED | `ReportedPatch` has no member able to hold it; `toReportedPatch` reads only `state.reported`; no delta or wildcard topic in `SHADOW_TOPICS`. |
+| 7 | **SC-3c** An omitted-field document cannot corrupt a previously accepted value | ✓ VERIFIED (was FAILED) | Probe A/B against `dist/device/state.js`: empty patch leaves `receivedAt` unchanged; establishes no watermark from `undefined`; advances one it already held. `carriesObservation` (state.ts:195-197), `nextShadowVersion` (205-211), `nextSnapshot` (218-230). The scenario that encoded the defect is rewritten — `features/shadowMerge.feature:40-50` now asserts `carries no shadow version` and `carries the receipt time the scenario started at`. Unit cases at `test/device/state.test.ts:197, 356, 379, 403, 418`. |
+| 8 | **SC-3d** REST snapshots and shadow updates produce one current state per device, neither reverting the other | ✓ VERIFIED (was FAILED) | Probe D: an older REST body against a live v90 watermark left `primary_pump_running` true and the watermark at 90. `pollTelemetry` (state.ts:164-166) keeps `data` shadow-sourced while a watermark is held. Probe C: after `releaseShadowSource()` the poll writes `data` again (D-15 preserved) and a full shadow at the unchanged v90 applies (SYNC-03 refresh no longer discarded). New scenario `features/shadowLifecycle.feature:26-40` runs a short poll interval against a live shadow. |
+| 9 | **SC-4a** A complete shadow is requested on the first connection and again after every reconnect | ✓ VERIFIED | `requestEveryShadow` (shadow.ts:340-363) subscribes then publishes a get per device, and only then reports `onConnected`. Two `shadowLifecycle.feature` scenarios assert 1 then 2 requests across a forced reconnect. The prior caveat is gone: the refresh is applied, not discarded. |
+| 10 | **SC-4b** Credential rotation refreshes the cache in place without disturbing the live connection | ✓ VERIFIED | `accountRuntime.ts:377-384` calls `cache.replace` only; `signHandshake` (shadow.ts:235-248) re-reads the cache per handshake; `features/credentialRotation.feature` asserts 1 handshake across rotation, then rotated material and identifiers on the next. |
+| 11 | **SC-4c** Reconnect backoff is capped and a single transport failure produces exactly one retry chain | ✓ VERIFIED | `retryPolicy.ts` pending guard plus `Math.min(maxDelayMs, ...)`; `reconnectPeriod: 0` disables the library timer; unit cases cover the duplicate-notification case. |
+| 12 | **SC-4d** Shutdown during an in-flight retry wait, an in-flight request, and an open shadow connection produces no unhandled rejection; `stop()` is idempotent | ✓ VERIFIED | `accountRuntime.ts:543-551` guards on `stopped`, aborts once, swallows a close rejection; six `features/lifecycle.feature` scenarios. |
+| 13 | **SC-4e** Repeated connection cycles leave no superseded connection driving live state and no connection nothing will close | ✓ VERIFIED (was FAILED) | Per-connection `ShadowConnection` record (shadow.ts:103-111) plus the `isCurrent` generation guard (216-218) on all four handlers. Probe 1: a late close and a late error from superseded connection A left `connected` true, emitted nothing, and scheduled nothing while B was live; `previous.transport.end()` (shadow.ts:431) had already ended A. Probe 2: a retry firing after `close()` opened no second transport — `openConnection` refuses once `closing` (406-408). Probe 4: `onConnected` no longer fires at the handshake, only after the subscription resolves. Unit cases at `test/cloud/shadow.test.ts` ('stays connected when a connection it has replaced closes', 'schedules no reconnect when a connection it has replaced fails', 'opens no connection when a reconnect wait elapses after shutdown'). New scenario `features/lifecycle.feature:37-50` shuts down with a reconnect pending and asserts `the broker holds no live connection`. `attemptShadow` re-checks `hasStopped()` after `await client.start()` and closes (accountRuntime.ts:320-324); probe C confirmed the close. WR-11 closed: `OPERATION_DEADLINE_MS` reaches `within()` in `mqttTransport.ts:103-126`. |
+| 14 | The runtime can express that monitoring has stopped, and its monitoring-path contract matches its declared consumer's | ✓ VERIFIED (was FAILED) | One `MonitoringPath` declaration, `src/device/health.ts:23`, imported by `accountRuntime.ts:21`. `monitoringPathNow()` (226-232) derives from `halted`, `polling`, `shadowConnected`. Probe: `unavailable` before anything succeeds, `unavailable` after a terminal `AuthRejectedError` with `recordFailure(AUTHENTICATION, …)` recorded, `unavailable` while throttled, `poll-only` after a successful launch, `shadow-and-poll` once the shadow reports connected, back to `unavailable` when the poll starts failing. `features/degradedOperation.feature` uses the renamed values. See W2/W3 below for two design notes. |
+| 15 | `npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both suites | ✓ VERIFIED (was FAILED) | Exit 0 in this run. 455 unit tests, 0 fail, 0 skipped. 35 scenarios / 299 steps in 12.8 s (was ~40 s). `assertClientIdentifiers` now waits through `this.untilTrue` (`features/support/steps/shadow.ts:296-304`); rotation timing is injected through `rotationLeadMs`/`minRotationDelayMs` on the seam and set by the harness (`features/support/world.ts:494`). |
+| 16 | `npm pack --dry-run` lists only the allowlisted files (D-21) | ✓ VERIFIED | 84 files, 67.9 kB: `dist/**`, CHANGELOG.md, LICENSE, README.md, config.schema.json, package.json. |
+| 17 | Exactly four typed REST routes exist and no excluded route is constructible (SYNC-01) | ✓ VERIFIED | `ROUTES` closed constant; `devicePath` the only builder; unit test asserts the exact value set. |
+| 18 | The token cache lives under the Homebridge storage path with owner-only mode and a salted email fingerprint (AUTH-02, D-08) | ✓ VERIFIED | Unchanged guarantees, plus WR-05 hardening: exclusive create at `0o600` (`flag: 'wx'`), random temporary suffix, cleanup on a failed rename. |
+| 19 | Every module of the adopted tree exists, not-yet-wired modules are declaration-only, and the dead-code gate passes on reachability (D-17) | ✓ VERIFIED | `fallow dead-code --fail-on-issues` clean; `health` 0 above threshold, maintainability 92.8; `dupes` 0.0%. `.fallowrc.json` `ignoreFindings` holds exactly the eight scaffold entries. |
+| 20 | The deterministic suite runs offline against transport-level fakes naming no client library (D-10, D-11) | ✓ VERIFIED | 35 scenarios green offline; `features/support/` holds loopback Auth0, REST, MQTT broker, and Homebridge stand-ins on ephemeral ports. |
 
-**Score:** 13/20 truths verified (1 present, behavior-unverified)
+**Score:** 19/20 truths verified (1 present, behavior-unverified)
 
 ### Deferred Items
 
 | # | Item | Addressed In | Evidence |
 |---|------|-------------|----------|
-| 1 | A user can tell a dead monitoring path apart from a working degraded one | Phase 5 | SC-2: "Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path"; RES-04: "only explicit credential rejection yields a persistent communication failure requiring user action". Only the user-facing surfacing defers. The representable runtime state and the type collision stay in truth 14's gap, because D-15's reversibility note says the state set Phase 5 consumes is shaped in Phase 1. |
+| 1 | A user can tell a dead monitoring path apart from a working degraded one | Phase 5 | Phase 5 SC-2. The representable state and the type contract are now delivered here; only the surfacing defers. |
+| 2 | A heartbeat-only telemetry key survives the first poll after ownership release, marked stale rather than dropped | Phase 3 | Phase 3 SC-6. `pollTelemetry` still replaces telemetry wholesale when no watermark is held (`state.ts:164-166`). Not a regression — the pre-fix code clobbered unconditionally. 01-17 Deferral Register. |
+| 3 | A rejected complete-shadow request marks the affected device scope untrustworthy | Phase 3 | Phase 3 SC-6. `shadow.ts:257-261` warns and returns. 01-17 Deferral Register (WR-14 item 3). |
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `config.schema.json` | Settings GUI for one account | ✓ VERIFIED | `strictValidation`, `singular`, `headerDisplay` warning, `widget: password`, `format: email`, `placeholder` 900, `default` 2. See WR-13 below for a schema/runtime disagreement. |
-| `src/platform.ts` | Composition root, records restored accessories only | ✓ VERIFIED | 93 lines; refusal returns before listeners; `configureAccessory` only writes the map; no `unregisterPlatformAccessories` anywhere in `src/`. |
-| `src/config.ts` | Refuse-never-clamp validation | ✓ VERIFIED | Fixed field order, explicit `null` refused, absent optionals defaulted, no clamping. Carries the WR-01 leak. |
-| `src/logging.ts` | Redacting wrapper over all seven `Logging` members | ✓ VERIFIED | Bare callable, `log(level, ...)`, and the five levelled members all route through `redactText`/`redactParameters`. |
-| `src/cloud/auth.ts` | Grant, owner-only cache, failure policy | ✓ VERIFIED | 439 lines; `AuthRejectedError` halts, `AuthThrottledError` retries long, cache invalidated on fingerprint mismatch. Carries WR-04/WR-05. |
-| `src/cloud/api.ts` | Four routes, composed abort signals, narrowed bodies | ✓ VERIFIED | 147 lines; `AbortSignal.any([signal, timeout])`. Carries WR-02/WR-03. |
-| `src/cloud/types.ts` | Wire types and hand-written predicates | ✓ VERIFIED | All eight declared exports present and consumed by `api.ts`. |
-| `src/cloud/sigv4.ts` | Presigned AWS IoT WebSocket URL | ✓ VERIFIED | 86 lines; token appended after signing; `createHmac`/`createHash` from `node:crypto`. |
-| `src/cloud/mqttTransport.ts` | Consumer-declared transport port and adapter | ⚠️ ORPHANED-BEHAVIOR | Exists, substantive, wired. `subscribeOnce`/`publishOnce` carry no deadline (WR-11), which is the mechanism behind truth 13's third consequence. |
-| `src/cloud/shadow.ts` | Topic layer, signing hook, reconnect lifecycle | ✗ STUB-FREE BUT DEFECTIVE | 350 lines, fully wired. Connection state shared across connections; superseded connections never detached or ended; `openConnection` unguarded on `closing`. See truth 13. |
-| `src/device/state.ts` | Merge reducer, watermark, change notification | ✗ DEFECTIVE | 234 lines, fully wired. Empty patch restamps freshness; REST path has no ordering guard. See truths 7 and 8. |
-| `src/runtime/accountRuntime.ts` | Rotation, poll backstop, shadow wiring, seam | ✗ DEFECTIVE | 529 lines, fully wired. No dead-monitoring state; terminal branch silent in the failure log. See truth 14. |
-| `src/runtime/retryPolicy.ts` | Capped backoff, re-entrancy guard, abortable wait | ✓ VERIFIED | 90 lines; guard and cap both unit-tested. |
-| `src/runtime/failureLog.ts` | Rate-limited transient-failure discipline | ✓ VERIFIED | 70 lines; `FAILURE_REMINDER_MS` consumed at the seam. |
-| `src/device/{events,health,family,gemini,halo}.ts`, `src/accessories/*`, `src/persistence/*` | Declaration-only scaffolds | ✓ VERIFIED (intended) | Zero runtime declarations each; deliberate per plan 01-03. `health.ts` carries the wrong `MonitoringPath` contract — see truth 14. |
-| `features/support/*` | Loopback fakes and per-scenario world | ✓ VERIFIED | Ephemeral ports, per-scenario teardown, no client library named. |
-| `.fallowrc.json` | `ignoreFindings` at exactly the eight D-17 entries | ✓ VERIFIED | Eight entries, all declaration-only scaffolds. |
-| `CHANGELOG.md` | Keep a Changelog with an Unreleased section | ✓ VERIFIED | Present and in the packed artifact. |
-| `package.json` | `files` allowlist, `mqtt` as only runtime dependency | ✓ VERIFIED | `files: ["dist","config.schema.json","CHANGELOG.md"]`; `dependencies: {"mqtt":"^5.15.2"}`; `type: module`; engines `^22.10.0 \|\| ^24.0.0`. `homebridge-lib` gone. |
+| `config.schema.json` | Settings GUI for one account, agreeing with the runtime | ✓ VERIFIED | `name` gained `minLength: 1` + `pattern: "\\S"`; `password` and `clientId` carry `pattern: "\\S"`. WR-13 closed. |
+| `src/platform.ts` | Composition root, records restored accessories only | ✓ VERIFIED | 101 lines; refusal returns before listeners; quoting rationale recorded at 48-57. |
+| `src/config.ts` | Refuse-never-clamp validation, no identifier in the message | ✓ VERIFIED | 154 lines; the email refusal names the field and the rule and quotes nothing. |
+| `src/logging.ts` | Redacting wrapper, bounded over uptime | ✓ VERIFIED | 179 lines; `SecretRole` makes a rotated value replace its predecessor (WR-09); `describeObject` no longer reads `constructor.name` (WR-10). Probed both. |
+| `src/cloud/auth.ts` | Grant, owner-only cache, failure policy, one grant per lapse | ✓ VERIFIED | 484 lines; shared `cacheRead` promise and shared `inFlight` grant (WR-04); exclusive create + cleanup (WR-05). |
+| `src/cloud/api.ts` | Four routes, deadline-first composition, typed parse failures | ✓ VERIFIED | 176 lines; `readBody`/`unreadable` replace an escaping `SyntaxError` (WR-02); the deadline is built before `idToken` (WR-03). |
+| `src/cloud/sigv4.ts` | Presigned AWS IoT WebSocket URL | ✓ VERIFIED | Unchanged; independently derived unit test. External check remains human item 3. |
+| `src/cloud/mqttTransport.ts` | Consumer-declared transport port with an operation deadline | ✓ VERIFIED (was ORPHANED-BEHAVIOR) | `within()` bounds `subscribe` and `publish` and cancels the timer on settle; `endOnce` force-drops a client that never connected. |
+| `src/cloud/shadow.ts` | Topic layer, signing hook, generation-guarded reconnect lifecycle | ✓ VERIFIED (was DEFECTIVE) | 458 lines. Per-connection state, `isCurrent` on all four handlers, `closing` guard inside `openConnection`, previous transport ended on supersede, `requestFullShadow` removed, wildcard identifiers refused. |
+| `src/device/state.ts` | Merge reducer, source ownership, change notification | ✓ VERIFIED (was DEFECTIVE) | 330 lines. `carriesObservation`, `nextShadowVersion`, `pollTelemetry`, `releaseShadowSource`, `freezeDeep`, `isSameValue`. |
+| `src/runtime/accountRuntime.ts` | Rotation, poll backstop, shadow wiring, derived monitoring path | ✓ VERIFIED (was DEFECTIVE) | 633 lines. Path derived from three facts; terminal auth halts and records; shutdown window closed; rotation timing injectable. |
+| `src/device/health.ts` | Single `MonitoringPath` declaration and the trust projection | ✓ VERIFIED | 53 lines; `'shadow-and-poll' \| 'poll-only' \| 'unavailable'`, one declaration in the repo, consumed by the runtime. The four declarations below it stay scaffolds for Phase 3. |
+| `src/runtime/retryPolicy.ts`, `src/runtime/failureLog.ts` | Capped backoff, rate-limited failure discipline | ✓ VERIFIED | Unchanged; both unit-tested. |
+| `src/device/{events,family,gemini,halo}.ts`, `src/accessories/*`, `src/persistence/*` | Declaration-only scaffolds | ✓ VERIFIED (intended) | Zero runtime declarations each; eight `.fallowrc.json` entries. |
+| `features/support/*` | Loopback fakes and per-scenario world | ✓ VERIFIED | Rotation timing injectable; `clientIds` assertion now waits. `verifyClient` still accepts every signature — human item 3. |
+| `.gitignore` | No tracked credential file | ✓ VERIFIED (was WARNING) | `/test/hbConfig/*` ignored with only `config.example.json` exempted; `auth.json` is gone from the index. |
+| `eslint.config.js` | Floating-promise exemption scoped to the unit tree | ✓ VERIFIED (was WARNING) | `files: ['test/**/*.ts']`; the Cucumber harness is no longer exempt. WR-14.4 closed. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `src/index.ts` | `src/platform.ts` | `registerPlatform(PLATFORM_NAME, BasementGuardianPlatform)` | ✓ WIRED | One platform, no `api.hap` read. |
-| `src/platform.ts` | `src/config.ts` | `validateConfig` refusal returns before listener registration | ✓ WIRED | Line 52-58. |
-| `src/platform.ts` | `src/logging.ts` | `createRedactingLogger` installed before the first log call | ✓ WIRED | Line 50, before validation. |
-| `src/platform.ts` | `src/runtime/accountRuntime.ts` | `createAccountRuntimeFromConfig`; `didFinishLaunching` -> start, `shutdown` -> stop | ✓ WIRED | Lines 65-85. |
-| `src/cloud/api.ts` | `src/cloud/auth.ts` | `options.auth.idToken(signal)` per request | ✓ WIRED | Line 101. Deadline starts after the token fetch (WR-03). |
-| `src/cloud/api.ts` | `src/cloud/types.ts` | each route narrows through its predicate | ✓ WIRED | `isApiDeviceList`, `isApiDevice`, `isAwsCredentialsResponse`, `isCommandResult`. |
-| `src/cloud/shadow.ts` | `src/cloud/sigv4.ts` | `presignIotWebsocketUrl` in the URL-transform hook | ✓ WIRED | Lines 172-185. |
-| `src/cloud/shadow.ts` | `src/runtime/retryPolicy.ts` | `options.retry.schedule` owns reconnect timing | ✓ WIRED | Line 224. |
-| `src/cloud/shadow.ts` | `src/device/state.ts` | accepted document forwarded as `ReportedPatch` | ⚠️ WIRED, HOLLOW | Connected, but an empty document is forwarded as a real observation (truth 7). |
+| `src/index.ts` | `src/platform.ts` | `registerPlatform(PLATFORM_NAME, …)` | ✓ WIRED | One platform, no `api.hap` read. |
+| `src/platform.ts` | `src/config.ts` | refusal returns before listener registration | ✓ WIRED | Lines 60-66. |
+| `src/platform.ts` | `src/logging.ts` | redacting logger installed before the first log call | ✓ WIRED | Line 58. |
+| `src/platform.ts` | `src/runtime/accountRuntime.ts` | `createAccountRuntimeFromConfig`; launch -> start, shutdown -> stop | ✓ WIRED | Lines 73-93. |
+| `src/cloud/api.ts` | `src/cloud/auth.ts` | the operation deadline is built first and handed to `idToken` | ✓ WIRED | `send()` line 128-130. WR-03 closed. |
+| `src/cloud/shadow.ts` | `src/cloud/mqttTransport.ts` | the client supplies the operation deadline the transport enforces | ✓ WIRED | `deadlineMs: OPERATION_DEADLINE_MS` at shadow.ts:418, consumed at mqttTransport.ts:187/191. |
+| `src/cloud/shadow.ts` | `src/runtime/retryPolicy.ts` | reconnect stays owned by the capped policy; the opener refuses once closing | ✓ WIRED | `options.retry.schedule` at shadow.ts:287; `closing` guard at 406-408. **Note:** `gsd query verify.key-links` reports this link unverified — 01-14's YAML pattern is double-escaped (`retry\\.schedule`), so the tool matches a literal backslash. Tool false negative; the wiring is present. |
+| `src/cloud/shadow.ts` | `src/device/state.ts` | an accepted document is forwarded as a `ReportedPatch` and claims an observation only when it carries one | ✓ WIRED | `toReportedPatch` (185-194) -> `carriesObservation` (195-197). No longer hollow. |
+| `src/runtime/accountRuntime.ts` | `src/device/state.ts` | a lost connection releases shadow ownership so the poll takes telemetry back over | ✓ WIRED | `handleShadowDisconnected` -> `store.releaseShadowSource()` at accountRuntime.ts:268; four unit cases, one per disconnect reason. |
+| `src/runtime/accountRuntime.ts` | `src/device/health.ts` | `MonitoringPath` contract | ✓ WIRED (was NOT_WIRED) | `import type { MonitoringPath } from '../device/health.js'` at line 21; one declaration in the repo. |
 | `src/runtime/accountRuntime.ts` | `src/cloud/shadow.ts` | the cache rotation refreshes is the cache the signing hook reads | ✓ WIRED | `createCredentialCache` / `cache.replace`. |
-| `src/runtime/accountRuntime.ts` | `src/device/state.ts` | discovery through `applyDiscovery`, patches through `applyReportedPatch` | ⚠️ WIRED, ORDERING BROKEN | Both land, but with no ordering guard between them (truth 8). |
-| `src/runtime/accountRuntime.ts` | `src/device/health.ts` | `MonitoringPath` contract | ✗ NOT_WIRED | Same exported name, disjoint value sets. `DeviceHealth.monitoringPath` cannot accept `AccountRuntime.monitoringPath`. |
-| `features/support/world.ts` | `src/runtime/accountRuntime.ts` | the world builds through `createAccountRuntimeFromConfig` | ✓ WIRED | Production seam, no test hook. |
+| `config.schema.json` | `src/config.ts` | the form's non-blank rule and required list match the validator's | ✓ WIRED | `pattern: "\\S"` against `trim().length > 0`. |
+| `features/support/world.ts` | `src/runtime/accountRuntime.ts` | the world builds through `createAccountRuntimeFromConfig`, now carrying injected rotation timing | ✓ WIRED | Line 494. Production seam, no test hook. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| `src/device/state.ts` | `snapshot.data` | `ApiDevice.data` (REST) merged with `reported.data` (shadow) | Yes | ⚠️ FLOWING BUT REVERSIBLE — an older REST body overwrites a newer shadow value (truth 8). |
-| `src/device/state.ts` | `snapshot.receivedAt` | `options.clock.now()` on every applied patch | Yes | ✗ FALSE FRESHNESS — advanced by a document carrying no observation (truth 7). |
-| `src/device/state.ts` | `snapshot.shadowVersion` | `patch.version` | Yes | ⚠️ INCONSISTENT — survives a REST overwrite that replaced the data it describes. |
-| `src/runtime/accountRuntime.ts` | `monitoringPath` | `handleShadowConnected` / `handleShadowDisconnected` | Yes | ✗ INCOMPLETE — no dead state; also settable by a superseded connection (truths 13, 14). |
-| `src/cloud/shadow.ts` | `live` (`ShadowClient.connected`) | `handleConnect` / `handleClose` | Yes | ✗ CROSS-TALK — written by every connection the client ever opened. |
-| `src/cloud/auth.ts` | `cached.idToken` | Auth0 grant or the on-disk cache | Yes | ✓ FLOWING |
+| `src/device/state.ts` | `snapshot.data` | `reported.data` while a watermark is held, `ApiDevice.data` otherwise | Yes | ✓ FLOWING — ownership is single-valued and released on disconnect; the revert is gone. |
+| `src/device/state.ts` | `snapshot.receivedAt` | `clock.now()` only when a patch carried an observation, or on any successful poll | Yes | ✓ FLOWING — an observation-free document no longer restamps it. |
+| `src/device/state.ts` | `snapshot.shadowVersion` | `patch.version`, advanced but never established by an observation-free patch; cleared by `releaseShadowSource` | Yes | ✓ FLOWING — one meaning: defined means the shadow owns `data`. |
+| `src/runtime/accountRuntime.ts` | `monitoringPath` | derived from `halted`, `polling`, `shadowConnected` | Yes | ✓ FLOWING — three values, computed not assigned; see W2/W3. |
+| `src/cloud/shadow.ts` | `connection.live` | the current connection alone, through `isCurrent` | Yes | ✓ FLOWING — cross-talk removed. |
+| `src/cloud/auth.ts` | `cached.idToken` | Auth0 grant or the on-disk cache, shared through one promise | Yes | ✓ FLOWING |
 | `src/cloud/shadow.ts` | signed handshake URL | `credentials.current()` re-read per handshake | Yes | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Empty shadow patch restamps freshness | `node` probe against `dist/device/state.js` | `receivedAt` 1000 -> 999999, `shadowVersion` -> 42, `data` unchanged | ✗ FAIL (defect reproduced) |
-| Older REST poll reverts newer shadow value | `node` probe against `dist/device/state.js` | `primary_pump_running` true -> false; v90 re-delivery rejected | ✗ FAIL (defect reproduced) |
-| Superseded connection drives live state | `node` probe against `dist/cloud/shadow.js` with injected transports | late close from A -> `connected=false`, `disconnected:transport-closed`, while B live | ✗ FAIL (defect reproduced) |
-| Reopen after `close()` | `node` probe against `dist/cloud/shadow.js` | transports 1 -> 2 after close; new one never ended | ✗ FAIL (defect reproduced) |
-| `monitoringPath` after terminal auth rejection | `node` probe against `dist/runtime/accountRuntime.js` | `'rest-only'`; no `recordFailure` call | ✗ FAIL (defect reproduced) |
-| Nested telemetry reports changed on an identical poll | `node` probe against `dist/device/state.js` | `changedKeys === ['nested']` | ✗ FAIL (WR-07 reproduced) |
-| `freeze()` protects nested state | `node` probe against `dist/device/state.js` | nested value mutated to 99 without throwing | ✗ FAIL (WR-08 reproduced) |
-| Build emits the bundled protocol constants | `npm run build` then inspect `dist/` | `dist/protocol.json` present | ✓ PASS |
-| Packed artifact holds only allowlisted files | `npm pack --dry-run` | `dist/**`, CHANGELOG, LICENSE, README, config.schema.json, package.json | ✓ PASS |
-| Dead-code gate passes on reachability | `fallow dead-code --fail-on-issues` | 0 issues, 70 entry points, dupes 0.0% | ✓ PASS |
-| Full phase gate | `npm run check` | exit 1 on run 1 (31/32 scenarios); exit 0 on runs 2-4 | ✗ FAIL (flaky) |
-| Unit suite | `npm run test:unit` (inside `check`) | passed on every run | ✓ PASS |
+| Observation-free patch against no watermark establishes none and leaves `receivedAt` | node probe on `dist/device/state.js` | `shadowVersion` undefined, `receivedAt` 1000, next poll wrote telemetry | ✓ PASS |
+| Observation-free patch against an existing watermark advances it, `receivedAt` frozen | node probe | v42 -> v50, `receivedAt` 2000 -> 2000 | ✓ PASS |
+| D-15: poll writes telemetry after ownership release | node probe | `pump` false after release + poll | ✓ PASS |
+| SYNC-03: full shadow at an unchanged version is applied after release | node probe | v90 re-delivery applied, `pump` true | ✓ PASS |
+| Older REST poll against a live watermark does not revert | node probe | `pump` stayed true, watermark 90, connectivity refreshed | ✓ PASS |
+| Deep freeze protects a nested telemetry value | node probe | `TypeError` on write, value unchanged | ✓ PASS (WR-08 closed) |
+| Identical repeated poll with a structured value reports no change | node probe | no listener notified | ✓ PASS (WR-07 closed) |
+| Superseded connection cannot drive live state or schedule a retry | node probe on `dist/cloud/shadow.js` | late close + error from A: `connected` still true, 0 events, 0 retries; A ended | ✓ PASS |
+| No reopen after `close()` | node probe | transports stayed at 1 after close + retry fire | ✓ PASS |
+| `onConnected` waits for the subscription | node probe | `connected` false while subscribe pending; true after it resolves | ✓ PASS |
+| Wildcard device identifier refused from the topic set | node probe | only `d1` topics subscribed | ✓ PASS (WR-14.2 closed) |
+| `monitoringPath` after a terminal `AuthRejectedError` | node probe on `dist/runtime/accountRuntime.js` | `'unavailable'`, `recordFailure('Authentication', …)` recorded | ✓ PASS |
+| `monitoringPath` with a live shadow and a failing poll | node probe | `shadow-and-poll` -> `unavailable` | ✓ PASS |
+| Shadow disconnect releases store ownership | node probe | `shadowVersion` 7 -> undefined, path `shadow-and-poll` -> `poll-only` | ✓ PASS |
+| Shutdown landing while `client.start()` resolves closes the client | node probe | `close()` called once | ✓ PASS |
+| Circular null-prototype object logged as a parameter | node probe on `dist/logging.js` | `[unserializable object]`, no throw | ✓ PASS (WR-10 closed) |
+| Role-scoped secret registration stays bounded | node probe | 50 rotations, newest redacted, superseded not retained | ✓ PASS (WR-09 closed) |
+| Full phase gate | `npm run check` | exit 0 | ✓ PASS |
+| Unit suite | inside `check` | 455 tests, 455 pass, 0 fail, 0 skipped | ✓ PASS |
+| Acceptance suite | inside `check` | 35 scenarios, 299 steps, all pass, 12.8 s | ✓ PASS |
+| Dead-code / health / dupes gate | `fallow` | 0 issues; 0 above threshold; maintainability 92.8; duplication 0.0% | ✓ PASS |
+| Packed artifact | `npm pack --dry-run` | 84 files, allowlist only | ✓ PASS |
+| Decision coverage | `gsd query check.decision-coverage-verify` | 24 honored / 24 total | ✓ PASS |
 
 ### Probe Execution
 
@@ -296,72 +227,66 @@ execution: N/A. Behavioral evidence came from the built-code probes above and fr
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
-|-------------|-------------|-------------|--------|----------|
-| CONF-01 | 01-01, 01-02 | Dynamic-platform package, TypeScript ESM, supported runtimes, child bridge | ✓ SATISFIED | `type: module`, engines `^22.10.0 \|\| ^24.0.0`, homebridge `^1.8.0 \|\| ^2.0.0`, `registerPlatform` in `src/index.ts`, `singular: true`. |
-| CONF-02 | 01-04 | Settings GUI, strict validation, masked password, plaintext disclosure | ⚠️ NEEDS HUMAN | Schema artifacts all present and correct; the rendered form is unverifiable here. WR-13 (schema/runtime disagreement) noted below. |
-| CONF-03 | 01-02, 01-04, 01-11 | Absent credentials -> clear error, no network/timer/accessory work | ✓ SATISFIED | `platform.ts:52-58`; three `configuration.feature` scenarios assert no listener and no request. |
-| CONF-04 | 01-02, 01-04 | Optional `clientId` override, no other constant exposed | ✓ SATISFIED | `config.ts` single precedence rule against `PROTOCOL.clientId`; only `clientId` appears in `config.schema.json`. |
-| CONF-05 | 01-04, 01-10 | `pollInterval` 300-3600 default ~900; `offlineConfirmationPollCount` 1-8 default 2 | ✓ SATISFIED | Bounds in `config.ts` and in the schema; boundary cases unit-tested; `pollIntervalSeconds` consumed at the seam. `offlineConfirmationPollCount` is validated and carried but not yet read — expected, Phase 5 consumes it. |
-| AUTH-01 | 01-02, 01-05, 01-08, 01-10, 01-11 | Unattended password-realm grant, cached token reuse, reauthentication | ✓ SATISFIED | `auth.ts`; `authentication.feature` first-start and restart-reuse scenarios. WR-04 (concurrent duplicate grant) noted below. |
-| AUTH-02 | 01-04, 01-05, 01-11 | Token under storage path, owner-only, no secret in logs or context | ✓ SATISFIED | `auth.ts:108-109` + `OWNER_ONLY_MODE`; `logging.ts` seven-member redaction; 'No credential reaches the log' scenario. The email leak (truth 4) breaches PROJECT.md's Privacy constraint but not AUTH-02's own wording, which does not list account identifiers. |
-| SYNC-01 | 01-02, 01-06, 01-08 | Four typed routes, no excluded route | ✓ SATISFIED | `ROUTES` closed object; unit test asserts the exact set; `01-COVERAGE.md` records every opt-out. |
-| SYNC-02 | 01-02, 01-03, 01-09, 01-11 | One canonical snapshot per device, ignore `desired`, preserve omitted | ✗ BLOCKED | Omission and `desired` exclusion hold, but truths 7 and 8 show previously accepted values being corrupted — by a document carrying no observation, and by an out-of-order REST write. |
-| SYNC-03 | 01-09, 01-10, 01-11 | Complete shadow after startup and reconnect; poll as backstop; no replay | ⚠️ PARTIAL | The requests are issued and the scenarios pass. The refresh is silently discarded when the version has not advanced, which is precisely the case after a degraded period where polls wrote `data` (see truth 8's missing item). |
-| SYNC-04 | 01-07, 01-08, 01-09, 01-10, 01-11 | Rotate in place ~10 min early, failed refresh stays scheduled, capped retries free of duplicate loops | ✗ BLOCKED | Rotation, the lead time, the reschedule-on-failure loop, and the cap are all correct and tested. The duplicate-loop clause fails: superseded connections are never detached or ended and can still drive state and start a reconnect (truth 13). |
-| SYNC-05 | 01-02, 01-06, 01-07, 01-10, 01-11 | Idempotent abortable lifecycle, no unhandled rejection | ⚠️ PARTIAL | Idempotence and the no-unhandled-rejection property are proven by five scenarios. The leaked-work half fails: a post-`close()` reopen and an unclosed superseded transport (truth 13). |
+|-------------|------------|-------------|--------|----------|
+| CONF-01 | 01-01, 01-02 | Dynamic-platform package, TypeScript ESM, supported runtimes, child bridge | ✓ SATISFIED | Unchanged and still true. |
+| CONF-02 | 01-04, 01-15 | Settings GUI, strict validation, masked password, plaintext disclosure | ⚠️ NEEDS HUMAN | Schema artifacts correct and now in agreement with the runtime; the rendered form is unverifiable here. |
+| CONF-03 | 01-02, 01-04, 01-11, 01-15 | Absent or invalid credentials -> clear error, no network/timer/accessory work | ✓ SATISFIED | Four `configuration.feature` scenarios, including the malformed-email refusal, each asserting no listener and no request. |
+| CONF-04 | 01-02, 01-04 | Optional `clientId` override, no other constant exposed | ✓ SATISFIED | Single precedence rule against `PROTOCOL.clientId`. |
+| CONF-05 | 01-04, 01-10 | `pollInterval` 300-3600 default ~900; `offlineConfirmationPollCount` 1-8 default 2 | ✓ SATISFIED | Bounds in `config.ts` and the schema; `offlineConfirmationPollCount` validated and carried for Phase 5. |
+| AUTH-01 | 01-02, 01-05, 01-08, 01-10, 01-11, 01-16 | Unattended password-realm grant, cached token reuse, reauthentication | ✓ SATISFIED | Plus one grant per lapse however many callers want it (WR-04 closed). |
+| AUTH-02 | 01-04, 01-05, 01-11, 01-15, 01-16 | Token under storage path, owner-only, no secret in logs or context | ✓ SATISFIED | Owner-only guaranteed by exclusive create; the account email no longer reaches the log, closing the PROJECT.md Privacy conflict. |
+| SYNC-01 | 01-02, 01-06, 01-08, 01-16 | Four typed routes, no excluded route | ✓ SATISFIED | Closed `ROUTES`; every failure now a typed vendor error. |
+| SYNC-02 | 01-02, 01-03, 01-09, 01-11, 01-13 | One canonical snapshot per device, ignore `desired`, preserve omitted | ✓ SATISFIED (was BLOCKED) | Truths 5-8. One source owns telemetry at a time; an observation-free document corrupts nothing. |
+| SYNC-03 | 01-09, 01-10, 01-11, 01-13 | Complete shadow after startup and reconnect; poll as backstop; no replay | ✓ SATISFIED (was PARTIAL) | `releaseShadowSource` on every disconnect reason makes the reconnect refresh apply rather than be discarded. |
+| SYNC-04 | 01-07..01-12, 01-14 | Rotate in place ~10 min early, failed refresh stays scheduled, capped retries free of duplicate loops | ✓ SATISFIED (was BLOCKED) | Rotation unchanged; the duplicate-loop clause now holds — superseded connections are ended and cannot schedule a retry. |
+| SYNC-05 | 01-02, 01-06, 01-07, 01-10, 01-11, 01-14, 01-17 | Idempotent abortable lifecycle, no unhandled rejection, no leaked work | ✓ SATISFIED (was PARTIAL) | No reopen after close; the `attemptShadow` stop window is closed; a scenario asserts the broker holds no live connection after a shutdown with a reconnect pending. |
 
 **Orphaned requirements:** none. All twelve IDs the roadmap assigns to Phase 1 appear in at least one
-plan's `requirements` field, and no additional Phase 1 ID exists in REQUIREMENTS.md.
+plan's `requirements` field.
 
 ### Decision Coverage
 
 All trackable CONTEXT.md decisions are honored by shipped artifacts: **24 honored / 24 total**, none
-missing. Spot-checked by hand: D-05 (`mqtt ^5.15.2` sole runtime dependency plus an in-house SigV4
-presigner on `node:crypto`), D-14 (`failureLog.ts` warn-once, debug-repeat, 15-minute reminder,
-info-on-recovery), D-15 (`handleShadowDisconnected` -> `rest-only` with a single warn, background
-capped retry), D-16 (`config.ts` refuses rather than clamps; explicit `null` refused), D-21 (`files`
-allowlist, `.npmignore` gone), D-24 (all four local pre-commit hooks now match
-`(src|test|features)/`).
+missing. Spot-checked by hand after the gap set: D-13 (terminal rejection halts, records, and reports
+`unavailable`), D-15 (release on disconnect, poll as source, one warn), D-16 (refuse never clamp),
+D-22 (throttle waits on the long interval and is not terminal), D-24 (all four local pre-commit hooks
+still match `(src|test|features)/`).
 
 ### Test Quality Audit
 
 | Test File | Linked Req | Active | Skipped | Circular | Assertion Level | Verdict |
 |-----------|-----------|--------|---------|----------|-----------------|---------|
-| `test/cloud/sigv4.test.ts` | SYNC-04 | yes | 0 | No | Value | ✓ Strong — expected signature derived independently through the four-step HMAC chain and a literal canonical request, not echoed from the module. |
-| `test/device/state.test.ts` | SYNC-02 | yes | 0 | No | Value | ⚠️ Insufficient — no case for an empty patch's effect on `receivedAt`, none for a REST write against a live watermark. |
-| `features/shadowMerge.feature` | SYNC-02 | yes | 0 | No | Behavioral | 🛑 **Encodes the defect.** 'A requested value never becomes device state' asserts `the canonical snapshot is at shadow version 1` after a document carrying no reported telemetry. The behavior truth 7 calls wrong is the behavior this scenario calls correct. The 32-scenario pass count is therefore not evidence for SC-3. |
-| `features/shadowLifecycle.feature` | SYNC-03 | yes | 0 | No | Behavioral | ⚠️ Insufficient — the poll-reconciliation scenario runs with the broker refusing, so `shadowVersion` is undefined and the poll/shadow interaction is never exercised. |
-| `features/lifecycle.feature` | SYNC-05 | yes | 0 | No | Behavioral | ⚠️ Insufficient — asserts 'records no unhandled rejection', which a leaked connection does not violate. No scenario asserts the broker holds no live connection after shutdown. |
-| `features/credentialRotation.feature` | SYNC-04 | yes | 0 | No | Behavioral | ⚠️ Flaky — one assertion skips the `untilTrue` wait its siblings use; failed once in four runs. Also burns 30 real seconds. |
-| `features/support/fakeShadowBroker.ts` | SYNC-04 | n/a | 0 | No | n/a | ⚠️ `verifyClient: () => !refusing` accepts every signature, so the suite would pass unchanged with a broken signer. `refuseConnections` is a switch, not an authorization test. |
-| all other `test/**` | mixed | yes | 0 | No | Value / Behavioral | ✓ 384 unit tests, none skipped, no fixture-generation script found. |
+| `test/device/state.test.ts` | SYNC-02, SYNC-03 | yes | 0 | No | Value | ✓ Strong — the establish-vs-advance rule has four dedicated cases plus a release suite of five; the previously missing empty-patch and REST-against-watermark cases both exist now. |
+| `features/shadowMerge.feature` | SYNC-02 | yes | 0 | No | Behavioral | ✓ Fixed — 'A requested value becomes neither device state nor a fresh receipt time' now asserts `carries no shadow version` and `carries the receipt time the scenario started at`. The scenario that encoded the defect asserts the correction. |
+| `features/shadowLifecycle.feature` | SYNC-03 | yes | 0 | No | Behavioral | ✓ Strong — a new scenario runs a short poll interval against a live shadow, which is the interaction the previous suite could not see. |
+| `features/lifecycle.feature` | SYNC-05 | yes | 0 | No | Behavioral | ✓ Strong — 'Shutdown while a reconnect is pending leaves no live connection' asserts `the broker holds no live connection`, not just the absence of a rejection. |
+| `features/credentialRotation.feature` | SYNC-04 | yes | 0 | No | Behavioral | ✓ Deterministic — the client-identifier assertion waits through `untilTrue`; rotation timing is injected, so the scenario no longer burns 30 real seconds. |
+| `test/cloud/shadow.test.ts` | SYNC-04, SYNC-05 | yes | 0 | No | Behavioral | ✓ Strong — six cases specifically on a replaced connection, plus 'opens no connection when a reconnect wait elapses after shutdown'. |
+| `test/runtime/accountRuntime.test.ts` | SYNC-05, D-13 | yes | 0 | No | Behavioral | ✓ Strong — four monitoring-path cases including both terminal-authentication branches, and the stop-window close. |
+| `test/cloud/sigv4.test.ts` | SYNC-04 | yes | 0 | No | Value | ✓ Strong, with the standing caveat that it and the harness share one reading of the specification — human item 3. |
+| `features/support/fakeShadowBroker.ts` | SYNC-04 | n/a | 0 | No | n/a | ⚠️ `verifyClient: () => !refusing` still accepts every signature. Deliberately deferred by 01-17 to human item 3, with a reason I accept. |
+| all other `test/**` | mixed | yes | 0 | No | Value / Behavioral | ✓ 455 unit tests, none skipped, no fixture-generation script. |
 
 **Disabled tests on requirements:** 0.
 **Circular patterns detected:** 0.
-**Insufficient assertions:** 4 (state, shadowLifecycle, lifecycle, fakeShadowBroker).
-**Tests asserting a defect as correct:** 1 → BLOCKER, contributes to truth 7.
+**Insufficient assertions:** 0 blocking. One harness limitation deferred to human verification.
+**Tests asserting a defect as correct:** 0 (was 1).
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| — | — | `TBD` / `FIXME` / `XXX` in phase-modified files | none | 0 found across `src/`, `test/`, `features/`. |
-| — | — | `TODO` / `HACK` | none | 0 found. |
+| — | — | `TBD` / `FIXME` / `XXX` in phase files | none | 0 found across `src/`, `test/`, `features/`, `config.schema.json`, `.fallowrc.json`. |
+| — | — | `TODO` / `HACK` | none | 0 found. Every `placeholder` hit is a deliberate stand-in identifier in a fixture, not a stub. |
 | — | — | Skipped or todo tests | none | 0 found. |
-| `src/device/state.ts` | 156-160 | Reference-equality `changedKeys` on a re-parsed record | ⚠️ Warning | WR-07 reproduced: two identical polls with `data: { nested: { a: 1 } }` yield `changedKeys === ['nested']`. Every non-scalar field reports as changed on every poll, pushing the duplicate-activation hazard D-19 exists to remove onto the Phase 3 consumer. Currently unreachable for Gemini's all-scalar fields; silent when it becomes reachable. |
-| `src/device/state.ts` | 106-114 | Shallow `Object.freeze` with a comment promising in-place protection | ⚠️ Warning | WR-08 reproduced: a listener mutated `snapshot.data.nested.a` to 99. `notify` hands the snapshot to arbitrary listeners, which is the surface the freeze defends. |
-| `src/cloud/api.ts` | 79 | `await response.json()` outside any `try` | ⚠️ Warning | WR-02: a 200 with a non-JSON body rejects with a raw `SyntaxError`, so `error instanceof CloudRequestError` branches miss and the operator loses the route label. |
-| `src/cloud/api.ts` | 100-105 | Deadline built after the token fetch | ⚠️ Warning | WR-03: with a lapsed token, `sendCommand` can take ~12.5 s before its own 2.5 s clock starts, against D-038's stated 2.5 s. Latent until Phase 4 uses commands. |
-| `src/cloud/auth.ts` | 403-421 | `cacheRead = true` set before the `await` that fills `cached` | ⚠️ Warning | WR-04: a concurrent caller skips a valid cache and issues a second grant. The module's own docs stress that each attempt extends a 30-day block. Also collides on the shared `${target}.${pid}.tmp` name. |
-| `src/cloud/auth.ts` | 197-216 | `writeFile` without `flag: 'wx'`; no temp-file cleanup on a failed rename | ⚠️ Warning | WR-05: an existing temp file is rewritten under its current mode, defeating the 0600 guarantee; a failed rename orphans a file holding the bearer token. |
-| `src/logging.ts` | 52-58 | `catch` branch reads `value.constructor.name` | ⚠️ Warning | WR-10: a circular `Object.create(null)` object logged as a parameter throws a `TypeError` out of the logger — from inside `catch` blocks that exist to prevent exactly that. |
-| `src/logging.ts` | 103-111 | Append-only secret array | ⚠️ Warning | WR-09: `refreshCredentials` registers three values hourly forever. ~2 000 full string scans per log line after a month, and expired credential material retained for the process lifetime. |
-| `src/cloud/shadow.ts` | 24-29 | `deviceId` interpolated into MQTT topics unescaped | ⚠️ Warning | WR-14.2: an id containing `+` or `#` creates wildcard subscriptions whose messages cannot be routed and are silently dropped. Likely unreachable for `<account>_<pump>` ids; silent if not. |
-| `src/cloud/shadow.ts` | 194-198 | `get/rejected` logs a warning and returns | ⚠️ Warning | WR-14.3: a per-device blind spot inside a connection the runtime still calls `rest-and-shadow`. Nothing marks that device untrustworthy. |
-| `src/cloud/shadow.ts` | 85, 337-339 | `requestFullShadow` has no production caller | ⚠️ Warning | WR-15: dead production surface. It also publishes on whatever `transport` currently holds, which after truth 13 may be a superseded connection, and its rejection would be unhandled. |
-| `config.schema.json` | 9, 15-35 | Schema and `validateConfig` disagree | ⚠️ Warning | WR-13: `name` is `required` with no `minLength`, so the form accepts `""` and the plugin then refuses to start; `password`/`clientId` carry `minLength: 1` while the runtime requires `trim().length > 0`, so `" "` passes the form and is refused at runtime. Directly against SC-1's "save one valid account through the form". |
-| `.gitignore` + `test/hbConfig/auth.json` | — | Force-included committed credential file | ⚠️ Warning | WR-14.1: a tracked `hashedPassword` + `salt` for a `homebridge-config-ui-x` admin. Predates this phase and is dev-only, but it is offline-crackable material in a repository intended to go public. |
-| `eslint.config.js` | 89-96 | `no-floating-promises` disabled for all of `features/**` | ⚠️ Warning | WR-14.4: the stated rationale (`node:test`'s return value) does not apply to Cucumber files. The harness starts servers and clients, so the exemption hides the class of bug the lifecycle scenarios exist to catch. |
+| `src/cloud/shadow.ts` | 91, 436-438 | `ShadowClient.connected` has no production consumer, and `close()` never clears `connection.live` | ⚠️ W1 | Dead production surface. After `close()` the getter still reads `true` because `closing` short-circuits the close handler through `isCurrent`. Nothing in `src/` reads it — the runtime uses `onConnected`/`onDisconnected` — so it is unobservable today, but it is a boolean that says "connected" about a closed client. |
+| `src/runtime/accountRuntime.ts` | 226-232, 543-551 | `stopped` is not one of the facts the monitoring path is derived from | ⚠️ W2 | After `stop()` the path keeps its last value, so a runtime that has shut down can still read `shadow-and-poll`. This is deliberate and tested (`SYNC-05 leaves the monitoring path where it stood, because a shutdown is not a monitoring failure`), and the process is exiting when it happens. Worth a human decision because truth 14's wording is "can express that monitoring has stopped", and this is one case where it does not. One line closes it. |
+| `src/runtime/accountRuntime.ts` | 227 | A failing poll reports `unavailable` even while the shadow is live and delivering | ⚠️ W3 | Deliberate: polling is the reconciliation backstop, so the plugin will not vouch for what it holds without it. The direction errs toward degraded rather than toward a false normal, which is the right way to be wrong here. Recorded so Phase 5 knows this is the contract it inherits, not an accident. |
+| `src/cloud/auth.ts` | `sharedGrant` | A joining caller inherits the opening caller's cancellation | ⚠️ W4 | Bounded and self-correcting as 01-16 claims: `inFlight` clears in a `finally`, and `fetchGrant` rethrows a caller-requested abort untouched without recording a transient failure. Unreachable this phase — `sendCommand` has no production caller. One thing for Phase 4: `runPoll`'s catch exempts only `root.signal.aborted`, so a poll cancelled by a command's 2.5 s deadline would be recorded as a poll failure and would flip the path to `unavailable`. |
+| `src/device/state.ts` | 164-166 | The first poll after ownership release drops heartbeat-only telemetry keys | ⚠️ W5 | Deferred to Phase 3 (SC-6) and recorded in 01-17's Deferral Register. Not a regression: the pre-fix code clobbered on every poll. |
+| `src/cloud/shadow.ts` | 257-261 | A rejected complete-shadow request leaves a per-device blind spot | ⚠️ W6 | Deferred to Phase 3 (SC-6). The device keeps the poll, so the scope is narrowed rather than lost. |
+| `.planning/phases/01-secure-cloud-foundation/01-14-PLAN.md` | 45 | Key-link pattern is double-escaped (`retry\\.schedule`) | ⚠️ W7 | `gsd query verify.key-links` reports the link unverified even though `options.retry.schedule` is at `shadow.ts:287`. Planning-artifact defect, not a code defect. Confirmed by matching the literal and the intended pattern separately. |
+| `.planning/phases/01-secure-cloud-foundation/01-17-SUMMARY.md` | Gate Results table | Reports 457 unit tests | ⚠️ W8 | Measured 455 in this run. Two-test discrepancy in a summary claim. No test is skipped or missing; the count is simply wrong. Noted because summary numbers are what a later reader trusts. |
 
 ### Human Verification Required
 
@@ -369,7 +294,7 @@ allowlist, `.npmignore` gone), D-24 (all four local pre-commit hooks now match
 
 **Test:** Install the built package into a real Homebridge instance. Open Plugins -> Basement Guardian -> Settings. Fill in an account and save.
 **Expected:** One account block; the header states that Homebridge stores the password in plain text in `config.json` and includes it in backups; the password field is masked; a malformed email is refused by the form; saving writes the account and the plugin starts.
-**Why human:** No harness renders the Homebridge settings form (ng-formworks inside the Homebridge UI). Plan 01-11 proves the refusal behavior behind the form, not the form itself. While you are there, please also try saving with the Name field cleared and with a single space in the password — WR-13 predicts the form accepts both and the plugin then refuses to start.
+**Why human:** No harness renders the Homebridge settings form (ng-formworks inside the Homebridge UI). The WR-13 disagreement is closed, so the previous ask — try a cleared Name field and a single-space password — should now be refused by the form rather than accepted and then refused at runtime. Worth confirming that while you are there.
 
 ### 2. Heartbeat topic assumption
 
@@ -381,61 +306,38 @@ allowlist, `.npmignore` gone), D-24 (all four local pre-commit hooks now match
 
 **Test:** Open a shadow connection against the real AWS IoT endpoint using real temporary credentials from `GET /credentials/aws`.
 **Expected:** The WebSocket handshake completes rather than returning HTTP 403.
-**Why human:** `features/support/fakeShadowBroker.ts:165` uses `verifyClient: () => !refusing`, so the harness accepts any signature. The unit test derives the expected signature independently and is good work, but it and the harness share one reading of the spec — nothing in the repo is an external check of this path.
+**Why human:** `features/support/fakeShadowBroker.ts:173` still uses `verifyClient: () => !refusing`, so the harness accepts any signature. 01-17 deliberately did not close this, and the reason is sound: a third implementation written from the same reading of the specification cannot falsify that reading. Only a real handshake can.
 
 ### Gaps Summary
 
-Six must-haves are unmet. Four of them are one shape of failure: **a source that has stopped
-carrying truth still presents as healthy.**
+No gaps. All six previously failing must-haves now pass, verified by reproduction against freshly
+built code rather than by reading the summaries.
 
-The merge reducer is where two of them live. A shadow document with no reported telemetry restamps
-the snapshot's only freshness field, so a device that has gone quiet reads as freshly reporting —
-and the vendor publishes that exact document every time it delivers a command. A REST poll
-describing an earlier moment overwrites newer shadow telemetry with no ordering guard at all, and
-because the version watermark survives the overwrite, the shadow's own re-delivery of the correct
-value is then refused as stale. I reproduced both against the built code: a running pump reads as
-not running, and it stays that way until a strictly newer version arrives, which for a quiet field
-can be the next heartbeat or the next command. That second defect also quietly disables the SYNC-03
-reconnect refresh, because a full shadow at an unchanged version is discarded — and a poll writing
-`data` during a shadow outage is the designed D-15 behavior, not an edge case.
+The four gap fixes that carried the goal's word "trustworthy" all landed on the correct side of the
+tradeoffs they had to make. `shadowVersion` now carries one meaning — defined means the shadow owns
+`data` — and everything else follows from it: a poll cannot revert newer shadow telemetry, a
+disconnect hands telemetry back to the poll on all four reasons, and the reconnect refresh applies at
+an unchanged version instead of being silently dropped. The advance-but-never-establish rule that the
+plan-checker blocked the first draft over is present and correct in the shipped code, and it has four
+dedicated unit cases plus a rewritten scenario. Connection state is per-connection behind a generation
+guard, superseded transports are ended, the opener refuses to run during shutdown, and transport
+operations carry a deadline, so both halves of SC-4's "leaked work" clause hold. `MonitoringPath` has
+one declaration with a value meaning nothing is working, derived from three facts rather than assigned
+wherever something changed.
 
-The shadow connection lifecycle holds the third. Connection state is four closure variables shared
-by every connection the client ever opens, and superseding a connection neither detaches its
-handlers nor ends it. I reproduced a late close from a superseded connection flipping the live
-connection's health to disconnected. That particular consequence errs safe — it reports degraded
-while healthy — but the same structure supports the unsafe direction, and "superseded connection
-never ended" is literally SC-4's "leaked work". I also reproduced a reconnect opening a brand-new
-connection after `close()` that nothing will ever close, though I could not demonstrate that the
-production timing is reachable and I say so rather than inheriting the review's stronger claim.
+Three things stay open and none is a code defect. The Homebridge settings form cannot be rendered by
+any harness here; the vendor's heartbeat topic is an assumption only real hardware can confirm; and
+the fake broker accepts every handshake signature, which 01-17 declined to change for a reason I
+accept. Those three are the whole of `human_needed`.
 
-The fourth is the composition seam. `MonitoringPath` has no value meaning "monitoring is dead", so a
-refused credential — the one failure this project treats as terminal, after which no poll, no
-credential refresh, and no shadow will ever run again — leaves the runtime reporting `'rest-only'`,
-which `health.ts` documents as a working degraded path. Nothing consumes it in production yet, so
-today the false normal is latent. It is still a shipped contract that is wrong: the same exported
-type name carries disjoint value sets in the producer and in the declaration-only consumer plan
-01-03 shipped for the next phase.
-
-The fifth gap is smaller in mechanism and larger in policy: the malformed-email refusal quotes the
-configured account email into the log. AUTH-02's own wording does not list account identifiers, but
-PROJECT.md's Privacy constraint and CLAUDE.md both do, and the platform comment shows the quoting
-was deliberate. That is a conflict between two project documents and wants a decision, not just a
-patch.
-
-The sixth is the phase seal itself. `npm run check` exited 1 on my first run — the credential
-rotation scenario, whose client-identifier assertion is the only one in that file that skips the
-`untilTrue` wait its siblings use. Three re-runs passed. A gate that certifies the phase four times
-out of five certifies nothing, and it sits on the scenario proving SYNC-04.
-
-What is genuinely good is worth saying plainly, because the fixes above should not disturb it: the
-SigV4 presigner and its independently derived test, the seven-member redacting logger, the
-refuse-never-clamp configuration validation, the closed four-route REST surface with its recorded
-opt-out matrix, the owner-only token cache with a salted email fingerprint, the six-file packed
-artifact, and a dead-code gate that passes on genuine reachability with the transitional
-suppressions all removed. Twenty-four of twenty-four context decisions are honored, all twelve
-requirement IDs are claimed, and no debt marker or skipped test exists anywhere in the phase's files.
+Eight warnings are recorded above. W2, W3, and W4 are design contracts rather than bugs, and each is
+written down so Phase 4 and Phase 5 inherit them knowingly rather than by surprise. W1 is a dead
+`connected` getter that reports true about a closed client — unobservable today, and either wire it or
+drop it before something starts reading it. W5 and W6 are recorded deferrals to Phase 3 with a
+matching success criterion. W7 and W8 are planning-artifact defects: a double-escaped key-link pattern
+that makes a wired link report unverified, and a summary that claims two more unit tests than exist.
 
 ---
 
-_Verified: 2026-08-29T10:15:47Z_
+_Verified: 2026-08-29T13:41:43Z_
 _Verifier: Claude (gsd-verifier)_
