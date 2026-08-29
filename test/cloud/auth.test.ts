@@ -109,6 +109,7 @@ function authOptions(storagePath: string, overrides: Partial<AuthClientOptions> 
     requestTimeoutMs: 1_000,
     clock: { now: () => START_TIME },
     createSalt: () => 'salt-1',
+    registerSecret: () => undefined,
     log: createRecordingLog([]),
     ...overrides,
   };
@@ -174,6 +175,53 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
       },
     ],
   );
+});
+
+test('AUTH-02 registers the granted token as a secret', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const registeredSecrets: string[] = [];
+  stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+
+  // act
+  await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(registeredSecrets, ['id-token-1']);
+});
+
+test('AUTH-02 registers one token once however many requests carry it', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const registeredSecrets: string[] = [];
+  stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+
+  // act
+  await authClient.idToken(new AbortController().signal);
+  await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(registeredSecrets, ['id-token-1']);
+});
+
+test('AUTH-02 registers a replacement token once the previous one has expired', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const registeredSecrets: string[] = [];
+  let currentTime = START_TIME;
+  const clock: Clock = { now: () => currentTime };
+  stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath, { clock, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  await authClient.idToken(new AbortController().signal);
+
+  // act
+  currentTime += TOKEN_LIFETIME_MS;
+  await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(registeredSecrets, ['id-token-1', 'id-token-2']);
 });
 
 test('reuses the cached token while it is still valid', async (t) => {

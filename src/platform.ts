@@ -33,7 +33,7 @@ export type BasementGuardianPlatformAccessory = PlatformAccessory<BasementGuardi
 // Manual constructor injection: every collaborator is built here and nowhere
 // else. None of these factories opens a connection, reads a file, or starts a
 // timer, so building them costs nothing until the runtime starts.
-function createRuntime(config: BgConfig, storagePath: string, log: Logging): AccountRuntime {
+function createRuntime(config: BgConfig, storagePath: string, log: RedactingLogger): AccountRuntime {
   const clock = systemClock;
   const auth = createAuthClient({
     constants: PROTOCOL,
@@ -44,6 +44,9 @@ function createRuntime(config: BgConfig, storagePath: string, log: Logging): Acc
     requestTimeoutMs: REQUEST_TIMEOUT_MS,
     clock,
     createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
+    registerSecret: (secret: string) => {
+      log.registerSecret(secret);
+    },
     log,
   });
   const api = createCloudApi({ baseUrl: PROTOCOL.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS });

@@ -67,6 +67,8 @@ export interface AuthClientOptions {
   clock: Clock;
   /** Supplies the salt the cached fingerprint is computed over. */
   createSalt: () => string;
+  /** Registers the granted token with the redacting logger (AUTH-02). */
+  registerSecret: (secret: string) => void;
   log: Logging;
 }
 
@@ -396,6 +398,7 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
   let cached: CachedToken | undefined;
   let cacheRead = false;
+  let registered: string | undefined;
 
   async function currentToken(signal: AbortSignal): Promise<CachedToken> {
     if (policy.haltedReason !== undefined) {
@@ -420,6 +423,15 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   return {
     async idToken(signal: AbortSignal): Promise<string> {
       cached = await currentToken(signal);
+
+      // A bearer token is credential material the moment it is in hand,
+      // whether it was granted or read back from the cache. It is registered
+      // once per distinct value rather than once per request, so a long-running
+      // bridge does not accumulate one entry per call (AUTH-02).
+      if (registered !== cached.idToken) {
+        registered = cached.idToken;
+        options.registerSecret(cached.idToken);
+      }
 
       return cached.idToken;
     },

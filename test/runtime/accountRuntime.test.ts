@@ -100,6 +100,7 @@ async function createAccount(t: TestContext, messages: string[] = []): Promise<{
     requestTimeoutMs: 1_000,
     clock,
     createSalt: () => 'salt-1',
+    registerSecret: () => undefined,
     log,
   });
   const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000 });
