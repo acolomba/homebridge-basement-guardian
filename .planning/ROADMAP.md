@@ -36,7 +36,7 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
   3. REST snapshots and partial shadow updates produce one current state per device without omitted or desired fields corrupting previously accepted values.
   4. Full-shadow refresh, REST reconciliation, credential rotation, retry, and shutdown can run repeatedly without duplicate loops, leaked work, or unhandled errors.
 
-**Plans**: 10/11 plans executed
+**Plans**: 11/11 plans executed
 
 Plans:
 **Wave 1**
@@ -69,7 +69,7 @@ Plans:
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 01-11-PLAN.md — Phase scenarios and changelog
+- [x] 01-11-PLAN.md — Phase scenarios and changelog
 
 **Cross-cutting constraints:**
 
@@ -160,7 +160,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 10/11 | In Progress|  |
+| 1. Secure Cloud Foundation | 11/11 | In Progress|  |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
