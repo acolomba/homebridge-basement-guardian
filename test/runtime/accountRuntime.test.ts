@@ -40,6 +40,12 @@ const DEGRADED_LINE = 'The shadow connection is unavailable, so device state is 
 // the ten-minute lead.
 const ROTATION_DELAY_MS = ONE_HOUR_MS - ROTATION_LEAD_MS;
 
+// A lead and a floor far below the bundled ones, so a case that supplies them
+// fails if the runtime reads the bundled numbers instead.
+const SHORT_ROTATION_LEAD_MS = 10;
+const SHORT_ROTATION_FLOOR_MS = 5;
+const SHORT_CREDENTIAL_LIFETIME_MS = 1_000;
+
 // Device time and local receipt time are deliberately different, so a snapshot
 // that collapsed the two would fail the end-to-end case.
 const DEVICE_TIME = 1_700_000_000_000;
@@ -191,6 +197,8 @@ interface Script {
   /** Whether closing the shadow connection rejects. */
   closeFails: boolean;
   pollIntervalMs: number;
+  rotationLeadMs: number;
+  minRotationDelayMs: number;
 }
 
 interface Harness {
@@ -271,6 +279,8 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     },
     createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
     pollIntervalMs: script.pollIntervalMs ?? POLL_INTERVAL_MS,
+    rotationLeadMs: script.rotationLeadMs ?? ROTATION_LEAD_MS,
+    minRotationDelayMs: script.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret: (secret: string): void => {
       secrets.push(secret);
@@ -479,19 +489,42 @@ describe('credential rotation', () => {
     assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
   });
 
-  test('holds the delay at the floor when the response already expires inside the lead window', async (t) => {
+  test('holds the delay at the injected floor when the response already expires inside the injected lead window', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(credentialsAt(START_TIME + 60_000))] });
+    const { runtime, calls, advance } = harness(t, {
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS))],
+      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+    });
     await runtime.start();
     await settle();
 
     // act
-    await advance(MIN_ROTATION_DELAY_MS - 1);
+    await advance(SHORT_ROTATION_FLOOR_MS - 1);
     const beforeFloor = calls.filter((call) => call === 'credentials').length;
     await advance(1);
 
     // assert
     assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 1, afterFloor: 2 });
+  });
+
+  test('SYNC-04 takes the injected lead when the expiry sits further out than the injected floor', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS))],
+      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS - SHORT_ROTATION_LEAD_MS - 1);
+    const beforeDue = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
+
+    // assert
+    assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
   });
 
   test('SYNC-04 schedules the next rotation from the new expiry rather than the first one', async (t) => {
@@ -589,16 +622,16 @@ describe('credential rotation', () => {
     );
   });
 
-  test('holds the delay at the floor when the vendor expiry cannot be read as a date', async (t) => {
+  test('holds the delay at the injected floor when the vendor expiry cannot be read as a date', async (t) => {
     // arrange
     const unreadable = { ...credentialsAt(START_TIME + ONE_HOUR_MS) };
     unreadable.credentials = { ...unreadable.credentials, Expiration: 'whenever' };
-    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(unreadable)] });
+    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(unreadable)], minRotationDelayMs: SHORT_ROTATION_FLOOR_MS });
     await runtime.start();
     await settle();
 
     // act
-    await advance(MIN_ROTATION_DELAY_MS);
+    await advance(SHORT_ROTATION_FLOOR_MS);
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'credentials').length, 2);
@@ -1049,6 +1082,8 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => fakeShadow(shadowOptions).client,
     createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
     pollIntervalMs: POLL_INTERVAL_MS,
+    rotationLeadMs: ROTATION_LEAD_MS,
+    minRotationDelayMs: MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret: () => undefined,
     clock,
@@ -1084,6 +1119,10 @@ function stubCloud(t: TestContext): { url: string; authorization: string | undef
   });
 
   return requests;
+}
+
+function credentialRequestCount(requests: readonly { url: string }[]): number {
+  return requests.filter((request) => request.url.endsWith('/credentials/aws')).length;
 }
 
 describe('createAccountRuntimeFromConfig', () => {
@@ -1149,6 +1188,48 @@ describe('createAccountRuntimeFromConfig', () => {
 
     // assert
     assert.strictEqual(recorded.at(-1), 'info the grant produced [redacted] and the handshake used [redacted] with [redacted]');
+  });
+
+  test('SYNC-04 arms the rotation on the lead and floor the caller states rather than the bundled pair', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const requests = stubCloud(t);
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      storagePath,
+      clock: { now: () => START_TIME },
+      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      connect: () => {
+        throw new Error('no socket expected');
+      },
+      createSalt: () => 'salt-1',
+      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+    });
+
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    await runtime.start();
+    await settle();
+
+    // act
+    t.mock.timers.tick(ONE_HOUR_MS - SHORT_ROTATION_LEAD_MS - 1);
+    await settle();
+    const beforeDue = credentialRequestCount(requests);
+    t.mock.timers.tick(1);
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ beforeDue, afterDue: credentialRequestCount(requests) }, { beforeDue: 1, afterDue: 2 });
   });
 });
 

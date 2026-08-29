@@ -28,10 +28,10 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 const MILLISECONDS_PER_SECOND = 1_000;
 
-/** How long before a credential expiry the rotation refreshes the cache. */
+/** How long before a credential expiry a bundled runtime refreshes the cache. */
 export const ROTATION_LEAD_MS = 600_000;
 
-/** The floor a rotation delay is held at, so a response already inside the lead window still waits. */
+/** The floor a bundled rotation delay is held at, so a response already inside the lead window still waits. */
 export const MIN_ROTATION_DELAY_MS = 30_000;
 
 /**
@@ -85,6 +85,10 @@ export interface AccountRuntimeOptions {
    */
   createRetry: (signal: AbortSignal) => RetryPolicy;
   pollIntervalMs: number;
+  /** How long before a credential expiry the rotation refreshes the cache. */
+  rotationLeadMs: number;
+  /** The floor a rotation delay is held at, so a response already inside the lead window still waits. */
+  minRotationDelayMs: number;
   failures: FailureLog;
   /** Registers credential material with the redacting logger as it arrives (AUTH-02). */
   registerSecret: (secret: string) => void;
@@ -148,14 +152,14 @@ function toShadowCredentials(response: AwsCredentialsResponse): ShadowCredential
 
 // The expiry is an untyped vendor string, so one that does not parse must not
 // become a NaN delay: a timer armed with NaN fires at once and spins.
-function rotationDelayMs(expiration: string, now: number): number {
+function rotationDelayMs(expiration: string, now: number, options: AccountRuntimeOptions): number {
   const expiresAt = Date.parse(expiration);
 
   if (!Number.isFinite(expiresAt)) {
-    return MIN_ROTATION_DELAY_MS;
+    return options.minRotationDelayMs;
   }
 
-  return Math.max(MIN_ROTATION_DELAY_MS, expiresAt - now - ROTATION_LEAD_MS);
+  return Math.max(options.minRotationDelayMs, expiresAt - now - options.rotationLeadMs);
 }
 
 /**
@@ -309,13 +313,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       options.failures.recordSuccess(ROTATION);
 
-      return rotationDelayMs(response.credentials.Expiration, options.clock.now());
+      return rotationDelayMs(response.credentials.Expiration, options.clock.now(), options);
     } catch {
       if (!root.signal.aborted) {
         options.failures.recordFailure(ROTATION, ROTATION_FAILED);
       }
 
-      return MIN_ROTATION_DELAY_MS;
+      return options.minRotationDelayMs;
     }
   }
 
@@ -469,6 +473,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
  * its own so it can point the runtime at a local fake cloud. That is a genuine
  * dependency made explicit, not a hook added for testing, and it is what keeps
  * the harness from needing a production escape hatch.
+ *
+ * The rotation lead and floor travel the same way. The seam is where the
+ * bundled numbers are chosen, so a caller that omits them gets production
+ * timing and a caller that states them drives the schedule itself.
  */
 export interface AccountRuntimeDeps {
   config: BgConfig;
@@ -479,6 +487,10 @@ export interface AccountRuntimeDeps {
   log: RedactingLogger;
   connect: MqttConnect;
   createSalt: () => string;
+  /** How long before a credential expiry the rotation refreshes the cache. Bundled lead when absent. */
+  rotationLeadMs?: number;
+  /** The floor a rotation delay is held at. Bundled floor when absent. */
+  minRotationDelayMs?: number;
 }
 
 /**
@@ -521,6 +533,8 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
       }),
     createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: deps.log }),
     pollIntervalMs: deps.config.pollIntervalSeconds * MILLISECONDS_PER_SECOND,
+    rotationLeadMs: deps.rotationLeadMs ?? ROTATION_LEAD_MS,
+    minRotationDelayMs: deps.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret,
     clock: deps.clock,

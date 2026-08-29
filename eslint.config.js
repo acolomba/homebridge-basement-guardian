@@ -87,9 +87,11 @@ export default tseslint.config(
     },
   },
   {
-    // node:test's test() returns a promise at every call site, which
+    // The unit runner's test() returns a promise at every call site, which
     // strictTypeChecked reports as a floating promise under --max-warnings=0.
-    files: ['test/**/*.ts', 'features/**/*.ts'],
+    // The exemption names the unit tree alone: the cucumber harness starts
+    // servers, brokers, and clients, so a promise it abandons is a real defect.
+    files: ['test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
     },

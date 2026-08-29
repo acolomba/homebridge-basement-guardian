@@ -31,6 +31,9 @@ const STEP_TIMEOUT_MS = 15_000;
 // must never reach the canonical snapshot.
 const REQUESTED_STATE = { desired: { data: { alarm_muted: true } } };
 
+// The identifier of each connection one rotation produces, in the order the vendor issued them.
+const EXPECTED_CLIENT_IDS: readonly string[] = [SHADOW_CREDENTIALS.clientId, ROTATED_SHADOW_CREDENTIALS.clientId];
+
 // A table cell reads as the JSON value the vendor would have sent, so a scenario states `false`
 // and `2` rather than the text of either.
 function fieldValue(text: string): unknown {
@@ -193,11 +196,12 @@ function assertShadowVersion(this: BasementGuardianWorld, version: number): Prom
 
 Then('the canonical snapshot is at shadow version {int}', { timeout: STEP_TIMEOUT_MS }, assertShadowVersion);
 
-function assertCanonicalChangeCount(this: BasementGuardianWorld, count: number): void {
+async function assertCanonicalChangeCount(this: BasementGuardianWorld, count: number): Promise<void> {
+  await this.untilTrue(() => this.changes.length >= count, DEADLINE_MS, `the plugin reported fewer than ${String(count)} canonical changes`);
   assert.equal(this.changes.length, count);
 }
 
-Then('the plugin reports {int} canonical change(s)', assertCanonicalChangeCount);
+Then('the plugin reports {int} canonical change(s)', { timeout: STEP_TIMEOUT_MS }, assertCanonicalChangeCount);
 
 async function assertCompleteShadowRequests(this: BasementGuardianWorld, count: number): Promise<void> {
   const broker = await this.broker();
@@ -246,7 +250,11 @@ Then('the newest handshake carries the rotated credentials', assertHandshakeCarr
 async function assertClientIdentifiers(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
-  assert.deepEqual([...broker.clientIds], [SHADOW_CREDENTIALS.clientId, ROTATED_SHADOW_CREDENTIALS.clientId]);
+  // The broker records a client identifier when it reads the MQTT connect packet, which is a later
+  // moment than the WebSocket upgrade a handshake count waits on. Waiting on the identifiers
+  // themselves is what keeps the assertion from reading one packet early.
+  await this.untilTrue(() => broker.clientIds.length >= EXPECTED_CLIENT_IDS.length, DEADLINE_MS, `the broker never held ${EXPECTED_CLIENT_IDS.join(' and ')}`);
+  assert.deepEqual([...broker.clientIds], EXPECTED_CLIENT_IDS);
 }
 
-Then('the broker holds the first and the rotated client identifier', assertClientIdentifiers);
+Then('the broker holds the first and the rotated client identifier', { timeout: STEP_TIMEOUT_MS }, assertClientIdentifiers);
