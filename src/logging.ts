@@ -25,9 +25,24 @@ export interface RedactingLoggerOptions {
   secrets: readonly string[];
 }
 
-/** A `Logging` that also accepts secrets discovered after it was built. */
+/**
+ * Which rotated credential a registered value is.
+ *
+ * The vendor issues a fresh set of these about every hour, over a run that
+ * lasts months. A value registered under its role replaces the value that role
+ * held before, so the superseded one is neither scanned for nor retained
+ * (AUTH-02).
+ */
+export type SecretRole = 'aws-access-key-id' | 'aws-secret-access-key' | 'aws-session-token';
+
+/**
+ * A `Logging` that also accepts secrets discovered after it was built.
+ *
+ * A value registered with no role is kept for the life of the logger, which is
+ * what the account password and the cached bearer token need.
+ */
 export interface RedactingLogger extends Logging {
-  registerSecret(secret: string): void;
+  registerSecret(secret: string, role?: SecretRole): void;
 }
 
 /** The five members that carry their level in their own name. */

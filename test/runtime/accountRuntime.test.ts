@@ -20,6 +20,7 @@ import type { ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { BgConfig } from '../../src/config.js';
 import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
+import type { SecretRole } from '../../src/logging.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { Clock } from '../../src/runtime/clock.js';
@@ -205,7 +206,8 @@ interface Harness {
   runtime: AccountRuntime;
   store: DeviceStateStore;
   logged: string[];
-  secrets: string[];
+  /** One entry per registered secret, its role first, in registration order. */
+  registrations: string[];
   shadows: ShadowRecorder[];
   calls: string[];
   advance: (ms: number) => Promise<void>;
@@ -227,7 +229,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   t.mock.timers.enable({ apis: ['setTimeout'] });
 
   const logged: string[] = [];
-  const secrets: string[] = [];
+  const registrations: string[] = [];
   const shadows: ShadowRecorder[] = [];
   const calls: string[] = [];
   let time = START_TIME;
@@ -282,8 +284,8 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     rotationLeadMs: script.rotationLeadMs ?? ROTATION_LEAD_MS,
     minRotationDelayMs: script.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
-    registerSecret: (secret: string): void => {
-      secrets.push(secret);
+    registerSecret: (secret: string, role?: SecretRole): void => {
+      registrations.push(`${String(role)} ${secret}`);
     },
     clock,
     log,
@@ -299,7 +301,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     runtime,
     store,
     logged,
-    secrets,
+    registrations,
     shadows,
     calls,
     advance: async (ms: number): Promise<void> => {
@@ -369,16 +371,20 @@ describe('start', () => {
     assert.deepStrictEqual({ connections: shadows.length, subscribed: shadows[0]?.subscribed }, { connections: 1, subscribed: [[DEVICE_ID]] });
   });
 
-  test('AUTH-02 registers every temporary credential value as a secret', async (t) => {
+  test('AUTH-02 registers every temporary credential value under its own rotated role', async (t) => {
     // arrange
-    const { runtime, secrets } = harness(t);
+    const { runtime, registrations } = harness(t);
 
     // act
     await runtime.start();
     await settle();
 
     // assert
-    assert.deepStrictEqual(secrets, ['test-access-key-id', 'test-secret-access-key', 'test-session-token']);
+    assert.deepStrictEqual(registrations, [
+      'aws-access-key-id test-access-key-id',
+      'aws-secret-access-key test-secret-access-key',
+      'aws-session-token test-session-token',
+    ]);
   });
 
   test('reports the route and the status when the vendor refuses discovery', async (t) => {

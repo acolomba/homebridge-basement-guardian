@@ -19,7 +19,7 @@ import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnect
 import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
 import type { BgConfig } from '../config.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
-import type { RedactingLogger } from '../logging.js';
+import type { RedactingLogger, SecretRole } from '../logging.js';
 import type { ProtocolConstants } from '../protocol.js';
 import type { Logging } from 'homebridge';
 
@@ -90,8 +90,13 @@ export interface AccountRuntimeOptions {
   /** The floor a rotation delay is held at, so a response already inside the lead window still waits. */
   minRotationDelayMs: number;
   failures: FailureLog;
-  /** Registers credential material with the redacting logger as it arrives (AUTH-02). */
-  registerSecret: (secret: string) => void;
+  /**
+   * Registers credential material with the redacting logger as it arrives.
+   *
+   * A rotated value carries its role, so it replaces the value that role held
+   * rather than joining it (AUTH-02).
+   */
+  registerSecret: (secret: string, role?: SecretRole) => void;
   clock: Clock;
   log: Logging;
 }
