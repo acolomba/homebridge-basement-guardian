@@ -42,6 +42,14 @@ export interface FakeRestApi {
   /** Arms exactly one subsequent request to fail with this status. */
   failNextWith(status: number): void;
 
+  /**
+   * Records the next request and never answers it.
+   *
+   * A scenario uses this to hold a vendor call in flight while it shuts the plugin down. The held
+   * response is destroyed with every other connection when the service closes.
+   */
+  holdNextRequest(): void;
+
   /** Stops the service and resolves once every open connection is destroyed. */
   close(): Promise<void>;
 }
@@ -51,6 +59,7 @@ interface ServiceState {
   devices: readonly ApiDevice[];
   credentials: AwsCredentialsResponse;
   armedStatus: number | undefined;
+  holdNext: boolean;
 }
 
 const DEFAULT_CREDENTIALS: AwsCredentialsResponse = {
@@ -126,6 +135,13 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
   const method = request.method ?? '';
 
   state.requests.push({ method, path, authorization: request.headers.authorization, body: await readBody(request) });
+
+  if (state.holdNext) {
+    state.holdNext = false;
+
+    return;
+  }
+
   const armedStatus = state.armedStatus;
   state.armedStatus = undefined;
 
@@ -144,7 +160,7 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
  * The promise resolves only once the port is known, so a caller can read `baseUrl` immediately.
  */
 export async function createFakeRestApi(): Promise<FakeRestApi> {
-  const state: ServiceState = { requests: [], devices: [], credentials: DEFAULT_CREDENTIALS, armedStatus: undefined };
+  const state: ServiceState = { requests: [], devices: [], credentials: DEFAULT_CREDENTIALS, armedStatus: undefined, holdNext: false };
   const server = await startLoopbackServer((request, response) => route(state, request, response));
 
   return {
@@ -158,6 +174,9 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     },
     failNextWith(status: number): void {
       state.armedStatus = status;
+    },
+    holdNextRequest(): void {
+      state.holdNext = true;
     },
     close(): Promise<void> {
       return server.close();

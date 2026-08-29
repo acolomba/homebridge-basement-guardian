@@ -11,7 +11,9 @@ import { readBody, respondJson, startLoopbackServer } from './loopbackServer.js'
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const TOKEN_PATH = '/oauth/token';
-const DEFAULT_ID_TOKEN = 'fake-id-token';
+
+/** The identity token the tenant issues unless a scenario replaces it. */
+export const DEFAULT_ID_TOKEN = 'fake-id-token';
 
 // The tenant reports the observed 30-day identity-token lifetime unless a scenario shortens it.
 const DEFAULT_EXPIRES_IN_SECONDS = 2592000;

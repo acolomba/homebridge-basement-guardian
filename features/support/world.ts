@@ -6,14 +6,24 @@
  * scenario ends, so no scenario leaks a listening socket, an open connection, or a temporary
  * directory into the next one.
  *
+ * The world also builds the plugin's own account runtime against those fakes, through the single
+ * composition seam the runtime publishes. The protocol constants are an ordinary injected
+ * dependency of that seam, so pointing the plugin at a local cloud costs no production escape
+ * hatch: the seam takes the bundled values in Homebridge and the harness values here.
+ *
  * The world reports scenario time through `now()`, which is the shape a production clock port
- * expects, so a later scenario can hand the world itself to the code under test as its clock.
+ * expects, so it is handed to the code under test as its clock.
  */
 
 import { setTimeout as delay } from 'node:timers/promises';
 
 import { After, setWorldConstructor, World } from '@cucumber/cucumber';
-import { connectAsync } from 'mqtt';
+import { connect, connectAsync } from 'mqtt';
+
+import { createRedactingLogger } from '../../src/logging.js';
+import { BasementGuardianPlatform } from '../../src/platform.js';
+import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
+import { PLATFORM_NAME } from '../../src/settings.js';
 
 import { createFakeAuth0 } from './fakeAuth0.js';
 import { createFakeHomebridgeApi } from './fakeHomebridgeApi.js';
@@ -24,16 +34,83 @@ import type { FakeAuth0 } from './fakeAuth0.js';
 import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
 import type { FakeShadowBroker } from './fakeShadowBroker.js';
+import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
+import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { RedactingLogger } from '../../src/logging.js';
+import type { ProtocolConstants } from '../../src/protocol.js';
+import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
+import type { LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
 
 const POLL_INTERVAL_MS = 10;
 
+/** The moment every scenario's clock starts from. It moves only when a step moves it. */
+export const SCENARIO_START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
+
+/** The account a scenario signs in with. Neither value names a real account. */
+export const ACCOUNT_EMAIL = 'account@example.test';
+
+/** The password a scenario signs in with. */
+export const ACCOUNT_PASSWORD = 'placeholder-password';
+
+/** The poll interval a scenario takes unless it asks for a shorter one, in seconds. */
+const DEFAULT_POLL_INTERVAL_SECONDS = 900;
+
+/** The Auth0 client identifier the harness signs in with. */
+export const HARNESS_CLIENT_ID = 'placeholder-client-id';
+
+/** The Auth0 password realm the harness signs in against. */
+export const HARNESS_REALM = 'placeholder-realm';
+
+const HARNESS_REGION = 'placeholder-region';
+const HARNESS_SALT = 'placeholder-salt';
+const CONFIRMATION_POLL_COUNT = 2;
+
+// The signer builds the handshake URL from this scheme, and the local broker speaks the unsecured
+// one. Nothing here disables certificate verification; there is no certificate to verify.
+const UNSECURED_WEBSOCKET = 'ws';
+
+/** One set of credential values the fake vendor issues. Not one of them is real. */
+export interface ShadowCredentialMaterial {
+  clientId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken: string;
+}
+
+/** The credential material the fake vendor issues for the first handshake. */
+export const SHADOW_CREDENTIALS: ShadowCredentialMaterial = {
+  clientId: 'placeholder-shadow-client',
+  accessKeyId: 'placeholder-access-key-id',
+  secretAccessKey: 'placeholder-secret-access-key',
+  sessionToken: 'placeholder-session-token',
+};
+
+/** The credential material the fake vendor rotates to. Every value differs from the first set. */
+export const ROTATED_SHADOW_CREDENTIALS: ShadowCredentialMaterial = {
+  clientId: 'placeholder-next-shadow-client',
+  accessKeyId: 'placeholder-next-access-key-id',
+  secretAccessKey: 'placeholder-next-secret-access-key',
+  sessionToken: 'placeholder-next-session-token',
+};
+
+/** Every credential value the fake vendor can issue across one scenario. */
+export const EVERY_ISSUED_CREDENTIAL: readonly string[] = [
+  SHADOW_CREDENTIALS.accessKeyId,
+  SHADOW_CREDENTIALS.secretAccessKey,
+  SHADOW_CREDENTIALS.sessionToken,
+  ROTATED_SHADOW_CREDENTIALS.accessKeyId,
+  ROTATED_SHADOW_CREDENTIALS.secretAccessKey,
+  ROTATED_SHADOW_CREDENTIALS.sessionToken,
+];
+
 /**
  * The client identifier the scenario's subscriber connects under.
  *
- * The subscriber stands in for the plugin's shadow client until the composition seam exists. It
- * never reconnects on its own, so a scenario can observe a close as the event it is.
+ * The subscriber stands in for the plugin's shadow client in the harness scenarios, which prove the
+ * fakes themselves. It never reconnects on its own, so a scenario can observe a close as the event
+ * it is.
  */
 export const SUBSCRIBER_CLIENT_ID = 'harness-subscriber';
 
@@ -42,12 +119,26 @@ export class BasementGuardianWorld extends World {
   /** What the scenario observed, in arrival order. */
   readonly observations: string[] = [];
 
+  /** Every line the plugin logged, its level first. */
+  readonly logged: string[] = [];
+
+  /** Every unhandled rejection the process reported while the scenario ran. */
+  readonly rejections: string[] = [];
+
+  /** One entry per canonical state change the store reported, naming the keys that moved. */
+  readonly changes: string[] = [];
+
+  /** The account settings the scenario configures the platform with. */
+  settings: Record<string, unknown> = {};
+
   /** The devices the scenario handed to the fake REST service. */
   devices: readonly ApiDevice[] = [];
 
   private readonly cleanups: (() => Promise<void>)[] = [];
 
-  private scenarioTime = 0;
+  private scenarioTime = SCENARIO_START_TIME;
+
+  private pollIntervalSeconds = DEFAULT_POLL_INTERVAL_SECONDS;
 
   private auth0Tenant: FakeAuth0 | undefined = undefined;
 
@@ -59,17 +150,40 @@ export class BasementGuardianWorld extends World {
 
   private subscriber: MqttClient | undefined = undefined;
 
+  private redactingLog: RedactingLogger | undefined = undefined;
+
+  private accountRuntime: AccountRuntime | undefined = undefined;
+
+  private starting: Promise<void> | undefined = undefined;
+
+  private loadedPlatform: BasementGuardianPlatform | undefined = undefined;
+
   private subscriberClosed = false;
 
   private readonly received: { topic: string; payload: string }[] = [];
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
 
+  private publishedVersion = 0;
+
+  // A stable bound reference, because the listener has to be removed again at the end of the
+  // scenario. Recording is what lets a shutdown scenario assert the absence of a rejection rather
+  // than hope the process would have crashed on one.
+  private readonly recordRejection = (reason: unknown): void => {
+    this.rejections.push(String(reason));
+  };
+
   constructor(readonly options: IWorldOptions) {
     super(options);
+    process.on('unhandledRejection', this.recordRejection);
+    this.own(() => {
+      process.off('unhandledRejection', this.recordRejection);
+
+      return Promise.resolve();
+    });
   }
 
-  /** The scenario's current time in milliseconds. It moves only when a step moves it. */
+  /** The scenario's current time in milliseconds. */
   now(): number {
     return this.scenarioTime;
   }
@@ -128,6 +242,113 @@ export class BasementGuardianWorld extends World {
     return this.homebridgeApi;
   }
 
+  /** The logger the plugin writes through. Every registered secret is redacted before it lands. */
+  logger(): RedactingLogger {
+    this.redactingLog ??= createRedactingLogger({ delegate: this.recordingLog(), secrets: [] });
+
+    return this.redactingLog;
+  }
+
+  /**
+   * Points the temporary-credentials route at the local broker with this credential material.
+   *
+   * The expiry is the scenario's own start time, which is already inside the refresh lead window,
+   * so the runtime rotates on its shortest permitted delay rather than an hour from now.
+   */
+  async issueShadowCredentials(material: ShadowCredentialMaterial): Promise<void> {
+    const broker = await this.broker();
+    const service = await this.restApi();
+    const response: AwsCredentialsResponse = {
+      endpoint: broker.host,
+      clientId: material.clientId,
+      credentials: {
+        AccessKeyId: material.accessKeyId,
+        SecretAccessKey: material.secretAccessKey,
+        SessionToken: material.sessionToken,
+        Expiration: new Date(SCENARIO_START_TIME).toISOString(),
+      },
+    };
+
+    service.setAwsCredentials(response);
+  }
+
+  /** The version the next shadow document a scenario publishes carries. */
+  nextShadowVersion(): number {
+    this.publishedVersion += 1;
+
+    return this.publishedVersion;
+  }
+
+  /** Shortens the poll interval so a scenario can observe the REST backstop reconcile. */
+  usePollInterval(seconds: number): void {
+    this.pollIntervalSeconds = seconds;
+  }
+
+  /** Loads the platform against the fake Homebridge API, which is all a refusal needs. */
+  async loadPlatform(): Promise<void> {
+    const homebridge = await this.homebridge();
+    const config: PlatformConfig = { platform: PLATFORM_NAME, ...this.settings };
+
+    this.loadedPlatform = new BasementGuardianPlatform(this.recordingLog(), config, homebridge.api);
+  }
+
+  /** How many accessories the loaded platform holds. */
+  accessoryCount(): number {
+    if (this.loadedPlatform === undefined) {
+      throw new Error('no step has loaded the platform yet');
+    }
+
+    return this.loadedPlatform.accessories.size;
+  }
+
+  /** Builds the account runtime against the fakes and starts it, without waiting for the launch. */
+  startPlugin(): void {
+    this.starting = this.launch();
+  }
+
+  /** Resolves once the launch attempt has finished, however it finished. */
+  async awaitStart(): Promise<void> {
+    await this.starting;
+  }
+
+  /** Stops the running account runtime. */
+  async stopPlugin(): Promise<void> {
+    await this.accountRuntime?.stop();
+  }
+
+  /** Stops the account runtime and builds a fresh one, as a Homebridge restart does. */
+  async restartPlugin(): Promise<void> {
+    await this.stopPlugin();
+    this.accountRuntime = undefined;
+    this.starting = this.launch();
+    await this.starting;
+  }
+
+  /** Starts the account runtime a second time, which a stopped runtime must decline. */
+  async startPluginAgain(): Promise<void> {
+    await this.runtime().start();
+  }
+
+  /** The account runtime a scenario started. */
+  runtime(): AccountRuntime {
+    if (this.accountRuntime === undefined) {
+      throw new Error('no step has started the plugin yet');
+    }
+
+    return this.accountRuntime;
+  }
+
+  /** The canonical snapshot the plugin holds for one device. */
+  snapshot(deviceId: string): DeviceSnapshot {
+    const held = this.runtime().store.snapshot(deviceId);
+
+    if (held === undefined) {
+      throw new Error(`the plugin holds no snapshot for ${deviceId}`);
+    }
+
+    return held;
+  }
+
   /** Subscribes the scenario's subscriber to a topic, connecting it on first use. */
   async subscribe(topic: string): Promise<void> {
     const subscriber = await this.connectSubscriber();
@@ -137,14 +358,43 @@ export class BasementGuardianWorld extends World {
 
   /** The payload of the first message on a topic, or a failure once the deadline passes. */
   async nextMessage(topic: string, timeoutMs: number): Promise<string> {
-    const message = await this.waitFor(() => this.received.find((candidate) => candidate.topic === topic), timeoutMs, `no message arrived on ${topic}`);
+    const message = await this.until(() => this.received.find((candidate) => candidate.topic === topic), timeoutMs, `no message arrived on ${topic}`);
 
     return message.payload;
   }
 
   /** Resolves once the subscriber's connection closes, or fails once the deadline passes. */
   async awaitSubscriberClose(timeoutMs: number): Promise<void> {
-    await this.waitFor(() => (this.subscriberClosed ? this.subscriberClosed : undefined), timeoutMs, 'the subscriber connection stayed open');
+    await this.until(() => (this.subscriberClosed ? this.subscriberClosed : undefined), timeoutMs, 'the subscriber connection stayed open');
+  }
+
+  /**
+   * Resolves with the first value the reader answers, or fails once the deadline passes.
+   *
+   * The harness watches transports it does not own, so it polls. Every wait carries a deadline, so
+   * a transport regression fails as a timeout on a named step rather than as a silent stall.
+   */
+  async until<T>(read: () => T | undefined, timeoutMs: number, failure: string): Promise<T> {
+    const deadline = Date.now() + timeoutMs;
+
+    for (;;) {
+      const value = read();
+
+      if (value !== undefined) {
+        return value;
+      }
+
+      if (Date.now() >= deadline) {
+        throw new Error(`${failure} within ${String(timeoutMs)} ms`);
+      }
+
+      await delay(POLL_INTERVAL_MS);
+    }
+  }
+
+  /** Resolves once the condition holds, or fails once the deadline passes. */
+  async untilTrue(condition: () => boolean, timeoutMs: number, failure: string): Promise<void> {
+    await this.until(() => (condition() ? true : undefined), timeoutMs, failure);
   }
 
   /** Records the status and parsed body of a response a step received. */
@@ -163,10 +413,89 @@ export class BasementGuardianWorld extends World {
 
   /** Runs every registered teardown step in reverse order. */
   async cleanUp(): Promise<void> {
+    await this.starting;
+
     const cleanups = this.cleanups.splice(0).reverse();
 
     for (const cleanup of cleanups) {
       await cleanup();
+    }
+  }
+
+  private recordingLog(): Logging {
+    const at = (level: string) => (message: string) => {
+      this.logged.push(`${level} ${message}`);
+    };
+
+    return Object.assign(at('info'), {
+      prefix: 'basement guardian',
+      debug: at('debug'),
+      error: at('error'),
+      info: at('info'),
+      success: at('success'),
+      warn: at('warn'),
+      log: (level: LogLevel, message: string): void => {
+        this.logged.push(`${level} ${message}`);
+      },
+    });
+  }
+
+  // The constants the seam takes. The REST base and the tenant origin come from the running fakes;
+  // the endpoint and the vendor client identifier need no override at all, because both reach the
+  // plugin as data in the credentials response.
+  private async harnessConstants(): Promise<ProtocolConstants> {
+    const tenant = await this.auth0();
+    const service = await this.restApi();
+
+    return {
+      apiUrl: service.baseUrl,
+      clientId: HARNESS_CLIENT_ID,
+      auth0Url: tenant.origin,
+      auth0Realm: HARNESS_REALM,
+      awsRegion: HARNESS_REGION,
+      protocol: UNSECURED_WEBSOCKET,
+    };
+  }
+
+  private async launch(): Promise<void> {
+    const homebridge = await this.homebridge();
+    const runtime = createAccountRuntimeFromConfig({
+      config: {
+        name: 'Basement Guardian',
+        email: ACCOUNT_EMAIL,
+        password: ACCOUNT_PASSWORD,
+        clientId: HARNESS_CLIENT_ID,
+        pollIntervalSeconds: this.pollIntervalSeconds,
+        offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
+      },
+      constants: await this.harnessConstants(),
+      storagePath: homebridge.storagePath,
+      clock: this,
+      log: this.logger(),
+      connect,
+      createSalt: () => HARNESS_SALT,
+    });
+
+    this.accountRuntime = runtime;
+    this.own(() => runtime.stop());
+    await runtime.start();
+    this.watchDevices(runtime);
+  }
+
+  // Watching starts once discovery has run, which is when the store knows the account's devices.
+  private watchDevices(runtime: AccountRuntime): void {
+    for (const deviceId of runtime.store.deviceIds()) {
+      // The listener signature fixes the position of the two snapshots, which this recorder has no
+      // use for. The leading underscore is the compiler's marker for a parameter it may drop.
+      const unsubscribe = runtime.store.subscribe(deviceId, (_next, _previous, changedKeys) => {
+        this.changes.push(`${deviceId} ${changedKeys.join(' ')}`);
+      });
+
+      this.own(() => {
+        unsubscribe();
+
+        return Promise.resolve();
+      });
     }
   }
 
@@ -188,25 +517,6 @@ export class BasementGuardianWorld extends World {
     }
 
     return this.subscriber;
-  }
-
-  // Polls until the reader answers a value, because the harness watches transports it does not own.
-  private async waitFor<T>(read: () => T | undefined, timeoutMs: number, failure: string): Promise<T> {
-    const deadline = Date.now() + timeoutMs;
-
-    for (;;) {
-      const value = read();
-
-      if (value !== undefined) {
-        return value;
-      }
-
-      if (Date.now() >= deadline) {
-        throw new Error(`${failure} within ${String(timeoutMs)} ms`);
-      }
-
-      await delay(POLL_INTERVAL_MS);
-    }
   }
 }
 
