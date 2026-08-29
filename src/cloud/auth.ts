@@ -385,6 +385,12 @@ async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, s
  * block only thirty days after the last attempt (D-13). A throttling response
  * is tried again on a long interval instead (D-22). Anything else is transient
  * and leaves both the cache and the client intact.
+ *
+ * Stated assumption: the vendor's published error codes do not name the code it
+ * returns for a wrong password, so every client error that is not a throttle is
+ * read as a refusal. If that reading is wrong, the plugin stops on a failure it
+ * could have retried, which a restart clears. The opposite mistake would retry
+ * into a thirty-day block that no restart clears.
  */
 export function createAuthClient(options: AuthClientOptions): AuthClient {
   const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
