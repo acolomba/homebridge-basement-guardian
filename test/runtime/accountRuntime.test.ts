@@ -869,6 +869,20 @@ describe('stop', () => {
     );
   });
 
+  test('SYNC-05 schedules nothing and reports no failure when a shutdown aborts the launch', async (t) => {
+    // arrange
+    const { runtime, logged, calls } = harness(t, { devices: [hangingUntilAborted] });
+    const starting = runtime.start();
+
+    // act
+    await runtime.stop();
+    await starting;
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ calls, warnings: logged.filter((line) => line.startsWith('warn ')) }, { calls: ['devices'], warnings: [] });
+  });
+
   test('SYNC-05 leaves the monitoring path where it stood, because a shutdown is not a monitoring failure', async (t) => {
     // arrange
     const { runtime } = harness(t);
