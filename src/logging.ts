@@ -3,6 +3,9 @@ import type { LogLevel, Logging } from 'homebridge';
 /** Stands in for every value the wrapper substitutes. */
 const REDACTED = '[redacted]';
 
+/** Stands in for a parameter the wrapper cannot serialize. */
+const UNSERIALIZABLE = '[unserializable object]';
+
 // Credential material the plugin never holds as a registered string. Each
 // pattern keeps the naming part of its match, so the log still says which
 // credential was present, and replaces only the value that follows it.
@@ -63,12 +66,15 @@ function redactText(text: string, secrets: readonly string[]): string {
 }
 
 // An object can carry a secret in any field and its graph can be circular, so
-// it is described defensively rather than walked.
+// it is described defensively rather than walked. The fallback reads nothing
+// off the value: an object made with no prototype has no constructor to name,
+// and that read would raise out of the logger, which the plugin calls from
+// inside catch blocks and message handlers (WR-10).
 function describeObject(value: object): string {
   try {
     return JSON.stringify(value);
   } catch {
-    return `[unserializable ${value.constructor.name}]`;
+    return UNSERIALIZABLE;
   }
 }
 
@@ -113,15 +119,40 @@ function wrapMember(delegate: Logging, member: LevelledMember, secrets: readonly
  * Redaction works two ways: exact substitution of every registered secret, and
  * pattern substitution for credential material the plugin never holds as a
  * registered string.
+ *
+ * The registered list stays bounded over a long-running bridge: a rotated value
+ * replaces the one its role held, so the per-line scan cost and the retained
+ * credential material both stay flat instead of growing with uptime.
  */
 export function createRedactingLogger(options: RedactingLoggerOptions): RedactingLogger {
   const secrets: string[] = [];
+  const roleIndexes = new Map<SecretRole, number>();
 
-  const registerSecret = (secret: string): void => {
+  // A value with no role is kept for the life of the logger; a value with one
+  // takes the place its role already holds, so a rotation supersedes its
+  // predecessor rather than joining it. Nothing is evicted by age or by count:
+  // guessing which held value has expired is how a password stops being
+  // redacted.
+  const registerSecret = (secret: string, role?: SecretRole): void => {
     // An empty or whitespace-only value would match everywhere, so it is not a
     // secret this wrapper can act on.
-    if (secret.trim().length > 0) {
+    if (secret.trim().length === 0) {
+      return;
+    }
+
+    if (role === undefined) {
       secrets.push(secret);
+
+      return;
+    }
+
+    const held = roleIndexes.get(role);
+
+    if (held === undefined) {
+      roleIndexes.set(role, secrets.length);
+      secrets.push(secret);
+    } else {
+      secrets[held] = secret;
     }
   };
 

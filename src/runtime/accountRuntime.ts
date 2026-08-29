@@ -302,10 +302,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     try {
       const response = await options.api.awsCredentials(root.signal);
       // Every one of the three values is credential material the moment it
-      // arrives, so each is registered before anything can quote it (AUTH-02).
-      options.registerSecret(response.credentials.AccessKeyId);
-      options.registerSecret(response.credentials.SecretAccessKey);
-      options.registerSecret(response.credentials.SessionToken);
+      // arrives, so each is registered before anything can quote it. Each
+      // carries its role, so this set replaces the one the previous rotation
+      // registered instead of adding to it (AUTH-02).
+      options.registerSecret(response.credentials.AccessKeyId, 'aws-access-key-id');
+      options.registerSecret(response.credentials.SecretAccessKey, 'aws-secret-access-key');
+      options.registerSecret(response.credentials.SessionToken, 'aws-session-token');
 
       const cache = credentials;
 
@@ -506,8 +508,11 @@ export interface AccountRuntimeDeps {
  * them costs nothing until the runtime starts.
  */
 export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): AccountRuntime {
-  const registerSecret = (secret: string): void => {
-    deps.log.registerSecret(secret);
+  // The auth client registers one value that must be kept for the life of the
+  // process, so it calls this with no role and keeps its own single-argument
+  // signature.
+  const registerSecret = (secret: string, role?: SecretRole): void => {
+    deps.log.registerSecret(secret, role);
   };
 
   const auth = createAuthClient({
