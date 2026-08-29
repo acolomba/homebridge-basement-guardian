@@ -314,11 +314,49 @@ describe('start', () => {
       {
         published: [],
         logged: ['debug The shadow subscription could not be established, so the connection will be retried.'],
-        lifecycle: ['connected', 'disconnected subscription-refused'],
+        lifecycle: ['disconnected subscription-refused'],
         ends: 1,
       },
     );
   });
+
+  test('reports nothing connected while the subscription of an open socket is unanswered', async () => {
+    // arrange
+    const { client, transports, lifecycle } = harness({ holdSubscribe: true });
+
+    // act
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // assert
+    assert.deepStrictEqual({ connected: client.connected, lifecycle }, { connected: false, lifecycle: [] });
+  });
+
+  for (const { character, deviceId } of [
+    { character: 'a single-level wildcard', deviceId: 'account-1_serial+b' },
+    { character: 'a multi-level wildcard', deviceId: 'account-1_serial#b' },
+  ]) {
+    test(`leaves a device identifier carrying ${character} out of the subscription and the routing table`, async () => {
+      // arrange
+      const { client, transports, logged } = harness();
+
+      // act
+      await client.start([DEVICE_A, deviceId]);
+      await connected(transports[0]);
+
+      // assert
+      assert.deepStrictEqual(
+        { subscribed: transports[0]?.subscribed, published: transports[0]?.published, logged },
+        {
+          subscribed: [
+            [`$aws/things/${DEVICE_A}/shadow/get/accepted`, `$aws/things/${DEVICE_A}/shadow/get/rejected`, `$aws/things/${DEVICE_A}/shadow/update/accepted`],
+          ],
+          published: [{ topic: `$aws/things/${DEVICE_A}/shadow/get`, payload: '' }],
+          logged: ['warn A device identifier cannot be used as a shadow topic, so the poll is the only source for that device.'],
+        },
+      );
+    });
+  }
 
   test('reports not connected after a refused subscription rather than a healthy monitoring path', async () => {
     // arrange
@@ -906,7 +944,7 @@ describe('the connection lifecycle', () => {
     await nextEventLoopTurn();
 
     // assert
-    assert.deepStrictEqual({ connections: transports.length, lifecycle }, { connections: 2, lifecycle: ['connected', 'disconnected transport-error'] });
+    assert.deepStrictEqual({ connections: transports.length, lifecycle }, { connections: 2, lifecycle: ['disconnected transport-error'] });
   });
 
   test('opens no connection when a reconnect wait elapses after shutdown', async (t) => {
