@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createCloudApi } from '../../src/cloud/api.js';
+import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
 
 import type { CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
-import type { ApiDevice } from '../../src/cloud/types.js';
+import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { TestContext } from 'node:test';
+
+// Longer than the command deadline, which is what lets a case tell the two apart.
+const REQUEST_TIMEOUT_MS = 10_000;
 
 const auth: AuthClient = { idToken: () => Promise.resolve('id-token-1') };
 
@@ -24,21 +27,51 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// Every field here is invented; the vendor issues these values at runtime.
+function awsCredentialsResponse(): AwsCredentialsResponse {
+  return {
+    endpoint: 'shadow.example.test',
+    clientId: 'shadow-client-1',
+    credentials: {
+      AccessKeyId: 'access-key-1',
+      SecretAccessKey: 'secret-access-key-1',
+      SessionToken: 'session-token-1',
+      Expiration: '2026-01-01T00:00:00.000Z',
+    },
+  };
+}
+
 function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
-  return { baseUrl: 'https://api.example.test', auth, requestTimeoutMs: 1_000, ...overrides };
+  return { baseUrl: 'https://api.example.test', auth, requestTimeoutMs: REQUEST_TIMEOUT_MS, ...overrides };
+}
+
+interface RecordedRequest {
+  method: string;
+  url: string;
+  authorization: string | undefined;
+  contentType: string | undefined;
+  body: string | undefined;
 }
 
 // Records every request and answers each one with a fresh Response.
-function stubFetch(t: TestContext, respond: () => Response): { url: string; authorization: string | undefined }[] {
-  const deviceRequests: { url: string; authorization: string | undefined }[] = [];
+function stubFetch(t: TestContext, respond: () => Response): RecordedRequest[] {
+  const vendorRequests: RecordedRequest[] = [];
 
   t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
-    deviceRequests.push({ url: input.toString(), authorization: new Headers(init?.headers).get('authorization') ?? undefined });
+    const headers = new Headers(init?.headers);
+
+    vendorRequests.push({
+      method: init?.method ?? '',
+      url: input.toString(),
+      authorization: headers.get('authorization') ?? undefined,
+      contentType: headers.get('content-type') ?? undefined,
+      body: typeof init?.body === 'string' ? init.body : undefined,
+    });
 
     return Promise.resolve(respond());
   });
 
-  return deviceRequests;
+  return vendorRequests;
 }
 
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
@@ -62,9 +95,44 @@ function stubHangingFetch(t: TestContext): void {
   });
 }
 
+// Replaces the per-request deadline with a signal the case owns, and records the
+// deadline each route asked for, so a case reads a deadline without waiting it out.
+function stubDeadlines(t: TestContext): { requested: number[]; expire: () => void } {
+  const requested: number[] = [];
+  const deadline = new AbortController();
+
+  t.mock.method(AbortSignal, 'timeout', (milliseconds: number) => {
+    requested.push(milliseconds);
+
+    return deadline.signal;
+  });
+
+  return {
+    requested,
+    expire: (): void => {
+      deadline.abort();
+    },
+  };
+}
+
+test('reaches exactly the four vendor routes this version uses', () => {
+  // act & assert
+  assert.deepStrictEqual(ROUTES, {
+    devices: 'GET /devices',
+    device: 'GET /devices/{deviceId}',
+    command: 'PUT /devices/{deviceId}/data',
+    awsCredentials: 'GET /credentials/aws',
+  });
+});
+
+test('waits at most 2500 milliseconds for the vendor to accept a command', () => {
+  // act & assert
+  assert.strictEqual(COMMAND_DEADLINE_MS, 2_500);
+});
+
 test('authorizes the device request with the bearer token the auth client supplies', async (t) => {
   // arrange
-  const deviceRequests = stubFetch(t, () => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
 
   // act
@@ -72,7 +140,9 @@ test('authorizes the device request with the bearer token the auth client suppli
 
   // assert
   assert.deepStrictEqual(devices, [geminiDevice()]);
-  assert.deepStrictEqual(deviceRequests, [{ url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1' }]);
+  assert.deepStrictEqual(vendorRequests, [
+    { method: 'GET', url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1', contentType: undefined, body: undefined },
+  ]);
 });
 
 test('reads an empty account as an empty device list', async (t) => {
@@ -85,6 +155,90 @@ test('reads an empty account as an empty device list', async (t) => {
 
   // assert
   assert.deepStrictEqual(devices, []);
+});
+
+test('reads one device from the device route', async (t) => {
+  // arrange
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const device = await cloudApi.device('account-1_serial-1', new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(device, geminiDevice());
+  assert.deepStrictEqual(vendorRequests, [
+    {
+      method: 'GET',
+      url: 'https://api.example.test/devices/account-1_serial-1',
+      authorization: 'Bearer id-token-1',
+      contentType: undefined,
+      body: undefined,
+    },
+  ]);
+});
+
+test('encodes a device identifier that needs percent-encoding into the path', async (t) => {
+  // arrange
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  await cloudApi.device('account 1/serial#1', new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(
+    vendorRequests.map((vendorRequest) => vendorRequest.url),
+    ['https://api.example.test/devices/account%201%2Fserial%231'],
+  );
+});
+
+test('reads the shadow endpoint, the client identifier, and the temporary credentials', async (t) => {
+  // arrange
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const credentials = await cloudApi.awsCredentials(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(credentials, awsCredentialsResponse());
+  assert.deepStrictEqual(vendorRequests, [
+    { method: 'GET', url: 'https://api.example.test/credentials/aws', authorization: 'Bearer id-token-1', contentType: undefined, body: undefined },
+  ]);
+});
+
+test('sends a device command as a desiredData body and reports the vendor answer', async (t) => {
+  // arrange
+  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const commandResult = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(commandResult, { success: true });
+  assert.deepStrictEqual(vendorRequests, [
+    {
+      method: 'PUT',
+      url: 'https://api.example.test/devices/account-1_serial-1/data',
+      authorization: 'Bearer id-token-1',
+      contentType: 'application/json',
+      body: '{"desiredData":{"test_running":true}}',
+    },
+  ]);
+});
+
+test('reports a refused command rather than raising', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify({ success: false }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const commandResult = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { alarm_audio_muted: true } }, new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(commandResult, { success: false });
 });
 
 test('refuses a device response the vendor answered with an error status', async (t) => {
@@ -125,6 +279,91 @@ test('refuses a device response whose shape the plugin cannot read', async (t) =
   );
 });
 
+test('refuses a credential response whose shape the plugin cannot read', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify({ endpoint: 'shadow.example.test' }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.awsCredentials(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 200);
+      assert.strictEqual(error.route, 'GET /credentials/aws');
+      assert.strictEqual(error.message, 'GET /credentials/aws returned a response the plugin cannot read.');
+
+      return true;
+    },
+  );
+});
+
+test('refuses a command response whose shape the plugin cannot read', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify({ accepted: 'yes' }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.strictEqual(error.status, 200);
+      assert.strictEqual(error.route, 'PUT /devices/{deviceId}/data');
+      assert.strictEqual(error.message, 'PUT /devices/{deviceId}/data returned a response the plugin cannot read.');
+
+      return true;
+    },
+  );
+});
+
+test('keeps the token, the base URL, and the response body out of a failed request error', async (t) => {
+  // arrange
+  stubFetch(t, () => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.device('account-1_serial-1', new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.deepStrictEqual(
+        ['id-token-1', 'api.example.test', 'account-1_serial-1', 'Token is missing'].filter((secret) => `${error.message} ${error.route}`.includes(secret)),
+        [],
+      );
+      assert.strictEqual(error.route, 'GET /devices/{deviceId}');
+
+      return true;
+    },
+  );
+});
+
+test('deadlines a read route with the configured request timeout', async (t) => {
+  // arrange
+  const deadlines = stubDeadlines(t);
+  stubFetch(t, () => new Response(JSON.stringify([]), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  await cloudApi.devices(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(deadlines.requested, [REQUEST_TIMEOUT_MS]);
+});
+
+test('deadlines a command with the command deadline rather than the request timeout', async (t) => {
+  // arrange
+  const deadlines = stubDeadlines(t);
+  stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(deadlines.requested, [COMMAND_DEADLINE_MS]);
+});
+
 test('aborts an in-flight device request when the root signal aborts', async (t) => {
   // arrange
   stubHangingFetch(t);
@@ -147,5 +386,21 @@ test('aborts a device request on its own deadline while the root signal stays op
 
   // act & assert
   await assert.rejects(() => cloudApi.devices(rootController.signal));
+  assert.strictEqual(rootController.signal.aborted, false);
+});
+
+test('aborts a command on its own deadline while the root signal stays open', async (t) => {
+  // arrange
+  const deadlines = stubDeadlines(t);
+  stubHangingFetch(t);
+  const rootController = new AbortController();
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  const commandResult = cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, rootController.signal);
+  deadlines.expire();
+
+  // assert
+  await assert.rejects(() => commandResult);
   assert.strictEqual(rootController.signal.aborted, false);
 });

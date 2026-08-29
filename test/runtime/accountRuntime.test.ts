@@ -48,6 +48,20 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// A REST client whose discovery route answers as the case asks. Every other
+// route rejects, so a runtime that reached one would fail the case instead of
+// passing on a route it has no business calling.
+function discoveryOnlyApi(devices: () => Promise<readonly ApiDevice[]>): CloudApi {
+  const unreachable = (route: string): Promise<never> => Promise.reject(new Error(`discovery must not reach ${route}`));
+
+  return {
+    devices,
+    device: () => unreachable('the device route'),
+    awsCredentials: () => unreachable('the credentials route'),
+    sendCommand: () => unreachable('the command route'),
+  };
+}
+
 function createRecordingLog(messages: string[]): Logging {
   const record = (message: string): void => {
     messages.push(message);
@@ -198,7 +212,7 @@ test('resolves start with no unhandled rejection when a shutdown interrupts disc
 test('logs the route and the status when the vendor refuses discovery', async () => {
   // arrange
   const messages: string[] = [];
-  const api: CloudApi = { devices: () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices')) };
+  const api = discoveryOnlyApi(() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices')));
   const log = createRecordingLog(messages);
   const store = createDeviceStateStore({ clock, log });
   const accountRuntime = createAccountRuntime({ api, store, clock, log });
@@ -214,7 +228,7 @@ test('logs the route and the status when the vendor refuses discovery', async ()
 test('logs a fixed message that repeats nothing from an unexpected discovery failure', async () => {
   // arrange
   const messages: string[] = [];
-  const api: CloudApi = { devices: () => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices')) };
+  const api = discoveryOnlyApi(() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices')));
   const log = createRecordingLog(messages);
   const store = createDeviceStateStore({ clock, log });
   const accountRuntime = createAccountRuntime({ api, store, clock, log });
