@@ -1,5 +1,5 @@
 import { CloudRequestError } from './errors.js';
-import { isApiDevice, isApiDeviceList, isAwsCredentialsResponse, isCommandResult } from './types.js';
+import { isAwsCredentialsResponse, isCommandResult, isWireDeviceListResponse, isWireDeviceResponse, toApiDevice } from './types.js';
 
 import type { AuthClient } from './auth.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from './types.js';
@@ -149,12 +149,12 @@ export function createCloudApi(options: CloudApiOptions): CloudApi {
     devices(signal: AbortSignal): Promise<ApiDevice[]> {
       const call = { route: ROUTES.devices, path: DEVICES_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
 
-      return send(options, { ...call, accepts: isApiDeviceList }, signal);
+      return send(options, { ...call, accepts: isWireDeviceListResponse }, signal).then((body) => body.devices.map((device) => toApiDevice(device)));
     },
     device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
       const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
 
-      return send(options, { ...call, accepts: isApiDevice }, signal);
+      return send(options, { ...call, accepts: isWireDeviceResponse }, signal).then((body) => toApiDevice(body.device));
     },
     awsCredentials(signal: AbortSignal): Promise<AwsCredentialsResponse> {
       const call = { route: ROUTES.awsCredentials, path: CREDENTIALS_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };

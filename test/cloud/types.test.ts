@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { isApiDevice, isApiDeviceList, isAwsCredentialsResponse, isCommandResult, isRecord } from '../../src/cloud/types.js';
+import { isAwsCredentialsResponse, isCommandResult, isRecord, isWireDeviceListResponse, isWireDeviceResponse, toApiDevice } from '../../src/cloud/types.js';
 
-import type { ApiConnectivity, ApiDevice, AwsCredentialsResponse, DeviceCommand } from '../../src/cloud/types.js';
+import type { ApiConnectivity, ApiDevice, AwsCredentialsResponse, DeviceCommand, WireDevice } from '../../src/cloud/types.js';
 
 // A command is outbound, so no predicate narrows it. Its contract is that every
 // field the plugin asks for travels under one desiredData key.
@@ -26,6 +26,41 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// The same device as the vendor sends it, with all thirteen top-level keys. It is
+// a plain record rather than a WireDevice, because eight of those keys are ones
+// the interface deliberately does not describe. The serial number sits under
+// `attributes`, alongside the product line the plugin never reads.
+function geminiWireDevice(): Record<string, unknown> {
+  return {
+    accountId: 'account-1',
+    deviceId: 'account-1_serial-1',
+    deviceTypeId: 'wayneWaterGemini',
+    location: 'placeholder-location',
+    name: 'Sump System',
+    homeId: null,
+    roomId: null,
+    state: { wifi_signal_dbm: -55, mcu_firmware_version: '1.0.0' },
+    data: { water_level: 1, primary_pump_running: false },
+    timestamp: 1_700_000_000_000,
+    shadow: { state: { offline: false }, data: { water_level: 1 }, timestamp: 1_700_000_000_000 },
+    attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+  };
+}
+
+// Routes the full wire record through the production guard, so the normalizer
+// cases receive the same value a real response would hand them, extra keys and
+// all.
+function narrowedWireDevice(): WireDevice {
+  const body = { device: geminiWireDevice() };
+
+  if (!isWireDeviceResponse(body)) {
+    assert.fail('the wire fixture does not satisfy the single-device guard');
+  }
+
+  return body.device;
+}
+
 // Every field here is invented. The vendor issues these values at runtime and
 // none of them is ever written down.
 function awsCredentialsResponse(): AwsCredentialsResponse {
@@ -45,22 +80,31 @@ function withCredentials(overrides: Record<string, unknown>): unknown {
   return { ...awsCredentialsResponse(), credentials: { ...awsCredentialsResponse().credentials, ...overrides } };
 }
 
-const malformedDevices: { description: string; device: unknown }[] = [
+const malformedWireDevices: { description: string; device: unknown }[] = [
   { description: 'a null value', device: null },
   { description: 'an undefined value', device: undefined },
   { description: 'a string', device: 'wayneWaterGemini' },
-  { description: 'an array', device: [geminiDevice()] },
+  { description: 'an array', device: [geminiWireDevice()] },
   { description: 'an empty record', device: {} },
-  { description: 'a record with no device identifier', device: { ...geminiDevice(), deviceId: undefined } },
-  { description: 'a record whose device identifier is a number', device: { ...geminiDevice(), deviceId: 7 } },
-  { description: 'a record whose device type is a number', device: { ...geminiDevice(), deviceTypeId: 7 } },
-  { description: 'a record whose name is a number', device: { ...geminiDevice(), name: 7 } },
-  { description: 'a record whose serial number is a number', device: { ...geminiDevice(), serialNumber: 7 } },
-  { description: 'a record with no connectivity', device: { ...geminiDevice(), connectivity: undefined } },
-  { description: 'a record whose connected flag is a string', device: { ...geminiDevice(), connectivity: { connected: 'true', timestamp: 1 } } },
-  { description: 'a record whose connectivity timestamp is a string', device: { ...geminiDevice(), connectivity: { connected: true, timestamp: 'now' } } },
-  { description: 'a record whose data is a string', device: { ...geminiDevice(), data: 'water_level=1' } },
-  { description: 'a record whose data is an array', device: { ...geminiDevice(), data: [1] } },
+  { description: 'a record with no device identifier', device: { ...geminiWireDevice(), deviceId: undefined } },
+  { description: 'a record whose device identifier is a number', device: { ...geminiWireDevice(), deviceId: 7 } },
+  { description: 'a record whose device type is a number', device: { ...geminiWireDevice(), deviceTypeId: 7 } },
+  { description: 'a record whose name is a number', device: { ...geminiWireDevice(), name: 7 } },
+  { description: 'a record with no attributes', device: { ...geminiWireDevice(), attributes: undefined } },
+  { description: 'a record whose attributes are a string', device: { ...geminiWireDevice(), attributes: 'serial-1' } },
+  { description: 'a record whose nested serial number is a number', device: { ...geminiWireDevice(), attributes: { serialNumber: 7 } } },
+  {
+    description: 'a record carrying its serial number at the top level',
+    device: { ...geminiWireDevice(), attributes: undefined, serialNumber: 'serial-1' },
+  },
+  { description: 'a record with no connectivity', device: { ...geminiWireDevice(), connectivity: undefined } },
+  { description: 'a record whose connected flag is a string', device: { ...geminiWireDevice(), connectivity: { connected: 'true', timestamp: 1 } } },
+  {
+    description: 'a record whose connectivity timestamp is a string',
+    device: { ...geminiWireDevice(), connectivity: { connected: true, timestamp: 'now' } },
+  },
+  { description: 'a record whose data is a string', device: { ...geminiWireDevice(), data: 'water_level=1' } },
+  { description: 'a record whose data is an array', device: { ...geminiWireDevice(), data: [1] } },
 ];
 
 const malformedCredentialResponses: { description: string; response: unknown }[] = [
@@ -111,44 +155,93 @@ describe('isRecord', () => {
   });
 });
 
-describe('isApiDevice', () => {
-  test('accepts a device record carrying every field the plugin reads', () => {
+describe('isWireDeviceListResponse', () => {
+  test('accepts an empty account', () => {
     // act & assert
-    assert.strictEqual(isApiDevice(geminiDevice()), true);
+    assert.strictEqual(isWireDeviceListResponse({ devices: [] }), true);
+  });
+
+  test('accepts an envelope holding well-formed wire records', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceListResponse({ devices: [geminiWireDevice(), geminiWireDevice()] }), true);
   });
 
   test('accepts a device that has reported no telemetry yet', () => {
     // act & assert
-    assert.strictEqual(isApiDevice({ ...geminiDevice(), data: {} }), true);
+    assert.strictEqual(isWireDeviceListResponse({ devices: [{ ...geminiWireDevice(), data: {} }] }), true);
   });
 
-  for (const { description, device } of malformedDevices) {
-    test(`rejects ${description}`, () => {
+  test('rejects a bare top-level array', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceListResponse([geminiWireDevice()]), false);
+  });
+
+  test('rejects a record carrying no devices key', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceListResponse({ deviceList: [geminiWireDevice()] }), false);
+  });
+
+  test('rejects a devices key that is not an array', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceListResponse({ devices: geminiWireDevice() }), false);
+  });
+
+  test('rejects the single-device envelope, so the two routes cannot be crossed', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceListResponse({ device: geminiWireDevice() }), false);
+  });
+
+  for (const { description, device } of malformedWireDevices) {
+    test(`rejects an envelope holding ${description}`, () => {
       // act & assert
-      assert.strictEqual(isApiDevice(device), false);
+      assert.strictEqual(isWireDeviceListResponse({ devices: [device] }), false);
     });
   }
 });
 
-describe('isApiDeviceList', () => {
-  test('accepts an empty list', () => {
+describe('isWireDeviceResponse', () => {
+  test('accepts an envelope holding one well-formed wire record', () => {
     // act & assert
-    assert.strictEqual(isApiDeviceList([]), true);
+    assert.strictEqual(isWireDeviceResponse({ device: geminiWireDevice() }), true);
   });
 
-  test('accepts a list of well-formed device records', () => {
+  test('rejects a value that is not a record', () => {
     // act & assert
-    assert.strictEqual(isApiDeviceList([geminiDevice(), geminiDevice()]), true);
+    assert.strictEqual(isWireDeviceResponse([geminiWireDevice()]), false);
   });
 
-  test('rejects a value that is not a list', () => {
+  test('rejects a bare unwrapped record', () => {
     // act & assert
-    assert.strictEqual(isApiDeviceList(geminiDevice()), false);
+    assert.strictEqual(isWireDeviceResponse(geminiWireDevice()), false);
   });
 
-  test('rejects a list holding one malformed device record', () => {
+  test('rejects a record carrying no device key', () => {
     // act & assert
-    assert.strictEqual(isApiDeviceList([geminiDevice(), { deviceId: 'account-1_serial-2' }]), false);
+    assert.strictEqual(isWireDeviceResponse({ theDevice: geminiWireDevice() }), false);
+  });
+
+  test('rejects the list envelope, so the two routes cannot be crossed', () => {
+    // act & assert
+    assert.strictEqual(isWireDeviceResponse({ devices: [geminiWireDevice()] }), false);
+  });
+
+  for (const { description, device } of malformedWireDevices) {
+    test(`rejects an envelope holding ${description}`, () => {
+      // act & assert
+      assert.strictEqual(isWireDeviceResponse({ device }), false);
+    });
+  }
+});
+
+describe('toApiDevice', () => {
+  test('lifts the serial number from the attributes the vendor nests it in', () => {
+    // act & assert
+    assert.deepStrictEqual(toApiDevice(narrowedWireDevice()), geminiDevice());
+  });
+
+  test('returns exactly the six fields the plugin reads', () => {
+    // act & assert
+    assert.deepStrictEqual(Object.keys(toApiDevice(narrowedWireDevice())).sort(), ['connectivity', 'data', 'deviceId', 'deviceTypeId', 'name', 'serialNumber']);
   });
 });
 

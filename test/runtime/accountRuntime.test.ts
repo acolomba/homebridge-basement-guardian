@@ -88,6 +88,27 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// The same device as the vendor sends it: the list route wraps its records under
+// a plural key and the serial number sits under `attributes`, not at the top
+// level.
+function geminiWireDeviceList(): { devices: Record<string, unknown>[] } {
+  const device = geminiDevice();
+
+  return {
+    devices: [
+      {
+        accountId: 'account-1',
+        deviceId: device.deviceId,
+        deviceTypeId: device.deviceTypeId,
+        name: device.name,
+        data: device.data,
+        attributes: { productLine: 'wayneWater', serialNumber: device.serialNumber },
+        connectivity: device.connectivity,
+      },
+    ],
+  };
+}
+
 function credentialsAt(expiresAtMs: number): AwsCredentialsResponse {
   return {
     endpoint: 'broker.invalid',
@@ -1323,7 +1344,7 @@ function stubCloud(t: TestContext): { url: string; authorization: string | undef
       return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
     }
 
-    return Promise.resolve(new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
   });
 
   return requests;
