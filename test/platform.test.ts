@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, test } from 'node:test';
 
 import { It, mock, verify, when } from 'strong-mock';
@@ -8,6 +11,7 @@ import { PLATFORM_NAME } from '../src/settings.js';
 
 import type { BasementGuardianPlatformAccessory } from '../src/platform.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
+import type { TestContext } from 'node:test';
 
 // Logging is a callable interface with seven members, so a silent stub is a
 // function that carries them rather than an object literal.
@@ -57,6 +61,22 @@ function captureListener(listeners: (() => void)[]): () => void {
   });
 }
 
+// An accepted configuration reaches for the Homebridge storage directory, so
+// each such case gets its own, removed when the case ends.
+async function expectStoragePath(t: TestContext, api: API): Promise<API['user']> {
+  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-platform-'));
+
+  t.after(async () => {
+    await rm(storagePath, { recursive: true, force: true });
+  });
+
+  const user = mock<API['user']>({ exactParams: true, name: 'homebridge user' });
+  when(() => user.storagePath()).thenReturn(storagePath);
+  when(() => api.user).thenReturn(user);
+
+  return user;
+}
+
 describe('BasementGuardianPlatform', () => {
   test('holds no accessory and calls nothing on the API once constructed', () => {
     // arrange
@@ -99,12 +119,13 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
-  test('AUTH-02 registers the account password as a secret once the configuration is accepted', (t) => {
+  test('AUTH-02 registers the account password as a secret once the configuration is accepted', async (t) => {
     // arrange
     t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
     const messages: string[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const user = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), accountConfig, api);
@@ -114,14 +135,16 @@ describe('BasementGuardianPlatform', () => {
 
     // assert
     assert.deepStrictEqual(messages, ['the grant used [redacted]']);
+    verify(user);
     verify(api);
   });
 
-  test('registers the launch and shutdown listeners once the configuration is valid', (t) => {
+  test('registers the launch and shutdown listeners once the configuration is valid', async (t) => {
     // arrange
     const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const user = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
@@ -132,14 +155,16 @@ describe('BasementGuardianPlatform', () => {
     assert.strictEqual(listeners.length, 2);
     assert.strictEqual(requestSpy.mock.callCount(), 0);
     assert.deepStrictEqual(platform.accessories, new Map());
+    verify(user);
     verify(api);
   });
 
-  test('registers and removes no accessory across the whole lifecycle', (t) => {
+  test('registers and removes no accessory across the whole lifecycle', async (t) => {
     // arrange
     t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const user = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
@@ -150,6 +175,7 @@ describe('BasementGuardianPlatform', () => {
     }
 
     // assert
+    verify(user);
     verify(api);
   });
 });

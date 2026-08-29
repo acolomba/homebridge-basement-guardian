@@ -10,6 +10,9 @@ const GRANT_SCOPE = 'openid profile email';
 const TOO_MANY_ATTEMPTS = 429;
 const MILLISECONDS_PER_SECOND = 1_000;
 
+/** The cache file's name inside the Homebridge storage directory. */
+export const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
+
 /** Everything the authentication client needs, by injection. */
 export interface AuthClientOptions {
   constants: ProtocolConstants;
@@ -17,8 +20,12 @@ export interface AuthClientOptions {
   clientId: string;
   email: string;
   password: string;
+  /** The Homebridge storage directory; the token cache lives there and nowhere else. */
+  storagePath: string;
   requestTimeoutMs: number;
   clock: Clock;
+  /** Supplies the salt the cached fingerprint is computed over. */
+  createSalt: () => string;
   log: Logging;
 }
 
