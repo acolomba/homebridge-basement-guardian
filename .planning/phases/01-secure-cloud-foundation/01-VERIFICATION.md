@@ -1,28 +1,26 @@
 ---
 phase: 01-secure-cloud-foundation
-verified: 2026-08-29T18:43:21Z
-status: human_needed
+verified: 2026-08-29T19:53:19Z
+status: passed
 score: 22/22 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: human_needed
-  previous_score: 19/20
-  scope: "UAT closure of three human items, plus a delta re-verification of the seven files changed by quick task 260829-gx6"
+  previous_score: 22/22
+  scope: "Fourth run. Closes W10 against a real shadow-document observation, and re-checks the phase against a delta of three test-only changes plus a CI workflow change."
   gaps_closed: []
   gaps_remaining: []
   regressions: []
   human_items_closed:
-    - "Homebridge settings form renders and refuses correctly (SC-1, CONF-02) — closed by 01-UAT.md item 1"
-    - "Vendor heartbeat topic (SYNC-02) — closed by 01-UAT.md item 2"
-    - "Real SigV4 handshake (SYNC-04, AUTH-01) — closed by 01-UAT.md item 3"
+    - "Confirm a real vendor shadow message actually merges into the canonical snapshot — closed by auditing the probe against the source rather than by accepting its summary. See 'Ruling on W10'."
   warnings_closed:
-    - "W9 — 01-VALIDATION.md marked the D-21 packing check manual. Corrected by commit b35e322: the per-task row now reads `unit` / `node --test dist-test/test/packedArtifact.test.js`, the pre-verify bullet no longer asks for a separate inspection, and an amendment section records the move."
+    - "W10 — the shadow document shape is no longer fixture-rested. A real get/accepted document established the shadow watermark from undefined, which is reachable only with carriesObservation true, so neither silent failure path fired. Closed on that line, not on the heartbeat line the brief cited — see W10-R."
   warnings_opened:
-    - "W10 — the AWS IoT shadow document shape is the last wire assumption resting only on a fixture, and a mismatch there is silent"
-    - "W11 — the Cucumber REST fake serves a 7-key structural subset of the 13-key measured vendor record"
-  human_items_opened:
-    - "Confirm a real vendor shadow message actually merges into the canonical snapshot"
+    - "W10-R — the partial merge itself is inferred from the confirmed document shape plus a proved pure spread, not observed. The probe output is byte-identical for a correct merge and a silently dropped patch."
+    - "W12 — this phase's code was never gated by CI through five certifications, and when it finally ran it was red. Three timing-dependent test defects had survived every green local gate."
+    - "W13 — the `features/phase-01-secure-cloud-foundation` branch head is still the red commit. The three fixes live only on the phase-02 lineage."
+  human_items_opened: []
 deferred:
   - truth: "A user can tell a dead monitoring path apart from a working degraded one"
     addressed_in: "Phase 5"
@@ -33,176 +31,303 @@ deferred:
   - truth: "A rejected complete-shadow request marks the affected device scope untrustworthy"
     addressed_in: "Phase 3"
     evidence: "Phase 3 SC-6. `src/cloud/shadow.ts:257-261` warns and returns. Unchanged by this delta."
-human_verification:
-  - test: "During the next real-hardware run, log the canonical snapshot for one device immediately before and immediately after a shadow message arrives on `$aws/things/<deviceId>/shadow/get/accepted` and on `.../shadow/update/accepted`."
-    expected: "The snapshot's `data` and/or `metadata` records gain real vendor keys, and `receivedAt` moves. Equivalently: `store.applyReportedPatch` is reached with a patch whose `data` or `state` is defined, and `shadowVersion` becomes a number."
-    why_human: "Only a real vendor message can falsify the assumed document shape. A document whose `state.reported` is nested differently than assumed is discarded at `src/cloud/shadow.ts:262-267` with a debug line, or produces an all-undefined patch that `carriesObservation` (src/device/state.ts:195-197) drops with no log at all. The plugin reports `shadow-and-poll` either way. 01-UAT.md item 2 measured the topic, the payload size, and the 898-second interval — not that the payload parsed and merged. This is the same class of assumption that broke the REST boundary, at the one remaining boundary where it is still fixture-rested."
+human_verification: []
 ---
 
 # Phase 1: Secure Cloud Foundation Verification Report
 
 **Phase Goal:** Administrator can securely connect one Basement Guardian account and the plugin can maintain trustworthy current cloud state over a long-running Homebridge lifecycle.
-**Verified:** 2026-08-29T18:43:21Z
-**Status:** human_needed
-**Re-verification:** Yes — third run. Previous: `human_needed`, 19/20.
+**Verified:** 2026-08-29T19:53:19Z
+**Status:** passed
+**Re-verification:** Yes — fourth run. Previous: `human_needed`, 22/22, with W10 open.
 
 ## Scope and method of this run
 
-Two things changed: `01-UAT.md` moved to `status: complete` with 3/3 passed, and quick task
-260829-gx6 fixed a production-breaking defect inside this phase's REST boundary.
+Three things changed since the previous run: a real shadow observation that speaks to W10, three
+test defects the CI runner found and someone fixed, and a CI workflow rewrite.
 
-I did not carry forward the previous run's conclusions on the changed surface. I confirmed the code
-delta myself with `git diff --stat c269a23..HEAD`, which reports seven files and **exactly two under
-`src/`** — `src/cloud/api.ts` (+6) and `src/cloud/types.ts` (+85). Everything else is test, fixture,
-or Cucumber-fake code. I ran the phase gate once and the coverage gate once, and I re-proved the
-three new REST assertions by mutating the compiled artifact rather than reading the claim that
-someone else had.
+I re-derived the delta myself rather than reading it. `git diff --stat 6d8a02a..HEAD` reports
+**three files, none under `src/`**: `test/cloud/api.test.ts` (+16/-3), `test/platform.test.ts`
+(+25/-2), `.github/workflows/build.yml` (+18/-2). `git diff --stat 6d8a02a..HEAD -- src/` is empty.
+So every truth about production behaviour rests on code this delta did not reach, and the only
+question the delta raises is whether the evidence for those truths got weaker.
 
-**On the standing instruction to distrust this phase's history.** This phase was certified sound four
-times while `GET /devices` could not be read at all. My previous run was one of those four. The
-mechanism was not carelessness about tests — it was that every layer that could have caught it
-(production guard, unit fixture, Cucumber fake) encoded one unchecked reading of the vendor. So the
-question I carried through this run was not "do the tests pass" but "for each must-have, what stands
-outside the fixture". Section **Where each must-have rests** answers that directly, and it is the
-reason this run does not return `passed`.
+I ran the phase gate (exit 0), the coverage gate (exit 0), mutation-tested both repaired cases
+against the production code they name, read the CI run logs directly rather than accepting the
+summary, and judged the shadow evidence on its own terms.
+
+**On the standing instruction to distrust this phase's history.** The instruction was well aimed
+again. This run found that CI had been **red on this phase's code at the moment my previous report
+declared it green** — run 33267115276 failed at 18:00:51Z on the phase-01 branch; my report is
+stamped 18:43:21Z. That is now fixed and verified green, but it is the second time in two runs that
+a green local gate certified something a second machine would have refused. It is recorded as W12
+rather than waved through, because the pattern is the point.
+
+## Ruling on W10
+
+**W10 is closed** — but not on the reading the brief offered, and the difference matters enough to
+set out. I found the probe itself (`w10-probe.mjs`, 217 lines) and its raw output (`w10-watch.log`)
+rather than working from the summary, and read the probe's method against the source it exercises.
+
+### What the probe actually is
+
+It imports `createAccountRuntimeFromConfig` from `dist/runtime/accountRuntime.js` — the production
+composition root, compiled, not a re-implementation — and passes a `connect` that wraps the real
+`mqtt.connect` and only observes. So the claim that it drove production code is true. On each
+message it records `JSON.stringify(runtime.store.snapshot(id))` before, and again 1200 ms after, and
+reports "MOVED" on string inequality plus the snapshot's `data` key count, `metadata` key count,
+`shadowVersion`, and `deviceTimestamp`.
+
+### The raw observation
+
+```
+18:50:00.694 INFO  Discovered 1 device(s).
+18:50:00.697 INFO  started; monitoringPath=poll-only
+18:50:00.982 CONN  handshake #1 ESTABLISHED
+18:50:01.052 MSG   +    1s .../shadow/get/accepted    bytes=1800  keys=[data, state]
+         payload.state.reported present=true keys=[data, state]
+         SNAPSHOT MOVED  data=19k metadata=3k shadowVersion=393614 deviceTs=1787077555329
+18:55:34.225 MSG   +  335s .../shadow/update/accepted bytes=584   keys=[data, state]
+         payload.state.reported present=true keys=[data, state]
+         SNAPSHOT MOVED  data=19k metadata=3k shadowVersion=393615 deviceTs=1787077555329
+19:10:00.749 CONN  socket closed
+```
+
+### The decisive line is the first one, not the second
+
+The brief presents the partial heartbeat as "the decisive one for SC-3a". Reading the source, it is
+the other way round.
+
+**`get/accepted` is decisive, and it is confound-free.** Trace `shadowVersion`. The poll path,
+`toSnapshot` (state.ts:173-186), sets `shadowVersion: previous?.shadowVersion` — it preserves a
+watermark and can never establish one. `nextSnapshot` (state.ts:218), the only place a watermark is
+established, is called from exactly one site: `applyReportedPatch` (state.ts:304). And
+`nextShadowVersion` (state.ts:205-211) opens with
+
+```js
+if (!observed && previous.shadowVersion === undefined) { return undefined; }
+```
+
+Before this message the snapshot came from the startup poll, so `shadowVersion` was `undefined`. It
+came out `393614`. That is only reachable with `observed === true`, and `observed` is
+`carriesObservation(patch)`, which is true only when `patch.data` or `patch.state` is defined — which
+`toReportedPatch` (shadow.ts:185-192) produces only when `document.state.reported.data` or
+`.state` satisfies `isRecord`.
+
+So the first message proves, without relying on the MOVED heuristic at all: a real vendor document
+narrowed through `readShadowDocument`, carried `state.reported` nested exactly where the code reads
+it, held a real record there, reached `applyReportedPatch`, and established the watermark. The
+discard-with-`debug` path at shadow.ts:263-268 did not fire. The no-log `carriesObservation` drop at
+state.ts:195-197 did not fire. **That is the whole of W10, answered.**
+
+This also disposes of the one confound worth raising against "MOVED" on a message arriving 358 ms
+after discovery: a still-settling startup poll could have moved the snapshot string. It could not
+have set `shadowVersion`.
+
+### The heartbeat line does not carry what the brief assigns to it
+
+The brief argues that `shadowVersion` advancing 393614 → 393615 while `data` stayed at 19 keys shows
+"the partial patch merged WITHOUT removing the fields it omits". That inference does not hold on this
+output, for two independent reasons.
+
+**One: `shadowVersion` advances whether or not the patch observed anything.** Once a watermark
+exists, `nextShadowVersion` returns `patch.version ?? previous.shadowVersion` — the `observed` guard
+only governs *establishing* a watermark, never advancing one. A patch whose `data` and `state` were
+both dropped, but which carried `version: 393615`, produces `shadowVersion=393615` and a changed
+JSON string, so it prints `SNAPSHOT MOVED` exactly like a correct merge.
+
+**Two: `data` stays at 19 keys under both hypotheses.** If the heartbeat's seven fields merged, the
+result is 19 keys. If the heartbeat's patch was dropped entirely, `previous.data` survives at 19
+keys. And once a watermark exists the poll stops rewriting telemetry too — `nextTelemetry`
+(state.ts:165) returns `previous.data` whenever `previous.shadowVersion !== undefined` — so the count
+is pinned at 19 by three different mechanisms. It cannot discriminate.
+
+The probe printed `shadowVersion` and `deviceTimestamp` but not `receivedAt`, which is the one field
+that would have settled it: `nextSnapshot` sets `receivedAt: observed ? receivedAt : previous.receivedAt`,
+so a moving `receivedAt` is exactly the signal that the heartbeat observed something. One more field
+in the same `console.log` and there would be nothing left to argue about.
+
+So, answering the question as asked: **no, an unchanged key count plus an advanced `shadowVersion`
+does not establish SC-3a.** There is a reading where it does not, and it is not a contrived one — a
+silently dropped patch carrying a version number produces byte-identical probe output.
+
+### Why W10 still closes, and why SC-3a still holds
+
+W10 was never a doubt about `mergeRecord`. It was the doubt that a real vendor document reaches it,
+and that a mismatch would be invisible. The `get/accepted` observation settles that on its own terms,
+by a route the poll cannot fake.
+
+SC-3a then follows deductively rather than observationally, and the deduction is short:
+
+- The vendor's document shape is now confirmed: `state.reported` is present at the read nesting and
+  `data` is a record.
+- `handleMessage` (shadow.ts:255-271) branches on topic only to reject `rejected` leaves. `get` and
+  `update` accepted messages go through the same `readShadowDocument` and the same `toReportedPatch`.
+  There is no per-topic parsing, so a confirmed shape on one is a confirmed shape on the other — and
+  the probe logged `payload.state.reported present=true keys=[data, state]` on the heartbeat too.
+- `mergeRecord` (state.ts:119-121) is `{ ...base, ...patch }`: a pure spread over a plain record,
+  proved by five unit cases and `features/shadowMerge.feature`. Its behaviour cannot depend on where
+  its input came from. There is no failure mode in which a spread preserves omitted keys on synthetic
+  records and drops them on vendor records.
+
+That chain is sound, and it is what SC-3a rests on. It is weaker than a direct observation would have
+been, and I would rather say so than dress the count up as one. Recorded as **W10-R**: the residual is
+that the partial merge is inferred, not seen, and one extra field in the probe would see it.
+
+### A process note
+
+The probe and its log live in a session scratchpad, not in the repository, and nothing in
+`.planning/` records this observation (`grep -rl "393614\|SNAPSHOT MOVED" .planning/` finds nothing).
+`01-UAT.md` item 2 still carries only its original topic, byte-count, and interval evidence, and its
+stated expectation was "arrives on update/accepted **and merges into the canonical snapshot**". This
+report is currently the only place the second clause has evidence behind it. It belongs appended to
+that item, together with the caveat above about which of the two messages carries the weight.
+
+## The test delta: what I checked
+
+**No source file moved.** Confirmed from the diff, not from the brief:
+`git diff --stat 6d8a02a..HEAD -- src/` produces no output. The changed files are two test files and
+one workflow file. `git diff 6d8a02a..HEAD -- test/ | grep -cE "^-\s*(test|it|describe)\("` returns
+**0** — no test declaration was removed.
+
+**`test/cloud/api.test.ts` — does the repaired case still constrain what it names?** The case
+`aborts a device request on its own deadline while the root signal stays open` no longer sets
+`requestTimeoutMs: 10` and wait for a real `AbortSignal.timeout`; it stubs the deadline and expires
+it. That could easily have turned the case into a test of the stub. I checked with two mutations of
+the compiled artifact:
+
+1. Replacing the composition with the bare root signal (`const deadline = signal`) — caught: two
+   other cases fail on assertion, and this case never settles.
+2. The surgical one, which only this case can catch: keep `AbortSignal.timeout(call.deadlineMs)`
+   being called, but do not compose it into the request
+   (`AbortSignal.timeout(call.deadlineMs); const deadline = signal;`). Under this mutation the two
+   `deadlines a ... route` cases still pass, and the suite goes non-green **solely** through this
+   case, at `cancelled 1` with `'Promise resolution is still pending but the event loop has already
+   resolved'`.
+
+So the case does constrain the composed deadline. **But it catches a break by hanging, not by
+failing.** Run alone under mutation 2 it did not terminate within 60 s. That is the same mechanism
+that produced the original CI failure, and the workflow sets no `timeout-minutes`, so a future break
+of this kind would occupy a runner until GitHub's six-hour default. Recorded as W12-b. It is not a
+regression — before the fix the case behaved this way with *correct* production code — but the
+repair moved the hang from "always" to "only when the deadline is broken" rather than removing it.
+
+**`test/platform.test.ts` — does `until` weaken the assertion?** No; it strengthens the diagnostic. I
+mutated the compiled token-cache write to skip the `rename` (src/cloud/auth.js:121) and ran the
+AUTH-02 case. It failed in 5.03 s with `Error: timed out waiting for the token cache file to be
+written`, naming the condition, instead of failing on a downstream `readdir` comparison. The
+assertion that follows the wait is still stronger than the wait: `until` waits for the cache file to
+be *present*, the assertion requires the directory to hold *exactly* that one entry, so the
+temporary-file cleanup is still asserted.
+
+The other repaired case waits for `requestSpy.mock.callCount() >= 2` and then asserts
+`requestsAfterLaunch === 2` with `requestsAfterShutdown === 0`. The wait is a weaker form of the
+assertion, which is the usual tautology risk, but a third request would land in the
+post-shutdown count and fail the case. Nothing was weakened.
+
+**The rule the fix articulated is not enforced anywhere else.** "A fixed drain is sound only for a
+negative assertion" is right, and `test/runtime/accountRuntime.test.ts` still has its own 8-turn
+`settle()` used **57 times**, many of them before positive assertions
+(`assert.deepStrictEqual(logged, ['info Discovered 1 device(s).'])`, connection counts, credential
+registrations). I checked whether that is the same latent defect rather than assuming either way:
+that harness enables `t.mock.timers`, serves `CloudApi` from an in-process object returning
+already-resolved promises, uses a socket-free fake shadow and a synthetic clock, and touches no
+filesystem. Its chains are bounded microtask chains, which resolve in a fixed number of turns
+regardless of machine speed — unlike the real `fs` write that broke the platform case. Sound today,
+and CI now confirms it on two Node versions on a foreign runner. But the invariant that makes it
+sound is unstated, so a future `await` on real I/O anywhere in that path turns 8 back into a guess.
+Recorded as W12-c.
+
+## The CI discovery
+
+This warrants its own record, and it is the reason `passed` here means something different from
+`passed` last time.
+
+**What I verified directly, from `gh run list` and `gh run view --log`, not from the brief:**
+
+| Run | Branch / commit | Trigger | Result | What it says |
+|---|---|---|---|---|
+| 33267115276 | `features/phase-01-secure-cloud-foundation` @ c269a23 | push | **failure** at 18:00:51Z | On Node 22: `not ok 20 - aborts a device request on its own deadline...` with `failureType: 'cancelledByParent'`, and **seven cases cancelled behind it** — including all three SYNC-01 prohibition cases. On both 22 and 24: `AUTH-02 caches the granted token...` AssertionError. `# cancelled 8`. |
+| 33267116120 | `features/phase-02-...` | push | failure at 18:00:51Z | Same defects, same code. |
+| 33270739587 | `features/phase-02-...` | workflow_dispatch | failure at 19:23:12Z | After the api.test.ts fix: `tests 497 / pass 496 / fail 1 / cancelled 0`. The remaining failure is the AUTH-02 token cache case. |
+| **33271243443** | `features/phase-02-...` | workflow_dispatch | **success** at 19:35:04Z | `build (22.x)` and `build (24.x)` both green. `ℹ tests 497 / pass 497 / fail 0 / cancelled 0 / skipped 0`, `35 scenarios (35 passed)`, `299 steps (299 passed)`. |
+
+Three things follow.
+
+**First, the timing.** My previous report is stamped 18:43:21Z. Run 33267115276 failed at 18:00:51Z,
+42 minutes earlier, on the exact branch that report was certifying. So this phase's most recent
+certification was issued while a public CI record of its failure already existed. Nobody looked.
+
+**Second, what was cancelled matters.** Truth 17 (SYNC-01, "exactly four typed routes exist and no
+excluded route is constructible") was certified in three consecutive reports on the strength of three
+prohibition cases. On Node 22 in that failing run, all three were `cancelledByParent` — they did not
+execute. The evidence for a prohibition was, on that runner, not obtained. It is obtained now: run
+33271243443 shows 497 pass / 0 cancelled on both Node versions. Truth 17 is materially better
+supported than it was, and it is worth being explicit that it was worse supported than claimed.
+
+**Third, a count correction.** The brief states "Node 22 and 24 in Docker: 496 pass" and commit
+65c9cb9's message says "Green on Node 22 and 24 at 496 tests". 496 is the pass count of the *failing*
+19:23 run (`pass 496 / fail 1`). The green run and my local gate both report **497 pass / 0 fail /
+0 cancelled / 0 skipped**. Immaterial to the verdict; recorded because the whole point of this run is
+not to take counts on trust.
+
+**On the workflow rewrite.** Scoping to `main` pushes, PRs into `main`, and `workflow_dispatch` is a
+defensible cost decision, and the Node matrix change implements D-032's own instruction correctly —
+`engines.node` is `^22.10.0 || ^24.0.0` and Homebridge 1.8 accepts `^22`, so no Homebridge 1.x
+coverage is lost. But note what it does to the mechanism that caught these defects: run 33267115276
+was a **push-triggered run on a feature branch**, and that trigger no longer exists. Under the new
+configuration the same three defects would have survived until a PR into `main` was opened. The PR
+gate is real and merges go through PRs, so nothing reaches `main` ungated — the exposure is the
+length of a feature branch's life, which for this phase was 174 commits and five certifications.
+Recorded as W12-a, not as a defect.
 
 ## Goal Achievement
 
 ### Observable Truths
 
+Rows unchanged in substance from the previous run carry their evidence forward; the **Status** and
+**Evidence** columns say where this run added, corrected, or re-derived something.
+
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | **SC-1** Administrator can install the dynamic platform and save one valid account through the settings form, with the password-storage warning visible | ✓ VERIFIED | **Was PRESENT_BEHAVIOR_UNVERIFIED; now closed by human evidence.** `01-UAT.md` item 1: throwaway Homebridge 2.4.0 container, UI v5.28.0, the packed 0.1.0 tarball installed into the plugin path, a human reading the rendered form. All five behaviours enumerated separately rather than asserted in bulk: one account block (`singular` honoured), plaintext warning in the header, password field MASKED, malformed email refused, saving starts the plugin. I re-confirmed the schema half against `config.schema.json` — `singular` (:4), `strictValidation` (:5), the plaintext `headerDisplay` (:6), `format: email` (:22), `widget: password` (:28), `\S` patterns (:16, :30, :37) — all unchanged since `1f42292`. The open risk resolved in the safe direction: ng-formworks honours `widget`, so no schema change. Item 5 is independently corroborated in code — `Discovered 1 device(s).` is a real log line at `src/runtime/accountRuntime.ts:493`. Residuals in "Judgment on the UAT evidence". |
-| 2 | **SC-2a** Missing configuration leaves the plugin idle with a clear log message | ✓ VERIFIED | `src/platform.ts:62-66` returns before registering a listener; four `features/configuration.feature` scenarios assert refusal text, no lifecycle listener, no accessory, no request reaching the fake cloud. Not in the delta; green in this run's gate. |
-| 3 | **SC-2b** Valid configuration authenticates without exposing credentials or tokens | ✓ VERIFIED | `features/authentication.feature` 'No credential reaches the log'; `src/logging.ts` wraps all seven `Logging` members. Not in the delta. |
-| 4 | No account identifier reaches the log (PROJECT.md Privacy) | ✓ VERIFIED | Re-derived this run rather than carried: `src/` contains exactly **three** interpolating log calls — `accountRuntime.ts:493` (a device count), `platform.ts:63` (a validation reason, which `src/config.ts:107-109` returns without interpolating the address), and `failureLog.ts:66` (a failure kind). None can carry an email or an account identifier. The wire fix did not add a fourth. |
-| 5 | **SC-3a** A partial shadow `reported` patch merges and removes no field it omits | ✓ VERIFIED (fixture-rested — see W10) | `mergeRecord` at `state.ts:119-121`; `features/shadowMerge.feature` 'A partial heartbeat keeps the fields it omits'. `src/device/state.ts` is not in the delta. The merge logic is proven; what no test can prove is that a real vendor document reaches it. |
-| 6 | **SC-3b** A `desired`/requested value never becomes reported device state | ✓ VERIFIED | Structural, not behavioural: `ReportedPatch` (`state.ts:52-58`) has no member able to hold it, `toReportedPatch` (`shadow.ts:185-192`) reads only `document.state.reported`, and `SHADOW_TOPICS` carries no delta or wildcard topic. A structural impossibility does not depend on a fixture. |
-| 7 | **SC-3c** An omitted-field document cannot corrupt a previously accepted value | ✓ VERIFIED (fixture-rested — see W10) | `carriesObservation` (state.ts:195-197), `nextShadowVersion` (205-211), `nextSnapshot` (218-230) unchanged; five unit cases plus `features/shadowMerge.feature:40-50` green in this run. |
-| 8 | **SC-3d** REST snapshots and shadow updates produce one current state per device, neither reverting the other | ✓ VERIFIED (REST half now live-confirmed) | `pollTelemetry` (state.ts:164-166) and the four-reason `releaseShadowSource` loop (`test/runtime/accountRuntime.test.ts:1186-1200`) unchanged and green. **Strengthened this run:** the REST half of this truth is no longer fixture-only — discovery now succeeds against the real vendor (`01-UAT.md` items 1 and 3). The shadow half stays fixture-rested (W10). |
-| 9 | **SC-4a** A complete shadow is requested on the first connection and again after every reconnect | ✓ VERIFIED | `requestEveryShadow` (shadow.ts:340-363) unchanged; two `shadowLifecycle.feature` scenarios assert 1 then 2 requests across a forced reconnect. |
-| 10 | **SC-4b** Credential rotation refreshes the cache in place without disturbing the live connection | ✓ VERIFIED | `signHandshake` (shadow.ts:232-248) re-reads the cache per handshake; `features/credentialRotation.feature` asserts 1 handshake across rotation. Unchanged. |
-| 11 | **SC-4c** Reconnect backoff is capped and a single transport failure produces exactly one retry chain | ✓ VERIFIED | `retryPolicy.ts` pending guard plus `Math.min(maxDelayMs, ...)`; all nine backoff cases and the duplicate-notification case green in this run's gate. |
-| 12 | **SC-4d** Shutdown during an in-flight retry wait, an in-flight request, and an open shadow connection produces no unhandled rejection; `stop()` is idempotent | ✓ VERIFIED | `accountRuntime.ts:551-559` guards on `stopped`, aborts once, swallows a close rejection; six `features/lifecycle.feature` scenarios green. Unchanged by the delta. |
-| 13 | **SC-4e** Repeated connection cycles leave no superseded connection driving live state and no connection nothing will close | ✓ VERIFIED | `src/cloud/shadow.ts` is **not** in this delta, so 01-14's one-disconnection-per-connection contract and the W1 fix stand as verified last run. Re-read to confirm the fix is still shipped: `get connected() { return !closing && (connection?.live ?? false); }` at shadow.ts:443-444. |
-| 14 | The runtime can express that monitoring has stopped, and its monitoring-path contract matches its declared consumer's | ✓ VERIFIED | `src/runtime/accountRuntime.ts` is not in this delta. Re-read to confirm: `if (stopped \|\| halted \|\| !polling) return 'unavailable';` at accountRuntime.ts:233-239. One `MonitoringPath` declaration (`src/device/health.ts:23`), imported at accountRuntime.ts:21. **Independently corroborated live this run:** `01-UAT.md` item 3 records `monitoringPath` reading `shadow-and-poll` while connected and `unavailable` after a clean stop — the 01-18 behaviour, observed rather than asserted. |
-| 15 | `npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both suites | ✓ VERIFIED | Exit 0 in this run. **497** unit tests, 0 fail, 0 skipped, 0 todo, 30 suites. 35 scenarios / 299 steps in 12.8 s. `fallow`: 0 dead-code issues, 0 above threshold, maintainability 92.9, duplication 0.0%. `npm run test:coverage:all` exit 0: **100% lines / branches / functions on every file**, `types.js` and `api.js` included. |
-| 16 | `npm pack --dry-run` lists only the allowlisted files (D-21) | ✓ VERIFIED — now with install-side evidence | `test/packedArtifact.test.ts` green inside the gate (both cases, ~1.2 s each, running a real `npm pack --dry-run --json`). Stronger than last run: the packed 0.1.0 tarball was actually **installed into a Homebridge 2.4.0 container and ran** (`01-UAT.md` item 1), so the allowlist is now known to be sufficient as well as not excessive. |
-| 17 | Exactly four typed REST routes exist and no excluded route is constructible (SYNC-01) | ✓ VERIFIED — re-checked against the delta | `ROUTES` (api.ts:27-32) still holds exactly four; `devicePath` still the only builder; `CloudApi` (api.ts:47-52) still declares four operations. The three prohibition cases at `test/cloud/api.test.ts:635-670` survive the delta intact, and the delta **strengthened** them: `vendorBodies()` now feeds each operation a well-formed wire envelope, so every call passes narrowing and its request is recorded rather than cut short by a rejection. `Record<keyof CloudApi, …>` at :599 and :610 is the unchanged type-level door. |
-| 18 | The token cache lives under the Homebridge storage path with owner-only mode and a salted email fingerprint (AUTH-02, D-08) | ✓ VERIFIED | Unchanged. Exclusive create at `0o600` (`flag: 'wx'`), random temporary suffix, cleanup on failed rename. 01-SECURITY finding 2 qualification carried: the cached `id_token` payload carries an `email` claim. |
-| 19 | Every module of the adopted tree exists, not-yet-wired modules are declaration-only, and the dead-code gate passes on reachability (D-17) | ✓ VERIFIED | `fallow dead-code --fail-on-issues` clean; `.fallowrc.json` byte-identical to the previous run (`git diff` empty) and `ignoreFindings` still holds exactly **8** entries. The delta added no silencing entry, which matters: `WireDevice`, both guards, and `toApiDevice` are genuinely consumed. |
-| 20 | The deterministic suite runs offline against transport-level fakes naming no client library (D-10, D-11) | ✓ VERIFIED | 35 scenarios green offline. `features/support/fakeRestApi.ts` now serves the measured wire shape, which makes the acceptance layer stop certifying an imagined one — see W11 for the residual. |
-| 21 | **NEW (WIRE-01/02/03)** The REST client reads the vendor device routes as the vendor actually sends them | ✓ VERIFIED — mutation-proved by this verifier | `api.ts:152` uses `isWireDeviceListResponse` and unwraps `body.devices`; `:157` uses `isWireDeviceResponse` and unwraps `body.device`; `toApiDevice` reads `device.attributes.serialNumber`. Guards are distinct by key, so a crossed route cannot pass. **I re-ran the doors myself** — see Behavioral Spot-Checks; all three mutations were caught. Outside the fixture: `01-UAT.md` items 1 and 3 both record discovery succeeding against the real account. |
-| 22 | **NEW (AUTH-02, T-GX6-01)** No vendor field the plugin does not read crosses the REST boundary | ✓ VERIFIED — mutation-proved by this verifier | `toApiDevice` (types.ts:158-167) builds field by field and never spreads, so `accountId`, `location`, `homeId`, `roomId`, `state`, `timestamp`, `shadow`, and `attributes` stop at the boundary. Defence in depth downstream: `toSnapshot` (state.ts:173-190) also rebuilds field by field, so even a leak at the boundary would not reach a stored snapshot. Asserted at `test/cloud/api.test.ts:234-247` against a 13-key fixture. Spreading the wire record in the compiled normalizer fails that case — I ran it. |
+| 1 | **SC-1** Administrator can install the dynamic platform and save one valid account through the settings form, with the password-storage warning visible | ✓ VERIFIED | Carried. `01-UAT.md` item 1: Homebridge 2.4.0 container, UI v5.28.0, packed 0.1.0 tarball, five behaviours read off the rendered form. `config.schema.json` unchanged since `1f42292` and not in this delta. |
+| 2 | **SC-2a** Missing configuration leaves the plugin idle with a clear log message | ✓ VERIFIED | `src/platform.ts:62-66`; four `features/configuration.feature` scenarios. Green in this run's gate and in CI 33271243443. |
+| 3 | **SC-2b** Valid configuration authenticates without exposing credentials or tokens | ✓ VERIFIED | `features/authentication.feature`; `src/logging.ts` wraps all seven `Logging` members. |
+| 4 | No account identifier reaches the log (PROJECT.md Privacy) | ✓ VERIFIED — re-derived this run | Not carried. `grep -rnE "log\.(info\|warn\|error\|debug)\(" src/ \| grep -E '\$\{\|\+ '` returns exactly **three** hits: `platform.ts:63` (a validation reason, which `src/config.ts:107-109` returns without interpolating the address), `runtime/failureLog.ts:66` (a failure kind), `runtime/accountRuntime.ts:493` (a device count). None can carry an email or an account identifier. |
+| 5 | **SC-3a** A partial shadow `reported` patch merges and removes no field it omits | ✓ VERIFIED — **W10 closed** | `mergeRecord` at `state.ts:119-121`; `features/shadowMerge.feature` 'A partial heartbeat keeps the fields it omits'. **New:** the vendor's document shape is now confirmed on real traffic — a real `get/accepted` document established the watermark from `undefined` to 393614, which `nextShadowVersion` (state.ts:205-211) reaches only with `carriesObservation` true. SC-3a follows from that confirmed shape plus `mergeRecord` being a proved pure spread. The partial merge itself is inferred, not observed: see "The heartbeat line does not carry what the brief assigns to it" and W10-R. |
+| 6 | **SC-3b** A `desired`/requested value never becomes reported device state | ✓ VERIFIED | Structural. `ReportedPatch` (`state.ts:52-58`) has no member able to hold it; `toReportedPatch` (`shadow.ts:185-192`) reads only `document.state.reported`; `SHADOW_TOPICS` carries no delta or wildcard topic. |
+| 7 | **SC-3c** An omitted-field document cannot corrupt a previously accepted value | ✓ VERIFIED — **W10 closed** | `carriesObservation` (state.ts:195-197), `nextShadowVersion` (205-211), `nextSnapshot` (218-230) unchanged and green. The `get/accepted` observation proves `carriesObservation` returned true on a real vendor document rather than dropping it with no log — the watermark could not otherwise have been established. |
+| 8 | **SC-3d** REST snapshots and shadow updates produce one current state per device, neither reverting the other | ✓ VERIFIED — **both halves now live-confirmed** | `pollTelemetry` (state.ts:164-166) and the four-reason `releaseShadowSource` loop unchanged and green. REST half confirmed by `01-UAT.md` items 1 and 3; shadow half confirmed by the W10 observation. Neither half is fixture-only any more. |
+| 9 | **SC-4a** A complete shadow is requested on the first connection and again after every reconnect | ✓ VERIFIED | `requestEveryShadow` (shadow.ts:340-363); two `shadowLifecycle.feature` scenarios assert 1 then 2 requests across a forced reconnect. Reconnect is our own path, so no vendor assumption is involved. |
+| 10 | **SC-4b** Credential rotation refreshes the cache in place without disturbing the live connection | ✓ VERIFIED | `signHandshake` (shadow.ts:232-248) re-reads the cache per handshake; `features/credentialRotation.feature` asserts 1 handshake across rotation. |
+| 11 | **SC-4c** Reconnect backoff is capped and a single transport failure produces exactly one retry chain | ✓ VERIFIED | `retryPolicy.ts` pending guard plus `Math.min(maxDelayMs, ...)`; all nine backoff cases and the duplicate-notification case green in this run's gate and in CI. |
+| 12 | **SC-4d** Shutdown during an in-flight retry wait, an in-flight request, and an open shadow connection produces no unhandled rejection; `stop()` is idempotent | ✓ VERIFIED | `accountRuntime.ts:551-559`; six `features/lifecycle.feature` scenarios. |
+| 13 | **SC-4e** Repeated connection cycles leave no superseded connection driving live state and no connection nothing will close | ✓ VERIFIED | `src/cloud/shadow.ts` not in this delta. Re-read: `get connected() { return !closing && (connection?.live ?? false); }` at shadow.ts:443-444. |
+| 14 | The runtime can express that monitoring has stopped, and its monitoring-path contract matches its declared consumer's | ✓ VERIFIED | `accountRuntime.ts:233-239`; one `MonitoringPath` declaration (`src/device/health.ts:23`). Observed live reading both `shadow-and-poll` and `unavailable` (`01-UAT.md` item 3). |
+| 15 | `npm run check` passes typecheck, lint, all three fallow sub-commands, format:check, and both suites | ✓ VERIFIED — **now on a second machine** | Exit 0 in this run: 497 unit tests, 0 fail, 0 cancelled, 0 skipped, 0 todo, 30 suites; 35 scenarios / 299 steps; fallow 0 issues, 0 above threshold, maintainability 92.9, duplication 0.0%. `npm run test:coverage:all` exit 0 at 100.00 / 100.00 / 100.00 on every file. **The material change:** CI run 33271243443 reproduces the same 497/497 and 35/299 on Node 22.x and 24.x on a foreign runner. Until 19:35Z today, every green gate this phase ever cited came from one machine. |
+| 16 | `npm pack --dry-run` lists only the allowlisted files (D-21) | ✓ VERIFIED | `test/packedArtifact.test.ts` green inside the gate against a real `npm pack --dry-run --json`; the packed 0.1.0 tarball was installed into a Homebridge 2.4.0 container and ran. |
+| 17 | Exactly four typed REST routes exist and no excluded route is constructible (SYNC-01) | ✓ VERIFIED — **evidence now actually obtained on both Node versions** | `ROUTES` (api.ts:27-32) holds exactly four; `devicePath` is the only builder; `Record<keyof CloudApi, …>` at api.test.ts:599 and :610 is the type-level door. The three prohibition cases at `api.test.ts:635-670` are intact. Correction on the record: in the red CI run all three were `cancelledByParent` on Node 22 and did not execute. They execute and pass in 33271243443. |
+| 18 | The token cache lives under the Homebridge storage path with owner-only mode and a salted email fingerprint (AUTH-02, D-08) | ✓ VERIFIED — **its proving test repaired and mutation-checked** | Exclusive create at `0o600` (`flag: 'wx'`), random temporary suffix, cleanup on failed rename — unchanged. The case that proves the file lands is the one CI failed on; it now waits on the condition and, with the `rename` mutated out, fails in 5.03 s naming what it waited for. 01-SECURITY finding 2 qualification carried: the cached `id_token` payload carries an `email` claim. |
+| 19 | Every module of the adopted tree exists, not-yet-wired modules are declaration-only, and the dead-code gate passes on reachability (D-17) | ✓ VERIFIED | `fallow dead-code --fail-on-issues` clean; `.fallowrc.json` not in this delta and `ignoreFindings` still holds exactly 8 entries. |
+| 20 | The deterministic suite runs offline against transport-level fakes naming no client library (D-10, D-11) | ✓ VERIFIED | 35 scenarios green offline, locally and on the CI runner. W11 residual on the REST fake carried. |
+| 21 | The REST client reads the vendor device routes as the vendor actually sends them (WIRE-01/02/03) | ✓ VERIFIED | Carried, with the three mutations from the previous run standing (`src/cloud/types.ts` and `api.ts` are not in this delta). Live-confirmed by `01-UAT.md` items 1 and 3. |
+| 22 | No vendor field the plugin does not read crosses the REST boundary (AUTH-02, T-GX6-01) | ✓ VERIFIED | Carried. `toApiDevice` (types.ts:158-167) builds field by field and never spreads; `toSnapshot` (state.ts:173-190) rebuilds field by field downstream. Asserted at `api.test.ts:234-247` against a 13-key fixture; mutation-proved in the previous run and the file is unchanged. |
 
-**Score:** 22/22 truths verified (0 present, behavior-unverified)
+**Score:** 22/22 truths verified (0 present, behavior-unverified). No overrides applied.
 
 ### Where each must-have rests
 
-The standing instruction for this run was to say, per must-have, whether anything outside the
-fixture supports it. This table is the answer, and rows 4 and 5 are why the status is not `passed`.
+The table the previous run introduced, updated. Row 5 is the one that changed, and it is why the
+status changed.
 
 | Must-have group | What supports it inside the suite | What supports it outside the suite |
 |---|---|---|
-| 1 — settings form (SC-1) | `config.schema.json` values, `test/packageManifest.test.ts` | **A human read the rendered form** in Homebridge 2.4.0 / UI 5.28.0 from the packed tarball. Strongest possible evidence for this class. |
-| 17, 21, 22 — REST wire shape and boundary privacy (SYNC-01, WIRE-*) | 29 `api.test.ts` cases, 77 `types.test.ts` cases, mutation-proved by me | **A live vendor measurement** (`.planning/intel/constraints.md` §6, 2026-08-29) and **two live runs** where discovery succeeded. The fixture is now downstream of reality rather than upstream of it. |
-| 9-14 — connection lifecycle, rotation, backoff, shutdown (SC-4) | 57 `shadow.test.ts` cases, `features/lifecycle.feature`, `credentialRotation.feature` | **A real SigV4 handshake** against the real AWS IoT endpoint through the shipped presigner: ESTABLISHED, 0 errors, no 403, live `monitoringPath` observed. This falsifies the one thing `verifyClient: () => !refusing` never could. |
-| 2-4, 18-20 — refusal, redaction, token cache, tooling | Cucumber scenarios and unit cases | Structural, local, and observable in the repository. No vendor assumption is involved. |
-| **5, 7, 8 (shadow half) — shadow document → canonical snapshot (SC-3)** | `shadowMerge.feature`, `state.test.ts`, `shadow.test.ts` — all against a document shape the harness itself constructs | **Nothing.** `01-UAT.md` item 2 measured the topic, 584 bytes, and the 898-second interval. It did not record that the payload parsed or that the snapshot changed. See W10. |
-
-### Judgment on the UAT evidence
-
-I read `01-UAT.md` as three claims to test, not three passes to record.
-
-**Item 1 — settings form (SC-1). Accept.** The strongest of the three. It names the Homebridge
-version, the UI version, the artifact used (the packed 0.1.0 tarball, not a linked working tree), and
-it reports the five behaviours separately rather than as one verdict. The one risk the previous run
-flagged as unresolvable — whether ng-formworks honours `widget: password` or requires the
-`x-schema-form` spelling — resolved by observation, in the safe direction. Item 5 of that evidence
-("saving starts the plugin") is corroborated in code: `Initializing BasementGuardian platform...` and
-`Discovered 1 device(s).` are real log lines I can find at `src/platform.ts` and
-`src/runtime/accountRuntime.ts:493`, and the second one cannot be emitted unless `api.devices()`
-resolved. That makes item 1 a first end-to-end pass through the real Homebridge lifecycle, not only a
-form-rendering check.
-
-Two residuals, neither blocking. One UI version was exercised, and `widget` is a UI-layer behaviour
-that a future ng-formworks release could change. And the previous run's aside — try a cleared Name
-field and a single-space password — is not recorded as tested. That aside was not part of the item's
-stated expectation, and the schema/runtime agreement it targets is verified statically (the `\S`
-patterns match the runtime's `trim().length > 0`), so I record it rather than reopening the item.
-
-**Item 2 — heartbeat topic (SYNC-02). Accept the claim as written; note that half the stated
-expectation is unevidenced.** The measurement is genuinely a measurement: a named topic, two byte
-counts that differ in the direction the claim requires (584 partial against 1800 complete), and an
-interval of 898 seconds reported as exact rather than approximate. That closes the item as written —
-*the vendor publishes device heartbeats on the update-accepted topic the client subscribes to* — and
-it upgrades RES-01's two-missed-heartbeat staleness rule from a citation to an observation. The UAT's
-own caveat is fair and I keep it: one device, one firmware version.
-
-But the item's stated expectation was "arrives on update/accepted **and merges into the canonical
-snapshot**". The evidence covers the first clause. Nothing in it speaks to the second. That gap is
-W10 and the one open human item.
-
-**Item 3 — real SigV4 handshake (SYNC-04, AUTH-01). Accept, and it is decisive.** It was driven
-"through the shipped presigner rather than a second hand-rolled one", which is the detail that makes
-it evidence: 01-SECURITY finding 4 established that the golden-vector test derives the crypto chain
-independently but hand-writes the canonical request from the same reading of the spec as the signer,
-so a third re-derivation would have proved nothing. A live broker either accepts the signature or
-returns 403. It accepted, on the first handshake, with 0 errors, and returned a real 1800-byte
-payload. Nothing short of this could have closed it.
-
-**Also closed, and correctly: the CONF-01 child-bridge clause.** `01-VALIDATION.md` routed this to
-Manual-Only, and the previous run agreed that a child bridge is a Homebridge process feature the
-plugin can only supply a precondition for. The recorded log lines are the ones Homebridge emits for
-that path (`Initializing child bridge`, `Child bridge started successfully`, a second HAP port at
-51888 beside 51999), and discovery completed from inside that process. Both bridge modes are now
-exercised on current Homebridge 2.x, which D-033 asks for. I accept this as evidence and note the
-UAT's own point that it was cheap to test now precisely because Phase 1 publishes no accessories, so
-the D-036 and REL-08 hazards have nothing to act on yet.
-
-### The wire-shape delta: what I checked and what it cost
-
-**No source file outside the REST boundary moved.** `git diff --stat c269a23..HEAD` reports seven
-files; under `src/` there are exactly two, `api.ts` (+6) and `types.ts` (+85). `shadow.ts`,
-`accountRuntime.ts`, `state.ts`, `auth.ts`, `sigv4.ts`, `mqttTransport.ts`, `config.ts`,
-`logging.ts`, `platform.ts`, `retryPolicy.ts`, and `failureLog.ts` are untouched, so truths 2-14 and
-18-20 rest on code this delta did not reach. I verified that from the diff, not from the summary.
-
-**SYNC-01 was strengthened, not weakened.** The three prohibition cases are intact and the delta
-improved them: because `vendorBodies()` now carries well-formed envelopes, every operation completes
-narrowing and its request is recorded. Under the old bodies, two of the four operations would have
-rejected mid-flight. The type-level door (`Record<keyof CloudApi, …>`) is unchanged.
-
-**The refusal contract is unchanged in strictness and slightly stronger in reach.** Pre-fix,
-`isApiDeviceList` was `isUnknownArray(value) && value.every(isApiDevice)`. Post-fix,
-`isWireDeviceListResponse` is `isRecord(value) && isUnknownArray(value.devices) &&
-value.devices.every(isWireDevice)`. Same all-or-nothing semantics on a malformed member — one bad
-record still refuses the whole list — plus an envelope check the old one did not have, plus a
-required `attributes.serialNumber`. The 19-row malformed table now runs against **both** envelope
-guards, and both cross-route rejections are asserted directly. No assertion was relaxed to fit the
-new shape; the one assertion that changed shape (`accountRuntime.test.ts`'s `stubCloud`) still
-expects `stored: ['account-1_serial-1']`.
-
-**The privacy constraint is enforced twice and asserted once.** `toApiDevice` never spreads, and
-`toSnapshot` rebuilds field by field downstream, so a vendor key would have to survive two
-field-by-field constructions to reach stored state. Accessory context is not a path today —
-`src/persistence/accessoryContext.ts` is a declaration-only scaffold and `src/platform.ts` writes no
-context. Logs are not a path: three interpolating calls in all of `src/`, carrying a count, a
-validation reason, and a failure kind.
-
-**One thing the delta did change in the project's privacy posture, recorded rather than flagged.**
-`.planning/intel/constraints.md` §6 now records a maintainer decision that the vendor `deviceId` is
-not sensitive and may be stored in accessory context and written to runtime logs, on the ground that
-its `<account-id>` segment is opaque 24-character hex rather than an email. That is consistent with
-truth 4 as written (no account *email* reaches the log) and with D-027, which still requires a
-placeholder in public artifacts — and the fixtures honour it. Nothing in `src/` logs a `deviceId`
-today, so the decision widens a permission the code has not yet used.
-
-**Test count reconciles.** 464 → 497 is +33: four new cases in `api.test.ts` (the two envelope
-refusals, the serial lift, and the six-key privacy assertion), and a rewritten `types.test.ts` whose
-top-level cases go 16 → 25 with the malformed table growing 16 → 19 rows and running against both
-envelope guards. Nothing in the delta is unexplained, and `git diff` shows zero removed `test(`
-declarations.
+| 1 — settings form (SC-1) | `config.schema.json` values, `test/packageManifest.test.ts` | A human read the rendered form in Homebridge 2.4.0 / UI 5.28.0 from the packed tarball. |
+| 17, 21, 22 — REST wire shape and boundary privacy | 29 `api.test.ts` cases, 77 `types.test.ts` cases, mutation-proved | A live vendor measurement (`.planning/intel/constraints.md` §6) and two live runs where discovery succeeded. |
+| 9-14 — connection lifecycle, rotation, backoff, shutdown (SC-4) | 57 `shadow.test.ts` cases, `features/lifecycle.feature`, `credentialRotation.feature` | A real SigV4 handshake against the real AWS IoT endpoint through the shipped presigner: ESTABLISHED, 0 errors, no 403, live `monitoringPath` observed. |
+| 2-4, 18-20 — refusal, redaction, token cache, tooling | Cucumber scenarios and unit cases | Structural, local, and observable in the repository. Now also green on two Node versions on a runner nobody controls. |
+| **5, 7, 8 (shadow half) — shadow document → canonical snapshot (SC-3)** | `shadowMerge.feature`, `state.test.ts`, `shadow.test.ts` | **Two real vendor documents**, on `get/accepted` and `update/accepted`, observed reaching `applyReportedPatch` and moving the snapshot. Was "Nothing" in the previous run. |
+| 15 — the gate itself | `npm run check` on a developer machine | CI 33271243443, Node 22.x and 24.x, 497/497 and 35/299. Was single-machine through five certifications. |
 
 ### Deferred Items
 
@@ -214,97 +339,110 @@ declarations.
 
 ### Required Artifacts
 
-Only artifacts the delta touched, or whose status changed, carry new detail. The rest are carried
-forward and were re-confirmed present, substantive, and green under this run's gate.
+Only artifacts this delta touched carry new detail. Everything else is carried forward and was
+re-confirmed present, substantive, wired, and green under this run's gate and under CI 33271243443.
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/cloud/types.ts` | Wire types, two envelope guards, boundary normalizer | ✓ VERIFIED | 176 lines (+85). `WireDevice`, `WireDeviceListResponse`, `WireDeviceResponse`, `isWireDeviceListResponse`, `isWireDeviceResponse`, `toApiDevice` all present and exported and consumed. `isApiDevice`, `isApiDeviceList`, `DEVICE_STRING_FIELDS` removed with no stale reference anywhere in `src/`, `test/`, or `features/`. `ApiDevice` unchanged, so no downstream consumer moved. |
-| `src/cloud/api.ts` | Four routes, envelope unwrapping, typed parse failures | ✓ VERIFIED | 176 lines (+6). Only the import line and two `accepts`/`.then` lines changed. `ROUTES`, `devicePath`, `VendorCall`, `narrow`, `readBody`, `requestInit`, `send`, deadlines, and error text untouched; `/credentials/aws` still routed through `isAwsCredentialsResponse`. |
-| `test/cloud/types.test.ts` | Guard and normalizer coverage | ✓ VERIFIED — genuine | 77 passing cases. 19-row malformed table against both guards, both cross-route rejections, both normalizer assertions. Mutation-proved by me. |
-| `test/cloud/api.test.ts` | Client-level coverage on the measured shape, plus the SYNC-01 doors | ✓ VERIFIED — genuine | 29 passing cases. `geminiWireDevice()` is deliberately untyped and carries all 13 measured keys in vendor order, so the drop of the eight unread keys is observable; `geminiDevice()` is kept byte-identical as the expected normalized result. Both SYNC-01 doors intact. |
-| `test/runtime/accountRuntime.test.ts` | Fixture repaired (outside the task's declared file list) | ✓ VERIFIED | +23/-6: a `geminiWireDeviceList()` helper and one `stubCloud` body. No assertion weakened — the case still expects `stored: ['account-1_serial-1']`. |
-| `features/support/fakeRestApi.ts` | Serves the measured wire shape | ✓ VERIFIED — with a residual | Both routes enveloped; `wireDevice()` nests serial and product line under `attributes`; `setDevices(readonly ApiDevice[])` unchanged so no step file moved. Serves 7 of the 13 measured keys — see W11. Account-identifier caveat recorded in a comment at the serializer. |
-| `features/support/steps/harness.ts` | Device-list step reads the envelope | ✓ VERIFIED | `assertDeviceListHoldsTheDevices` reads the `devices` key and asserts identifier, name, and `attributes.serialNumber` per record, and calls `assert.fail` when the array is absent rather than passing on `undefined`. |
-| `config.schema.json` | Strict single-account settings form | ✓ VERIFIED — now also rendered | Unchanged since `1f42292`. All five properties the UAT confirmed are present at the lines cited in truth 1. |
-| `src/cloud/shadow.ts`, `src/runtime/accountRuntime.ts`, `src/device/{state,health}.ts`, `src/{platform,config,logging}.ts`, `src/cloud/{auth,sigv4,mqttTransport}.ts`, `src/runtime/{retryPolicy,failureLog}.ts` | As previously verified | ✓ VERIFIED (carried forward, delta-confirmed) | Not in the delta; confirmed by `git diff --stat`. The two one-line fixes from the previous run were re-read and are still shipped (shadow.ts:443-444, accountRuntime.ts:234). |
-| `test/packedArtifact.test.ts`, `test/packageManifest.test.ts` | Packing and manifest prohibitions | ✓ VERIFIED | Both green in this run's gate; `packedArtifact` runs a real `npm pack --dry-run --json` (~1.2 s per case). |
-| `src/device/{events,family,gemini,halo}.ts`, `src/accessories/*`, `src/persistence/*` | Declaration-only scaffolds | ✓ VERIFIED (intended) | Unchanged; the eight `.fallowrc.json` entries are unchanged in count and content. |
+| `test/cloud/api.test.ts` | Client-level coverage on the measured shape, the SYNC-01 doors, and deadline behaviour | ✓ VERIFIED — repaired, not weakened | +16/-3. The abort case now owns and expires its deadline via `stubDeadlines`. Mutation-checked twice; the surgical mutation is caught by this case alone. No test declaration removed; 29 cases as before. Both SYNC-01 doors unchanged at :599, :610, :635-670. |
+| `test/platform.test.ts` | Platform lifecycle, listener registration, token cache landing | ✓ VERIFIED — repaired, and the diagnostic improved | +25/-2. Adds `until(reached, what)` with a 5 s wall-clock deadline; replaces `settle()` at the two positive assertions only. `settle()` is deliberately kept at the three post-shutdown negative assertions, which is the correct application of the rule. Mutation-checked against `auth.js` `rename`. |
+| `.github/workflows/build.yml` | The project's only automated gate | ✓ VERIFIED — with W12 | Triggers `push:[main]`, `pull_request:[main]`, `workflow_dispatch`. Matrix `[22.x, 24.x]`, correct against `engines.node` `^22.10.0 \|\| ^24.0.0` and D-032. Steps run lint, format:check, typecheck, fallow, `npm test`, build — the same commands as `npm run check`. It does **not** run `test:coverage:all`, so the 100% gate stays developer-machine-only (pre-existing). No `timeout-minutes` on the job. |
+| `src/**` (all) | As previously verified | ✓ VERIFIED (carried forward, delta-confirmed) | `git diff --stat 6d8a02a..HEAD -- src/` is empty. Every production truth rests on code this delta did not reach. Spot re-reads: shadow.ts:443-444, accountRuntime.ts:233-239, state.ts:119-121, shadow.ts:185-192, api.ts:130. |
+| `src/cloud/types.ts`, `src/cloud/api.ts` | Wire types, envelope guards, boundary normalizer | ✓ VERIFIED | Unchanged since the previous run's mutation proofs. 100% lines / branches / functions on both. |
+| `config.schema.json`, `.fallowrc.json`, `features/**`, all other `test/**` | As previously verified | ✓ VERIFIED (carried forward) | Not in this delta. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `src/cloud/api.ts` | `src/cloud/types.ts` | `accepts: isWireDeviceListResponse` / `isWireDeviceResponse` | ✓ WIRED | api.ts:152, :157. Each guard reads only its own key, so a crossed route cannot pass either. |
-| `src/cloud/types.ts` `toApiDevice` | `src/device/state.ts` `toSnapshot` | `ApiDevice` unchanged, so the consumer did not move | ✓ WIRED | `ApiDevice` byte-identical; `src/device/state.ts` not in the delta; typecheck clean. |
-| `features/support/fakeRestApi.ts` | the production narrowing path | Cucumber discovery scenarios | ✓ WIRED | Load-bearing: the executor's red run failed 16 scenarios with the fake at the wire shape and `src/` pre-fix, which is only possible if the fake's payload reaches the real client. |
-| `src/cloud/shadow.ts` | itself — `closing` and `connection.live` | `connected` reads both | ✓ WIRED | shadow.ts:443-444. Unchanged by this delta. |
-| `src/runtime/accountRuntime.ts` | itself — `stopped`, `halted`, `polling`, `shadowConnected` | `monitoringPathNow()` derives from four held facts | ✓ WIRED | accountRuntime.ts:233-239. Unchanged, and corroborated live by `01-UAT.md` item 3. |
+| `src/cloud/shadow.ts` `handleMessage` | `src/device/state.ts` `applyReportedPatch` | `options.onReportedPatch(route.deviceId, toReportedPatch(document))` | ✓ WIRED — **now confirmed on real vendor traffic** | shadow.ts:271. Previously the one link proved only against harness-built documents. Two real documents traversed it and moved the snapshot. |
+| `src/cloud/api.ts` | `src/cloud/types.ts` | `accepts: isWireDeviceListResponse` / `isWireDeviceResponse` | ✓ WIRED | api.ts:152, :157. Unchanged. |
+| `src/cloud/api.ts` `send` | the composed request deadline | `AbortSignal.any([signal, AbortSignal.timeout(call.deadlineMs)])` | ✓ WIRED — mutation-proved this run | api.ts:130. Breaking the composition while leaving `AbortSignal.timeout` called is caught by exactly one case. |
+| `src/cloud/auth.ts` | the Homebridge storage path | `writeFile(temporary, …, { mode: 0o600, flag: 'wx' })` then `rename` | ✓ WIRED — mutation-proved this run | auth.ts:213, :216. Removing the rename fails AUTH-02 in 5.03 s with a named condition. |
+| `src/cloud/types.ts` `toApiDevice` | `src/device/state.ts` `toSnapshot` | `ApiDevice` | ✓ WIRED | Unchanged; typecheck clean. |
+| `features/support/fakeRestApi.ts` | the production narrowing path | Cucumber discovery scenarios | ✓ WIRED | Unchanged. W11 residual carried. |
+| `src/cloud/shadow.ts` | `src/runtime/retryPolicy.ts` | `options.retry.schedule` | ✓ WIRED | shadow.ts:287. `gsd query verify.key-links` still reports 1/2 for 01-14-PLAN.md — the W7 double-escaped pattern, a planning-artifact defect. |
 | `src/runtime/accountRuntime.ts` | `src/device/health.ts` | `MonitoringPath` contract | ✓ WIRED | `import type` at line 21; one declaration in the repo. |
-| `src/runtime/accountRuntime.ts` | `src/device/state.ts` | a lost connection releases shadow ownership so the poll takes telemetry back | ✓ WIRED | `handleShadowDisconnected` → `store.releaseShadowSource()` at accountRuntime.ts:274; four unit cases, one per disconnect reason, green. |
-| `src/cloud/shadow.ts` | `src/runtime/retryPolicy.ts` | reconnect stays owned by the capped policy | ✓ WIRED | `options.retry.schedule` confirmed at **shadow.ts:287**. `gsd query verify.key-links` on 01-14-PLAN.md still reports 1/2 — a tool false negative from a double-escaped pattern in the plan (W7), re-confirmed this run. |
-| `test/cloud/api.test.ts` | `src/cloud/api.ts` | `Record<keyof CloudApi, …>` breaks the build on a fifth operation | ✓ WIRED | Unchanged at :599 and :610; `tsconfig.test.json` includes `test/` and `npm test` runs `build:test` first, so the door sits inside the gate. |
+| `src/runtime/accountRuntime.ts` | `src/device/state.ts` | `handleShadowDisconnected` → `store.releaseShadowSource()` | ✓ WIRED | accountRuntime.ts:274; four unit cases, one per disconnect reason. |
+| `test/cloud/api.test.ts` | `src/cloud/api.ts` | `Record<keyof CloudApi, …>` breaks the build on a fifth operation | ✓ WIRED | :599, :610. `npm test` runs `build:test` first, so the door sits inside the gate — and now inside CI. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| `api.ts devices()` | `body.devices` | live `fetch` → `readBody` → `narrow` → `.map(toApiDevice)` | Yes | ✓ FLOWING — and now confirmed against the live vendor. |
+| `shadow.ts toReportedPatch` | `data`, `state`, `version` | `document.state.reported.*` from a real MQTT payload | **Yes — observed** | ✓ FLOWING. Was the one ⚠️ row. Real `get/accepted` and `update/accepted` payloads carried `state.reported` with `[data, state]` and produced a snapshot with 19 data keys, 3 metadata keys, and `shadowVersion` 393614 then 393615. |
+| `api.ts devices()` | `body.devices` | live `fetch` → `readBody` → `narrow` → `.map(toApiDevice)` | Yes | ✓ FLOWING — confirmed against the live vendor. |
 | `api.ts device()` | `body.device` | live `fetch` → `readBody` → `narrow` → `toApiDevice` | Yes | ✓ FLOWING |
-| `toApiDevice` | `serialNumber` | `device.attributes.serialNumber` | Yes | ✓ FLOWING — no `??` fallback, so a missing serial is refused at the guard rather than defaulted. Correct under the project's safety semantics. |
-| `state.ts toSnapshot` | `identity`, `connectivity`, `data` | field-by-field copy from `ApiDevice` | Yes | ✓ FLOWING — second field-by-field construction; nothing spreads. |
-| `shadow.ts toReportedPatch` | `data`, `state`, `version` | `document.state.reported.*` from a real MQTT payload | **Unconfirmed against a real payload** | ⚠️ See W10. The read path is real and has no static fallback, but the shape it reads has never been observed post-parse. |
+| `toApiDevice` | `serialNumber` | `device.attributes.serialNumber` | Yes | ✓ FLOWING — no `??` fallback, so a missing serial is refused at the guard rather than defaulted. |
+| `state.ts toSnapshot` | `identity`, `connectivity`, `data` | field-by-field copy from `ApiDevice` | Yes | ✓ FLOWING |
+| `state.ts nextSnapshot` | `data`, `metadata` | `mergeRecord(previous, patch)` | Yes | ✓ FLOWING — merged real vendor keys this run. |
 | `shadow.ts` | `connected` | `closing` and `connection.live` | Yes | ✓ FLOWING (carried forward) |
-| `accountRuntime.ts` | `monitoringPath` | four held facts | Yes | ✓ FLOWING — observed live reading both `shadow-and-poll` and `unavailable`. |
+| `accountRuntime.ts` | `monitoringPath` | four held facts | Yes | ✓ FLOWING — observed live reading both values. |
 
 ### Behavioral Spot-Checks
 
 Every mutation below was applied to the compiled `dist-test/` artifact (a gitignored build output),
-run, and reverted. `git status --porcelain` is empty at the end of this run, and `dist-test/` was
-rebuilt from source afterwards.
+run, and reverted. `git status --porcelain` is empty at the end of this run, `dist-test/` holds the
+unmutated lines (`api.js:88` and `auth.js:121` re-read and confirmed), and no `MUTATED` marker
+survives anywhere.
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
 | Full phase gate | `npm run check` | exit 0 | ✓ PASS |
-| Unit suite | inside `check` | 497 tests, 497 pass, 0 fail, 0 skipped, 0 todo, 30 suites | ✓ PASS |
-| Acceptance suite | inside `check` | 35 scenarios, 299 steps, all pass, 12.8 s | ✓ PASS |
-| Whole-project coverage | `npm run test:coverage:all` | exit 0; **100.00 / 100.00 / 100.00** on all files; `types.js` and `api.js` each 100/100/100 | ✓ PASS |
-| Dead-code / health / dupes | `fallow` inside `check` | 0 issues; 0 above threshold; maintainability 92.9; duplication 0.0%; `ignoreFindings` still 8 | ✓ PASS |
-| **Privacy door (truth 22)** | added `...device` to the compiled `toApiDevice`, reran `api.test.js` | ✖ `carries no vendor field inward beyond the six the plugin reads`, plus 2 collateral | ✓ PASS — the six-key assertion is not vacuous |
-| **Envelope door, list route (truth 21)** | made the compiled `isWireDeviceListResponse` return `true` for a bare array, reran `api.test.js` | ✖ `refuses a device list the vendor sent as a bare top-level array` | ✓ PASS — the fixed defect is now genuinely fenced |
-| **Serial-lift door (truth 21)** | changed the compiled normalizer to read `device.serialNumber`, reran `api.test.js` + `types.test.js` | ✖ `lifts the serial number the vendor nests under attributes`, ✖ `lifts the serial number from the attributes the vendor nests it in`, plus 2 collateral | ✓ PASS |
-| SYNC-01 doors | carried forward from the previous run's mutations; cases re-read and unchanged at `api.test.ts:599-670` | both doors intact, now fed complete envelopes | ℹ Carried forward |
-| Packed artifact gate | `test/packedArtifact.test.ts` inside `check` | both cases ✔ against a real `npm pack --dry-run --json` | ✓ PASS |
-| Anti-pattern scan, 7 changed files | `grep -nE "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER\|not yet implemented\|coming soon"` | 0 debt markers. The only `placeholder` hits are intentional fixture values, which D-027 requires | ✓ PASS |
-| Secret scan, 7 changed files | `grep -nE "[a-f0-9]{24}\|@…\.(com\|net\|org)\|AKIA\|eyJ"` | 0 matches | ✓ PASS |
-| Skipped / todo tests | gate output | 0 skipped, 0 todo across 497 | ✓ PASS |
-| Test-count reconciliation | 464 + 4 (`api.test.ts`) + 29 (`types.test.ts` rewrite) | measured 497 | ✓ PASS — nothing unexplained |
+| Unit suite | inside `check` | 497 tests, 497 pass, 0 fail, 0 cancelled, 0 skipped, 0 todo, 30 suites | ✓ PASS |
+| Acceptance suite | inside `check` | 35 scenarios, 299 steps, all pass | ✓ PASS |
+| Whole-project coverage | `npm run test:coverage:all` | exit 0; 100.00 / 100.00 / 100.00 on all files, `api.js`, `types.js`, `state.js`, `shadow.js`, `auth.js`, `platform.js` each 100/100/100 | ✓ PASS |
+| Dead-code / health / dupes | `fallow` inside `check` | 0 issues; 0 above threshold; maintainability 92.9; duplication 0.0% | ✓ PASS |
+| **CI on a foreign runner** | `gh run view 33271243443 --log` | `build (22.x)` and `build (24.x)` both green; `tests 497 / pass 497 / fail 0 / cancelled 0 / skipped 0`; `35 scenarios (35 passed)`; `299 steps (299 passed)` | ✓ PASS — read from the run log, not from the summary |
+| **Deadline door (truth 18 / api.ts:130), coarse** | replaced the composed deadline with the bare root signal in compiled `api.js`, reran `api.test.js` | ✖ 2 assertion failures + `cancelled 1` | ✓ PASS |
+| **Deadline door, surgical** | kept `AbortSignal.timeout` called but uncomposed, reran `api.test.js` | only the repaired abort case goes non-green — `cancelled 1`, `'Promise resolution is still pending…'` | ✓ PASS — the case constrains what it names (see W12-b on the failure *mode*) |
+| **Token-cache door (truth 18)** | removed `await rename(temporary, target)` from compiled `auth.js:121`, reran the AUTH-02 case | ✖ `Error: timed out waiting for the token cache file to be written` after 5.03 s | ✓ PASS — `until` fails naming its condition |
+| Truth 4 re-derivation | `grep -rnE "log\.(info\|warn\|error\|debug)\(" src/ \| grep -E '\$\{\|\+ '` | exactly 3 hits: a validation reason, a failure kind, a device count | ✓ PASS |
+| No removed tests | `git diff 6d8a02a..HEAD -- test/ \| grep -cE "^-\s*(test\|it\|describe)\("` | 0 | ✓ PASS |
+| No source change | `git diff --stat 6d8a02a..HEAD -- src/` | empty | ✓ PASS |
+| Anti-pattern scan, 3 changed files | `grep -nE "TBD\|FIXME\|XXX\|TODO\|HACK\|PLACEHOLDER\|not yet implemented\|coming soon"` | 0 debt markers | ✓ PASS |
+| Secret scan, 3 changed files | `grep -nE "AKIA\|eyJ[A-Za-z0-9]\|[a-f0-9]{32}"` | 0 matches | ✓ PASS |
 | Working tree | `git status --porcelain` | empty | ✓ PASS |
 
 ### Probe Execution
 
-No `scripts/*/tests/probe-*.sh` exist in this repository and no plan or summary declares one. Probe
-execution: N/A. Behavioural evidence came from the three mutations above, from `npm run check` and
-`npm run test:coverage:all` run by this verifier, and from the three live runs recorded in
-`01-UAT.md`.
+No `scripts/*/tests/probe-*.sh` exist in this repository and no plan or summary declares one, so the
+conventional probe contract is N/A.
+
+One ad-hoc probe governs a must-have and is therefore treated as evidence rather than narration:
+`w10-probe.mjs` (217 lines) with its output `w10-watch.log`, both in a session scratchpad rather than
+the repository. I could not re-run it — it needs the real account and real hardware — so I audited it
+instead of executing it: I read what it imports (`createAccountRuntimeFromConfig` from `dist/`, the
+production composition root), what it substitutes (nothing; `connect` wraps the real `mqtt.connect`
+and only observes), and what each printed field can and cannot mean, checked against `src/device/state.ts`
+and `src/cloud/shadow.ts`. That audit is the "Ruling on W10" section, and it changed the reading: the
+line the brief called decisive is not, and a different line is.
+
+| Probe | Command | Result | Status |
+|-------|---------|--------|--------|
+| `w10-probe.mjs` (scratchpad, not in repo) | not re-runnable — requires the live account and device | `get/accepted` established `shadowVersion` from `undefined` to 393614; `update/accepted` advanced it to 393615; both moved the snapshot | ✓ AUDITED — accepted for W10's core proposition, not for the partial-merge inference (W10-R) |
+
+Other behavioural evidence came from the three mutations above, from `npm run check` and
+`npm run test:coverage:all` run by this verifier, from CI run 33271243443 read from its log, and from
+the live runs recorded in `01-UAT.md`.
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|------------|-------------|--------|----------|
-| CONF-01 | 01-01, 01-02 | Dynamic-platform package, TypeScript ESM, supported runtimes, child bridge | ✓ SATISFIED | `test/packageManifest.test.ts` pins `engines`, `type`, `main`, name, keywords. **Both clauses now exercised on Homebridge 2.4.0:** normal bridge (UAT item 1) and child bridge (UAT Additional Verification, own process, HAP port 51888, discovery completed). The Manual-Only routing is discharged. |
-| CONF-02 | 01-04, 01-15 | Settings GUI, strict validation, masked password, plaintext disclosure | ✓ SATISFIED | **Was NEEDS HUMAN.** Closed by UAT item 1: all five behaviours read off the rendered form in the real UI. |
+| CONF-01 | 01-01, 01-02 | Dynamic-platform package, TypeScript ESM, supported runtimes, child bridge | ✓ SATISFIED | `test/packageManifest.test.ts` pins `engines`, `type`, `main`, name, keywords. Both bridge modes exercised on Homebridge 2.4.0. The CI matrix now matches `engines.node` exactly, which it did not before (it tested Node 20, which `engines` refuses). |
+| CONF-02 | 01-04, 01-15 | Settings GUI, strict validation, masked password, plaintext disclosure | ✓ SATISFIED | `01-UAT.md` item 1, five behaviours read off the rendered form. |
 | CONF-03 | 01-02, 01-04, 01-11, 01-15 | Absent or invalid credentials → clear error, no network/timer/accessory work | ✓ SATISFIED | Four `configuration.feature` scenarios, each asserting no listener and no request. |
 | CONF-04 | 01-02, 01-04 | Optional `clientId` override, no other constant exposed | ✓ SATISFIED | Single precedence rule against `PROTOCOL.clientId`. |
-| CONF-05 | 01-04, 01-10 | `pollInterval` 300-3600 default ~900; `offlineConfirmationPollCount` 1-8 default 2 | ✓ SATISFIED | Bounds in `config.ts` and the schema. |
+| CONF-05 | 01-04, 01-10 | `pollInterval` 300-3600 default ~900; `offlineConfirmationPollCount` 1-8 default 2 | ✓ SATISFIED | Bounds in `config.ts` and the schema. The 898-second measured heartbeat cadence (`01-UAT.md` item 2) sits under the ~900 default. |
 | AUTH-01 | 01-02, 01-05, 01-08, 01-10, 01-11, 01-16 | Unattended password-realm grant, cached token reuse, reauthentication | ✓ SATISFIED | Plus a live end-to-end run: the grant fed a real `GET /credentials/aws` and a real IoT handshake. |
-| AUTH-02 | 01-04, 01-05, 01-11, 01-15, 01-16 | Token under storage path, owner-only, no secret in logs or context | ✓ SATISFIED | Strengthened by truth 22: the REST boundary now drops eight vendor keys by construction, mutation-proved. Qualified by 01-SECURITY finding 2 (the `id_token` payload carries an `email` claim). |
-| SYNC-01 | 01-02, 01-06, 01-08, 01-16 | Four typed routes, no excluded route | ✓ SATISFIED | Both prohibition doors intact through the delta and now exercised with complete envelopes. |
-| SYNC-02 | 01-02, 01-03, 01-09, 01-11, 01-13 | One canonical snapshot per device, ignore `desired`, preserve omitted | ⚠️ SATISFIED WITH RESIDUAL | The merge contract is verified and the heartbeat **topic** is now a measurement. Whether a real vendor document parses into a patch is unconfirmed — W10. |
-| SYNC-03 | 01-09, 01-10, 01-11, 01-13 | Complete shadow after startup and reconnect; poll as backstop; no replay | ✓ SATISFIED | `releaseShadowSource` on every disconnect reason; four-reason loop green. |
-| SYNC-04 | 01-07..01-12, 01-14, 01-18 | Rotate in place, failed refresh stays scheduled, capped retries free of duplicate loops | ✓ SATISFIED | **Materially strengthened:** the presigner is now known to produce a URL the real AWS IoT broker accepts. The fake broker could never have told this apart. |
-| SYNC-05 | 01-02, 01-06, 01-07, 01-10, 01-11, 01-14, 01-17, 01-18 | Idempotent abortable lifecycle, no unhandled rejection, no leaked work | ✓ SATISFIED | Plus a live observation of `monitoringPath` moving to `unavailable` after a clean stop. |
-| WIRE-01..04 | quick 260829-gx6 | Vendor device-route envelopes and nested serial number | ✓ SATISFIED | Truths 21 and 22. Task-local IDs; they are not Phase 1 roadmap requirements and appear in no REQUIREMENTS.md traceability row, so they raise no orphan. |
+| AUTH-02 | 01-04, 01-05, 01-11, 01-15, 01-16 | Token under storage path, owner-only, no secret in logs or context | ✓ SATISFIED — **its proving case now genuinely runs everywhere** | Truth 18. The case that asserts the cache file lands was failing on both CI Node versions until 19:35Z; it is repaired, mutation-checked, and green on both. Qualified by 01-SECURITY finding 2. |
+| SYNC-01 | 01-02, 01-06, 01-08, 01-16 | Four typed routes, no excluded route | ✓ SATISFIED — with the record corrected | Truth 17. Both prohibition doors intact; all three prohibition cases now execute and pass on Node 22 and 24, having been cancelled on Node 22 in the red run. |
+| SYNC-02 | 01-02, 01-03, 01-09, 01-11, 01-13 | One canonical snapshot per device, ignore `desired`, preserve omitted | ✓ SATISFIED | **Was ⚠️ SATISFIED WITH RESIDUAL.** The residual was W10. A real vendor document now parses into a patch and merges. `desired` remains structurally unrepresentable. |
+| SYNC-03 | 01-09, 01-10, 01-11, 01-13 | Complete shadow after startup and reconnect; poll as backstop; no replay | ✓ SATISFIED | `releaseShadowSource` on every disconnect reason; four-reason loop green. The real `get/accepted` observed at +3 s is the startup complete-shadow request working end to end. |
+| SYNC-04 | 01-07..01-12, 01-14, 01-18 | Rotate in place, failed refresh stays scheduled, capped retries free of duplicate loops | ✓ SATISFIED | The presigner produces a URL the real AWS IoT broker accepts. Rotation and reconnect remain fake-exercised, which is appropriate: those are local paths with no vendor-shape dependency. |
+| SYNC-05 | 01-02, 01-06, 01-07, 01-10, 01-11, 01-14, 01-17, 01-18 | Idempotent abortable lifecycle, no unhandled rejection, no leaked work | ✓ SATISFIED | Six `lifecycle.feature` scenarios plus a live observation of `monitoringPath` moving to `unavailable` after a clean stop. |
+| WIRE-01..04 | quick 260829-gx6 | Vendor device-route envelopes and nested serial number | ✓ SATISFIED | Truths 21 and 22. Task-local IDs; not Phase 1 roadmap requirements, so they raise no orphan. |
 | REL-04 | 01-19 (early) | Packed-package checks exclude secrets and identifiers | ℹ EARLY COVERAGE | REQUIREMENTS.md maps REL-04 to Phase 6. Noted so Phase 6 knows the assertion exists. |
 
 **Orphaned requirements:** none. All twelve IDs the roadmap assigns to Phase 1 (CONF-01..05,
@@ -315,25 +453,23 @@ above.
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| — | — | `TBD` / `FIXME` / `XXX` / `TODO` / `HACK` in phase files | none | 0 found across `src/`, `test/`, `features/`, `config.schema.json`, `.fallowrc.json`, including all seven files the delta touched. |
-| — | — | Skipped or todo tests | none | 0 found across 497. |
-| `src/cloud/shadow.ts` + `src/device/state.ts` | 262-267, 195-197 | **A vendor shadow document that does not match the assumed shape is dropped silently** | ⚠️ **W10 (new)** | Two silent paths, one behind the other. An unparseable document logs at `debug` and returns. A parseable document whose `state.reported` is nested differently yields an all-undefined patch, which `carriesObservation` drops with **no log at all** and no snapshot change. `monitoringPath` still reads `shadow-and-poll` in both cases, because it derives from the connection, not from arriving data. This is the same failure class as the REST defect, at the one boundary where it is still unfalsified. Detail and closure in the human item. |
-| `features/support/fakeRestApi.ts` | 84-96 | The REST fake serves 7 of the 13 measured top-level keys | ⚠️ **W11 (new)** | `location`, `homeId`, `roomId`, `state`, `timestamp`, and `shadow` are absent from the fake, so the acceptance layer does not exercise the drop of the six keys most worth dropping. Not a defect — the guards ignore keys they do not read, and the 13-key unit fixture does cover the drop — but the fake should not be treated as evidence about what survives normalization. The fake also breaks the measured `deviceId === <accountId>_<serialNumber>` relation, which its own comment records. |
-| `src/cloud/shadow.ts` | 91, 443 | `ShadowClient.connected` still has no production consumer | ℹ W1 (reduced) | Unchanged. The false-status half is closed; a public boolean that only tests read remains. Phase 3 or 5 will read it or it should go. |
+| — | — | `TBD` / `FIXME` / `XXX` / `TODO` / `HACK` across `src/`, `test/`, `features/`, and the three delta files | none | 0 found. |
+| — | — | Skipped or todo tests | none | 0 across 497, locally and in CI. |
+| `.github/workflows/build.yml` | 3-13 | **This phase's code was never gated by CI until after five certifications, and when it finally ran it was red** | ⚠️ **W12 (new)** | 174 commits, five certifications, all citing `npm run check` green on one machine. Run 33267115276 failed on Node 22 with 8 cancelled cases, including all three SYNC-01 prohibition cases, plus an AUTH-02 assertion failure on both Node versions. Now green (33271243443). Three sub-notes below. |
+| `.github/workflows/build.yml` | 6-9 | The trigger that caught these defects no longer exists | ℹ **W12-a** | The failing run was push-triggered on a feature branch. Triggers are now `main` push, PR into `main`, and `workflow_dispatch`. Nothing reaches `main` ungated, so the exposure is bounded by a branch's life — which here was 174 commits. `workflow_dispatch` is the mitigation and it was used correctly today. |
+| `.github/workflows/build.yml` | 16-18 | No `timeout-minutes`, and a hang is a reachable failure mode | ℹ **W12-b** | Mutation 2 showed the repaired api.test.ts case detects a broken composed deadline by never settling. Node's runner does not self-terminate; under mutation it ran past 60 s alone. In CI that becomes GitHub's six-hour default. A `timeout-minutes: 15` on the job costs nothing. |
+| `test/runtime/accountRuntime.test.ts` | 252-256 | 57 fixed 8-turn `settle()` drains, many before positive assertions | ℹ **W12-c** | The rule the fix articulated ("a fixed drain is sound only for a negative assertion") is not applied here and is not enforced anywhere. Checked rather than assumed: this harness uses `t.mock.timers`, an in-process `CloudApi`, a socket-free shadow, and a synthetic clock, so its chains are bounded microtask chains that resolve in a fixed number of turns on any machine. Sound today and green on the runner. A future `await` on real I/O in that path turns 8 back into a guess. |
+| `features/phase-01-secure-cloud-foundation` | head c269a23 | The Phase 1 branch head is the commit CI refused | ⚠️ **W13 (new)** | The three fixes are on the phase-02 lineage only; c269a23 is an ancestor of `HEAD`, so shipping from `HEAD` is green. But a PR opened from the phase-01 branch would fail CI, and under the new triggers a re-push would not even re-run it. Merge the fixes forward into that branch or delete it. |
+| — | — | The partial merge is inferred from the confirmed shape, not observed | ⚠️ **W10-R (new)** | W10's core proposition is closed by the `get/accepted` line. The heartbeat line does not add what it appears to: `nextShadowVersion` advances an existing watermark via `patch.version ?? previous.shadowVersion` regardless of `observed`, and `data` is pinned at 19 keys under both a correct merge and a silently dropped patch, so 393614→393615 with `data=19k` is byte-identical output for either. SC-3a therefore rests on the confirmed document shape plus `mergeRecord` being a proved pure spread. Sound, but deductive. The probe prints `shadowVersion` and `deviceTimestamp`; adding `receivedAt` — which `nextSnapshot` moves only when `observed` — would settle it outright, since `state.ts:165` also pins `data` once a watermark exists. |
+| `features/support/fakeRestApi.ts` | 84-96 | The REST fake serves 7 of the 13 measured top-level keys | ⚠️ W11 | Unchanged. `location`, `homeId`, `roomId`, `state`, `timestamp`, and `shadow` are absent, so the acceptance layer does not exercise the drop of the six keys most worth dropping. The 13-key unit fixture covers that; the fake should not be cited for it. |
+| `src/cloud/shadow.ts` | 91, 443 | `ShadowClient.connected` still has no production consumer | ℹ W1 (reduced) | Unchanged. Phase 3 or 5 will read it or it should go. |
 | `src/runtime/accountRuntime.ts` | 237 | A failing poll reports `unavailable` even while the shadow is live and delivering | ⚠️ W3 | Unchanged and deliberate. Errs toward degraded rather than toward a false normal. Phase 5 inherits it as a contract. |
-| `src/cloud/auth.ts` | `sharedGrant` | A joining caller inherits the opening caller's cancellation | ⚠️ W4 | Unchanged, bounded, self-correcting, and unreachable this phase. Phase 4 note carried. |
-| `src/device/state.ts` | 164-166 | The first poll after ownership release drops heartbeat-only telemetry keys | ⚠️ W5 | Deferred to Phase 3 (SC-6). Unchanged by this delta. |
-| `src/cloud/shadow.ts` | 257-261 | A rejected complete-shadow request leaves a per-device blind spot | ⚠️ W6 | Deferred to Phase 3 (SC-6). Unchanged by this delta. |
-| `.planning/phases/01-secure-cloud-foundation/01-14-PLAN.md` | 45 | Key-link pattern is double-escaped (`retry\\.schedule`) | ⚠️ W7 | Re-confirmed open. `gsd query verify.key-links` reports 1/2 for that plan; the wiring is real at `shadow.ts:287`. Planning-artifact defect, not a code defect. |
+| `src/cloud/auth.ts` | `sharedGrant` | A joining caller inherits the opening caller's cancellation | ⚠️ W4 | Unchanged, bounded, self-correcting, unreachable this phase. Phase 4 note carried. |
+| `src/device/state.ts` | 164-166 | The first poll after ownership release drops heartbeat-only telemetry keys | ⚠️ W5 | Deferred to Phase 3 (SC-6). |
+| `src/cloud/shadow.ts` | 257-261 | A rejected complete-shadow request leaves a per-device blind spot | ⚠️ W6 | Deferred to Phase 3 (SC-6). |
+| `01-14-PLAN.md` | 45 | Key-link pattern is double-escaped (`retry\\.schedule`) | ⚠️ W7 | Re-confirmed open. Planning-artifact defect; the wiring is real at shadow.ts:287. |
 
-**W9 is closed.** I checked the file rather than the claim. Commit `b35e322` corrected both places
-the previous run cited: the pre-verify bullet (line 36) now says the D-21 allowlist is asserted by
-`test/packedArtifact.test.ts` inside `npm test` and that no separate inspection is required, and the
-per-task row (line 80) now reads plan `01-19`, threat `T-01-60`, method `unit`, command
-`node --test dist-test/test/packedArtifact.test.js`, `✅ green`. An amendment section records the
-move and confirms `nyquist_compliant: true` is unaffected. Timing note for the record: `b35e322`
-landed at 11:19:54 EDT and the previous report was stamped 11:15:27 EDT, so that run flagged a row
-that was corrected four minutes later.
+**W10 is closed** — see "Ruling on W10". **W9 remains closed**, unchanged since `b35e322`.
 
 ### Test Quality Audit
 
@@ -341,112 +477,105 @@ Only rows that changed. The rest carry forward.
 
 | Test File | Linked Req | Active | Skipped | Circular | Assertion Level | Verdict |
 |-----------|-----------|--------|---------|----------|-----------------|---------|
-| `test/cloud/types.test.ts` | WIRE-01..03, T-GX6-01 | yes | 0 | No | Behavioral | ✓ Strong. 19 malformed rows against **both** guards, both cross-route rejections asserted in both directions, and the normalizer fed through the production guard so it receives the real value with the extra keys attached. Mutation-proved by me. |
-| `test/cloud/api.test.ts` | SYNC-01, WIRE-*, AUTH-02 | yes | 0 | No | Behavioral + type-level | ✓ Strong. The untyped 13-key `geminiWireDevice()` is the load-bearing detail: an untyped literal cannot be reshaped by a later edit to a plugin type, so it keeps describing the vendor rather than the plugin. The six-key assertion is only meaningful because that fixture carries eight keys that must not travel. Both SYNC-01 doors survive the delta. |
-| `test/runtime/accountRuntime.test.ts` | SYNC-05, AUTH-01, D-13 | yes | 0 | No | Behavioral | ✓ Strong. The delta is a fixture repair only. The expectation `stored: ['account-1_serial-1']` is unchanged, so nothing was weakened to make the new client pass. |
-| `features/support/fakeRestApi.ts` | SYNC-01, D-10 | n/a | 0 | No | n/a | ⚠️ Adequate. No longer certifies an imagined shape, which was the point. Serves a 7-key subset — W11. |
-| `features/support/fakeShadowBroker.ts` | SYNC-04 | n/a | 0 | No | n/a | ℹ `verifyClient: () => !refusing` still accepts every signature. **This no longer matters for SYNC-04**, because a real handshake closed that item. It still means the acceptance layer proves nothing about signing. |
-| `features/support/*` shadow fakes | SYNC-02, SC-3 | n/a | 0 | No | n/a | ⚠️ The harness constructs the shadow documents it then parses, so the suite cannot falsify the document shape. W10. |
-| all other `test/**` and `features/**` | mixed | yes | 0 | No | Value / Behavioral | ✓ 497 unit tests, 35 scenarios, none skipped, 100% branch coverage. |
+| `test/cloud/api.test.ts` | SYNC-01, WIRE-*, AUTH-02 | yes | 0 | No | Behavioral + type-level | ✓ Strong, and stronger than before on the runner. The abort case now settles deterministically instead of racing an unref'd timer, so the seven cases behind it — including all three SYNC-01 doors — actually execute on CI. Mutation-checked that the repair did not turn it into a test of its own stub. One residual: it signals a break by hanging (W12-b). |
+| `test/platform.test.ts` | CONF-01, CONF-03, AUTH-02, SYNC-05 | yes | 0 | No | Behavioral | ✓ Strong. `until` replaces a guessed turn count with the condition itself and fails naming what it waited for — verified by mutation, 5.03 s, clear message. The fixed drain is correctly retained at the three post-shutdown negative assertions, where waiting longer can only make the case stricter. |
+| `test/runtime/accountRuntime.test.ts` | SYNC-05, AUTH-01, D-13 | yes | 0 | No | Behavioral | ✓ Strong, with W12-c noted. Not in this delta. Its 57 fixed drains are sound because the harness is pure microtask, which I confirmed by reading it. |
+| `features/support/fakeShadowBroker.ts` | SYNC-04 | n/a | 0 | No | n/a | ℹ `verifyClient: () => !refusing` still accepts every signature. Does not matter for SYNC-04 — a real handshake closed that. It still means the acceptance layer proves nothing about signing. |
+| `features/support/*` shadow fakes | SYNC-02, SC-3 | n/a | 0 | No | n/a | ✓ Adequate — **upgraded**. The harness still builds the documents it parses, so it cannot falsify the shape. It no longer needs to: the shape is now measured. Previously ⚠️ under W10. |
+| `features/support/fakeRestApi.ts` | SYNC-01, D-10 | n/a | 0 | No | n/a | ⚠️ Adequate. Serves a 7-key subset — W11. |
+| all other `test/**` and `features/**` | mixed | yes | 0 | No | Value / Behavioral | ✓ 497 unit tests, 35 scenarios, none skipped, 100% branch coverage — on two machines now. |
 
 **Disabled tests on requirements:** 0. **Circular patterns:** 0. **Tests asserting a defect as
-correct:** 0. **Insufficient assertions:** 0 blocking; one harness limitation routed to the human
-item.
+correct:** 0. **Insufficient assertions:** 0.
 
 ### Human Verification Required
 
-The three items from the previous run are closed by `01-UAT.md` and are not repeated. One new item
-replaces them.
+None. The previous run's single item — confirm a real vendor shadow message merges into the
+canonical snapshot — is closed by direct observation, judged above rather than accepted.
 
-#### 1. Confirm a real vendor shadow message actually merges into the canonical snapshot
+No new human item is opened, and W10-R is the one worth explaining rather than asserting. It is not a
+gap in the code and not a proposition a human must go and test: SC-3a rests on a document shape that
+is now confirmed on real traffic plus `mergeRecord`, a pure spread whose behaviour cannot vary with
+the origin of its input. Opening a human item for it would ask someone to re-observe a pure function.
+What it warrants instead is one more printed field the next time that probe runs — `receivedAt` — and
+that is recorded in W10-R where whoever runs it will find it.
 
-**Test:** During the next real-hardware run — Phase 2 will need one anyway — log the canonical
-snapshot for one device immediately before and immediately after a message arrives on
-`$aws/things/<deviceId>/shadow/get/accepted`, and again around one `.../shadow/update/accepted`
-heartbeat. Logging `Object.keys(parsed)` on the raw payload and the resulting `ReportedPatch` is
-enough, and it is cheaper than reasoning about it.
-
-**Expected:** The raw payload's top-level keys include `state`, and `state.reported` holds `data`
-and/or `state`. Downstream, `store.applyReportedPatch` receives a patch with at least one section
-defined, the snapshot's `data` or `metadata` gains real vendor keys, `shadowVersion` becomes a
-number, and `receivedAt` moves.
-
-**Why human:** No harness can falsify this, because the harness builds the documents it parses. And
-a mismatch is invisible from outside: `readShadowDocument` discards an unreadable payload with a
-`debug` line (`src/cloud/shadow.ts:262-267`), while a payload that parses but nests `reported`
-differently produces an all-undefined patch that `carriesObservation` (`src/device/state.ts:195-197`)
-drops with **no log at all**. In both cases the plugin keeps reporting `shadow-and-poll` and keeps
-serving poll-only state. `01-UAT.md` item 2 recorded the topic, 584 bytes, and an 898-second
-interval — real measurements, but all three are satisfied equally by a payload the plugin then
-throws away. Its own stated expectation included "and merges into the canonical snapshot", and that
-clause has no evidence behind it.
-
-**Why this is being raised now rather than waved through:** this is the same shape of assumption that
-made `GET /devices` unreadable in production while 464 unit tests, 35 scenarios, a code review, a
-Nyquist audit, a security audit at `threats_open: 0`, and my own previous run all read green. That
-one was caught by a live run, not by the suite. The shadow document is the last boundary in this
-phase where the assumption is still only in a fixture, and the intel record shows why: the REST
-section of `.planning/intel/constraints.md` was corrected by the 2026-08-29 measurement, but §5 still
-describes the shadow from a reading of the vendor's own client, uncorrected. Two mitigating facts,
-recorded honestly: `update/accepted` is generated by AWS IoT rather than by the vendor, so its
-envelope is a documented AWS contract, and the vendor-client snippet in §5 shows the access path
-`state.state.reported.data`, which agrees with the code. This is likely fine. It is not confirmed,
-and confirming it costs one log line.
+The other residuals (W12, W13) are likewise actionable straight from this report: add a job timeout,
+decide the CI trigger tradeoff, and clean up a stale branch pointer.
 
 ### Gaps Summary
 
-**No gaps. No regression from the delta. 22/22 truths verified, and the phase is one cheap
-observation away from complete.**
+**No gaps. 22/22 truths verified. Phase 1 can be marked COMPLETE.**
 
-**The three human items are genuinely closed, on evidence I judged rather than accepted.** The
-settings form was read by a human in a real Homebridge 2.4.0 container from the packed tarball, with
-all five behaviours reported separately and the one open schema risk resolving in the safe direction.
-The heartbeat topic is now a measurement — a named topic, 584 bytes against a 1800-byte complete
-fetch, and an interval of 898 seconds reported as exact — which is what RES-01's staleness rule
-needed under it. The SigV4 handshake ran through the shipped presigner against the real broker and
-established with 0 errors and no 403, which is the only thing that could ever have closed it, since
-both the fake broker and the golden-vector test are blind to a signer that is wrong in the way the
-spec reading is wrong. The CONF-01 child-bridge clause closed alongside them, discharging the last
-Manual-Only routing in `01-VALIDATION.md`.
+**W10 is closed, and the reason is not the one the brief gave.** I found the probe and its raw log
+rather than working from the summary, and audited its method against `src/device/state.ts` and
+`src/cloud/shadow.ts`. The audit moved the weight from one line to the other. The decisive
+observation is `get/accepted`: the snapshot's `shadowVersion` went from `undefined` to 393614, and
+`nextShadowVersion` (state.ts:205-211) refuses to establish a watermark unless `carriesObservation`
+is true, while the poll path (`toSnapshot`, state.ts:186) can only ever preserve one. So a real
+vendor document narrowed, carried `state.reported` at exactly the nesting `toReportedPatch` reads,
+held a record there, and reached `applyReportedPatch`. The discard-with-`debug` path and the no-log
+`carriesObservation` drop are both falsified, by a route a still-settling startup poll cannot fake.
+That is the whole of what W10 asserted, and it is now answered.
 
-**The wire-shape fix is real and it introduced no regression.** Only two files under `src/` moved,
-both at the REST boundary, and I confirmed that from `git diff` before deciding what to re-check.
-SYNC-01's two prohibition doors survive intact and are now fed complete envelopes, so every operation
-completes narrowing instead of rejecting mid-flight. The refusal contract is at least as strict as
-before — same all-or-nothing behaviour on a malformed member, plus an envelope check and a required
-`attributes.serialNumber` that did not exist. No assertion was weakened; the one fixture that changed
-shape still expects the same stored result. And the privacy constraint is stronger than the brief
-asked: `toApiDevice` never spreads, `toSnapshot` rebuilds field by field again downstream, accessory
-context is not a live path this phase, and `src/` contains exactly three interpolating log calls,
-carrying a count, a validation reason, and a failure kind. I proved the three new assertions by
-mutating the compiled normalizer and guard — spread the record, read the serial from the top level,
-accept a bare array — and all three mutations were caught.
+**The heartbeat line does not carry what was assigned to it, and I am recording that rather than
+letting it pass.** The brief called the 584-byte `update/accepted` decisive for SC-3a on the ground
+that `shadowVersion` advanced while `data` stayed at 19 keys. It does not establish that. Once a
+watermark exists, `nextShadowVersion` returns `patch.version ?? previous.shadowVersion` with no
+reference to `observed`, so a patch whose sections were both dropped still advances the version and
+still changes the snapshot string. And `data` is pinned at 19 keys three ways over — a correct merge
+of seven fields yields 19, a dropped patch leaves 19, and `nextTelemetry` (state.ts:165) stops the
+poll rewriting telemetry once a watermark exists. The probe's output is byte-identical under both
+hypotheses. SC-3a therefore rests on the confirmed document shape plus `mergeRecord` being a proved
+pure spread over a plain record, which is sound but deductive. That is W10-R, and the fix is one more
+printed field: `receivedAt` moves only when `observed`, so printing it settles the question outright.
 
-**W9 is closed and two warnings open.** The D-21 validation row was corrected by `b35e322`; I read
-the file. W11 is small: the Cucumber REST fake serves 7 of the 13 measured keys, so the acceptance
-layer should not be cited as evidence about which vendor fields get dropped — the unit fixture is
-what covers that.
+**The three test fixes touched no production code, and I confirmed that from the diff.**
+`git diff --stat 6d8a02a..HEAD -- src/` is empty; the delta is `test/cloud/api.test.ts`,
+`test/platform.test.ts`, and `.github/workflows/build.yml`. No test declaration was removed. Neither
+repair weakened what it replaced: the api.test.ts abort case still fails when the composed deadline
+is broken while `AbortSignal.timeout` is still called — a mutation only that case can catch — and the
+platform.ts `until` helper fails in 5 s naming its own condition when the token-cache `rename` is
+removed, which is a better failure than the one it replaced. The fixed drain was correctly kept where
+the assertion is negative.
 
-**W10 is the one that matters, and it is why this run returns `human_needed` rather than `passed`.**
-The instruction for this run was to say, per must-have, whether anything stands outside the fixture.
-For every must-have in this phase, something now does — the settings form was rendered, the REST
-shape was measured and re-measured live, the handshake was established against the real broker, the
-package was installed and ran — with one exception. The path from a real vendor shadow document to a
-canonical snapshot has never been observed end to end, and both ways it can fail are silent: a
-`debug` line, or nothing at all, with `monitoringPath` still reporting the healthy combined path. The
-merge logic is correct and well tested for the shape it assumes; what is unverified is whether the
-vendor sends that shape. That is exactly the proposition that was false at the REST boundary through
-four green gates.
+**The CI discovery is worth a warning of its own, and it is W12.** Not because the code was wrong —
+it was not — but because of what the phase's verification history now looks like from outside. This
+phase accumulated 174 commits and five certifications, every one of them resting on `npm run check`
+green on a single developer machine. When the work finally reached a runner it was red: eight
+cancelled cases on Node 22, including all three SYNC-01 prohibition cases, plus an AUTH-02 assertion
+failure on both Node versions. Two facts follow that a future reader should have. The first is
+timing: that failure was recorded at 18:00:51Z and my previous report was stamped 18:43:21Z, so this
+phase's most recent certification was issued 42 minutes after a public record of its failure existed.
+The second is scope: truth 17's evidence is three prohibition cases, and on that runner all three
+were cancelled rather than run — the prohibition was asserted in three consecutive reports on
+evidence that, on one of two supported Node versions, had not actually been obtained. Both are fixed.
+Run 33271243443 is green on 22.x and 24.x at 497/497 and 35/299, and I read that from the run log
+rather than from anyone's summary. Truth 15 is materially better supported than it has ever been.
+Three smaller notes ride along: the push trigger that caught this no longer exists (W12-a), the job
+has no timeout while a hang is a reachable failure (W12-b), and 57 fixed-turn drains remain in
+`accountRuntime.test.ts` — sound today because that harness is pure microtask, which I read rather
+than assumed (W12-c).
 
-**Can Phase 1 be marked COMPLETE?** Not quite, and not for anything that needs re-planning. Every
-must-have is verified, every previously open human item is closed, the gate and the coverage gate are
-green at 497 tests and 100% branches, and the working tree is clean. What remains is a single
-observation on the next real-hardware run: log one shadow payload's top-level keys and the snapshot
-before and after. If the snapshot moves, this phase is done and the status becomes `passed` with
-nothing else to change. If it does not, the phase has a second production-breaking wire defect and
-would have shipped with it.
+**Two things to tidy that do not block completion.** The Phase 1 branch head, c269a23, is still the
+commit CI refused; the fixes live on the phase-02 lineage, which contains c269a23 as an ancestor, so
+shipping from `HEAD` is green but a PR from the phase-01 branch would not be (W13). And the shadow
+probe output that closes W10 is not recorded anywhere in `.planning/` — this report is currently its
+only home, and it belongs appended to `01-UAT.md` item 2, whose stated expectation included the
+merge clause it now finally evidences.
+
+**Can Phase 1 be marked COMPLETE? Yes.** Every must-have is verified. Every human item is closed on
+evidence I judged rather than accepted. The phase gate and the 100% coverage gate are exit 0 here,
+and — for the first time in this phase's life — the same suite is green on hardware nobody involved
+controls, on both supported Node versions. Every boundary this phase touches now has something
+outside its own fixtures under it: a human read the settings form, the REST shape was measured and
+re-measured live, the SigV4 signature was accepted by the real broker, the packed tarball was
+installed and ran, and a real shadow document reached the canonical snapshot and established the
+watermark. That last one was the only entry left on the list, and it is now off it — on a narrower
+and better-founded reading than the one offered, with the part that is still deductive named as
+W10-R rather than absorbed into the pass.
 
 ---
 
-_Verified: 2026-08-29T18:43:21Z_
+_Verified: 2026-08-29T19:53:19Z_
 _Verifier: Claude (gsd-verifier)_

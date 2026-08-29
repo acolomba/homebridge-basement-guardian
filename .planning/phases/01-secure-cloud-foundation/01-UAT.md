@@ -78,6 +78,35 @@ evidence: |
   One device, one firmware version. The interval is not proven for other
   hardware.
 
+  ADDENDUM 2026-08-29 — the merge clause of this item's own expectation.
+  The measurement above proves the message ARRIVES. It does not prove the
+  plugin USES it, and the two are different claims. A second run compared the
+  canonical snapshot immediately before and after each shadow message:
+
+    get/accepted     1800 B  state.reported present, keys [data, state]
+                             snapshot MOVED, shadowVersion undefined -> 393614
+    update/accepted   584 B  state.reported present, keys [data, state]
+                             snapshot MOVED, shadowVersion 393614 -> 393615
+
+  The DECISIVE observation is `get/accepted`, not the heartbeat. Establishing a
+  watermark where none existed requires `carriesObservation` to be true
+  (`nextShadowVersion`, state.ts:205-211); the poll path can only preserve a
+  watermark, never establish one. So a real vendor document narrowed, sat at the
+  nesting `toReportedPatch` reads, and reached `applyReportedPatch`. Both silent
+  failure paths are falsified.
+
+  The heartbeat line does NOT establish SC-3a, and the first reading of it here
+  was wrong. Once a watermark exists `nextShadowVersion` returns
+  `patch.version ?? previous.shadowVersion` without consulting `observed`, so a
+  silently dropped patch advances the version and changes the snapshot too. The
+  19-key count is likewise consistent with a correct merge, a dropped patch, and
+  the poll being held off. The output is identical under both hypotheses.
+
+  SC-3a therefore rests on the now-confirmed document shape plus `mergeRecord`
+  being a proved pure spread. Sound, but deductive rather than observed. Tracked
+  as W10-R. One printed field closes it: `receivedAt`, which moves only when
+  `observed`.
+
 ### 3. Real SigV4 handshake
 
 expected: Open a shadow connection against the real AWS IoT endpoint with real
