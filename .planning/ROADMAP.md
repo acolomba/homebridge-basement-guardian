@@ -73,7 +73,7 @@ Plans:
 
 **Gap closure Wave 1** *(from 01-VERIFICATION.md; blocked on Wave 7 completion)*
 
-- [ ] 01-12-PLAN.md — Acceptance-gate determinism and injected rotation timing
+- [x] 01-12-PLAN.md — Acceptance-gate determinism and injected rotation timing
 
 **Gap closure Wave 2** *(blocked on Gap closure Wave 1)*
 
@@ -178,7 +178,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 11/11 | In Progress|  |
+| 1. Secure Cloud Foundation | 12/17 | In Progress|  |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
