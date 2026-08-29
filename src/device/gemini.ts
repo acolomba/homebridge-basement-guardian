@@ -1,16 +1,17 @@
 /**
- * @fileoverview The Gemini dual-pump system: its identity and the names of the
- * fields it reports.
+ * @fileoverview The Gemini dual-pump system: its identity, the fields it
+ * reports, and the family adapter that validates and decodes them.
  *
- * These are field names, not field meanings. No legal-value set and no flood
- * threshold appears here. Only one water level has hardware-validation
- * evidence, so the level lookup and the threshold stay out of the tree until
- * a natural water-level cycle validates the progression. A guessed lookup
- * would read as a confident measurement.
- *
- * This module is a declaration only. Its entry in the `ignoreFindings` list of
- * `.fallowrc.json` goes away when a production consumer arrives.
+ * Only one water level has hardware-validation evidence, so the level lookup
+ * and the flood threshold stay out of this module until a natural
+ * water-level cycle validates the progression. A guessed lookup would read
+ * as a confident measurement (D-014). `validate()` still knows every legal
+ * `water_level` code, because refusing an out-of-domain code is a shape
+ * check, not a meaning the plugin has not earned yet.
  */
+
+import type { DeviceCapability, DeviceFamily, FamilyCommand, FamilyValidation, FieldViolation } from './family.js';
+import type { DeviceSnapshot } from './state.js';
 
 /** The vendor `deviceTypeId` that selects the Gemini adapter. */
 export type GeminiDeviceTypeId = 'wayneWaterGemini';
@@ -38,3 +39,251 @@ export type GeminiTelemetryField =
 
 /** Every device metadata field Gemini reports. */
 export type GeminiMetadataField = 'wifi_signal_dbm' | 'mcu_firmware_version' | 'wifi_firmware_version' | 'mcu_target_version';
+
+/** Gemini's decoded telemetry. `backupPumpTimestamp` and `testTimestamp` are the only optional members. */
+export interface GeminiTelemetryState {
+  waterLevel: number;
+  primaryPumpRunning: boolean;
+  primaryPumpFault: boolean;
+  backupPumpRunning: boolean;
+  backupPumpFault: boolean;
+  backupPumpFuseBlown: boolean;
+  backupPumpTimestamp: number | undefined;
+  acPower: boolean;
+  batteryCharging: boolean;
+  batteryVoltageLow: boolean;
+  batteryHealth: number;
+  hoursOfProtection: number;
+  waterSensorFault: boolean;
+  serialCommunications: boolean;
+  alarmAudioMuted: boolean;
+  testRunning: boolean;
+  testTimestamp: number | undefined;
+  offline: boolean;
+}
+
+/** Gemini's decoded device metadata. Every member is optional; the vendor omits all four on some firmware. */
+export interface GeminiMetadataState {
+  wifiSignalDbm: number | undefined;
+  mcuFirmwareVersion: string | undefined;
+  wifiFirmwareVersion: string | undefined;
+  mcuTargetVersion: string | undefined;
+}
+
+/** Gemini's complete decoded domain state. */
+export interface GeminiDomainState {
+  telemetry: GeminiTelemetryState;
+  metadata: GeminiMetadataState;
+}
+
+// The known enum codes, read from hardware-observed vendor values. `water_level`
+// includes 0 even though no hardware evidence validates it as a level yet: this
+// is a shape check on what the vendor can legally send, not the level lookup
+// itself, which stays out of this module (D-014).
+const WATER_LEVEL_VALUES: ReadonlySet<number> = new Set([0, 1, 3, 7, 15, 31]);
+const BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8, 16, 32]);
+const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8]);
+
+type FieldCheck = (data: Readonly<Record<string, unknown>>) => FieldViolation | undefined;
+
+function requiredBoolean(field: string): FieldCheck {
+  return (data) => {
+    if (!(field in data)) {
+      return { field, reason: 'missing' };
+    }
+
+    return typeof data[field] === 'boolean' ? undefined : { field, reason: 'wrong-type' };
+  };
+}
+
+function requiredEnum(field: string, legalValues: ReadonlySet<number>): FieldCheck {
+  return (data) => {
+    if (!(field in data)) {
+      return { field, reason: 'missing' };
+    }
+
+    const value = data[field];
+
+    if (typeof value !== 'number') {
+      return { field, reason: 'wrong-type' };
+    }
+
+    return legalValues.has(value) ? undefined : { field, reason: 'out-of-domain' };
+  };
+}
+
+function optionalNumber(field: string): FieldCheck {
+  return (data) => {
+    if (!(field in data)) {
+      return undefined;
+    }
+
+    return typeof data[field] === 'number' ? undefined : { field, reason: 'wrong-type' };
+  };
+}
+
+function optionalString(field: string): FieldCheck {
+  return (data) => {
+    if (!(field in data)) {
+      return undefined;
+    }
+
+    return typeof data[field] === 'string' ? undefined : { field, reason: 'wrong-type' };
+  };
+}
+
+// `backup_pump_timestamp` and `test_timestamp` are the only two optional
+// telemetry fields; every other of the 16 is required.
+const TELEMETRY_CHECKS: readonly FieldCheck[] = [
+  requiredEnum('water_level', WATER_LEVEL_VALUES),
+  requiredBoolean('primary_pump_running'),
+  requiredBoolean('primary_pump_fault'),
+  requiredBoolean('backup_pump_running'),
+  requiredBoolean('backup_pump_fault'),
+  requiredBoolean('backup_pump_fuse_blown'),
+  optionalNumber('backup_pump_timestamp'),
+  requiredBoolean('ac_power'),
+  requiredBoolean('battery_charging'),
+  requiredBoolean('battery_voltage_low'),
+  requiredEnum('battery_health', BATTERY_HEALTH_VALUES),
+  requiredEnum('hours_of_protection', HOURS_OF_PROTECTION_VALUES),
+  requiredBoolean('water_sensor_fault'),
+  requiredBoolean('serial_communications'),
+  requiredBoolean('alarm_audio_muted'),
+  requiredBoolean('test_running'),
+  optionalNumber('test_timestamp'),
+  requiredBoolean('offline'),
+];
+
+// Every metadata field is optional: the vendor omits all four on some
+// firmware, and an absent field is not a violation.
+const METADATA_CHECKS: readonly FieldCheck[] = [
+  optionalNumber('wifi_signal_dbm'),
+  optionalString('mcu_firmware_version'),
+  optionalString('wifi_firmware_version'),
+  optionalString('mcu_target_version'),
+];
+
+function violationsOf(checks: readonly FieldCheck[], data: Readonly<Record<string, unknown>>): FieldViolation[] {
+  const violations: FieldViolation[] = [];
+
+  for (const check of checks) {
+    const violation = check(data);
+
+    if (violation !== undefined) {
+      violations.push(violation);
+    }
+  }
+
+  return violations;
+}
+
+function validate(snapshot: DeviceSnapshot): FamilyValidation {
+  const violations = [...violationsOf(TELEMETRY_CHECKS, snapshot.data), ...violationsOf(METADATA_CHECKS, snapshot.metadata)];
+
+  return violations.length === 0 ? { valid: true } : { valid: false, violations };
+}
+
+// `decode()` runs only after `validate()` confirms every field's shape, so a
+// mismatch here means that contract was broken rather than a value this
+// module should guess at.
+function booleanField(data: Readonly<Record<string, unknown>>, field: string): boolean {
+  const value = data[field];
+
+  if (typeof value !== 'boolean') {
+    throw new TypeError(`decode() expected ${field} to be a boolean; validate() must reject this snapshot first`);
+  }
+
+  return value;
+}
+
+function numberField(data: Readonly<Record<string, unknown>>, field: string): number {
+  const value = data[field];
+
+  if (typeof value !== 'number') {
+    throw new TypeError(`decode() expected ${field} to be a number; validate() must reject this snapshot first`);
+  }
+
+  return value;
+}
+
+function optionalNumberField(data: Readonly<Record<string, unknown>>, field: string): number | undefined {
+  return field in data ? numberField(data, field) : undefined;
+}
+
+function optionalStringField(data: Readonly<Record<string, unknown>>, field: string): string | undefined {
+  if (!(field in data)) {
+    return undefined;
+  }
+
+  const value = data[field];
+
+  if (typeof value !== 'string') {
+    throw new TypeError(`decode() expected ${field} to be a string; validate() must reject this snapshot first`);
+  }
+
+  return value;
+}
+
+// Every field is read by its own name, never spread from `snapshot.data` or
+// `snapshot.metadata`, so an unread vendor key cannot reach domain state.
+function decode(snapshot: DeviceSnapshot): GeminiDomainState {
+  const { data, metadata } = snapshot;
+
+  return {
+    telemetry: {
+      waterLevel: numberField(data, 'water_level'),
+      primaryPumpRunning: booleanField(data, 'primary_pump_running'),
+      primaryPumpFault: booleanField(data, 'primary_pump_fault'),
+      backupPumpRunning: booleanField(data, 'backup_pump_running'),
+      backupPumpFault: booleanField(data, 'backup_pump_fault'),
+      backupPumpFuseBlown: booleanField(data, 'backup_pump_fuse_blown'),
+      backupPumpTimestamp: optionalNumberField(data, 'backup_pump_timestamp'),
+      acPower: booleanField(data, 'ac_power'),
+      batteryCharging: booleanField(data, 'battery_charging'),
+      batteryVoltageLow: booleanField(data, 'battery_voltage_low'),
+      batteryHealth: numberField(data, 'battery_health'),
+      hoursOfProtection: numberField(data, 'hours_of_protection'),
+      waterSensorFault: booleanField(data, 'water_sensor_fault'),
+      serialCommunications: booleanField(data, 'serial_communications'),
+      alarmAudioMuted: booleanField(data, 'alarm_audio_muted'),
+      testRunning: booleanField(data, 'test_running'),
+      testTimestamp: optionalNumberField(data, 'test_timestamp'),
+      offline: booleanField(data, 'offline'),
+    },
+    metadata: {
+      wifiSignalDbm: optionalNumberField(metadata, 'wifi_signal_dbm'),
+      mcuFirmwareVersion: optionalStringField(metadata, 'mcu_firmware_version'),
+      wifiFirmwareVersion: optionalStringField(metadata, 'wifi_firmware_version'),
+      mcuTargetVersion: optionalStringField(metadata, 'mcu_target_version'),
+    },
+  };
+}
+
+const CAPABILITIES: readonly DeviceCapability[] = ['self-test', 'alarm-mute'];
+
+// Gemini always reports both capability-backing fields, so no state-dependent
+// gating exists at this phase; the decoded state the interface passes here
+// goes unread.
+function capabilities(): readonly DeviceCapability[] {
+  return CAPABILITIES;
+}
+
+function command(capability: DeviceCapability, requested: boolean): FamilyCommand {
+  if (capability === 'self-test') {
+    return { desiredData: { test_running: requested } };
+  }
+
+  return { desiredData: { alarm_audio_muted: requested } };
+}
+
+/** The Gemini family adapter: strict validation, field-by-field decoding, and its two official commands. */
+export const geminiFamily: DeviceFamily<GeminiDomainState> = {
+  deviceTypeId: 'wayneWaterGemini',
+  displayName: 'Wayne Water Gemini',
+  implemented: true,
+  validate,
+  decode,
+  capabilities,
+  command,
+};

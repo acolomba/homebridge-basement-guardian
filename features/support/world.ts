@@ -20,8 +20,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { After, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
+import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
-import { BasementGuardianPlatform } from '../../src/platform.js';
+import { BasementGuardianPlatform, registerDiscoveredDevices } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 
@@ -37,6 +38,7 @@ import type { FakeShadowBroker } from './fakeShadowBroker.js';
 import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
 import type { RedactingLogger } from '../../src/logging.js';
+import type { BasementGuardianPlatformAccessory } from '../../src/platform.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
@@ -474,6 +476,8 @@ export class BasementGuardianWorld extends World {
 
   private async launch(): Promise<void> {
     const homebridge = await this.homebridge();
+    const registry = createFamilyRegistry();
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const runtime = createAccountRuntimeFromConfig({
       config: {
         name: 'Basement Guardian',
@@ -489,6 +493,11 @@ export class BasementGuardianWorld extends World {
       log: this.logger(),
       connect,
       createSalt: () => HARNESS_SALT,
+      // Drives the same registration logic `BasementGuardianPlatform` runs, so a scenario proves
+      // the real discovery pipeline rather than a parallel copy of it.
+      onTrustworthyInventory: (deviceIds: readonly string[]): void => {
+        registerDiscoveredDevices({ api: homebridge.api, accessories, registry, log: this.logger() }, deviceIds, runtime.store);
+      },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.
       ...(this.shortRotation ? { rotationLeadMs: HARNESS_ROTATION_LEAD_MS, minRotationDelayMs: HARNESS_MIN_ROTATION_DELAY_MS } : {}),
