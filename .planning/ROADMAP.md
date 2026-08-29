@@ -77,9 +77,9 @@ Plans:
 
 **Gap closure Wave 2** *(blocked on Gap closure Wave 1)*
 
-- [ ] 01-14-PLAN.md — Shadow connection generation and transport deadlines
-- [ ] 01-15-PLAN.md — Account-identifier privacy, logger bounds, form agreement
-- [ ] 01-16-PLAN.md — REST and auth client robustness
+- [x] 01-14-PLAN.md — Shadow connection generation and transport deadlines
+- [x] 01-15-PLAN.md — Account-identifier privacy, logger bounds, form agreement
+- [x] 01-16-PLAN.md — REST and auth client robustness
 
 **Gap closure Wave 3** *(blocked on Gap closure Wave 2)*
 
@@ -178,7 +178,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 12/17 | In Progress|  |
+| 1. Secure Cloud Foundation | 15/17 | In Progress|  |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
