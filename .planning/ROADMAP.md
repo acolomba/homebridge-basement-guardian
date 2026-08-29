@@ -83,7 +83,7 @@ Plans:
 
 **Gap closure Wave 3** *(blocked on Gap closure Wave 2)*
 
-- [ ] 01-13-PLAN.md — Merge reducer: false freshness, source ownership, change detection
+- [x] 01-13-PLAN.md — Merge reducer: false freshness, source ownership, change detection
 
 **Gap closure Wave 4** *(blocked on Gap closure Wave 3)*
 
@@ -178,7 +178,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Secure Cloud Foundation | 15/17 | In Progress|  |
+| 1. Secure Cloud Foundation | 16/17 | In Progress|  |
 | 2. Safe Gemini Discovery and Identity | 0/TBD | Not started | - |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
