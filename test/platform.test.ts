@@ -49,10 +49,33 @@ function createRecordingLog(messages: string[]): Logging {
 
 // Drains the promise chains a lifecycle event starts, so the work it triggered
 // has settled before the assertions run.
+//
+// A fixed turn count is sound only for a negative assertion, where draining
+// longer can only make the case stricter. For anything the lifecycle reaches
+// asynchronously, wait on the condition itself with `until`: eight turns is a
+// guess, and a filesystem write behind the token cache needs more of them on a
+// slower machine than on the one the constant was chosen on.
 async function settle(): Promise<void> {
   for (let turn = 0; turn < 8; turn += 1) {
     await nextEventLoopTurn();
   }
+}
+
+// Waits for a condition the lifecycle reaches on its own schedule, rather than
+// for a number of turns that happened to be enough locally. Fails with what it
+// was waiting for instead of with whatever the assertion would have said.
+async function until(reached: () => boolean | Promise<boolean>, what: string): Promise<void> {
+  const deadlineMs = Date.now() + 5_000;
+
+  while (Date.now() < deadlineMs) {
+    if (await reached()) {
+      return;
+    }
+
+    await nextEventLoopTurn();
+  }
+
+  throw new Error(`timed out waiting for ${what}`);
 }
 
 const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
@@ -197,7 +220,7 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await settle();
+    await until(() => requestSpy.mock.callCount() >= 2, 'the launch event to reach the vendor');
     const requestsAfterLaunch = requestSpy.mock.callCount();
     shutdown?.();
     await settle();
@@ -228,7 +251,7 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await settle();
+    await until(async () => (await readdir(storagePath)).includes(TOKEN_CACHE_FILENAME), 'the token cache file to be written');
     shutdown?.();
     await settle();
 
