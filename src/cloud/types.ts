@@ -24,6 +24,44 @@ export interface ApiDevice {
   data: Readonly<Record<string, unknown>>;
 }
 
+// The device routes wrap their answer in an envelope, and the two keys are not
+// the same one: the list route sends `devices`, the single-device route sends
+// `device`. A guard that accepted either key would let a crossed route through,
+// so each is narrowed on its own.
+
+/**
+ * One device record as the vendor sends it on the wire.
+ *
+ * The record carries eight more top-level keys than the plugin reads, among them
+ * the account identifier and an embedded shadow snapshot. Only the fields
+ * narrowed here are described, and only they survive normalization.
+ */
+export interface WireDevice {
+  deviceId: string;
+  deviceTypeId: string;
+  name: string;
+  connectivity: ApiConnectivity;
+  data: Readonly<Record<string, unknown>>;
+  /**
+   * The vendor's nested attributes.
+   *
+   * `serialNumber` lives here and never at the top level. So does `productLine`,
+   * which is not narrowed because nothing in the plugin reads it; requiring an
+   * unread field would only add a way to refuse a device that could be served.
+   */
+  attributes: { serialNumber: string };
+}
+
+/** The list route's answer. Its key is plural. */
+export interface WireDeviceListResponse {
+  devices: WireDevice[];
+}
+
+/** The single-device route's answer. Its key is singular. */
+export interface WireDeviceResponse {
+  device: WireDevice;
+}
+
 /**
  * The temporary security-token credentials the vendor issues for the shadow
  * connection.
@@ -58,7 +96,7 @@ export interface CommandResult {
   success: boolean;
 }
 
-const DEVICE_STRING_FIELDS = ['deviceId', 'deviceTypeId', 'name', 'serialNumber'];
+const WIRE_DEVICE_STRING_FIELDS = ['deviceId', 'deviceTypeId', 'name'];
 const CREDENTIAL_STRING_FIELDS = ['AccessKeyId', 'SecretAccessKey', 'SessionToken', 'Expiration'];
 const CREDENTIALS_RESPONSE_STRING_FIELDS = ['endpoint', 'clientId'];
 
@@ -87,14 +125,47 @@ function isAwsCredentials(value: unknown): value is AwsCredentials {
   return isRecord(value) && hasStringFields(value, CREDENTIAL_STRING_FIELDS);
 }
 
-/** Narrows an unknown JSON value to one vendor device record. */
-export function isApiDevice(value: unknown): value is ApiDevice {
-  return isRecord(value) && hasStringFields(value, DEVICE_STRING_FIELDS) && isApiConnectivity(value.connectivity) && isRecord(value.data);
+function isWireDeviceAttributes(value: unknown): value is { serialNumber: string } {
+  return isRecord(value) && typeof value.serialNumber === 'string';
 }
 
-/** Narrows an unknown JSON value to a list of vendor device records. */
-export function isApiDeviceList(value: unknown): value is ApiDevice[] {
-  return isUnknownArray(value) && value.every((device) => isApiDevice(device));
+function isWireDevice(value: unknown): value is WireDevice {
+  return (
+    isRecord(value) &&
+    hasStringFields(value, WIRE_DEVICE_STRING_FIELDS) &&
+    isWireDeviceAttributes(value.attributes) &&
+    isApiConnectivity(value.connectivity) &&
+    isRecord(value.data)
+  );
+}
+
+/** Narrows an unknown JSON value to the list route's answer. */
+export function isWireDeviceListResponse(value: unknown): value is WireDeviceListResponse {
+  return isRecord(value) && isUnknownArray(value.devices) && value.devices.every((device) => isWireDevice(device));
+}
+
+/** Narrows an unknown JSON value to the single-device route's answer. */
+export function isWireDeviceResponse(value: unknown): value is WireDeviceResponse {
+  return isRecord(value) && isWireDevice(value.device);
+}
+
+/**
+ * Builds the plugin's device record from one wire record.
+ *
+ * The result is built field by field and the wire record is never spread, so the
+ * account identifier, the embedded shadow snapshot, and every other key the
+ * vendor sends stop here rather than reaching accessory context or a log
+ * (AUTH-02).
+ */
+export function toApiDevice(device: WireDevice): ApiDevice {
+  return {
+    deviceId: device.deviceId,
+    deviceTypeId: device.deviceTypeId,
+    name: device.name,
+    serialNumber: device.attributes.serialNumber,
+    connectivity: device.connectivity,
+    data: device.data,
+  };
 }
 
 /** Narrows an unknown JSON value to the vendor's temporary-credentials answer. */
