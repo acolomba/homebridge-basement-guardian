@@ -5,49 +5,20 @@
  * scenario can assert the authorization header and the command payload without knowing how the
  * request was sent.
  *
- * The wire shapes below mirror the vendor contract. They are declared here so the harness compiles
- * against the transport alone; once the shared wire-type module is reachable from this directory,
- * the harness reads the shapes from there instead of restating them.
+ * The wire shapes come from the plugin's own boundary module, so a scenario cannot pass a payload
+ * the production predicates would reject.
  */
 
 import { LOOPBACK_ADDRESS, readBody, respondJson, startLoopbackServer } from './loopbackServer.js';
 
+import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+
+export type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 
 const DEVICES_PATH = '/devices';
 const CREDENTIALS_PATH = '/credentials/aws';
 const COMMAND_SUFFIX = '/data';
-
-/** Whether the vendor last saw the device, and when. */
-export interface ApiConnectivity {
-  connected: boolean;
-  timestamp: number;
-}
-
-/** One device as the vendor device routes report it. */
-export interface ApiDevice {
-  deviceId: string;
-  deviceTypeId: string;
-  name: string;
-  serialNumber: string;
-  connectivity: ApiConnectivity;
-  data: Readonly<Record<string, unknown>>;
-}
-
-/** The temporary security-token credentials the vendor hands out for the shadow connection. */
-export interface AwsCredentials {
-  AccessKeyId: string;
-  SecretAccessKey: string;
-  SessionToken: string;
-  Expiration: string;
-}
-
-/** The credentials route's response: where to connect, as whom, and with which credentials. */
-export interface AwsCredentialsResponse {
-  endpoint: string;
-  clientId: string;
-  credentials: AwsCredentials;
-}
 
 /** One request, in the shape the service received it. */
 export interface FakeRestRequest {
