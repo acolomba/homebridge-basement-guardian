@@ -10,7 +10,9 @@ const AWS_SESSION_CREDENTIAL_FIELDS = 'AccessKeyId|SecretAccessKey|SessionToken'
 const PRESIGNED_URL_PARAMETERS = 'X-Amz-Credential|X-Amz-Security-Token|X-Amz-Signature';
 const AUTHENTICATION_BODY_FIELDS = 'password|username';
 
-const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w.+/=-]+/g;
+// A token carries dots, so the class holds one, but the match may not end on a
+// dot: a token at the end of a sentence would otherwise swallow the full stop.
+const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=-](?:[\w.+/=-]*[\w+/=-])?/g;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\\s*[:=]\\s*"?)[^",\\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\\s"]+`, 'g');
 const AUTHENTICATION_BODY_PATTERN = new RegExp(`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\\s*[:=]\\s*"?)[^",}]+`, 'gi');
