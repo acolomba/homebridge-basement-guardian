@@ -7,7 +7,7 @@ import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
-import { AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
+import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
@@ -36,6 +36,10 @@ const THROTTLE_RETRY_MS = 1_800_000;
 // The one actionable line a degraded monitoring path produces, restated here so
 // the case fails if the wording drifts.
 const DEGRADED_LINE = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
+
+// The line a terminal authentication answer records, restated here for the same
+// reason.
+const STOPPED_LINE = 'Monitoring has stopped because the vendor refused the account credentials. Correct the account in Homebridge to start the plugin again.';
 
 // The rotation the fixture expiry produces: an hour of credential life, less
 // the ten-minute lead.
@@ -865,6 +869,36 @@ describe('stop', () => {
     );
   });
 
+  test('SYNC-05 leaves the monitoring path where it stood, because a shutdown is not a monitoring failure', async (t) => {
+    // arrange
+    const { runtime } = harness(t);
+    await runtime.start();
+    await settle();
+    const beforeStop = runtime.monitoringPath;
+
+    // act
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'shadow-and-poll' });
+  });
+
+  test('SYNC-05 leaves the monitoring path alone when a shutdown aborts a poll already in flight', async (t) => {
+    // arrange
+    const { runtime, advance } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
+    await runtime.start();
+    await settle();
+    await advance(POLL_INTERVAL_MS);
+    const beforeStop = runtime.monitoringPath;
+
+    // act
+    await runtime.stop();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'shadow-and-poll' });
+  });
+
   test('SYNC-05 arms no timer that outlives it', async (t) => {
     // arrange
     const { runtime, calls, advance } = harness(t);
@@ -882,6 +916,87 @@ describe('stop', () => {
 });
 
 describe('the degraded monitoring path', () => {
+  test('reports monitoring unavailable before anything has succeeded', (t) => {
+    // arrange
+    const { runtime } = harness(t);
+
+    // act & assert
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+  });
+
+  test('reports monitoring unavailable while the poll is failing and the shadow is down, and the polling-only path once a poll succeeds', async (t) => {
+    // arrange
+    const { runtime, advance } = harness(t, {
+      devices: [
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+        () => Promise.resolve([geminiDevice()]),
+      ],
+      shadow: [false],
+    });
+    await runtime.start();
+    await settle();
+    const whileFailing = runtime.monitoringPath;
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ whileFailing, afterRecovery: runtime.monitoringPath }, { whileFailing: 'unavailable', afterRecovery: 'poll-only' });
+  });
+
+  test('D-13 reports monitoring unavailable and records the stop when the vendor refuses the account credentials', async (t) => {
+    // arrange
+    const { runtime, logged } = harness(t, {
+      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
+      { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
+    );
+  });
+
+  test('D-13 reports monitoring unavailable and records the stop when authentication has halted', async (t) => {
+    // arrange
+    const { runtime, logged } = harness(t, {
+      devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))],
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
+      { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
+    );
+  });
+
+  test('D-22 recovers the combined path after a throttled answer rather than claiming the runtime stopped for good', async (t) => {
+    // arrange
+    const { runtime, logged, advance } = harness(t, {
+      devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
+    });
+    await runtime.start();
+    await settle();
+    const whileWaiting = runtime.monitoringPath;
+
+    // act
+    await advance(THROTTLE_RETRY_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { whileWaiting, afterRetry: runtime.monitoringPath, stops: logged.filter((line) => line.endsWith(STOPPED_LINE)) },
+      { whileWaiting: 'unavailable', afterRetry: 'shadow-and-poll', stops: [] },
+    );
+  });
+
   test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
     // arrange
     const { runtime, advance } = harness(t, { shadow: [false] });
@@ -891,7 +1006,7 @@ describe('the degraded monitoring path', () => {
     await advance(0);
 
     // assert
-    assert.strictEqual(runtime.monitoringPath, 'rest-only');
+    assert.strictEqual(runtime.monitoringPath, 'poll-only');
   });
 
   test('D-15 reports the degraded path once across three failed shadow attempts', async (t) => {
@@ -937,7 +1052,7 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(
       { path: runtime.monitoringPath, recoveries: logged.filter((line) => line.endsWith('recovered.')) },
-      { path: 'rest-and-shadow', recoveries: ['info The shadow connection recovered.'] },
+      { path: 'shadow-and-poll', recoveries: ['info The shadow connection recovered.'] },
     );
   });
 
@@ -950,7 +1065,7 @@ describe('the degraded monitoring path', () => {
     await settle();
 
     // assert
-    assert.strictEqual(runtime.monitoringPath, 'rest-and-shadow');
+    assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
   });
 
   test('falls back to the polling-only path without reporting a fault when the connection closes', async (t) => {
@@ -963,7 +1078,7 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onDisconnected('transport-closed');
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, warnings: countOf(logged, 'warn') }, { path: 'rest-only', warnings: 0 });
+    assert.deepStrictEqual({ path: runtime.monitoringPath, warnings: countOf(logged, 'warn') }, { path: 'poll-only', warnings: 0 });
   });
 
   test('SYNC-04 reports no fault for the daily reconnect the provider connection ceiling forces', async (t) => {
@@ -977,7 +1092,7 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onConnected();
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'rest-and-shadow', reports: [] });
+    assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'shadow-and-poll', reports: [] });
   });
 
   test('D-15 reports the degraded path once while the connection keeps failing', async (t) => {
@@ -994,7 +1109,7 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'rest-only', warnings: [`warn ${DEGRADED_LINE}`] },
+      { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
     );
   });
 
@@ -1010,7 +1125,7 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'rest-only', warnings: [`warn ${DEGRADED_LINE}`] },
+      { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
     );
   });
 
@@ -1193,7 +1308,7 @@ describe('createAccountRuntimeFromConfig', () => {
     });
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, requests: requestSpy.mock.callCount(), sockets }, { path: 'rest-only', requests: 0, sockets: 0 });
+    assert.deepStrictEqual({ path: runtime.monitoringPath, requests: requestSpy.mock.callCount(), sockets }, { path: 'unavailable', requests: 0, sockets: 0 });
   });
 
   test('AUTH-02 registers the bearer token and the temporary credentials with the redacting logger', async (t) => {
