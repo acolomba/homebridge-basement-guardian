@@ -19,6 +19,10 @@ Phase 2 turns the account-level runtime from Phase 1 into published accessories 
 
 ### Identity and privacy — `deviceId` is not sensitive
 
+- **D-01 — `deviceId` is not sensitive:** Treat the vendor `deviceId` as non-sensitive; it may be
+  stored in `accessory.context` and written to logs. `D-027` still governs public artifacts —
+  fixtures, committed samples, and anything published keep placeholders.
+
 The vendor `deviceId` has the shape `<account-id>_<serial-number>`, so it embeds the account
 identifier. The Phase 1 security audit recorded this as a collision between the Identity
 constraint and the Privacy constraint, because `src/persistence/accessoryContext.ts` declares
@@ -43,6 +47,10 @@ constraint and the Privacy constraint, because `src/persistence/accessoryContext
 Not user-visible and not sensitive are different claims, and only the second one changed.
 
 ### Inventory reconciliation and removal
+
+- **D-02 — Empty inventory counts toward removal:** A valid empty device list counts as one of
+  the two consecutive confirmations required before a device is removed, keeping `D-029` exactly
+  as locked — only failed inventories never count.
 
 `DEV-05` and `D-029` describe absence from the account inventory. They do not describe a device
 that goes offline. The three conditions stay separate:
@@ -78,6 +86,11 @@ Confirmed removal ends the observation epoch under `D-020`. A later return start
 
 ### Family adapter registry — build the full descriptor
 
+- **D-03 — Build the full capability-descriptor registry:** Per `DEV-02`, the family-adapter
+  registry declares capabilities, services, and command construction per family rather than a
+  minimal interface plus a lookup map. Gemini is the only complete implementation this milestone;
+  HALO stays deferred to v2.
+
 `D-003` keeps authentication, transports, state, lifecycle, and reconciliation family-neutral, and
 gives each adapter its own validation, decoding, capabilities, services, and commands. Phase 1
 already laid the seam in `src/device/family.ts`: `DeviceFamily<TDomainState>`, `DeviceCapability`,
@@ -96,6 +109,11 @@ each of the three to produce its own explanation, and neither non-Gemini case ma
 publication of valid Gemini devices in the same inventory.
 
 ### Degradation presentation — inactive, not faulty
+
+- **D-04 — Degrade in place with `StatusActive=false`, not `StatusFault`:** A published accessory
+  that stops validating sets `StatusActive` to false on the affected services and leaves
+  `StatusFault` at `NO_FAULT`. `SAFE-04`'s five vendor-reported fault conditions are never asserted
+  for a plugin-side interpretation failure.
 
 `DEV-08` permits "inactive or faulty" and `D-014` permits "faulty/inactive". The user asked for
 this to be settled in Phase 2 rather than deferred to Phase 3.
@@ -131,6 +149,10 @@ Phase 3 should decide how visibility is achieved within `SAFE-04`, which forbids
 System Fault adapter.
 
 ### Log cadence for non-Gemini profiles
+
+- **D-05 — Log unsupported profiles once per device per run:** Log an unsupported or unknown
+  profile once per device per plugin run, and again only when that device's `deviceTypeId`
+  changes.
 
 Not user-specified; decided here. Log an unsupported or unknown profile **once per device per
 plugin run**, and log again when that device's `deviceTypeId` changes. `DEV-08` already requires
