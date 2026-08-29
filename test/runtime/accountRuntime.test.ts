@@ -190,7 +190,6 @@ function fakeShadow(
 
         return whileStarting === undefined ? Promise.resolve() : whileStarting();
       },
-      requestFullShadow: (): Promise<void> => Promise.resolve(),
       close: (): Promise<void> => {
         closes += 1;
         live = false;
