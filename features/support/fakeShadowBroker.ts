@@ -33,6 +33,9 @@ export interface FakeShadowBroker {
   readonly handshakes: readonly string[];
   readonly clientIds: readonly string[];
 
+  /** Every topic a connected client published to, in arrival order. */
+  readonly publishedTopics: readonly string[];
+
   /** Publishes a device-reported patch on the update-accepted topic. */
   publishReported(deviceId: string, reported: Record<string, unknown>, version: number): void;
 
@@ -44,6 +47,17 @@ export interface FakeShadowBroker {
 
   /** Closes every live connection, which is how a scenario forces the reconnect path. */
   disconnectAll(): void;
+
+  /**
+   * Rejects every later handshake, which is how a scenario drives the degraded path.
+   *
+   * The rejection happens before the upgrade, so a refused attempt reaches neither the recorded
+   * handshakes nor the broker, and the client sees a failure rather than a clean close.
+   */
+  refuseConnections(): void;
+
+  /** Accepts handshakes again, which is how a scenario drives the recovery path. */
+  acceptConnections(): void;
 
   /** Stops the broker and the WebSocket service and resolves once every connection is destroyed. */
   close(): Promise<void>;
@@ -141,15 +155,26 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
   const broker = await Aedes.createBroker();
   const handshakes: string[] = [];
   const clientIds: string[] = [];
+  const publishedTopics: string[] = [];
+  let refusing = false;
 
   const server = new WebSocketServer({
     host: LOOPBACK_ADDRESS,
     port: 0,
     handleProtocols: (protocols) => (protocols.has('mqtt') ? 'mqtt' : false),
+    verifyClient: () => !refusing,
   });
 
   broker.on('client', (client) => {
     clientIds.push(client.id);
+  });
+
+  // A null client is the broker publishing to its own subscribers, which is the scenario speaking
+  // rather than the plugin. Only what a client sent is recorded.
+  broker.on('publish', (packet, client) => {
+    if (client !== null) {
+      publishedTopics.push(packet.topic);
+    }
   });
 
   server.on('connection', (socket, request) => {
@@ -163,6 +188,7 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     host: hostOf(server),
     handshakes,
     clientIds,
+    publishedTopics,
     publishReported(deviceId: string, reported: Record<string, unknown>, version: number): void {
       publishJson(broker, shadowTopic(deviceId, 'update/accepted'), { state: { reported }, version });
     },
@@ -176,6 +202,12 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
       for (const socket of server.clients) {
         socket.close();
       }
+    },
+    refuseConnections(): void {
+      refusing = true;
+    },
+    acceptConnections(): void {
+      refusing = false;
     },
     async close(): Promise<void> {
       for (const socket of server.clients) {

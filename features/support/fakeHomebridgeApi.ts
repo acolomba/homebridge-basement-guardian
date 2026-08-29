@@ -21,6 +21,9 @@ export interface FakeHomebridgeApi {
   readonly api: API;
   readonly storagePath: string;
 
+  /** Every lifecycle event a listener was registered for, in registration order. */
+  readonly registrations: readonly string[];
+
   /** Runs the handlers registered for a lifecycle event and awaits what each one returns. */
   emit(event: 'didFinishLaunching' | 'shutdown'): Promise<void>;
 
@@ -42,6 +45,7 @@ class HarnessPlatformAccessory {
 export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-'));
   const handlers = new Map<LifecycleEvent, (() => unknown)[]>();
+  const registrations: string[] = [];
 
   const standIn = {
     hap: {},
@@ -50,6 +54,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     on(event: LifecycleEvent, listener: () => void) {
       const listeners = handlers.get(event) ?? [];
 
+      registrations.push(event);
       listeners.push(listener);
       handlers.set(event, listeners);
 
@@ -63,6 +68,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     // the failure this harness wants while the accessory work is still ahead.
     api: standIn as unknown as API,
     storagePath,
+    registrations,
     async emit(event: 'didFinishLaunching' | 'shutdown'): Promise<void> {
       for (const listener of handlers.get(event) ?? []) {
         await listener();

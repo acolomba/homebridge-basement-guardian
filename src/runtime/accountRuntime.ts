@@ -15,7 +15,7 @@ import type { FailureLog } from './failureLog.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
 import type { MqttConnect } from '../cloud/mqttTransport.js';
-import type { CredentialCache, ShadowClient, ShadowCredentials } from '../cloud/shadow.js';
+import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnectReason } from '../cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
 import type { BgConfig } from '../config.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
@@ -67,7 +67,7 @@ export interface ShadowRuntimeOptions {
   retry: RetryPolicy;
   onReportedPatch: (deviceId: string, patch: ReportedPatch) => void;
   onConnected: () => void;
-  onDisconnected: (reason: string) => void;
+  onDisconnected: (reason: ShadowDisconnectReason) => void;
 }
 
 /** Everything the account runtime needs, by injection. */
@@ -95,6 +95,13 @@ export interface AccountRuntimeOptions {
 /** One account's cloud work, started and stopped by the Homebridge lifecycle. */
 export interface AccountRuntime {
   readonly monitoringPath: MonitoringPath;
+  /**
+   * The canonical device state both sources land in.
+   *
+   * The runtime owns the single store, so whatever renders device state reads
+   * and subscribes here rather than keeping a second copy that can disagree.
+   */
+  readonly store: DeviceStateStore;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -202,13 +209,22 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     options.failures.recordSuccess(SHADOW);
   }
 
-  // A disconnection is not a fault. The provider closes a signed connection at
-  // a ceiling it publishes no knob for, so at least one reconnect a day is
+  // A clean close is not a fault. The provider closes a signed connection at a
+  // ceiling it publishes no knob for, so at least one reconnect a day is
   // ordinary, and the client's own guarded retry owns getting back. Only the
-  // path changes here, and it changes because the plugin is seeing less, not
-  // because a device said anything.
-  function handleShadowDisconnected(): void {
+  // path changes, and it changes because the plugin is seeing less, not because
+  // a device said anything.
+  //
+  // A failed connection and a refused subscription are the degraded path, and
+  // this is the one place that sees the whole stream of them, so the reader is
+  // told once and then on the reminder cadence rather than on every
+  // capped-backoff attempt (D-14, D-15).
+  function handleShadowDisconnected(reason: ShadowDisconnectReason): void {
     path = 'rest-only';
+
+    if (reason !== 'transport-closed') {
+      options.failures.recordFailure(SHADOW, SHADOW_DEGRADED);
+    }
   }
 
   // Opens the connection once there is both a credential cache to sign from and
@@ -403,6 +419,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     get monitoringPath(): MonitoringPath {
       return path;
     },
+
+    store: options.store,
 
     // Resolves once the first attempt has been made. A launch that must be
     // tried again waits in the background, so the Homebridge launch event is

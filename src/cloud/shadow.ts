@@ -28,6 +28,17 @@ export const SHADOW_TOPICS = {
   updateAccepted: (deviceId: string): string => `$aws/things/${deviceId}/shadow/update/accepted`,
 } as const;
 
+/**
+ * Why a shadow connection ended.
+ *
+ * `transport-closed` is routine: the provider closes an established connection
+ * at a ceiling it publishes no knob for, so at least one reconnect a day is
+ * expected operation. The other three say the plugin is seeing less than it
+ * should, and the consumer that watches the whole failure stream decides how
+ * loudly to say so (D-14, D-15).
+ */
+export type ShadowDisconnectReason = 'transport-closed' | 'transport-error' | 'subscription-refused' | 'handshake-refused';
+
 /** One handshake's worth of connection facts, as the vendor issues them. */
 export interface ShadowCredentials {
   endpoint: string;
@@ -64,7 +75,7 @@ export interface ShadowClientOptions {
   onReportedPatch: (deviceId: string, patch: ReportedPatch) => void;
   onConnected: () => void;
   /** Receives a short classification, never a URL and never credential material. */
-  onDisconnected: (reason: string) => void;
+  onDisconnected: (reason: ShadowDisconnectReason) => void;
 }
 
 /** One connection serving every device shadow on the account. */
@@ -150,6 +161,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   let devices: readonly string[] = [];
   let transport: MqttTransport | undefined;
   let live = false;
+  let established = false;
   let failed = false;
   let closing = false;
   let ending: Promise<void> | undefined;
@@ -216,23 +228,39 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     });
   }
 
+  // One failed attempt is a diagnostic note here, not a warning. A refused
+  // broker produces one of these per capped-backoff attempt, and the consumer
+  // that sees the whole stream is what holds the warning down to the reminder
+  // cadence, exactly as the authentication client already does (D-14).
   function handleError(reopen: () => void): void {
     failed = true;
-    options.log.warn('The shadow connection failed and will reconnect.');
+    options.log.debug('The shadow connection failed and will reconnect.');
     scheduleReconnect(reopen);
   }
 
-  // The provider closes a signed connection at a ceiling it does not publish a
-  // knob for, so at least one reconnect a day is expected operation. Reporting
-  // that as a fault would teach the reader to ignore the genuine ones.
+  // The provider closes an established connection at a ceiling it does not
+  // publish a knob for, so at least one reconnect a day is expected operation.
+  // Reporting that as a fault would teach the reader to ignore the genuine ones.
+  //
+  // A connection that closes without ever becoming established is a different
+  // event with the same shape: a refused handshake, which is what an expired or
+  // mis-signed credential produces, and which a WebSocket reports as a plain
+  // close with no error beside it. Reading that as routine would leave the
+  // reader with a silently dead monitoring path and nothing above debug to say
+  // so (D-15).
   function handleClose(reopen: () => void): void {
     live = false;
 
-    if (!failed) {
+    if (failed) {
+      options.onDisconnected('transport-error');
+    } else if (established) {
       options.log.debug('The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.');
+      options.onDisconnected('transport-closed');
+    } else {
+      options.log.debug('The shadow connection was refused before it was established and will be retried.');
+      options.onDisconnected('handshake-refused');
     }
 
-    options.onDisconnected(failed ? 'transport-error' : 'transport-closed');
     scheduleReconnect(reopen);
   }
 
@@ -255,7 +283,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     } catch {
       live = false;
       failed = true;
-      options.log.warn('The shadow subscription could not be established, so the connection will be retried.');
+      options.log.debug('The shadow subscription could not be established, so the connection will be retried.');
       options.onDisconnected('subscription-refused');
       void connection.end();
       scheduleReconnect(reopen);
@@ -264,6 +292,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
 
   function handleConnect(connection: MqttTransport, reopen: () => void): void {
     live = true;
+    established = true;
     options.retry.reset();
     options.onConnected();
     void requestEveryShadow(connection, reopen);
@@ -278,6 +307,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
       signUrl: signHandshake,
     });
     transport = connection;
+    established = false;
     failed = false;
     connection.onConnect(() => {
       handleConnect(connection, openConnection);

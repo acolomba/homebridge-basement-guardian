@@ -16,8 +16,13 @@ export interface ProtocolConstants {
   apiUrl: string;
   /** Public Auth0 client identifier. */
   clientId: string;
-  /** Vendor Auth0 tenant. */
-  auth0Domain: string;
+  /**
+   * Base URL of the vendor Auth0 tenant.
+   *
+   * The value carries its scheme, as `apiUrl` does, so the one place that
+   * builds a grant URL concatenates rather than deciding a scheme of its own.
+   */
+  auth0Url: string;
   /** Auth0 password realm. */
   auth0Realm: string;
   /** AWS IoT region. */
