@@ -127,11 +127,14 @@ async function assertDegradedPathWarnedOnce(this: BasementGuardianWorld): Promis
 
 Then('the log warns once about the degraded path', { timeout: STEP_TIMEOUT_MS }, assertDegradedPathWarnedOnce);
 
-function assertRecoveryAnnouncedOnce(this: BasementGuardianWorld): void {
+// The runtime moves the monitoring path before it reports the recovery, so a step that waited on
+// the path alone can read the log between the two.
+async function assertRecoveryAnnouncedOnce(this: BasementGuardianWorld): Promise<void> {
+  await this.untilTrue(() => countOf(this.logged, RECOVERY_LINE) >= 1, DEADLINE_MS, 'the log never announced the recovery');
   assert.equal(countOf(this.logged, RECOVERY_LINE), 1);
 }
 
-Then('the log announces the recovery once', assertRecoveryAnnouncedOnce);
+Then('the log announces the recovery once', { timeout: STEP_TIMEOUT_MS }, assertRecoveryAnnouncedOnce);
 
 function assertNoErrorLogged(this: BasementGuardianWorld): void {
   assert.deepEqual(
