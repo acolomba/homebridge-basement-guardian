@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { access, chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -24,6 +24,8 @@ const ACCOUNT_EMAIL = 'account@example.test';
 const ACCOUNT_PASSWORD = 'account-password';
 const OWNER_ONLY_MODE = 0o600;
 const GROUP_READABLE_MODE = 0o644;
+const OWNER_ALL_MODE = 0o700;
+const READ_ONLY_DIRECTORY_MODE = 0o500;
 const PERMISSION_BITS = 0o777;
 const THIRTY_MINUTES_MS = 1_800_000;
 const GRANT_ROUTE = 'POST /oauth/token';
@@ -88,11 +90,18 @@ function createRecordingLog(messages: string[]): Logging {
   });
 }
 
+// A directory mode stops a write only for a process the mode applies to:
+// Windows does not enforce one, and a process running as root is exempt.
+const DIRECTORY_MODES_BLOCK_WRITES = process.platform !== 'win32' && process.getuid?.() !== 0;
+
 // One storage directory per case, so no case can observe another's cache file.
+// The mode is restored first, because a case that made the directory read-only
+// would otherwise leave its own contents undeletable.
 async function createStoragePath(t: TestContext): Promise<string> {
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-auth-'));
 
   t.after(async () => {
+    await chmod(storagePath, OWNER_ALL_MODE);
     await rm(storagePath, { recursive: true, force: true });
   });
 
@@ -259,6 +268,35 @@ test('authenticates again once the cached token has expired', async (t) => {
   assert.strictEqual(grantRequests.length, 2);
 });
 
+test('AUTH-01 answers two callers that start together from the cache file, without authenticating', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  await writeCacheText(storagePath, JSON.stringify(cacheContents()));
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+
+  // assert
+  assert.deepStrictEqual(idTokens, ['cached-token-1', 'cached-token-1']);
+  assert.deepStrictEqual(grantRequests, []);
+});
+
+test('AUTH-01 issues one grant for two callers that start together with no current token', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+
+  // assert
+  assert.deepStrictEqual(idTokens, ['id-token-1', 'id-token-1']);
+  assert.strictEqual(grantRequests.length, 1);
+});
+
 test('AUTH-01 stores the granted token in the cache file under the storage path', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
@@ -365,7 +403,7 @@ for (const { description, text } of [
   });
 }
 
-test('D-08 authenticates and keeps serving at debug level when the cache path cannot be read or written', async (t) => {
+test('D-08 authenticates, keeps serving at debug level, and orphans no temporary file when the cache path cannot be read or written', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   await mkdir(join(storagePath, TOKEN_CACHE_FILENAME));
@@ -379,6 +417,7 @@ test('D-08 authenticates and keeps serving at debug level when the cache path ca
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.strictEqual(grantRequests.length, 1);
+  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
   assert.deepStrictEqual(messages, [
     'debug The cached token could not be read; authenticating again.',
     'debug The token cache could not be written; the token is held in memory only.',
@@ -415,25 +454,64 @@ test('AUTH-02 writes neither the account email nor the account password into the
   assert.strictEqual(contents.includes('id-token-1'), true);
 });
 
-test('AUTH-02 leaves an earlier cache file byte-for-byte unchanged when the temporary file cannot be written', async (t) => {
+test('AUTH-02 leaves no temporary file beside the cache file it wrote', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
-  const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
-  await writeCacheText(storagePath, earlierContents);
-  await mkdir(`${cachePath}.${String(process.pid)}.tmp`);
   stubFetch(t, () => grantResponse('id-token-1'));
   const authClient = createAuthClient(authOptions(storagePath));
 
   // act
-  const idToken = await authClient.idToken(new AbortController().signal);
+  await authClient.idToken(new AbortController().signal);
 
   // assert
-  assert.strictEqual(idToken, 'id-token-1');
-  assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
+  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
 });
 
+if (DIRECTORY_MODES_BLOCK_WRITES) {
+  test('AUTH-02 leaves an earlier cache file byte-for-byte unchanged when the temporary file cannot be written', async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+    const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
+    await writeCacheText(storagePath, earlierContents);
+    stubFetch(t, () => grantResponse('id-token-1'));
+    const authClient = createAuthClient(authOptions(storagePath));
+    await chmod(storagePath, READ_ONLY_DIRECTORY_MODE);
+
+    // act
+    const idToken = await authClient.idToken(new AbortController().signal);
+
+    // assert
+    assert.strictEqual(idToken, 'id-token-1');
+    assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
+  });
+}
+
 if (process.platform !== 'win32') {
+  test('AUTH-02 writes an owner-only cache file on a POSIX host where an earlier run left a wider temporary file behind', async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+    const strandedPath = `${cachePath}.${String(process.pid)}.tmp`;
+    await writeFile(strandedPath, 'stranded', 'utf8');
+    await chmod(strandedPath, GROUP_READABLE_MODE);
+    stubFetch(t, () => grantResponse('id-token-1'));
+    const authClient = createAuthClient(authOptions(storagePath));
+
+    // act
+    await authClient.idToken(new AbortController().signal);
+
+    // assert
+    const { mode } = await stat(cachePath);
+    assert.strictEqual(mode & PERMISSION_BITS, OWNER_ONLY_MODE);
+    assert.deepStrictEqual(parseJson(await readFile(cachePath, 'utf8')), {
+      idToken: 'id-token-1',
+      expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+      emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+      salt: 'salt-1',
+    });
+  });
+
   test('AUTH-02 restores owner-only permissions on a POSIX host when a second grant rewrites the cache file', async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
