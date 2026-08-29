@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -41,6 +41,10 @@ const HALTED = 'authentication stopped after the vendor refused the account cred
 // Only the owner may read the cache: it holds a bearer token for the account
 // (AUTH-02).
 const OWNER_ONLY_MODE = 0o600;
+
+// How much randomness the temporary cache name carries, on top of the process
+// id, to keep two writers off one path.
+const TEMPORARY_SUFFIX_BYTES = 8;
 
 // A token is renewed this long before it expires, so no request is sent with a
 // token that lapses while it is in flight (AUTH-01).
@@ -188,15 +192,37 @@ async function readCachedToken(options: AuthClientOptions): Promise<CachedToken 
   return { idToken: cache.idToken, expiresAtMs: cache.expiresAt };
 }
 
+// The temporary name carries the process id and a fresh random suffix, so
+// neither two Homebridge processes nor two writers inside one process can pick
+// the same path. The process id alone rules out only the first of those, and a
+// recycled one does not even do that (WR-04).
+function temporaryPath(target: string): string {
+  return `${target}.${String(process.pid)}.${randomBytes(TEMPORARY_SUFFIX_BYTES).toString('hex')}.tmp`;
+}
+
 // The mode is applied only when the file is created, so a fresh file is written
 // and renamed over the target; writing the target in place would leave a
 // drifted mode untouched and the token readable by every local user (AUTH-02,
-// T-01-21). The rename is atomic, so an interrupted write cannot truncate the
-// cache into an avoidable authentication. The temporary name carries the
-// process id, so two Homebridge processes cannot collide on it.
+// T-01-21). For the same reason the create is exclusive: an occupied name is a
+// failure rather than a rewrite of a file that already carries a wider mode
+// (WR-05). The rename is atomic, so an interrupted write cannot truncate the
+// cache into an avoidable authentication, and a rename that fails takes the
+// fresh file with it rather than leaving a bearer token in the storage
+// directory (T-01-91).
+async function storeCache(temporary: string, target: string, contents: string): Promise<void> {
+  await writeFile(temporary, contents, { mode: OWNER_ONLY_MODE, flag: 'wx' });
+
+  try {
+    await rename(temporary, target);
+  } catch (error: unknown) {
+    await rm(temporary, { force: true });
+
+    throw error;
+  }
+}
+
 async function writeCachedToken(options: AuthClientOptions, token: CachedToken): Promise<void> {
   const target = cachePath(options);
-  const temporary = `${target}.${String(process.pid)}.tmp`;
   const salt = options.createSalt();
   const cache: TokenCacheFile = {
     idToken: token.idToken,
@@ -206,8 +232,7 @@ async function writeCachedToken(options: AuthClientOptions, token: CachedToken):
   };
 
   try {
-    await writeFile(temporary, JSON.stringify(cache), { mode: OWNER_ONLY_MODE });
-    await rename(temporary, target);
+    await storeCache(temporaryPath(target), target, JSON.stringify(cache));
   } catch {
     // The token itself is usable, so a cache that cannot be written costs one
     // grant on the next start rather than this one.
