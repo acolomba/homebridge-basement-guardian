@@ -81,11 +81,12 @@ function recordInto(notifications: Notification[]): DeviceSnapshotListener {
 }
 
 // One discovered device carrying shadow version 5, the starting point for every
-// out-of-order case.
+// out-of-order case. The seeding patch repeats the discovered water level, so it
+// establishes the watermark without moving a value or notifying anyone.
 function versionedStore(): DeviceStateStore {
   const store = createDeviceStateStore(fixedStoreOptions());
   store.applyDiscovery(geminiDevice());
-  store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 5 });
+  store.applyReportedPatch(DEVICE_ID, { data: { water_level: 1 }, state: undefined, version: 5 });
 
   return store;
 }
@@ -290,7 +291,7 @@ describe('applyReportedPatch', () => {
     assert.strictEqual(snapshot.shadowVersion, 2);
   });
 
-  test('leaves every stored value in place for a patch that reports neither section', () => {
+  test('leaves the receipt time alone and establishes no watermark for a patch that reports neither section', () => {
     // arrange
     let currentTime = FIRST_RECEIPT;
     const clock: Clock = { now: () => currentTime };
@@ -299,7 +300,7 @@ describe('applyReportedPatch', () => {
 
     // act
     currentTime = SECOND_RECEIPT;
-    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: undefined });
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 42 });
 
     // assert
     assert.deepStrictEqual(snapshot, {
@@ -309,8 +310,62 @@ describe('applyReportedPatch', () => {
       metadata: {},
       shadowVersion: undefined,
       deviceTimestamp: DEVICE_TIME,
-      receivedAt: SECOND_RECEIPT,
+      receivedAt: FIRST_RECEIPT,
     });
+  });
+
+  test('leaves the receipt time alone and advances the watermark it already held for a patch that reports neither section', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 1 }, state: undefined, version: 5 });
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 6 });
+
+    // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 6,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('advances the receipt time for a patch that reports telemetry', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 1 });
+
+    // assert
+    assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
+  });
+
+  test('advances the receipt time for a patch that reports only device metadata', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { wifi_signal_dbm: -54 }, version: 1 });
+
+    // assert
+    assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
   });
 
   test('reports nothing and stores nothing for a device REST discovery has never returned', () => {
@@ -393,6 +448,20 @@ describe('subscribe', () => {
 
     // act
     store.applyReportedPatch(DEVICE_ID, { data: { water_level: 1, ac_power: true }, state: undefined, version: undefined });
+
+    // assert
+    assert.deepStrictEqual(notifications, []);
+  });
+
+  test('notifies no listener for a patch that reports neither section', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.applyReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 3 });
 
     // assert
     assert.deepStrictEqual(notifications, []);
