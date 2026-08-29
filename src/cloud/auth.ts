@@ -372,6 +372,15 @@ async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, s
   return grant;
 }
 
+// One grant, and the cache write that follows it, described as a single unit so
+// concurrent callers can share the whole attempt rather than only its request.
+async function grantAndCache(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
+  const granted = await requestGrant(options, policy, signal);
+  await writeCachedToken(options, granted);
+
+  return granted;
+}
+
 /**
  * Creates the vendor authentication client.
  *
@@ -397,27 +406,38 @@ async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, s
 export function createAuthClient(options: AuthClientOptions): AuthClient {
   const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
   let cached: CachedToken | undefined;
-  let cacheRead = false;
+  let cacheRead: Promise<CachedToken | undefined> | undefined;
+  let inFlight: Promise<CachedToken> | undefined;
   let registered: string | undefined;
+
+  // A caller arriving while an attempt is in flight joins it instead of opening
+  // a second one, because every attempt against a throttling tenant extends the
+  // block it may already be under (WR-04, D-22). The attempt is forgotten once
+  // it settles, so a later lapse, or a retry after a transient failure, starts
+  // a fresh one.
+  function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
+    inFlight ??= grantAndCache(options, policy, signal).finally(() => {
+      inFlight = undefined;
+    });
+
+    return inFlight;
+  }
 
   async function currentToken(signal: AbortSignal): Promise<CachedToken> {
     if (policy.haltedReason !== undefined) {
       throw new AuthHaltedError(HALTED, policy.haltedReason);
     }
 
-    if (!cacheRead) {
-      cacheRead = true;
-      cached = await readCachedToken(options);
-    }
+    // The read is shared rather than flagged, so a second caller waits for the
+    // answer instead of seeing an empty cache and stepping around it (WR-04).
+    cacheRead ??= readCachedToken(options);
+    cached ??= await cacheRead;
 
     if (cached !== undefined && isCurrent(cached.expiresAtMs, options.clock)) {
       return cached;
     }
 
-    const granted = await requestGrant(options, policy, signal);
-    await writeCachedToken(options, granted);
-
-    return granted;
+    return sharedGrant(signal);
   }
 
   return {
