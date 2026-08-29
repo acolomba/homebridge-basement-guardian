@@ -8,9 +8,12 @@ import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 import { It, mock, verify, when } from 'strong-mock';
 
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
-import { BasementGuardianPlatform } from '../src/platform.js';
-import { PLATFORM_NAME } from '../src/settings.js';
+import { createDeviceStateStore } from '../src/device/state.js';
+import { BasementGuardianPlatform, registerDiscoveredDevices } from '../src/platform.js';
+import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
+import type { ApiDevice } from '../src/cloud/types.js';
+import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
 import type { BasementGuardianPlatformAccessory } from '../src/platform.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 import type { TestContext } from 'node:test';
@@ -83,6 +86,89 @@ const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
 const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
 
 const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
+
+const DEVICE_ID = 'account-1_serial-1';
+const DEVICE_TYPE_ID = 'wayneWaterGemini';
+
+// A minimal, hand-built stand-in for a HAP `Service`, matching the fake `hap` namespace below.
+class FakeAccessoryInformationService {
+  private readonly characteristics = new Map<string, unknown>();
+
+  setCharacteristic(identifier: { UUID: string }, value: unknown): this {
+    this.characteristics.set(identifier.UUID, value);
+
+    return this;
+  }
+
+  getCharacteristic(identifier: { UUID: string }): unknown {
+    return this.characteristics.get(identifier.UUID);
+  }
+}
+
+const FAKE_SERVICE_ACCESSORY_INFORMATION = { UUID: 'fake-service-accessory-information' };
+
+// Enough of `hap.Service`/`hap.Characteristic` for `createBasementGuardianAccessory`'s
+// `AccessoryInformation` population to run against, mirroring the Cucumber harness's own stand-in.
+const fakeHap = {
+  Service: { AccessoryInformation: FAKE_SERVICE_ACCESSORY_INFORMATION },
+  Characteristic: {
+    Manufacturer: { UUID: 'fake-characteristic-manufacturer' },
+    Model: { UUID: 'fake-characteristic-model' },
+    SerialNumber: { UUID: 'fake-characteristic-serial-number' },
+    FirmwareRevision: { UUID: 'fake-characteristic-firmware-revision' },
+  },
+  uuid: { generate: (data: string): string => `uuid-${data}` },
+};
+
+// Mirrors the real `Accessory` constructor, which always carries one `AccessoryInformation`
+// service, so the family adapter's `update()` has a service to populate.
+class FakeDiscoveryAccessory {
+  context: Record<string, unknown> = {};
+
+  private readonly accessoryInformation = new FakeAccessoryInformationService();
+
+  constructor(
+    public readonly displayName: string,
+    public readonly UUID: string,
+  ) {}
+
+  getService(identifier: { UUID: string }): FakeAccessoryInformationService | undefined {
+    return identifier.UUID === FAKE_SERVICE_ACCESSORY_INFORMATION.UUID ? this.accessoryInformation : undefined;
+  }
+}
+
+function geminiDevice(): ApiDevice {
+  return {
+    deviceId: DEVICE_ID,
+    deviceTypeId: DEVICE_TYPE_ID,
+    name: 'Sump System',
+    serialNumber: 'serial-1',
+    connectivity: { connected: true, timestamp: 0 },
+    data: {},
+  };
+}
+
+function unknownRegistry(): FamilyRegistry {
+  return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }) };
+}
+
+interface FakeApiCall {
+  pluginIdentifier: string;
+  platformName: string;
+  accessories: FakeDiscoveryAccessory[];
+}
+
+function fakeDiscoveryApi(registerCalls: FakeApiCall[]): API {
+  const standIn = {
+    hap: fakeHap,
+    platformAccessory: FakeDiscoveryAccessory,
+    registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeDiscoveryAccessory[]) {
+      registerCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
+    },
+  };
+
+  return standIn as unknown as API;
+}
 
 // strong-mock matches a function argument only through It.matches, so the
 // matcher doubles as the capture point for the registered listener.
@@ -261,6 +347,75 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('registers a newly discovered device once the launch event succeeds', async (t) => {
+    // arrange
+    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              devices: [
+                {
+                  accountId: 'account-1',
+                  deviceId: DEVICE_ID,
+                  deviceTypeId: DEVICE_TYPE_ID,
+                  name: 'Sump System',
+                  data: {},
+                  attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
+                  connectivity: { connected: true, timestamp: 0 },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      return Promise.resolve(new Response('{}', { status: 503 }));
+    });
+    const registeredAccessories: FakeDiscoveryAccessory[] = [];
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    when(() => api.hap).thenReturn(fakeHap as unknown as API['hap']);
+    when(() => api.platformAccessory).thenReturn(FakeDiscoveryAccessory as unknown as API['platformAccessory']);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((accessories: PlatformAccessory[]) => {
+          registeredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    const [launch, shutdown] = listeners;
+
+    // act
+    launch?.();
+    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { count: registeredAccessories.length, device: registeredAccessories[0]?.context.device },
+      { count: 1, device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } },
+    );
+    verify(user);
+    verify(api);
+  });
+
   test('reaches no vendor route until Homebridge reports it has finished launching', async (t) => {
     // arrange
     const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
@@ -358,5 +513,67 @@ describe('configureAccessory', () => {
     // assert
     verify(api);
     verify(staleAccessory);
+  });
+});
+
+describe('registerDiscoveredDevices', () => {
+  test('registers one accessory for a newly discovered device not already in accessories', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        accessoryCount: accessories.size,
+        registerCalls: registerCalls.map((call) => ({
+          pluginIdentifier: call.pluginIdentifier,
+          platformName: call.platformName,
+          deviceIds: call.accessories.map((accessory) => accessory.context.device),
+        })),
+      },
+      {
+        accessoryCount: 1,
+        registerCalls: [{ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, deviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] }],
+      },
+    );
+  });
+
+  test('leaves a deviceId already present in accessories untouched', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const uuid = `uuid-${DEVICE_ID}`;
+    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 1, registerCalls: [] });
+  });
+
+  test('does nothing for a deviceId the store holds no snapshot for', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 0, registerCalls: [] });
   });
 });
