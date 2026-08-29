@@ -2,11 +2,13 @@ import { createCloudApi } from './cloud/api.js';
 import { createAuthClient } from './cloud/auth.js';
 import { validateConfig } from './config.js';
 import { createDeviceStateStore } from './device/state.js';
+import { createRedactingLogger } from './logging.js';
 import { PROTOCOL } from './protocol.js';
 import { createAccountRuntime } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
 
 import type { BgConfig } from './config.js';
+import type { RedactingLogger } from './logging.js';
 import type { AccountRuntime } from './runtime/accountRuntime.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
@@ -55,11 +57,18 @@ function createRuntime(config: BgConfig, log: Logging): AccountRuntime {
 export class BasementGuardianPlatform implements DynamicPlatformPlugin {
   readonly accessories = new Map<string, BasementGuardianPlatformAccessory>();
 
+  /** The only logger this plugin writes through, so no secret can reach the log. */
+  readonly log: RedactingLogger;
+
   constructor(
-    readonly log: Logging,
+    log: Logging,
     readonly config: PlatformConfig,
     readonly api: API,
   ) {
+    // Installed before anything else can log: the refusal below quotes the
+    // configuration value it rejected (T-01-16).
+    this.log = createRedactingLogger({ delegate: log, secrets: [] });
+
     const validated = validateConfig(this.config);
 
     if (!validated.ok) {
@@ -67,6 +76,8 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
       return;
     }
+
+    this.log.registerSecret(validated.config.password);
 
     const runtime = createRuntime(validated.config, this.log);
 

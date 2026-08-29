@@ -8,6 +8,9 @@ import { PLATFORM_NAME } from '../src/settings.js';
 import type { BgConfig, ConfigAccepted, ConfigRefused } from '../src/config.js';
 import type { PlatformConfig } from 'homebridge';
 
+const POLL_INTERVAL_REFUSAL = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is';
+const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number of polls from 1 to 8, but it is';
+
 function accountConfig(overrides: Record<string, unknown> = {}): PlatformConfig {
   return { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password', ...overrides };
 }
@@ -48,6 +51,28 @@ test('refuses a configuration whose account email is empty', () => {
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
+test('CONF-05 refuses an account email that is not an email address', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account email must be an email address, but it is not-an-email.' };
+
+  // act
+  const configResult = validateConfig(accountConfig({ email: 'not-an-email' }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
+test('CONF-05 reports the first failing field in a fixed order when several fields are wrong', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account email must be an email address, but it is not-an-email.' };
+
+  // act
+  const configResult = validateConfig(accountConfig({ email: 'not-an-email', pollInterval: 1 }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
 test('refuses a configuration that omits the account password', () => {
   // arrange
   const expectedRefusal: ConfigRefused = { ok: false, reason: 'the account password is missing.' };
@@ -70,6 +95,17 @@ test('refuses a configuration whose account password is empty', () => {
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
+test('refuses a configuration whose platform name is supplied but empty', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'the platform name must not be empty when it is set.' };
+
+  // act
+  const configResult = validateConfig(accountConfig({ name: '   ' }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
 test('resolves the bundled client identifier and the documented defaults when the optional fields are absent', () => {
   // act
   const configResult = validateConfig(accountConfig());
@@ -78,13 +114,34 @@ test('resolves the bundled client identifier and the documented defaults when th
   assert.deepStrictEqual(configResult, acceptedConfig());
 });
 
-test('resolves a supplied client identifier over the bundled one', () => {
+test('CONF-04 accepts a client identifier equal to the bundled constant and yields that same value', () => {
+  // act
+  const configResult = validateConfig(accountConfig({ clientId: PROTOCOL.clientId }));
+
+  // assert
+  assert.deepStrictEqual(configResult, acceptedConfig());
+});
+
+test('CONF-04 resolves a supplied client identifier over the bundled one', () => {
   // act
   const configResult = validateConfig(accountConfig({ clientId: 'supplied-client-id' }));
 
   // assert
   assert.deepStrictEqual(configResult, acceptedConfig({ clientId: 'supplied-client-id' }));
 });
+
+for (const clientId of ['', '   ']) {
+  test(`CONF-04 refuses a client identifier of ${JSON.stringify(clientId)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: 'clientId must not be empty when it is set.' };
+
+    // act
+    const configResult = validateConfig(accountConfig({ clientId }));
+
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
 
 test('keeps the supplied platform name', () => {
   // act
@@ -94,32 +151,59 @@ test('keeps the supplied platform name', () => {
   assert.deepStrictEqual(configResult, acceptedConfig({ name: 'Cellar Guardian' }));
 });
 
-test('keeps the supplied poll interval and offline confirmation poll count', () => {
-  // act
-  const configResult = validateConfig(accountConfig({ pollInterval: 600, offlineConfirmationPollCount: 4 }));
+for (const pollInterval of [300, 900, 3600]) {
+  test(`CONF-05 accepts a poll interval of ${String(pollInterval)}`, () => {
+    // act
+    const configResult = validateConfig(accountConfig({ pollInterval }));
 
-  // assert
-  assert.deepStrictEqual(configResult, acceptedConfig({ pollIntervalSeconds: 600, offlineConfirmationPollCount: 4 }));
-});
+    // assert
+    assert.deepStrictEqual(configResult, acceptedConfig({ pollIntervalSeconds: pollInterval }));
+  });
+}
 
-test('refuses a poll interval that is not a number', () => {
+for (const pollInterval of [299, 3601, 3.5, '900', null]) {
+  test(`CONF-05 refuses a poll interval of ${JSON.stringify(pollInterval)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} ${String(pollInterval)}.` };
+
+    // act
+    const configResult = validateConfig(accountConfig({ pollInterval }));
+
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
+
+test('CONF-05 describes a structured poll interval rather than reporting it as an object', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'pollInterval must be a number of seconds, but it is every-ten-minutes.' };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} {"seconds":900}.` };
 
   // act
-  const configResult = validateConfig(accountConfig({ pollInterval: 'every-ten-minutes' }));
+  const configResult = validateConfig(accountConfig({ pollInterval: { seconds: 900 } }));
 
   // assert
   assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
-test('refuses an offline confirmation poll count that is not a number', () => {
-  // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'offlineConfirmationPollCount must be a number of polls, but it is twice.' };
+for (const offlineConfirmationPollCount of [1, 2, 8]) {
+  test(`CONF-05 accepts an offline confirmation poll count of ${String(offlineConfirmationPollCount)}`, () => {
+    // act
+    const configResult = validateConfig(accountConfig({ offlineConfirmationPollCount }));
 
-  // act
-  const configResult = validateConfig(accountConfig({ offlineConfirmationPollCount: 'twice' }));
+    // assert
+    assert.deepStrictEqual(configResult, acceptedConfig({ offlineConfirmationPollCount }));
+  });
+}
 
-  // assert
-  assert.deepStrictEqual(configResult, expectedRefusal);
-});
+for (const offlineConfirmationPollCount of [0, 9, 1.5, '2', null]) {
+  test(`CONF-05 refuses an offline confirmation poll count of ${JSON.stringify(offlineConfirmationPollCount)}`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_COUNT_REFUSAL} ${String(offlineConfirmationPollCount)}.` };
+
+    // act
+    const configResult = validateConfig(accountConfig({ offlineConfirmationPollCount }));
+
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
