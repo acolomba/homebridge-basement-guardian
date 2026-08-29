@@ -747,7 +747,7 @@ describe('the poll backstop', () => {
     assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), errors: countOf(logged, 'error') }, { warnings: 0, errors: 0 });
   });
 
-  test('SYNC-03 keeps the shadow metadata a later poll does not carry', async (t) => {
+  test('SYNC-02 keeps the telemetry and metadata a later poll would overwrite while the shadow owns them', async (t) => {
     // arrange
     const { runtime, shadows, store, advance } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
@@ -762,8 +762,25 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(
       { data: store.snapshot(DEVICE_ID)?.data, metadata: store.snapshot(DEVICE_ID)?.metadata, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
-      { data: { water_level: 4 }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
+      { data: { water_level: 2, primary_pump_running: false, ac_power: true }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
     );
+  });
+
+  test('D-15 lets the poll write telemetry again once the shadow connection is gone', async (t) => {
+    // arrange
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+
+    // act
+    shadows[0]?.options.onDisconnected('transport-closed');
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 4 });
   });
 
   test('SYNC-03 lets a shadow document that arrives after a poll win on the keys it carries', async (t) => {
@@ -996,6 +1013,22 @@ describe('the degraded monitoring path', () => {
       { path: 'rest-only', warnings: [`warn ${DEGRADED_LINE}`] },
     );
   });
+
+  for (const reason of ['transport-closed', 'transport-error', 'subscription-refused', 'handshake-refused'] as const) {
+    test(`SYNC-03 hands telemetry back to the poll when the connection reports ${reason}`, async (t) => {
+      // arrange
+      const { runtime, shadows, store } = harness(t);
+      await runtime.start();
+      await settle();
+      store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 90 });
+
+      // act
+      shadows[0]?.options.onDisconnected(reason);
+
+      // assert
+      assert.strictEqual(store.snapshot(DEVICE_ID)?.shadowVersion, undefined);
+    });
+  }
 
   test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {
     // arrange

@@ -7,12 +7,14 @@
  */
 
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { SHADOW_TOPICS } from '../../../src/cloud/shadow.js';
-import { ROTATED_SHADOW_CREDENTIALS, SHADOW_CREDENTIALS } from '../world.js';
+import { ROTATED_SHADOW_CREDENTIALS, SCENARIO_START_TIME, SHADOW_CREDENTIALS } from '../world.js';
 
+import type { DeviceSnapshot } from '../../../src/device/state.js';
 import type { ApiDevice } from '../fakeRestApi.js';
 import type { BasementGuardianWorld } from '../world.js';
 import type { DataTable } from '@cucumber/cucumber';
@@ -26,6 +28,14 @@ const DEVICE_TIME = 1_700_000_000_000;
 // failure names the condition that was never met rather than the runner giving up first.
 const DEADLINE_MS = 5000;
 const STEP_TIMEOUT_MS = 15_000;
+
+// How far a step moves the scenario clock, so a later moment is distinguishable from the one the
+// plugin started at.
+const CLOCK_STEP_MS = 60_000;
+
+// A document that changes nothing leaves no trace a step can wait on, so a step asserting that it
+// changed nothing gives the delivery and the merge it would have made time to land first.
+const DELIVERY_SETTLE_MS = 200;
 
 // The requested value a device carries while it acknowledges a command. It is not device state and
 // must never reach the canonical snapshot.
@@ -156,6 +166,12 @@ async function publishRequestedState(this: BasementGuardianWorld): Promise<void>
 
 When('the device publishes a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);
 
+function advanceTheScenarioClock(this: BasementGuardianWorld): void {
+  this.advanceClock(CLOCK_STEP_MS);
+}
+
+When('the scenario clock moves forward', advanceTheScenarioClock);
+
 async function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const fields = fieldsOf(table);
 
@@ -185,6 +201,28 @@ function assertSnapshotOmitsField(this: BasementGuardianWorld, name: string): vo
 }
 
 Then('the canonical snapshot carries no {string} field', assertSnapshotOmitsField);
+
+async function settledSnapshot(world: BasementGuardianWorld): Promise<DeviceSnapshot> {
+  await delay(DELIVERY_SETTLE_MS);
+
+  return world.snapshot(theDeviceId(world));
+}
+
+async function assertNoShadowVersion(this: BasementGuardianWorld): Promise<void> {
+  const snapshot = await settledSnapshot(this);
+
+  assert.equal(snapshot.shadowVersion, undefined);
+}
+
+Then('the canonical snapshot carries no shadow version', { timeout: STEP_TIMEOUT_MS }, assertNoShadowVersion);
+
+async function assertStartingReceiptTime(this: BasementGuardianWorld): Promise<void> {
+  const snapshot = await settledSnapshot(this);
+
+  assert.equal(snapshot.receivedAt, SCENARIO_START_TIME);
+}
+
+Then('the canonical snapshot carries the receipt time the scenario started at', { timeout: STEP_TIMEOUT_MS }, assertStartingReceiptTime);
 
 function assertShadowVersion(this: BasementGuardianWorld, version: number): Promise<void> {
   return this.untilTrue(
