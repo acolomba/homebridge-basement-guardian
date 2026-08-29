@@ -86,6 +86,23 @@ export interface ShadowClient {
   close(): Promise<void>;
 }
 
+// One connection's own state.
+//
+// These were once plain variables shared by every connection the client had
+// ever opened, which let a connection the client had already replaced rewrite
+// the live one's health and start its own retry chain. Each connection now
+// carries its own record, and identity decides whether a notification is worth
+// listening to at all (SYNC-04).
+interface ShadowConnection {
+  transport: MqttTransport;
+  /** The socket opened, which tells a refused handshake from a routine close. */
+  established: boolean;
+  /** A shadow message can reach the store over this connection. */
+  live: boolean;
+  /** The client has given this connection up and has already said so once. */
+  released: boolean;
+}
+
 // A full shadow and a partial update take one path into the store, so the two
 // accepted topics share a leaf. A rejection produces nothing at all.
 interface ShadowRoute {
@@ -159,12 +176,29 @@ function toReportedPatch(document: ShadowDocument): ReportedPatch {
 export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   const routes = new Map<string, ShadowRoute>();
   let devices: readonly string[] = [];
-  let transport: MqttTransport | undefined;
-  let live = false;
-  let established = false;
-  let failed = false;
+  let connection: ShadowConnection | undefined;
   let closing = false;
   let ending: Promise<void> | undefined;
+
+  // Whether a notification belongs to the connection the client is actually
+  // using. A connection the client has replaced keeps its handlers, and its
+  // outstanding callbacks still settle, so this predicate is the one thing
+  // standing between what it says and the live connection's health (SYNC-04).
+  function isCurrent(target: ShadowConnection): boolean {
+    return connection === target && !target.released && !closing;
+  }
+
+  // Ends the client's use of one connection and says so once.
+  //
+  // Ownership ends at the first of these: the transport fails under it, the
+  // transport closes, or its subscription is refused. Whichever comes first
+  // reports; everything after it finds the connection released and reports
+  // nothing, so a consumer sees exactly one disconnection per connection.
+  function release(target: ShadowConnection, reason: ShadowDisconnectReason): void {
+    target.released = true;
+    target.live = false;
+    options.onDisconnected(reason);
+  }
 
   // The signing hook cannot await, so it reads the cache the rotation timer
   // keeps fresh. Refreshing the identifier here is load-bearing: the broker
@@ -216,11 +250,11 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   // The reopener is passed in rather than read from the enclosing scope: the
   // handlers, the schedule, and the opener would otherwise form a declaration
   // cycle, and the parameter names the one thing a retry actually does.
+  //
+  // Nothing checks the shutdown flag here. Every caller reaches this only by
+  // releasing a connection it still owned, which shutdown makes impossible, and
+  // the opener refuses to run once closing in any case.
   function scheduleReconnect(reopen: () => void): void {
-    if (closing) {
-      return;
-    }
-
     options.retry.schedule(() => {
       reopen();
 
@@ -232,9 +266,12 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   // broker produces one of these per capped-backoff attempt, and the consumer
   // that sees the whole stream is what holds the warning down to the reminder
   // cadence, exactly as the authentication client already does (D-14).
-  function handleError(reopen: () => void): void {
-    failed = true;
+  // The connection is given up here rather than at the close that follows it. A
+  // failed transport carries nothing, and reporting at the earliest honest
+  // moment is what keeps one failure from being reported twice.
+  function handleError(target: ShadowConnection, reopen: () => void): void {
     options.log.debug('The shadow connection failed and will reconnect.');
+    release(target, 'transport-error');
     scheduleReconnect(reopen);
   }
 
@@ -248,17 +285,13 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   // close with no error beside it. Reading that as routine would leave the
   // reader with a silently dead monitoring path and nothing above debug to say
   // so (D-15).
-  function handleClose(reopen: () => void): void {
-    live = false;
-
-    if (failed) {
-      options.onDisconnected('transport-error');
-    } else if (established) {
+  function handleClose(target: ShadowConnection, reopen: () => void): void {
+    if (target.established) {
       options.log.debug('The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.');
-      options.onDisconnected('transport-closed');
+      release(target, 'transport-closed');
     } else {
       options.log.debug('The shadow connection was refused before it was established and will be retried.');
-      options.onDisconnected('handshake-refused');
+      release(target, 'handshake-refused');
     }
 
     scheduleReconnect(reopen);
@@ -273,57 +306,94 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
   // reach the store would report a healthy monitoring path that is silently
   // dead, so the connection is given up and retried through the same guarded
   // policy a transport failure uses.
-  async function requestEveryShadow(connection: MqttTransport, reopen: () => void): Promise<void> {
+  // The connection is checked again after the await: a subscription belonging to
+  // a connection the client has already replaced must change nothing.
+  async function requestEveryShadow(target: ShadowConnection, reopen: () => void): Promise<void> {
     try {
-      await connection.subscribe([...routes.keys()]);
+      await target.transport.subscribe([...routes.keys()]);
 
       for (const deviceId of devices) {
-        await connection.publish(SHADOW_TOPICS.get(deviceId), '');
+        await target.transport.publish(SHADOW_TOPICS.get(deviceId), '');
       }
     } catch {
-      live = false;
-      failed = true;
-      options.log.debug('The shadow subscription could not be established, so the connection will be retried.');
-      options.onDisconnected('subscription-refused');
-      void connection.end();
-      scheduleReconnect(reopen);
+      if (isCurrent(target)) {
+        options.log.debug('The shadow subscription could not be established, so the connection will be retried.');
+        release(target, 'subscription-refused');
+        void target.transport.end();
+        scheduleReconnect(reopen);
+      }
     }
   }
 
-  function handleConnect(connection: MqttTransport, reopen: () => void): void {
-    live = true;
-    established = true;
+  function handleConnect(target: ShadowConnection, reopen: () => void): void {
+    target.established = true;
+    target.live = true;
     options.retry.reset();
     options.onConnected();
-    void requestEveryShadow(connection, reopen);
+    void requestEveryShadow(target, reopen);
   }
 
+  // Every notification is checked against the connection it came from before it
+  // reaches anything, so a connection the client has replaced drives no live
+  // state, routes no message, and starts no retry.
+  function attach(target: ShadowConnection, reopen: () => void): void {
+    target.transport.onConnect(() => {
+      if (isCurrent(target)) {
+        handleConnect(target, reopen);
+      }
+    });
+    target.transport.onMessage((topic: string, payload: Buffer) => {
+      if (isCurrent(target)) {
+        handleMessage(topic, payload);
+      }
+    });
+    target.transport.onError(() => {
+      if (isCurrent(target)) {
+        handleError(target, reopen);
+      }
+    });
+    target.transport.onClose(() => {
+      if (isCurrent(target)) {
+        handleClose(target, reopen);
+      }
+    });
+  }
+
+  // Nothing may open a connection once shutdown has begun. `close` memoizes the
+  // ending of the transport that existed when it ran, so a connection appearing
+  // after it would be one nothing ever ends; this guard is what makes that
+  // memoization sound (SYNC-05).
   function openConnection(): void {
+    if (closing) {
+      return;
+    }
+
     const current = options.credentials.current();
-    const connection = options.createTransport({
-      connect: options.connect,
-      url: `${options.scheme}://${current.endpoint}${BROKER_PATH}`,
-      clientId: current.clientId,
-      signUrl: signHandshake,
-    });
-    transport = connection;
-    established = false;
-    failed = false;
-    connection.onConnect(() => {
-      handleConnect(connection, openConnection);
-    });
-    connection.onMessage(handleMessage);
-    connection.onError(() => {
-      handleError(openConnection);
-    });
-    connection.onClose(() => {
-      handleClose(openConnection);
-    });
+    const previous = connection;
+    const target: ShadowConnection = {
+      transport: options.createTransport({
+        connect: options.connect,
+        url: `${options.scheme}://${current.endpoint}${BROKER_PATH}`,
+        clientId: current.clientId,
+        signUrl: signHandshake,
+      }),
+      established: false,
+      live: false,
+      released: false,
+    };
+
+    connection = target;
+    // The socket the replacement supersedes is the plugin's own, and one the
+    // broker still holds open is work nobody will ever close. Ending is
+    // memoized per transport, so this costs nothing when it has already gone
+    // down (SYNC-05).
+    void previous?.transport.end();
+    attach(target, openConnection);
   }
 
   return {
     get connected(): boolean {
-      return live;
+      return connection?.live ?? false;
     },
 
     start(deviceIds: readonly string[]): Promise<void> {
@@ -335,14 +405,15 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     },
 
     requestFullShadow(deviceId: string): Promise<void> {
-      return transport === undefined ? Promise.resolve() : transport.publish(SHADOW_TOPICS.get(deviceId), '');
+      return connection === undefined ? Promise.resolve() : connection.transport.publish(SHADOW_TOPICS.get(deviceId), '');
     },
 
     // The flag is set before the transport is ended, so the close notification
-    // teardown produces cannot schedule a retry.
+    // teardown produces reaches nothing, and the opener refuses to run, so the
+    // memoized ending cannot be left belonging to a superseded transport.
     close(): Promise<void> {
       closing = true;
-      ending ??= transport === undefined ? Promise.resolve() : transport.end();
+      ending ??= connection === undefined ? Promise.resolve() : connection.transport.end();
 
       return ending;
     },
