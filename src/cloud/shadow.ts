@@ -117,6 +117,28 @@ interface ShadowDocument {
   version: unknown;
 }
 
+// MQTT reserves `+` and `#` as subscription wildcards.
+const TOPIC_WILDCARD = /[+#]/;
+
+// The device identifiers whose topics the routing table can resolve.
+//
+// An identifier carrying a wildcard would build a subscription whose incoming
+// topics cannot be found in the routing table, so every message for that device
+// would be dropped by the unresolved-route path without a word. The identifier
+// is refused instead. The device keeps the poll, which is the reconciliation
+// backstop anyway, so this narrows the scope rather than losing the device, and
+// the message says so once without quoting the identifier, which embeds the
+// account identifier (D-15, AUTH-02).
+function usableDevices(deviceIds: readonly string[], log: Logging): readonly string[] {
+  const usable = deviceIds.filter((deviceId: string) => !TOPIC_WILDCARD.test(deviceId));
+
+  if (usable.length !== deviceIds.length) {
+    log.warn('A device identifier cannot be used as a shadow topic, so the poll is the only source for that device.');
+  }
+
+  return usable;
+}
+
 // The routing table and the subscription list are the same set, built once from
 // the device list. Subscribing to a topic that cannot be routed, or routing one
 // that was never subscribed to, is therefore not expressible.
@@ -322,14 +344,25 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
         void target.transport.end();
         scheduleReconnect(reopen);
       }
+
+      return;
+    }
+
+    if (isCurrent(target)) {
+      target.live = true;
+      options.retry.reset();
+      options.onConnected();
     }
   }
 
+  // The socket opening is not the same event as the plugin being able to see
+  // anything. A connection announced at the handshake, with its subscription
+  // still outstanding, reports a healthy combined path while no shadow message
+  // can reach the store, which is a monitoring path that is dead and says it is
+  // fine. Only `established` is set here, because telling a refused handshake
+  // from a routine close is a socket-level question (D-15).
   function handleConnect(target: ShadowConnection, reopen: () => void): void {
     target.established = true;
-    target.live = true;
-    options.retry.reset();
-    options.onConnected();
     void requestEveryShadow(target, reopen);
   }
 
@@ -397,7 +430,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     },
 
     start(deviceIds: readonly string[]): Promise<void> {
-      devices = [...deviceIds];
+      devices = usableDevices(deviceIds, options.log);
       fillRoutes(routes, devices);
       openConnection();
 
