@@ -11,7 +11,9 @@
     "src/accessories/services.ts",
     "src/persistence/accessoryContext.ts",
     "src/cloud/sigv4.ts",
-    "src/runtime/retryPolicy.ts"
+    "src/runtime/retryPolicy.ts",
+    "src/cloud/mqttTransport.ts",
+    "src/cloud/shadow.ts"
   ],
   "ignorePatterns": ["dist-test/**"],
   "production": false,
