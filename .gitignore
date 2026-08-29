@@ -126,7 +126,6 @@ dist
 .idea
 
 /test/hbConfig/*
-!/test/hbConfig/auth.json
 !/test/hbConfig/config.example.json
 
 # A developer run of `npm run watch` puts a real account password here.
