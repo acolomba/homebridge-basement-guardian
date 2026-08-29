@@ -45,6 +45,14 @@ import type { MqttClient } from 'mqtt';
 
 const POLL_INTERVAL_MS = 10;
 
+// The bundled rotation waits ten minutes before an expiry and never less than thirty seconds, so a
+// scenario driving a real rotation would wait thirty real seconds. A scenario that asks for the
+// short interval states its own pair through the same seam, which turns that wait into
+// milliseconds. Every other scenario keeps the bundled pair, because a rotation firing on this
+// cadence would add vendor requests the scenario never asked for.
+const HARNESS_ROTATION_LEAD_MS = 20;
+const HARNESS_MIN_ROTATION_DELAY_MS = 50;
+
 /** The moment every scenario's clock starts from. It moves only when a step moves it. */
 export const SCENARIO_START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
 
@@ -139,6 +147,8 @@ export class BasementGuardianWorld extends World {
   private scenarioTime = SCENARIO_START_TIME;
 
   private pollIntervalSeconds = DEFAULT_POLL_INTERVAL_SECONDS;
+
+  private shortRotation = false;
 
   private auth0Tenant: FakeAuth0 | undefined = undefined;
 
@@ -282,6 +292,11 @@ export class BasementGuardianWorld extends World {
   /** Shortens the poll interval so a scenario can observe the REST backstop reconcile. */
   usePollInterval(seconds: number): void {
     this.pollIntervalSeconds = seconds;
+  }
+
+  /** Shortens the rotation lead and floor so a scenario can observe a rotation without a real wait. */
+  useShortRotation(): void {
+    this.shortRotation = true;
   }
 
   /** Loads the platform against the fake Homebridge API, which is all a refusal needs. */
@@ -474,6 +489,9 @@ export class BasementGuardianWorld extends World {
       log: this.logger(),
       connect,
       createSalt: () => HARNESS_SALT,
+      // A scenario that did not ask for the short interval leaves both members absent, so the seam
+      // supplies the bundled pair rather than the harness overriding it with a production value.
+      ...(this.shortRotation ? { rotationLeadMs: HARNESS_ROTATION_LEAD_MS, minRotationDelayMs: HARNESS_MIN_ROTATION_DELAY_MS } : {}),
     });
 
     this.accountRuntime = runtime;

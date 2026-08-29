@@ -7,6 +7,7 @@ Feature: Credential rotation
 
   Background:
     Given the fake cloud
+    Given a short rotation interval
     Given these gemini devices:
       | deviceId                             | name        |
       | placeholder-account_placeholder-pump | Sump System |

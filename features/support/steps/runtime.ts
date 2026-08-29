@@ -22,11 +22,6 @@ const SHORT_POLL_INTERVAL_SECONDS = 0.05;
 const DEADLINE_MS = 10_000;
 const STEP_TIMEOUT_MS = 20_000;
 
-// The runtime holds a rotation to a thirty-second floor, however soon the vendor expiry falls, so a
-// scenario that waits for a real rotation waits at least that long.
-const ROTATION_DEADLINE_MS = 45_000;
-const ROTATION_STEP_TIMEOUT_MS = 60_000;
-
 // Long enough for work the plugin had already scheduled to run, so a step asserting that nothing
 // more happens is not just asking too early.
 const SETTLE_MS = 200;
@@ -59,6 +54,12 @@ function shortPollInterval(this: BasementGuardianWorld): void {
 
 Given('a short poll interval', shortPollInterval);
 
+function shortRotationInterval(this: BasementGuardianWorld): void {
+  this.useShortRotation();
+}
+
+Given('a short rotation interval', shortRotationInterval);
+
 async function heldRequest(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
@@ -90,10 +91,10 @@ async function rotateCredentials(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
   const issued = credentialRequestCount(service);
 
-  await this.untilTrue(() => credentialRequestCount(service) > issued, ROTATION_DEADLINE_MS, 'the plugin requested no fresh credentials');
+  await this.untilTrue(() => credentialRequestCount(service) > issued, DEADLINE_MS, 'the plugin requested no fresh credentials');
 }
 
-When('the credentials rotate', { timeout: ROTATION_STEP_TIMEOUT_MS }, rotateCredentials);
+When('the credentials rotate', { timeout: STEP_TIMEOUT_MS }, rotateCredentials);
 
 async function shutDown(this: BasementGuardianWorld): Promise<void> {
   await this.stopPlugin();
