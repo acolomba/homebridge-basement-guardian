@@ -71,7 +71,7 @@
     | --- | --- | --- | --- |
     | `GET` | `/devices` | Discover devices and get snapshots. | `{ "devices": [ <device>, ... ] }` |
     | `GET` | `/devices/{deviceId}` | Get one device and its shadow snapshot. | `{ "device": <device> }` |
-    | `PUT` | `/devices/{deviceId}/data` | Send a family-specific device command. | `Not measured.` |
+    | `PUT` | `/devices/{deviceId}/data` | Send a family-specific device command. | Not measured. |
     | `GET` | `/credentials/aws` | Get the AWS IoT endpoint, client ID, and temporary credentials. | `{ endpoint, clientId, credentials }` |
 
     A measurement against the live vendor API on 2026-08-29 confirmed these envelopes. One `wayneWaterGemini` device was available. The measurement also confirmed the `/credentials/aws` body that section 5 gives.
@@ -189,7 +189,7 @@
     attributes.productLine    wayneWater
     ```
 
-    The measurement of 2026-08-29 read one `wayneWaterGemini` device. The device record returned the 13 top-level keys in the order that the block gives.
+    The measurement of 2026-08-29 read one `wayneWaterGemini` device. The first 13 lines of the block are the top-level keys, in the order the record returned them. The last two lines are nested fields, shown here because the plugin reads them.
 
     The `deviceId` value is the `accountId` value, then an underscore, then the `attributes.serialNumber` value. Both segments matched byte for byte.
 
