@@ -28,9 +28,15 @@ export interface MqttClientEvents {
   close: () => void;
 }
 
+// The registrations are written as overloads rather than one generic signature.
+// The library's own `on` is generic over its whole eleven-event map, and a
+// narrower generic constraint cannot be related to it; overloads can.
 /** The part of the transport library's client surface this adapter drives. */
 export interface MqttClientLike extends MqttClientIdentity {
-  on<Event extends keyof MqttClientEvents>(event: Event, handler: MqttClientEvents[Event]): void;
+  on(event: 'connect', handler: MqttClientEvents['connect']): void;
+  on(event: 'message', handler: MqttClientEvents['message']): void;
+  on(event: 'error', handler: MqttClientEvents['error']): void;
+  on(event: 'close', handler: MqttClientEvents['close']): void;
   subscribe(topics: string[], callback: (error: Error | null) => void): void;
   publish(topic: string, payload: string, callback: (error?: Error) => void): void;
   end(force: boolean, callback: (error?: Error) => void): void;
@@ -75,6 +81,40 @@ export interface MqttTransportOptions {
   signUrl: (client: MqttClientIdentity) => string;
 }
 
+function subscribeOnce(client: MqttClientLike, topics: readonly string[]): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    client.subscribe([...topics], (error: Error | null) => {
+      if (error === null) {
+        resolve();
+      } else {
+        reject(error);
+      }
+    });
+  });
+}
+
+function publishOnce(client: MqttClientLike, topic: string, payload: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    client.publish(topic, payload, (error?: Error) => {
+      if (error === undefined) {
+        resolve();
+      } else {
+        reject(error);
+      }
+    });
+  });
+}
+
+// A graceful end sends the disconnect packet rather than dropping the socket,
+// and the callback is the only report that the client has finished.
+function endOnce(client: MqttClientLike): Promise<void> {
+  return new Promise<void>((resolve) => {
+    client.end(false, () => {
+      resolve();
+    });
+  });
+}
+
 /**
  * Creates the transport over one client connection.
  *
@@ -83,7 +123,39 @@ export interface MqttTransportOptions {
  * a new one for every reconnect so that every handshake is signed afresh.
  */
 export function createMqttTransport(options: MqttTransportOptions): MqttTransport {
-  void options;
+  const client = options.connect(options.url, {
+    clientId: options.clientId,
+    protocolVersion: 4,
+    reconnectPeriod: 0,
+    clean: true,
+    resubscribe: true,
+    // The hook is handed a URL carrying a port, and the message broker signs
+    // the bare host, so that argument is deliberately unused and the signer
+    // builds from the endpoint instead. The hook cannot await, which is why the
+    // signer reads a cache the rotation timer keeps fresh (SYNC-04).
+    transformWsUrl: (_url: string, _connectOptions: object, live: MqttClientIdentity): string => options.signUrl(live),
+  });
+  let ending: Promise<void> | undefined;
 
-  throw new Error('not implemented');
+  return {
+    onConnect: (handler: () => void): void => {
+      client.on('connect', handler);
+    },
+    onMessage: (handler: (topic: string, payload: Buffer) => void): void => {
+      client.on('message', handler);
+    },
+    onError: (handler: (error: Error) => void): void => {
+      client.on('error', handler);
+    },
+    onClose: (handler: () => void): void => {
+      client.on('close', handler);
+    },
+    subscribe: (topics: readonly string[]): Promise<void> => subscribeOnce(client, topics),
+    publish: (topic: string, payload: string): Promise<void> => publishOnce(client, topic, payload),
+    end: (): Promise<void> => {
+      ending ??= endOnce(client);
+
+      return ending;
+    },
+  };
 }
