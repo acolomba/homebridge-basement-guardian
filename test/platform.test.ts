@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
+import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { It, mock, verify, when } from 'strong-mock';
 
+import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { BasementGuardianPlatform } from '../src/platform.js';
 import { PLATFORM_NAME } from '../src/settings.js';
 
@@ -45,6 +47,14 @@ function createRecordingLog(messages: string[]): Logging {
   });
 }
 
+// Drains the promise chains a lifecycle event starts, so the work it triggered
+// has settled before the assertions run.
+async function settle(): Promise<void> {
+  for (let turn = 0; turn < 8; turn += 1) {
+    await nextEventLoopTurn();
+  }
+}
+
 const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
 
 const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
@@ -63,7 +73,7 @@ function captureListener(listeners: (() => void)[]): () => void {
 
 // An accepted configuration reaches for the Homebridge storage directory, so
 // each such case gets its own, removed when the case ends.
-async function expectStoragePath(t: TestContext, api: API): Promise<API['user']> {
+async function expectStoragePath(t: TestContext, api: API): Promise<{ user: API['user']; storagePath: string }> {
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-platform-'));
 
   t.after(async () => {
@@ -74,7 +84,7 @@ async function expectStoragePath(t: TestContext, api: API): Promise<API['user']>
   when(() => user.storagePath()).thenReturn(storagePath);
   when(() => api.user).thenReturn(user);
 
-  return user;
+  return { user, storagePath };
 }
 
 describe('BasementGuardianPlatform', () => {
@@ -125,7 +135,7 @@ describe('BasementGuardianPlatform', () => {
     const messages: string[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
-    const user = await expectStoragePath(t, api);
+    const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), accountConfig, api);
@@ -144,7 +154,7 @@ describe('BasementGuardianPlatform', () => {
     const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
-    const user = await expectStoragePath(t, api);
+    const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
@@ -159,12 +169,85 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('starts the cloud work on the launch event and releases it on shutdown', async (t) => {
+    // arrange
+    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    const [launch, shutdown] = listeners;
+
+    // act
+    launch?.();
+    await settle();
+    const requestsAfterLaunch = requestSpy.mock.callCount();
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { requestsAfterLaunch, requestsAfterShutdown: requestSpy.mock.callCount() - requestsAfterLaunch },
+      { requestsAfterLaunch: 2, requestsAfterShutdown: 0 },
+    );
+    verify(user);
+    verify(api);
+  });
+
+  test('AUTH-02 caches the granted token under the Homebridge storage directory', async (t) => {
+    // arrange
+    t.mock.method(globalThis, 'fetch', (input: string | URL) =>
+      input.toString().endsWith('/oauth/token')
+        ? Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }))
+        : Promise.resolve(new Response('{}', { status: 503 })),
+    );
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user, storagePath } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    const [launch, shutdown] = listeners;
+
+    // act
+    launch?.();
+    await settle();
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+    verify(user);
+    verify(api);
+  });
+
+  test('reaches no vendor route until Homebridge reports it has finished launching', async (t) => {
+    // arrange
+    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+
+    // act
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    await settle();
+
+    // assert
+    assert.strictEqual(requestSpy.mock.callCount(), 0);
+    verify(user);
+    verify(api);
+  });
+
   test('registers and removes no accessory across the whole lifecycle', async (t) => {
     // arrange
     t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
-    const user = await expectStoragePath(t, api);
+    const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     new BasementGuardianPlatform(createSilentLog(), accountConfig, api);

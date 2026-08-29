@@ -9,11 +9,7 @@
     "src/device/halo.ts",
     "src/accessories/basementGuardian.ts",
     "src/accessories/services.ts",
-    "src/persistence/accessoryContext.ts",
-    "src/cloud/sigv4.ts",
-    "src/runtime/retryPolicy.ts",
-    "src/cloud/mqttTransport.ts",
-    "src/cloud/shadow.ts"
+    "src/persistence/accessoryContext.ts"
   ],
   "ignorePatterns": ["dist-test/**"],
   "production": false,

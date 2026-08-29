@@ -1,10 +1,3 @@
-// This module is parked in the `.fallowrc.json` `ignoreFindings` list because
-// no production code reaches it yet. The entry and this note are removed
-// together, in the commit that wires this client into the account runtime and
-// makes it reachable from the plugin entry point. Until then the whole
-// transport subgraph beneath it -- the transport port, the signer, and the retry
-// policy -- is reached only by its own tests.
-//
 // Nothing here logs a topic, a device identifier, a URL, or a payload. The
 // signed URL carries the credential scope, the session token, and the
 // signature, and the device identifier embeds the account identifier (AUTH-02).
@@ -203,21 +196,6 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     options.onReportedPatch(route.deviceId, toReportedPatch(document));
   }
 
-  // The shadow service synchronizes current state rather than replaying what
-  // was missed, so a complete shadow is requested after every connection
-  // (SYNC-03).
-  async function requestEveryShadow(live: MqttTransport): Promise<void> {
-    try {
-      await live.subscribe([...routes.keys()]);
-
-      for (const deviceId of devices) {
-        await live.publish(SHADOW_TOPICS.get(deviceId), '');
-      }
-    } catch {
-      options.log.debug('The shadow subscription could not be established.');
-    }
-  }
-
   // Reconnect timing belongs to the capped, guarded policy rather than to the
   // transport library, whose own timer is disabled. A single failure raises
   // both an error and a close notification, and the policy's pending guard is
@@ -258,11 +236,37 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     scheduleReconnect(reopen);
   }
 
-  function handleConnect(connection: MqttTransport): void {
+  // The shadow service synchronizes current state rather than replaying what
+  // was missed, so a complete shadow is requested after every connection
+  // (SYNC-03).
+  //
+  // A refused subscription leaves the socket open with nothing able to arrive
+  // on it. Holding a connection that reads as live while no shadow message can
+  // reach the store would report a healthy monitoring path that is silently
+  // dead, so the connection is given up and retried through the same guarded
+  // policy a transport failure uses.
+  async function requestEveryShadow(connection: MqttTransport, reopen: () => void): Promise<void> {
+    try {
+      await connection.subscribe([...routes.keys()]);
+
+      for (const deviceId of devices) {
+        await connection.publish(SHADOW_TOPICS.get(deviceId), '');
+      }
+    } catch {
+      live = false;
+      failed = true;
+      options.log.warn('The shadow subscription could not be established, so the connection will be retried.');
+      options.onDisconnected('subscription-refused');
+      void connection.end();
+      scheduleReconnect(reopen);
+    }
+  }
+
+  function handleConnect(connection: MqttTransport, reopen: () => void): void {
     live = true;
     options.retry.reset();
     options.onConnected();
-    void requestEveryShadow(connection);
+    void requestEveryShadow(connection, reopen);
   }
 
   function openConnection(): void {
@@ -276,7 +280,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
     transport = connection;
     failed = false;
     connection.onConnect(() => {
-      handleConnect(connection);
+      handleConnect(connection, openConnection);
     });
     connection.onMessage(handleMessage);
     connection.onError(() => {

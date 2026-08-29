@@ -1,21 +1,15 @@
 import { randomBytes } from 'node:crypto';
 
-import { createCloudApi } from './cloud/api.js';
-import { createAuthClient } from './cloud/auth.js';
+import { connect } from 'mqtt';
+
 import { validateConfig } from './config.js';
-import { createDeviceStateStore } from './device/state.js';
 import { createRedactingLogger } from './logging.js';
 import { PROTOCOL } from './protocol.js';
-import { createAccountRuntime } from './runtime/accountRuntime.js';
+import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
 
-import type { BgConfig } from './config.js';
 import type { RedactingLogger } from './logging.js';
-import type { AccountRuntime } from './runtime/accountRuntime.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
-
-/** Deadline applied to each vendor request. */
-const REQUEST_TIMEOUT_MS = 10_000;
 
 /** Length of the salt the token cache fingerprints the account email with. */
 const SALT_BYTES = 16;
@@ -29,27 +23,6 @@ export interface BasementGuardianAccessoryContext extends UnknownContext {}
 
 /** A Homebridge accessory carrying this plugin's context. */
 export type BasementGuardianPlatformAccessory = PlatformAccessory<BasementGuardianAccessoryContext>;
-
-// Manual constructor injection: every collaborator is built here and nowhere
-// else. None of these factories opens a connection, reads a file, or starts a
-// timer, so building them costs nothing until the runtime starts.
-function createRuntime(config: BgConfig, storagePath: string, log: Logging): AccountRuntime {
-  const clock = systemClock;
-  const auth = createAuthClient({
-    constants: PROTOCOL,
-    clientId: config.clientId,
-    email: config.email,
-    password: config.password,
-    storagePath,
-    requestTimeoutMs: REQUEST_TIMEOUT_MS,
-    clock,
-    createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
-    log,
-  });
-  const api = createCloudApi({ baseUrl: PROTOCOL.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS });
-
-  return createAccountRuntime({ api, store: createDeviceStateStore({ clock, log }), clock, log });
-}
 
 /**
  * Composition root of the dynamic platform.
@@ -86,13 +59,23 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
     this.log.registerSecret(validated.config.password);
 
-    // The token cache is written under the Homebridge storage directory, so the
-    // path comes from Homebridge itself rather than from any configured value
-    // (AUTH-02).
-    const runtime = createRuntime(validated.config, this.api.user.storagePath(), this.log);
+    // Every collaborator is built through the one seam. The token cache is
+    // written under the Homebridge storage directory, so that path comes from
+    // Homebridge itself rather than from any configured value (AUTH-02).
+    const runtime = createAccountRuntimeFromConfig({
+      config: validated.config,
+      constants: PROTOCOL,
+      storagePath: this.api.user.storagePath(),
+      clock: systemClock,
+      log: this.log,
+      connect,
+      createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
+    });
 
-    // Both handlers discard their promise: neither start nor stop rejects, so
-    // nothing floats and no exception escapes into Homebridge.
+    // The cloud work begins on the launch event, never in this constructor, and
+    // the shutdown handler is the sole owner of teardown. Both handlers discard
+    // their promise: neither start nor stop rejects, so nothing floats and no
+    // exception escapes into Homebridge.
     this.api.on('didFinishLaunching', () => {
       void runtime.start();
     });
