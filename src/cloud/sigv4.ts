@@ -1,15 +1,12 @@
-// This module is parked in the `.fallowrc.json` `ignoreFindings` list because
-// `IOT_SERVICE_NAME` has no consumer yet. The entry and this note are removed
-// together, in the commit that wires the shadow client into the account
-// runtime and makes this module reachable from the plugin entry point.
-//
 // Nothing here logs, and the produced URL never reaches an error message: it
 // carries the credential scope, the session token, and the signature (AUTH-02).
 
 import { createHash, createHmac } from 'node:crypto';
 
-/** The AWS service name the message broker signs connection requests under. */
-export const IOT_SERVICE_NAME = 'iotdevicegateway';
+// The AWS service name the message broker signs connection requests under. It
+// is read back from the credential scope of the signed URL, so it needs no
+// export of its own.
+const IOT_SERVICE_NAME = 'iotdevicegateway';
 
 const ALGORITHM = 'AWS4-HMAC-SHA256';
 const CANONICAL_PATH = '/mqtt';

@@ -1,8 +1,3 @@
-// This module is parked in the `.fallowrc.json` `ignoreFindings` list because
-// no production code reaches it yet. The entry and this note are removed
-// together, in the commit that wires the shadow client into the account runtime
-// and makes this module reachable from the plugin entry point.
-//
 // The client port below is declared by this consumer rather than imported from
 // the transport library, so the shadow client's own tests inject a plain object
 // and open no socket, while the transport-level scenarios drive the real

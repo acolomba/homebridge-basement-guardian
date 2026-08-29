@@ -1,10 +1,3 @@
-// This module is parked in the `.fallowrc.json` `ignoreFindings` list because
-// no production code reaches it yet. The entry and this note are removed
-// together, in the commit that wires this client into the account runtime and
-// makes it reachable from the plugin entry point. Until then the whole
-// transport subgraph beneath it -- the transport port, the signer, and the retry
-// policy -- is reached only by its own tests.
-//
 // Nothing here logs a topic, a device identifier, a URL, or a payload. The
 // signed URL carries the credential scope, the session token, and the
 // signature, and the device identifier embeds the account identifier (AUTH-02).

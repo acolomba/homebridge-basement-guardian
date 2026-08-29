@@ -1,8 +1,3 @@
-// This module is parked in the `.fallowrc.json` `ignoreFindings` list because
-// `MAX_BACKOFF_MS` has no consumer yet. The entry and this note are removed
-// together, in the commit that wires the shadow client into the account
-// runtime and makes this module reachable from the plugin entry point.
-//
 // The default import is deliberate: the named ESM export of a builtin is a
 // snapshot binding, which the test runner's timer mocks cannot replace, so the
 // wait would be untestable without awaiting a real timer.

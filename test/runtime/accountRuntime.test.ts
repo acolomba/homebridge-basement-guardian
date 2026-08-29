@@ -107,15 +107,25 @@ function recordingLog(recorded: string[]): Logging {
 
 // One scripted answer per call, with the final entry standing for every call
 // after it, so a case states only the answers it cares about.
-function answering<T>(answers: readonly (() => Promise<T>)[]): () => Promise<T> {
+function answering<T>(answers: readonly ((signal: AbortSignal) => Promise<T>)[]): (signal: AbortSignal) => Promise<T> {
   let calls = 0;
 
-  return (): Promise<T> => {
+  return (signal: AbortSignal): Promise<T> => {
     const answer = answers[Math.min(calls, answers.length - 1)];
     calls += 1;
 
-    return answer === undefined ? Promise.reject(new Error('no answer was scripted')) : answer();
+    return answer === undefined ? Promise.reject(new Error('no answer was scripted')) : answer(signal);
   };
+}
+
+// Mimics the vendor request's abort behavior: it settles only when its signal
+// aborts, which is how a shutdown reaches a request that is already in flight.
+function hangingUntilAborted(signal: AbortSignal): Promise<never> {
+  return new Promise<never>((_resolve, reject) => {
+    signal.addEventListener('abort', () => {
+      reject(new Error('the request was aborted'));
+    });
+  });
 }
 
 interface ShadowRecorder {
@@ -126,7 +136,7 @@ interface ShadowRecorder {
 
 // A shadow client that opens no socket. Starting it reports the connection the
 // way the real client does, from its connect notification.
-function fakeShadow(options: ShadowRuntimeOptions): { client: ShadowClient; recorder: ShadowRecorder } {
+function fakeShadow(options: ShadowRuntimeOptions, closeFails = false): { client: ShadowClient; recorder: ShadowRecorder } {
   const subscribed: string[][] = [];
   let closes = 0;
   let live = false;
@@ -148,7 +158,7 @@ function fakeShadow(options: ShadowRuntimeOptions): { client: ShadowClient; reco
         closes += 1;
         live = false;
 
-        return Promise.resolve();
+        return closeFails ? Promise.reject(new Error('the connection could not be closed')) : Promise.resolve();
       },
     },
     recorder: { options, subscribed, closes: () => closes },
@@ -156,10 +166,12 @@ function fakeShadow(options: ShadowRuntimeOptions): { client: ShadowClient; reco
 }
 
 interface Script {
-  devices: readonly (() => Promise<readonly ApiDevice[]>)[];
-  credentials: readonly (() => Promise<AwsCredentialsResponse>)[];
+  devices: readonly ((signal: AbortSignal) => Promise<readonly ApiDevice[]>)[];
+  credentials: readonly ((signal: AbortSignal) => Promise<AwsCredentialsResponse>)[];
   /** Whether each successive connection attempt opens; the last entry repeats. */
   shadow: readonly boolean[];
+  /** Whether closing the shadow connection rejects. */
+  closeFails: boolean;
 }
 
 interface Harness {
@@ -203,15 +215,15 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   let shadowAttempts = 0;
 
   const api: CloudApi = {
-    devices: () => {
+    devices: (signal: AbortSignal) => {
       calls.push('devices');
 
-      return nextDevices();
+      return nextDevices(signal);
     },
-    awsCredentials: () => {
+    awsCredentials: (signal: AbortSignal) => {
       calls.push('credentials');
 
-      return nextCredentials();
+      return nextCredentials(signal);
     },
     device: () => Promise.reject(new Error('the runtime must not reach the device route')),
     sendCommand: () => Promise.reject(new Error('the runtime must not reach the command route')),
@@ -233,7 +245,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
         throw new Error('the broker refused the connection');
       }
 
-      const { client, recorder } = fakeShadow(shadowOptions);
+      const { client, recorder } = fakeShadow(shadowOptions, script.closeFails ?? false);
       shadows.push(recorder);
 
       return client;
@@ -393,6 +405,20 @@ describe('start', () => {
     );
   });
 
+  test('D-22 waits again when the launch that follows a throttling response is throttled too', async (t) => {
+    // arrange
+    const throttled = (): Promise<never> => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
+    const { runtime, calls, advance } = harness(t, { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])] });
+
+    // act
+    await runtime.start();
+    await advance(THROTTLE_RETRY_MS);
+    await advance(THROTTLE_RETRY_MS);
+
+    // assert
+    assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
+  });
+
   test('performs no work when start runs after stop', async (t) => {
     // arrange
     const { runtime, calls } = harness(t);
@@ -533,6 +559,21 @@ describe('credential rotation', () => {
     );
   });
 
+  test('holds the delay at the floor when the vendor expiry cannot be read as a date', async (t) => {
+    // arrange
+    const unreadable = { ...credentialsAt(START_TIME + ONE_HOUR_MS) };
+    unreadable.credentials = { ...unreadable.credentials, Expiration: 'whenever' };
+    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(unreadable)] });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(MIN_ROTATION_DELAY_MS);
+
+    // assert
+    assert.strictEqual(calls.filter((call) => call === 'credentials').length, 2);
+  });
+
   test('SYNC-04 gives the shadow client a reconnect policy the runtime own retry has not advanced', async (t) => {
     // arrange
     const { runtime, shadows, advance } = harness(t, { shadow: [false, true] });
@@ -618,6 +659,23 @@ describe('the poll backstop', () => {
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
+  });
+
+  test('SYNC-05 reports no failure when a shutdown aborts a poll that is in flight', async (t) => {
+    // arrange
+    const { runtime, logged, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)],
+    });
+    await runtime.start();
+    await settle();
+    await advance(POLL_INTERVAL_MS);
+
+    // act
+    await runtime.stop();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), errors: countOf(logged, 'error') }, { warnings: 0, errors: 0 });
   });
 
   test('SYNC-03 keeps the shadow metadata a later poll does not carry', async (t) => {
@@ -736,6 +794,29 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'rest-and-shadow', reports: [] });
+  });
+
+  test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {
+    // arrange
+    const { runtime, shadows } = harness(t);
+    await runtime.start();
+    await settle();
+
+    // act
+    await runtime.stop();
+
+    // assert
+    assert.strictEqual(shadows[0]?.closes(), 1);
+  });
+
+  test('SYNC-05 resolves stop when the shadow connection cannot be closed', async (t) => {
+    // arrange
+    const { runtime } = harness(t, { closeFails: true });
+    await runtime.start();
+    await settle();
+
+    // act & assert
+    await assert.doesNotReject(() => runtime.stop());
   });
 
   test('opens no shadow connection while discovery has returned no device', async (t) => {
