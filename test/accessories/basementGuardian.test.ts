@@ -1136,6 +1136,29 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost'), undefined);
   });
 
+  test('removes a suppressed sensor a previous run published while the family no longer resolves', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const published = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+    published.update(buildSnapshot({ connected: true }), 'poll');
+    const ignoredFaults: readonly NotificationServiceKind[] = ['basement-guardian-offline', 'mains-power-lost'];
+    const restarted = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }), ignoredFaults });
+
+    // act
+    restarted.update(buildSnapshot({ connected: false }), 'poll');
+    restarted.update(buildSnapshot({ connected: false }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        offline: accessory.getServiceById(HAP.Service.ContactSensor, 'basement-guardian-offline'),
+        mainsPowerLost: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost'),
+        primaryPumpFaultActive: statusActiveOf(accessory, 'Primary Pump Fault'),
+      },
+      { offline: undefined, mainsPowerLost: undefined, primaryPumpFaultActive: false },
+    );
+  });
+
   test('applies the same suppression a second time without adding or removing a service', (t) => {
     // arrange
     const accessory = accessoryStandIn();

@@ -394,8 +394,21 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // publishing its current verdict and stays active -- which is what `untrusted`
   // has always reported for that scope, and what the wire envelope still
   // supports (D-014, RES-03).
+  //
+  // Suppression is applied here on the same terms the publishing path applies
+  // it. An administrator's `ignoredFaults` list is a standing instruction, not
+  // one the resolving path owns: without this gate a profile that stopped
+  // resolving would leave a removed sensor in HomeKit and go on driving it with
+  // a live verdict every poll, which is the sensor and the automations attached
+  // to it coming back on their own (CONF-06, D-017).
   function republishPublishedRows(input: ProjectionInput): void {
     for (const row of catalogue) {
+      if (isSuppressed(row.kind)) {
+        removeServiceIfPresent(accessory, row);
+
+        continue;
+      }
+
       const service = publishedService(accessory, row);
 
       if (service === undefined) {
