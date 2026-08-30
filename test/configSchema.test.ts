@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import { PLATFORM_NAME } from '../src/settings.js';
 
+/** The value domain of a list field in the generated settings form. */
+interface SettingsFormItems {
+  type: string;
+  enum: string[];
+}
+
 /** One field of the generated settings form. */
 interface SettingsFormField {
   title: string;
@@ -16,9 +22,11 @@ interface SettingsFormField {
   default?: unknown;
   minLength?: number;
   pattern?: string;
+  uniqueItems?: boolean;
+  items?: SettingsFormItems;
 }
 
-/** The six fields the settings form offers, and no others. */
+/** The seven fields the settings form offers, and no others. */
 interface SettingsFormFields {
   name: SettingsFormField;
   email: SettingsFormField;
@@ -26,6 +34,7 @@ interface SettingsFormFields {
   clientId: SettingsFormField;
   pollInterval: SettingsFormField;
   offlineConfirmationPollCount: SettingsFormField;
+  ignoredFaults: SettingsFormField;
 }
 
 /** The shape of the shipped `config.schema.json`. */
@@ -130,11 +139,57 @@ test('CONF-05 writes the offline confirmation poll count default of 2 into the c
 
 test('CONF-04 exposes no vendor protocol constant other than the client identifier', () => {
   // arrange
-  const expectedFields = ['name', 'email', 'password', 'clientId', 'pollInterval', 'offlineConfirmationPollCount'];
+  const expectedFields = ['name', 'email', 'password', 'clientId', 'pollInterval', 'offlineConfirmationPollCount', 'ignoredFaults'];
 
   // act
   const settingsSchema = readSettingsSchema();
 
   // assert
   assert.deepStrictEqual(Object.keys(settingsSchema.schema.properties), expectedFields);
+});
+
+test('CONF-06 offers the removable notification sensors as a list that cannot repeat a name', () => {
+  // act
+  const { ignoredFaults } = readSettingsSchema().schema.properties;
+
+  // assert
+  assert.strictEqual(ignoredFaults.type, 'array');
+  assert.strictEqual(ignoredFaults.uniqueItems, true);
+});
+
+test('CONF-06 offers exactly the seven removable notification sensors and no other value', () => {
+  // arrange
+  const expectedItems = {
+    type: 'string',
+    enum: [
+      'backup-pump-activated',
+      'mains-power-lost',
+      'primary-pump-fault',
+      'backup-pump-fault',
+      'water-sensor-fault',
+      'pump-controller-link-lost',
+      'basement-guardian-offline',
+    ],
+  };
+
+  // act
+  const { ignoredFaults } = readSettingsSchema().schema.properties;
+
+  // assert
+  assert.deepStrictEqual(ignoredFaults.items, expectedItems);
+});
+
+// SAFE-07 forbids a plugin-side delay from existing at all, and absence is not provable by watching
+// behaviour: a debounce shorter than whatever a case waits would survive. The settings form is the
+// only surface an administrator could reach one through, so the key set is read from the shipped
+// file rather than a literal, which covers a key added later too (D-18).
+test('SAFE-07 offers no settings-form control that could delay a notification', () => {
+  // arrange
+  const delayTokens = ['delay', 'debounce', 'acknowledg', 'latch', 'quiet'];
+
+  // act
+  const delayControls = Object.keys(readSettingsSchema().schema.properties).filter((field) => delayTokens.some((token) => field.toLowerCase().includes(token)));
+
+  // assert
+  assert.deepStrictEqual(delayControls, []);
 });
