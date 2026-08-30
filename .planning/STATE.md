@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-08-30T18:55:25.987Z"
+stopped_at: Completed 03-07-PLAN.md
+last_updated: "2026-08-30T19:48:59.267Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 03 execution started
-state_head: b97f81bb1c17a0e23e1ba425e5ec344962f61a59
+state_head: eb414cce7ed4856a9f1dfef081984e2d1f916580
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 29
+  completed_plans: 30
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-08-30 — Phase 03 execution started
 
@@ -70,6 +70,7 @@ Progress: [███░░░░░░░] 2 of 6 phases complete ([███░
 | Phase 03 P04 | 60 min | 1 tasks | 12 files |
 | Phase 03 P05 | 60 min | 3 tasks | 7 files |
 | Phase 03 P06 | 45 min | 3 tasks | 7 files |
+| Phase 03 P07 | 45 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: A row's trust gate is applied per decoded scope group rather than per row, so Sump Pit Level keeps publishing water while the fault scope is untrusted
 - [Phase 03]: A merged backup-pump verdict is withheld unless both raw causes decoded, rather than defaulting the missing one to false
 - [Phase 03]: hap.Service.Battery is used; the Service.BatteryService alias does not exist on the Homebridge 2.x HAP line
+- [Phase 03]: Both alarm characteristics activate at 1 and rest at 0, so one pair of sensor steps covers the leak sensor and the seven contact adapters
+- [Phase 03]: The static gate reads an import rather than a mention, so the gate's own prose naming the forbidden modules does not report itself
+- [Phase 03]: Every commit in this plan is typed test, because it ships no production code and a feat commit would claim a feature that does not exist
 
 ### Pending Todos
 
@@ -176,6 +180,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T18:55:25.706Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-08-30T19:48:38.460Z
+Stopped at: Completed 03-07-PLAN.md
 Resume file: None

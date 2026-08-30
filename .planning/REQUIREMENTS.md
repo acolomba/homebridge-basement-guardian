@@ -40,13 +40,13 @@
 
 ### Safety Monitoring and HomeKit Representation
 
-- [ ] **SAFE-01**: The `Sump Pit Level` service maps every legal Gemini water-level code (`0`, `1`, `3`, `7`, `15`, `31`) through an explicit lookup and never through a population count; an unknown value faults the service instead of guessing a level, and `Sump Pit Flood` activates only at the flood threshold. The flood-threshold constant and every level mapping other than `1` stay provisional until G-002 closes, and G-002 blocks only the `1.0.0` release.
+- [x] **SAFE-01**: The `Sump Pit Level` service maps every legal Gemini water-level code (`0`, `1`, `3`, `7`, `15`, `31`) through an explicit lookup and never through a population count; an unknown value faults the service instead of guessing a level, and `Sump Pit Flood` activates only at the flood threshold. The flood-threshold constant and every level mapping other than `1` stay provisional until G-002 closes, and G-002 blocks only the `1.0.0` release.
 - [x] **SAFE-02**: Primary and backup Pump services truthfully expose live running state, and `Primary Pump Running` plus `Backup Pump Activated` Contact Sensors follow their respective device booleans.
-- [ ] **SAFE-03**: Every live backup-pump activation, including self-test activity, updates immediately without inventing a cause; recovered timestamp evidence adds one de-duplicated record without a late sensor pulse or notification.
-- [ ] **SAFE-04**: Primary pump, backup pump/fuse, water sensor, controller-link, and confirmed-offline faults update owning-service status plus five distinct Apple Home adapters, with exact raw causes retained and no aggregate System Fault adapter.
+- [x] **SAFE-03**: Every live backup-pump activation, including self-test activity, updates immediately without inventing a cause; recovered timestamp evidence adds one de-duplicated record without a late sensor pulse or notification.
+- [x] **SAFE-04**: Primary pump, backup pump/fuse, water sensor, controller-link, and confirmed-offline faults update owning-service status plus five distinct Apple Home adapters, with exact raw causes retained and no aggregate System Fault adapter.
 - [x] **SAFE-05**: Mains presence appears truthfully on the read-only `Sump Mains Power` service and `Mains Power Lost` follows `ac_power === false` independently of pump health.
 - [ ] **SAFE-06**: Backup battery services expose exact charging, low-voltage, health, and protection-band facts plus clearly labeled 25/50/75/100 estimated standard levels, without misusing filter-maintenance semantics.
-- [ ] **SAFE-07**: Current-condition and adapter transitions publish immediately and clear immediately on valid source recovery, with no plugin alert-delay setting or durable acknowledgement latch.
+- [x] **SAFE-07**: Current-condition and adapter transitions publish immediately and clear immediately on valid source recovery, with no plugin alert-delay setting or durable acknowledgement latch.
 - [ ] **SAFE-08**: Standard HomeKit semantics are used wherever truthful, vendor-defined characteristics are read-only, and no device value is mislabeled as an unrelated standard measurement or control merely for Apple Home visibility.
 
 ### Pump Records and Official Controls
@@ -59,9 +59,9 @@
 
 ### Degraded Operation and Recovery
 
-- [ ] **RES-01**: Communication or field-validation failure preserves the last valid value and marks only the narrowest affected service stale, inactive, or faulty; omitted partial fields and invalid updates never clear active safety conditions. The device heartbeat is approximately 898 seconds, and approximately 15 minutes of shadow silence is normal. Shadow silence is a secondary staleness signal only after two missed heartbeats, and one missed heartbeat is never evidence that the device is offline.
+- [x] **RES-01**: Communication or field-validation failure preserves the last valid value and marks only the narrowest affected service stale, inactive, or faulty; omitted partial fields and invalid updates never clear active safety conditions. The device heartbeat is approximately 898 seconds, and approximately 15 minutes of shadow silence is normal. Shadow silence is a secondary staleness signal only after two missed heartbeats, and one missed heartbeat is never evidence that the device is offline.
   - *Delivery split (Phase 3 discussion, `03-CONTEXT.md` D-10):* Phase 3 delivers the field-validity half — last valid value preserved, narrowest scope faulted, active safety conditions never cleared. Phase 5 delivers the time-based half — the heartbeat interval, the two-missed-heartbeat rule, and shadow silence as a secondary signal.
-- [ ] **RES-02**: `serial_communications === false` immediately activates `Pump Controller Link Lost`, faults controller-derived services, preserves their values, and exposes when trustworthy controller data was last received.
+- [x] **RES-02**: `serial_communications === false` immediately activates `Pump Controller Link Lost`, faults controller-derived services, preserves their values, and exposes when trustworthy controller data was last received.
 - [x] **RES-03**: `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report `connectivity.connected === false`. `data.offline === true` is corroboration and diagnostics only and never activates the adapter by itself (`D-016`). Failed REST requests or monitoring-path loss are logged and diagnosed separately without a false physical-device alert.
   - *Delivery split (Phase 3 discussion, `03-CONTEXT.md` D-09):* Phase 3 delivers the confirmation counter and the adapter, since `SAFE-04` publishes `Basement Guardian Offline` among its five adapters and an adapter without the counter would flap. Phase 5 delivers the remaining sentence — separating a lost monitoring path from a confirmed-offline device without a false physical-device alert.
 - [ ] **RES-04**: After a failed restart, getters return cached values without network calls, accessories remain present and visibly stale, commands stay disabled until fresh valid state returns, and only explicit credential rejection yields a persistent communication failure requiring user action.
@@ -128,21 +128,21 @@
 | DEV-06 | Phase 2 | Complete |
 | DEV-07 | Phase 2 | Complete |
 | DEV-08 | Phase 2 | Complete |
-| SAFE-01 | Phase 3 | Pending |
+| SAFE-01 | Phase 3 | Complete |
 | SAFE-02 | Phase 3 | Complete |
-| SAFE-03 | Phase 3 | Pending |
-| SAFE-04 | Phase 3 | Pending |
+| SAFE-03 | Phase 3 | Complete |
+| SAFE-04 | Phase 3 | Complete |
 | SAFE-05 | Phase 3 | Complete |
 | SAFE-06 | Phase 3 | Pending |
-| SAFE-07 | Phase 3 | Pending |
+| SAFE-07 | Phase 3 | Complete |
 | SAFE-08 | Phase 3 | Pending |
 | CTRL-01 | Phase 4 | Pending |
 | CTRL-02 | Phase 4 | Pending |
 | CTRL-03 | Phase 4 | Pending |
 | CTRL-04 | Phase 4 | Pending |
 | CTRL-05 | Phase 4 | Pending |
-| RES-01 | Phase 3, Phase 5 | Pending |
-| RES-02 | Phase 3 | Pending |
+| RES-01 | Phase 3, Phase 5 | Complete |
+| RES-02 | Phase 3 | Complete |
 | RES-03 | Phase 3, Phase 5 | Complete |
 | RES-04 | Phase 5 | Pending |
 | REL-01 | Phase 6 | Pending |
