@@ -33,7 +33,7 @@ export interface FakeService {
 
 /** A minimal, hand-built stand-in for a HAP `PlatformAccessory`. */
 export interface FakeAccessory {
-  readonly displayName: string;
+  displayName: string;
   readonly UUID: string;
   readonly context: Record<string, unknown>;
   getService(identifier: FakeIdentifier): FakeService | undefined;
@@ -150,7 +150,7 @@ class HarnessPlatformAccessory implements FakeAccessory {
   private readonly services: HarnessService[] = [];
 
   constructor(
-    readonly displayName: string,
+    public displayName: string,
     readonly UUID: string,
   ) {
     // Mirrors the real `Accessory` constructor, which always adds one

@@ -187,12 +187,15 @@ interface FakeApiCall {
   accessories: FakeDiscoveryAccessory[];
 }
 
-function fakeDiscoveryApi(registerCalls: FakeApiCall[]): API {
+function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeDiscoveryAccessory[][] = []): API {
   const standIn = {
     hap: fakeHap,
     platformAccessory: FakeDiscoveryAccessory,
     registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeDiscoveryAccessory[]) {
       registerCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
+    },
+    updatePlatformAccessories(accessories: FakeDiscoveryAccessory[]) {
+      updateCalls.push([...accessories]);
     },
   };
 
@@ -574,13 +577,15 @@ describe('registerDiscoveredDevices', () => {
     );
   });
 
-  test('leaves a deviceId already present in accessories untouched', () => {
+  test('updates a deviceId already present in accessories in place instead of registering it again', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
-    const api = fakeDiscoveryApi(registerCalls);
+    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const uuid = `uuid-${DEVICE_ID}`;
     const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    existing.context.lastVendorName = 'Sump System';
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
@@ -589,7 +594,94 @@ describe('registerDiscoveredDevices', () => {
     registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
 
     // assert
-    assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 1, registerCalls: [] });
+    assert.deepStrictEqual(
+      {
+        accessoryCount: accessories.size,
+        registerCalls,
+        displayName: existing.displayName,
+        device: existing.context.device,
+        updatedAccessoryCount: updateCalls.length,
+      },
+      {
+        accessoryCount: 1,
+        registerCalls: [],
+        displayName: 'Sump System',
+        device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+        updatedAccessoryCount: 1,
+      },
+    );
+  });
+
+  test('adopts a vendor rename when the display name still matches the stored vendor name', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const api = fakeDiscoveryApi(registerCalls, updateCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const uuid = `uuid-${DEVICE_ID}`;
+    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    existing.context.lastVendorName = 'Sump System';
+    existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
+      { displayName: 'Sump Sentry', lastVendorName: 'Sump Sentry', updatedAccessoryCount: 1 },
+    );
+  });
+
+  test('keeps a customized display name but still advances the stored vendor name', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const api = fakeDiscoveryApi(registerCalls, updateCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const uuid = `uuid-${DEVICE_ID}`;
+    const existing = new FakeDiscoveryAccessory('Basement Pump', uuid);
+    existing.context.lastVendorName = 'Sump System';
+    existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
+      { displayName: 'Basement Pump', lastVendorName: 'Sump Sentry', updatedAccessoryCount: 1 },
+    );
+  });
+
+  test('calls updatePlatformAccessories no times when nothing about the cached accessory changed', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const api = fakeDiscoveryApi(registerCalls, updateCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const uuid = `uuid-${DEVICE_ID}`;
+    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    existing.context.lastVendorName = 'Sump System';
+    existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
+      { displayName: 'Sump System', lastVendorName: 'Sump System', updatedAccessoryCount: 0 },
+    );
   });
 
   test('does nothing for a deviceId the store holds no snapshot for', () => {
