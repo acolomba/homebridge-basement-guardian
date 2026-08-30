@@ -38,6 +38,18 @@ export interface FakeRestApi {
   /** Sets the devices the discovery and device routes answer with. */
   setDevices(devices: readonly ApiDevice[]): void;
 
+  /**
+   * Arms the next `/devices` GET response with these devices.
+   *
+   * Queued answers apply in call order, one per request, before the service
+   * falls back to the standing device list `setDevices` holds. This is what
+   * lets a scenario script the out-of-band final-check fetch (DEV-05)
+   * differently from the confirming poll that triggers it, without racing a
+   * real HTTP round trip: both fetches happen back to back with no
+   * scenario-controllable gap between them.
+   */
+  armDevicesAnswer(devices: readonly ApiDevice[]): void;
+
   /** Sets the response the temporary-credentials route answers with. */
   setAwsCredentials(response: AwsCredentialsResponse): void;
 
@@ -59,6 +71,8 @@ export interface FakeRestApi {
 interface ServiceState {
   readonly requests: FakeRestRequest[];
   devices: readonly ApiDevice[];
+  /** One-shot device-list answers, consumed in order before `devices`. */
+  readonly queuedDeviceAnswers: (readonly ApiDevice[])[];
   credentials: AwsCredentialsResponse;
   armedStatus: number | undefined;
   holdNext: boolean;
@@ -124,7 +138,9 @@ function answerDevice(state: ServiceState, deviceId: string, response: ServerRes
 
 function answer(state: ServiceState, method: string, pathname: string, response: ServerResponse): void {
   if (method === 'GET' && pathname === DEVICES_PATH) {
-    respondJson(response, 200, { devices: state.devices.map((device) => wireDevice(device)) });
+    const queued = state.queuedDeviceAnswers.shift();
+    const devices = queued ?? state.devices;
+    respondJson(response, 200, { devices: devices.map((device) => wireDevice(device)) });
 
     return;
   }
@@ -184,7 +200,14 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
  * The promise resolves only once the port is known, so a caller can read `baseUrl` immediately.
  */
 export async function createFakeRestApi(): Promise<FakeRestApi> {
-  const state: ServiceState = { requests: [], devices: [], credentials: DEFAULT_CREDENTIALS, armedStatus: undefined, holdNext: false };
+  const state: ServiceState = {
+    requests: [],
+    devices: [],
+    queuedDeviceAnswers: [],
+    credentials: DEFAULT_CREDENTIALS,
+    armedStatus: undefined,
+    holdNext: false,
+  };
   const server = await startLoopbackServer((request, response) => route(state, request, response));
 
   return {
@@ -192,6 +215,9 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     requests: state.requests,
     setDevices(devices: readonly ApiDevice[]): void {
       state.devices = devices;
+    },
+    armDevicesAnswer(devices: readonly ApiDevice[]): void {
+      state.queuedDeviceAnswers.push(devices);
     },
     setAwsCredentials(response: AwsCredentialsResponse): void {
       state.credentials = response;

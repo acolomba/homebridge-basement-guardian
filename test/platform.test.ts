@@ -9,7 +9,7 @@ import { It, mock, verify, when } from 'strong-mock';
 
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
-import { BasementGuardianPlatform, registerDiscoveredDevices } from '../src/platform.js';
+import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
 import type { ApiDevice } from '../src/cloud/types.js';
@@ -187,7 +187,7 @@ interface FakeApiCall {
   accessories: FakeDiscoveryAccessory[];
 }
 
-function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeDiscoveryAccessory[][] = []): API {
+function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeDiscoveryAccessory[][] = [], unregisterCalls: FakeApiCall[] = []): API {
   const standIn = {
     hap: fakeHap,
     platformAccessory: FakeDiscoveryAccessory,
@@ -196,6 +196,9 @@ function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeDiscove
     },
     updatePlatformAccessories(accessories: FakeDiscoveryAccessory[]) {
       updateCalls.push([...accessories]);
+    },
+    unregisterPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeDiscoveryAccessory[]) {
+      unregisterCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
     },
   };
 
@@ -448,6 +451,96 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('unregisters a confirmed-absent accessory once two trustworthy polls and a final check agree it is gone', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let deviceListCalls = 0;
+    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        deviceListCalls += 1;
+
+        const wireDevice = {
+          accountId: 'account-1',
+          deviceId: DEVICE_ID,
+          deviceTypeId: DEVICE_TYPE_ID,
+          name: 'Sump System',
+          data: {},
+          attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+        };
+        const body = deviceListCalls === 1 ? { devices: [wireDevice] } : { devices: [] };
+
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }
+
+      return Promise.resolve(new Response('{}', { status: 503 }));
+    });
+    const registeredAccessories: FakeDiscoveryAccessory[] = [];
+    const unregisteredAccessories: FakeDiscoveryAccessory[] = [];
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    // `api.hap` is read three times across this scenario: twice while
+    // registering the accessory (the UUID derivation, then the accessory
+    // factory), and once more while deriving the same UUID to look the
+    // accessory up for removal.
+    when(() => api.hap)
+      .thenReturn(fakeHap as unknown as API['hap'])
+      .times(3);
+    when(() => api.platformAccessory).thenReturn(FakeDiscoveryAccessory as unknown as API['platformAccessory']);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((accessories: PlatformAccessory[]) => {
+          registeredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      api.unregisterPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((accessories: PlatformAccessory[]) => {
+          unregisteredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
+    const [launch, shutdown] = listeners;
+
+    // act
+    launch?.();
+    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
+    t.mock.timers.tick(300_000);
+    await settle();
+    t.mock.timers.tick(300_000);
+    await settle();
+    await until(() => unregisteredAccessories.length > 0, 'the platform to unregister the confirmed-absent accessory');
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { unregisteredCount: unregisteredAccessories.length, accessoryCount: platform.accessories.size },
+      { unregisteredCount: 1, accessoryCount: 0 },
+    );
+    verify(user);
+    verify(api);
+  });
+
   test('reaches no vendor route until Homebridge reports it has finished launching', async (t) => {
     // arrange
     const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
@@ -531,7 +624,7 @@ describe('configureAccessory', () => {
     verify(api);
   });
 
-  test('D-03 removes nothing from HomeKit while restoring cached accessories', () => {
+  test('D-03 removes nothing from HomeKit on cache-restore alone', () => {
     // arrange
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const staleAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'stale accessory' });
@@ -778,6 +871,61 @@ describe('registerDiscoveredDevices', () => {
         registeredDeviceIds: registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
       },
       { accessoryCount: 1, registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] },
+    );
+  });
+});
+
+describe('removeDiscoveredDevice', () => {
+  test('unregisters a cached accessory, drops it from accessories, and removes its stored state', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const unregisterCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls, [], unregisterCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const uuid = `uuid-${DEVICE_ID}`;
+    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    removeDiscoveredDevice({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        accessoryCount: accessories.size,
+        unregisterCalls: unregisterCalls.map((call) => ({
+          pluginIdentifier: call.pluginIdentifier,
+          platformName: call.platformName,
+          uuids: call.accessories.map((accessory) => accessory.UUID),
+        })),
+        storedSnapshot: store.snapshot(DEVICE_ID),
+      },
+      {
+        accessoryCount: 0,
+        unregisterCalls: [{ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, uuids: [uuid] }],
+        storedSnapshot: undefined,
+      },
+    );
+  });
+
+  test('does nothing for a deviceId with no cached accessory', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const unregisterCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls, [], unregisterCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const expectedSnapshot = store.applyDiscovery(geminiDevice());
+
+    // act
+    removeDiscoveredDevice({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+
+    // assert
+    assert.deepStrictEqual(
+      { accessoryCount: accessories.size, unregisterCalls, storedSnapshot: store.snapshot(DEVICE_ID) },
+      { accessoryCount: 0, unregisterCalls: [], storedSnapshot: expectedSnapshot },
     );
   });
 });

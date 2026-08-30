@@ -64,3 +64,19 @@ Feature: Discovering a Gemini and publishing its accessory
       | placeholder-gemini | Sump Sentry |
     Then the accessory remembers the vendor name "Sump Sentry"
     Then the accessory is named "Basement Pump"
+
+  Scenario: A device omitted from two trustworthy polls and a final check is removed
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin registers one accessory with a truthful accessory information service
+    When the vendor reports no devices
+    Then the plugin unregisters the accessory
+
+  Scenario: A device that reappears before the final check is not removed
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin registers one accessory with a truthful accessory information service
+    When the vendor omits the device from the next 2 inventory checks
+    Then the plugin polls the vendor at least 6 times
+    Then the plugin registers one accessory with a truthful accessory information service
+    Then the plugin never unregisters the accessory

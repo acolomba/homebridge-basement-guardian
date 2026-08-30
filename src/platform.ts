@@ -163,14 +163,40 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
 }
 
 /**
+ * Unregisters a confirmed-absent accessory from HomeKit and drops its stored
+ * canonical state.
+ *
+ * A `deviceId` with no cached accessory is a no-op: it was never registered,
+ * or an earlier removal already unregistered it. The UUID is derived the
+ * same way discovery derives it, so the same physical device always resolves
+ * to the same accessory (DEV-05, D-029).
+ */
+export function removeDiscoveredDevice(context: DiscoveryContext, deviceId: string, store: DeviceStateStore): void {
+  const uuid = context.api.hap.uuid.generate(deviceId);
+  const accessory = context.accessories.get(uuid);
+
+  if (accessory === undefined) {
+    return;
+  }
+
+  context.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+  context.accessories.delete(uuid);
+  store.remove(deviceId);
+}
+
+/**
  * Composition root of the dynamic platform.
  *
  * An invalid configuration is refused before any listener exists, so the plugin
  * installs and stays quiet rather than starting half-configured (CONF-03). The
  * cloud work begins on `didFinishLaunching` and is released on `shutdown`.
  *
- * The platform removes nothing: a cached accessory this build cannot explain
- * still belongs to the user's HomeKit (D-03).
+ * A cached accessory the plugin cannot currently explain -- an unsupported or
+ * unknown profile, or a payload that stops validating -- is never removed for
+ * that reason alone; it stays and, where DEV-08 applies, degrades in place
+ * (D-03). Confirmed inventory absence is the one condition that does trigger
+ * removal, once two consecutive trustworthy polls and an out-of-band final
+ * check all agree the device is gone (DEV-05, D-029).
  */
 export class BasementGuardianPlatform implements DynamicPlatformPlugin {
   readonly accessories = new Map<string, BasementGuardianPlatformAccessory>();
@@ -220,6 +246,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         registerDiscoveredDevices({ api: this.api, accessories: this.accessories, registry: this.registry, log: this.log }, deviceIds, runtime.store);
+      },
+      onDeviceRemoved: (deviceId: string): void => {
+        removeDiscoveredDevice({ api: this.api, accessories: this.accessories, registry: this.registry, log: this.log }, deviceId, runtime.store);
       },
     });
 
