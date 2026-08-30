@@ -11,8 +11,9 @@
  * is not an option: the style rules ban it, and Node rejects an enum when it
  * strips types rather than compiling them.
  *
- * This module is a declaration only. Its entry in the `ignoreFindings` list of
- * `.fallowrc.json` goes away when a production consumer arrives.
+ * The removable notification names appear twice, once as a type and once as a
+ * runtime list, because an administrator supplies them as text: the
+ * configuration check and the shipped settings form both read them at run time.
  */
 
 /**
@@ -22,7 +23,15 @@
  * removing one would hide a condition rather than hide a notification.
  */
 export type CoreServiceKind =
-  'sump-pit-flood' | 'sump-pit-level' | 'primary-pump' | 'backup-pump' | 'sump-mains-power' | 'backup-battery' | 'system-self-test' | 'alarm-mute';
+  | 'sump-pit-flood'
+  | 'sump-pit-level'
+  | 'primary-pump'
+  | 'primary-pump-running'
+  | 'backup-pump'
+  | 'sump-mains-power'
+  | 'backup-battery'
+  | 'system-self-test'
+  | 'alarm-mute';
 
 /**
  * The notification sensors a user may remove from the configuration.
@@ -39,6 +48,37 @@ export type NotificationServiceKind =
   | 'water-sensor-fault'
   | 'pump-controller-link-lost'
   | 'basement-guardian-offline';
+
+/**
+ * The removable notification names, in the order the type declares them.
+ *
+ * This is the one runtime source the configuration refusal and the shipped
+ * settings-form enum both trace to, so neither can offer a name the type does
+ * not declare.
+ */
+export const NOTIFICATION_SERVICE_KINDS: readonly NotificationServiceKind[] = [
+  'backup-pump-activated',
+  'mains-power-lost',
+  'primary-pump-fault',
+  'backup-pump-fault',
+  'water-sensor-fault',
+  'pump-controller-link-lost',
+  'basement-guardian-offline',
+];
+
+// `Array.includes` requires an argument of the element type, so membership is
+// tested through a widened view of the same list rather than an assertion.
+const NOTIFICATION_SERVICE_NAMES: readonly string[] = NOTIFICATION_SERVICE_KINDS;
+
+/**
+ * Answers whether a supplied value names one of the removable notification sensors.
+ *
+ * The value arrives from a hand-edited `config.json`, so it is checked as
+ * `unknown` rather than trusted to be text.
+ */
+export function isNotificationServiceKind(value: unknown): value is NotificationServiceKind {
+  return typeof value === 'string' && NOTIFICATION_SERVICE_NAMES.includes(value);
+}
 
 /** Every service kind this plugin can publish. */
 export type ServiceKind = CoreServiceKind | NotificationServiceKind;
