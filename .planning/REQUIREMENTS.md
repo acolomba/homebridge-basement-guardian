@@ -41,7 +41,7 @@
 ### Safety Monitoring and HomeKit Representation
 
 - [ ] **SAFE-01**: The `Sump Pit Level` service maps every legal Gemini water-level code (`0`, `1`, `3`, `7`, `15`, `31`) through an explicit lookup and never through a population count; an unknown value faults the service instead of guessing a level, and `Sump Pit Flood` activates only at the flood threshold. The flood-threshold constant and every level mapping other than `1` stay provisional until G-002 closes, and G-002 blocks only the `1.0.0` release.
-- [ ] **SAFE-02**: Primary and backup Pump services truthfully expose live running state, and `Primary Pump Running` plus `Backup Pump Activated` Contact Sensors follow their respective device booleans.
+- [x] **SAFE-02**: Primary and backup Pump services truthfully expose live running state, and `Primary Pump Running` plus `Backup Pump Activated` Contact Sensors follow their respective device booleans.
 - [ ] **SAFE-03**: Every live backup-pump activation, including self-test activity, updates immediately without inventing a cause; recovered timestamp evidence adds one de-duplicated record without a late sensor pulse or notification.
 - [ ] **SAFE-04**: Primary pump, backup pump/fuse, water sensor, controller-link, and confirmed-offline faults update owning-service status plus five distinct Apple Home adapters, with exact raw causes retained and no aggregate System Fault adapter.
 - [x] **SAFE-05**: Mains presence appears truthfully on the read-only `Sump Mains Power` service and `Mains Power Lost` follows `ac_power === false` independently of pump health.
@@ -129,7 +129,7 @@
 | DEV-07 | Phase 2 | Complete |
 | DEV-08 | Phase 2 | Complete |
 | SAFE-01 | Phase 3 | Pending |
-| SAFE-02 | Phase 3 | Pending |
+| SAFE-02 | Phase 3 | Complete |
 | SAFE-03 | Phase 3 | Pending |
 | SAFE-04 | Phase 3 | Pending |
 | SAFE-05 | Phase 3 | Complete |

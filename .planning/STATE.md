@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-08-30T16:55:41.437Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-08-30T18:01:52.664Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 03 execution started
-state_head: 018ba9be1bd87f7d7fedb854ce24090d8e13e569
+state_head: 4fdfb55c8503f1db34e7aa074e7eb10bced2f7da
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 27
+  completed_plans: 28
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-08-30 — Phase 03 execution started
 
@@ -68,6 +68,7 @@ Progress: [███░░░░░░░] 2 of 6 phases complete ([███░
 | Phase 03 P02 | 42 min | 3 tasks | 7 files |
 | Phase 03 P03 | 31 min | 3 tasks | 8 files |
 | Phase 03 P04 | 60 min | 1 tasks | 12 files |
+| Phase 03 P05 | 60 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,10 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: Phase 3: a defensive guard behind a validation gate is covered by constructing the broken contract it names, never by a coverage exception or a silent default.
 - [Phase 03]: D-12 confirmed: a HomeKit service subtype is its ServiceKind slug verbatim, and custom service and characteristic UUIDs are hard-coded random v4 literals outside Apple's base namespace — A seed-derived identifier would silently orphan every custom service on every installed accessory if the seed were later edited, with a green test suite. A literal cannot drift.
 - [Phase 03]: The accessory logs its degradation warning on any transition into a degraded state, not only when no adapter resolves — A per-field validation failure now narrows distrust to one scope, but the owner still needs the diagnostic; scoping the log to the unresolved-family branch would have removed a passing discovery scenario's assertion.
+- [Phase 03]: Both battery services publish under the single backup-battery kind and subtype, named Backup Battery and Backup Battery Facts
+- [Phase 03]: A row's trust gate is applied per decoded scope group rather than per row, so Sump Pit Level keeps publishing water while the fault scope is untrusted
+- [Phase 03]: A merged backup-pump verdict is withheld unless both raw causes decoded, rather than defaulting the missing one to false
+- [Phase 03]: hap.Service.Battery is used; the Service.BatteryService alias does not exist on the Homebridge 2.x HAP line
 
 ### Pending Todos
 
@@ -161,6 +166,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T16:55:41.067Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-08-30T18:01:41.341Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
