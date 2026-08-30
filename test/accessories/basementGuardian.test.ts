@@ -729,6 +729,16 @@ describe('createBasementGuardianAccessory', () => {
     });
   }
 
+  for (const offlineConfirmationPollCount of [0, -1, 1.5, Number.NaN]) {
+    test(`refuses an offline confirmation poll count of ${String(offlineConfirmationPollCount)} at construction`, () => {
+      // arrange
+      const accessory = accessoryStandIn();
+
+      // act & assert
+      assert.throws(() => accessoryWith(accessory, { offlineConfirmationPollCount }), Error);
+    });
+  }
+
   test('takes the documented default of two consecutive disconnected polls', () => {
     // arrange
     const accessory = accessoryStandIn();

@@ -97,7 +97,14 @@ export interface BasementGuardianAccessoryOptions {
   timers: Timers;
   /** The notification sensors to leave unpublished. Absent publishes every adapter (D-017, CONF-06). */
   ignoredFaults?: readonly NotificationServiceKind[];
-  /** Consecutive disconnected polls before the offline adapter activates. Absent takes the documented default (RES-03, D-09). */
+  /**
+   * Consecutive disconnected polls before the offline adapter activates.
+   *
+   * Absent takes the documented default. A supplied value is a whole number of
+   * at least one; anything else is refused at construction, because a threshold
+   * of zero would activate the adapter on every update including the first
+   * (RES-03, D-09).
+   */
   offlineConfirmationPollCount?: number;
 }
 
@@ -293,6 +300,16 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   const catalogue = createServiceCatalogue(hap);
   const ignoredFaults: readonly NotificationServiceKind[] = options.ignoredFaults ?? [];
   const offlineThreshold = options.offlineConfirmationPollCount ?? DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT;
+
+  // A threshold of zero makes `offlineCount >= offlineThreshold` true from the
+  // first update, so `Basement Guardian Offline` would read activated while the
+  // vendor answers normally -- a permanent false alarm on the one adapter RES-03
+  // exists for. `src/config.ts` bounds the setting at 1, but this factory is an
+  // exported entry point, so its contract does not depend on its caller having
+  // validated first.
+  if (!Number.isInteger(offlineThreshold) || offlineThreshold < 1) {
+    throw new Error(`offlineConfirmationPollCount must be a whole number of at least 1, not ${String(offlineThreshold)}`);
+  }
 
   // Local to this accessory: per scope, the receipt time of the last snapshot
   // in which it was still vouched for; whether the accessory is currently
