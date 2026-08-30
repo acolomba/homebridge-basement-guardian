@@ -176,6 +176,24 @@ const POWER_FAMILY: DeviceFamily<unknown> = {
   command: () => ({ desiredData: {} }),
 };
 
+// A device whose decode raises, so a case can drive one failing device through a batch that also
+// carries a healthy one.
+const THROWING_DEVICE_ID = 'account-1_serial-throwing';
+
+// A family that raises while decoding one named device and decodes every other one normally. The
+// three reachable throws inside the dispatch (the identity guard, the AccessoryInformation guard,
+// and a family decode guard) all reach the loop the same way, so one of them stands for all three.
+const THROWING_FAMILY: DeviceFamily<unknown> = {
+  ...POWER_FAMILY,
+  decode: (snapshot) => {
+    if (snapshot.identity.deviceId === THROWING_DEVICE_ID) {
+      throw new TypeError('decode() expected ac_power to be a boolean');
+    }
+
+    return { metadata: {}, power: { mainsPresent: true } };
+  },
+};
+
 function implementedRegistry(): FamilyRegistry {
   return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: FAKE_FAMILY }), shouldLog: () => true };
 }
@@ -962,6 +980,33 @@ describe('registerDiscoveredDevices', () => {
         registeredDeviceIds: registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
       },
       { accessoryCount: 1, registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] },
+    );
+  });
+
+  test('registers a healthy device after an earlier device in the same batch throws', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), deviceId: THROWING_DEVICE_ID });
+    store.applyDiscovery(geminiDevice());
+    const messages: string[] = [];
+    const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: THROWING_FAMILY }), shouldLog: () => true };
+
+    // act
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry, log: createRecordingLog(messages) }), [THROWING_DEVICE_ID, DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        registeredDeviceIds: registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
+        messages,
+      },
+      {
+        registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }],
+        messages: [`Skipping ${THROWING_DEVICE_ID} on this inventory; every other device still updates.`],
+      },
     );
   });
 

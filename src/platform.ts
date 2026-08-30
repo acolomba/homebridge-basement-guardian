@@ -205,6 +205,49 @@ function updateDiscoveredDevice(
   }
 }
 
+// One device's whole dispatch, so the loop below can hold it in a `try` without
+// wrapping the loop itself: a throw here costs this device its turn on this
+// inventory and nothing else.
+function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, store: DeviceStateStore): void {
+  const uuid = context.api.hap.uuid.generate(deviceId);
+  const snapshot = store.snapshot(deviceId);
+
+  if (snapshot === undefined) {
+    return;
+  }
+
+  const existing = context.accessories.get(uuid);
+
+  if (existing !== undefined) {
+    updateDiscoveredDevice(context, uuid, existing, snapshot, store);
+
+    return;
+  }
+
+  const outcome = context.registry.lookup(snapshot.identity.deviceTypeId);
+
+  if (outcome.kind !== 'implemented') {
+    if (context.registry.shouldLog(deviceId, snapshot.identity.deviceTypeId)) {
+      explainSkippedDevice(context.log, deviceId, outcome);
+    }
+
+    return;
+  }
+
+  const accessory = new context.api.platformAccessory<BasementGuardianAccessoryContext>(snapshot.identity.name, uuid);
+  accessory.context.device = { deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
+  // First registration has no prior HomeKit name to compare against, so the
+  // vendor name is adopted outright and the baseline for later rename
+  // adoption is set here (DEV-06).
+  accessory.context.lastVendorName = snapshot.identity.name;
+
+  const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory, deviceId, store);
+  basementGuardianAccessory.update(snapshot, 'poll');
+
+  context.accessories.set(uuid, accessory);
+  context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+}
+
 /**
  * Dispatches every discovered device through the family registry, registering
  * one HomeKit accessory for each implemented device this platform has not
@@ -217,49 +260,23 @@ function updateDiscoveredDevice(
  * removes an accessory (DEV-04). A HALO or unknown-`deviceTypeId` device that
  * has never been registered is explained through the registry's log-cadence
  * tracking and never registered (DEV-01); one device's outcome never stops
- * the loop from dispatching the rest. Exported so the harness that proves
+ * the loop from dispatching the rest, and a device that throws is logged by
+ * name and costs only its own turn on this inventory. Exported so the harness that proves
  * this end to end drives the identical logic a real platform runs, rather
  * than a parallel copy of it.
  */
 export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: readonly string[], store: DeviceStateStore): void {
   for (const deviceId of deviceIds) {
-    const uuid = context.api.hap.uuid.generate(deviceId);
-    const snapshot = store.snapshot(deviceId);
-
-    if (snapshot === undefined) {
-      continue;
+    try {
+      dispatchDiscoveredDevice(context, deviceId, store);
+    } catch (error: unknown) {
+      // One device's outcome never stops the loop from dispatching the rest: a
+      // fleet is several basements, and a single malformed payload must not
+      // leave the others unregistered or unrefreshed. The error travels as a
+      // parameter so the redacting logger describes it rather than a message
+      // built here (D-024).
+      context.log.error(`Skipping ${deviceId} on this inventory; every other device still updates.`, error);
     }
-
-    const existing = context.accessories.get(uuid);
-
-    if (existing !== undefined) {
-      updateDiscoveredDevice(context, uuid, existing, snapshot, store);
-
-      continue;
-    }
-
-    const outcome = context.registry.lookup(snapshot.identity.deviceTypeId);
-
-    if (outcome.kind !== 'implemented') {
-      if (context.registry.shouldLog(deviceId, snapshot.identity.deviceTypeId)) {
-        explainSkippedDevice(context.log, deviceId, outcome);
-      }
-
-      continue;
-    }
-
-    const accessory = new context.api.platformAccessory<BasementGuardianAccessoryContext>(snapshot.identity.name, uuid);
-    accessory.context.device = { deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
-    // First registration has no prior HomeKit name to compare against, so the
-    // vendor name is adopted outright and the baseline for later rename
-    // adoption is set here (DEV-06).
-    accessory.context.lastVendorName = snapshot.identity.name;
-
-    const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory, deviceId, store);
-    basementGuardianAccessory.update(snapshot, 'poll');
-
-    context.accessories.set(uuid, accessory);
-    context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
   }
 }
 
