@@ -10,6 +10,9 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { isNotificationServiceKind } from '../../../src/accessories/services.js';
+
+import type { NotificationServiceKind } from '../../../src/accessories/services.js';
 import type { BasementGuardianWorld } from '../world.js';
 import type { DataTable } from '@cucumber/cucumber';
 
@@ -26,6 +29,23 @@ function accountSettings(this: BasementGuardianWorld, table: DataTable): void {
 }
 
 Given('these account settings:', accountSettings);
+
+// The slug an administrator types into `ignoredFaults` is the adapter's own configuration name, so
+// a scenario naming one the plugin never publishes fails here rather than quietly suppressing
+// nothing and proving the suppression works (CONF-06, D-12).
+function ignoredFaultAdapter(slug: string | undefined): NotificationServiceKind {
+  if (!isNotificationServiceKind(slug)) {
+    throw new Error(`the plugin publishes no ${String(slug)} fault adapter`);
+  }
+
+  return slug;
+}
+
+function ignoredFaultAdapters(this: BasementGuardianWorld, table: DataTable): void {
+  this.ignoredFaults = table.raw().map(([slug]) => ignoredFaultAdapter(slug));
+}
+
+Given('the plugin ignores these fault adapters:', ignoredFaultAdapters);
 
 async function loadPlugin(this: BasementGuardianWorld): Promise<void> {
   await this.loadPlatform();

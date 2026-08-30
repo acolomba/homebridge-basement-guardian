@@ -37,6 +37,7 @@ import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
 import type { FakeShadowBroker } from './fakeShadowBroker.js';
 import type { BasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
+import type { NotificationServiceKind } from '../../src/accessories/services.js';
 import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
@@ -143,6 +144,15 @@ export class BasementGuardianWorld extends World {
 
   /** The account settings the scenario configures the platform with. */
   settings: Record<string, unknown> = {};
+
+  /**
+   * The notification sensors the scenario configures the plugin to leave unpublished.
+   *
+   * The harness `launch()` path builds its own runtime configuration and its own `DiscoveryContext`,
+   * so a scenario-configured suppression reaches the accessory through this field rather than
+   * through `settings`, which only `loadPlatform()` reads (CONF-06).
+   */
+  ignoredFaults: readonly NotificationServiceKind[] = [];
 
   /** The devices the scenario handed to the fake REST service. */
   devices: readonly ApiDevice[] = [];
@@ -492,7 +502,7 @@ export class BasementGuardianWorld extends World {
         clientId: HARNESS_CLIENT_ID,
         pollIntervalSeconds: this.pollIntervalSeconds,
         offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
-        ignoredFaults: [],
+        ignoredFaults: this.ignoredFaults,
       },
       constants: await this.harnessConstants(),
       storagePath: homebridge.storagePath,
@@ -539,7 +549,7 @@ export class BasementGuardianWorld extends World {
       basementGuardianAccessories,
       registry,
       log: this.logger(),
-      ignoredFaults: [],
+      ignoredFaults: this.ignoredFaults,
       offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
       timers: systemTimers,
     };

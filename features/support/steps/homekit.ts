@@ -27,12 +27,14 @@ import type { API } from 'homebridge';
 const PUBLISH_DEADLINE_MS = 2000;
 const STEP_TIMEOUT_MS = 15_000;
 
-// `CONTACT_NOT_DETECTED` is the activated state for every "is something wrong" sensor, so an Apple
-// Home tile reads "Open" when there is something to act on.
-const CONTACT_DETECTED = 0;
-const CONTACT_NOT_DETECTED = 1;
-
-const CONTACT_SENSOR_STATE = 'Contact Sensor State';
+// The two characteristics this plugin raises an alarm through, and the states they raise it in.
+// `ContactSensorState.CONTACT_NOT_DETECTED` and `LeakDetected.LEAK_DETECTED` are both 1, so an
+// Apple Home tile reads "Open" or "Leak" when there is something to act on, and 0 is the quiet
+// state of either. A service carries exactly one of the two, so a step names the sensor and the
+// read finds whichever characteristic that sensor raises its alarm through.
+const ALARM_CHARACTERISTICS: readonly string[] = ['Contact Sensor State', 'Leak Detected'];
+const ALARM_ACTIVATED = 1;
+const ALARM_QUIET = 0;
 
 // Every scenario here seeds exactly one physical device, so a step reads state back through the one
 // accessory the plugin ever registers.
@@ -56,24 +58,33 @@ function characteristicValue(service: FakeHapService | undefined, displayName: s
   return service?.characteristics.find((candidate) => candidate.displayName === displayName)?.value;
 }
 
-// A scenario states a published boolean as the value the vendor would have sent, so it reads `true`
-// rather than the text of it.
-function booleanValue(text: string): boolean {
-  if (text !== 'true' && text !== 'false') {
-    throw new Error(`a scenario states a published boolean as "true" or "false", not ${text}`);
+// A scenario states a published value as the value HomeKit carries, so it reads `true` and `80`
+// rather than the text of either. Every characteristic these scenarios read carries a boolean or a
+// whole number, so anything else is a scenario naming a value no service can publish.
+function publishedValue(text: string): boolean | number {
+  if (text === 'true' || text === 'false') {
+    return text === 'true';
   }
 
-  return text === 'true';
+  if (!/^-?\d+$/.test(text)) {
+    throw new Error(`a scenario states a published value as "true", "false", or a whole number, not ${text}`);
+  }
+
+  return Number(text);
+}
+
+function alarmValue(service: FakeHapService | undefined): unknown {
+  return service?.characteristics.find((candidate) => ALARM_CHARACTERISTICS.includes(candidate.displayName))?.value;
 }
 
 function untilPublished(world: BasementGuardianWorld, read: () => unknown, expected: unknown, failure: string): Promise<void> {
   return world.untilTrue(() => read() === expected, PUBLISH_DEADLINE_MS, failure);
 }
 
-async function untilContactState(world: BasementGuardianWorld, displayName: string, state: number, failure: string): Promise<void> {
+async function untilAlarmState(world: BasementGuardianWorld, displayName: string, state: number, failure: string): Promise<void> {
   const homebridge = await world.homebridge();
 
-  await untilPublished(world, () => characteristicValue(serviceOf(homebridge, displayName), CONTACT_SENSOR_STATE), state, failure);
+  await untilPublished(world, () => alarmValue(serviceOf(homebridge, displayName)), state, failure);
 }
 
 async function assertServicePublished(this: BasementGuardianWorld, displayName: string): Promise<void> {
@@ -96,19 +107,19 @@ async function assertCharacteristicValue(this: BasementGuardianWorld, serviceNam
   const homebridge = await this.homebridge();
   const failure = `the ${serviceName} service never reported ${characteristicName} as ${text}`;
 
-  await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), booleanValue(text), failure);
+  await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), publishedValue(text), failure);
 }
 
 Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
 
 function assertSensorActivated(this: BasementGuardianWorld, displayName: string): Promise<void> {
-  return untilContactState(this, displayName, CONTACT_NOT_DETECTED, `the ${displayName} sensor never activated`);
+  return untilAlarmState(this, displayName, ALARM_ACTIVATED, `the ${displayName} sensor never activated`);
 }
 
 Then('the {string} sensor is activated', { timeout: STEP_TIMEOUT_MS }, assertSensorActivated);
 
 function assertSensorNotActivated(this: BasementGuardianWorld, displayName: string): Promise<void> {
-  return untilContactState(this, displayName, CONTACT_DETECTED, `the ${displayName} sensor never reported a quiet state`);
+  return untilAlarmState(this, displayName, ALARM_QUIET, `the ${displayName} sensor never reported a quiet state`);
 }
 
 Then('the {string} sensor is not activated', { timeout: STEP_TIMEOUT_MS }, assertSensorNotActivated);
