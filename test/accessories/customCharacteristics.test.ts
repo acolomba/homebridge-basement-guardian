@@ -204,14 +204,17 @@ describe('createCustomCharacteristics', () => {
     assert.strictEqual(controllerDataLastTrustedAt.value, '');
   });
 
-  test('gives two characteristics no shared permission array to mutate', () => {
+  test('leaves one characteristic intact when another mutates its own permissions', () => {
     // arrange
-    const { MainsPowerPresent, PumpRunning } = createCustomCharacteristics(hapNamespace());
+    const hap = hapNamespace();
+    const { MainsPowerPresent, PumpRunning } = createCustomCharacteristics(hap);
+    const mainsPower = new MainsPowerPresent().props.perms;
+    const pumpRunning = new PumpRunning().props.perms;
 
     // act
-    const perms = { mainsPower: new MainsPowerPresent().props.perms, pumpRunning: new PumpRunning().props.perms };
+    mainsPower.push(hap.Perms.PAIRED_WRITE);
 
     // assert
-    assert.notStrictEqual(perms.mainsPower, perms.pumpRunning);
+    assert.deepStrictEqual({ mainsPower, pumpRunning }, { mainsPower: ['pr', 'ev', 'pw'], pumpRunning: ['pr', 'ev'] });
   });
 });
