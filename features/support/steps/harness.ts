@@ -16,6 +16,7 @@ import { shadowTopic } from '../fakeShadowBroker.js';
 import { SUBSCRIBER_CLIENT_ID } from '../world.js';
 
 import type { FakeAuth0TokenRequest } from '../fakeAuth0.js';
+import type { FakeAccessory, FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../fakeRestApi.js';
 import type { ShadowTopicLeaf } from '../fakeShadowBroker.js';
 import type { BasementGuardianWorld } from '../world.js';
@@ -27,6 +28,11 @@ const AUTHORIZATION_HEADER = 'Bearer fake-id-token';
 // A wrong bridge makes the broker go silent rather than fail, so the deadline is what turns that
 // silence into a named failure.
 const MESSAGE_DEADLINE_MS = 2000;
+
+// A discovery scenario that changes device data mid-scenario waits for the accessory's stored
+// state to reach the value a later step just reported, so the deadline is what turns a poll that
+// never picked up the change into a named failure rather than a false pass.
+const DISCOVERY_CHANGE_DEADLINE_MS = 2000;
 
 const DEVICE_ID = 'placeholder-gemini';
 const ACCESSORY_NAME = 'Sump Guardian';
@@ -118,6 +124,14 @@ function wireIdentity(wireDevice: unknown): Record<string, unknown> {
   };
 }
 
+// The scenarios that change device data after the plugin starts read state
+// back through the one accessory the harness ever registers, rather than a
+// deviceId lookup, because every discovery scenario in this feature seeds
+// exactly one physical device.
+function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
+  return homebridge.registerPlatformAccessoryCalls[0]?.accessories[0];
+}
+
 function topicNamed(name: string): string {
   const leaf = TOPIC_LEAVES.get(name);
 
@@ -175,11 +189,15 @@ async function fakeRestService(this: BasementGuardianWorld): Promise<void> {
 
 Given('the fake rest service', fakeRestService);
 
-async function devices(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  const service = await this.restApi();
+async function applyDevicesFromTable(world: BasementGuardianWorld, table: DataTable): Promise<void> {
+  const service = await world.restApi();
 
-  this.devices = table.hashes().map((row) => toDevice(row));
-  service.setDevices(this.devices);
+  world.devices = table.hashes().map((row) => toDevice(row));
+  service.setDevices(world.devices);
+}
+
+async function devices(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  await applyDevicesFromTable(this, table);
 }
 
 Given('these devices:', devices);
@@ -307,6 +325,25 @@ async function shutDown(this: BasementGuardianWorld): Promise<void> {
 }
 
 When('the api shuts down', shutDown);
+
+async function devicesReported(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  await applyDevicesFromTable(this, table);
+}
+
+When('the vendor reports these devices:', devicesReported);
+
+async function userRenamesAccessory(this: BasementGuardianWorld, name: string): Promise<void> {
+  const homebridge = await this.homebridge();
+  const accessory = currentAccessory(homebridge);
+
+  if (accessory === undefined) {
+    throw new Error('no accessory has been registered yet');
+  }
+
+  accessory.displayName = name;
+}
+
+When('the user renames the accessory to {string} in the home app', userRenamesAccessory);
 
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
@@ -476,3 +513,42 @@ function assertHaloAndUnknownExplainedOnceEach(this: BasementGuardianWorld): voi
 }
 
 Then('the plugin explains the halo and the unknown device once each', assertHaloAndUnknownExplainedOnceEach);
+
+// Waits for the accessory's stored vendor name to advance to what a scenario just reported, which
+// only happens once a discovery poll has actually applied the new device data (D-030). A scenario
+// asserts this before reading `displayName`, so that read is never a race against the poll.
+async function assertAccessoryRemembersVendorName(this: BasementGuardianWorld, name: string): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  await this.untilTrue(
+    () => currentAccessory(homebridge)?.context.lastVendorName === name,
+    DISCOVERY_CHANGE_DEADLINE_MS,
+    `the accessory never remembered the vendor name ${name}`,
+  );
+}
+
+Then('the accessory remembers the vendor name {string}', assertAccessoryRemembersVendorName);
+
+async function assertAccessoryDisplayName(this: BasementGuardianWorld, name: string): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  assert.equal(currentAccessory(homebridge)?.displayName, name);
+}
+
+Then('the accessory is named {string}', assertAccessoryDisplayName);
+
+// Waits for the accessory's stored deviceTypeId to advance to what a scenario just reported, which
+// only happens once a discovery poll has refreshed the context of the same, already-cached
+// accessory (DEV-04). Also proves the accessory context was actually refreshed rather than left
+// untouched, which a bare register-count assertion cannot tell apart.
+async function assertAccessoryRemembersDeviceType(this: BasementGuardianWorld, deviceTypeId: string): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  await this.untilTrue(
+    () => field(currentAccessory(homebridge)?.context.device, 'deviceTypeId') === deviceTypeId,
+    DISCOVERY_CHANGE_DEADLINE_MS,
+    `the accessory never remembered the device type ${deviceTypeId}`,
+  );
+}
+
+Then('the accessory remembers the device type {string}', assertAccessoryRemembersDeviceType);

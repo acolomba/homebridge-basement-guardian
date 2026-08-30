@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 
 import { connect } from 'mqtt';
 
@@ -12,8 +13,9 @@ import { systemClock } from './runtime/clock.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
 import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
-import type { DeviceStateStore } from './device/state.js';
+import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
+import type { AccessoryContext } from './persistence/accessoryContext.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
 /** Length of the salt the token cache fingerprints the account email with. */
@@ -28,6 +30,8 @@ const SALT_BYTES = 16;
  */
 export interface BasementGuardianAccessoryContext extends UnknownContext {
   device?: { deviceId: string; deviceTypeId: string };
+  /** The vendor name last adopted for this accessory's display name (DEV-06). */
+  lastVendorName?: AccessoryContext['lastVendorName'];
 }
 
 /** A Homebridge accessory carrying this plugin's context. */
@@ -56,31 +60,80 @@ function explainSkippedDevice(log: Logging, deviceId: string, outcome: Exclude<F
   log.info(`Skipping ${deviceId}: ${outcome.deviceTypeId} is not a recognized device family.`);
 }
 
+// D-030: a vendor rename is adopted only while the HomeKit display name still
+// equals the last vendor name the plugin itself stored; a display name that
+// has already diverged is a user's own customization, so it stays untouched
+// here even though `lastVendorName` still advances, which is what lets a
+// later, matching rename be detected even after a customization.
+function resolveVendorName(accessory: BasementGuardianPlatformAccessory, vendorName: string): { displayName: string; lastVendorName: string } {
+  const noCustomization = accessory.displayName === accessory.context.lastVendorName;
+
+  return {
+    displayName: noCustomization ? vendorName : accessory.displayName,
+    lastVendorName: vendorName,
+  };
+}
+
+/**
+ * Applies one discovery snapshot to an accessory already present in
+ * `accessories`.
+ *
+ * A `deviceId` already found by its UUID is never re-registered (DEV-04): the
+ * lookup that found it already proves physical identity, so this path only
+ * ever refreshes what a `deviceTypeId` or vendor-name change reported for the
+ * same accessory, never the accessory's identity itself.
+ */
+function updateDiscoveredDevice(context: DiscoveryContext, accessory: BasementGuardianPlatformAccessory, snapshot: DeviceSnapshot): void {
+  const rename = resolveVendorName(accessory, snapshot.identity.name);
+  const nextDevice = { deviceId: snapshot.identity.deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
+  const previousState = { displayName: accessory.displayName, lastVendorName: accessory.context.lastVendorName, device: accessory.context.device };
+  const nextState = { displayName: rename.displayName, lastVendorName: rename.lastVendorName, device: nextDevice };
+
+  accessory.displayName = nextState.displayName;
+  accessory.context.lastVendorName = nextState.lastVendorName;
+  accessory.context.device = nextState.device;
+
+  const basementGuardianAccessory = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+  basementGuardianAccessory.update(snapshot);
+
+  // A context mutation Homebridge does not know about is invisible on disk
+  // until the next full register/unregister cycle, so only a real change
+  // earns the call rather than persisting an identical value on every poll.
+  if (!isDeepStrictEqual(previousState, nextState)) {
+    context.api.updatePlatformAccessories([accessory]);
+  }
+}
+
 /**
  * Dispatches every discovered device through the family registry, registering
  * one HomeKit accessory for each implemented device this platform has not
- * already registered.
+ * already registered, and updating in place every device it has.
  *
  * The accessory UUID is seeded only from `deviceId`, never a mutable field
- * (C-002), so a `deviceId` already present in `accessories` is left
- * untouched here: only a genuinely new physical device gets a new accessory.
- * A HALO or unknown-`deviceTypeId` device is explained through the registry's
- * log-cadence tracking and never registered (DEV-01); one device's outcome
- * never stops the loop from dispatching the rest. Exported so the harness
- * that proves this end to end drives the identical logic a real platform
- * runs, rather than a parallel copy of it.
+ * (C-002), so a `deviceId` already present in `accessories` is always the
+ * same accessory: only a genuinely new physical device gets a new one, and a
+ * `deviceTypeId` or vendor-name change on an existing device never creates or
+ * removes an accessory (DEV-04). A HALO or unknown-`deviceTypeId` device that
+ * has never been registered is explained through the registry's log-cadence
+ * tracking and never registered (DEV-01); one device's outcome never stops
+ * the loop from dispatching the rest. Exported so the harness that proves
+ * this end to end drives the identical logic a real platform runs, rather
+ * than a parallel copy of it.
  */
 export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: readonly string[], store: DeviceStateStore): void {
   for (const deviceId of deviceIds) {
     const uuid = context.api.hap.uuid.generate(deviceId);
-
-    if (context.accessories.has(uuid)) {
-      continue;
-    }
-
     const snapshot = store.snapshot(deviceId);
 
     if (snapshot === undefined) {
+      continue;
+    }
+
+    const existing = context.accessories.get(uuid);
+
+    if (existing !== undefined) {
+      updateDiscoveredDevice(context, existing, snapshot);
+
       continue;
     }
 
@@ -96,6 +149,10 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
 
     const accessory = new context.api.platformAccessory<BasementGuardianAccessoryContext>(snapshot.identity.name, uuid);
     accessory.context.device = { deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
+    // First registration has no prior HomeKit name to compare against, so the
+    // vendor name is adopted outright and the baseline for later rename
+    // adoption is set here (DEV-06).
+    accessory.context.lastVendorName = snapshot.identity.name;
 
     const basementGuardianAccessory = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
     basementGuardianAccessory.update(snapshot);

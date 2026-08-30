@@ -20,6 +20,7 @@ function storedContext(): AccessoryContext {
     primaryPump: pumpObservation(),
     backupPump: pumpObservation(),
     watermarks: noWatermarks(),
+    lastVendorName: 'Sump System',
   };
 }
 
@@ -38,3 +39,10 @@ const { backupPump, ...withoutBackupPump } = storedContext();
 void (backupPump satisfies PumpObservation);
 // @ts-expect-error both pumps are observed, so neither record is optional
 void (withoutBackupPump satisfies AccessoryContext);
+
+void ({ ...storedContext(), lastVendorName: 'Sump System' } satisfies AccessoryContext);
+
+const { lastVendorName, ...withoutLastVendorName } = storedContext();
+void (lastVendorName satisfies string);
+// @ts-expect-error it is written on every registration, so it is never left unset
+void (withoutLastVendorName satisfies AccessoryContext);
