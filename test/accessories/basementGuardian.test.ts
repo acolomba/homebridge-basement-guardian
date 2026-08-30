@@ -463,6 +463,30 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(warnings.length, 2);
   });
 
+  test('asks the family for its verdict before it asks the family to decode', () => {
+    // arrange
+    const calls: string[] = [];
+    const family = fakeFamily({
+      validate: () => {
+        calls.push('validate');
+
+        return { valid: true };
+      },
+      decode: () => {
+        calls.push('decode');
+
+        return decodedState(true);
+      },
+    });
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family }) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(calls, ['validate', 'decode']);
+  });
+
   test('publishes every service in catalogue order and marks each one active', () => {
     // arrange
     const accessory = accessoryStandIn();

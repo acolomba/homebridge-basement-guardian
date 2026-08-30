@@ -442,9 +442,14 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         return;
       }
 
+      // The verdict is reached before the same snapshot is decoded, which is
+      // the order the family contract documents: a family decides what it may
+      // decode from its own validation, so asking for the verdict first keeps
+      // the call order and the contract saying the same thing.
+      const validation = outcome.family.validate(snapshot);
       const decoded = outcome.family.decode(snapshot);
       const linkLost = isControllerLinkLost(decoded);
-      const reasons = distrustReasonsOf(violatedScopesOf(outcome.family.validate(snapshot)), linkLost);
+      const reasons = distrustReasonsOf(violatedScopesOf(validation), linkLost);
       const metadata = decodedMetadataOf(decoded);
 
       recordTrustedScopes(reasons, snapshot.receivedAt);

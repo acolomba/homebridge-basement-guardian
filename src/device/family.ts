@@ -37,8 +37,11 @@ export interface FieldViolation {
 /**
  * The verdict on one snapshot.
  *
- * A snapshot that does not validate is never decoded. Refusing is what keeps a
- * vendor schema change from becoming a confidently wrong reading.
+ * A verdict is reached before the same snapshot is decoded, and it names the
+ * scopes that stop being trustworthy rather than refusing the whole payload:
+ * one bad field costs one scope. `decode()` therefore runs on snapshots that
+ * did not fully validate and is self-guarding, so a vendor schema change never
+ * becomes a confidently wrong reading (D-014).
  */
 export type FamilyValidation = { valid: true } | { valid: false; violations: readonly FieldViolation[] };
 
@@ -151,6 +154,11 @@ export interface DeviceFamily<TDomainState> {
    * A partly-invalid snapshot still publishes current values for the scopes
    * that are still trustworthy. An omitted scope is never a default, a zero, or
    * a remembered value the adapter guessed at (D-014, RES-01).
+   *
+   * The caller passes the snapshot as it arrived, so an implementation checks
+   * each scope's own fields itself rather than trusting the caller to have
+   * refused an invalid payload first. Reading a field directly here would raise
+   * on the first malformed value the vendor sends.
    */
   decode(snapshot: DeviceSnapshot): TDomainState;
   capabilities(state: TDomainState): readonly DeviceCapability[];
