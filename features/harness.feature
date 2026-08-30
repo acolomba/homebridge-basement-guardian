@@ -75,6 +75,16 @@ Feature: Harness fakes
     Then the service adds the characteristic an update names
     Then the service appends an optional characteristic on every call
 
+  Scenario: The fake accessory carries several services of one type
+    Then the accessory holds each contact sensor under its own subtype
+
+  Scenario: The fake accessory refuses a duplicate service
+    Then the accessory refuses a second service with the same type and subtype
+    Then the accessory refuses a second service of one type without a subtype
+
+  Scenario: The fake accessory removes one service
+    Then the accessory removes only the service it is given
+
   Scenario: The fake homebridge api answers the surface this version needs
     Given the fake homebridge api
     Given a listener on each lifecycle event

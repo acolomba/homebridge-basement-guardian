@@ -3,42 +3,40 @@
  *
  * The stand-in carries what the plugin reads while it registers accessories: the HAP namespace,
  * the storage path, the two lifecycle events, the accessory constructor, and the three
- * accessory-registration calls. The HAP namespace is a hand-built stand-in rather than the real
- * `@homebridge/hap-nodejs`, matching every other external boundary in this codebase: it carries
- * only the `Service`/`Characteristic` identifiers and the `uuid.generate` behavior a scenario
- * needs, not a faithful reimplementation of HAP-NodeJS itself.
+ * accessory-registration calls. The HAP namespace is the shared hand-built stand-in from
+ * `./fakeHap.js` rather than the real `@homebridge/hap-nodejs`, matching every other external
+ * boundary in this codebase.
+ *
+ * The accessory answers the real HAP call shapes: `addService(serviceClass, displayName, subtype)`
+ * takes the display name second, as the real one does, and refuses a duplicate service in both the
+ * ways the real one refuses. A two-argument form whose second parameter was the subtype would
+ * record a display name as a subtype, and every scenario built on it would pass while proving
+ * nothing about what the plugin published.
  */
 
-import { createHash } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { createFakeHap } from './fakeHap.js';
+
+import type { FakeHap, FakeHapService, FakeServiceClass } from './fakeHap.js';
 import type { API } from 'homebridge';
 
 type LifecycleEvent = 'didFinishLaunching' | 'shutdown';
 
-/** A fake `Service`/`Characteristic` identifier. Stable and unique per kind, never per instance. */
-export interface FakeIdentifier {
-  readonly UUID: string;
-}
-
-/** A minimal, hand-built stand-in for a HAP `Service`. */
-export interface FakeService {
-  readonly UUID: string;
-  readonly subtype: string | undefined;
-  setCharacteristic(identifier: FakeIdentifier, value: unknown): FakeService;
-  getCharacteristic(identifier: FakeIdentifier): unknown;
-}
+// A published service is `FakeHapService` from `./fakeHap.js`. This module carries no service type
+// of its own: a second name for one boundary is the first step toward a second stand-in of it.
 
 /** A minimal, hand-built stand-in for a HAP `PlatformAccessory`. */
 export interface FakeAccessory {
   displayName: string;
   readonly UUID: string;
   readonly context: Record<string, unknown>;
-  getService(identifier: FakeIdentifier): FakeService | undefined;
-  getServiceById(identifier: FakeIdentifier, subtype: string): FakeService | undefined;
-  addService(identifier: FakeIdentifier, subtype?: string): FakeService;
+  getService(serviceClass: FakeServiceClass): FakeHapService | undefined;
+  getServiceById(serviceClass: FakeServiceClass, subtype: string): FakeHapService | undefined;
+  addService(serviceClass: FakeServiceClass, displayName?: string, subtype?: string): FakeHapService;
+  removeService(service: FakeHapService): void;
 }
 
 /** One call a scenario's plugin made to `registerPlatformAccessories`. */
@@ -65,6 +63,15 @@ export interface FakeHomebridgeApi {
   readonly api: API;
   readonly storagePath: string;
 
+  /**
+   * The same HAP namespace `api.hap` carries, under its own type.
+   *
+   * `api` is deliberately widened to Homebridge's own `API`, which types `hap` as the real
+   * HAP-NodeJS namespace, so a step reaching a service class through `api.hap` would hand a real
+   * HAP class to a stand-in accessory. This member is that one seam, kept honest.
+   */
+  readonly hap: FakeHap;
+
   /** Every lifecycle event a listener was registered for, in registration order. */
   readonly registrations: readonly string[];
 
@@ -84,62 +91,27 @@ export interface FakeHomebridgeApi {
   cleanup(): Promise<void>;
 }
 
-const SERVICE_ACCESSORY_INFORMATION: FakeIdentifier = { UUID: 'fake-service-accessory-information' };
+const hap = createFakeHap();
 
-const CHARACTERISTIC_MANUFACTURER: FakeIdentifier = { UUID: 'fake-characteristic-manufacturer' };
-const CHARACTERISTIC_MODEL: FakeIdentifier = { UUID: 'fake-characteristic-model' };
-const CHARACTERISTIC_SERIAL_NUMBER: FakeIdentifier = { UUID: 'fake-characteristic-serial-number' };
-const CHARACTERISTIC_FIRMWARE_REVISION: FakeIdentifier = { UUID: 'fake-characteristic-firmware-revision' };
-const CHARACTERISTIC_NAME: FakeIdentifier = { UUID: 'fake-characteristic-name' };
-const CHARACTERISTIC_IDENTIFY: FakeIdentifier = { UUID: 'fake-characteristic-identify' };
+// Both refusals the real `Accessory.addService` makes, in its own wording: a second service of one
+// type needs a subtype, and that subtype must be unique among the services already carrying that
+// type. The get-or-add reconciliation an accessory publishes with leans on them, so a stand-in that
+// accepted either duplicate would hide a real defect.
+function refuseDuplicateService(services: readonly FakeHapService[], uuid: string, subtype: string | undefined): void {
+  const sameType = services.filter((service) => service.UUID === uuid);
 
-/**
- * The fake `hap` namespace: enough of `Service`, `Characteristic`, and `uuid` for the accessory
- * adapters to run against, hand-built rather than imported from `@homebridge/hap-nodejs`.
- */
-const hap = {
-  Service: {
-    AccessoryInformation: SERVICE_ACCESSORY_INFORMATION,
-  },
-  Characteristic: {
-    Manufacturer: CHARACTERISTIC_MANUFACTURER,
-    Model: CHARACTERISTIC_MODEL,
-    SerialNumber: CHARACTERISTIC_SERIAL_NUMBER,
-    FirmwareRevision: CHARACTERISTIC_FIRMWARE_REVISION,
-    Name: CHARACTERISTIC_NAME,
-    Identify: CHARACTERISTIC_IDENTIFY,
-  },
-  uuid: {
-    // Deterministic (same input -> same output, different input -> different output), never HAP's
-    // real v5 derivation: the harness needs a stable, injectable stand-in, not the production
-    // algorithm.
-    generate(data: string): string {
-      return createHash('sha1').update(data).digest('hex');
-    },
-  },
-};
-
-/** A minimal, hand-built stand-in for a HAP `Service`, backed by a `Map` a test can read back. */
-class HarnessService implements FakeService {
-  readonly UUID: string;
-
-  readonly subtype: string | undefined;
-
-  private readonly characteristics = new Map<string, unknown>();
-
-  constructor(identifier: FakeIdentifier, subtype?: string) {
-    this.UUID = identifier.UUID;
-    this.subtype = subtype;
+  if (sameType.length === 0) {
+    return;
   }
 
-  setCharacteristic(identifier: FakeIdentifier, value: unknown): FakeService {
-    this.characteristics.set(identifier.UUID, value);
-
-    return this;
+  if (subtype === undefined) {
+    throw new Error(
+      `Cannot add a Service with the same UUID '${uuid}' as another Service in this Accessory without also defining a unique 'subtype' property.`,
+    );
   }
 
-  getCharacteristic(identifier: FakeIdentifier): unknown {
-    return this.characteristics.get(identifier.UUID);
+  if (sameType.some((service) => service.subtype === subtype)) {
+    throw new Error(`Cannot add a Service with the same UUID '${uuid}' and subtype '${subtype}' as another Service in this Accessory.`);
   }
 }
 
@@ -147,7 +119,7 @@ class HarnessService implements FakeService {
 class HarnessPlatformAccessory implements FakeAccessory {
   readonly context: Record<string, unknown> = {};
 
-  private readonly services: HarnessService[] = [];
+  private readonly services: FakeHapService[] = [];
 
   constructor(
     public displayName: string,
@@ -158,26 +130,38 @@ class HarnessPlatformAccessory implements FakeAccessory {
     this.addService(hap.Service.AccessoryInformation);
   }
 
-  getService(identifier: FakeIdentifier): FakeService | undefined {
-    return this.services.find((service) => service.UUID === identifier.UUID && service.subtype === undefined);
+  // The real `Accessory.getService` answers the first service of that type whatever its subtype, so
+  // a caller whose service has siblings has to ask `getServiceById` instead.
+  getService(serviceClass: FakeServiceClass): FakeHapService | undefined {
+    return this.services.find((service) => service.UUID === serviceClass.UUID);
   }
 
-  getServiceById(identifier: FakeIdentifier, subtype: string): FakeService | undefined {
-    return this.services.find((service) => service.UUID === identifier.UUID && service.subtype === subtype);
+  getServiceById(serviceClass: FakeServiceClass, subtype: string): FakeHapService | undefined {
+    return this.services.find((service) => service.UUID === serviceClass.UUID && service.subtype === subtype);
   }
 
-  addService(identifier: FakeIdentifier, subtype?: string): FakeService {
-    const collision = subtype === undefined && this.services.some((service) => service.UUID === identifier.UUID);
+  addService(serviceClass: FakeServiceClass, displayName?: string, subtype?: string): FakeHapService {
+    refuseDuplicateService(this.services, serviceClass.UUID, subtype);
 
-    if (collision) {
-      throw new Error(`Cannot add a Service with the same UUID '${identifier.UUID}' without also defining a unique 'subtype' property.`);
-    }
+    const service = new serviceClass(displayName, subtype);
 
-    const service = new HarnessService(identifier, subtype);
     this.services.push(service);
 
     return service;
   }
+
+  removeService(service: FakeHapService): void {
+    const index = this.services.indexOf(service);
+
+    if (index >= 0) {
+      this.services.splice(index, 1);
+    }
+  }
+}
+
+/** Builds one accessory stand-in, for a scenario that reads the accessory service surface directly. */
+export function createFakeAccessory(displayName: string, uuid: string): FakeAccessory {
+  return new HarnessPlatformAccessory(displayName, uuid);
 }
 
 /** Starts a Homebridge API stand-in with its own temporary storage directory. */
@@ -219,6 +203,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     // failure this harness wants while more of the accessory work is still ahead.
     api: standIn as unknown as API,
     storagePath,
+    hap,
     registrations,
     registerPlatformAccessoryCalls,
     updatePlatformAccessoryCalls,

@@ -520,14 +520,14 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
 
   assert.equal(accessories.length, 1);
 
-  const accessoryInformation = accessories[0]?.getService(homebridge.api.hap.Service.AccessoryInformation);
+  const accessoryInformation = accessories[0]?.getService(homebridge.hap.Service.AccessoryInformation);
 
   assert.deepEqual(
     {
-      manufacturer: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.Manufacturer),
-      model: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.Model),
-      serialNumber: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.SerialNumber),
-      firmwareRevision: accessoryInformation?.getCharacteristic(homebridge.api.hap.Characteristic.FirmwareRevision),
+      manufacturer: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Manufacturer)?.value,
+      model: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Model)?.value,
+      serialNumber: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.SerialNumber)?.value,
+      firmwareRevision: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.FirmwareRevision)?.value,
     },
     {
       manufacturer: EXPECTED_MANUFACTURER,

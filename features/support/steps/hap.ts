@@ -1,11 +1,12 @@
 /**
- * @fileoverview Steps that hold the HAP stand-in to its own contract.
+ * @fileoverview Steps that hold the HAP stand-in, and the accessory surface built on it, to their
+ * own contract.
  *
  * Every safety assertion in this suite reads the plugin's HomeKit output through the stand-in, so a
  * stand-in that accepted a call shape production cannot make, or answered a default kinder than the
  * real HAP's, would turn each of those assertions into a false assurance. These steps pin the real
- * argument orders and the real format defaults directly, so that drift fails here rather than
- * passing quietly somewhere downstream.
+ * argument orders, the real duplicate refusals, and the real format defaults directly, so that
+ * drift fails here rather than passing quietly somewhere downstream.
  */
 
 import assert from 'node:assert/strict';
@@ -13,6 +14,7 @@ import assert from 'node:assert/strict';
 import { Then } from '@cucumber/cucumber';
 
 import { createFakeHap } from '../fakeHap.js';
+import { createFakeAccessory } from '../fakeHomebridgeApi.js';
 
 const HAP = createFakeHap();
 
@@ -20,6 +22,10 @@ const HAP = createFakeHap();
 // assertion fails when the stand-in's own literal drifts.
 const LEAK_DETECTED_UUID = '00000070-0000-1000-8000-0026BB765291';
 const CONTACT_SENSOR_STATE_UUID = '0000006A-0000-1000-8000-0026BB765291';
+const CONTACT_SENSOR_UUID = '00000080-0000-1000-8000-0026BB765291';
+
+const ACCESSORY_NAME = 'Sump System';
+const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
 const SCRATCH_CHARACTERISTIC_MINIMUM = 3;
 
@@ -148,3 +154,95 @@ function assertOptionalCharacteristicsAppend(): void {
 }
 
 Then('the service appends an optional characteristic on every call', assertOptionalCharacteristicsAppend);
+
+// The eight notification adapters this plugin publishes are all contact sensors on one accessory,
+// so several services of one type have to coexist under their own subtypes. A display name passed
+// where the real HAP takes one must also land as a display name: a stand-in that recorded it as the
+// subtype would report the wrong service identity to every scenario reading a published service
+// back (D-12).
+function assertSiblingSubtypes(): void {
+  const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
+  const primaryPumpRunning = accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
+  const backupPumpActivated = accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Activated', 'backup-pump-activated');
+
+  assert.deepEqual(
+    {
+      primary: accessory.getServiceById(HAP.Service.ContactSensor, 'primary-pump-running') === primaryPumpRunning,
+      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-activated') === backupPumpActivated,
+      primaryName: primaryPumpRunning.displayName,
+      primarySubtype: primaryPumpRunning.subtype,
+      unknownSubtype: accessory.getServiceById(HAP.Service.ContactSensor, 'water-sensor-fault'),
+      otherType: accessory.getServiceById(HAP.Service.LeakSensor, 'primary-pump-running'),
+    },
+    {
+      primary: true,
+      backup: true,
+      primaryName: 'Primary Pump Running',
+      primarySubtype: 'primary-pump-running',
+      unknownSubtype: undefined,
+      otherType: undefined,
+    },
+  );
+}
+
+Then('the accessory holds each contact sensor under its own subtype', assertSiblingSubtypes);
+
+// Both refusals the real `Accessory.addService` makes, over an accessory that already carries one
+// contact sensor. The get-or-add reconciliation the accessory publishes with leans on them, so the
+// wording is the real wording and the refusal is asserted whole.
+function refusalOfASecondContactSensor(displayName: string, subtype: string | undefined, expectedMessage: string): void {
+  const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
+
+  accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
+
+  assert.throws(
+    () => accessory.addService(HAP.Service.ContactSensor, displayName, subtype),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, expectedMessage);
+
+      return true;
+    },
+  );
+}
+
+function assertDuplicateSubtypeRefused(): void {
+  refusalOfASecondContactSensor(
+    'Backup Pump Activated',
+    'primary-pump-running',
+    `Cannot add a Service with the same UUID '${CONTACT_SENSOR_UUID}' and subtype 'primary-pump-running' as another Service in this Accessory.`,
+  );
+}
+
+Then('the accessory refuses a second service with the same type and subtype', assertDuplicateSubtypeRefused);
+
+function assertMissingSubtypeRefused(): void {
+  refusalOfASecondContactSensor(
+    'Backup Pump Activated',
+    undefined,
+    `Cannot add a Service with the same UUID '${CONTACT_SENSOR_UUID}' as another Service in this Accessory without also defining a unique 'subtype' property.`,
+  );
+}
+
+Then('the accessory refuses a second service of one type without a subtype', assertMissingSubtypeRefused);
+
+// Removing a suppressed adapter is how `ignoredFaults` un-publishes one contact sensor, so the call
+// has to leave every sibling and the accessory information service in place (D-17).
+function assertRemoveServiceRemovesOnlyItsTarget(): void {
+  const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
+  const primaryPumpRunning = accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
+
+  accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Activated', 'backup-pump-activated');
+  accessory.removeService(primaryPumpRunning);
+
+  assert.deepEqual(
+    {
+      primary: accessory.getServiceById(HAP.Service.ContactSensor, 'primary-pump-running'),
+      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-activated')?.displayName,
+      accessoryInformation: accessory.getService(HAP.Service.AccessoryInformation)?.UUID,
+    },
+    { primary: undefined, backup: 'Backup Pump Activated', accessoryInformation: HAP.Service.AccessoryInformation.UUID },
+  );
+}
+
+Then('the accessory removes only the service it is given', assertRemoveServiceRemovesOnlyItsTarget);
