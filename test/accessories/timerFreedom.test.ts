@@ -48,8 +48,21 @@ const ACCESSORIES_DIRECTORY = join(REPOSITORY_ROOT, 'src', 'accessories');
 // without examining a single accessory module.
 const ACCESSORIES_MODULE_FLOOR = 6;
 
+// A comment naming a module is not an import of it, and this gate's whole
+// content is that something does not exist, so the detector reads the three
+// spellings that actually reach a module -- `from '<specifier>'`, a side-effect
+// `import '<specifier>'`, and a dynamic `import('<specifier>')` -- rather than
+// the module name wherever it appears. Either quote character is accepted: a
+// module that reached for deferred execution is already a module that got
+// something wrong, so the gate does not also assume it obeyed the quote style.
+// Neither specifier carries a regular-expression metacharacter, so each goes
+// into the pattern as it is written.
+function importsModule(source: string, specifier: string): boolean {
+  return new RegExp(`(\\bfrom\\s+|\\bimport\\s+|\\bimport\\s*\\(\\s*)['"]${specifier}['"]`, 'u').test(source);
+}
+
 function importsDeferredExecution(source: string): boolean {
-  return DEFERRED_EXECUTION_MODULES.some((specifier) => source.includes(specifier));
+  return DEFERRED_EXECUTION_MODULES.some((specifier) => importsModule(source, specifier));
 }
 
 // One fixture per spelling the detector has to catch, written out rather than
