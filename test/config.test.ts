@@ -5,6 +5,7 @@ import { validateConfig } from '../src/config.js';
 import { PROTOCOL } from '../src/protocol.js';
 import { PLATFORM_NAME } from '../src/settings.js';
 
+import type { NotificationServiceKind } from '../src/accessories/services.js';
 import type { BgConfig, ConfigAccepted, ConfigRefused } from '../src/config.js';
 import type { PlatformConfig } from 'homebridge';
 
@@ -14,6 +15,21 @@ const MALFORMED_EMAIL_REFUSAL = 'the account email must be an email address.';
 
 const POLL_INTERVAL_REFUSAL = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is';
 const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number of polls from 1 to 8, but it is';
+
+// The removable sensor names are written out here rather than read from the production list, so a
+// case fails when the refusal stops enumerating one of them instead of agreeing with it (D-17).
+const REMOVABLE_SENSOR_NAMES: readonly NotificationServiceKind[] = [
+  'backup-pump-activated',
+  'mains-power-lost',
+  'primary-pump-fault',
+  'backup-pump-fault',
+  'water-sensor-fault',
+  'pump-controller-link-lost',
+  'basement-guardian-offline',
+];
+
+const UNKNOWN_SENSOR_REFUSAL = `ignoredFaults must name only ${REMOVABLE_SENSOR_NAMES.join(', ')}, but it names`;
+const NOT_A_LIST_REFUSAL = 'ignoredFaults must be a list of notification sensor names, but it is';
 
 function accountConfig(overrides: Record<string, unknown> = {}): PlatformConfig {
   return { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password', ...overrides };
@@ -27,6 +43,7 @@ function acceptedConfig(overrides: Partial<BgConfig> = {}): ConfigAccepted {
     clientId: PROTOCOL.clientId,
     pollIntervalSeconds: 900,
     offlineConfirmationPollCount: 2,
+    ignoredFaults: [],
     ...overrides,
   };
 
@@ -217,3 +234,133 @@ for (const offlineConfirmationPollCount of [0, 9, 1.5, '2', null]) {
     assert.deepStrictEqual(configResult, expectedRefusal);
   });
 }
+
+/** One removable-sensor list the validator accepts, and the words its case titles it with. */
+interface AcceptedSensorList {
+  described: string;
+  ignoredFaults: readonly NotificationServiceKind[];
+}
+
+const ACCEPTED_SENSOR_LISTS: readonly AcceptedSensorList[] = [
+  { described: 'an empty list', ignoredFaults: [] },
+  { described: 'one removable sensor', ignoredFaults: ['mains-power-lost'] },
+  { described: 'every removable sensor', ignoredFaults: REMOVABLE_SENSOR_NAMES },
+  { described: 'every removable sensor in the opposite order', ignoredFaults: [...REMOVABLE_SENSOR_NAMES].reverse() },
+];
+
+for (const { described, ignoredFaults } of ACCEPTED_SENSOR_LISTS) {
+  test(`CONF-06 accepts ${described} and resolves it in the supplied order`, () => {
+    // act
+    const configResult = validateConfig(accountConfig({ ignoredFaults }));
+
+    // assert
+    assert.deepStrictEqual(configResult, acceptedConfig({ ignoredFaults }));
+  });
+}
+
+test('CONF-06 publishes every adapter when the configuration omits the removable sensor list', () => {
+  // act
+  const configResult = validateConfig(accountConfig());
+
+  // assert
+  assert.deepStrictEqual(configResult, acceptedConfig({ ignoredFaults: [] }));
+});
+
+for (const { described, entry } of [
+  { described: 'a misspelled sensor name', entry: 'mains-power-lst' },
+  { described: 'a truthful service that cannot be removed', entry: 'sump-pit-flood' },
+  { described: 'an entry that is not text', entry: 1 },
+]) {
+  test(`CONF-06 refuses ${described} and enumerates every removable sensor`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} ${String(entry)}.` };
+
+    // act
+    const configResult = validateConfig(accountConfig({ ignoredFaults: [entry] }));
+
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
+
+// D-17 refuses the whole configuration over one typo, so the refusal is the administrator's only
+// route back. Each removable sensor is checked on its own, against a name this module owns.
+for (const sensorName of REMOVABLE_SENSOR_NAMES) {
+  test(`CONF-06 names ${sensorName} in the refusal for an unrecognised removable sensor`, () => {
+    // act
+    const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
+
+    // assert
+    assert.ok(!configResult.ok);
+    assert.ok(configResult.reason.includes(sensorName));
+  });
+}
+
+test('CONF-06 names the unrecognised entry in the refusal', () => {
+  // act
+  const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
+
+  // assert
+  assert.ok(!configResult.ok);
+  assert.ok(configResult.reason.includes('mains-power-lst'));
+});
+
+test('CONF-06 names the same unrecognised entry wherever it sits in the list', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} mains-power-lst.` };
+
+  // act
+  const configResult = validateConfig(accountConfig({ ignoredFaults: ['backup-pump-fault', 'mains-power-lst', 'water-sensor-fault'] }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
+test('CONF-06 refuses a repeated removable sensor and says the list must be unique', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'ignoredFaults must be a unique list, but it names mains-power-lost more than once.' };
+
+  // act
+  const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lost', 'primary-pump-fault', 'mains-power-lost'] }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
+for (const { supplied, describedValue } of [
+  { supplied: null, describedValue: 'null' },
+  { supplied: 'mains-power-lost', describedValue: 'mains-power-lost' },
+  { supplied: {}, describedValue: '{}' },
+  { supplied: 3, describedValue: '3' },
+]) {
+  test(`CONF-06 refuses a removable sensor list of ${describedValue} that is not a list`, () => {
+    // arrange
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${NOT_A_LIST_REFUSAL} ${describedValue}.` };
+
+    // act
+    const configResult = validateConfig(accountConfig({ ignoredFaults: supplied }));
+
+    // assert
+    assert.deepStrictEqual(configResult, expectedRefusal);
+  });
+}
+
+test('CONF-06 reports the poll interval before the removable sensor list when both are wrong', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} 1.` };
+
+  // act
+  const configResult = validateConfig(accountConfig({ pollInterval: 1, ignoredFaults: ['mains-power-lst'] }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
+test('CONF-06 refuses an unrecognised removable sensor without quoting the account email', () => {
+  // act
+  const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
+
+  // assert
+  assert.ok(!configResult.ok);
+  assert.strictEqual(configResult.reason.includes('@'), false);
+});

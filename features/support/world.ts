@@ -490,6 +490,7 @@ export class BasementGuardianWorld extends World {
         clientId: HARNESS_CLIENT_ID,
         pollIntervalSeconds: this.pollIntervalSeconds,
         offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
+        ignoredFaults: [],
       },
       constants: await this.harnessConstants(),
       storagePath: homebridge.storagePath,

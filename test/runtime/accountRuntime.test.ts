@@ -64,6 +64,7 @@ function accountConfig(): BgConfig {
     clientId: 'client-id-1',
     pollIntervalSeconds: POLL_INTERVAL_MS / 1_000,
     offlineConfirmationPollCount: 2,
+    ignoredFaults: [],
   };
 }
 

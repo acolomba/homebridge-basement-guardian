@@ -1,5 +1,7 @@
+import { isNotificationServiceKind, NOTIFICATION_SERVICE_KINDS } from './accessories/services.js';
 import { PROTOCOL } from './protocol.js';
 
+import type { NotificationServiceKind } from './accessories/services.js';
 import type { PlatformConfig } from 'homebridge';
 
 /** Name shown in the Homebridge log when the configuration omits one. */
@@ -37,6 +39,8 @@ export interface BgConfig {
   clientId: string;
   pollIntervalSeconds: number;
   offlineConfirmationPollCount: number;
+  /** The notification sensors to leave unpublished. Empty publishes every adapter (D-017). */
+  ignoredFaults: readonly NotificationServiceKind[];
 }
 
 /** A configuration the plugin will not start from, with the reason to log. */
@@ -56,6 +60,10 @@ export type ConfigResult = ConfigRefused | ConfigAccepted;
 
 function isConfiguredText(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isUnknownArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
 }
 
 // A refusal quotes the value it rejected, so an object has to be stringified;
@@ -88,6 +96,46 @@ function resolveInteger(value: unknown, bounds: IntegerBounds): number {
   return typeof value === 'number' ? value : bounds.documentedDefault;
 }
 
+// Returns the reason to refuse this field, or undefined when it is acceptable.
+// An absent field is acceptable and takes its documented default later. An
+// unrecognised or repeated name refuses the whole configuration rather than
+// being skipped, because a typo means the administrator did not get the
+// adapters they asked for (D-17). The refusal is their only route back, so it
+// names the offending entry and enumerates every name that would have worked.
+// Every quoted value is administrator-authored text, never a credential.
+function ignoredFaultsRefusal(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!isUnknownArray(value)) {
+    return `ignoredFaults must be a list of notification sensor names, but it is ${describeValue(value)}.`;
+  }
+
+  const named = new Set<string>();
+
+  for (const entry of value) {
+    if (!isNotificationServiceKind(entry)) {
+      return `ignoredFaults must name only ${NOTIFICATION_SERVICE_KINDS.join(', ')}, but it names ${describeValue(entry)}.`;
+    }
+
+    if (named.has(entry)) {
+      return `ignoredFaults must be a unique list, but it names ${describeValue(entry)} more than once.`;
+    }
+
+    named.add(entry);
+  }
+
+  return undefined;
+}
+
+// Only an acceptable value reaches here, so anything that is not a list is an
+// absent field taking its documented default. That default is the empty list,
+// which publishes every adapter (D-017).
+function resolveIgnoredFaults(value: unknown): readonly NotificationServiceKind[] {
+  return isUnknownArray(value) ? value.filter(isNotificationServiceKind) : [];
+}
+
 // Checks the fields in one fixed order and returns on the first failure, so a
 // configuration with several problems always produces the same message.
 function firstRefusal(fields: Record<string, unknown>): string | undefined {
@@ -116,7 +164,11 @@ function firstRefusal(fields: Record<string, unknown>): string | undefined {
     return 'clientId must not be empty when it is set.';
   }
 
-  return integerRefusal(fields.pollInterval, POLL_INTERVAL_BOUNDS) ?? integerRefusal(fields.offlineConfirmationPollCount, POLL_COUNT_BOUNDS);
+  return (
+    integerRefusal(fields.pollInterval, POLL_INTERVAL_BOUNDS) ??
+    integerRefusal(fields.offlineConfirmationPollCount, POLL_COUNT_BOUNDS) ??
+    ignoredFaultsRefusal(fields.ignoredFaults)
+  );
 }
 
 /**
@@ -149,6 +201,7 @@ export function validateConfig(raw: PlatformConfig): ConfigResult {
       clientId: isConfiguredText(clientId) ? clientId : PROTOCOL.clientId,
       pollIntervalSeconds: resolveInteger(fields.pollInterval, POLL_INTERVAL_BOUNDS),
       offlineConfirmationPollCount: resolveInteger(fields.offlineConfirmationPollCount, POLL_COUNT_BOUNDS),
+      ignoredFaults: resolveIgnoredFaults(fields.ignoredFaults),
     },
   };
 }
