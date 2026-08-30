@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 3
 current_phase_name: Safety Monitoring in HomeKit
 status: planning
-stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-08-30T03:32:32.087Z"
+stopped_at: Phase 3 context gathered
+last_updated: "2026-08-30T04:24:41.027Z"
 last_activity: 2026-08-29
 last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 5eca722481cc3dd9477189e83a56aa62e60bc0cc
+state_head: 1a95aa7170717e3add0674409d840160dd41f76a
 progress:
   total_phases: 6
   completed_phases: 2
@@ -92,7 +92,10 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 ### Pending Todos
 
-- Backup-battery fault adapter: decide during Phase 3 discussion whether `battery_health == 32` (NotDetected) earns a sixth Apple Home fault adapter. Recorded as an open proposal in PROJECT.md.
+- Backup-battery fault adapter: RESOLVED in the Phase 3 discussion (2026-08-30) against a sixth
+  adapter. `D-008` stays locked at five; `battery_health == 32` surfaces through the standard
+  Battery service's `StatusLowBattery`. Remove the open proposal from PROJECT.md when Phase 3
+  completes.
 - `package.json` keeps `private: true` as an accidental-publish guard. Remove it in Phase 6 when the first `0.x` prerelease goes to the npm `next` tag under `D-026`. The version now reads `0.1.0`.
 - `package.json` declares `license: "Apache-2.0"`, which contradicts the `D-035` `SEE LICENSE IN LICENSE` metadata rule. Resolve in Phase 6.
 - `homebridge-lib` is still a runtime dependency and `config.schema.json` still carries `strictValidation: false`. Resolve the schema flag in Phase 1 and the dependency removal in Phase 6.
@@ -108,9 +111,16 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 
 Carried forward from Phase 2:
 
-- [Phase 2 → Phase 3]: Apple Home does not render `StatusFault`. Phase 2 leaves a degraded
-  accessory at `StatusActive` false and `StatusFault` `NO_FAULT`, so degraded state is invisible
-  in Apple Home today. Decide the Phase 3 treatment during discussion.
+- [Phase 2 → Phase 3]: RESOLVED in the Phase 3 discussion (2026-08-30). Degraded state is marked
+  with `StatusActive = false` plus README guidance, with no new adapter and no ADR revision
+  (`03-CONTEXT.md` D-05). Apple Home shows it under accessory Details as "Status Active — No".
+
+Opened by the Phase 3 discussion:
+
+- [Phase 3]: A HAP-NodeJS issue report (homebridge/HAP-NodeJS#375) claims a sensor marked inactive
+  drops out of Apple Home automations. If true on current iOS, `StatusActive = false` would
+  silently disable a user's flood automation. Research must confirm or refute this before Phase 3
+  ships; a positive finding reopens `03-CONTEXT.md` D-05.
 
 ### Quick Tasks Completed
 
@@ -132,6 +142,6 @@ Carried forward from Phase 2:
 
 ## Session Continuity
 
-Last session: 2026-08-29T23:32:00.000Z
-Stopped at: Phase 02 complete, ready to plan Phase 3
-Resume file: None
+Last session: 2026-08-30T04:24:40.689Z
+Stopped at: Phase 3 context gathered
+Resume file: .planning/phases/03-safety-monitoring-in-homekit/03-CONTEXT.md
