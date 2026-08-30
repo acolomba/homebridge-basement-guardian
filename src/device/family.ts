@@ -9,11 +9,9 @@
  * plausible, wrong water level, which is the most safety-relevant value in the
  * system. The `deviceTypeId` selects the adapter once, at discovery, and never
  * changes the physical identity of the device.
- *
- * This module is a declaration only. Its entry in the `ignoreFindings` list of
- * `.fallowrc.json` goes away when a production consumer arrives.
  */
 
+import type { TrustScope } from './health.js';
 import type { DeviceSnapshot } from './state.js';
 
 /** Something a family can ask its device to do. */
@@ -26,6 +24,14 @@ export type FieldViolationReason = 'missing' | 'wrong-type' | 'out-of-domain';
 export interface FieldViolation {
   field: string;
   reason: FieldViolationReason;
+  /**
+   * The scope that stops being trustworthy while this field is invalid.
+   *
+   * One bad field deactivates one scope, never the whole device (D-014).
+   * `undefined` marks a field no published service reads, so a violation on it
+   * is still recorded and diagnosable without deactivating anything.
+   */
+  scope: TrustScope | undefined;
 }
 
 /**
@@ -46,6 +52,84 @@ export interface FamilyCommand {
   desiredData: Readonly<Record<string, unknown>>;
 }
 
+/** How full the sump pit is. */
+export interface WaterState {
+  /** The vendor code exactly as reported, published beside the percentage so the mapping stays checkable against a real pit. */
+  levelCode: number;
+  levelPercent: number;
+  flooded: boolean;
+}
+
+/** What the two pumps are doing right now. */
+export interface PumpState {
+  primaryRunning: boolean;
+  backupRunning: boolean;
+  /** Device time of the last reported backup activation, or `undefined` when the device reports none. */
+  backupActivatedAt: number | undefined;
+}
+
+/** Mains power at the device. */
+export interface PowerState {
+  mainsPresent: boolean;
+}
+
+/** The backup battery's exact reported facts, and the two values a family derives from them. */
+export interface BatteryState {
+  charging: boolean;
+  voltageLow: boolean;
+  /** The vendor health code exactly as reported; its meaning lives behind the family boundary. */
+  healthCode: number;
+  /** The vendor protection-hours code exactly as reported. */
+  protectionHoursCode: number;
+  /** The documented protection-duration estimate, not a measured charge (D-012). */
+  levelPercent: number;
+  low: boolean;
+}
+
+/** The equipment faults a device reports, one member per fault adapter. */
+export interface FaultState {
+  primaryPumpFault: boolean;
+  backupPumpFault: boolean;
+  backupPumpFuseBlown: boolean;
+  waterSensorFault: boolean;
+  /** Reported rather than inverted: `true` means the network module still has its link to the pump controller. */
+  controllerLinkPresent: boolean;
+}
+
+/** What a device says about its own connection to the vendor cloud. */
+export interface ConnectivityState {
+  reportedOffline: boolean;
+}
+
+/** Device identification and radio diagnostics, which no safety scope owns. */
+export interface DeviceMetadataState {
+  mcuFirmwareVersion: string | undefined;
+  wifiFirmwareVersion: string | undefined;
+  mcuTargetVersion: string | undefined;
+  wifiSignalDbm: number | undefined;
+}
+
+/**
+ * One device's decoded state, one member per scope a published service reads.
+ *
+ * `undefined` means "this scope did not validate", never "this scope reported
+ * nothing". The family reports the absence; only the accessory decides what a
+ * consumer sees while a scope is absent, and it retains the last valid values
+ * rather than publishing a default (D-014, RES-01).
+ *
+ * Every member is `| undefined` rather than optional, so a family that forgets a
+ * scope fails to typecheck instead of silently omitting one.
+ */
+export interface ScopedDomainState {
+  water: WaterState | undefined;
+  pump: PumpState | undefined;
+  power: PowerState | undefined;
+  battery: BatteryState | undefined;
+  fault: FaultState | undefined;
+  connectivity: ConnectivityState | undefined;
+  metadata: DeviceMetadataState | undefined;
+}
+
 /**
  * One family adapter.
  *
@@ -60,6 +144,14 @@ export interface DeviceFamily<TDomainState> {
   readonly displayName: string;
   readonly implemented: boolean;
   validate(snapshot: DeviceSnapshot): FamilyValidation;
+  /**
+   * Decodes every scope whose own fields all validated, and omits every scope
+   * that did not.
+   *
+   * A partly-invalid snapshot still publishes current values for the scopes
+   * that are still trustworthy. An omitted scope is never a default, a zero, or
+   * a remembered value the adapter guessed at (D-014, RES-01).
+   */
   decode(snapshot: DeviceSnapshot): TDomainState;
   capabilities(state: TDomainState): readonly DeviceCapability[];
   command(capability: DeviceCapability, requested: boolean): FamilyCommand;

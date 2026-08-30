@@ -257,7 +257,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('degrades every non-connectivity scope when validate() reports the snapshot invalid', () => {
     // arrange
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }) });
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
 
@@ -274,7 +274,10 @@ describe('createBasementGuardianAccessory', () => {
   test('never calls decode() when validate() reports the snapshot invalid', (t) => {
     // arrange
     const decodeSpy = t.mock.fn(() => ({}));
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }), decode: decodeSpy });
+    const family = fakeFamily({
+      validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }),
+      decode: decodeSpy,
+    });
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
 
@@ -287,7 +290,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('produces the identical untrusted shape whether the family is unresolved or its validate() fails', () => {
     // arrange
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }) });
     const unresolvedAccessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const invalidAccessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const unresolved = createBasementGuardianAccessory(
@@ -404,7 +407,7 @@ describe('createBasementGuardianAccessory', () => {
     const beforeDegrading = accessoryInformation?.getCharacteristic(CHARACTERISTIC_FIRMWARE_REVISION);
 
     // act
-    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] });
     basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
 
     // assert
@@ -413,7 +416,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('recovers from degraded state on a following family-valid update', () => {
     // arrange
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }) });
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
     const accessoryInformation = accessory.getService(SERVICE_ACCESSORY_INFORMATION);
@@ -437,7 +440,7 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID, 1_700_000_000_000));
 
     // act
-    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] });
     basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID, 1_700_000_060_000));
 
     // assert
@@ -449,7 +452,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('logs the degradation transition exactly once across repeated degraded updates', () => {
     // arrange
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }) });
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const { log, warnings } = recordingLog();
     const basementGuardianAccessory = createBasementGuardianAccessory(
@@ -467,7 +470,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('logs again after recovering and degrading a second time', () => {
     // arrange
-    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] }) });
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const { log, warnings } = recordingLog();
     const basementGuardianAccessory = createBasementGuardianAccessory(
@@ -478,7 +481,7 @@ describe('createBasementGuardianAccessory', () => {
     // act
     family.validate = () => ({ valid: true });
     basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
-    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] });
     basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
 
     // assert

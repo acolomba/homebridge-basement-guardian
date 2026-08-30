@@ -4,6 +4,7 @@ import { describe, test } from 'node:test';
 import { geminiFamily } from '../../src/device/gemini.js';
 
 import type { GeminiDeviceTypeId, GeminiMetadataField, GeminiTelemetryField } from '../../src/device/gemini.js';
+import type { TrustScope } from '../../src/device/health.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
 
 void ('wayneWaterGemini' satisfies GeminiDeviceTypeId);
@@ -58,6 +59,56 @@ function validMetadata(): Record<string, unknown> {
   };
 }
 
+// One telemetry field, the scope that stops being trustworthy while it is
+// invalid, a value of the wrong type for it, and whether the vendor may omit it.
+interface TelemetryScopeRow {
+  field: GeminiTelemetryField;
+  scope: TrustScope | undefined;
+  wrongValue: unknown;
+  required: boolean;
+}
+
+// One metadata field and a value of the wrong type for it. No published service
+// reads device metadata, so every row owns no scope.
+interface MetadataScopeRow {
+  field: GeminiMetadataField;
+  wrongValue: unknown;
+}
+
+const TELEMETRY_SCOPES: readonly TelemetryScopeRow[] = [
+  { field: 'water_level', scope: 'water', wrongValue: 'not-a-number', required: true },
+  { field: 'primary_pump_running', scope: 'pump', wrongValue: 'not-a-boolean', required: true },
+  { field: 'primary_pump_fault', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
+  { field: 'backup_pump_running', scope: 'pump', wrongValue: 'not-a-boolean', required: true },
+  { field: 'backup_pump_fault', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
+  { field: 'backup_pump_fuse_blown', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
+  { field: 'backup_pump_timestamp', scope: 'pump', wrongValue: 'not-a-number', required: false },
+  { field: 'ac_power', scope: 'power', wrongValue: 'not-a-boolean', required: true },
+  { field: 'battery_charging', scope: 'battery', wrongValue: 'not-a-boolean', required: true },
+  { field: 'battery_voltage_low', scope: 'battery', wrongValue: 'not-a-boolean', required: true },
+  { field: 'battery_health', scope: 'battery', wrongValue: 'not-a-number', required: true },
+  { field: 'hours_of_protection', scope: 'battery', wrongValue: 'not-a-number', required: true },
+  { field: 'water_sensor_fault', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
+  { field: 'serial_communications', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
+  { field: 'alarm_audio_muted', scope: undefined, wrongValue: 'not-a-boolean', required: true },
+  { field: 'test_running', scope: undefined, wrongValue: 'not-a-boolean', required: true },
+  { field: 'test_timestamp', scope: undefined, wrongValue: 'not-a-number', required: false },
+  { field: 'offline', scope: 'connectivity', wrongValue: 'not-a-boolean', required: true },
+];
+
+const METADATA_SCOPES: readonly MetadataScopeRow[] = [
+  { field: 'wifi_signal_dbm', wrongValue: 'strong' },
+  { field: 'mcu_firmware_version', wrongValue: 123 },
+  { field: 'wifi_firmware_version', wrongValue: 123 },
+  { field: 'mcu_target_version', wrongValue: 123 },
+];
+
+// A valid telemetry record with one field left out, so the case exercises an
+// omission rather than a rebuilt object.
+function telemetryWithout(field: GeminiTelemetryField): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(validTelemetry()).filter(([name]) => name !== field));
+}
+
 function buildSnapshot(data: Record<string, unknown>, metadata: Record<string, unknown> = {}): DeviceSnapshot {
   return {
     identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
@@ -79,123 +130,12 @@ describe('validate', () => {
     assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
   });
 
-  test('returns a missing violation when a required boolean field is absent', () => {
-    // arrange
-    const telemetry = validTelemetry();
-    delete telemetry.primary_pump_running;
-    const snapshot = buildSnapshot(telemetry);
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'primary_pump_running', reason: 'missing' }] });
-  });
-
-  test('returns a missing violation when a required enum field is absent', () => {
-    // arrange
-    const telemetry = validTelemetry();
-    delete telemetry.water_level;
-    const snapshot = buildSnapshot(telemetry);
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
-  });
-
-  test('returns a wrong-type violation when a required enum field is not a number', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), water_level: '1' });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'water_level', reason: 'wrong-type' }] });
-  });
-
-  test('returns an out-of-domain violation when water_level is outside its legal codes', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), water_level: 2 });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'water_level', reason: 'out-of-domain' }] });
-  });
-
-  test('returns an out-of-domain violation when battery_health is outside its legal codes', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), battery_health: 3 });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'battery_health', reason: 'out-of-domain' }] });
-  });
-
-  test('returns an out-of-domain violation when hours_of_protection is outside its legal codes', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), hours_of_protection: 3 });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'hours_of_protection', reason: 'out-of-domain' }] });
-  });
-
-  test('returns a wrong-type violation when serial_communications is a string', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), serial_communications: 'true' });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'serial_communications', reason: 'wrong-type' }] });
-  });
-
-  test('returns valid when backup_pump_timestamp and test_timestamp are both absent', () => {
-    // arrange
-    const snapshot = buildSnapshot(validTelemetry());
-
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
-  });
-
   test('returns valid when backup_pump_timestamp and test_timestamp are both present and correctly typed', () => {
     // arrange
     const snapshot = buildSnapshot({ ...validTelemetry(), backup_pump_timestamp: 1_699_999_000, test_timestamp: 1_699_998_000 });
 
     // act & assert
     assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
-  });
-
-  test('returns a wrong-type violation when backup_pump_timestamp is present with the wrong type', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), backup_pump_timestamp: 'not-a-number' });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'backup_pump_timestamp', reason: 'wrong-type' }] });
-  });
-
-  test('returns a wrong-type violation when test_timestamp is present with the wrong type', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), test_timestamp: 'not-a-number' });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'test_timestamp', reason: 'wrong-type' }] });
   });
 
   test('returns valid when every metadata field is present and correctly typed', () => {
@@ -206,33 +146,62 @@ describe('validate', () => {
     assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
   });
 
-  test('returns a wrong-type violation when wifi_signal_dbm is present with the wrong type', () => {
+  for (const { field, scope, wrongValue } of TELEMETRY_SCOPES) {
+    test(`RES-01 attributes a wrong-type ${field} violation to the ${String(scope)} scope`, () => {
+      // arrange
+      const snapshot = buildSnapshot({ ...validTelemetry(), [field]: wrongValue });
+
+      // act
+      const validation = geminiFamily.validate(snapshot);
+
+      // assert
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'wrong-type', scope }] });
+    });
+  }
+
+  for (const { field, scope } of TELEMETRY_SCOPES.filter((row) => row.required)) {
+    test(`RES-01 attributes a missing ${field} violation to the ${String(scope)} scope`, () => {
+      // act
+      const validation = geminiFamily.validate(buildSnapshot(telemetryWithout(field)));
+
+      // assert
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'missing', scope }] });
+    });
+  }
+
+  for (const { field, scope, illegalValue } of [
+    { field: 'water_level', scope: 'water', illegalValue: 2 },
+    { field: 'battery_health', scope: 'battery', illegalValue: 3 },
+    { field: 'hours_of_protection', scope: 'battery', illegalValue: 3 },
+  ] satisfies readonly { field: GeminiTelemetryField; scope: TrustScope; illegalValue: number }[]) {
+    test(`RES-01 attributes an out-of-domain ${field} violation to the ${scope} scope`, () => {
+      // arrange
+      const snapshot = buildSnapshot({ ...validTelemetry(), [field]: illegalValue });
+
+      // act
+      const validation = geminiFamily.validate(snapshot);
+
+      // assert
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'out-of-domain', scope }] });
+    });
+  }
+
+  for (const { field, wrongValue } of METADATA_SCOPES) {
+    test(`RES-01 attributes a wrong-type ${field} violation to no scope, because no published service reads it`, () => {
+      // arrange
+      const snapshot = buildSnapshot(validTelemetry(), { [field]: wrongValue });
+
+      // act
+      const validation = geminiFamily.validate(snapshot);
+
+      // assert
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'wrong-type', scope: undefined }] });
+    });
+  }
+
+  test('returns every violation a snapshot carries, not only the first, each with its own scope', () => {
     // arrange
-    const snapshot = buildSnapshot(validTelemetry(), { wifi_signal_dbm: 'strong' });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'wifi_signal_dbm', reason: 'wrong-type' }] });
-  });
-
-  test('returns a wrong-type violation when mcu_firmware_version is present with the wrong type', () => {
-    // arrange
-    const snapshot = buildSnapshot(validTelemetry(), { mcu_firmware_version: 123 });
-
-    // act
-    const validation = geminiFamily.validate(snapshot);
-
-    // assert
-    assert.deepStrictEqual(validation, { valid: false, violations: [{ field: 'mcu_firmware_version', reason: 'wrong-type' }] });
-  });
-
-  test('returns every violation a snapshot carries, not only the first', () => {
-    // arrange
-    const telemetry = validTelemetry();
-    delete telemetry.primary_pump_running;
-    const snapshot = buildSnapshot({ ...telemetry, water_level: 2 });
+    const snapshot = buildSnapshot({ ...telemetryWithout('primary_pump_running'), water_level: 2 });
 
     // act
     const validation = geminiFamily.validate(snapshot);
@@ -241,8 +210,8 @@ describe('validate', () => {
     assert.deepStrictEqual(validation, {
       valid: false,
       violations: [
-        { field: 'water_level', reason: 'out-of-domain' },
-        { field: 'primary_pump_running', reason: 'missing' },
+        { field: 'water_level', reason: 'out-of-domain', scope: 'water' },
+        { field: 'primary_pump_running', reason: 'missing', scope: 'pump' },
       ],
     });
   });

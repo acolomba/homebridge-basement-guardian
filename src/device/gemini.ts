@@ -10,7 +10,8 @@
  * check, not a meaning the plugin has not earned yet.
  */
 
-import type { DeviceCapability, DeviceFamily, FamilyCommand, FamilyValidation, FieldViolation } from './family.js';
+import type { DeviceCapability, DeviceFamily, FamilyCommand, FamilyValidation, FieldViolation, FieldViolationReason } from './family.js';
+import type { TrustScope } from './health.js';
 import type { DeviceSnapshot } from './state.js';
 
 /** The vendor `deviceTypeId` that selects the Gemini adapter. */
@@ -84,7 +85,25 @@ const WATER_LEVEL_VALUES: ReadonlySet<number> = new Set([0, 1, 3, 7, 15, 31]);
 const BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8, 16, 32]);
 const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8]);
 
-type FieldCheck = (data: Readonly<Record<string, unknown>>) => FieldViolation | undefined;
+// `undefined` names the command surface and the metadata fields. No published
+// service reads either, so a violation on one is still recorded and diagnosable
+// without deactivating anything, and no member is added to `TrustScope` for
+// them.
+type GeminiFieldScope = TrustScope | undefined;
+
+/** How one field failed, before the scope that owns it is stamped on. */
+interface FieldFault {
+  field: string;
+  reason: FieldViolationReason;
+}
+
+type FieldCheck = (data: Readonly<Record<string, unknown>>) => FieldFault | undefined;
+
+/** One field's shape check and the scope that stops being trustworthy while that field is invalid (D-04). */
+interface TelemetryCheck {
+  scope: GeminiFieldScope;
+  check: FieldCheck;
+}
 
 function requiredBoolean(field: string): FieldCheck {
   return (data) => {
@@ -134,44 +153,45 @@ function optionalString(field: string): FieldCheck {
 
 // `backup_pump_timestamp` and `test_timestamp` are the only two optional
 // telemetry fields; every other of the 16 is required.
-const TELEMETRY_CHECKS: readonly FieldCheck[] = [
-  requiredEnum('water_level', WATER_LEVEL_VALUES),
-  requiredBoolean('primary_pump_running'),
-  requiredBoolean('primary_pump_fault'),
-  requiredBoolean('backup_pump_running'),
-  requiredBoolean('backup_pump_fault'),
-  requiredBoolean('backup_pump_fuse_blown'),
-  optionalNumber('backup_pump_timestamp'),
-  requiredBoolean('ac_power'),
-  requiredBoolean('battery_charging'),
-  requiredBoolean('battery_voltage_low'),
-  requiredEnum('battery_health', BATTERY_HEALTH_VALUES),
-  requiredEnum('hours_of_protection', HOURS_OF_PROTECTION_VALUES),
-  requiredBoolean('water_sensor_fault'),
-  requiredBoolean('serial_communications'),
-  requiredBoolean('alarm_audio_muted'),
-  requiredBoolean('test_running'),
-  optionalNumber('test_timestamp'),
-  requiredBoolean('offline'),
+const TELEMETRY_CHECKS: readonly TelemetryCheck[] = [
+  { scope: 'water', check: requiredEnum('water_level', WATER_LEVEL_VALUES) },
+  { scope: 'pump', check: requiredBoolean('primary_pump_running') },
+  { scope: 'fault', check: requiredBoolean('primary_pump_fault') },
+  { scope: 'pump', check: requiredBoolean('backup_pump_running') },
+  { scope: 'fault', check: requiredBoolean('backup_pump_fault') },
+  { scope: 'fault', check: requiredBoolean('backup_pump_fuse_blown') },
+  { scope: 'pump', check: optionalNumber('backup_pump_timestamp') },
+  { scope: 'power', check: requiredBoolean('ac_power') },
+  { scope: 'battery', check: requiredBoolean('battery_charging') },
+  { scope: 'battery', check: requiredBoolean('battery_voltage_low') },
+  { scope: 'battery', check: requiredEnum('battery_health', BATTERY_HEALTH_VALUES) },
+  { scope: 'battery', check: requiredEnum('hours_of_protection', HOURS_OF_PROTECTION_VALUES) },
+  { scope: 'fault', check: requiredBoolean('water_sensor_fault') },
+  { scope: 'fault', check: requiredBoolean('serial_communications') },
+  { scope: undefined, check: requiredBoolean('alarm_audio_muted') },
+  { scope: undefined, check: requiredBoolean('test_running') },
+  { scope: undefined, check: optionalNumber('test_timestamp') },
+  { scope: 'connectivity', check: requiredBoolean('offline') },
 ];
 
 // Every metadata field is optional: the vendor omits all four on some
-// firmware, and an absent field is not a violation.
-const METADATA_CHECKS: readonly FieldCheck[] = [
-  optionalNumber('wifi_signal_dbm'),
-  optionalString('mcu_firmware_version'),
-  optionalString('wifi_firmware_version'),
-  optionalString('mcu_target_version'),
+// firmware, and an absent field is not a violation. None of the four belongs to
+// a scope, because no published service reads them.
+const METADATA_CHECKS: readonly TelemetryCheck[] = [
+  { scope: undefined, check: optionalNumber('wifi_signal_dbm') },
+  { scope: undefined, check: optionalString('mcu_firmware_version') },
+  { scope: undefined, check: optionalString('wifi_firmware_version') },
+  { scope: undefined, check: optionalString('mcu_target_version') },
 ];
 
-function violationsOf(checks: readonly FieldCheck[], data: Readonly<Record<string, unknown>>): FieldViolation[] {
+function violationsOf(checks: readonly TelemetryCheck[], data: Readonly<Record<string, unknown>>): FieldViolation[] {
   const violations: FieldViolation[] = [];
 
-  for (const check of checks) {
-    const violation = check(data);
+  for (const { scope, check } of checks) {
+    const fault = check(data);
 
-    if (violation !== undefined) {
-      violations.push(violation);
+    if (fault !== undefined) {
+      violations.push({ ...fault, scope });
     }
   }
 
