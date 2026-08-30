@@ -65,6 +65,16 @@ Feature: Harness fakes
     When the broker closes every connection
     Then the subscriber observes the close
 
+  Scenario: The fake hap namespace carries the definitions the accessories publish
+    Then the hap stand-in carries the standard characteristic identifiers
+    Then the hap stand-in carries the formats, perms, and units the plugin reads
+    Then a plugin type extends the hap service and the hap characteristic
+
+  Scenario: The fake hap namespace reproduces the format defaults of the real hap
+    Then a fresh sensor service reads at the hap format defaults
+    Then the service adds the characteristic an update names
+    Then the service appends an optional characteristic on every call
+
   Scenario: The fake homebridge api answers the surface this version needs
     Given the fake homebridge api
     Given a listener on each lifecycle event
