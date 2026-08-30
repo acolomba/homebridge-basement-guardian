@@ -115,8 +115,15 @@ function refuseDuplicateService(services: readonly FakeHapService[], uuid: strin
   }
 }
 
-/** The accessory identity the plugin supplies, extended with the service surface the accessory adapters need. */
-class HarnessPlatformAccessory implements FakeAccessory {
+/**
+ * The accessory identity the plugin supplies, extended with the service surface the accessory
+ * adapters need.
+ *
+ * Exported as the class rather than only through `createFakeAccessory`, because the plugin builds a
+ * new accessory with `new api.platformAccessory(name, uuid)`: a caller standing in for that member
+ * needs the constructor itself.
+ */
+export class HarnessPlatformAccessory implements FakeAccessory {
   readonly context: Record<string, unknown> = {};
 
   private readonly services: FakeHapService[] = [];

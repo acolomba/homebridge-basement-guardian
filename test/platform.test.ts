@@ -7,11 +7,14 @@ import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { It, mock, verify, when } from 'strong-mock';
 
+import { createFakeHap } from '../features/support/fakeHap.js';
+import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
+import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { ApiDevice } from '../src/cloud/types.js';
 import type { DeviceFamily } from '../src/device/family.js';
@@ -92,52 +95,18 @@ const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardia
 const DEVICE_ID = 'account-1_serial-1';
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
 
-// A minimal, hand-built stand-in for a HAP `Service`, matching the fake `hap` namespace below.
-class FakeAccessoryInformationService {
-  private readonly characteristics = new Map<string, unknown>();
+// The one hand-built stand-in of this boundary. The accessory now declares its own HomeKit types by
+// subclassing the injected namespace, so `Service` and `Characteristic` have to be constructible
+// bases rather than identifier constants; a second stand-in of the same boundary would drift.
+const HAP = createFakeHap();
 
-  setCharacteristic(identifier: { UUID: string }, value: unknown): this {
-    this.characteristics.set(identifier.UUID, value);
+// The stand-in answers the members the plugin reads and nothing else, which no structural type can
+// express; the widening is what lets it stand where the plugin takes the real namespace.
+const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
-    return this;
-  }
-
-  getCharacteristic(identifier: { UUID: string }): unknown {
-    return this.characteristics.get(identifier.UUID);
-  }
-}
-
-const FAKE_SERVICE_ACCESSORY_INFORMATION = { UUID: 'fake-service-accessory-information' };
-
-// Enough of `hap.Service`/`hap.Characteristic` for `createBasementGuardianAccessory`'s
-// `AccessoryInformation` population to run against, mirroring the Cucumber harness's own stand-in.
-const fakeHap = {
-  Service: { AccessoryInformation: FAKE_SERVICE_ACCESSORY_INFORMATION },
-  Characteristic: {
-    Manufacturer: { UUID: 'fake-characteristic-manufacturer' },
-    Model: { UUID: 'fake-characteristic-model' },
-    SerialNumber: { UUID: 'fake-characteristic-serial-number' },
-    FirmwareRevision: { UUID: 'fake-characteristic-firmware-revision' },
-  },
-  uuid: { generate: (data: string): string => `uuid-${data}` },
-};
-
-// Mirrors the real `Accessory` constructor, which always carries one `AccessoryInformation`
-// service, so the family adapter's `update()` has a service to populate.
-class FakeDiscoveryAccessory {
-  context: Record<string, unknown> = {};
-
-  private readonly accessoryInformation = new FakeAccessoryInformationService();
-
-  constructor(
-    public readonly displayName: string,
-    public readonly UUID: string,
-  ) {}
-
-  getService(identifier: { UUID: string }): FakeAccessoryInformationService | undefined {
-    return identifier.UUID === FAKE_SERVICE_ACCESSORY_INFORMATION.UUID ? this.accessoryInformation : undefined;
-  }
-}
+// The accessory identifier the plugin derives for this device, taken from the same derivation the
+// plugin uses rather than restated as a literal.
+const ACCESSORY_UUID = HAP.uuid.generate(DEVICE_ID);
 
 function geminiDevice(): ApiDevice {
   return {
@@ -156,17 +125,16 @@ function unknownRegistry(): FamilyRegistry {
 
 // A minimal fake family, so `registerDiscoveredDevices` tests exercising the
 // `implemented` outcome need not depend on Gemini's own field shapes. Its
-// `validate()` always reports the snapshot invalid, so `decode()` never runs
-// and `update()`'s AccessoryInformation population is out of scope for these
-// dispatch-focused cases.
+// `validate()` reports one scope's field invalid, which is what puts the
+// accessory into the degraded state these dispatch-focused cases observe;
+// `decode()` then omits that scope, as every family does for a scope whose own
+// fields did not validate.
 const FAKE_FAMILY: DeviceFamily<unknown> = {
   deviceTypeId: DEVICE_TYPE_ID,
   displayName: 'Fake Family',
   implemented: true,
-  validate: () => ({ valid: false, violations: [] }),
-  decode: () => {
-    throw new Error('decode() must not run on an invalid snapshot');
-  },
+  validate: () => ({ valid: false, violations: [{ field: 'ac_power', reason: 'missing', scope: 'power' }] }),
+  decode: () => ({}),
   capabilities: () => [],
   command: () => ({ desiredData: {} }),
 };
@@ -185,20 +153,20 @@ function unsupportedRegistry(shouldLog: boolean): FamilyRegistry {
 interface FakeApiCall {
   pluginIdentifier: string;
   platformName: string;
-  accessories: FakeDiscoveryAccessory[];
+  accessories: FakeAccessory[];
 }
 
-function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeDiscoveryAccessory[][] = [], unregisterCalls: FakeApiCall[] = []): API {
+function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeAccessory[][] = [], unregisterCalls: FakeApiCall[] = []): API {
   const standIn = {
-    hap: fakeHap,
-    platformAccessory: FakeDiscoveryAccessory,
-    registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeDiscoveryAccessory[]) {
+    hap: HAP_NAMESPACE,
+    platformAccessory: HarnessPlatformAccessory,
+    registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
       registerCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
     },
-    updatePlatformAccessories(accessories: FakeDiscoveryAccessory[]) {
+    updatePlatformAccessories(accessories: FakeAccessory[]) {
       updateCalls.push([...accessories]);
     },
-    unregisterPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeDiscoveryAccessory[]) {
+    unregisterPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
       unregisterCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
     },
   };
@@ -415,20 +383,25 @@ describe('BasementGuardianPlatform', () => {
 
       return Promise.resolve(new Response('{}', { status: 503 }));
     });
-    const registeredAccessories: FakeDiscoveryAccessory[] = [];
+    const registeredAccessories: FakeAccessory[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    when(() => api.hap).thenReturn(fakeHap as unknown as API['hap']);
-    when(() => api.platformAccessory).thenReturn(FakeDiscoveryAccessory as unknown as API['platformAccessory']);
+    // `api.hap` is read twice while registering the accessory: once for the
+    // UUID derivation, and once by the accessory factory, which declares this
+    // plugin's own HomeKit types over the namespace it is given.
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          registeredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
 
           return true;
         }),
@@ -482,8 +455,8 @@ describe('BasementGuardianPlatform', () => {
 
       return Promise.resolve(new Response('{}', { status: 503 }));
     });
-    const registeredAccessories: FakeDiscoveryAccessory[] = [];
-    const unregisteredAccessories: FakeDiscoveryAccessory[] = [];
+    const registeredAccessories: FakeAccessory[] = [];
+    const unregisteredAccessories: FakeAccessory[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
@@ -494,15 +467,15 @@ describe('BasementGuardianPlatform', () => {
     // factory), and once more while deriving the same UUID to look the
     // accessory up for removal.
     when(() => api.hap)
-      .thenReturn(fakeHap as unknown as API['hap'])
+      .thenReturn(HAP_NAMESPACE)
       .times(3);
-    when(() => api.platformAccessory).thenReturn(FakeDiscoveryAccessory as unknown as API['platformAccessory']);
+    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          registeredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
 
           return true;
         }),
@@ -513,7 +486,7 @@ describe('BasementGuardianPlatform', () => {
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          unregisteredAccessories.push(...(accessories as unknown as FakeDiscoveryAccessory[]));
+          unregisteredAccessories.push(...(accessories as unknown as FakeAccessory[]));
 
           return true;
         }),
@@ -678,11 +651,11 @@ describe('registerDiscoveredDevices', () => {
   test('updates a deviceId already present in accessories in place instead of registering it again', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
-    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const uuid = `uuid-${DEVICE_ID}`;
-    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    const uuid = ACCESSORY_UUID;
+    const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
@@ -717,11 +690,11 @@ describe('registerDiscoveredDevices', () => {
   test('adopts a vendor rename when the display name still matches the stored vendor name', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
-    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const uuid = `uuid-${DEVICE_ID}`;
-    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    const uuid = ACCESSORY_UUID;
+    const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
@@ -745,11 +718,11 @@ describe('registerDiscoveredDevices', () => {
   test('keeps a customized display name but still advances the stored vendor name', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
-    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const uuid = `uuid-${DEVICE_ID}`;
-    const existing = new FakeDiscoveryAccessory('Basement Pump', uuid);
+    const uuid = ACCESSORY_UUID;
+    const existing = new HarnessPlatformAccessory('Basement Pump', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
@@ -773,11 +746,11 @@ describe('registerDiscoveredDevices', () => {
   test('calls updatePlatformAccessories no times when nothing about the cached accessory changed', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
-    const updateCalls: FakeDiscoveryAccessory[][] = [];
+    const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const uuid = `uuid-${DEVICE_ID}`;
-    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    const uuid = ACCESSORY_UUID;
+    const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
@@ -941,8 +914,8 @@ describe('removeDiscoveredDevice', () => {
     const unregisterCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls, [], unregisterCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const uuid = `uuid-${DEVICE_ID}`;
-    const existing = new FakeDiscoveryAccessory('Sump System', uuid);
+    const uuid = ACCESSORY_UUID;
+    const existing = new HarnessPlatformAccessory('Sump System', uuid);
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
