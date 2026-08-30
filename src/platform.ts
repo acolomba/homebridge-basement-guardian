@@ -104,7 +104,13 @@ function resolveVendorName(accessory: BasementGuardianPlatformAccessory, vendorN
 // degrade-in-place closure state (the log-once flag, the last family-valid
 // `receivedAt`) on every call, so the same instance is reused for as long as
 // the accessory itself stays registered.
-function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, accessory: BasementGuardianPlatformAccessory): BasementGuardianAccessory {
+function basementGuardianAccessoryFor(
+  context: DiscoveryContext,
+  uuid: string,
+  accessory: BasementGuardianPlatformAccessory,
+  deviceId: string,
+  store: DeviceStateStore,
+): BasementGuardianAccessory {
   const existing = context.basementGuardianAccessories.get(uuid);
 
   if (existing !== undefined) {
@@ -122,6 +128,22 @@ function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, a
   });
   context.basementGuardianAccessories.set(uuid, created);
 
+  // Without this, `update()` is reached only once per successful REST poll. A
+  // backup pump runs for seven to fifteen seconds and the default poll interval
+  // is about fifteen minutes, so an activation would almost never be observed
+  // at all; canonical state that changes between polls has to reach HomeKit on
+  // the store's own change notification instead (SAFE-03, SAFE-07). The store
+  // notifies only when a telemetry value actually moved, and it contains a
+  // failing listener itself, so nothing here filters or guards again.
+  //
+  // No unsubscribe handle is kept: `store.remove(deviceId)`, which
+  // `removeDiscoveredDevice` already calls, drops this device's whole listener
+  // entry in the same breath as the cached accessory, so a later re-discovery
+  // builds a fresh instance and subscribes it again.
+  store.subscribe(deviceId, (next) => {
+    created.update(next, 'live');
+  });
+
   return created;
 }
 
@@ -134,18 +156,46 @@ function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, a
  * ever refreshes what a `deviceTypeId` or vendor-name change reported for the
  * same accessory, never the accessory's identity itself.
  */
-function updateDiscoveredDevice(context: DiscoveryContext, uuid: string, accessory: BasementGuardianPlatformAccessory, snapshot: DeviceSnapshot): void {
+function updateDiscoveredDevice(
+  context: DiscoveryContext,
+  uuid: string,
+  accessory: BasementGuardianPlatformAccessory,
+  snapshot: DeviceSnapshot,
+  store: DeviceStateStore,
+): void {
   const rename = resolveVendorName(accessory, snapshot.identity.name);
   const nextDevice = { deviceId: snapshot.identity.deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
-  const previousState = { displayName: accessory.displayName, lastVendorName: accessory.context.lastVendorName, device: accessory.context.device };
-  const nextState = { displayName: rename.displayName, lastVendorName: rename.lastVendorName, device: nextDevice };
+  const previousDisplayName = accessory.displayName;
+  const previousVendorName = accessory.context.lastVendorName;
+  const previousDevice = accessory.context.device;
 
-  accessory.displayName = nextState.displayName;
-  accessory.context.lastVendorName = nextState.lastVendorName;
-  accessory.context.device = nextState.device;
+  // The identity has to be on the accessory before the factory reads it: an
+  // accessory Homebridge restored from a cache written before `context.device`
+  // existed carries none, and this is the call that supplies it.
+  accessory.displayName = rename.displayName;
+  accessory.context.lastVendorName = rename.lastVendorName;
+  accessory.context.device = nextDevice;
 
-  const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
+  const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory, snapshot.identity.deviceId, store);
+  // The published service set is part of what Homebridge persists, so it is
+  // compared beside the display name and the context: an adapter an
+  // administrator added to `ignoredFaults` removes a service, which has to earn
+  // the persistence call the same way a rename does (CONF-06).
+  const previousState = {
+    displayName: previousDisplayName,
+    lastVendorName: previousVendorName,
+    device: previousDevice,
+    services: basementGuardianAccessory.services,
+  };
+
   basementGuardianAccessory.update(snapshot, 'poll');
+
+  const nextState = {
+    displayName: rename.displayName,
+    lastVendorName: rename.lastVendorName,
+    device: nextDevice,
+    services: basementGuardianAccessory.services,
+  };
 
   // A context mutation Homebridge does not know about is invisible on disk
   // until the next full register/unregister cycle, so only a real change
@@ -183,7 +233,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     const existing = context.accessories.get(uuid);
 
     if (existing !== undefined) {
-      updateDiscoveredDevice(context, uuid, existing, snapshot);
+      updateDiscoveredDevice(context, uuid, existing, snapshot, store);
 
       continue;
     }
@@ -205,7 +255,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     // adoption is set here (DEV-06).
     accessory.context.lastVendorName = snapshot.identity.name;
 
-    const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
+    const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory, deviceId, store);
     basementGuardianAccessory.update(snapshot, 'poll');
 
     context.accessories.set(uuid, accessory);
@@ -236,6 +286,11 @@ export function removeDiscoveredDevice(context: DiscoveryContext, deviceId: stri
   context.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
   context.accessories.delete(uuid);
   context.basementGuardianAccessories.delete(uuid);
+  // This also drops the live-state listener the accessory was subscribed with,
+  // because `remove` deletes the whole listener entry for the device alongside
+  // its snapshot. That is why no unsubscribe handle is kept anywhere: the
+  // cached accessory and its subscription are discarded in the same call, and a
+  // later re-discovery of the same `deviceId` builds and subscribes a new one.
   store.remove(deviceId);
 }
 
