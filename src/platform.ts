@@ -12,6 +12,7 @@ import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
+import type { BasementGuardianAccessory } from './accessories/basementGuardian.js';
 import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
 import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
@@ -41,6 +42,17 @@ export type BasementGuardianPlatformAccessory = PlatformAccessory<BasementGuardi
 export interface DiscoveryContext {
   api: API;
   accessories: Map<string, BasementGuardianPlatformAccessory>;
+  /**
+   * One `BasementGuardianAccessory` per physical accessory, reused across
+   * every poll.
+   *
+   * Its closure holds the DEV-08 degrade-in-place state (the last
+   * family-valid `receivedAt` and the log-once flag): creating a fresh
+   * instance on every poll would silently discard that state instead of
+   * carrying it forward, defeating the log-once and last-valid-value
+   * guarantees.
+   */
+  basementGuardianAccessories: Map<string, BasementGuardianAccessory>;
   registry: FamilyRegistry;
   log: Logging;
 }
@@ -74,6 +86,25 @@ function resolveVendorName(accessory: BasementGuardianPlatformAccessory, vendorN
   };
 }
 
+// Returns the one `BasementGuardianAccessory` this physical accessory owns
+// for the life of the plugin run, creating it on the first poll that ever
+// sees this `uuid`. A fresh instance per poll would reset the DEV-08
+// degrade-in-place closure state (the log-once flag, the last family-valid
+// `receivedAt`) on every call, so the same instance is reused for as long as
+// the accessory itself stays registered.
+function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, accessory: BasementGuardianPlatformAccessory): BasementGuardianAccessory {
+  const existing = context.basementGuardianAccessories.get(uuid);
+
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  const created = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+  context.basementGuardianAccessories.set(uuid, created);
+
+  return created;
+}
+
 /**
  * Applies one discovery snapshot to an accessory already present in
  * `accessories`.
@@ -83,7 +114,7 @@ function resolveVendorName(accessory: BasementGuardianPlatformAccessory, vendorN
  * ever refreshes what a `deviceTypeId` or vendor-name change reported for the
  * same accessory, never the accessory's identity itself.
  */
-function updateDiscoveredDevice(context: DiscoveryContext, accessory: BasementGuardianPlatformAccessory, snapshot: DeviceSnapshot): void {
+function updateDiscoveredDevice(context: DiscoveryContext, uuid: string, accessory: BasementGuardianPlatformAccessory, snapshot: DeviceSnapshot): void {
   const rename = resolveVendorName(accessory, snapshot.identity.name);
   const nextDevice = { deviceId: snapshot.identity.deviceId, deviceTypeId: snapshot.identity.deviceTypeId };
   const previousState = { displayName: accessory.displayName, lastVendorName: accessory.context.lastVendorName, device: accessory.context.device };
@@ -93,7 +124,7 @@ function updateDiscoveredDevice(context: DiscoveryContext, accessory: BasementGu
   accessory.context.lastVendorName = nextState.lastVendorName;
   accessory.context.device = nextState.device;
 
-  const basementGuardianAccessory = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+  const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
   basementGuardianAccessory.update(snapshot);
 
   // A context mutation Homebridge does not know about is invisible on disk
@@ -132,7 +163,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     const existing = context.accessories.get(uuid);
 
     if (existing !== undefined) {
-      updateDiscoveredDevice(context, existing, snapshot);
+      updateDiscoveredDevice(context, uuid, existing, snapshot);
 
       continue;
     }
@@ -154,7 +185,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     // adoption is set here (DEV-06).
     accessory.context.lastVendorName = snapshot.identity.name;
 
-    const basementGuardianAccessory = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+    const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
     basementGuardianAccessory.update(snapshot);
 
     context.accessories.set(uuid, accessory);
@@ -169,7 +200,10 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
  * A `deviceId` with no cached accessory is a no-op: it was never registered,
  * or an earlier removal already unregistered it. The UUID is derived the
  * same way discovery derives it, so the same physical device always resolves
- * to the same accessory (DEV-05, D-029).
+ * to the same accessory (DEV-05, D-029). Dropping the cached
+ * `BasementGuardianAccessory` alongside the HAP accessory is what starts a
+ * fresh observation epoch: a later re-discovery of the same `deviceId`
+ * builds a brand-new instance with no memory of a prior degradation (D-020).
  */
 export function removeDiscoveredDevice(context: DiscoveryContext, deviceId: string, store: DeviceStateStore): void {
   const uuid = context.api.hap.uuid.generate(deviceId);
@@ -181,6 +215,7 @@ export function removeDiscoveredDevice(context: DiscoveryContext, deviceId: stri
 
   context.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
   context.accessories.delete(uuid);
+  context.basementGuardianAccessories.delete(uuid);
   store.remove(deviceId);
 }
 
@@ -205,6 +240,10 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
   readonly log: RedactingLogger;
 
   private readonly registry: FamilyRegistry = createFamilyRegistry();
+
+  // One BasementGuardianAccessory per physical accessory, reused across every
+  // poll so its DEV-08 degrade-in-place state persists (see DiscoveryContext).
+  private readonly basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
 
   constructor(
     log: Logging,
@@ -245,10 +284,30 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       connect,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
-        registerDiscoveredDevices({ api: this.api, accessories: this.accessories, registry: this.registry, log: this.log }, deviceIds, runtime.store);
+        registerDiscoveredDevices(
+          {
+            api: this.api,
+            accessories: this.accessories,
+            basementGuardianAccessories: this.basementGuardianAccessories,
+            registry: this.registry,
+            log: this.log,
+          },
+          deviceIds,
+          runtime.store,
+        );
       },
       onDeviceRemoved: (deviceId: string): void => {
-        removeDiscoveredDevice({ api: this.api, accessories: this.accessories, registry: this.registry, log: this.log }, deviceId, runtime.store);
+        removeDiscoveredDevice(
+          {
+            api: this.api,
+            accessories: this.accessories,
+            basementGuardianAccessories: this.basementGuardianAccessories,
+            registry: this.registry,
+            log: this.log,
+          },
+          deviceId,
+          runtime.store,
+        );
       },
     });
 

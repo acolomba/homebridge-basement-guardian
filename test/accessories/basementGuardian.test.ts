@@ -5,6 +5,7 @@ import { createBasementGuardianAccessory } from '../../src/accessories/basementG
 
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { DeviceFamily } from '../../src/device/family.js';
+import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
@@ -12,18 +13,25 @@ import type { API, Logging, PlatformAccessory } from 'homebridge';
 const DEVICE_ID = 'account-1_serial-1';
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
 
+// Every scope the accessory degrades, in the stable order `update()` must
+// expose them -- written independently of the production constant.
+const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault'];
+
 void ({
   deviceId: DEVICE_ID,
   services: [{ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', name: 'Sump Pit Flood' }],
+  untrusted: [],
   update: () => undefined,
 } satisfies BasementGuardianAccessory);
 
 // @ts-expect-error the accessory is seeded by the immutable vendor identifier
-void ({ services: [], update: () => undefined } satisfies BasementGuardianAccessory);
+void ({ services: [], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
 // @ts-expect-error state reaches HomeKit through the update entry point alone
-void ({ deviceId: DEVICE_ID, services: [] } satisfies BasementGuardianAccessory);
+void ({ deviceId: DEVICE_ID, services: [], untrusted: [] } satisfies BasementGuardianAccessory);
 // @ts-expect-error a published service is a keyed descriptor, not a bare name
-void ({ deviceId: DEVICE_ID, services: ['sump-pit-flood'], update: () => undefined } satisfies BasementGuardianAccessory);
+void ({ deviceId: DEVICE_ID, services: ['sump-pit-flood'], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
+// @ts-expect-error a degraded scope is a keyed descriptor, not a bare name
+void ({ deviceId: DEVICE_ID, services: [], untrusted: ['water'], update: () => undefined } satisfies BasementGuardianAccessory);
 
 interface FakeIdentifier {
   readonly UUID: string;
@@ -91,11 +99,30 @@ function silentLog(): Logging {
   });
 }
 
+// A `Logging` stand-in that records every `warn()` call, so a case can assert
+// the degradation transition logs exactly once.
+function recordingLog(): { log: Logging; warnings: string[] } {
+  const warnings: string[] = [];
+  const log = Object.assign(() => undefined, {
+    prefix: 'basement guardian',
+    debug: () => undefined,
+    error: () => undefined,
+    info: () => undefined,
+    log: () => undefined,
+    success: () => undefined,
+    warn: (message: string) => {
+      warnings.push(message);
+    },
+  });
+
+  return { log, warnings };
+}
+
 function registryWith(outcome: FamilyOutcome<unknown>): FamilyRegistry {
   return { lookup: () => outcome, shouldLog: () => true };
 }
 
-function buildSnapshot(deviceTypeId: string): DeviceSnapshot {
+function buildSnapshot(deviceTypeId: string, receivedAt = 0): DeviceSnapshot {
   return {
     identity: { deviceId: DEVICE_ID, deviceTypeId, name: 'Sump System', serialNumber: 'serial-1' },
     connectivity: { connected: true, timestamp: 0 },
@@ -103,7 +130,7 @@ function buildSnapshot(deviceTypeId: string): DeviceSnapshot {
     metadata: {},
     shadowVersion: undefined,
     deviceTimestamp: undefined,
-    receivedAt: 0,
+    receivedAt,
   };
 }
 
@@ -157,6 +184,17 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(basementGuardianAccessory.services, []);
   });
 
+  test('exposes no untrusted scopes before any update() call', () => {
+    // arrange
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+
+    // act
+    const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory }));
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
+  });
+
   test('throws when the accessory context carries no device identity', () => {
     // arrange
     const accessory = new FakeAccessory(undefined);
@@ -198,7 +236,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.throws(() => createBasementGuardianAccessory(buildOptions({ accessory })), Error);
   });
 
-  test('update() does nothing when the registry reports no adapter for the deviceTypeId', () => {
+  test('degrades every non-connectivity scope when the registry reports no adapter for the deviceTypeId', () => {
     // arrange
     const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
     const basementGuardianAccessory = createBasementGuardianAccessory(
@@ -211,6 +249,26 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.strictEqual(accessoryInformation?.getCharacteristic(CHARACTERISTIC_MANUFACTURER), undefined);
+    assert.deepStrictEqual(
+      basementGuardianAccessory.untrusted,
+      DEGRADED_SCOPES.map((scope) => ({ scope, reason: 'invalid', lastTrustedAt: undefined })),
+    );
+  });
+
+  test('degrades every non-connectivity scope when validate() reports the snapshot invalid', () => {
+    // arrange
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.deepStrictEqual(
+      basementGuardianAccessory.untrusted,
+      DEGRADED_SCOPES.map((scope) => ({ scope, reason: 'invalid', lastTrustedAt: undefined })),
+    );
   });
 
   test('never calls decode() when validate() reports the snapshot invalid', (t) => {
@@ -225,6 +283,24 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.strictEqual(decodeSpy.mock.callCount(), 0);
+  });
+
+  test('produces the identical untrusted shape whether the family is unresolved or its validate() fails', () => {
+    // arrange
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const unresolvedAccessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const invalidAccessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const unresolved = createBasementGuardianAccessory(
+      buildOptions({ accessory: unresolvedAccessory, registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }) }),
+    );
+    const invalid = createBasementGuardianAccessory(buildOptions({ accessory: invalidAccessory, registry: registryWith({ kind: 'implemented', family }) }));
+
+    // act
+    unresolved.update(buildSnapshot(DEVICE_TYPE_ID));
+    invalid.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.deepStrictEqual(unresolved.untrusted, invalid.untrusted);
   });
 
   test('populates AccessoryInformation from the decoded metadata when the family reports the snapshot valid', () => {
@@ -247,6 +323,7 @@ describe('createBasementGuardianAccessory', () => {
       },
       { manufacturer: 'Wayne', model: 'Gemini', serialNumber: 'serial-1', firmwareRevision: '1.2.3' },
     );
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
   });
 
   test('defaults FirmwareRevision to "unknown" when the decoded state carries no mcuFirmwareVersion', () => {
@@ -315,5 +392,96 @@ describe('createBasementGuardianAccessory', () => {
     assert.throws(() => {
       basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
     }, Error);
+  });
+
+  test('keeps AccessoryInformation unchanged after a degrading update follows a valid one', () => {
+    // arrange
+    const family = fakeFamily({ decode: () => ({ metadata: { mcuFirmwareVersion: '1.2.3' } }) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
+    const accessoryInformation = accessory.getService(SERVICE_ACCESSORY_INFORMATION);
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+    const beforeDegrading = accessoryInformation?.getCharacteristic(CHARACTERISTIC_FIRMWARE_REVISION);
+
+    // act
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.strictEqual(accessoryInformation?.getCharacteristic(CHARACTERISTIC_FIRMWARE_REVISION), beforeDegrading);
+  });
+
+  test('recovers from degraded state on a following family-valid update', () => {
+    // arrange
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
+    const accessoryInformation = accessory.getService(SERVICE_ACCESSORY_INFORMATION);
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // act
+    family.validate = () => ({ valid: true });
+    family.decode = () => ({ metadata: { mcuFirmwareVersion: '4.5.6' } });
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
+    assert.strictEqual(accessoryInformation?.getCharacteristic(CHARACTERISTIC_FIRMWARE_REVISION), '4.5.6');
+  });
+
+  test('sets lastTrustedAt on degradation to the receivedAt of the last family-valid snapshot', () => {
+    // arrange
+    const family = fakeFamily({ decode: () => ({}) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const basementGuardianAccessory = createBasementGuardianAccessory(buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }) }));
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID, 1_700_000_000_000));
+
+    // act
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID, 1_700_000_060_000));
+
+    // assert
+    assert.deepStrictEqual(
+      basementGuardianAccessory.untrusted,
+      DEGRADED_SCOPES.map((scope) => ({ scope, reason: 'invalid', lastTrustedAt: 1_700_000_000_000 })),
+    );
+  });
+
+  test('logs the degradation transition exactly once across repeated degraded updates', () => {
+    // arrange
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = createBasementGuardianAccessory(
+      buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }), log }),
+    );
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.strictEqual(warnings.length, 1);
+  });
+
+  test('logs again after recovering and degrading a second time', () => {
+    // arrange
+    const family = fakeFamily({ validate: () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] }) });
+    const accessory = new FakeAccessory({ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID });
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = createBasementGuardianAccessory(
+      buildOptions({ accessory, registry: registryWith({ kind: 'implemented', family }), log }),
+    );
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // act
+    family.validate = () => ({ valid: true });
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+    family.validate = () => ({ valid: false, violations: [{ field: 'water_level', reason: 'missing' }] });
+    basementGuardianAccessory.update(buildSnapshot(DEVICE_TYPE_ID));
+
+    // assert
+    assert.strictEqual(warnings.length, 2);
   });
 });

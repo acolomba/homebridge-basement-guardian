@@ -142,8 +142,17 @@ function topicNamed(name: string): string {
   return shadowTopic(DEVICE_ID, leaf);
 }
 
+// `waterLevel` is an optional column, following the same model `deviceTypeId`
+// established: a scenario naming it overrides the one otherwise-valid
+// telemetry field, which is what lets a scenario seed an out-of-domain
+// `water_level` (DEV-08) without restating the other 15 required fields.
+function withWaterLevelOverride(telemetry: Readonly<Record<string, unknown>>, row: Record<string, string>): Readonly<Record<string, unknown>> {
+  return row.waterLevel === undefined ? telemetry : { ...telemetry, water_level: Number(row.waterLevel) };
+}
+
 function toDevice(row: Record<string, string>): ApiDevice {
   const deviceTypeId = row.deviceTypeId ?? DEFAULT_DEVICE_TYPE_ID;
+  const telemetry = deviceTypeId === DEFAULT_DEVICE_TYPE_ID ? VALID_GEMINI_TELEMETRY : {};
 
   return {
     deviceId: row.deviceId ?? '',
@@ -151,7 +160,7 @@ function toDevice(row: Record<string, string>): ApiDevice {
     name: row.name ?? '',
     serialNumber: 'placeholder-serial-number',
     connectivity: { connected: true, timestamp: 0 },
-    data: deviceTypeId === DEFAULT_DEVICE_TYPE_ID ? VALID_GEMINI_TELEMETRY : {},
+    data: withWaterLevelOverride(telemetry, row),
   };
 }
 
@@ -596,3 +605,24 @@ async function assertPluginNeverUnregistersTheAccessory(this: BasementGuardianWo
 }
 
 Then('the plugin never unregisters the accessory', assertPluginNeverUnregistersTheAccessory);
+
+const EXPECTED_DEGRADATION_EXPLANATION =
+  `warn Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
+  'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
+
+// Waits for the poll that carries the out-of-domain telemetry to actually run, then asserts the
+// degradation transition logged exactly once (DEV-08) -- not once per poll.
+async function assertPluginExplainsTheDegradationOnce(this: BasementGuardianWorld): Promise<void> {
+  await this.untilTrue(
+    () => this.logged.includes(EXPECTED_DEGRADATION_EXPLANATION),
+    DISCOVERY_CHANGE_DEADLINE_MS,
+    'the plugin never logged the degradation explanation',
+  );
+
+  assert.deepEqual(
+    this.logged.filter((line) => line === EXPECTED_DEGRADATION_EXPLANATION),
+    [EXPECTED_DEGRADATION_EXPLANATION],
+  );
+}
+
+Then('the plugin explains the degradation once', assertPluginExplainsTheDegradationOnce);
