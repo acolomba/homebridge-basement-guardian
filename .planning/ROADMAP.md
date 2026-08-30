@@ -163,19 +163,23 @@ Plans:
 **Wave 3** *(blocked on 03-04)*
 
 - [ ] 03-05-PLAN.md — The complete service catalogue: water, both pumps, the battery pair, and the five fault adapters
+
+**Wave 4** *(blocked on 03-05)*
+
 - [ ] 03-06-PLAN.md — Controller-link distrust, live state to HomeKit, and the four-layer immediacy gate
 
-**Wave 4** *(blocked on 03-05 and 03-06)*
+**Wave 5** *(blocked on 03-05 and 03-06)*
 
 - [ ] 03-07-PLAN.md — End-to-end safety scenarios and the static immediacy gate
 
-**Wave 5** *(blocked on 03-07)*
+**Wave 6** *(blocked on 03-07)*
 
 - [ ] 03-08-PLAN.md — Retire stale build exemptions and document inactive scopes, `ignoredFaults`, and the estimated values
 
 **Cross-cutting constraints:**
 
-- `.fallowrc.json` is edited by exactly one plan, alone in its wave; `fallow dupes` sits at a zero baseline, so the service catalogue must be table-driven rather than fourteen inline publish blocks.
+- `.fallowrc.json` is edited by exactly one plan, alone in its wave; `fallow dupes` sits at a zero baseline, so the service catalogue must be table-driven rather than fifteen inline publish blocks.
+- 03-06 follows 03-05 for a semantic reason rather than a file conflict: its controller-link and suppression assertions only discriminate against the complete catalogue.
 - The Cucumber HAP stand-in lands before any plan whose scenarios depend on it.
 
 **UI hint**: no
