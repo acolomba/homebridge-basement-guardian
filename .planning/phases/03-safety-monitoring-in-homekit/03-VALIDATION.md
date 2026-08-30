@@ -59,7 +59,7 @@ planner binds each row to a task ID and the executor updates Status.
 
 | Requirement | Behavior | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---|---|---|---|---|---|---|---|
-| SAFE-01 | Every legal code maps through the explicit ladder; `31` → 100; `0` → 0 with `NO_FAULT` | — | N/A | unit (data-driven, one `test()` per row) | `node --test dist-test/test/accessories/waterLevel.test.js` | ❌ W0 | ⬜ pending |
+| SAFE-01 | Every legal code maps through the explicit ladder; `31` → 100; `0` → 0 with `NO_FAULT` | — | N/A | unit (data-driven, one `test()` per row) | `node --test dist-test/test/device/waterLevel.test.js` | ❌ W0 | ⬜ pending |
 | SAFE-01 | An out-of-domain code never reaches the lookup; it faults the `water` scope only | — | No guessed level from an unvalidated code | unit | `node --test dist-test/test/device/gemini.test.js` | ✅ | ⬜ pending |
 | SAFE-01 | `Sump Pit Flood` reports `LEAK_DETECTED` only at `31` | — | N/A | unit | `node --test dist-test/test/accessories/serviceCatalogue.test.js` | ❌ W0 | ⬜ pending |
 | SAFE-02 | Both Pump services and both activity ContactSensors follow their booleans | — | N/A | unit | `node --test dist-test/test/accessories/serviceCatalogue.test.js` | ❌ W0 | ⬜ pending |
@@ -100,7 +100,10 @@ planner binds each row to a task ID and the executor updates Status.
 
 ## Wave 0 Requirements
 
-- [ ] `test/accessories/waterLevel.test.ts` — covers SAFE-01
+- [ ] `test/device/waterLevel.test.ts` — covers SAFE-01. The ladder lives at `src/device/waterLevel.ts`,
+      not under `src/accessories/`: it is domain decode, and `src/device/family.ts`'s own header puts
+      field meaning behind the family boundary. A HomeKit module knowing the thermometer code is the
+      failure that header warns about.
 - [ ] `test/accessories/serviceCatalogue.test.ts` — covers SAFE-01, SAFE-02, SAFE-04, SAFE-05, SAFE-06, SAFE-08
 - [ ] `test/accessories/customServices.test.ts` — covers SAFE-08
 - [ ] `test/accessories/customCharacteristics.test.ts` — covers SAFE-08
@@ -113,7 +116,7 @@ planner binds each row to a task ID and the executor updates Status.
       it** — the current two-argument `addService(identifier, subtype?)` would silently record a
       display name as a subtype.
 - [ ] New step in `features/support/steps/shadow.ts`: `When the scenario clock does not move`
-- [ ] New feature file for safety-condition transitions (`features/safetyConditions.feature`)
+- [ ] New feature file for safety-condition transitions (`features/safetyMonitoring.feature`)
 - [ ] No framework install needed — `node:test` and Cucumber are already wired.
 
 ---
