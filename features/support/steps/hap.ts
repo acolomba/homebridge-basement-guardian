@@ -101,10 +101,10 @@ function assertScratchTypeConstructs(): void {
 Then('a plugin type extends the hap service and the hap characteristic', assertScratchTypeConstructs);
 
 // The real HAP creates each characteristic at its format default, and for this plugin those
-// defaults are the good-news values: a sensor published before the first valid decode reads "no
-// leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
-// default that is honest, which is why the accessory leaves it there until a valid decode arrives
-// (D-05, D-014).
+// defaults are the good-news values: a sensor published before the first valid decode would read
+// "no leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
+// default that is honest. The accessory never relies on that: it adds no service until its row has
+// a value to vouch for, and pushes `StatusActive` on every service it does add (D-05, D-014).
 function assertFormatDefaults(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');

@@ -188,9 +188,10 @@ class StandInCharacteristic implements FakeHapCharacteristic {
   // format the first declared valid value, then the declared minimum, then zero. The numeric order
   // matters: a characteristic whose domain excludes zero would otherwise start at a code its own
   // `validValues` forbids here while the real HAP started it at a legal one. Those defaults are
-  // this plugin's good-news values, so a service published before the first valid decode reads as
-  // a healthy sump pit; reproducing them exactly is what lets a scenario prove the accessory never
-  // leaves a service sitting there (D-014).
+  // this plugin's good-news values, so a service published before the first valid decode would read
+  // as a healthy sump pit. That is why the accessory adds no service until its row has a value to
+  // vouch for, and why the scenario "A field that never validates publishes no service at all"
+  // asserts an absent service rather than a quiet one (D-014).
   getDefaultValue(): unknown {
     if (this.props.format === FORMATS.BOOL) {
       return false;
