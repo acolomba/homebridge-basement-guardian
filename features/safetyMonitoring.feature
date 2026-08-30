@@ -42,9 +42,9 @@ Feature: Publishing safety state to HomeKit
     When the vendor changes these device fields:
       | water_level | 12 |
     When the plugin starts
-    Then the plugin publishes the "Sump Mains Power" service
     Then the plugin publishes no "Sump Pit Flood" service
     Then the plugin publishes no "Sump Pit Level" service
+    Then the plugin publishes the "Sump Mains Power" service
 
   Scenario: The offline adapter stays quiet while the vendor answers for the device
     When the plugin starts

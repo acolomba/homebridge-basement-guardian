@@ -104,13 +104,32 @@ async function assertServicePublished(this: BasementGuardianWorld, displayName: 
 
 Then('the plugin publishes the {string} service', { timeout: STEP_TIMEOUT_MS }, assertServicePublished);
 
+// How many catalogue services the one registered accessory carries. Nothing is registered until the
+// first poll completes, and an unregistered accessory answers `undefined` for every service name, so
+// an absence read before then is satisfied by every name including the ones the plugin does publish.
+// Waiting on this count is what makes the absence evidence: a run that published nothing at all
+// fails the step by name rather than passing it fifteen times over.
+function publishedServiceCount(homebridge: FakeHomebridgeApi): number {
+  const accessory = currentAccessory(homebridge);
+
+  if (accessory === undefined) {
+    return 0;
+  }
+
+  return createServiceCatalogue(homebridge.hap as unknown as API['hap']).filter(
+    (row) => accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype) !== undefined,
+  ).length;
+}
+
 async function assertServiceNotPublished(this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
+
+  await this.untilTrue(() => publishedServiceCount(homebridge) > 0, PUBLISH_DEADLINE_MS, 'the plugin never published a service');
 
   assert.equal(serviceOf(homebridge, displayName), undefined);
 }
 
-Then('the plugin publishes no {string} service', assertServiceNotPublished);
+Then('the plugin publishes no {string} service', { timeout: STEP_TIMEOUT_MS }, assertServiceNotPublished);
 
 async function assertCharacteristicValue(this: BasementGuardianWorld, serviceName: string, characteristicName: string, text: string): Promise<void> {
   const homebridge = await this.homebridge();
