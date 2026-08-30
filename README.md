@@ -6,7 +6,7 @@
 
 A Homebridge dynamic platform plugin for monitoring and protecting basements.
 
-> This project currently contains the working starter accessories supplied by the official Homebridge plugin template. Basement-specific discovery, sensors, and automations still need to be implemented.
+> This plugin is in development and is not released. Some of the values it publishes are estimates, and some are provisional until they are validated against real hardware. The sections that follow name each one.
 
 ## Requirements
 
@@ -54,6 +54,70 @@ Add the platform through the Homebridge UI, or add it directly to `config.json`:
   "name": "Basement Guardian"
 }
 ```
+
+## What the plugin publishes
+
+The plugin publishes one HomeKit accessory for each Basement Guardian system on your account. Every accessory carries these services:
+
+- `Sump Pit Level` reports the water level in the pit, with the raw vendor code beside it.
+- `Sump Pit Flood` is a leak sensor. It activates at the highest water level the system reports.
+- `Primary Pump` and `Backup Pump` carry the exact conditions the system reports for each pump.
+- `Primary Pump Running` and `Backup Pump Activated` are two sensors that follow live pump activity.
+- `Sump Mains Power` reports the presence of mains power, with a `Mains Power Lost` sensor beside it.
+- `Backup Battery` is a standard battery service. `Backup Battery Facts` carries the exact values the system reports.
+- Five sensors report equipment faults: `Primary Pump Fault`, `Backup Pump Fault`, `Water Sensor Fault`, `Pump Controller Link Lost`, and `Basement Guardian Offline`.
+
+The plugin updates these services each time it polls the vendor cloud. It also updates them when the cloud reports a change between two polls. A backup pump run can last as little as 7 seconds. If the message for a short run does not arrive, that run stays unseen until the next poll.
+
+The plugin publishes state to HomeKit. Whether your devices notify you, and how quickly, depends on your home and on Apple rather than on this plugin.
+
+## When the plugin cannot vouch for a value
+
+The plugin never replaces a doubtful value with a normal one. If it cannot vouch for part of what a system reports, it keeps the last value it does trust and marks the affected services inactive.
+
+Most Homebridge plugins substitute a safe default here, such as a not-detected state. This plugin does not. A stale reading shown as a normal one is a false all-clear, which is the failure this plugin exists to prevent.
+
+An inactive service keeps showing its last trusted value. Apple Home shows the inactive state as a `Status Active` row in the accessory details, not on the tile. Controllers such as Eve show it directly.
+
+The network module can lose its link to the pump controller while the vendor cloud still answers normally. The system then still reads as online, but every value that comes through the controller is no longer trustworthy. The plugin marks the water, pump, power, battery, and fault services inactive, activates `Pump Controller Link Lost`, and publishes the time trustworthy controller data last arrived.
+
+## Removing a notification sensor
+
+The `ignoredFaults` setting removes notification sensors you do not want in your home. It accepts these seven names:
+
+- `backup-pump-activated`
+- `mains-power-lost`
+- `primary-pump-fault`
+- `backup-pump-fault`
+- `water-sensor-fault`
+- `pump-controller-link-lost`
+- `basement-guardian-offline`
+
+Add a name to remove that one sensor:
+
+```json
+{
+  "platform": "BasementGuardian",
+  "name": "Basement Guardian",
+  "ignoredFaults": ["basement-guardian-offline"]
+}
+```
+
+CAUTION: Removing a sensor also removes whatever you attached to it in your home. Its automations, its scenes, and its Activity History go with it. Apple Home does not move them to another service.
+
+A removed sensor is the only thing you lose. The plugin still reads the condition, still reports it on the status characteristics of the service that owns it, and still writes it to the log.
+
+CAUTION: If `ignoredFaults` holds a name the plugin does not publish, or holds the same name twice, the plugin refuses the configuration and does not start. The log names the entry that is wrong and lists all seven valid names. A typo therefore leaves your pump unmonitored until you correct it.
+
+Two services cannot be removed. `Sump Pit Flood` is the flood sensor, and `Backup Battery` is the standard battery service. Neither name is accepted in `ignoredFaults`.
+
+## Values that are estimates
+
+Two groups of published numbers are not measurements. The plugin publishes the exact vendor value beside each one, so you can check the mapping yourself.
+
+The backup battery percentage is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. This is an estimate of remaining protection, not a measured charge. `Backup Battery Facts` carries the exact values the system reports.
+
+The water level percentages and the flood threshold are provisional. The plugin maps the six water level codes to 0, 20, 40, 60, 80, and 100 percent. Only the code that maps to 20 percent is confirmed against a real pit. Every other step, and the level at which `Sump Pit Flood` activates, stays provisional until validation against a real sump pit is complete. `Sump Pit Level` publishes the raw vendor code beside the percentage.
 
 ## Project structure
 
