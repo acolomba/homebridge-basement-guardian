@@ -123,6 +123,33 @@ function assertFormatDefaults(): void {
 
 Then('a fresh sensor service reads at the hap format defaults', assertFormatDefaults);
 
+// The real HAP starts four string characteristics at a named default rather than at the empty
+// string, and all four sit on `AccessoryInformation`. The accessory overwrites every one of them
+// from decoded metadata, so nothing depends on the value; reproducing it is what keeps a case that
+// reads an untouched service from comparing against a value only this stand-in would answer.
+function assertAccessoryInformationDefaults(): void {
+  const accessoryInformation = new HAP.Service.AccessoryInformation('Sump System');
+
+  assert.deepEqual(
+    {
+      manufacturer: accessoryInformation.getCharacteristic(HAP.Characteristic.Manufacturer)?.value,
+      model: accessoryInformation.getCharacteristic(HAP.Characteristic.Model)?.value,
+      serialNumber: accessoryInformation.getCharacteristic(HAP.Characteristic.SerialNumber)?.value,
+      firmwareRevision: accessoryInformation.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value,
+      name: accessoryInformation.getCharacteristic(HAP.Characteristic.Name)?.value,
+    },
+    {
+      manufacturer: 'Default-Manufacturer',
+      model: 'Default-Model',
+      serialNumber: 'Default-SerialNumber',
+      firmwareRevision: '0.0.0',
+      name: 'Sump System',
+    },
+  );
+}
+
+Then('a fresh accessory information service reads at the hap string defaults', assertAccessoryInformationDefaults);
+
 function declaresOptional(service: FakeHapService, characteristicClass: FakeCharacteristicClass): boolean {
   return service.optionalCharacteristics.some((declared) => declared.UUID === characteristicClass.UUID);
 }

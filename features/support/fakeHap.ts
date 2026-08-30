@@ -24,6 +24,17 @@ import { createHash } from 'node:crypto';
 // completed by this suffix.
 const APPLE_BASE_UUID = '-0000-1000-8000-0026BB765291';
 
+// The four string characteristics the real HAP answers a named default for, keyed by identifier as
+// the real switch keys on. Every other string characteristic starts at the empty string. The
+// definitions below carry the same identifiers, and a scenario reads all four back, so the two lists
+// cannot drift apart unnoticed.
+const NAMED_STRING_DEFAULTS: ReadonlyMap<string, string> = new Map([
+  [`00000020${APPLE_BASE_UUID}`, 'Default-Manufacturer'],
+  [`00000021${APPLE_BASE_UUID}`, 'Default-Model'],
+  [`00000030${APPLE_BASE_UUID}`, 'Default-SerialNumber'],
+  [`00000052${APPLE_BASE_UUID}`, '0.0.0'],
+]);
+
 /** The characteristic formats this stand-in answers, carrying the values the real enum carries. */
 export interface FakeFormats {
   readonly BOOL: string;
@@ -184,21 +195,25 @@ class StandInCharacteristic implements FakeHapCharacteristic {
     this.value = this.getDefaultValue();
   }
 
-  // The real HAP answers `false` for a bool, the empty string for a string, and for a numeric
-  // format the first declared valid value, then the declared minimum, then zero. The numeric order
-  // matters: a characteristic whose domain excludes zero would otherwise start at a code its own
-  // `validValues` forbids here while the real HAP started it at a legal one. Those defaults are
-  // this plugin's good-news values, so a service published before the first valid decode would read
-  // as a healthy sump pit. That is why the accessory adds no service until its row has a value to
-  // vouch for, and why the scenario "A field that never validates publishes no service at all"
-  // asserts an absent service rather than a quiet one (D-014).
+  // The real HAP answers `false` for a bool; for a string, one of four named defaults by identifier
+  // and the empty string otherwise; and for a numeric format the first declared valid value, then
+  // the declared minimum, then zero. The numeric order matters: a characteristic whose domain
+  // excludes zero would otherwise start at a code its own `validValues` forbids here while the real
+  // HAP started it at a legal one. The real numeric fallback also takes the declared minimum only
+  // when it is finite; every numeric characteristic defined here declares a finite one, so that
+  // guard has nothing to discriminate and is not reproduced.
+  //
+  // Those defaults are this plugin's good-news values, so a service published before the first
+  // valid decode would read as a healthy sump pit. That is why the accessory adds no service until
+  // its row has a value to vouch for, and why the scenario "A field that never validates publishes
+  // no service at all" asserts an absent service rather than a quiet one (D-014).
   getDefaultValue(): unknown {
     if (this.props.format === FORMATS.BOOL) {
       return false;
     }
 
     if (this.props.format === FORMATS.STRING) {
-      return '';
+      return NAMED_STRING_DEFAULTS.get(this.UUID) ?? '';
     }
 
     return this.props.validValues?.[0] ?? this.props.minValue ?? 0;

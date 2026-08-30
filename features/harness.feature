@@ -72,6 +72,7 @@ Feature: Harness fakes
 
   Scenario: The fake hap namespace reproduces the format defaults of the real hap
     Then a fresh sensor service reads at the hap format defaults
+    Then a fresh accessory information service reads at the hap string defaults
     Then a standard sensor service declares the optional characteristics apple declares
     Then the service adds the characteristic an update names
     Then the service appends an optional characteristic on every call
