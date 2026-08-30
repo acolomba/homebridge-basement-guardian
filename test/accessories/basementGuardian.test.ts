@@ -7,16 +7,18 @@ import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
+import { systemTimers } from '../../src/runtime/timers.js';
 
 import type { FakeHapService, FakeServiceClass } from '../../features/support/fakeHap.js';
 import type { FakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor } from '../../src/accessories/services.js';
-import type { DeviceFamily } from '../../src/device/family.js';
+import type { DeviceFamily, FieldViolation } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { Timers } from '../../src/runtime/timers.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
 
 const DEVICE_ID = 'account-1_serial-1';
@@ -70,6 +72,16 @@ const PUBLISHED_SCOPES: readonly TrustScope[] = [
   'connectivity',
 ];
 
+// The one row that keeps publishing while a lost controller link makes its own scope untrusted: the
+// network module reports that link state directly, so the adapter for it stays truthful (D-11).
+const CONTROLLER_LINK_ROW = 'Pump Controller Link Lost';
+
+// The whole controller-link report, written out here rather than matched on a fragment, so a case
+// asserts what an owner reads: the device it names, the condition, and what happens to the values.
+const CONTROLLER_LINK_WARNING =
+  `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so water, pump, power, ` +
+  'battery, and fault values are retained rather than refreshed until the link returns.';
+
 // Every module this plan writes under `src/accessories/`, read as source so a prohibited idiom
 // fails here by name rather than through some downstream symptom.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
@@ -82,7 +94,7 @@ const HAP = createFakeHap();
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
-const { MainsPowerPresent } = createCustomCharacteristics(HAP_NAMESPACE);
+const { ControllerDataLastTrustedAt, ControllerLinkPresent, MainsPowerPresent } = createCustomCharacteristics(HAP_NAMESPACE);
 const CATALOGUE = createServiceCatalogue(HAP_NAMESPACE);
 
 void ({
@@ -151,8 +163,57 @@ function recordingLog(): { log: Logging; warnings: string[] } {
   return { log, warnings };
 }
 
+// A `Timers` stand-in that records every call and schedules nothing. The accessory takes the port
+// and never reaches for it, so a case asserts this recorder stayed empty across a whole transition.
+function recordingTimers(): { timers: Timers; calls: string[] } {
+  const calls: string[] = [];
+  const timers: Timers = {
+    setTimeout: (_handler, delayMs) => {
+      calls.push(`setTimeout ${String(delayMs)}`);
+
+      return undefined;
+    },
+    setInterval: (_handler, delayMs) => {
+      calls.push(`setInterval ${String(delayMs)}`);
+
+      return undefined;
+    },
+    clearTimeout: () => {
+      calls.push('clearTimeout');
+    },
+    clearInterval: () => {
+      calls.push('clearInterval');
+    },
+  };
+
+  return { timers, calls };
+}
+
+// A deliberately deferred variant of the same transition, private to this module and never a
+// production option. Every immediacy layer is shown to catch it, which is what makes a green layer
+// evidence that the accessory did not defer rather than evidence that the layer cannot tell.
+function deferredTransition(timers: Timers, run: () => void): unknown {
+  return timers.setTimeout(run, 0);
+}
+
 function registryWith(outcome: FamilyOutcome<unknown>): FamilyRegistry {
   return { lookup: () => outcome, shouldLog: () => true };
+}
+
+// Answers each outcome in turn and then repeats the last one, so a case drives a sequence of
+// snapshots through one accessory without restating the registry.
+function registryOver(outcomes: readonly FamilyOutcome<unknown>[]): FamilyRegistry {
+  const remaining = [...outcomes];
+  let latest = remaining[0] ?? { kind: 'unknown' as const, deviceTypeId: DEVICE_TYPE_ID };
+
+  return {
+    lookup: () => {
+      latest = remaining.shift() ?? latest;
+
+      return latest;
+    },
+    shouldLog: () => true,
+  };
 }
 
 interface SnapshotOverrides {
@@ -185,6 +246,7 @@ function buildOptions(
     hap: HAP_NAMESPACE,
     registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }),
     log: silentLog(),
+    timers: recordingTimers().timers,
     ...rest,
     accessory: accessory as unknown as PlatformAccessory,
   };
@@ -218,6 +280,35 @@ function powerFamily(mainsPresent?: boolean): DeviceFamily<unknown> {
     validate: () => (mainsPresent === undefined ? { valid: false, violations } : { valid: true }),
     decode: () => decodedState(mainsPresent),
   });
+}
+
+interface LinkOverrides {
+  linkPresent: boolean;
+  mainsPresent?: boolean;
+  violations?: readonly FieldViolation[];
+}
+
+// A family whose fault group reports the controller link state. `serial_communications` is a
+// reported condition rather than a validation failure, so the whole payload keeps validating and
+// every scope group decodes while the link is down -- which is what makes the distrust the
+// accessory's own decision rather than a consequence of a failed field.
+function linkFamily({ linkPresent, mainsPresent = true, violations = [] }: LinkOverrides): DeviceFamily<unknown> {
+  return fakeFamily({
+    validate: () => (violations.length === 0 ? { valid: true } : { valid: false, violations }),
+    decode: () => ({
+      metadata: { mcuFirmwareVersion: '1.2.3' },
+      water: { levelCode: 0, levelPercent: 0, flooded: false },
+      pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+      power: { mainsPresent },
+      battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+      fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: linkPresent },
+      connectivity: { reportedOffline: false },
+    }),
+  });
+}
+
+function linkOutcome(overrides: LinkOverrides): FamilyOutcome<unknown> {
+  return { kind: 'implemented', family: linkFamily(overrides) };
 }
 
 function accessoryWith(accessory: FakeAccessory, overrides: Partial<Omit<BasementGuardianAccessoryOptions, 'accessory'>>): BasementGuardianAccessory {
@@ -326,7 +417,7 @@ describe('createBasementGuardianAccessory', () => {
     const beforeUpdate = accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value;
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -343,9 +434,9 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
-    basementGuardianAccessory.update(buildSnapshot());
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.strictEqual(warnings.length, 1);
@@ -364,9 +455,9 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
-    basementGuardianAccessory.update(buildSnapshot());
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.strictEqual(warnings.length, 2);
@@ -378,7 +469,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
@@ -395,7 +486,7 @@ describe('createBasementGuardianAccessory', () => {
       const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(mainsPresent) }) });
 
       // act
-      basementGuardianAccessory.update(buildSnapshot());
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
       // assert
       assert.deepStrictEqual(
@@ -415,7 +506,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(false) }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.strictEqual(valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState), CONTACT_NOT_DETECTED);
@@ -428,7 +519,7 @@ describe('createBasementGuardianAccessory', () => {
     const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -453,7 +544,7 @@ describe('createBasementGuardianAccessory', () => {
       const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family }) });
 
       // act
-      basementGuardianAccessory.update(buildSnapshot());
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
       // assert
       assert.strictEqual(accessory.getService(HAP.Service.AccessoryInformation)?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value, 'unknown');
@@ -475,7 +566,7 @@ describe('createBasementGuardianAccessory', () => {
       const beforeUpdate = accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value;
 
       // act
-      basementGuardianAccessory.update(buildSnapshot());
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
       // assert
       assert.strictEqual(accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value, beforeUpdate);
@@ -491,7 +582,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act & assert
     assert.throws(() => {
-      basementGuardianAccessory.update(buildSnapshot());
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
     }, Error);
   });
 
@@ -499,13 +590,13 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
     const firstServices = [...basementGuardianAccessory.services];
     const addServiceSpy = t.mock.method(accessory, 'addService');
     const removeServiceSpy = t.mock.method(accessory, 'removeService');
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.services, firstServices);
@@ -521,14 +612,14 @@ describe('createBasementGuardianAccessory', () => {
     ];
     const registry: FamilyRegistry = { lookup: () => outcomes.shift() ?? { kind: 'implemented', family: powerFamily(undefined) }, shouldLog: () => true };
     const basementGuardianAccessory = accessoryWith(accessory, { registry });
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
     const beforeFailing = {
       reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
       adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
     };
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -547,7 +638,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(undefined) }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -564,10 +655,10 @@ describe('createBasementGuardianAccessory', () => {
     ];
     const registry: FamilyRegistry = { lookup: () => outcomes.shift() ?? { kind: 'implemented', family: powerFamily(undefined) }, shouldLog: () => true };
     const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry });
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1_700_000_000_000 }]);
@@ -578,7 +669,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family: powerFamily(undefined) }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'power', reason: 'invalid', lastTrustedAt: undefined }]);
@@ -593,7 +684,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }));
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'fault', reason: 'invalid', lastTrustedAt: undefined }]);
@@ -609,7 +700,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
@@ -629,7 +720,7 @@ describe('createBasementGuardianAccessory', () => {
       const readings: unknown[] = [];
 
       for (let poll = 0; poll < threshold; poll += 1) {
-        basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+        basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
         readings.push(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState));
       }
 
@@ -644,9 +735,9 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
     const afterOne = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
-    basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -659,13 +750,13 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
-    basementGuardianAccessory.update(buildSnapshot({ connected: false }));
-    basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ connected: true }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: true }), 'poll');
     const afterReconnect = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
-    basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -683,16 +774,16 @@ describe('createBasementGuardianAccessory', () => {
     });
 
     for (let poll = 0; poll < 20; poll += 1) {
-      basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+      basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
     }
 
-    basementGuardianAccessory.update(buildSnapshot({ connected: true }));
+    basementGuardianAccessory.update(buildSnapshot({ connected: true }), 'poll');
 
     // act
     const readings: unknown[] = [];
 
     for (let poll = 0; poll < 7; poll += 1) {
-      basementGuardianAccessory.update(buildSnapshot({ connected: false }));
+      basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
       readings.push(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState));
     }
 
@@ -707,7 +798,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     for (let poll = 0; poll < 10; poll += 1) {
-      basementGuardianAccessory.update(buildSnapshot({ connected: true, data: { offline: true } }));
+      basementGuardianAccessory.update(buildSnapshot({ connected: true, data: { offline: true } }), 'poll');
     }
 
     // assert
@@ -721,7 +812,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }), ignoredFaults });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -738,7 +829,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(false) }), ignoredFaults });
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual(
@@ -756,12 +847,12 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const published = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
-    published.update(buildSnapshot());
+    published.update(buildSnapshot(), 'poll');
     const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
     const suppressed = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }), ignoredFaults });
 
     // act
-    suppressed.update(buildSnapshot());
+    suppressed.update(buildSnapshot(), 'poll');
 
     // assert
     assert.strictEqual(accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost'), undefined);
@@ -772,15 +863,397 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }), ignoredFaults });
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
     const addServiceSpy = t.mock.method(accessory, 'addService');
     const removeServiceSpy = t.mock.method(accessory, 'removeService');
 
     // act
-    basementGuardianAccessory.update(buildSnapshot());
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
     assert.deepStrictEqual({ added: addServiceSpy.mock.callCount(), removed: removeServiceSpy.mock.callCount() }, { added: 0, removed: 0 });
+  });
+
+  test('marks every controller-derived scope untrusted when the controller link is lost', () => {
+    // arrange
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, [
+      { scope: 'water', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'pump', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'power', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'battery', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: undefined },
+    ]);
+  });
+
+  test('keeps a field violation at reason invalid while the controller link is lost', () => {
+    // arrange
+    const violations: readonly FieldViolation[] = [{ field: 'water_level', reason: 'out-of-domain', scope: 'water' }];
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith(linkOutcome({ linkPresent: false, violations })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, [
+      { scope: 'water', reason: 'invalid', lastTrustedAt: undefined },
+      { scope: 'pump', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'power', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'battery', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: undefined },
+    ]);
+  });
+
+  test('leaves connectivity trusted while the controller link is lost, because the cloud still answers', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
+      PUBLISHED_SERVICES.map((descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || PUBLISHED_SCOPES[index] === 'connectivity'),
+    );
+  });
+
+  test('keeps the controller link adapter reporting the lost link it observed directly', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        adapter: valueOf(accessory, CONTROLLER_LINK_ROW, HAP.Characteristic.ContactSensorState),
+        reported: valueOf(accessory, CONTROLLER_LINK_ROW, ControllerLinkPresent),
+      },
+      { adapter: CONTACT_NOT_DETECTED, reported: false },
+    );
+  });
+
+  test('retains the last controller-derived values published before the link was lost', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: false, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+        adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
+      },
+      { reported: true, adapter: CONTACT_DETECTED },
+    );
+  });
+
+  test('times each poisoned scope at the last snapshot in which the controller link was present', () => {
+    // arrange
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      basementGuardianAccessory.untrusted.map((untrusted) => untrusted.lastTrustedAt),
+      [1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000],
+    );
+  });
+
+  test('publishes the time controller data was last trustworthy beside the lost link state', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.strictEqual(valueOf(accessory, CONTROLLER_LINK_ROW, ControllerDataLastTrustedAt), '2023-11-14T22:13:20.000Z');
+  });
+
+  test('clears the controller-link distrust on the first snapshot in which the link returns', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: false, mainsPresent: false }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
+    assert.deepStrictEqual(
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
+      PUBLISHED_SERVICES.map(() => true),
+    );
+    assert.strictEqual(valueOf(accessory, 'Sump Mains Power', MainsPowerPresent), false);
+  });
+
+  test('reports the controller link condition exactly once across three consecutive lost-link updates', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING]);
+  });
+
+  test('reports the controller link condition again after a recovery and a later re-entry', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([linkOutcome({ linkPresent: false }), linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING, CONTROLLER_LINK_WARNING]);
+  });
+
+  test('does not call a lost controller link a validation failure', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      warnings.filter((warning) => warning.includes('stopped validating')),
+      [],
+    );
+  });
+
+  test('leaves the offline confirmation run untouched by ten disconnected live updates', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+
+    // act
+    for (let update = 0; update < 10; update += 1) {
+      basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'live');
+    }
+
+    const afterLiveUpdates = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { afterLiveUpdates, afterTwoPolls: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState) },
+      { afterLiveUpdates: CONTACT_DETECTED, afterTwoPolls: CONTACT_NOT_DETECTED },
+    );
+  });
+
+  test('confirms offline on the configured polls despite a disconnected live update between them', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'live');
+    const afterOnePoll = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { afterOnePoll, afterTwoPolls: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState) },
+      { afterOnePoll: CONTACT_DETECTED, afterTwoPolls: CONTACT_NOT_DETECTED },
+    );
+  });
+
+  test('leaves a run of disconnected polls unreset by a connected live update between them', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+    basementGuardianAccessory.update(buildSnapshot({ connected: true }), 'live');
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+
+    // assert
+    assert.strictEqual(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState), CONTACT_NOT_DETECTED);
+  });
+
+  test('publishes a live update on the same characteristics a poll update publishes', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'live');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+        adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
+      },
+      { reported: false, adapter: CONTACT_NOT_DETECTED },
+    );
+  });
+
+  test('clears a safety condition on the same update that clears it in the source', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: false }), linkOutcome({ linkPresent: true, mainsPresent: true })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const whileActive = valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { whileActive, afterClearing: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState) },
+      { whileActive: CONTACT_NOT_DETECTED, afterClearing: CONTACT_DETECTED },
+    );
+  });
+
+  test('records no call on the injected timer port across a source change to a published value', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers, calls } = recordingTimers();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry, timers });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { calls, adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState) },
+      { calls: [], adapter: CONTACT_NOT_DETECTED },
+    );
+  });
+
+  test('calls no global scheduling function across a source change to a published value', (t) => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const setTimeoutSpy = t.mock.method(globalThis, 'setTimeout');
+    const setIntervalSpy = t.mock.method(globalThis, 'setInterval');
+    const setImmediateSpy = t.mock.method(globalThis, 'setImmediate');
+    const queueMicrotaskSpy = t.mock.method(globalThis, 'queueMicrotask');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const scheduled = {
+      setTimeout: setTimeoutSpy.mock.callCount(),
+      setInterval: setIntervalSpy.mock.callCount(),
+      setImmediate: setImmediateSpy.mock.callCount(),
+      queueMicrotask: queueMicrotaskSpy.mock.callCount(),
+    };
+
+    // assert
+    assert.deepStrictEqual(scheduled, { setTimeout: 0, setInterval: 0, setImmediate: 0, queueMicrotask: 0 });
+  });
+
+  test('carries the new value on the statement after update() returns, with no await and no tick', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const readImmediately = valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState);
+
+    // assert
+    assert.strictEqual(readImmediately, CONTACT_NOT_DETECTED);
+  });
+
+  test('the timer port layer catches a transition deferred through the injected port', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers, calls } = recordingTimers();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry, timers });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    deferredTransition(timers, () => {
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    });
+
+    // assert
+    assert.deepStrictEqual(calls, ['setTimeout 0']);
+  });
+
+  test('the global spy layer catches a transition deferred through the process timers', (t) => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const setTimeoutSpy = t.mock.method(globalThis, 'setTimeout');
+
+    // act
+    const handle = deferredTransition(systemTimers, () => {
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    });
+    systemTimers.clearTimeout(handle);
+
+    // assert
+    assert.strictEqual(setTimeoutSpy.mock.callCount(), 1);
+  });
+
+  test('the synchronous-visibility layer catches a transition deferred through the process timers', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    const handle = deferredTransition(systemTimers, () => {
+      basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    });
+    const readImmediately = valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState);
+    systemTimers.clearTimeout(handle);
+
+    // assert
+    assert.strictEqual(readImmediately, CONTACT_DETECTED);
   });
 
   for (const module of ACCESSORY_MODULES) {

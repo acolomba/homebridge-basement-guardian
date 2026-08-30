@@ -36,7 +36,20 @@ import type { FamilyValidation } from '../device/family.js';
 import type { TrustScope, UntrustedScope } from '../device/health.js';
 import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceSnapshot } from '../device/state.js';
+import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
+
+/**
+ * Where one snapshot came from.
+ *
+ * Only a successful REST inventory response is evidence about whether the
+ * vendor can still reach the device, so `'poll'` is the one source that may
+ * advance or reset the offline confirmation run. `'live'` names canonical state
+ * that changed between polls and reaches HomeKit on the store's own change
+ * notification; it publishes everything a poll publishes and says nothing about
+ * reachability, because it never observed a request succeed (RES-03, D-09).
+ */
+export type SnapshotSource = 'poll' | 'live';
 
 /** One physical system as HomeKit sees it. */
 export interface BasementGuardianAccessory {
@@ -63,7 +76,7 @@ export interface BasementGuardianAccessory {
    * synchronously: nothing is awaited and nothing is scheduled, so two updates
    * cannot interleave and a suppression cannot be observed half-applied.
    */
-  update(snapshot: DeviceSnapshot): void;
+  update(snapshot: DeviceSnapshot, source: SnapshotSource): void;
 }
 
 /** Everything the accessory factory needs, by injection. */
@@ -72,6 +85,16 @@ export interface BasementGuardianAccessoryOptions {
   hap: API['hap'];
   registry: FamilyRegistry;
   log: Logging;
+  /**
+   * Deferred execution, taken and never called.
+   *
+   * The accessory publishes synchronously inside `update()`, so nothing here
+   * schedules anything. The port is required rather than optional because its
+   * whole purpose is to be observed: a test hands in a stand-in that records
+   * calls and asserts it recorded none, which is evidence about an absence that
+   * watching behaviour alone cannot give (SAFE-07, D-18).
+   */
+  timers: Timers;
   /** The notification sensors to leave unpublished. Absent publishes every adapter (D-017, CONF-06). */
   ignoredFaults?: readonly NotificationServiceKind[];
   /** Consecutive disconnected polls before the offline adapter activates. Absent takes the documented default (RES-03, D-09). */
@@ -303,7 +326,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       return untrusted;
     },
 
-    update(snapshot: DeviceSnapshot): void {
+    update(snapshot: DeviceSnapshot, source: SnapshotSource): void {
+      void source;
       const outcome = registry.lookup(snapshot.identity.deviceTypeId);
 
       if (outcome.kind !== 'implemented') {

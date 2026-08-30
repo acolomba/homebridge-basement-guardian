@@ -10,6 +10,7 @@ import { createRedactingLogger } from './logging.js';
 import { PROTOCOL } from './protocol.js';
 import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
+import { systemTimers } from './runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
 import type { BasementGuardianAccessory } from './accessories/basementGuardian.js';
@@ -99,7 +100,7 @@ function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, a
     return existing;
   }
 
-  const created = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log });
+  const created = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log, timers: systemTimers });
   context.basementGuardianAccessories.set(uuid, created);
 
   return created;
@@ -125,7 +126,7 @@ function updateDiscoveredDevice(context: DiscoveryContext, uuid: string, accesso
   accessory.context.device = nextState.device;
 
   const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
-  basementGuardianAccessory.update(snapshot);
+  basementGuardianAccessory.update(snapshot, 'poll');
 
   // A context mutation Homebridge does not know about is invisible on disk
   // until the next full register/unregister cycle, so only a real change
@@ -186,7 +187,7 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
     accessory.context.lastVendorName = snapshot.identity.name;
 
     const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory);
-    basementGuardianAccessory.update(snapshot);
+    basementGuardianAccessory.update(snapshot, 'poll');
 
     context.accessories.set(uuid, accessory);
     context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
