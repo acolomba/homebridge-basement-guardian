@@ -1,5 +1,6 @@
 import timers from 'node:timers/promises';
 
+import { createReconciliation } from '../accessories/reconciliation.js';
 import { createCloudApi } from '../cloud/api.js';
 import { createAuthClient } from '../cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../cloud/errors.js';
@@ -104,6 +105,12 @@ export interface AccountRuntimeOptions {
    * listener (D-029).
    */
   onTrustworthyInventory: TrustworthyInventoryListener;
+  /**
+   * Reports a deviceId confirmed absent by two consecutive trustworthy
+   * inventory responses and by one further out-of-band final-check fetch run
+   * immediately before this call (D-029).
+   */
+  onDeviceRemoved: (deviceId: string) => void;
   clock: Clock;
   log: Logging;
 }
@@ -192,6 +199,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const root = new AbortController();
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
+  const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
   // The three facts the monitoring path is derived from. Holding them, rather
@@ -218,12 +226,41 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
-  function applyDevices(devices: readonly ApiDevice[]): void {
+  // The final check re-fetches the inventory once more, immediately before a
+  // removal commits, closing the race where a device reappears between the
+  // second confirming poll and the removal decision (D-029). Its own failure
+  // is a monitoring-path failure, not a device fact (D-014): it removes
+  // nothing and leaves the pending deviceIds for the next successful poll's
+  // own confirmedAbsent computation, with no separate retry state.
+  async function applyDevices(devices: readonly ApiDevice[]): Promise<void> {
     for (const device of devices) {
       options.store.applyDiscovery(device);
     }
 
-    options.onTrustworthyInventory(devices.map((device) => device.deviceId));
+    const deviceIds = devices.map((device) => device.deviceId);
+    options.onTrustworthyInventory(deviceIds);
+
+    const confirmedAbsent = reconciliation.observe(deviceIds);
+
+    if (confirmedAbsent.length === 0) {
+      return;
+    }
+
+    try {
+      const freshDevices = await options.api.devices(root.signal);
+      const freshDeviceIds = freshDevices.map((device) => device.deviceId);
+      reconciliation.observe(freshDeviceIds);
+
+      const stillPresent = new Set(freshDeviceIds);
+
+      for (const deviceId of confirmedAbsent) {
+        if (!stillPresent.has(deviceId)) {
+          options.onDeviceRemoved(deviceId);
+        }
+      }
+    } catch {
+      // Deliberately silent, for the reason above.
+    }
   }
 
   // Which sources are feeding canonical state, derived from what is working
@@ -431,7 +468,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // (SYNC-03).
   async function runPoll(): Promise<void> {
     try {
-      applyDevices(await options.api.devices(root.signal));
+      await applyDevices(await options.api.devices(root.signal));
       recordPollSuccess();
       await openShadow();
     } catch (error: unknown) {
@@ -502,7 +539,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function launch(): Promise<number | undefined> {
     try {
       const devices = await options.api.devices(root.signal);
-      applyDevices(devices);
+      await applyDevices(devices);
       recordPollSuccess();
       options.log.info(`Discovered ${String(devices.length)} device(s).`);
     } catch (error: unknown) {
@@ -602,6 +639,8 @@ export interface AccountRuntimeDeps {
   minRotationDelayMs?: number;
   /** Reports every deviceId a trustworthy inventory response named. A no-op when absent. */
   onTrustworthyInventory?: TrustworthyInventoryListener;
+  /** Reports a deviceId confirmed absent by DEV-05's removal protocol. A no-op when absent. */
+  onDeviceRemoved?: (deviceId: string) => void;
 }
 
 /**
@@ -652,6 +691,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret,
     onTrustworthyInventory: deps.onTrustworthyInventory ?? (() => undefined),
+    onDeviceRemoved: deps.onDeviceRemoved ?? (() => undefined),
     clock: deps.clock,
     log: deps.log,
   });

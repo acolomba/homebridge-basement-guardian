@@ -28,6 +28,7 @@ import type { LogLevel, Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
 
 const DEVICE_ID = 'account-1_serial-1';
+const OTHER_DEVICE_ID = 'account-1_serial-2';
 const START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
 const ONE_HOUR_MS = 3_600_000;
 const POLL_INTERVAL_MS = 900_000;
@@ -86,6 +87,12 @@ function geminiDevice(): ApiDevice {
     connectivity: { connected: true, timestamp: DEVICE_TIME },
     data: { water_level: 1, primary_pump_running: false, ac_power: true },
   };
+}
+
+// A second physical device, so a removal case can prove the final-check fetch
+// covers every pending deviceId at once rather than one call per id.
+function otherGeminiDevice(): ApiDevice {
+  return { ...geminiDevice(), deviceId: OTHER_DEVICE_ID };
 }
 
 // The same device as the vendor sends it: the list route wraps its records under
@@ -246,6 +253,8 @@ interface Harness {
   calls: string[];
   /** One entry per trustworthy inventory response, the deviceIds it named. */
   trustworthyInventories: string[][];
+  /** One entry per deviceId the runtime reported confirmed absent, in report order. */
+  removed: string[];
   advance: (ms: number) => Promise<void>;
 }
 
@@ -269,6 +278,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const shadows: ShadowRecorder[] = [];
   const calls: string[] = [];
   const trustworthyInventories: string[][] = [];
+  const removed: string[] = [];
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
@@ -327,6 +337,9 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     onTrustworthyInventory: (deviceIds: readonly string[]): void => {
       trustworthyInventories.push([...deviceIds]);
     },
+    onDeviceRemoved: (deviceId: string): void => {
+      removed.push(deviceId);
+    },
     clock,
     log,
   });
@@ -345,6 +358,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     shadows,
     calls,
     trustworthyInventories,
+    removed,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
@@ -1308,6 +1322,114 @@ describe('the degraded monitoring path', () => {
   });
 });
 
+describe('DEV-05 removal reconciliation', () => {
+  function devicesCallCount(calls: readonly string[]): number {
+    return calls.filter((call) => call === 'devices').length;
+  }
+
+  test('makes no extra devices call and reports no removal while a tracked device stays present', async (t) => {
+    // arrange
+    const { runtime, calls, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()])],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 2, removed: [] });
+  });
+
+  test('never reports removal for a deviceId absent once between two present observations', async (t) => {
+    // arrange
+    const { runtime, calls, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([geminiDevice()])],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 3, removed: [] });
+  });
+
+  test('makes exactly one final-check fetch per cycle and removes every deviceId still absent from it', async (t) => {
+    // arrange
+    const { runtime, calls, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { devicesCalls: devicesCallCount(calls), removed: [...removed].sort() },
+      { devicesCalls: 4, removed: [DEVICE_ID, OTHER_DEVICE_ID].sort() },
+    );
+  });
+
+  test('does not remove a deviceId that reappears in the final-check fetch, and resets its absence count', async (t) => {
+    // arrange
+    const { runtime, calls, removed, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([]),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 5, removed: [] });
+  });
+
+  test('reports no removal when the final-check fetch itself fails, and retries the check on the next successful poll', async (t) => {
+    // arrange
+    const { runtime, calls, removed, logged, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+      ],
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ removed, warnings: countOf(logged, 'warn') }, { removed: [], warnings: 0 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+  });
+});
+
 // Wires the real authentication client, REST client, and store behind the
 // runtime, so only the network boundary is replaced. The token cache lands in
 // this case's own storage directory, which is removed when the case ends.
@@ -1345,6 +1467,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret: () => undefined,
     onTrustworthyInventory: () => undefined,
+    onDeviceRemoved: () => undefined,
     clock,
     log,
   });
@@ -1489,6 +1612,60 @@ describe('createAccountRuntimeFromConfig', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: credentialRequestCount(requests) }, { beforeDue: 1, afterDue: 2 });
+  });
+
+  test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let deviceListCalls = 0;
+    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        deviceListCalls += 1;
+
+        return Promise.resolve(new Response(JSON.stringify(deviceListCalls === 1 ? geminiWireDeviceList() : { devices: [] }), { status: 200 }));
+      }
+
+      return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+    });
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      storagePath,
+      clock: { now: () => START_TIME },
+      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      connect: () => {
+        throw new Error('no socket expected');
+      },
+      createSalt: () => 'salt-1',
+    });
+
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    await runtime.start();
+    await settle();
+
+    // act & assert
+    await assert.doesNotReject(async () => {
+      t.mock.timers.tick(POLL_INTERVAL_MS);
+      await settle();
+      t.mock.timers.tick(POLL_INTERVAL_MS);
+      await settle();
+    });
+    assert.strictEqual(deviceListCalls, 4);
   });
 });
 
