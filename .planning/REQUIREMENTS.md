@@ -33,7 +33,7 @@
 - [x] **DEV-02**: A stable family-adapter registry owns payload validation, value-domain decoding, capabilities, services, and command construction so future families can be added without changing account-wide infrastructure.
 - [x] **DEV-03**: Strict Gemini identity, required-field, type, and legal-value validation prevents a mismatched or changed vendor payload from becoming plausible but incorrect HomeKit state.
 - [x] **DEV-04**: One physical system produces one multi-service accessory whose UUID derives only from immutable `deviceId`; a `deviceTypeId` change selects an adapter without creating or unregistering the physical identity.
-- [ ] **DEV-05**: A cached accessory is removed only after two consecutive successful healthy inventories omit it and a final current-inventory check confirms absence; confirmed removal also ends its observation epoch.
+- [x] **DEV-05**: A cached accessory is removed only after two consecutive successful healthy inventories omit it and a final current-inventory check confirms absence; confirmed removal also ends its observation epoch.
 - [x] **DEV-06**: A vendor rename updates the accessory only while the HomeKit name still matches the prior vendor name, preserving user-customized names and stable functional service names/subtypes.
 - [x] **DEV-07**: The accessory publishes a populated `AccessoryInformation` service with Manufacturer, Model, SerialNumber, and FirmwareRevision, sourced only from validated vendor identity and the metadata fields `mcu_firmware_version`, `wifi_firmware_version`, and `mcu_target_version`. It exposes remaining truthful metadata such as `wifi_signal_dbm` read-only where a semantically correct representation exists. The vendor `deviceId` never becomes a user-visible value, and `D-027` privacy rules continue to control logs, fixtures, and public artifacts.
 - [ ] **DEV-08**: A published accessory whose `deviceTypeId` changes to an unsupported family, or whose payload stops validating after publication, keeps its HomeKit identity and last valid values, marks its services inactive or faulty, disables commands, logs the condition once, and is never unregistered for that reason alone. It resumes normal operation when a supported profile and fresh family-valid state return (`C-002`).
@@ -122,7 +122,7 @@
 | DEV-02 | Phase 2 | Complete |
 | DEV-03 | Phase 2 | Complete |
 | DEV-04 | Phase 2 | Complete |
-| DEV-05 | Phase 2 | Pending |
+| DEV-05 | Phase 2 | Complete |
 | DEV-06 | Phase 2 | Complete |
 | DEV-07 | Phase 2 | Complete |
 | DEV-08 | Phase 2 | Pending |
