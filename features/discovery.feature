@@ -80,3 +80,18 @@ Feature: Discovering a Gemini and publishing its accessory
     Then the plugin polls the vendor at least 6 times
     Then the plugin registers one accessory with a truthful accessory information service
     Then the plugin never unregisters the accessory
+
+  Scenario: A payload that stops validating degrades the accessory in place
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin registers one accessory with a truthful accessory information service
+    When the vendor reports these devices:
+      | deviceId           | name          | waterLevel |
+      | placeholder-gemini | Sump Guardian | 99         |
+    Then the plugin explains the degradation once
+    Then the plugin never unregisters the accessory
+    When the vendor reports these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    Then the plugin registers one accessory with a truthful accessory information service
+    Then the plugin never unregisters the accessory

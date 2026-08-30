@@ -35,6 +35,7 @@ import type { FakeAuth0 } from './fakeAuth0.js';
 import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
 import type { FakeShadowBroker } from './fakeShadowBroker.js';
+import type { BasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
 import type { RedactingLogger } from '../../src/logging.js';
@@ -478,6 +479,7 @@ export class BasementGuardianWorld extends World {
     const homebridge = await this.homebridge();
     const registry = createFamilyRegistry();
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const runtime = createAccountRuntimeFromConfig({
       config: {
         name: 'Basement Guardian',
@@ -496,10 +498,10 @@ export class BasementGuardianWorld extends World {
       // Drives the same registration logic `BasementGuardianPlatform` runs, so a scenario proves
       // the real discovery pipeline rather than a parallel copy of it.
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
-        registerDiscoveredDevices({ api: homebridge.api, accessories, registry, log: this.logger() }, deviceIds, runtime.store);
+        registerDiscoveredDevices({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceIds, runtime.store);
       },
       onDeviceRemoved: (deviceId: string): void => {
-        removeDiscoveredDevice({ api: homebridge.api, accessories, registry, log: this.logger() }, deviceId, runtime.store);
+        removeDiscoveredDevice({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceId, runtime.store);
       },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.

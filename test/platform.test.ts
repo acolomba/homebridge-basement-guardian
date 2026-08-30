@@ -12,6 +12,7 @@ import { createDeviceStateStore } from '../src/device/state.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
+import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { ApiDevice } from '../src/cloud/types.js';
 import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
@@ -651,7 +652,11 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: implementedRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: implementedRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -684,7 +689,11 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -720,7 +729,11 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -744,7 +757,11 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -768,7 +785,11 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -785,7 +806,11 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 0, registerCalls: [] });
@@ -801,7 +826,11 @@ describe('registerDiscoveredDevices', () => {
     const messages: string[] = [];
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unsupportedRegistry(true), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unsupportedRegistry(true), log: createRecordingLog(messages) },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     const expectedMessage = `Skipping ${DEVICE_ID}: Wayne Water HALO (${DEVICE_TYPE_ID}) is a recognized but unsupported device family.`;
@@ -821,7 +850,11 @@ describe('registerDiscoveredDevices', () => {
     const messages: string[] = [];
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unknownRegistry(), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createRecordingLog(messages) },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual(
@@ -840,7 +873,11 @@ describe('registerDiscoveredDevices', () => {
     const messages: string[] = [];
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry: unsupportedRegistry(false), log: createRecordingLog(messages) }, [DEVICE_ID], store);
+    registerDiscoveredDevices(
+      { api, accessories, basementGuardianAccessories: new Map(), registry: unsupportedRegistry(false), log: createRecordingLog(messages) },
+      [DEVICE_ID],
+      store,
+    );
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls, messages }, { accessoryCount: 0, registerCalls: [], messages: [] });
@@ -862,7 +899,7 @@ describe('registerDiscoveredDevices', () => {
     };
 
     // act
-    registerDiscoveredDevices({ api, accessories, registry, log: createSilentLog() }, [haloDeviceId, DEVICE_ID], store);
+    registerDiscoveredDevices({ api, accessories, basementGuardianAccessories: new Map(), registry, log: createSilentLog() }, [haloDeviceId, DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -872,6 +909,28 @@ describe('registerDiscoveredDevices', () => {
       },
       { accessoryCount: 1, registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] },
     );
+  });
+
+  test('reuses the same BasementGuardianAccessory across polls so the DEV-08 log-once state persists', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+    const messages: string[] = [];
+    const context = { api, accessories, basementGuardianAccessories, registry: implementedRegistry(), log: createRecordingLog(messages) };
+
+    // act
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    const expectedMessage =
+      `Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
+      'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
+    assert.deepStrictEqual(messages, [expectedMessage]);
   });
 });
 
@@ -889,7 +948,7 @@ describe('removeDiscoveredDevice', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    removeDiscoveredDevice({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+    removeDiscoveredDevice({ api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
 
     // assert
     assert.deepStrictEqual(
@@ -920,7 +979,7 @@ describe('removeDiscoveredDevice', () => {
     const expectedSnapshot = store.applyDiscovery(geminiDevice());
 
     // act
-    removeDiscoveredDevice({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+    removeDiscoveredDevice({ api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
 
     // assert
     assert.deepStrictEqual(
