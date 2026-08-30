@@ -505,6 +505,10 @@ export class BasementGuardianWorld extends World {
       },
       onDeviceRemoved: (deviceId: string): void => {
         removeDiscoveredDevice({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceId, runtime.store);
+        // The store deletes this deviceId's whole listener registry entry on removal, so a later
+        // re-discovery needs watchDevices() to subscribe it again rather than skip it as already
+        // watched (WR-03).
+        this.watchedDeviceIds.delete(deviceId);
       },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.
