@@ -11,6 +11,7 @@ import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.j
 import type { FakeHapService, FakeServiceClass } from '../../features/support/fakeHap.js';
 import type { FakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
+import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor } from '../../src/accessories/services.js';
 import type { DeviceFamily } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
@@ -40,12 +41,34 @@ const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
   { kind: 'backup-pump-activated', subtype: 'backup-pump-activated', name: 'Backup Pump Activated' },
   { kind: 'sump-mains-power', subtype: 'sump-mains-power', name: 'Sump Mains Power' },
   { kind: 'mains-power-lost', subtype: 'mains-power-lost', name: 'Mains Power Lost' },
+  { kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery' },
+  { kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery Facts' },
+  { kind: 'primary-pump-fault', subtype: 'primary-pump-fault', name: 'Primary Pump Fault' },
+  { kind: 'backup-pump-fault', subtype: 'backup-pump-fault', name: 'Backup Pump Fault' },
+  { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', name: 'Water Sensor Fault' },
+  { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost', name: 'Pump Controller Link Lost' },
   { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', name: 'Basement Guardian Offline' },
 ];
 
 // The scope each published service reads, in the same order, so a case can name the services one
 // failing scope deactivates without restating the catalogue.
-const PUBLISHED_SCOPES: readonly TrustScope[] = ['water', 'water', 'pump', 'pump', 'pump', 'pump', 'power', 'power', 'connectivity'];
+const PUBLISHED_SCOPES: readonly TrustScope[] = [
+  'water',
+  'water',
+  'pump',
+  'pump',
+  'pump',
+  'pump',
+  'power',
+  'power',
+  'battery',
+  'battery',
+  'fault',
+  'fault',
+  'fault',
+  'fault',
+  'connectivity',
+];
 
 // Every module this plan writes under `src/accessories/`, read as source so a prohibited idiom
 // fails here by name rather than through some downstream symptom.
@@ -201,34 +224,37 @@ function accessoryWith(accessory: FakeAccessory, overrides: Partial<Omit<Basemen
   return createBasementGuardianAccessory(buildOptions({ accessory, ...overrides }));
 }
 
-function serviceClassOf(subtype: string): FakeServiceClass {
-  const row = CATALOGUE.find((candidate) => candidate.subtype === subtype);
+// A service is resolved by the name HomeKit shows rather than by its subtype, because the two
+// backup battery services share one subtype and differ only in their service type.
+function rowNamed(displayName: string): ServiceRow {
+  const row = CATALOGUE.find((candidate) => candidate.displayName === displayName);
 
   if (row === undefined) {
-    throw new Error(`the catalogue publishes no ${subtype} row`);
+    throw new Error(`the catalogue publishes no ${displayName} row`);
   }
 
-  // The catalogue declares its classes against the real HAP types while the accessory stand-in
-  // answers its own; the class is one runtime object, so the lookup needs the stand-in's view of it.
-  return row.serviceClass as unknown as FakeServiceClass;
+  return row;
 }
 
-function serviceOf(accessory: FakeAccessory, subtype: string): FakeHapService {
-  const service = accessory.getServiceById(serviceClassOf(subtype), subtype);
+function serviceOf(accessory: FakeAccessory, displayName: string): FakeHapService {
+  const row = rowNamed(displayName);
+  // The catalogue declares its classes against the real HAP types while the accessory stand-in
+  // answers its own; the class is one runtime object, so the lookup needs the stand-in's view of it.
+  const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
 
   if (service === undefined) {
-    throw new Error(`the accessory publishes no ${subtype} service`);
+    throw new Error(`the accessory publishes no ${displayName} service`);
   }
 
   return service;
 }
 
-function valueOf(accessory: FakeAccessory, subtype: string, characteristic: { UUID: string }): unknown {
-  return serviceOf(accessory, subtype).characteristics.find((candidate) => candidate.UUID === characteristic.UUID)?.value;
+function valueOf(accessory: FakeAccessory, displayName: string, characteristic: { UUID: string }): unknown {
+  return serviceOf(accessory, displayName).characteristics.find((candidate) => candidate.UUID === characteristic.UUID)?.value;
 }
 
-function statusActiveOf(accessory: FakeAccessory, subtype: string): unknown {
-  return valueOf(accessory, subtype, HAP.Characteristic.StatusActive);
+function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
+  return valueOf(accessory, displayName, HAP.Characteristic.StatusActive);
 }
 
 async function sourceOf(module: string): Promise<string> {
@@ -357,8 +383,8 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
     assert.deepStrictEqual(
-      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.subtype)),
-      [true, true, true, true, true, true, true, true, true],
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
+      [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
     );
   });
 
@@ -374,9 +400,9 @@ describe('createBasementGuardianAccessory', () => {
       // assert
       assert.deepStrictEqual(
         {
-          reported: valueOf(accessory, 'sump-mains-power', MainsPowerPresent),
-          adapter: valueOf(accessory, 'mains-power-lost', HAP.Characteristic.ContactSensorState),
-          fault: valueOf(accessory, 'mains-power-lost', HAP.Characteristic.StatusFault),
+          reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+          adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
+          fault: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.StatusFault),
         },
         { reported: mainsPresent, adapter: mainsPresent ? CONTACT_DETECTED : CONTACT_NOT_DETECTED, fault: HAP.Characteristic.StatusFault.NO_FAULT },
       );
@@ -392,7 +418,7 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot());
 
     // assert
-    assert.strictEqual(valueOf(accessory, 'mains-power-lost', HAP.Characteristic.ContactSensorState), CONTACT_NOT_DETECTED);
+    assert.strictEqual(valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState), CONTACT_NOT_DETECTED);
   });
 
   test('refreshes AccessoryInformation from the decoded metadata', () => {
@@ -461,7 +487,7 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
-    accessory.removeService(accessoryInformation ?? serviceOf(accessory, 'sump-mains-power'));
+    accessory.removeService(accessoryInformation ?? serviceOf(accessory, 'Sump Mains Power'));
 
     // act & assert
     assert.throws(() => {
@@ -497,8 +523,8 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = accessoryWith(accessory, { registry });
     basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }));
     const beforeFailing = {
-      reported: valueOf(accessory, 'sump-mains-power', MainsPowerPresent),
-      adapter: valueOf(accessory, 'mains-power-lost', HAP.Characteristic.ContactSensorState),
+      reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+      adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
     };
 
     // act
@@ -507,8 +533,8 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        reported: valueOf(accessory, 'sump-mains-power', MainsPowerPresent),
-        adapter: valueOf(accessory, 'mains-power-lost', HAP.Characteristic.ContactSensorState),
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+        adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
       },
       beforeFailing,
     );
@@ -525,7 +551,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.subtype)),
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
       PUBLISHED_SCOPES.map((scope) => scope !== 'power'),
     );
   });
@@ -587,7 +613,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(basementGuardianAccessory.untrusted, []);
-    assert.strictEqual(statusActiveOf(accessory, 'sump-mains-power'), true);
+    assert.strictEqual(statusActiveOf(accessory, 'Sump Mains Power'), true);
   });
 
   for (const threshold of [1, 2, 8]) {
@@ -604,7 +630,7 @@ describe('createBasementGuardianAccessory', () => {
 
       for (let poll = 0; poll < threshold; poll += 1) {
         basementGuardianAccessory.update(buildSnapshot({ connected: false }));
-        readings.push(valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState));
+        readings.push(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState));
       }
 
       // assert
@@ -619,12 +645,12 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.update(buildSnapshot({ connected: false }));
-    const afterOne = valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState);
+    const afterOne = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
     basementGuardianAccessory.update(buildSnapshot({ connected: false }));
 
     // assert
     assert.deepStrictEqual(
-      { afterOne, afterTwo: valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState) },
+      { afterOne, afterTwo: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState) },
       { afterOne: CONTACT_DETECTED, afterTwo: CONTACT_NOT_DETECTED },
     );
   });
@@ -638,12 +664,12 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.update(buildSnapshot({ connected: true }));
-    const afterReconnect = valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState);
+    const afterReconnect = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
     basementGuardianAccessory.update(buildSnapshot({ connected: false }));
 
     // assert
     assert.deepStrictEqual(
-      { afterReconnect, afterOneMore: valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState) },
+      { afterReconnect, afterOneMore: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState) },
       { afterReconnect: CONTACT_DETECTED, afterOneMore: CONTACT_DETECTED },
     );
   });
@@ -667,7 +693,7 @@ describe('createBasementGuardianAccessory', () => {
 
     for (let poll = 0; poll < 7; poll += 1) {
       basementGuardianAccessory.update(buildSnapshot({ connected: false }));
-      readings.push(valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState));
+      readings.push(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState));
     }
 
     // assert
@@ -685,7 +711,7 @@ describe('createBasementGuardianAccessory', () => {
     }
 
     // assert
-    assert.strictEqual(valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState), CONTACT_DETECTED);
+    assert.strictEqual(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState), CONTACT_DETECTED);
   });
 
   test('publishes every service but the suppressed one, in catalogue order', () => {
@@ -717,9 +743,9 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        reported: valueOf(accessory, 'sump-mains-power', MainsPowerPresent),
-        active: statusActiveOf(accessory, 'sump-mains-power'),
-        offline: valueOf(accessory, 'basement-guardian-offline', HAP.Characteristic.ContactSensorState),
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+        active: statusActiveOf(accessory, 'Sump Mains Power'),
+        offline: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState),
         untrusted: basementGuardianAccessory.untrusted,
       },
       { reported: false, active: true, offline: CONTACT_DETECTED, untrusted: [] },

@@ -208,6 +208,29 @@ function faultState(hap: API['hap'], faulted: boolean | undefined): Characterist
   return faulted ? StatusFault.GENERAL_FAULT : StatusFault.NO_FAULT;
 }
 
+function lowBatteryState(hap: API['hap'], low: boolean | undefined): CharacteristicValue | undefined {
+  const { StatusLowBattery } = hap.Characteristic;
+
+  if (low === undefined) {
+    return undefined;
+  }
+
+  return low ? StatusLowBattery.BATTERY_LEVEL_LOW : StatusLowBattery.BATTERY_LEVEL_NORMAL;
+}
+
+// `NOT_CHARGEABLE` is never published: no vendor field sources it, and a
+// charging state stopping for the eight seconds a self-test takes is normal
+// rather than a fault (D-008).
+function chargingState(hap: API['hap'], charging: boolean | undefined): CharacteristicValue | undefined {
+  const { ChargingState } = hap.Characteristic;
+
+  if (charging === undefined) {
+    return undefined;
+  }
+
+  return charging ? ChargingState.CHARGING : ChargingState.NOT_CHARGING;
+}
+
 function leakState(hap: API['hap'], flooded: boolean | undefined): CharacteristicValue | undefined {
   const { LeakDetected } = hap.Characteristic;
 
@@ -327,6 +350,68 @@ function mainsPowerLostValues(hap: API['hap'], input: ProjectionInput, trust: Ro
   ]);
 }
 
+// The backup battery is published twice: the standard service carries the
+// documented 25/50/75/100 protection-duration estimates and the low-battery
+// indicator, and the facts service carries the exact vendor codes beside them so
+// anyone can check one against the other. Neither reads the other's fields.
+// Correcting a reported protection band because the health code says the battery
+// is absent would be exactly the guess the safety rule forbids, so both facts are
+// published as reported and `StatusLowBattery` carries the warning (D-007,
+// D-008, D-012). Battery health, replacement, and protection duration are never
+// represented through filter-maintenance semantics (D-021, SAFE-06).
+function batteryValues(hap: API['hap'], input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const battery = trustedGroup(input, trust, 'battery');
+
+  return published([
+    { characteristic: hap.Characteristic.StatusLowBattery, value: lowBatteryState(hap, booleanOf(battery, 'low')) },
+    { characteristic: hap.Characteristic.BatteryLevel, value: numberOf(battery, 'levelPercent') },
+    { characteristic: hap.Characteristic.ChargingState, value: chargingState(hap, booleanOf(battery, 'charging')) },
+  ]);
+}
+
+function batteryFactsValues(characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const battery = trustedGroup(input, trust, 'battery');
+
+  return published([
+    { characteristic: characteristics.BatteryCharging, value: booleanOf(battery, 'charging') },
+    { characteristic: characteristics.BatteryVoltageLow, value: booleanOf(battery, 'voltageLow') },
+    { characteristic: characteristics.BatteryHealthCode, value: numberOf(battery, 'healthCode') },
+    { characteristic: characteristics.ProtectionHoursCode, value: numberOf(battery, 'protectionHoursCode') },
+  ]);
+}
+
+// Five conditions, five adapters, five causes. Reducing them to one tile would
+// tell an owner that something is wrong without telling them what, which is the
+// failure a sump-pump alert exists to avoid, so no aggregate row is ever
+// published and each adapter transitions on its own condition alone (SAFE-04,
+// D-008).
+function faultAdapterValues(hap: API['hap'], faulted: boolean | undefined, extra: readonly Candidate[] = []): readonly ProjectedValue[] {
+  return published([
+    { characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, faulted) },
+    { characteristic: hap.Characteristic.StatusFault, value: faultState(hap, faulted) },
+    ...extra,
+  ]);
+}
+
+// The network module knows its own link state directly, so this one adapter
+// stays truthful while everything downstream of the controller does not. A
+// `serial_communications` field that failed validation is a different matter:
+// the link state is then unknown rather than known-lost, the row's own scope is
+// untrusted for a reason it does not tolerate, and it publishes nothing
+// (D-11, RES-02).
+function controllerLinkValues(hap: API['hap'], characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const linkPresent = booleanOf(trustedGroup(input, trust, 'fault'), 'controllerLinkPresent');
+
+  return faultAdapterValues(hap, inverted(linkPresent), [
+    { characteristic: characteristics.ControllerLinkPresent, value: linkPresent },
+    // The time the accessory last had trustworthy controller-derived state
+    // publishes beside the link state rather than on its own, so a row that
+    // cannot vouch for the link never publishes a time that would read as
+    // evidence about it (RES-02).
+    { characteristic: characteristics.ControllerDataLastTrustedAt, value: linkPresent === undefined ? undefined : input.controllerDataLastTrustedAt },
+  ]);
+}
+
 // The offline adapter reads the accessory's own confirmation count, never a
 // reported field: `data.offline` is what the device says about itself, and a
 // physical-device alert raised from it would fire on a transport hiccup
@@ -431,6 +516,70 @@ function powerDefinitions(hap: API['hap'], characteristics: CustomCharacteristic
   ];
 }
 
+// Two services of one kind under one subtype. They carry different HAP service
+// types, so HAP accepts both on one accessory and `getServiceById` tells them
+// apart by class (D-12).
+function batteryDefinitions(hap: API['hap'], characteristics: CustomCharacteristics, services: CustomServices): readonly RowDefinition[] {
+  return [
+    {
+      kind: 'backup-battery',
+      displayName: 'Backup Battery',
+      scope: 'battery',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.Battery,
+      values: (input, trust) => batteryValues(hap, input, trust),
+    },
+    {
+      kind: 'backup-battery',
+      displayName: 'Backup Battery Facts',
+      scope: 'battery',
+      toleratedDistrust: [],
+      serviceClass: services.BackupBatteryService,
+      values: (input, trust) => batteryFactsValues(characteristics, input, trust),
+    },
+  ];
+}
+
+function faultDefinitions(hap: API['hap'], characteristics: CustomCharacteristics): readonly RowDefinition[] {
+  return [
+    {
+      kind: 'primary-pump-fault',
+      displayName: 'Primary Pump Fault',
+      scope: 'fault',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => faultAdapterValues(hap, booleanOf(trustedGroup(input, trust, 'fault'), 'primaryPumpFault')),
+    },
+    {
+      kind: 'backup-pump-fault',
+      displayName: 'Backup Pump Fault',
+      scope: 'fault',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => faultAdapterValues(hap, backupPumpFaulted(trustedGroup(input, trust, 'fault'))),
+    },
+    {
+      kind: 'water-sensor-fault',
+      displayName: 'Water Sensor Fault',
+      scope: 'fault',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => faultAdapterValues(hap, booleanOf(trustedGroup(input, trust, 'fault'), 'waterSensorFault')),
+    },
+    {
+      kind: 'pump-controller-link-lost',
+      displayName: 'Pump Controller Link Lost',
+      scope: 'fault',
+      // The only row that keeps publishing while a lost controller link has made
+      // its own scope untrusted, because the network module reports that link
+      // state directly (D-11, RES-02).
+      toleratedDistrust: ['controller-link-lost'],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => controllerLinkValues(hap, characteristics, input, trust),
+    },
+  ];
+}
+
 function connectivityDefinitions(hap: API['hap']): readonly RowDefinition[] {
   return [
     {
@@ -460,6 +609,8 @@ export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
     ...waterDefinitions(hap, characteristics, services),
     ...pumpDefinitions(hap, characteristics, services),
     ...powerDefinitions(hap, characteristics, services),
+    ...batteryDefinitions(hap, characteristics, services),
+    ...faultDefinitions(hap, characteristics),
     ...connectivityDefinitions(hap),
   ];
 
