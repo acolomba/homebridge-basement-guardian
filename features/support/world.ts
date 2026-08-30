@@ -22,7 +22,7 @@ import { connect, connectAsync } from 'mqtt';
 
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
-import { BasementGuardianPlatform, registerDiscoveredDevices } from '../../src/platform.js';
+import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 
@@ -497,6 +497,9 @@ export class BasementGuardianWorld extends World {
       // the real discovery pipeline rather than a parallel copy of it.
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         registerDiscoveredDevices({ api: homebridge.api, accessories, registry, log: this.logger() }, deviceIds, runtime.store);
+      },
+      onDeviceRemoved: (deviceId: string): void => {
+        removeDiscoveredDevice({ api: homebridge.api, accessories, registry, log: this.logger() }, deviceId, runtime.store);
       },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.

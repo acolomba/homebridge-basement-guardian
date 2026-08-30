@@ -332,6 +332,30 @@ async function devicesReported(this: BasementGuardianWorld, table: DataTable): P
 
 When('the vendor reports these devices:', devicesReported);
 
+async function devicesOmitted(this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+
+  service.setDevices([]);
+}
+
+When('the vendor reports no devices', devicesOmitted);
+
+// Arms exactly the next N `/devices` GET responses as an empty inventory,
+// then falls back to the standing device list a scenario already set. This
+// scripts the confirming poll and its own out-of-band final-check fetch
+// (DEV-05) independently: the two happen back to back with no
+// scenario-controllable gap between them, so only request order -- not real
+// time -- can distinguish them.
+async function deviceOmittedFromNextChecks(this: BasementGuardianWorld, count: number): Promise<void> {
+  const service = await this.restApi();
+
+  for (let check = 0; check < count; check += 1) {
+    service.armDevicesAnswer([]);
+  }
+}
+
+When('the vendor omits the device from the next {int} inventory checks', deviceOmittedFromNextChecks);
+
 async function userRenamesAccessory(this: BasementGuardianWorld, name: string): Promise<void> {
   const homebridge = await this.homebridge();
   const accessory = currentAccessory(homebridge);
@@ -552,3 +576,23 @@ async function assertAccessoryRemembersDeviceType(this: BasementGuardianWorld, d
 }
 
 Then('the accessory remembers the device type {string}', assertAccessoryRemembersDeviceType);
+
+async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  await this.untilTrue(
+    () => homebridge.unregisterPlatformAccessoryCalls.length > 0,
+    DISCOVERY_CHANGE_DEADLINE_MS,
+    'the plugin never unregistered the accessory',
+  );
+}
+
+Then('the plugin unregisters the accessory', assertPluginUnregistersTheAccessory);
+
+async function assertPluginNeverUnregistersTheAccessory(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+
+  assert.equal(homebridge.unregisterPlatformAccessoryCalls.length, 0);
+}
+
+Then('the plugin never unregisters the accessory', assertPluginNeverUnregistersTheAccessory);
