@@ -62,7 +62,7 @@
 - [ ] **RES-01**: Communication or field-validation failure preserves the last valid value and marks only the narrowest affected service stale, inactive, or faulty; omitted partial fields and invalid updates never clear active safety conditions. The device heartbeat is approximately 898 seconds, and approximately 15 minutes of shadow silence is normal. Shadow silence is a secondary staleness signal only after two missed heartbeats, and one missed heartbeat is never evidence that the device is offline.
   - *Delivery split (Phase 3 discussion, `03-CONTEXT.md` D-10):* Phase 3 delivers the field-validity half — last valid value preserved, narrowest scope faulted, active safety conditions never cleared. Phase 5 delivers the time-based half — the heartbeat interval, the two-missed-heartbeat rule, and shadow silence as a secondary signal.
 - [ ] **RES-02**: `serial_communications === false` immediately activates `Pump Controller Link Lost`, faults controller-derived services, preserves their values, and exposes when trustworthy controller data was last received.
-- [ ] **RES-03**: `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report `connectivity.connected === false`. `data.offline === true` is corroboration and diagnostics only and never activates the adapter by itself (`D-016`). Failed REST requests or monitoring-path loss are logged and diagnosed separately without a false physical-device alert.
+- [x] **RES-03**: `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report `connectivity.connected === false`. `data.offline === true` is corroboration and diagnostics only and never activates the adapter by itself (`D-016`). Failed REST requests or monitoring-path loss are logged and diagnosed separately without a false physical-device alert.
   - *Delivery split (Phase 3 discussion, `03-CONTEXT.md` D-09):* Phase 3 delivers the confirmation counter and the adapter, since `SAFE-04` publishes `Basement Guardian Offline` among its five adapters and an adapter without the counter would flap. Phase 5 delivers the remaining sentence — separating a lost monitoring path from a confirmed-offline device without a false physical-device alert.
 - [ ] **RES-04**: After a failed restart, getters return cached values without network calls, accessories remain present and visibly stale, commands stay disabled until fresh valid state returns, and only explicit credential rejection yields a persistent communication failure requiring user action.
 
@@ -143,7 +143,7 @@
 | CTRL-05 | Phase 4 | Pending |
 | RES-01 | Phase 3, Phase 5 | Pending |
 | RES-02 | Phase 3 | Pending |
-| RES-03 | Phase 3, Phase 5 | Pending |
+| RES-03 | Phase 3, Phase 5 | Complete |
 | RES-04 | Phase 5 | Pending |
 | REL-01 | Phase 6 | Pending |
 | REL-02 | Phase 6 | Pending |
