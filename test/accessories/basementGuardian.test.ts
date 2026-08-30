@@ -470,7 +470,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value, beforeUpdate);
   });
 
-  test('deactivates every service it already published when the family stops resolving', () => {
+  test('deactivates every service derived from the profile and leaves the offline sensor active when the family stops resolving', () => {
     // arrange
     const accessory = accessoryStandIn();
     const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
