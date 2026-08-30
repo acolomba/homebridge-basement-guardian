@@ -1196,6 +1196,27 @@ describe('registerDiscoveredDevices', () => {
     );
   });
 
+  test('removes an adapter added to ignoredFaults on a restart whose profile no longer resolves', () => {
+    // arrange
+    const api = fakeDiscoveryApi([], []);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const accessory = registeredDevice(discoveryContext({ api, accessories, registry: powerRegistry() }), accessories, store);
+    const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
+
+    // act
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), ignoredFaults }), [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        ignored: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost'),
+        sibling: contactStateOf(accessory, 'primary-pump-fault'),
+      },
+      { ignored: undefined, sibling: CONTACT_DETECTED },
+    );
+  });
+
   test('confirms a device offline on the run of polls an administrator configured', () => {
     // arrange
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
