@@ -692,6 +692,15 @@ export function publishedService(accessory: PlatformAccessory, row: ServiceRow):
  * A service the accessory already carries is answered whatever the row can
  * publish, so a scope that stops validating keeps its last trustworthy values
  * and still receives its `StatusActive` push.
+ *
+ * Gating on the projection length is sound only while every *required*
+ * characteristic of a row's service class comes from a scope that row is still
+ * publishing from. A required characteristic sourced from a second scope group
+ * would be constructed as soon as the row projected its own-scope value, and
+ * left at the format default HAP gave it, which is the false normal this gate
+ * exists to prevent. That alignment is a precondition rather than a
+ * coincidence, and the catalogue's own case over every row in every trust state
+ * is what holds it.
  */
 export function ensureService(accessory: PlatformAccessory, row: ServiceRow, projected: readonly ProjectedValue[]): Service | undefined {
   const service = publishedService(accessory, row);

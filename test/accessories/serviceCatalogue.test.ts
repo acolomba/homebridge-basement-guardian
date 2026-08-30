@@ -228,6 +228,37 @@ function valueOf(values: readonly ProjectedValue[], characteristic: { UUID: stri
   return values.find((projected) => projected.characteristic.UUID === characteristic.UUID)?.value;
 }
 
+// Every required characteristic a row's service class carries that the row does not publish, over
+// each trust state the accessory can hand it, named once each.
+//
+// `ensureService` adds a service as soon as a row projects anything at all, which is sound only
+// while every required characteristic of that service class comes from a scope the row still
+// publishes from. Break that and the service is added for the value the row did project while the
+// required one sits at HAP's format default: a `Status Fault` of `NO_FAULT`, or a quiet contact,
+// that no device ever reported. `Name` is excluded because the service constructor sets it from the
+// display name it is given.
+function unprojectedRequiredCharacteristics(hap: API['hap'], rows: readonly ServiceRow[]): readonly string[] {
+  const inputs = [
+    projectionInput(),
+    ...TRUST_SCOPES.map((scope) => projectionInput({ untrustedScopes: [{ scope, reason: 'invalid', lastTrustedAt: undefined }] })),
+  ];
+  const drifted = rows.flatMap((row) =>
+    inputs.flatMap((input) => {
+      const projected = new Set(row.project(input).map((value) => value.characteristic.UUID));
+
+      if (projected.size === 0) {
+        return [];
+      }
+
+      return new row.serviceClass(row.displayName, row.subtype).characteristics
+        .filter((required) => required.UUID !== hap.Characteristic.Name.UUID && !projected.has(required.UUID))
+        .map((required) => `${row.displayName} adds a service without publishing ${required.displayName}`);
+    }),
+  );
+
+  return [...new Set(drifted)];
+}
+
 // The module is read as text rather than imported, because the assertion is about what it does not
 // import; the name is interpolated so the path is a runtime value rather than a static import.
 async function sourceOf(module: string): Promise<string> {
@@ -1011,6 +1042,29 @@ describe('createServiceCatalogue', () => {
   registerOfflineCases();
 
   registerAbsentStateCases();
+
+  test('publishes every required characteristic of a service it earns, in every trust state', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act & assert
+    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, createServiceCatalogue(hap)), []);
+  });
+
+  // The negative control for the case above. A row whose service class requires a characteristic it
+  // never publishes is exactly the drift the check exists to catch, so the check has to name it;
+  // without this, an empty answer would prove only that the check looks at nothing.
+  test('names a row whose service class requires a characteristic the row never publishes', () => {
+    // arrange
+    const hap = hapNamespace();
+    const drifted: ServiceRow = { ...rowOf(hap, 'mains-power-lost'), serviceClass: createCustomServices(hap).SumpPitService };
+
+    // act & assert
+    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, [drifted]), [
+      'Mains Power Lost adds a service without publishing Water Level',
+      'Mains Power Lost adds a service without publishing Raw Water Level Code',
+    ]);
+  });
 
   test('reads the water level meaning from decoded state rather than from the level ladder', async () => {
     // act
