@@ -14,10 +14,12 @@ import { systemTimers } from './runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
 import type { BasementGuardianAccessory } from './accessories/basementGuardian.js';
+import type { NotificationServiceKind } from './accessories/services.js';
 import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
 import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
 import type { AccessoryContext } from './persistence/accessoryContext.js';
+import type { Timers } from './runtime/timers.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
 /** Length of the salt the token cache fingerprints the account email with. */
@@ -56,6 +58,15 @@ export interface DiscoveryContext {
   basementGuardianAccessories: Map<string, BasementGuardianAccessory>;
   registry: FamilyRegistry;
   log: Logging;
+  /**
+   * The validated administrator list of notification sensors to leave
+   * unpublished. Empty publishes every adapter (CONF-06, D-017).
+   */
+  ignoredFaults: readonly NotificationServiceKind[];
+  /** The validated run of consecutive disconnected polls before the offline adapter activates (RES-03, D-09). */
+  offlineConfirmationPollCount: number;
+  /** Deferred execution, taken by injection so a test can prove the accessory never defers (SAFE-07, D-18). */
+  timers: Timers;
 }
 
 // A HALO or unknown outcome never becomes an accessory (DEV-01), so the
@@ -100,7 +111,15 @@ function basementGuardianAccessoryFor(context: DiscoveryContext, uuid: string, a
     return existing;
   }
 
-  const created = createBasementGuardianAccessory({ accessory, hap: context.api.hap, registry: context.registry, log: context.log, timers: systemTimers });
+  const created = createBasementGuardianAccessory({
+    accessory,
+    hap: context.api.hap,
+    registry: context.registry,
+    log: context.log,
+    ignoredFaults: context.ignoredFaults,
+    offlineConfirmationPollCount: context.offlineConfirmationPollCount,
+    timers: context.timers,
+  });
   context.basementGuardianAccessories.set(uuid, created);
 
   return created;
@@ -292,6 +311,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
             basementGuardianAccessories: this.basementGuardianAccessories,
             registry: this.registry,
             log: this.log,
+            ignoredFaults: validated.config.ignoredFaults,
+            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
+            timers: systemTimers,
           },
           deviceIds,
           runtime.store,
@@ -305,6 +327,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
             basementGuardianAccessories: this.basementGuardianAccessories,
             registry: this.registry,
             log: this.log,
+            ignoredFaults: validated.config.ignoredFaults,
+            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
+            timers: systemTimers,
           },
           deviceId,
           runtime.store,

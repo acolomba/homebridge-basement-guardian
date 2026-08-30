@@ -24,6 +24,7 @@ import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
+import { systemTimers } from '../../src/runtime/timers.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 
 import { createFakeAuth0 } from './fakeAuth0.js';
@@ -37,13 +38,14 @@ import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
 import type { FakeShadowBroker } from './fakeShadowBroker.js';
 import type { BasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
+import type { FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
 import type { RedactingLogger } from '../../src/logging.js';
-import type { BasementGuardianPlatformAccessory } from '../../src/platform.js';
+import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../../src/platform.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
-import type { LogLevel, Logging, PlatformConfig } from 'homebridge';
+import type { API, LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
 
 const POLL_INTERVAL_MS = 10;
@@ -501,11 +503,11 @@ export class BasementGuardianWorld extends World {
       // Drives the same registration logic `BasementGuardianPlatform` runs, so a scenario proves
       // the real discovery pipeline rather than a parallel copy of it.
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
-        registerDiscoveredDevices({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceIds, runtime.store);
+        registerDiscoveredDevices(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry), deviceIds, runtime.store);
         this.watchDevices(runtime);
       },
       onDeviceRemoved: (deviceId: string): void => {
-        removeDiscoveredDevice({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceId, runtime.store);
+        removeDiscoveredDevice(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry), deviceId, runtime.store);
         // The store deletes this deviceId's whole listener registry entry on removal, so a later
         // re-discovery needs watchDevices() to subscribe it again rather than skip it as already
         // watched (WR-03).
@@ -520,6 +522,27 @@ export class BasementGuardianWorld extends World {
     this.own(() => runtime.stop());
     await runtime.start();
     this.watchDevices(runtime);
+  }
+
+  // The harness stands in for `BasementGuardianPlatform`, so it is the one other place the concrete
+  // process timers are wired, and it supplies the same validated configuration members the platform
+  // reads from `validateConfig`.
+  private discoveryContext(
+    api: API,
+    accessories: Map<string, BasementGuardianPlatformAccessory>,
+    basementGuardianAccessories: Map<string, BasementGuardianAccessory>,
+    registry: FamilyRegistry,
+  ): DiscoveryContext {
+    return {
+      api,
+      accessories,
+      basementGuardianAccessories,
+      registry,
+      log: this.logger(),
+      ignoredFaults: [],
+      offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
+      timers: systemTimers,
+    };
   }
 
   // Re-scanned after every trustworthy inventory response (WR-01), so a device discovered only on

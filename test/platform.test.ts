@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
@@ -12,14 +12,17 @@ import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
+import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
 import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
+import type { NotificationServiceKind } from '../src/accessories/services.js';
 import type { ApiDevice } from '../src/cloud/types.js';
 import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
-import type { BasementGuardianPlatformAccessory } from '../src/platform.js';
+import type { DeviceStateStore, ReportedPatch } from '../src/device/state.js';
+import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 import type { TestContext } from 'node:test';
 
@@ -86,6 +89,25 @@ async function until(reached: () => boolean | Promise<boolean>, what: string): P
   throw new Error(`timed out waiting for ${what}`);
 }
 
+// Every module under `src/` that names a symbol, in path order. A module that wants to defer has to
+// take the port by injection, where a test can observe it, so the concrete process timers are wired
+// at the composition root and declared in their own module, and nowhere else (SAFE-07, D-18).
+async function modulesNaming(symbol: string): Promise<readonly string[]> {
+  const root = new URL('../../src/', import.meta.url);
+  const entries = await readdir(root, { recursive: true });
+  const naming: string[] = [];
+
+  for (const entry of entries.filter((candidate) => candidate.endsWith('.ts')).sort()) {
+    const source = await readFile(new URL(entry, root), 'utf8');
+
+    if (source.includes(symbol)) {
+      naming.push(entry);
+    }
+  }
+
+  return naming;
+}
+
 const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
 
 const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
@@ -94,6 +116,9 @@ const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardia
 
 const DEVICE_ID = 'account-1_serial-1';
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
+
+const CONTACT_DETECTED = 0;
+const CONTACT_NOT_DETECTED = 1;
 
 // The one hand-built stand-in of this boundary. The accessory now declares its own HomeKit types by
 // subclassing the injected namespace, so `Service` and `Characteristic` have to be constructible
@@ -139,8 +164,24 @@ const FAKE_FAMILY: DeviceFamily<unknown> = {
   command: () => ({ desiredData: {} }),
 };
 
+// A family that decodes the one telemetry field the live-state cases change, so a shadow patch
+// produces an observable characteristic change rather than only a call the suite could have mocked.
+const POWER_FAMILY: DeviceFamily<unknown> = {
+  deviceTypeId: DEVICE_TYPE_ID,
+  displayName: 'Power Family',
+  implemented: true,
+  validate: () => ({ valid: true }),
+  decode: (snapshot) => ({ metadata: {}, power: { mainsPresent: snapshot.data.ac_power === true } }),
+  capabilities: () => [],
+  command: () => ({ desiredData: {} }),
+};
+
 function implementedRegistry(): FamilyRegistry {
   return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: FAKE_FAMILY }), shouldLog: () => true };
+}
+
+function powerRegistry(): FamilyRegistry {
+  return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: POWER_FAMILY }), shouldLog: () => true };
 }
 
 function unsupportedRegistry(shouldLog: boolean): FamilyRegistry {
@@ -172,6 +213,66 @@ function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeAccesso
   };
 
   return standIn as unknown as API;
+}
+
+interface ContextOptions {
+  api: API;
+  accessories: Map<string, BasementGuardianPlatformAccessory>;
+  registry: FamilyRegistry;
+  basementGuardianAccessories?: Map<string, BasementGuardianAccessory>;
+  log?: Logging;
+  ignoredFaults?: readonly NotificationServiceKind[];
+  offlineConfirmationPollCount?: number;
+}
+
+// Every DiscoveryContext this suite builds carries the same wiring apart from the members a case is
+// about, so the shared parts live here rather than in a literal per case.
+function discoveryContext(options: ContextOptions): DiscoveryContext {
+  return {
+    api: options.api,
+    accessories: options.accessories,
+    basementGuardianAccessories: options.basementGuardianAccessories ?? new Map<string, BasementGuardianAccessory>(),
+    registry: options.registry,
+    log: options.log ?? createSilentLog(),
+    ignoredFaults: options.ignoredFaults ?? [],
+    offlineConfirmationPollCount: options.offlineConfirmationPollCount ?? 2,
+    timers: systemTimers,
+  };
+}
+
+// The accessory the platform built for this device, so a case can watch the calls the store's own
+// change notification makes on it rather than infer them.
+function builtAccessory(basementGuardianAccessories: Map<string, BasementGuardianAccessory>): BasementGuardianAccessory {
+  const built = basementGuardianAccessories.get(ACCESSORY_UUID);
+
+  if (built === undefined) {
+    throw new Error('the platform built no BasementGuardianAccessory for this device');
+  }
+
+  return built;
+}
+
+function reportedPatch(data: Readonly<Record<string, unknown>>): ReportedPatch {
+  return { data, state: undefined, version: undefined };
+}
+
+function contactStateOf(accessory: FakeAccessory, subtype: string): unknown {
+  const service = accessory.getServiceById(HAP.Service.ContactSensor, subtype);
+
+  return service?.characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.ContactSensorState.UUID)?.value;
+}
+
+// A device already registered under its own accessory, with the store holding its first snapshot,
+// which is the state every live-update case starts from.
+function registeredDevice(context: DiscoveryContext, accessories: Map<string, BasementGuardianPlatformAccessory>, store: DeviceStateStore): FakeAccessory {
+  const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
+  accessory.context.lastVendorName = 'Sump System';
+  accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+  accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+  store.applyDiscovery(geminiDevice());
+  registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+  return accessory;
 }
 
 // strong-mock matches a function argument only through It.matches, so the
@@ -534,6 +635,14 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('wires the concrete process timers at the composition root alone', async () => {
+    // act
+    const wiring = await modulesNaming('systemTimers');
+
+    // assert
+    assert.deepStrictEqual(wiring, ['platform.ts', 'runtime/timers.ts']);
+  });
+
   test('registers and removes no accessory across the whole lifecycle', async (t) => {
     // arrange
     t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
@@ -625,11 +734,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: implementedRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: implementedRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -662,11 +767,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -702,11 +803,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -730,11 +827,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -758,11 +851,7 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -779,11 +868,7 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 0, registerCalls: [] });
@@ -800,7 +885,7 @@ describe('registerDiscoveredDevices', () => {
 
     // act
     registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unsupportedRegistry(true), log: createRecordingLog(messages) },
+      discoveryContext({ api, accessories, registry: unsupportedRegistry(true), log: createRecordingLog(messages) }),
       [DEVICE_ID],
       store,
     );
@@ -823,11 +908,7 @@ describe('registerDiscoveredDevices', () => {
     const messages: string[] = [];
 
     // act
-    registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createRecordingLog(messages) },
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createRecordingLog(messages) }), [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -847,7 +928,7 @@ describe('registerDiscoveredDevices', () => {
 
     // act
     registerDiscoveredDevices(
-      { api, accessories, basementGuardianAccessories: new Map(), registry: unsupportedRegistry(false), log: createRecordingLog(messages) },
+      discoveryContext({ api, accessories, registry: unsupportedRegistry(false), log: createRecordingLog(messages) }),
       [DEVICE_ID],
       store,
     );
@@ -872,7 +953,7 @@ describe('registerDiscoveredDevices', () => {
     };
 
     // act
-    registerDiscoveredDevices({ api, accessories, basementGuardianAccessories: new Map(), registry, log: createSilentLog() }, [haloDeviceId, DEVICE_ID], store);
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry, log: createSilentLog() }), [haloDeviceId, DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
@@ -893,7 +974,7 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
     const messages: string[] = [];
-    const context = { api, accessories, basementGuardianAccessories, registry: implementedRegistry(), log: createRecordingLog(messages) };
+    const context = discoveryContext({ api, accessories, basementGuardianAccessories, registry: implementedRegistry(), log: createRecordingLog(messages) });
 
     // act
     registerDiscoveredDevices(context, [DEVICE_ID], store);
@@ -905,9 +986,142 @@ describe('registerDiscoveredDevices', () => {
       'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
     assert.deepStrictEqual(messages, [expectedMessage]);
   });
+
+  test('delivers a between-poll shadow change to HomeKit without waiting for the next poll', () => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry() });
+    const accessory = registeredDevice(context, accessories, store);
+    const beforePatch = contactStateOf(accessory, 'mains-power-lost');
+
+    // act
+    store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
+
+    // assert
+    assert.deepStrictEqual(
+      { beforePatch, afterPatch: contactStateOf(accessory, 'mains-power-lost') },
+      { beforePatch: CONTACT_NOT_DETECTED, afterPatch: CONTACT_DETECTED },
+    );
+  });
+
+  test('updates from the poll as poll-sourced and from the store notification as live', (t) => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    registeredDevice(context, accessories, store);
+    const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
+
+    // act
+    store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      updateSpy.mock.calls.map((call) => call.arguments[1]),
+      ['live', 'poll'],
+    );
+  });
+
+  test('calls updatePlatformAccessories once a suppression changes the published service set', () => {
+    // arrange
+    const updateCalls: FakeAccessory[][] = [];
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
+    const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry(), ignoredFaults });
+    registeredDevice(context, accessories, store);
+    const afterFirstPoll = updateCalls.length;
+
+    // act
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual({ afterFirstPoll, afterSecondPoll: updateCalls.length }, { afterFirstPoll: 1, afterSecondPoll: 1 });
+  });
+
+  test('publishes every adapter but the one an administrator ignored', () => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
+    const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry(), ignoredFaults });
+
+    // act
+    const accessory = registeredDevice(context, accessories, store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        ignored: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost') === undefined,
+        sibling: accessory.getServiceById(HAP.Service.ContactSensor, 'primary-pump-fault') !== undefined,
+      },
+      { ignored: true, sibling: true },
+    );
+  });
+
+  test('confirms a device offline on the run of polls an administrator configured', () => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry(), offlineConfirmationPollCount: 1 });
+    const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
+    accessory.context.lastVendorName = 'Sump System';
+    accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+    store.applyDiscovery({ ...geminiDevice(), connectivity: { connected: false, timestamp: 0 } });
+
+    // act
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    assert.strictEqual(contactStateOf(accessory, 'basement-guardian-offline'), CONTACT_NOT_DETECTED);
+  });
 });
 
 describe('removeDiscoveredDevice', () => {
+  test('leaves no live listener behind, so a later patch reaches no accessory', (t) => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], [], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    registeredDevice(context, accessories, store);
+    const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
+
+    // act
+    removeDiscoveredDevice(context, DEVICE_ID, store);
+    store.applyDiscovery({ ...geminiDevice(), data: { ac_power: true } });
+    store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: false }));
+
+    // assert
+    assert.strictEqual(updateSpy.mock.callCount(), 0);
+  });
+
+  test('subscribes again when the same deviceId is discovered after a removal', (t) => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], [], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    registeredDevice(context, accessories, store);
+    removeDiscoveredDevice(context, DEVICE_ID, store);
+    store.applyDiscovery(geminiDevice());
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+    const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
+
+    // act
+    store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
+
+    // assert
+    assert.deepStrictEqual(
+      updateSpy.mock.calls.map((call) => call.arguments[1]),
+      ['live'],
+    );
+  });
+
   test('unregisters a cached accessory, drops it from accessories, and removes its stored state', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
@@ -921,7 +1135,7 @@ describe('removeDiscoveredDevice', () => {
     store.applyDiscovery(geminiDevice());
 
     // act
-    removeDiscoveredDevice({ api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+    removeDiscoveredDevice(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), DEVICE_ID, store);
 
     // assert
     assert.deepStrictEqual(
@@ -952,7 +1166,7 @@ describe('removeDiscoveredDevice', () => {
     const expectedSnapshot = store.applyDiscovery(geminiDevice());
 
     // act
-    removeDiscoveredDevice({ api, accessories, basementGuardianAccessories: new Map(), registry: unknownRegistry(), log: createSilentLog() }, DEVICE_ID, store);
+    removeDiscoveredDevice(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), DEVICE_ID, store);
 
     // assert
     assert.deepStrictEqual(
