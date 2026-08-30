@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-30T14:55:39.200Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-08-30T16:55:41.437Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 03 execution started
-state_head: 87b723553fa9a153525ab7ec1fa56499ed580f60
+state_head: 018ba9be1bd87f7d7fedb854ce24090d8e13e569
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 26
+  completed_plans: 27
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-08-30 — Phase 03 execution started
 
@@ -67,6 +67,7 @@ Progress: [███░░░░░░░] 2 of 6 phases complete ([███░
 | Phase 03 P01 | 39 min | 3 tasks | 6 files |
 | Phase 03 P02 | 42 min | 3 tasks | 7 files |
 | Phase 03 P03 | 31 min | 3 tasks | 8 files |
+| Phase 03 P04 | 60 min | 1 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: Phase 3: FieldViolation carries the TrustScope its field owns, and decode() omits only the scopes that did not validate. undefined means the scope did not validate, never that it reported nothing.
 - [Phase 03]: Phase 3: the six Gemini group interfaces were not declared. The family-neutral groups already carry Gemini's exact members, so GeminiDomainState aliases ScopedDomainState; empty extending interfaces fail lint and re-declaration would duplicate them.
 - [Phase 03]: Phase 3: a defensive guard behind a validation gate is covered by constructing the broken contract it names, never by a coverage exception or a silent default.
+- [Phase 03]: D-12 confirmed: a HomeKit service subtype is its ServiceKind slug verbatim, and custom service and characteristic UUIDs are hard-coded random v4 literals outside Apple's base namespace — A seed-derived identifier would silently orphan every custom service on every installed accessory if the seed were later edited, with a green test suite. A literal cannot drift.
+- [Phase 03]: The accessory logs its degradation warning on any transition into a degraded state, not only when no adapter resolves — A per-field validation failure now narrows distrust to one scope, but the owner still needs the diagnostic; scoping the log to the unresolved-family branch would have removed a passing discovery scenario's assertion.
 
 ### Pending Todos
 
@@ -158,6 +161,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T14:55:38.826Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-08-30T16:55:41.067Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None

@@ -44,7 +44,7 @@
 - [ ] **SAFE-02**: Primary and backup Pump services truthfully expose live running state, and `Primary Pump Running` plus `Backup Pump Activated` Contact Sensors follow their respective device booleans.
 - [ ] **SAFE-03**: Every live backup-pump activation, including self-test activity, updates immediately without inventing a cause; recovered timestamp evidence adds one de-duplicated record without a late sensor pulse or notification.
 - [ ] **SAFE-04**: Primary pump, backup pump/fuse, water sensor, controller-link, and confirmed-offline faults update owning-service status plus five distinct Apple Home adapters, with exact raw causes retained and no aggregate System Fault adapter.
-- [ ] **SAFE-05**: Mains presence appears truthfully on the read-only `Sump Mains Power` service and `Mains Power Lost` follows `ac_power === false` independently of pump health.
+- [x] **SAFE-05**: Mains presence appears truthfully on the read-only `Sump Mains Power` service and `Mains Power Lost` follows `ac_power === false` independently of pump health.
 - [ ] **SAFE-06**: Backup battery services expose exact charging, low-voltage, health, and protection-band facts plus clearly labeled 25/50/75/100 estimated standard levels, without misusing filter-maintenance semantics.
 - [ ] **SAFE-07**: Current-condition and adapter transitions publish immediately and clear immediately on valid source recovery, with no plugin alert-delay setting or durable acknowledgement latch.
 - [ ] **SAFE-08**: Standard HomeKit semantics are used wherever truthful, vendor-defined characteristics are read-only, and no device value is mislabeled as an unrelated standard measurement or control merely for Apple Home visibility.
@@ -132,7 +132,7 @@
 | SAFE-02 | Phase 3 | Pending |
 | SAFE-03 | Phase 3 | Pending |
 | SAFE-04 | Phase 3 | Pending |
-| SAFE-05 | Phase 3 | Pending |
+| SAFE-05 | Phase 3 | Complete |
 | SAFE-06 | Phase 3 | Pending |
 | SAFE-07 | Phase 3 | Pending |
 | SAFE-08 | Phase 3 | Pending |
