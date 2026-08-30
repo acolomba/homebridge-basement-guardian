@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-08-30T13:46:22.965Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-08-30T14:23:42.103Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 03 execution started
-state_head: 702c0a4b2044075efee6ff45c965ddcc989f8856
+state_head: 4c8c9543aff9458ab620ab94839828b521699624
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 24
+  completed_plans: 25
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-08-30 — Phase 03 execution started
 
@@ -65,6 +65,7 @@ Progress: [███░░░░░░░] 2 of 6 phases complete ([███░
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 03 P01 | 39 min | 3 tasks | 6 files |
+| Phase 03 P02 | 42 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,10 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
 - [Phase 03]: The Cucumber harness has one hand-built HAP stand-in, features/support/fakeHap.ts, whose Service and Characteristic are constructible base classes. — Every module this phase adds declares its HomeKit types by subclassing the injected api.hap namespace, so a stand-in of identifier constants cannot exercise any of them.
 - [Phase 03]: FakeHomebridgeApi exposes a hap member typed as the stand-in namespace, beside the deliberately widened api member. — api is widened to Homebridge own API type, which types hap as the real HAP-NodeJS namespace, so a step reaching a service class through api.hap would hand a real HAP class to a stand-in accessory.
+- [Phase 03]: Phase 3: the provisional water-level ladder and flood threshold live in src/device/waterLevel.ts alone, named PROVISIONAL_*, so closing G-002 is one reviewable edit.
+- [Phase 03]: Phase 3: FieldViolation carries the TrustScope its field owns, and decode() omits only the scopes that did not validate. undefined means the scope did not validate, never that it reported nothing.
+- [Phase 03]: Phase 3: the six Gemini group interfaces were not declared. The family-neutral groups already carry Gemini's exact members, so GeminiDomainState aliases ScopedDomainState; empty extending interfaces fail lint and re-declaration would duplicate them.
+- [Phase 03]: Phase 3: a defensive guard behind a validation gate is covered by constructing the broken contract it names, never by a coverage exception or a silent default.
 
 ### Pending Todos
 
@@ -152,6 +157,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T13:46:08.233Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-08-30T14:23:29.350Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
