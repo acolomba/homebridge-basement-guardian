@@ -147,14 +147,14 @@ Plans:
   5. Standard services are used only for their defined meaning, while exact unsupported facts remain available through read-only vendor-defined characteristics.
   6. An invalid, omitted, or stale field preserves the last valid value and faults or deactivates only the narrowest owning scope, and `serial_communications === false` immediately activates `Pump Controller Link Lost` while exposing when trustworthy controller data last arrived.
 
-**Plans**: 2/8 plans executed
+**Plans**: 3/8 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 03-01-PLAN.md — Cucumber HomeKit harness: one class-shaped HAP stand-in at the real signatures, plus the zero-advance clock step
 - [x] 03-02-PLAN.md — Gemini water-level ladder and per-field trust scoping
-- [ ] 03-03-PLAN.md — `ignoredFaults` configuration surface and the seven-slug contract
+- [x] 03-03-PLAN.md — `ignoredFaults` configuration surface and the seven-slug contract
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -237,7 +237,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
-| 3. Safety Monitoring in HomeKit | 2/8 | In Progress|  |
+| 3. Safety Monitoring in HomeKit | 3/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
 | 5. Degraded Operation and Recovery | 0/TBD | Not started | - |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |
