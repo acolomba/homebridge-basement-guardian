@@ -103,6 +103,15 @@ export interface FakeHapCharacteristic {
   readonly UUID: string;
   readonly props: FakeCharacteristicProps;
   value: unknown;
+  /**
+   * Whether anything ever wrote this value, as against HAP having constructed it.
+   *
+   * The real HAP carries no such member, and no production code reads it. It exists because the
+   * construction default of both alarm characteristics is `0`, which is also the quiet state, so a
+   * scenario asserting a quiet sensor would otherwise be satisfied by a service the plugin created
+   * and never wrote to -- and would pass against an implementation that publishes nothing at all.
+   */
+  pushed: boolean;
   getDefaultValue(): unknown;
 }
 
@@ -164,6 +173,8 @@ export interface FakeCharacteristicNamespace {
 
 class StandInCharacteristic implements FakeHapCharacteristic {
   value: unknown;
+
+  pushed = false;
 
   constructor(
     readonly displayName: string,
@@ -315,6 +326,7 @@ class StandInService implements FakeHapService {
     const characteristic = this.getCharacteristic(characteristicClass) ?? this.addCharacteristic(characteristicClass);
 
     characteristic.value = value;
+    characteristic.pushed = true;
 
     return this;
   }

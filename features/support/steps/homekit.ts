@@ -17,7 +17,7 @@ import { Then } from '@cucumber/cucumber';
 
 import { createServiceCatalogue } from '../../../src/accessories/serviceCatalogue.js';
 
-import type { FakeHapService, FakeServiceClass } from '../fakeHap.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../fakeHap.js';
 import type { FakeAccessory, FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
 import type { BasementGuardianWorld } from '../world.js';
 import type { API } from 'homebridge';
@@ -54,8 +54,17 @@ function serviceOf(homebridge: FakeHomebridgeApi, displayName: string): FakeHapS
   return currentAccessory(homebridge)?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
 }
 
+// A value only the plugin can have written. HAP constructs every characteristic at its format
+// default, and for both alarm characteristics that default is `0`, which is also the quiet state,
+// so reading the value alone cannot tell a published quiet sensor from one the plugin never wrote
+// to. Anything not pushed reads as absent, which fails the step by name rather than passing on a
+// default (D-014).
+function pushedValue(characteristic: FakeHapCharacteristic | undefined): unknown {
+  return characteristic?.pushed === true ? characteristic.value : undefined;
+}
+
 function characteristicValue(service: FakeHapService | undefined, displayName: string): unknown {
-  return service?.characteristics.find((candidate) => candidate.displayName === displayName)?.value;
+  return pushedValue(service?.characteristics.find((candidate) => candidate.displayName === displayName));
 }
 
 // A scenario states a published value as the value HomeKit carries, so it reads `true` and `80`
@@ -74,7 +83,7 @@ function publishedValue(text: string): boolean | number {
 }
 
 function alarmValue(service: FakeHapService | undefined): unknown {
-  return service?.characteristics.find((candidate) => ALARM_CHARACTERISTICS.includes(candidate.displayName))?.value;
+  return pushedValue(service?.characteristics.find((candidate) => ALARM_CHARACTERISTICS.includes(candidate.displayName)));
 }
 
 function untilPublished(world: BasementGuardianWorld, read: () => unknown, expected: unknown, failure: string): Promise<void> {
