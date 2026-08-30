@@ -8,9 +8,10 @@
  * projection carries that marking, so a HomeKit handler reads trust from one
  * place instead of inferring it.
  *
- * `MonitoringPath` has a production consumer: the account runtime derives it and
- * publishes it. The four declarations under it still have none, which is why
- * this module keeps its entry in the `ignoreFindings` list of `.fallowrc.json`.
+ * Every declaration here has a production consumer except `DeviceHealth`, the
+ * aggregate projection nothing assembles yet. The account runtime derives
+ * `MonitoringPath`, and the accessory tier reads `TrustScope`, `DistrustReason`,
+ * and `UntrustedScope` directly.
  */
 
 /**
