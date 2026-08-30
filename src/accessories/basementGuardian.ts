@@ -352,7 +352,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       }
 
       publishValue(service, hap.Characteristic.StatusActive, isRowTrusted(row, input.untrustedScopes));
-      descriptors.push({ kind: row.kind, subtype: row.subtype, name: row.displayName });
+      descriptors.push({ kind: row.kind, subtype: row.subtype, serviceUuid: row.serviceClass.UUID, name: row.displayName });
     }
 
     return descriptors;

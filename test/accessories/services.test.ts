@@ -17,6 +17,11 @@ const REMOVABLE_SENSOR_NAMES = [
   'basement-guardian-offline',
 ];
 
+// Apple's Leak Sensor identifier, and a stand-in for a type this module declares no name for. The
+// descriptor types the field as text, so neither is checked for shape here.
+const LEAK_SENSOR_UUID = '00000083-0000-1000-8000-0026BB765291';
+const PLACEHOLDER_UUID = 'placeholder-service-uuid';
+
 void ('sump-pit-flood' satisfies CoreServiceKind);
 void ('primary-pump-running' satisfies CoreServiceKind);
 void ('system-self-test' satisfies CoreServiceKind);
@@ -24,7 +29,7 @@ void ('backup-pump-activated' satisfies NotificationServiceKind);
 void ('pump-controller-link-lost' satisfies NotificationServiceKind);
 void ('backup-battery' satisfies ServiceKind);
 void ('mains-power-lost' satisfies ServiceKind);
-void ({ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', name: 'Sump Pit Flood' } satisfies ServiceDescriptor);
+void ({ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', serviceUuid: LEAK_SENSOR_UUID, name: 'Sump Pit Flood' } satisfies ServiceDescriptor);
 
 // @ts-expect-error a removable notification sensor is not a truthful service
 void ('mains-power-lost' satisfies CoreServiceKind);
@@ -33,9 +38,11 @@ void ('sump-pit-level' satisfies NotificationServiceKind);
 // @ts-expect-error the primary pump activity sensor reports truthful state, so it is not removable
 void ('primary-pump-running' satisfies NotificationServiceKind);
 // @ts-expect-error HomeKit keys a service by type and subtype together, so the subtype is required
-void ({ kind: 'alarm-mute', name: 'Alarm Mute' } satisfies ServiceDescriptor);
+void ({ kind: 'alarm-mute', serviceUuid: PLACEHOLDER_UUID, name: 'Alarm Mute' } satisfies ServiceDescriptor);
+// @ts-expect-error two rows of one kind and subtype differ only by service type, so the type identifier is required
+void ({ kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery' } satisfies ServiceDescriptor);
 // @ts-expect-error a service kind is one of the declared names, not free-form text
-void ({ kind: 'sump-pit-humidity', subtype: 'sump-pit-humidity', name: 'Sump Pit Humidity' } satisfies ServiceDescriptor);
+void ({ kind: 'sump-pit-humidity', subtype: 'sump-pit-humidity', serviceUuid: PLACEHOLDER_UUID, name: 'Sump Pit Humidity' } satisfies ServiceDescriptor);
 
 test('CONF-06 lists the seven removable notification sensors in declaration order', () => {
   // act & assert

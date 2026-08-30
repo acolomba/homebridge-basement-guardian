@@ -83,11 +83,21 @@ export function isNotificationServiceKind(value: unknown): value is Notification
 /** Every service kind this plugin can publish. */
 export type ServiceKind = CoreServiceKind | NotificationServiceKind;
 
-/** One service published on one accessory. */
+/**
+ * One service published on one accessory.
+ *
+ * `kind` and `subtype` do not key a descriptor on their own: the backup battery
+ * publishes twice under one kind and one subtype, once as the standard Battery
+ * service and once as the vendor facts service. `serviceUuid` is the HAP type
+ * identifier that tells those two apart, so `kind`, `subtype`, and
+ * `serviceUuid` together are the key.
+ */
 export interface ServiceDescriptor {
   kind: ServiceKind;
   /** The stable HomeKit subtype. It never changes for a given service. */
   subtype: string;
+  /** The HAP service type identifier, which is what tells two rows of one kind and subtype apart. */
+  serviceUuid: string;
   /** The name HomeKit shows for the service. */
   name: string;
 }

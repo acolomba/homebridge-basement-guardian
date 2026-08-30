@@ -33,23 +33,35 @@ const CONTACT_NOT_DETECTED = 1;
 // expose them -- written independently of the production constant.
 const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault'];
 
+// The published HAP service type of every row, written out here rather than read off the catalogue,
+// so a row that changed service type fails at the descriptor as well as behind it. The two backup
+// battery rows share a kind and a subtype and differ only here, which is what makes the descriptor
+// keyable.
+const LEAK_SENSOR_UUID = '00000083-0000-1000-8000-0026BB765291';
+const CONTACT_SENSOR_UUID = '00000080-0000-1000-8000-0026BB765291';
+const BATTERY_UUID = '00000096-0000-1000-8000-0026BB765291';
+const SUMP_PIT_SERVICE_UUID = 'ed31d704-44c8-4f20-9de0-6f29b33ef607';
+const PUMP_SERVICE_UUID = '523f059e-deaa-4674-bbb2-980f9f7da7ec';
+const SUMP_MAINS_POWER_SERVICE_UUID = 'fbb41424-0697-4ebe-ba89-7ba8ea254623';
+const BACKUP_BATTERY_SERVICE_UUID = 'eb139c1e-aa1d-4318-bee9-60a338d99686';
+
 // Every service this accessory publishes, in the catalogue's declared order.
 const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
-  { kind: 'sump-pit-flood', subtype: 'sump-pit-flood', name: 'Sump Pit Flood' },
-  { kind: 'sump-pit-level', subtype: 'sump-pit-level', name: 'Sump Pit Level' },
-  { kind: 'primary-pump', subtype: 'primary-pump', name: 'Primary Pump' },
-  { kind: 'primary-pump-running', subtype: 'primary-pump-running', name: 'Primary Pump Running' },
-  { kind: 'backup-pump', subtype: 'backup-pump', name: 'Backup Pump' },
-  { kind: 'backup-pump-activated', subtype: 'backup-pump-activated', name: 'Backup Pump Activated' },
-  { kind: 'sump-mains-power', subtype: 'sump-mains-power', name: 'Sump Mains Power' },
-  { kind: 'mains-power-lost', subtype: 'mains-power-lost', name: 'Mains Power Lost' },
-  { kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery' },
-  { kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery Facts' },
-  { kind: 'primary-pump-fault', subtype: 'primary-pump-fault', name: 'Primary Pump Fault' },
-  { kind: 'backup-pump-fault', subtype: 'backup-pump-fault', name: 'Backup Pump Fault' },
-  { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', name: 'Water Sensor Fault' },
-  { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost', name: 'Pump Controller Link Lost' },
-  { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', name: 'Basement Guardian Offline' },
+  { kind: 'sump-pit-flood', subtype: 'sump-pit-flood', serviceUuid: LEAK_SENSOR_UUID, name: 'Sump Pit Flood' },
+  { kind: 'sump-pit-level', subtype: 'sump-pit-level', serviceUuid: SUMP_PIT_SERVICE_UUID, name: 'Sump Pit Level' },
+  { kind: 'primary-pump', subtype: 'primary-pump', serviceUuid: PUMP_SERVICE_UUID, name: 'Primary Pump' },
+  { kind: 'primary-pump-running', subtype: 'primary-pump-running', serviceUuid: CONTACT_SENSOR_UUID, name: 'Primary Pump Running' },
+  { kind: 'backup-pump', subtype: 'backup-pump', serviceUuid: PUMP_SERVICE_UUID, name: 'Backup Pump' },
+  { kind: 'backup-pump-activated', subtype: 'backup-pump-activated', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Activated' },
+  { kind: 'sump-mains-power', subtype: 'sump-mains-power', serviceUuid: SUMP_MAINS_POWER_SERVICE_UUID, name: 'Sump Mains Power' },
+  { kind: 'mains-power-lost', subtype: 'mains-power-lost', serviceUuid: CONTACT_SENSOR_UUID, name: 'Mains Power Lost' },
+  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BATTERY_UUID, name: 'Backup Battery' },
+  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BACKUP_BATTERY_SERVICE_UUID, name: 'Backup Battery Facts' },
+  { kind: 'primary-pump-fault', subtype: 'primary-pump-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Primary Pump Fault' },
+  { kind: 'backup-pump-fault', subtype: 'backup-pump-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Fault' },
+  { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Water Sensor Fault' },
+  { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost', serviceUuid: CONTACT_SENSOR_UUID, name: 'Pump Controller Link Lost' },
+  { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', serviceUuid: CONTACT_SENSOR_UUID, name: 'Basement Guardian Offline' },
 ];
 
 // The scope each published service reads, in the same order, so a case can name the services one
@@ -99,7 +111,7 @@ const CATALOGUE = createServiceCatalogue(HAP_NAMESPACE);
 
 void ({
   deviceId: DEVICE_ID,
-  services: [{ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', name: 'Sump Pit Flood' }],
+  services: [{ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', serviceUuid: LEAK_SENSOR_UUID, name: 'Sump Pit Flood' }],
   untrusted: [],
   update: () => undefined,
 } satisfies BasementGuardianAccessory);
@@ -500,6 +512,21 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
       [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+    );
+  });
+
+  test('keys every published service distinctly, including the two backup battery services', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      [...new Set(basementGuardianAccessory.services.map((descriptor) => `${descriptor.kind}/${descriptor.subtype}/${descriptor.serviceUuid}`))],
+      PUBLISHED_SERVICES.map((descriptor) => `${descriptor.kind}/${descriptor.subtype}/${descriptor.serviceUuid}`),
     );
   });
 
