@@ -115,12 +115,14 @@ Carried forward from Phase 2:
   with `StatusActive = false` plus README guidance, with no new adapter and no ADR revision
   (`03-CONTEXT.md` D-05). Apple Home shows it under accessory Details as "Status Active — No".
 
-Opened by the Phase 3 discussion:
+Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
-- [Phase 3]: A HAP-NodeJS issue report (homebridge/HAP-NodeJS#375) claims a sensor marked inactive
-  drops out of Apple Home automations. If true on current iOS, `StatusActive = false` would
-  silently disable a user's flood automation. Research must confirm or refute this before Phase 3
-  ships; a positive finding reopens `03-CONTEXT.md` D-05.
+- [Phase 3]: The claim that `StatusActive = false` drops a sensor out of Apple Home automations was
+  REFUTED at its source (2026-08-30). The cited issue is a 2017 thread on a different subject, and
+  its one relevant comment contradicts the claim. `D-05` stands. Residual: nobody could confirm
+  Apple Home's behavior on current iOS, so a real-home check rides along with `G-003`/`G-004` —
+  build an automation on `Sump Pit Flood`, force a degraded scope, confirm it still fires. Only a
+  positive finding there reopens `D-05`.
 
 ### Quick Tasks Completed
 

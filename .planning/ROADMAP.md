@@ -137,7 +137,7 @@ Plans:
 
 **Goal**: Users can observe every supported basement-protection condition through semantically truthful services and immediate safety adapters.
 **Depends on**: Phase 2
-**Requirements**: CONF-06, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05, SAFE-06, SAFE-07, SAFE-08, RES-01, RES-02
+**Requirements**: CONF-06, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05, SAFE-06, SAFE-07, SAFE-08, RES-01, RES-02, RES-03
 **Success Criteria** (what must be TRUE):
 
   1. Users can inspect truthful pit level through an explicit legal-value lookup and receive `Sump Pit Flood` only at the flood threshold; an unknown code displays a fault rather than a guessed level, and the threshold constant stays provisional until G-002 closes.

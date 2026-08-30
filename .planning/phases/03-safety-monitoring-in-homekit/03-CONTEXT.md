@@ -124,13 +124,22 @@ HAP-NodeJS's default advice — return a safe default such as a not-detected sta
 never becomes a false normal. The README should say so, because it is a visible departure from
 common plugin behavior.
 
-**Open hazard, must be verified rather than assumed.** A HAP-NodeJS issue report
-(homebridge/HAP-NodeJS#375) states that a sensor marked inactive is greyed out in Apple Home *and
-drops out of automations*. If that holds on current iOS, `StatusActive = false` on the
-`Sump Pit Flood` sensor would silently disable a user's flood automation at exactly the moment the
-plugin is least sure of itself. Research must confirm or refute this against current HAP and iOS
-behavior before the phase ships. If it is true, the finding reopens `D-05` rather than being
-worked around quietly, and it belongs in the phase's human-verification items.
+**Hazard investigated and refuted at its source; a residual remains for human verification.**
+`03-RESEARCH.md` (Open Question 1, Assumptions A1 and A6) examined the claim that a sensor marked
+inactive drops out of Apple Home automations. The cited issue does not say that. `homebridge/HAP-NodeJS#375`
+is a January 2017 thread about Apple Home offering no numeric-value automation triggers, closed
+within four minutes; its lone `StatusActive` mention is a 2018 drive-by comment whose own report
+*contradicts* the hazard — the commenter set `StatusActive` to **true** and the tile stayed greyed.
+The one first-hand discussion found (ebaauw, maintainer of `homebridge-hue` and `homebridge-lib`)
+says Apple Home does nothing with the characteristic beyond adding a settings row, which is what
+HAP-NodeJS's own wiki recommends it for.
+
+**`D-05` stands as decided.** What no source could settle is Apple Home's behavior on *current*
+iOS, so this becomes a human-verification item rather than a code decision: in a real Apple home
+with a current hub, build an automation on the `Sump Pit Flood` Leak Sensor, force a degraded
+scope, and confirm the automation still exists and still fires. Fold it into the `G-003` / `G-004`
+real-home session the project already requires — it costs one extra check, not a separate trip.
+Only a positive finding there reopens `D-05`.
 
 ### Backup battery
 
