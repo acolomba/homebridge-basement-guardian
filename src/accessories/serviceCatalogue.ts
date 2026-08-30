@@ -7,10 +7,10 @@
  * clamps an out-of-range value into a plausible reading rather than rejecting
  * it, so a `ContactSensorState` of 7 publishes as the alarm state nobody
  * reported. Every value a row projects is therefore one of the characteristic's
- * own declared constants or a boolean read verbatim from decoded state, and no
+ * own declared constants or a value read verbatim from decoded state, and no
  * arithmetic reaches a projection.
  *
- * A row that cannot vouch for its own scope projects nothing at all rather than
+ * A row that cannot vouch for a fact projects nothing for it at all rather than
  * projecting a default, so the last value a trustworthy snapshot produced stays
  * published while the accessory marks the row inactive (D-014, RES-01).
  *
@@ -23,8 +23,8 @@
 import { createCustomCharacteristics } from './customCharacteristics.js';
 import { createCustomServices } from './customServices.js';
 
-import type { CharacteristicClass } from './customCharacteristics.js';
-import type { ServiceClass } from './customServices.js';
+import type { CharacteristicClass, CustomCharacteristics } from './customCharacteristics.js';
+import type { CustomServices, ServiceClass } from './customServices.js';
 import type { ServiceKind } from './services.js';
 import type { DistrustReason, TrustScope, UntrustedScope } from '../device/health.js';
 import type { API, CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
@@ -88,6 +88,13 @@ export interface ServiceRow extends RowTrust {
   /**
    * The values to publish, or nothing at all when this row cannot vouch for them.
    *
+   * The rule is per value rather than per row, because several rows read more
+   * than one decoded scope group: a row publishes a value only when the group
+   * that value reads decoded and the scope owning that group is either trusted
+   * or untrusted for a reason this row tolerates. `Sump Pit Level` therefore
+   * keeps publishing a trustworthy water level while the `fault` scope is
+   * untrusted, and withholds only the fault-sourced values.
+   *
    * The trust gate reads the row the call is made on rather than a copy captured
    * when the catalogue was built, so a row derived from another with a different
    * `toleratedDistrust` is judged by its own list.
@@ -102,59 +109,26 @@ interface RowDefinition extends RowTrust {
   kind: ServiceKind;
   displayName: string;
   serviceClass: ServiceClass;
-  values: (input: ProjectionInput) => readonly ProjectedValue[];
+  values: (input: ProjectionInput, trust: RowTrust) => readonly ProjectedValue[];
+}
+
+/** One value a row would publish, absent when the fact it reads did not decode or is not trustworthy. */
+interface Candidate {
+  characteristic: CharacteristicClass;
+  value: CharacteristicValue | undefined;
+}
+
+/** What one pump reports, before the catalogue turns it into published values. */
+interface PumpFacts {
+  running: boolean | undefined;
+  faulted: boolean | undefined;
+  fuseBlown: boolean | undefined;
+  /** The condition the owning service's `StatusFault` follows, which merges the fuse on the backup pump. */
+  serviceFaulted: boolean | undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-// The `power` group of the family-neutral decoded state, read structurally so
-// this module stays ignorant of any one family's type (D-003). `undefined`
-// means the scope did not decode, never that mains power is absent.
-function mainsPresentOf(decoded: unknown): boolean | undefined {
-  const power = isRecord(decoded) ? decoded.power : undefined;
-  const mainsPresent = isRecord(power) ? power.mainsPresent : undefined;
-
-  return typeof mainsPresent === 'boolean' ? mainsPresent : undefined;
-}
-
-// The one place the project's alarm convention lives: `CONTACT_NOT_DETECTED`
-// is the activated state, so an Apple Home tile reads "Open" when there is
-// something to act on.
-function contactState(hap: API['hap'], activated: boolean): CharacteristicValue {
-  const { ContactSensorState } = hap.Characteristic;
-
-  return activated ? ContactSensorState.CONTACT_NOT_DETECTED : ContactSensorState.CONTACT_DETECTED;
-}
-
-function mainsPowerValues(mainsPowerPresent: CharacteristicClass, input: ProjectionInput): readonly ProjectedValue[] {
-  const mainsPresent = mainsPresentOf(input.decoded);
-
-  return mainsPresent === undefined ? [] : [{ characteristic: mainsPowerPresent, value: mainsPresent }];
-}
-
-// Mains loss is a condition the device reports, not a fault of the power
-// service, so `StatusFault` stays at `NO_FAULT` in both states (D-008).
-function mainsPowerLostValues(hap: API['hap'], input: ProjectionInput): readonly ProjectedValue[] {
-  const mainsPresent = mainsPresentOf(input.decoded);
-
-  if (mainsPresent === undefined) {
-    return [];
-  }
-
-  return [
-    { characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, !mainsPresent) },
-    { characteristic: hap.Characteristic.StatusFault, value: hap.Characteristic.StatusFault.NO_FAULT },
-  ];
-}
-
-// The offline adapter reads the accessory's own confirmation count, never a
-// reported field: `data.offline` is what the device says about itself, and a
-// physical-device alert raised from it would fire on a transport hiccup
-// (RES-03, D-016).
-function offlineValues(hap: API['hap'], input: ProjectionInput): readonly ProjectedValue[] {
-  return [{ characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, input.offlineConfirmed) }];
 }
 
 /**
@@ -169,6 +143,198 @@ export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedS
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
 }
 
+// One scope group of the family-neutral decoded state, read structurally so this
+// module stays ignorant of any one family's type (D-003), and answered only
+// while this row may still vouch for the scope that owns it. `undefined` means
+// the group did not decode or the scope is untrusted, never that the facts in it
+// are absent from the device.
+function trustedGroup(input: ProjectionInput, trust: RowTrust, scope: TrustScope): Record<string, unknown> | undefined {
+  if (!isRowTrusted({ scope, toleratedDistrust: trust.toleratedDistrust }, input.untrustedScopes)) {
+    return undefined;
+  }
+
+  const group = isRecord(input.decoded) ? input.decoded[scope] : undefined;
+
+  return isRecord(group) ? group : undefined;
+}
+
+function booleanOf(group: Record<string, unknown> | undefined, field: string): boolean | undefined {
+  const value = group?.[field];
+
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function numberOf(group: Record<string, unknown> | undefined, field: string): number | undefined {
+  const value = group?.[field];
+
+  return typeof value === 'number' ? value : undefined;
+}
+
+// A row publishes only the facts it can vouch for: an absent one is omitted
+// rather than defaulted, so the last trustworthy value stays published and no
+// service ever reads as a normal the device never reported (D-014, RES-01).
+function published(candidates: readonly Candidate[]): readonly ProjectedValue[] {
+  const values: ProjectedValue[] = [];
+
+  for (const candidate of candidates) {
+    if (candidate.value !== undefined) {
+      values.push({ characteristic: candidate.characteristic, value: candidate.value });
+    }
+  }
+
+  return values;
+}
+
+// The one place the project's alarm convention lives: `CONTACT_NOT_DETECTED`
+// is the activated state, so an Apple Home tile reads "Open" when there is
+// something to act on.
+function contactState(hap: API['hap'], activated: boolean | undefined): CharacteristicValue | undefined {
+  const { ContactSensorState } = hap.Characteristic;
+
+  if (activated === undefined) {
+    return undefined;
+  }
+
+  return activated ? ContactSensorState.CONTACT_NOT_DETECTED : ContactSensorState.CONTACT_DETECTED;
+}
+
+function faultState(hap: API['hap'], faulted: boolean | undefined): CharacteristicValue | undefined {
+  const { StatusFault } = hap.Characteristic;
+
+  if (faulted === undefined) {
+    return undefined;
+  }
+
+  return faulted ? StatusFault.GENERAL_FAULT : StatusFault.NO_FAULT;
+}
+
+function leakState(hap: API['hap'], flooded: boolean | undefined): CharacteristicValue | undefined {
+  const { LeakDetected } = hap.Characteristic;
+
+  if (flooded === undefined) {
+    return undefined;
+  }
+
+  return flooded ? LeakDetected.LEAK_DETECTED : LeakDetected.LEAK_NOT_DETECTED;
+}
+
+// An absent fact stays absent through the negation, so an undecoded reading
+// never becomes the quiet half of a two-state adapter.
+function inverted(fact: boolean | undefined): boolean | undefined {
+  return fact === undefined ? undefined : !fact;
+}
+
+// The backup fault covers a blown or missing fuse as well as the pump's own
+// reported fault. Both raw causes stay separately readable on the custom
+// `Backup Pump` service, so the exact cause is never lost to the merge, and a
+// group missing either fact yields no verdict rather than a quiet one.
+function backupPumpFaulted(fault: Record<string, unknown> | undefined): boolean | undefined {
+  const faulted = booleanOf(fault, 'backupPumpFault');
+  const fuseBlown = booleanOf(fault, 'backupPumpFuseBlown');
+
+  if (faulted === undefined || fuseBlown === undefined) {
+    return undefined;
+  }
+
+  return faulted || fuseBlown;
+}
+
+// The flood verdict and the level percentage both come from the decoded `water`
+// group, which already carries them from the family adapter. The level meaning
+// lives behind the family boundary, so this module never imports the ladder: a
+// second call site would be a second place to change when `G-002` closes.
+function floodValues(hap: API['hap'], input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const flooded = booleanOf(trustedGroup(input, trust, 'water'), 'flooded');
+
+  return published([{ characteristic: hap.Characteristic.LeakDetected, value: leakState(hap, flooded) }]);
+}
+
+// The raw thermometer code publishes beside the mapped percentage, so the
+// provisional ladder stays checkable against a real pit without a debug build
+// (D-015, SAFE-08).
+function sumpPitLevelValues(hap: API['hap'], characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const water = trustedGroup(input, trust, 'water');
+  const waterSensorFault = booleanOf(trustedGroup(input, trust, 'fault'), 'waterSensorFault');
+
+  return published([
+    { characteristic: hap.Characteristic.WaterLevel, value: numberOf(water, 'levelPercent') },
+    { characteristic: characteristics.RawWaterLevelCode, value: numberOf(water, 'levelCode') },
+    { characteristic: characteristics.WaterSensorFaultReported, value: waterSensorFault },
+    { characteristic: hap.Characteristic.StatusFault, value: faultState(hap, waterSensorFault) },
+  ]);
+}
+
+function pumpValues(hap: API['hap'], characteristics: CustomCharacteristics, facts: PumpFacts): readonly ProjectedValue[] {
+  return published([
+    { characteristic: characteristics.PumpRunning, value: facts.running },
+    { characteristic: characteristics.PumpFault, value: facts.faulted },
+    { characteristic: characteristics.PumpFuseBlown, value: facts.fuseBlown },
+    { characteristic: hap.Characteristic.StatusFault, value: faultState(hap, facts.serviceFaulted) },
+  ]);
+}
+
+function primaryPumpValues(hap: API['hap'], characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const faulted = booleanOf(trustedGroup(input, trust, 'fault'), 'primaryPumpFault');
+
+  return pumpValues(hap, characteristics, {
+    running: booleanOf(trustedGroup(input, trust, 'pump'), 'primaryRunning'),
+    faulted,
+    // The primary pump reports no fuse fact, which is why the custom service
+    // declares that characteristic optional rather than required.
+    fuseBlown: undefined,
+    serviceFaulted: faulted,
+  });
+}
+
+function backupPumpValues(hap: API['hap'], characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const fault = trustedGroup(input, trust, 'fault');
+
+  return pumpValues(hap, characteristics, {
+    running: booleanOf(trustedGroup(input, trust, 'pump'), 'backupRunning'),
+    faulted: booleanOf(fault, 'backupPumpFault'),
+    fuseBlown: booleanOf(fault, 'backupPumpFuseBlown'),
+    serviceFaulted: backupPumpFaulted(fault),
+  });
+}
+
+// The two live activity adapters read one pump boolean and nothing else. A
+// backup run shows that water reached the backup-pump threshold or that inflow
+// exceeded the primary pump's capacity; it establishes neither mains loss nor
+// primary-pump failure, and both of those have their own signals. So a
+// self-test in progress, an absent activation timestamp, a mains loss, and a
+// primary-pump fault all leave this adapter exactly where the running boolean
+// puts it (C-001, SAFE-03).
+function pumpActivityValues(hap: API['hap'], input: ProjectionInput, trust: RowTrust, field: string): readonly ProjectedValue[] {
+  const running = booleanOf(trustedGroup(input, trust, 'pump'), field);
+
+  return published([{ characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, running) }]);
+}
+
+function mainsPowerValues(characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const mainsPresent = booleanOf(trustedGroup(input, trust, 'power'), 'mainsPresent');
+
+  return published([{ characteristic: characteristics.MainsPowerPresent, value: mainsPresent }]);
+}
+
+function mainsPowerLostValues(hap: API['hap'], input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
+  const mainsPresent = booleanOf(trustedGroup(input, trust, 'power'), 'mainsPresent');
+
+  return published([
+    { characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, inverted(mainsPresent)) },
+    // Mains loss is a condition the device reports, not a fault of the power
+    // service, so `StatusFault` stays at `NO_FAULT` in both states (D-008).
+    { characteristic: hap.Characteristic.StatusFault, value: mainsPresent === undefined ? undefined : hap.Characteristic.StatusFault.NO_FAULT },
+  ]);
+}
+
+// The offline adapter reads the accessory's own confirmation count, never a
+// reported field: `data.offline` is what the device says about itself, and a
+// physical-device alert raised from it would fire on a transport hiccup
+// (RES-03, D-016).
+function offlineValues(hap: API['hap'], input: ProjectionInput): readonly ProjectedValue[] {
+  return published([{ characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, input.offlineConfirmed) }]);
+}
+
 function toRow(definition: RowDefinition): ServiceRow {
   const { kind, displayName, scope, toleratedDistrust, serviceClass, values } = definition;
 
@@ -181,30 +347,78 @@ function toRow(definition: RowDefinition): ServiceRow {
     serviceClass,
 
     project(input) {
-      return isRowTrusted(this, input.untrustedScopes) ? values(input) : [];
+      return isRowTrusted(this, input.untrustedScopes) ? values(input, this) : [];
     },
   };
 }
 
-/**
- * Answers every service this accessory publishes, in the order it publishes them.
- *
- * The order is the catalogue's own and never depends on configuration, so
- * suppressing one adapter never reorders the rest. Building the catalogue
- * touches nothing outside itself: no accessory is read and no service is added.
- */
-export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
-  const { MainsPowerPresent } = createCustomCharacteristics(hap);
-  const { SumpMainsPowerService } = createCustomServices(hap);
+function waterDefinitions(hap: API['hap'], characteristics: CustomCharacteristics, services: CustomServices): readonly RowDefinition[] {
+  return [
+    {
+      kind: 'sump-pit-flood',
+      displayName: 'Sump Pit Flood',
+      scope: 'water',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.LeakSensor,
+      values: (input, trust) => floodValues(hap, input, trust),
+    },
+    {
+      kind: 'sump-pit-level',
+      displayName: 'Sump Pit Level',
+      scope: 'water',
+      toleratedDistrust: [],
+      serviceClass: services.SumpPitService,
+      values: (input, trust) => sumpPitLevelValues(hap, characteristics, input, trust),
+    },
+  ];
+}
 
-  const definitions: readonly RowDefinition[] = [
+function pumpDefinitions(hap: API['hap'], characteristics: CustomCharacteristics, services: CustomServices): readonly RowDefinition[] {
+  return [
+    {
+      kind: 'primary-pump',
+      displayName: 'Primary Pump',
+      scope: 'pump',
+      toleratedDistrust: [],
+      serviceClass: services.PumpService,
+      values: (input, trust) => primaryPumpValues(hap, characteristics, input, trust),
+    },
+    {
+      kind: 'primary-pump-running',
+      displayName: 'Primary Pump Running',
+      scope: 'pump',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => pumpActivityValues(hap, input, trust, 'primaryRunning'),
+    },
+    {
+      kind: 'backup-pump',
+      displayName: 'Backup Pump',
+      scope: 'pump',
+      toleratedDistrust: [],
+      serviceClass: services.PumpService,
+      values: (input, trust) => backupPumpValues(hap, characteristics, input, trust),
+    },
+    {
+      kind: 'backup-pump-activated',
+      displayName: 'Backup Pump Activated',
+      scope: 'pump',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.ContactSensor,
+      values: (input, trust) => pumpActivityValues(hap, input, trust, 'backupRunning'),
+    },
+  ];
+}
+
+function powerDefinitions(hap: API['hap'], characteristics: CustomCharacteristics, services: CustomServices): readonly RowDefinition[] {
+  return [
     {
       kind: 'sump-mains-power',
       displayName: 'Sump Mains Power',
       scope: 'power',
       toleratedDistrust: [],
-      serviceClass: SumpMainsPowerService,
-      values: (input) => mainsPowerValues(MainsPowerPresent, input),
+      serviceClass: services.SumpMainsPowerService,
+      values: (input, trust) => mainsPowerValues(characteristics, input, trust),
     },
     {
       kind: 'mains-power-lost',
@@ -212,8 +426,13 @@ export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
       scope: 'power',
       toleratedDistrust: [],
       serviceClass: hap.Service.ContactSensor,
-      values: (input) => mainsPowerLostValues(hap, input),
+      values: (input, trust) => mainsPowerLostValues(hap, input, trust),
     },
+  ];
+}
+
+function connectivityDefinitions(hap: API['hap']): readonly RowDefinition[] {
+  return [
     {
       kind: 'basement-guardian-offline',
       displayName: 'Basement Guardian Offline',
@@ -222,6 +441,26 @@ export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
       serviceClass: hap.Service.ContactSensor,
       values: (input) => offlineValues(hap, input),
     },
+  ];
+}
+
+/**
+ * Answers every service this accessory publishes, in the order it publishes them.
+ *
+ * The order is the catalogue's own and never depends on configuration or on
+ * input, so suppressing one adapter never reorders the rest and no row's output
+ * depends on another row having been projected first. Building the catalogue
+ * touches nothing outside itself: no accessory is read and no service is added.
+ */
+export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
+  const characteristics = createCustomCharacteristics(hap);
+  const services = createCustomServices(hap);
+
+  const definitions: readonly RowDefinition[] = [
+    ...waterDefinitions(hap, characteristics, services),
+    ...pumpDefinitions(hap, characteristics, services),
+    ...powerDefinitions(hap, characteristics, services),
+    ...connectivityDefinitions(hap),
   ];
 
   return definitions.map((definition) => toRow(definition));

@@ -30,12 +30,22 @@ const CONTACT_NOT_DETECTED = 1;
 // expose them -- written independently of the production constant.
 const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault'];
 
-// The three services this accessory publishes, in the catalogue's declared order.
+// Every service this accessory publishes, in the catalogue's declared order.
 const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
+  { kind: 'sump-pit-flood', subtype: 'sump-pit-flood', name: 'Sump Pit Flood' },
+  { kind: 'sump-pit-level', subtype: 'sump-pit-level', name: 'Sump Pit Level' },
+  { kind: 'primary-pump', subtype: 'primary-pump', name: 'Primary Pump' },
+  { kind: 'primary-pump-running', subtype: 'primary-pump-running', name: 'Primary Pump Running' },
+  { kind: 'backup-pump', subtype: 'backup-pump', name: 'Backup Pump' },
+  { kind: 'backup-pump-activated', subtype: 'backup-pump-activated', name: 'Backup Pump Activated' },
   { kind: 'sump-mains-power', subtype: 'sump-mains-power', name: 'Sump Mains Power' },
   { kind: 'mains-power-lost', subtype: 'mains-power-lost', name: 'Mains Power Lost' },
   { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', name: 'Basement Guardian Offline' },
 ];
+
+// The scope each published service reads, in the same order, so a case can name the services one
+// failing scope deactivates without restating the catalogue.
+const PUBLISHED_SCOPES: readonly TrustScope[] = ['water', 'water', 'pump', 'pump', 'pump', 'pump', 'power', 'power', 'connectivity'];
 
 // Every module this plan writes under `src/accessories/`, read as source so a prohibited idiom
 // fails here by name rather than through some downstream symptom.
@@ -336,7 +346,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(warnings.length, 2);
   });
 
-  test('publishes all three services in catalogue order and marks each one active', () => {
+  test('publishes every service in catalogue order and marks each one active', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(true) }) });
@@ -348,7 +358,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.subtype)),
-      [true, true, true],
+      [true, true, true, true, true, true, true, true, true],
     );
   });
 
@@ -516,7 +526,7 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.subtype)),
-      [false, false, true],
+      PUBLISHED_SCOPES.map((scope) => scope !== 'power'),
     );
   });
 
@@ -688,7 +698,10 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot());
 
     // assert
-    assert.deepStrictEqual(basementGuardianAccessory.services, [PUBLISHED_SERVICES[0], PUBLISHED_SERVICES[2]]);
+    assert.deepStrictEqual(
+      basementGuardianAccessory.services,
+      PUBLISHED_SERVICES.filter((descriptor) => descriptor.kind !== 'mains-power-lost'),
+    );
     assert.strictEqual(accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost'), undefined);
   });
 
