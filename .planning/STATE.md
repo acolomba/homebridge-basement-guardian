@@ -103,6 +103,15 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: FakeHomebridgeApi exposes a hap member typed as the stand-in namespace, beside the deliberately widened api member. — api is widened to Homebridge own API type, which types hap as the real HAP-NodeJS namespace, so a step reaching a service class through api.hap would hand a real HAP class to a stand-in accessory.
 - [Phase 03]: Phase 3: the provisional water-level ladder and flood threshold live in src/device/waterLevel.ts alone, named PROVISIONAL_*, so closing G-002 is one reviewable edit.
 - [Phase 03]: Phase 3: FieldViolation carries the TrustScope its field owns, and decode() omits only the scopes that did not validate. undefined means the scope did not validate, never that it reported nothing.
+
+- [Phase 03, corrected 2026-08-30]: **A RED commit CAN pass the pre-commit hooks.**
+  `.pre-commit-config.yaml` runs exactly four local hooks — `npm lint`, `npm format:check`,
+  `npm typecheck`, `npm fallow`. The test suite is **not** among them, so a commit holding failing
+  (but compiling) tests passes. Plans 03-04 and 03-05 each recorded the opposite as fact and used it
+  to justify combining RED and GREEN into one commit; each had inherited the claim from the prior
+  summary rather than reading the config. Plan 03-06 checked and produced real `test(...)` →
+  `feat(...)` pairs. Any remaining plan should do the same; a RED commit only fails when its tests
+  reference a module that does not exist yet, which is a compile error, not a test failure.
 - [Phase 03]: Phase 3: the six Gemini group interfaces were not declared. The family-neutral groups already carry Gemini's exact members, so GeminiDomainState aliases ScopedDomainState; empty extending interfaces fail lint and re-declaration would duplicate them.
 - [Phase 03]: Phase 3: a defensive guard behind a validation gate is covered by constructing the broken contract it names, never by a coverage exception or a silent default.
 - [Phase 03]: D-12 confirmed: a HomeKit service subtype is its ServiceKind slug verbatim, and custom service and characteristic UUIDs are hard-coded random v4 literals outside Apple's base namespace — A seed-derived identifier would silently orphan every custom service on every installed accessory if the seed were later edited, with a green test suite. A literal cannot drift.
