@@ -69,7 +69,18 @@ function isUnknownArray(value: unknown): value is readonly unknown[] {
 // A refusal quotes the value it rejected, so an object has to be stringified;
 // String({}) reports nothing the administrator can act on. The value arrives
 // from config.json, so it is acyclic.
+//
+// Text is delimited because the two typo classes a slug refusal is least able
+// to help with are exactly the ones bare text hides: a stray leading space
+// renders as a double space nobody sees, and a pasted trailing newline
+// disappears entirely. Every other branch stays as it is: `integerRefusal`
+// shares this helper and JSON.stringify(NaN) answers 'null', which would name a
+// value the administrator never wrote (D-17).
 function describeValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+
   return typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
 }
 

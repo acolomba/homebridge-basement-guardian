@@ -188,10 +188,19 @@ for (const pollInterval of [300, 900, 3600]) {
   });
 }
 
-for (const pollInterval of [299, 3601, 3.5, '900', null]) {
-  test(`CONF-05 refuses a poll interval of ${JSON.stringify(pollInterval)}`, () => {
+// The described form is written out per row rather than derived, because text is delimited and
+// every other format is not: `NaN` reports itself and a number reports its digits.
+for (const { pollInterval, describedValue } of [
+  { pollInterval: 299, describedValue: '299' },
+  { pollInterval: 3601, describedValue: '3601' },
+  { pollInterval: 3.5, describedValue: '3.5' },
+  { pollInterval: Number.NaN, describedValue: 'NaN' },
+  { pollInterval: '900', describedValue: '"900"' },
+  { pollInterval: null, describedValue: 'null' },
+]) {
+  test(`CONF-05 refuses a poll interval of ${describedValue}`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} ${String(pollInterval)}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} ${describedValue}.` };
 
     // act
     const configResult = validateConfig(accountConfig({ pollInterval }));
@@ -222,10 +231,16 @@ for (const offlineConfirmationPollCount of [1, 2, 8]) {
   });
 }
 
-for (const offlineConfirmationPollCount of [0, 9, 1.5, '2', null]) {
-  test(`CONF-05 refuses an offline confirmation poll count of ${JSON.stringify(offlineConfirmationPollCount)}`, () => {
+for (const { offlineConfirmationPollCount, describedValue } of [
+  { offlineConfirmationPollCount: 0, describedValue: '0' },
+  { offlineConfirmationPollCount: 9, describedValue: '9' },
+  { offlineConfirmationPollCount: 1.5, describedValue: '1.5' },
+  { offlineConfirmationPollCount: '2', describedValue: '"2"' },
+  { offlineConfirmationPollCount: null, describedValue: 'null' },
+]) {
+  test(`CONF-05 refuses an offline confirmation poll count of ${describedValue}`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_COUNT_REFUSAL} ${String(offlineConfirmationPollCount)}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_COUNT_REFUSAL} ${describedValue}.` };
 
     // act
     const configResult = validateConfig(accountConfig({ offlineConfirmationPollCount }));
@@ -266,14 +281,18 @@ test('CONF-06 publishes every adapter when the configuration omits the removable
   assert.deepStrictEqual(configResult, acceptedConfig({ ignoredFaults: [] }));
 });
 
-for (const { described, entry } of [
-  { described: 'a misspelled sensor name', entry: 'mains-power-lst' },
-  { described: 'a truthful service that cannot be removed', entry: 'sump-pit-flood' },
-  { described: 'an entry that is not text', entry: 1 },
+// The last two rows are the typo classes the delimiters exist for: a stray space renders as a
+// double space nobody sees, and a pasted trailing newline disappears entirely (D-17).
+for (const { described, entry, describedValue } of [
+  { described: 'a misspelled sensor name', entry: 'mains-power-lst', describedValue: '"mains-power-lst"' },
+  { described: 'a truthful service that cannot be removed', entry: 'sump-pit-flood', describedValue: '"sump-pit-flood"' },
+  { described: 'an entry that is not text', entry: 1, describedValue: '1' },
+  { described: 'a sensor name carrying a leading space', entry: ' mains-power-lost', describedValue: '" mains-power-lost"' },
+  { described: 'a sensor name carrying a trailing newline', entry: 'mains-power-lost\n', describedValue: '"mains-power-lost\\n"' },
 ]) {
   test(`CONF-06 refuses ${described} and enumerates every removable sensor`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} ${String(entry)}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} ${describedValue}.` };
 
     // act
     const configResult = validateConfig(accountConfig({ ignoredFaults: [entry] }));
@@ -307,7 +326,7 @@ test('CONF-06 names the unrecognised entry in the refusal', () => {
 
 test('CONF-06 names the same unrecognised entry wherever it sits in the list', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} mains-power-lst.` };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} "mains-power-lst".` };
 
   // act
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['backup-pump-fault', 'mains-power-lst', 'water-sensor-fault'] }));
@@ -318,7 +337,7 @@ test('CONF-06 names the same unrecognised entry wherever it sits in the list', (
 
 test('CONF-06 refuses a repeated removable sensor and says the list must be unique', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'ignoredFaults must be a unique list, but it names mains-power-lost more than once.' };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'ignoredFaults must be a unique list, but it names "mains-power-lost" more than once.' };
 
   // act
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lost', 'primary-pump-fault', 'mains-power-lost'] }));
@@ -329,7 +348,7 @@ test('CONF-06 refuses a repeated removable sensor and says the list must be uniq
 
 for (const { supplied, describedValue } of [
   { supplied: null, describedValue: 'null' },
-  { supplied: 'mains-power-lost', describedValue: 'mains-power-lost' },
+  { supplied: 'mains-power-lost', describedValue: '"mains-power-lost"' },
   { supplied: {}, describedValue: '{}' },
   { supplied: 3, describedValue: '3' },
 ]) {
