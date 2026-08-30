@@ -16,6 +16,8 @@ import { Then } from '@cucumber/cucumber';
 import { createFakeHap } from '../fakeHap.js';
 import { createFakeAccessory } from '../fakeHomebridgeApi.js';
 
+import type { FakeCharacteristicClass, FakeHapService } from '../fakeHap.js';
+
 const HAP = createFakeHap();
 
 // The identifiers Apple assigns, written out here rather than read back from the stand-in, so the
@@ -121,6 +123,36 @@ function assertFormatDefaults(): void {
 
 Then('a fresh sensor service reads at the hap format defaults', assertFormatDefaults);
 
+function declaresOptional(service: FakeHapService, characteristicClass: FakeCharacteristicClass): boolean {
+  return service.optionalCharacteristics.some((declared) => declared.UUID === characteristicClass.UUID);
+}
+
+// The accessory pushes `StatusActive` onto every service it publishes, and `publishValue` declares
+// a characteristic first only when the service neither carries nor declares it. A stand-in whose
+// standard services declared nothing would send every one of those pushes through the declaring
+// branch while production took the other one, so the guard would be proven on a path it never runs
+// on. Apple's sensor definitions declare both status characteristics; the Battery definition
+// declares neither, which is what keeps the declaring branch reachable in production too.
+function assertStandardOptionalDeclarations(): void {
+  const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
+  const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
+  const battery = new HAP.Service.Battery('Backup Battery', 'backup-battery');
+
+  assert.deepEqual(
+    {
+      leakActive: declaresOptional(leakSensor, HAP.Characteristic.StatusActive),
+      leakFault: declaresOptional(leakSensor, HAP.Characteristic.StatusFault),
+      contactActive: declaresOptional(contactSensor, HAP.Characteristic.StatusActive),
+      contactFault: declaresOptional(contactSensor, HAP.Characteristic.StatusFault),
+      batteryActive: declaresOptional(battery, HAP.Characteristic.StatusActive),
+      batteryLevel: declaresOptional(battery, HAP.Characteristic.BatteryLevel),
+    },
+    { leakActive: true, leakFault: true, contactActive: true, contactFault: true, batteryActive: false, batteryLevel: true },
+  );
+}
+
+Then('a standard sensor service declares the optional characteristics apple declares', assertStandardOptionalDeclarations);
+
 function assertUpdateAddsTheCharacteristicItNames(): void {
   const contactSensor = new HAP.Service.ContactSensor('Water Sensor Fault', 'water-sensor-fault');
   const before = contactSensor.testCharacteristic(HAP.Characteristic.StatusActive);
@@ -140,15 +172,19 @@ function assertUpdateAddsTheCharacteristicItNames(): void {
 Then('the service adds the characteristic an update names', assertUpdateAddsTheCharacteristicItNames);
 
 // The real `addOptionalCharacteristic` is not idempotent: two calls push two entries. Production
-// guards against the second call, so the stand-in has to be able to record one.
+// guards against the second call, so the stand-in has to be able to record one. The standard
+// Battery service is the one this plugin publishes on that declares neither status characteristic,
+// so its own declarations cannot be mistaken for the two appended here.
 function assertOptionalCharacteristicsAppend(): void {
-  const contactSensor = new HAP.Service.ContactSensor('Primary Pump Fault', 'primary-pump-fault');
+  const battery = new HAP.Service.Battery('Backup Battery', 'backup-battery');
 
-  contactSensor.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
-  contactSensor.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
+  battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
+  battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
 
   assert.deepEqual(
-    contactSensor.optionalCharacteristics.map((characteristic) => characteristic.UUID),
+    battery.optionalCharacteristics
+      .filter((characteristic) => characteristic.UUID === HAP.Characteristic.StatusFault.UUID)
+      .map((characteristic) => characteristic.UUID),
     [HAP.Characteristic.StatusFault.UUID, HAP.Characteristic.StatusFault.UUID],
   );
 }

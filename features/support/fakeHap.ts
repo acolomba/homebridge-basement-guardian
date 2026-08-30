@@ -330,8 +330,21 @@ class StandInService implements FakeHapService {
   }
 }
 
-// One definition per standard service, each adding the characteristics the real definition requires.
-function defineService(uuid: string, required: readonly FakeCharacteristicClass[]): FakeServiceClass {
+// One definition per standard service, each adding the characteristics the real definition requires
+// and declaring the ones it declares optional.
+//
+// The optional list is not decoration. `publishValue` declares a characteristic before pushing it
+// only when the service neither carries nor declares it, and a stand-in that declared none would
+// send every push through the declaring branch while production took the other one -- so the guard
+// would be exercised on a path it never runs on. `Battery` genuinely declares neither status
+// characteristic, which is what keeps the declaring branch reachable here as it is in production.
+interface ServiceDefinition {
+  uuid: string;
+  required: readonly FakeCharacteristicClass[];
+  optional?: readonly FakeCharacteristicClass[];
+}
+
+function defineService({ uuid, required, optional = [] }: ServiceDefinition): FakeServiceClass {
   return class extends StandInService {
     static readonly UUID = uuid;
 
@@ -341,21 +354,40 @@ function defineService(uuid: string, required: readonly FakeCharacteristicClass[
       for (const characteristicClass of required) {
         this.addCharacteristic(characteristicClass);
       }
+
+      for (const characteristicClass of optional) {
+        this.addOptionalCharacteristic(characteristicClass);
+      }
     }
   };
 }
 
+// The optional lists carry only the members this stand-in declares; the real definitions also name
+// `StatusTampered`, which this plugin publishes on nothing.
+const SENSOR_OPTIONAL: readonly FakeCharacteristicClass[] = [CHARACTERISTIC.Name, CHARACTERISTIC.StatusActive, CHARACTERISTIC.StatusFault];
+
 const SERVICE: FakeServiceNamespace = Object.assign(StandInService, {
-  AccessoryInformation: defineService(`0000003E${APPLE_BASE_UUID}`, [
-    CHARACTERISTIC.Manufacturer,
-    CHARACTERISTIC.Model,
-    CHARACTERISTIC.SerialNumber,
-    CHARACTERISTIC.FirmwareRevision,
-    CHARACTERISTIC.Identify,
-  ]),
-  LeakSensor: defineService(`00000083${APPLE_BASE_UUID}`, [CHARACTERISTIC.LeakDetected]),
-  ContactSensor: defineService(`00000080${APPLE_BASE_UUID}`, [CHARACTERISTIC.ContactSensorState]),
-  Battery: defineService(`00000096${APPLE_BASE_UUID}`, [CHARACTERISTIC.StatusLowBattery]),
+  AccessoryInformation: defineService({
+    uuid: `0000003E${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.Manufacturer, CHARACTERISTIC.Model, CHARACTERISTIC.SerialNumber, CHARACTERISTIC.FirmwareRevision, CHARACTERISTIC.Identify],
+  }),
+  LeakSensor: defineService({
+    uuid: `00000083${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.LeakDetected],
+    optional: [...SENSOR_OPTIONAL, CHARACTERISTIC.StatusLowBattery],
+  }),
+  ContactSensor: defineService({
+    uuid: `00000080${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.ContactSensorState],
+    optional: [...SENSOR_OPTIONAL, CHARACTERISTIC.StatusLowBattery],
+  }),
+  // The real `Battery` declares neither `StatusActive` nor `StatusFault`, so the accessory's push
+  // of `StatusActive` onto it declares the characteristic first, in production as here.
+  Battery: defineService({
+    uuid: `00000096${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.StatusLowBattery],
+    optional: [CHARACTERISTIC.BatteryLevel, CHARACTERISTIC.ChargingState, CHARACTERISTIC.Name],
+  }),
 });
 
 /** The hand-built HAP namespace, in the shape a plugin consumes `api.hap` in. */

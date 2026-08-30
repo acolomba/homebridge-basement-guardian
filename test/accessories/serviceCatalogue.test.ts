@@ -1145,11 +1145,13 @@ describe('removeServiceIfPresent', () => {
 });
 
 describe('publishValue', () => {
+  // The standard Battery service declares neither status characteristic, so it is the row whose
+  // `StatusActive` push has to declare the characteristic before pushing it.
   test('declares an undeclared characteristic once and pushes the value', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowOf(hap, 'mains-power-lost'));
+    const service = ensureService(accessory, rowNamed(hap, 'Backup Battery'));
 
     // act
     publishValue(service, hap.Characteristic.StatusActive, true);
@@ -1168,7 +1170,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowOf(hap, 'mains-power-lost'));
+    const service = ensureService(accessory, rowNamed(hap, 'Backup Battery'));
     publishValue(service, hap.Characteristic.StatusActive, true);
 
     // act
@@ -1184,18 +1186,28 @@ describe('publishValue', () => {
     );
   });
 
-  test('declares no characteristic the service already declares', () => {
-    // arrange
-    const hap = hapNamespace();
-    const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowOf(hap, 'sump-mains-power'));
+  // Both service families the plugin publishes on: the vendor-defined services declare the two
+  // status characteristics themselves, and so do the standard sensors Apple defines.
+  for (const displayName of ['Sump Mains Power', 'Mains Power Lost']) {
+    test(`declares no characteristic the ${displayName} service already declares`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const accessory = accessoryStandIn();
+      const service = ensureService(accessory, rowNamed(hap, displayName));
 
-    // act
-    publishValue(service, hap.Characteristic.StatusActive, true);
+      // act
+      publishValue(service, hap.Characteristic.StatusActive, true);
 
-    // assert
-    assert.strictEqual(service.optionalCharacteristics.filter((declared) => declared.UUID === hap.Characteristic.StatusActive.UUID).length, 1);
-  });
+      // assert
+      assert.deepStrictEqual(
+        {
+          value: service.getCharacteristic(hap.Characteristic.StatusActive).value,
+          declared: service.optionalCharacteristics.filter((declared) => declared.UUID === hap.Characteristic.StatusActive.UUID).length,
+        },
+        { value: true, declared: 1 },
+      );
+    });
+  }
 
   test('pushes onto a characteristic the service already carries without declaring it optional', () => {
     // arrange
@@ -1210,7 +1222,7 @@ describe('publishValue', () => {
     assert.deepStrictEqual(
       {
         value: service.getCharacteristic(hap.Characteristic.ContactSensorState).value,
-        declared: service.optionalCharacteristics.length,
+        declared: service.optionalCharacteristics.filter((declared) => declared.UUID === hap.Characteristic.ContactSensorState.UUID).length,
       },
       { value: CONTACT_NOT_DETECTED, declared: 0 },
     );
