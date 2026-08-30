@@ -109,7 +109,7 @@ A removed sensor is the only thing you lose. The plugin still reads the conditio
 
 CAUTION: If `ignoredFaults` holds a name the plugin does not publish, or holds the same name twice, the plugin refuses the configuration and does not start. The log names the entry that is wrong and lists all seven valid names. A typo therefore leaves your pump unmonitored until you correct it.
 
-Two services cannot be removed. `Sump Pit Flood` is the flood sensor, and `Backup Battery` is the standard battery service. Neither name is accepted in `ignoredFaults`.
+Those seven names are the only names `ignoredFaults` accepts. Every other service the plugin publishes reports what the system reports, so it cannot be removed. `Sump Pit Flood`, `Sump Pit Level`, `Primary Pump`, `Primary Pump Running`, `Backup Pump`, `Sump Mains Power`, and both backup battery services stay in your home.
 
 ## Values that are estimates
 
