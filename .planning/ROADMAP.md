@@ -109,7 +109,7 @@ Plans:
   5. Each accessory carries truthful manufacturer, model, serial-number, and firmware metadata sourced only from validated vendor identity fields, and the vendor `deviceId` never becomes a user-visible value.
   6. A profile or payload that stops validating after publication degrades the accessory in place, keeping its identity and last valid values and disabling commands, instead of unregistering it.
 
-**Plans**: 3/6 plans executed
+**Plans**: 4/6 plans executed
 
 Plans:
 **Wave 1**
@@ -123,7 +123,7 @@ Plans:
 
 **Wave 3** *(blocked on 02-03)*
 
-- [ ] 02-04-PLAN.md — Accessory identity unification and vendor-rename adoption
+- [x] 02-04-PLAN.md — Accessory identity unification and vendor-rename adoption
 
 **Wave 4** *(blocked on 02-04 and 02-02)*
 
@@ -201,7 +201,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
-| 2. Safe Gemini Discovery and Identity | 3/6 | In Progress|  |
+| 2. Safe Gemini Discovery and Identity | 4/6 | In Progress|  |
 | 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
 | 5. Degraded Operation and Recovery | 0/TBD | Not started | - |
