@@ -332,7 +332,7 @@ describe('BasementGuardianPlatform', () => {
     // arrange
     const messages: string[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
-    const refusedReason = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is Bearer [redacted].';
+    const refusedReason = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is "Bearer [redacted]".';
 
     // act
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, pollInterval: 'Bearer leaked-token' }, api);
