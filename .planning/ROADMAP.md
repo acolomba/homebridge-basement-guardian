@@ -147,7 +147,38 @@ Plans:
   5. Standard services are used only for their defined meaning, while exact unsupported facts remain available through read-only vendor-defined characteristics.
   6. An invalid, omitted, or stale field preserves the last valid value and faults or deactivates only the narrowest owning scope, and `serial_communications === false` immediately activates `Pump Controller Link Lost` while exposing when trustworthy controller data last arrived.
 
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Cucumber HomeKit harness: one class-shaped HAP stand-in at the real signatures, plus the zero-advance clock step
+- [ ] 03-02-PLAN.md — Gemini water-level ladder and per-field trust scoping
+- [ ] 03-03-PLAN.md — `ignoredFaults` configuration surface and the seven-slug contract
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-04-PLAN.md — Tracer: `ac_power` and confirmed offline reach published HomeKit characteristics end to end
+
+**Wave 3** *(blocked on 03-04)*
+
+- [ ] 03-05-PLAN.md — The complete service catalogue: water, both pumps, the battery pair, and the five fault adapters
+- [ ] 03-06-PLAN.md — Controller-link distrust, live state to HomeKit, and the four-layer immediacy gate
+
+**Wave 4** *(blocked on 03-05 and 03-06)*
+
+- [ ] 03-07-PLAN.md — End-to-end safety scenarios and the static immediacy gate
+
+**Wave 5** *(blocked on 03-07)*
+
+- [ ] 03-08-PLAN.md — Retire stale build exemptions and document inactive scopes, `ignoredFaults`, and the estimated values
+
+**Cross-cutting constraints:**
+
+- `.fallowrc.json` is edited by exactly one plan, alone in its wave; `fallow dupes` sits at a zero baseline, so the service catalogue must be table-driven rather than fourteen inline publish blocks.
+- The Cucumber HAP stand-in lands before any plan whose scenarios depend on it.
+
+**UI hint**: no
 
 ### Phase 4: Pump Records and Official Controls
 
@@ -202,7 +233,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
-| 3. Safety Monitoring in HomeKit | 0/TBD | Not started | - |
+| 3. Safety Monitoring in HomeKit | 0/8 | Planned | - |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
 | 5. Degraded Operation and Recovery | 0/TBD | Not started | - |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |
