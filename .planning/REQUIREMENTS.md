@@ -12,7 +12,7 @@
 - [ ] **CONF-03**: When required credentials are absent, the plugin logs a clear configuration error and starts no network, timer, or accessory work.
 - [ ] **CONF-04**: Administrator can omit `clientId` to use the bundled public Auth0 client ID or set the optional override without exposing any other vendor protocol constants.
 - [ ] **CONF-05**: Administrator can set the REST poll interval from 300 through 3600 seconds, with approximately 900 seconds by default, and an integer `offlineConfirmationPollCount` from 1 through 8, with 2 by default. The `D-015` worst-case offline confirmation of 105 to 120 minutes assumes the default interval; a 3600-second interval with a count of 8 extends confirmation to approximately eight hours.
-- [ ] **CONF-06**: Administrator can use a unique, enumerated `ignoredFaults` list to remove only selected Apple Home notification adapters while all truthful source state remains available. The list enumerates seven slugs rather than eight because `Primary Pump Running` is an activity adapter, not a notification adapter, and it is deliberately not removable.
+- [x] **CONF-06**: Administrator can use a unique, enumerated `ignoredFaults` list to remove only selected Apple Home notification adapters while all truthful source state remains available. The list enumerates seven slugs rather than eight because `Primary Pump Running` is an activity adapter, not a notification adapter, and it is deliberately not removable.
 
 ### Authentication and Secret Handling
 
@@ -45,9 +45,9 @@
 - [x] **SAFE-03**: Every live backup-pump activation, including self-test activity, updates immediately without inventing a cause; recovered timestamp evidence adds one de-duplicated record without a late sensor pulse or notification.
 - [x] **SAFE-04**: Primary pump, backup pump/fuse, water sensor, controller-link, and confirmed-offline faults update owning-service status plus five distinct Apple Home adapters, with exact raw causes retained and no aggregate System Fault adapter.
 - [x] **SAFE-05**: Mains presence appears truthfully on the read-only `Sump Mains Power` service and `Mains Power Lost` follows `ac_power === false` independently of pump health.
-- [ ] **SAFE-06**: Backup battery services expose exact charging, low-voltage, health, and protection-band facts plus clearly labeled 25/50/75/100 estimated standard levels, without misusing filter-maintenance semantics.
+- [x] **SAFE-06**: Backup battery services expose exact charging, low-voltage, health, and protection-band facts plus clearly labeled 25/50/75/100 estimated standard levels, without misusing filter-maintenance semantics.
 - [x] **SAFE-07**: Current-condition and adapter transitions publish immediately and clear immediately on valid source recovery, with no plugin alert-delay setting or durable acknowledgement latch.
-- [ ] **SAFE-08**: Standard HomeKit semantics are used wherever truthful, vendor-defined characteristics are read-only, and no device value is mislabeled as an unrelated standard measurement or control merely for Apple Home visibility.
+- [x] **SAFE-08**: Standard HomeKit semantics are used wherever truthful, vendor-defined characteristics are read-only, and no device value is mislabeled as an unrelated standard measurement or control merely for Apple Home visibility.
 
 ### Pump Records and Official Controls
 
@@ -112,7 +112,7 @@
 | CONF-03 | Phase 1 | Pending |
 | CONF-04 | Phase 1 | Pending |
 | CONF-05 | Phase 1 | Pending |
-| CONF-06 | Phase 3 | Pending |
+| CONF-06 | Phase 3 | Complete |
 | AUTH-01 | Phase 1 | Pending |
 | AUTH-02 | Phase 1 | Pending |
 | SYNC-01 | Phase 1 | Pending |
@@ -133,9 +133,9 @@
 | SAFE-03 | Phase 3 | Complete |
 | SAFE-04 | Phase 3 | Complete |
 | SAFE-05 | Phase 3 | Complete |
-| SAFE-06 | Phase 3 | Pending |
+| SAFE-06 | Phase 3 | Complete |
 | SAFE-07 | Phase 3 | Complete |
-| SAFE-08 | Phase 3 | Pending |
+| SAFE-08 | Phase 3 | Complete |
 | CTRL-01 | Phase 4 | Pending |
 | CTRL-02 | Phase 4 | Pending |
 | CTRL-03 | Phase 4 | Pending |

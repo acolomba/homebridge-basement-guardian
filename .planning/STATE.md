@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
-status: executing
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-08-30T19:48:59.267Z"
+status: verifying
+stopped_at: Completed 03-08-PLAN.md
+last_updated: "2026-08-30T20:11:37.481Z"
 last_activity: 2026-08-30
 last_activity_desc: Phase 03 execution started
-state_head: eb414cce7ed4856a9f1dfef081984e2d1f916580
+state_head: c2fda9660346a83172a1aa0ec641347aac915b2a
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 30
+  completed_plans: 31
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-30 — Phase 03 execution started
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
@@ -71,6 +71,7 @@ Progress: [███░░░░░░░] 2 of 6 phases complete ([███░
 | Phase 03 P05 | 60 min | 3 tasks | 7 files |
 | Phase 03 P06 | 45 min | 3 tasks | 7 files |
 | Phase 03 P07 | 45 min | 2 tasks | 5 files |
+| Phase 03 P08 | 38 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: Both alarm characteristics activate at 1 and rest at 0, so one pair of sensor steps covers the leak sensor and the seven contact adapters
 - [Phase 03]: The static gate reads an import rather than a mention, so the gate's own prose naming the forbidden modules does not report itself
 - [Phase 03]: Every commit in this plan is typed test, because it ships no production code and a feat commit would claim a feature that does not exist
+- [Phase 03]: src/device/health.ts left .fallowrc.json ignoreFindings after measurement, not because DeviceHealth gained a production consumer — production: false makes fallow count test files as consumers, so DeviceHealth's test-only importer keeps the gate green. Three of the other four declarations gained real production consumers this phase.
+- [Phase 03]: An exemption removal is proven by planting a dead export in the newly checked module, because an unlisted module and a clean module produce the identical green
+- [Phase 03]: The src/device/events.ts exemption stays although it no longer suppresses a finding; every declaration in the module still has no production consumer
 
 ### Pending Todos
 
@@ -180,6 +184,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T19:48:38.460Z
-Stopped at: Completed 03-07-PLAN.md
+Last session: 2026-08-30T20:11:37.176Z
+Stopped at: Completed 03-08-PLAN.md
 Resume file: None
