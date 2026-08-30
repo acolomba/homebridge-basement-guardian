@@ -172,6 +172,14 @@ function advanceTheScenarioClock(this: BasementGuardianWorld): void {
 
 When('the scenario clock moves forward', advanceTheScenarioClock);
 
+// SAFE-07 forbids any plugin-added delay, so a scenario asserting a transition after zero elapsed
+// scenario time is one of the layers proving the transition was not deferred (D-18).
+function theScenarioClockDoesNotMove(this: BasementGuardianWorld): void {
+  this.advanceClock(0);
+}
+
+When('the scenario clock does not move', theScenarioClockDoesNotMove);
+
 async function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const fields = fieldsOf(table);
 
