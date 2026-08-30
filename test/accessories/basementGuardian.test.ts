@@ -28,6 +28,12 @@ const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
 const CONTACT_DETECTED = 0;
 const CONTACT_NOT_DETECTED = 1;
+const LEAK_DETECTED = 1;
+
+// The one legal water level code above the flood threshold, and the percentage the ladder maps it
+// to (D-01, D-03).
+const FLOODING_LEVEL_CODE = 31;
+const FLOODING_LEVEL_PERCENT = 100;
 
 // Every scope the accessory degrades when no adapter resolves, in the stable order `untrusted` must
 // expose them -- written independently of the production constant.
@@ -297,6 +303,7 @@ function powerFamily(mainsPresent?: boolean): DeviceFamily<unknown> {
 interface LinkOverrides {
   linkPresent: boolean;
   mainsPresent?: boolean;
+  flooded?: boolean;
   violations?: readonly FieldViolation[];
 }
 
@@ -304,12 +311,12 @@ interface LinkOverrides {
 // reported condition rather than a validation failure, so the whole payload keeps validating and
 // every scope group decodes while the link is down -- which is what makes the distrust the
 // accessory's own decision rather than a consequence of a failed field.
-function linkFamily({ linkPresent, mainsPresent = true, violations = [] }: LinkOverrides): DeviceFamily<unknown> {
+function linkFamily({ linkPresent, mainsPresent = true, flooded = false, violations = [] }: LinkOverrides): DeviceFamily<unknown> {
   return fakeFamily({
     validate: () => (violations.length === 0 ? { valid: true } : { valid: false, violations }),
     decode: () => ({
       metadata: { mcuFirmwareVersion: '1.2.3' },
-      water: { levelCode: 0, levelPercent: 0, flooded: false },
+      water: flooded ? { levelCode: FLOODING_LEVEL_CODE, levelPercent: FLOODING_LEVEL_PERCENT, flooded } : { levelCode: 0, levelPercent: 0, flooded },
       pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
       power: { mainsPresent },
       battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
@@ -438,6 +445,63 @@ describe('createBasementGuardianAccessory', () => {
     );
     assert.deepStrictEqual(basementGuardianAccessory.services, []);
     assert.strictEqual(accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value, beforeUpdate);
+  });
+
+  test('deactivates every service it already published when the family stops resolving', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+    const whileResolving = PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name));
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      whileResolving,
+      PUBLISHED_SERVICES.map(() => true),
+    );
+    assert.deepStrictEqual(
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
+      PUBLISHED_SERVICES.map(() => false),
+    );
+  });
+
+  test('retains the flood it published when the family stops resolving', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true, flooded: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        flood: valueOf(accessory, 'Sump Pit Flood', HAP.Characteristic.LeakDetected),
+        floodActive: statusActiveOf(accessory, 'Sump Pit Flood'),
+        level: valueOf(accessory, 'Sump Pit Level', HAP.Characteristic.WaterLevel),
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+      },
+      { flood: LEAK_DETECTED, floodActive: false, level: FLOODING_LEVEL_PERCENT, reported: true },
+    );
+  });
+
+  test('adds no service when the family stops resolving before it ever resolved', (t) => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }) });
+    const addServiceSpy = t.mock.method(accessory, 'addService');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual({ services: basementGuardianAccessory.services, added: addServiceSpy.mock.callCount() }, { services: [], added: 0 });
   });
 
   test('logs the degradation transition exactly once across repeated degraded updates', () => {

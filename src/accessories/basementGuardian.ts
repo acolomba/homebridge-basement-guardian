@@ -11,9 +11,11 @@
  *
  * `update()` re-resolves the family registry and re-validates on every call. A
  * `deviceTypeId` that stops resolving to an implemented family degrades the
- * whole accessory in place: it never calls `decode()`, never touches
- * `AccessoryInformation`, and never adds a second one (every
- * `PlatformAccessory` already carries one from its own construction). A payload
+ * whole accessory in place: it marks every service it has already published
+ * inactive while leaving their last trustworthy values exactly where they are,
+ * and it never calls `decode()`, never touches `AccessoryInformation`, and
+ * never adds a second one (every `PlatformAccessory` already carries one from
+ * its own construction). A payload
  * that fails one field's shape costs only the scope that field owns, because
  * the family still decodes every scope whose own fields validated (D-014).
  *
@@ -27,7 +29,7 @@
  * requires the accessory to keep (D-014, DEV-08).
  */
 
-import { createServiceCatalogue, ensureService, isRowTrusted, publishValue, removeServiceIfPresent } from './serviceCatalogue.js';
+import { createServiceCatalogue, ensureService, isRowTrusted, publishedService, publishValue, removeServiceIfPresent } from './serviceCatalogue.js';
 import { isNotificationServiceKind } from './services.js';
 
 import type { ProjectionInput } from './serviceCatalogue.js';
@@ -358,6 +360,23 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return descriptors;
   }
 
+  // Marks every service the accessory has already published inactive, and adds
+  // none. An accessory whose family has never resolved therefore still shows no
+  // service at all, while one that published before its profile stopped
+  // resolving stops reporting its retained values as trustworthy: without this,
+  // a quiet system would keep publishing "no leak, pump normal, battery fine,
+  // active" forever, which is the false all-clear the whole plugin exists to
+  // prevent (D-05, D-014, DEV-08).
+  function deactivatePublishedRows(): void {
+    for (const row of catalogue) {
+      const service = publishedService(accessory, row);
+
+      if (service !== undefined) {
+        publishValue(service, hap.Characteristic.StatusActive, false);
+      }
+    }
+  }
+
   // The transition into a degraded state logs once; recovery clears the flag,
   // so a sustained degradation says nothing further while a later relapse still
   // reports itself (D-05). A lost controller link is deliberately not a
@@ -433,10 +452,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       if (outcome.kind !== 'implemented') {
         // An unresolved family cannot say which scope a value belongs to, so
         // this is the one failure that still degrades every scope at once. It
-        // never calls `decode()` and never touches `AccessoryInformation`. The
+        // never calls `decode()` and never touches `AccessoryInformation`, and
+        // it publishes no value other than the deactivation, so every service
+        // keeps the last values a trustworthy snapshot produced. The
         // controller-link flag is left where it was, because a family that no
         // longer resolves reports nothing about the link either way.
         untrusted = untrustedScopesOf(reasonsOf(NON_CONNECTIVITY_SCOPES, 'invalid'), lastTrustedAt);
+        deactivatePublishedRows();
         reportDegradation();
 
         return;

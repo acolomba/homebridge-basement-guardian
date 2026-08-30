@@ -618,18 +618,29 @@ export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
 }
 
 /**
- * Answers the service a row publishes on, adding it when the accessory does not
- * carry it yet.
+ * Answers the service a row already publishes on, or `undefined` when the
+ * accessory does not carry it.
  *
  * The lookup always passes the service class rather than its identifier string:
  * the string overload matches a display name only, so it answers `undefined`
- * for an identifier and turns this get-or-add into an `addService` that throws
- * on the duplicate. Passing the class also matches a service restored from the
- * Homebridge cache, which arrives as a plain `Service` whose class the running
- * code no longer recognises.
+ * for an identifier and would turn a get-or-add into an `addService` that
+ * throws on the duplicate. Passing the class also matches a service restored
+ * from the Homebridge cache, which arrives as a plain `Service` whose class the
+ * running code no longer recognises.
+ *
+ * This is the one lookup an accessory reaches for when it must act on what it
+ * already published without publishing anything new.
+ */
+export function publishedService(accessory: PlatformAccessory, row: ServiceRow): Service | undefined {
+  return accessory.getServiceById(row.serviceClass, row.subtype);
+}
+
+/**
+ * Answers the service a row publishes on, adding it when the accessory does not
+ * carry it yet.
  */
 export function ensureService(accessory: PlatformAccessory, row: ServiceRow): Service {
-  return accessory.getServiceById(row.serviceClass, row.subtype) ?? accessory.addService(row.serviceClass, row.displayName, row.subtype);
+  return publishedService(accessory, row) ?? accessory.addService(row.serviceClass, row.displayName, row.subtype);
 }
 
 /**
@@ -641,7 +652,7 @@ export function ensureService(accessory: PlatformAccessory, row: ServiceRow): Se
  * to stop monitoring (CONF-06, D-017).
  */
 export function removeServiceIfPresent(accessory: PlatformAccessory, row: ServiceRow): boolean {
-  const service = accessory.getServiceById(row.serviceClass, row.subtype);
+  const service = publishedService(accessory, row);
 
   if (service === undefined) {
     return false;

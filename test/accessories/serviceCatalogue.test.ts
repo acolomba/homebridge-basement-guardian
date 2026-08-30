@@ -6,7 +6,14 @@ import { createFakeHap } from '../../features/support/fakeHap.js';
 import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
-import { createServiceCatalogue, ensureService, isRowTrusted, publishValue, removeServiceIfPresent } from '../../src/accessories/serviceCatalogue.js';
+import {
+  createServiceCatalogue,
+  ensureService,
+  isRowTrusted,
+  publishedService,
+  publishValue,
+  removeServiceIfPresent,
+} from '../../src/accessories/serviceCatalogue.js';
 
 import type { ProjectedValue, ProjectionInput, RowTrust, ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { ServiceKind } from '../../src/accessories/services.js';
@@ -995,6 +1002,42 @@ describe('isRowTrusted', () => {
   test('trusts a row while a different scope is untrusted', () => {
     // act & assert
     assert.strictEqual(isRowTrusted({ scope: 'connectivity', toleratedDistrust: [] }, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
+  });
+});
+
+describe('publishedService', () => {
+  test('answers nothing for a row the accessory does not carry', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+
+    // act & assert
+    assert.strictEqual(publishedService(accessory, rowOf(hap, 'mains-power-lost')), undefined);
+  });
+
+  test('answers the service the accessory already carries for the row', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'mains-power-lost');
+    const added = ensureService(accessory, row);
+
+    // act & assert
+    assert.strictEqual(publishedService(accessory, row), added);
+  });
+
+  test('tells two rows of one subtype apart by their service type', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const facts = rowNamed(hap, 'Backup Battery Facts');
+    ensureService(accessory, facts);
+
+    // act
+    const carried = { battery: publishedService(accessory, rowNamed(hap, 'Backup Battery')), facts: publishedService(accessory, facts)?.displayName };
+
+    // assert
+    assert.deepStrictEqual(carried, { battery: undefined, facts: 'Backup Battery Facts' });
   });
 });
 
