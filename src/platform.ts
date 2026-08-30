@@ -205,20 +205,30 @@ function updateDiscoveredDevice(
     services: basementGuardianAccessory.services,
   };
 
-  basementGuardianAccessory.update(snapshot, 'poll');
+  // The comparison runs even when the update throws, because the identity above
+  // is already on the accessory by the time it can. Letting the throw skip it
+  // would leave the mutation permanently unpersisted: the next poll reads its
+  // own baseline off this same already-mutated accessory, finds nothing
+  // different, and never calls for it again, so a vendor rename that coincided
+  // with one failing decode stays out of the Homebridge cache for the whole run
+  // (DEV-06). The throw still travels to the dispatch loop, which logs it and
+  // moves on to the next device.
+  try {
+    basementGuardianAccessory.update(snapshot, 'poll');
+  } finally {
+    const nextState = {
+      displayName: rename.displayName,
+      lastVendorName: rename.lastVendorName,
+      device: nextDevice,
+      services: basementGuardianAccessory.services,
+    };
 
-  const nextState = {
-    displayName: rename.displayName,
-    lastVendorName: rename.lastVendorName,
-    device: nextDevice,
-    services: basementGuardianAccessory.services,
-  };
-
-  // A context mutation Homebridge does not know about is invisible on disk
-  // until the next full register/unregister cycle, so only a real change
-  // earns the call rather than persisting an identical value on every poll.
-  if (!isDeepStrictEqual(previousState, nextState)) {
-    context.api.updatePlatformAccessories([accessory]);
+    // A context mutation Homebridge does not know about is invisible on disk
+    // until the next full register/unregister cycle, so only a real change
+    // earns the call rather than persisting an identical value on every poll.
+    if (!isDeepStrictEqual(previousState, nextState)) {
+      context.api.updatePlatformAccessories([accessory]);
+    }
   }
 }
 

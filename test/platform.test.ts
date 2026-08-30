@@ -930,6 +930,33 @@ describe('registerDiscoveredDevices', () => {
     );
   });
 
+  test('persists a vendor rename it already applied when the update that follows it throws', () => {
+    // arrange
+    const updateCalls: FakeAccessory[][] = [];
+    const api = fakeDiscoveryApi([], updateCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const existing = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
+    existing.context.lastVendorName = 'Sump System';
+    existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(ACCESSORY_UUID, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
+    const family = recoveringFamily();
+    const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family }), shouldLog: () => true };
+
+    // act
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry, log: createSilentLog() }), [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        displayName: existing.displayName,
+        persisted: updateCalls.map((call) => call.map((persistedAccessory) => persistedAccessory.displayName)),
+      },
+      { displayName: 'Sump Sentry', persisted: [['Sump Sentry']] },
+    );
+  });
+
   test('does nothing for a deviceId the store holds no snapshot for', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
