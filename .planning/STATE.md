@@ -1,47 +1,50 @@
 ---
 gsd_state_version: 1.0
-current_phase: 02
-current_phase_name: Safe Gemini Discovery and Identity
-status: executing
-stopped_at: Phase 1 complete and verified; ready for /gsd-plan-phase 2
-last_updated: "2026-08-29T22:09:22.559Z"
+current_phase: 3
+current_phase_name: Safety Monitoring in HomeKit
+status: planning
+stopped_at: Phase 02 complete, ready to plan Phase 3
+last_updated: "2026-08-30T03:32:32.087Z"
 last_activity: 2026-08-29
-last_activity_desc: Phase 02 execution started
-state_head: 0ce2e89bbdfecb6e2f1a5838a73a2218eb128dda
+last_activity_desc: Phase 02 complete, transitioned to Phase 3
+state_head: 5eca722481cc3dd9477189e83a56aa62e60bc0cc
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 23
-  completed_plans: 17
-  percent: 17
+  completed_plans: 23
+  percent: 33
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-27)
+See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 02 — Safe Gemini Discovery and Identity
+**Current focus:** Phase 3 — Safety Monitoring in HomeKit
 
 ## Current Position
 
-Phase: 02 (Safe Gemini Discovery and Identity) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 02
-Last activity: 2026-08-29 — Phase 02 execution started
+Phase: 3 — Safety Monitoring in HomeKit
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-29 — Phase 02 complete, transitioned to Phase 3
 
-Phase 01 is COMPLETE as of 2026-08-29. All four gates settled and all three UAT items
-passed against real hardware. Verification is `passed` at 22/22.
+Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
+three UAT items passed against real hardware.
 
-Progress: [██░░░░░░░░] 1 of 6 phases complete (17%)
+Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
+backstop-tagged UAT items accepted on structural evidence and no defects found.
+
+Progress: [███░░░░░░░] 2 of 6 phases complete (33%) — 23/23 plans
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 6
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -49,7 +52,7 @@ Progress: [██░░░░░░░░] 1 of 6 phases complete (17%)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 02 | 6 | - | - |
 
 **Recent Trend:**
 
@@ -103,6 +106,12 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 - G-003: Validate both pump Contact Sensors in an eligible real Apple home before release.
 - G-004: Validate `Sump Pit Flood` Leak Sensor notification delivery in a real eligible Apple home with a current home hub and the current Home architecture, and confirm that no documentation claims a Critical Alerts guarantee.
 
+Carried forward from Phase 2:
+
+- [Phase 2 → Phase 3]: Apple Home does not render `StatusFault`. Phase 2 leaves a degraded
+  accessory at `StatusActive` false and `StatusFault` `NO_FAULT`, so degraded state is invisible
+  in Apple Home today. Decide the Phase 3 treatment during discussion.
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
@@ -123,6 +132,6 @@ These are `1.0.0` release gates, not phase blockers. Each phase delivers its imp
 
 ## Session Continuity
 
-Last session: 2026-08-29T15:55:00.000Z
-Stopped at: UAT 2+3 passed and recorded; vendor wire-shape defect found and fixed; intel corrected. Phase 1 blocked only on UAT 1. Phase 2 ready to plan.
-Resume file: .planning/HANDOFF.json (then 02-CONTEXT.md)
+Last session: 2026-08-29T23:32:00.000Z
+Stopped at: Phase 02 complete, ready to plan Phase 3
+Resume file: None

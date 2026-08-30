@@ -16,12 +16,11 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 ### Validated
 
-(None yet — ship and validate the plugin to establish this list.)
+- ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
+- ✓ Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state. — Phase 2
 
 ### Active
 
-- [ ] A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state.
-- [ ] Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state.
 - [ ] Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics.
 - [ ] Self-test and alarm-mute controls follow only the official Gemini command contract and reported device state.
 - [ ] Cached accessories preserve safety state and identity through restarts, transport failures, profile drift, and transient discovery failures.
@@ -187,4 +186,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-08-28 after recording gate G-004, the release-only gating rule, the backup-battery adapter proposal, and the constructor injection preference*
+*Last updated: 2026-08-29 after Phase 2 — account configuration and safe Gemini discovery moved to Validated*

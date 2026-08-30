@@ -1,0 +1,43 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Secure Cloud Foundation",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Safe Gemini Discovery and Identity",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "Safety Monitoring in HomeKit",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Pump Records and Official Controls",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Degraded Operation and Recovery",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Validated Release Candidate",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 3)",
+    "reason": "Phase 3 of 6 — needs a plan"
+  },
+  "updated_at": "2026-08-30T03:32:32.150Z"
+}
