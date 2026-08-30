@@ -2,15 +2,35 @@
  * @fileoverview The Gemini dual-pump system: its identity, the fields it
  * reports, and the family adapter that validates and decodes them.
  *
- * Only one water level has hardware-validation evidence, so the level lookup
- * and the flood threshold stay out of this module until a natural
- * water-level cycle validates the progression. A guessed lookup would read
- * as a confident measurement (D-014). `validate()` still knows every legal
- * `water_level` code, because refusing an out-of-domain code is a shape
- * check, not a meaning the plugin has not earned yet.
+ * The level ladder and the flood threshold live in `./waterLevel.js`, so the one
+ * gate that still has to close on them (G-002) closes with a single reviewable
+ * edit there. This module keeps the shape check that stops an out-of-domain
+ * `water_level` from ever reaching that lookup: refusing an illegal code is a
+ * shape check, not a meaning the plugin has not earned yet.
+ *
+ * `battery_health` and `hours_of_protection` are Gemini value domains, so their
+ * meaning stays behind this family boundary in the same way `water_level`'s
+ * does.
  */
 
-import type { DeviceCapability, DeviceFamily, FamilyCommand, FamilyValidation, FieldViolation, FieldViolationReason } from './family.js';
+import { isPitFlooded, waterLevelPercentage } from './waterLevel.js';
+
+import type {
+  BatteryState,
+  ConnectivityState,
+  DeviceCapability,
+  DeviceFamily,
+  DeviceMetadataState,
+  FamilyCommand,
+  FamilyValidation,
+  FaultState,
+  FieldViolation,
+  FieldViolationReason,
+  PowerState,
+  PumpState,
+  ScopedDomainState,
+  WaterState,
+} from './family.js';
 import type { TrustScope } from './health.js';
 import type { DeviceSnapshot } from './state.js';
 
@@ -41,49 +61,40 @@ export type GeminiTelemetryField =
 /** Every device metadata field Gemini reports. */
 export type GeminiMetadataField = 'wifi_signal_dbm' | 'mcu_firmware_version' | 'wifi_firmware_version' | 'mcu_target_version';
 
-/** Gemini's decoded telemetry. `backupPumpTimestamp` and `testTimestamp` are the only optional members. */
-export interface GeminiTelemetryState {
-  waterLevel: number;
-  primaryPumpRunning: boolean;
-  primaryPumpFault: boolean;
-  backupPumpRunning: boolean;
-  backupPumpFault: boolean;
-  backupPumpFuseBlown: boolean;
-  backupPumpTimestamp: number | undefined;
-  acPower: boolean;
-  batteryCharging: boolean;
-  batteryVoltageLow: boolean;
-  batteryHealth: number;
-  hoursOfProtection: number;
-  waterSensorFault: boolean;
-  serialCommunications: boolean;
-  alarmAudioMuted: boolean;
-  testRunning: boolean;
-  testTimestamp: number | undefined;
-  offline: boolean;
-}
-
-/** Gemini's decoded device metadata. Every member is optional; the vendor omits all four on some firmware. */
-export interface GeminiMetadataState {
-  wifiSignalDbm: number | undefined;
-  mcuFirmwareVersion: string | undefined;
-  wifiFirmwareVersion: string | undefined;
-  mcuTargetVersion: string | undefined;
-}
-
-/** Gemini's complete decoded domain state. */
-export interface GeminiDomainState {
-  telemetry: GeminiTelemetryState;
-  metadata: GeminiMetadataState;
-}
+/**
+ * Gemini's decoded domain state.
+ *
+ * Every group this family publishes is family-neutral, so Gemini's decoded shape
+ * is the scoped shape itself. A scope that did not validate is `undefined` here
+ * rather than filled with a default (D-014).
+ */
+export type GeminiDomainState = ScopedDomainState;
 
 // The known enum codes, read from hardware-observed vendor values. `water_level`
 // includes 0 even though no hardware evidence validates it as a level yet: this
-// is a shape check on what the vendor can legally send, not the level lookup
-// itself, which stays out of this module (D-014).
+// is a shape check on what the vendor can legally send, and it is what keeps an
+// illegal code away from the level lookup in `./waterLevel.js` (D-014).
 const WATER_LEVEL_VALUES: ReadonlySet<number> = new Set([0, 1, 3, 7, 15, 31]);
 const BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8, 16, 32]);
-const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set([1, 2, 4, 8]);
+
+// The documented protection-duration estimate each `hours_of_protection` band
+// publishes. The band is reported exactly as the vendor sends it, never
+// arbitrated against `battery_health` (D-08, D-012).
+const PROTECTION_HOURS_PERCENTAGES: ReadonlyMap<number, number> = new Map([
+  [1, 25],
+  [2, 50],
+  [4, 75],
+  [8, 100],
+]);
+
+// Derived from the band map so the codes the shape check accepts and the codes
+// the band lookup answers for cannot drift apart.
+const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set(PROTECTION_HOURS_PERCENTAGES.keys());
+
+// The `battery_health` codes that mean the backup battery cannot be relied on:
+// Replace, Poor, and NotDetected. Okay, Good, and NA do not (D-07; vendor rules
+// WW-GEM-ALERT-1, -2, -3, and -11).
+const LOW_BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 32]);
 
 // `undefined` names the command surface and the metadata fields. No published
 // service reads either, so a violation on one is still recorded and diagnosable
@@ -245,38 +256,104 @@ function optionalStringField(data: Readonly<Record<string, unknown>>, field: str
   return value;
 }
 
-// Every field is read by its own name, never spread from `snapshot.data` or
-// `snapshot.metadata`, so an unread vendor key cannot reach domain state.
-function decode(snapshot: DeviceSnapshot): GeminiDomainState {
-  const { data, metadata } = snapshot;
+function protectionHoursPercentage(code: number): number {
+  const percentage = PROTECTION_HOURS_PERCENTAGES.get(code);
+
+  if (percentage === undefined) {
+    throw new TypeError(`decode() has no protection band for hours_of_protection ${String(code)}; validate() must reject this snapshot first`);
+  }
+
+  return percentage;
+}
+
+// One strict decoder per scope. Each runs only after its own scope's fields
+// validated, so a guard firing here means the gate above it is broken rather
+// than a value this module should guess at.
+function decodeWater(data: Readonly<Record<string, unknown>>): WaterState {
+  const levelCode = numberField(data, 'water_level');
+
+  return { levelCode, levelPercent: waterLevelPercentage(levelCode), flooded: isPitFlooded(levelCode) };
+}
+
+function decodePump(data: Readonly<Record<string, unknown>>): PumpState {
+  return {
+    primaryRunning: booleanField(data, 'primary_pump_running'),
+    backupRunning: booleanField(data, 'backup_pump_running'),
+    backupActivatedAt: optionalNumberField(data, 'backup_pump_timestamp'),
+  };
+}
+
+function decodePower(data: Readonly<Record<string, unknown>>): PowerState {
+  return { mainsPresent: booleanField(data, 'ac_power') };
+}
+
+function decodeBattery(data: Readonly<Record<string, unknown>>): BatteryState {
+  const healthCode = numberField(data, 'battery_health');
+  const protectionHoursCode = numberField(data, 'hours_of_protection');
+  const voltageLow = booleanField(data, 'battery_voltage_low');
 
   return {
-    telemetry: {
-      waterLevel: numberField(data, 'water_level'),
-      primaryPumpRunning: booleanField(data, 'primary_pump_running'),
-      primaryPumpFault: booleanField(data, 'primary_pump_fault'),
-      backupPumpRunning: booleanField(data, 'backup_pump_running'),
-      backupPumpFault: booleanField(data, 'backup_pump_fault'),
-      backupPumpFuseBlown: booleanField(data, 'backup_pump_fuse_blown'),
-      backupPumpTimestamp: optionalNumberField(data, 'backup_pump_timestamp'),
-      acPower: booleanField(data, 'ac_power'),
-      batteryCharging: booleanField(data, 'battery_charging'),
-      batteryVoltageLow: booleanField(data, 'battery_voltage_low'),
-      batteryHealth: numberField(data, 'battery_health'),
-      hoursOfProtection: numberField(data, 'hours_of_protection'),
-      waterSensorFault: booleanField(data, 'water_sensor_fault'),
-      serialCommunications: booleanField(data, 'serial_communications'),
-      alarmAudioMuted: booleanField(data, 'alarm_audio_muted'),
-      testRunning: booleanField(data, 'test_running'),
-      testTimestamp: optionalNumberField(data, 'test_timestamp'),
-      offline: booleanField(data, 'offline'),
-    },
-    metadata: {
-      wifiSignalDbm: optionalNumberField(metadata, 'wifi_signal_dbm'),
-      mcuFirmwareVersion: optionalStringField(metadata, 'mcu_firmware_version'),
-      wifiFirmwareVersion: optionalStringField(metadata, 'wifi_firmware_version'),
-      mcuTargetVersion: optionalStringField(metadata, 'mcu_target_version'),
-    },
+    charging: booleanField(data, 'battery_charging'),
+    voltageLow,
+    healthCode,
+    protectionHoursCode,
+    levelPercent: protectionHoursPercentage(protectionHoursCode),
+    low: voltageLow || LOW_BATTERY_HEALTH_VALUES.has(healthCode),
+  };
+}
+
+function decodeFault(data: Readonly<Record<string, unknown>>): FaultState {
+  return {
+    primaryPumpFault: booleanField(data, 'primary_pump_fault'),
+    backupPumpFault: booleanField(data, 'backup_pump_fault'),
+    backupPumpFuseBlown: booleanField(data, 'backup_pump_fuse_blown'),
+    waterSensorFault: booleanField(data, 'water_sensor_fault'),
+    controllerLinkPresent: booleanField(data, 'serial_communications'),
+  };
+}
+
+function decodeConnectivity(data: Readonly<Record<string, unknown>>): ConnectivityState {
+  return { reportedOffline: booleanField(data, 'offline') };
+}
+
+function decodeMetadata(metadata: Readonly<Record<string, unknown>>): DeviceMetadataState {
+  return {
+    mcuFirmwareVersion: optionalStringField(metadata, 'mcu_firmware_version'),
+    wifiFirmwareVersion: optionalStringField(metadata, 'wifi_firmware_version'),
+    mcuTargetVersion: optionalStringField(metadata, 'mcu_target_version'),
+    wifiSignalDbm: optionalNumberField(metadata, 'wifi_signal_dbm'),
+  };
+}
+
+// The scopes at least one telemetry field stopped vouching for. A violation on
+// a command-surface field lands here as `undefined`, which no group consults, so
+// it is recorded without deactivating anything.
+function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<GeminiFieldScope> {
+  return new Set(violationsOf(TELEMETRY_CHECKS, data).map((violation) => violation.scope));
+}
+
+// Device metadata is judged on its own fields, so an invalid command-surface
+// field cannot blank the firmware versions.
+function isMetadataTrustworthy(metadata: Readonly<Record<string, unknown>>): boolean {
+  return violationsOf(METADATA_CHECKS, metadata).length === 0;
+}
+
+// Every field is read by its own name, never spread from `snapshot.data` or
+// `snapshot.metadata`, so an unread vendor key cannot reach domain state. A
+// scope whose own fields did not all validate is absent rather than defaulted,
+// so one bad field costs one scope (D-014, RES-01).
+function decode(snapshot: DeviceSnapshot): GeminiDomainState {
+  const { data, metadata } = snapshot;
+  const untrusted = untrustedScopesOf(data);
+
+  return {
+    water: untrusted.has('water') ? undefined : decodeWater(data),
+    pump: untrusted.has('pump') ? undefined : decodePump(data),
+    power: untrusted.has('power') ? undefined : decodePower(data),
+    battery: untrusted.has('battery') ? undefined : decodeBattery(data),
+    fault: untrusted.has('fault') ? undefined : decodeFault(data),
+    connectivity: untrusted.has('connectivity') ? undefined : decodeConnectivity(data),
+    metadata: isMetadataTrustworthy(metadata) ? decodeMetadata(metadata) : undefined,
   };
 }
 
