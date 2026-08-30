@@ -175,6 +175,8 @@ export class BasementGuardianWorld extends World {
 
   private readonly received: { topic: string; payload: string }[] = [];
 
+  private readonly watchedDeviceIds = new Set<string>();
+
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
 
   private publishedVersion = 0;
@@ -499,6 +501,7 @@ export class BasementGuardianWorld extends World {
       // the real discovery pipeline rather than a parallel copy of it.
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         registerDiscoveredDevices({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceIds, runtime.store);
+        this.watchDevices(runtime);
       },
       onDeviceRemoved: (deviceId: string): void => {
         removeDiscoveredDevice({ api: homebridge.api, accessories, basementGuardianAccessories, registry, log: this.logger() }, deviceId, runtime.store);
@@ -514,9 +517,17 @@ export class BasementGuardianWorld extends World {
     this.watchDevices(runtime);
   }
 
-  // Watching starts once discovery has run, which is when the store knows the account's devices.
+  // Re-scanned after every trustworthy inventory response (WR-01), so a device discovered only on
+  // a later poll still gets a listener rather than silently recording nothing for it. Already
+  // watched deviceIds are skipped, so a repeated scan never double-subscribes one.
   private watchDevices(runtime: AccountRuntime): void {
     for (const deviceId of runtime.store.deviceIds()) {
+      if (this.watchedDeviceIds.has(deviceId)) {
+        continue;
+      }
+
+      this.watchedDeviceIds.add(deviceId);
+
       // The listener signature fixes the position of the two snapshots, which this recorder has no
       // use for. The leading underscore is the compiler's marker for a parameter it may drop.
       const unsubscribe = runtime.store.subscribe(deviceId, (_next, _previous, changedKeys) => {
