@@ -82,8 +82,8 @@ const CONTROLLER_LINK_WARNING =
   `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so water, pump, power, ` +
   'battery, and fault values are retained rather than refreshed until the link returns.';
 
-// Every module this plan writes under `src/accessories/`, read as source so a prohibited idiom
-// fails here by name rather than through some downstream symptom.
+// Every module under `src/accessories/`, read as source so a prohibited idiom fails here by name
+// rather than through some downstream symptom.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
 
 // The namespace holds no per-scenario state: a service and its characteristics live on the
@@ -272,7 +272,7 @@ function decodedState(mainsPresent?: boolean): Record<string, unknown> {
 }
 
 // A family that reports mains power until a case makes `ac_power` fail its shape, which is the one
-// per-field failure this plan's rows read.
+// per-field failure the power rows read.
 function powerFamily(mainsPresent?: boolean): DeviceFamily<unknown> {
   const violations = [{ field: 'ac_power', reason: 'missing' as const, scope: 'power' as const }];
 

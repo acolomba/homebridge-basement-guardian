@@ -360,8 +360,7 @@ function decode(snapshot: DeviceSnapshot): GeminiDomainState {
 const CAPABILITIES: readonly DeviceCapability[] = ['self-test', 'alarm-mute'];
 
 // Gemini always reports both capability-backing fields, so no state-dependent
-// gating exists at this phase; the decoded state the interface passes here
-// goes unread.
+// gating exists yet; the decoded state the interface passes here goes unread.
 function capabilities(): readonly DeviceCapability[] {
   return CAPABILITIES;
 }
