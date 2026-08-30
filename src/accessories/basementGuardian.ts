@@ -10,14 +10,18 @@
  * accessory, so the user's automations survive.
  *
  * `update()` re-resolves the family registry and re-validates on every call. A
- * `deviceTypeId` that stops resolving to an implemented family degrades the
- * whole accessory in place: it marks every service it has already published
- * inactive while leaving their last trustworthy values exactly where they are,
- * and it never calls `decode()`, never touches `AccessoryInformation`, and
- * never adds a second one (every `PlatformAccessory` already carries one from
- * its own construction). A payload
- * that fails one field's shape costs only the scope that field owns, because
- * the family still decodes every scope whose own fields validated (D-014).
+ * `deviceTypeId` that stops resolving to an implemented family degrades every
+ * controller-derived scope in place: it marks the services it has already
+ * published for those scopes inactive while leaving their last trustworthy
+ * values exactly where they are, and it never calls `decode()`, never touches
+ * `AccessoryInformation`, and never adds a second one (every
+ * `PlatformAccessory` already carries one from its own construction). The
+ * confirmed-offline adapter is not one of those services: it reads the
+ * accessory's own count of consecutive disconnected polls rather than anything
+ * an adapter decoded, so it keeps counting and keeps reporting (RES-03). A
+ * payload that fails one field's shape costs only the scope that field owns,
+ * because the family still decodes every scope whose own fields validated
+ * (D-014).
  *
  * Nothing here registers an `onGet` handler or a HAP `GET` event listener.
  * Every value reaches HomeKit by being pushed, so HAP serves the last pushed
@@ -376,20 +380,33 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return descriptors;
   }
 
-  // Marks every service the accessory has already published inactive, and adds
-  // none. An accessory whose family has never resolved therefore still shows no
+  // Refreshes every service the accessory has already published, and adds none.
+  // An accessory whose family has never resolved therefore still shows no
   // service at all, while one that published before its profile stopped
   // resolving stops reporting its retained values as trustworthy: without this,
   // a quiet system would keep publishing "no leak, pump normal, battery fine,
   // active" forever, which is the false all-clear the whole plugin exists to
   // prevent (D-05, D-014, DEV-08).
-  function deactivatePublishedRows(): void {
+  //
+  // The connectivity row is the one this leaves alone, because nothing about it
+  // stopped being knowable. It reads the accessory's own count of consecutive
+  // disconnected polls rather than anything an adapter decoded, so it keeps
+  // publishing its current verdict and stays active -- which is what `untrusted`
+  // has always reported for that scope, and what the wire envelope still
+  // supports (D-014, RES-03).
+  function republishPublishedRows(input: ProjectionInput): void {
     for (const row of catalogue) {
       const service = publishedService(accessory, row);
 
-      if (service !== undefined) {
-        publishValue(service, hap.Characteristic.StatusActive, false);
+      if (service === undefined) {
+        continue;
       }
+
+      for (const value of row.project(input)) {
+        publishValue(service, value.characteristic, value.value);
+      }
+
+      publishValue(service, hap.Characteristic.StatusActive, isRowFullyTrusted(row, input.untrustedScopes));
     }
   }
 
@@ -451,6 +468,18 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     }
   }
 
+  // Everything a row reads, assembled once from the accessory's own state so
+  // the resolved and unresolved paths cannot drift apart in what they hand a
+  // row.
+  function projectionInputOf(decoded: unknown): ProjectionInput {
+    return {
+      decoded,
+      untrustedScopes: untrusted,
+      offlineConfirmed: offlineCount >= offlineThreshold,
+      controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
+    };
+  }
+
   return {
     deviceId,
 
@@ -466,15 +495,26 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       const outcome = registry.lookup(snapshot.identity.deviceTypeId);
 
       if (outcome.kind !== 'implemented') {
-        // An unresolved family cannot say which scope a value belongs to, so
-        // this is the one failure that still degrades every scope at once. It
-        // never calls `decode()` and never touches `AccessoryInformation`, and
-        // it publishes no value other than the deactivation, so every service
-        // keeps the last values a trustworthy snapshot produced. The
-        // controller-link flag is left where it was, because a family that no
-        // longer resolves reports nothing about the link either way.
+        // An unresolved family cannot say which scope a decoded value belongs
+        // to, so this is the one failure that still degrades every
+        // controller-derived scope at once. It never calls `decode()` and never
+        // touches `AccessoryInformation`, and it publishes no decoded value at
+        // all, so every service keeps the last values a trustworthy snapshot
+        // produced. The controller-link flag is left where it was, because a
+        // family that no longer resolves reports nothing about the link either
+        // way.
+        //
+        // The confirmation run advances here as it does anywhere else. A
+        // successful REST inventory observed whether the vendor can still reach
+        // the device whatever the profile resolves to, and freezing the run
+        // would leave a device that stopped resolving and then went offline
+        // never activating the one adapter RES-03 exists for (RES-03, D-09).
+        if (source === 'poll') {
+          offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
+        }
+
         untrusted = untrustedScopesOf(reasonsOf(NON_CONNECTIVITY_SCOPES, 'invalid'), lastTrustedAt);
-        deactivatePublishedRows();
+        republishPublishedRows(projectionInputOf(undefined));
         reportDegradation();
 
         return;
@@ -505,12 +545,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         populateAccessoryInformation(accessory, hap, snapshot, metadata);
       }
 
-      published = publishRows({
-        decoded,
-        untrustedScopes: untrusted,
-        offlineConfirmed: offlineCount >= offlineThreshold,
-        controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
-      });
+      published = publishRows(projectionInputOf(decoded));
 
       reportControllerLink(linkLost);
       reportDegradation();

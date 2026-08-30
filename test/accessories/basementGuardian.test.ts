@@ -488,8 +488,43 @@ describe('createBasementGuardianAccessory', () => {
     );
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
-      PUBLISHED_SERVICES.map(() => false),
+      PUBLISHED_SCOPES.map((scope) => scope === 'connectivity'),
     );
+  });
+
+  test('confirms the device offline on the configured polls while the family does not resolve', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ connected: true }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+    const afterOne = valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState);
+    basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { afterOne, afterTwo: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState) },
+      { afterOne: CONTACT_DETECTED, afterTwo: CONTACT_NOT_DETECTED },
+    );
+  });
+
+  test('leaves the offline confirmation run untouched by a live update while the family does not resolve', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ connected: true }), 'poll');
+
+    // act
+    for (let update = 0; update < 10; update += 1) {
+      basementGuardianAccessory.update(buildSnapshot({ connected: false }), 'live');
+    }
+
+    // assert
+    assert.strictEqual(valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState), CONTACT_DETECTED);
   });
 
   test('retains the flood it published when the family stops resolving', () => {
