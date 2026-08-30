@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-08-30T13:02:54.562Z"
-last_activity: 2026-08-29
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: e817ed2fe993973699addf3d393ca46ba566c4dc
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-30T13:46:22.965Z"
+last_activity: 2026-08-30
+last_activity_desc: Phase 03 execution started
+state_head: 702c0a4b2044075efee6ff45c965ddcc989f8856
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 31
-  completed_plans: 23
+  completed_plans: 24
   percent: 33
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 3 — Safety Monitoring in HomeKit
+**Current focus:** Phase 03 — Safety Monitoring in HomeKit
 
 ## Current Position
 
-Phase: 03 (Safety Monitoring in HomeKit) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-08-29 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-08-30 — Phase 03 execution started
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
 three UAT items passed against real hardware.
@@ -38,7 +38,7 @@ three UAT items passed against real hardware.
 Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
 backstop-tagged UAT items accepted on structural evidence and no defects found.
 
-Progress: [███░░░░░░░] 2 of 6 phases complete (33%) — 23/23 plans
+Progress: [███░░░░░░░] 2 of 6 phases complete ([███░░░░░░░] 33%) — 23/23 plans
 
 ## Performance Metrics
 
@@ -60,6 +60,11 @@ Progress: [███░░░░░░░] 2 of 6 phases complete (33%) — 23/2
 - Trend: Not available
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 03 P01 | 39 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -89,6 +94,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
+- [Phase 03]: The Cucumber harness has one hand-built HAP stand-in, features/support/fakeHap.ts, whose Service and Characteristic are constructible base classes. — Every module this phase adds declares its HomeKit types by subclassing the injected api.hap namespace, so a stand-in of identifier constants cannot exercise any of them.
+- [Phase 03]: FakeHomebridgeApi exposes a hap member typed as the stand-in namespace, beside the deliberately widened api member. — api is widened to Homebridge own API type, which types hap as the real HAP-NodeJS namespace, so a step reaching a service class through api.hap would hand a real HAP class to a stand-in accessory.
 
 ### Pending Todos
 
@@ -123,6 +130,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   Apple Home's behavior on current iOS, so a real-home check rides along with `G-003`/`G-004` —
   build an automation on `Sump Pit Flood`, force a degraded scope, confirm it still fires. Only a
   positive finding there reopens `D-05`.
+- Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
 
 ### Quick Tasks Completed
 
@@ -144,6 +152,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 ## Session Continuity
 
-Last session: 2026-08-30T04:24:40.689Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-safety-monitoring-in-homekit/03-CONTEXT.md
+Last session: 2026-08-30T13:46:08.233Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
