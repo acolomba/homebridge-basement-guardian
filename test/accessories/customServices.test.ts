@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { createFakeHap } from '../../features/support/fakeHap.js';
+import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 
-import type { API } from 'homebridge';
+import type { CustomServices } from '../../src/accessories/customServices.js';
+import type { API, Service } from 'homebridge';
 
 // Every type Apple assigns lives in one namespace. A plugin identifier ending with this suffix
 // would sit inside Apple's assigned space, where a future Apple type could collide with it
@@ -15,9 +17,54 @@ const APPLE_BASE_UUID_SUFFIX = '-0000-1000-8000-0026BB765291';
 // which a later edit to the seed would silently change -- fails this shape (D-015).
 const RANDOM_V4_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-const MAINS_POWER_PRESENT_NAME = 'Mains Power Present';
 const STATUS_ACTIVE_NAME = 'Status Active';
 const STATUS_FAULT_NAME = 'Status Fault';
+
+// Wi-Fi signal strength is module diagnostics rather than a basement-protection condition (D-016),
+// and battery health is never represented through filter-maintenance semantics (D-021, SAFE-06).
+const FORBIDDEN_NAME_WORDS: readonly string[] = ['Filter', 'Wi-Fi', 'WiFi', 'Signal', 'dBm'];
+
+/** One vendor-defined service and the characteristic sections it declares. */
+interface ServiceExpectation {
+  name: keyof CustomServices;
+  displayName: string;
+  subtype: string;
+  required: readonly string[];
+  optional: readonly string[];
+}
+
+// The whole declared set, in the order the factory answers it. `Name` leads every required list
+// because a service constructed with a display name carries one, exactly as the real HAP does.
+const SERVICES: readonly ServiceExpectation[] = [
+  {
+    name: 'SumpPitService',
+    displayName: 'Sump Pit Level',
+    subtype: 'sump-pit-level',
+    required: ['Name', 'Water Level', 'Raw Water Level Code'],
+    optional: ['Water Sensor Fault Reported', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+  },
+  {
+    name: 'PumpService',
+    displayName: 'Primary Pump',
+    subtype: 'primary-pump',
+    required: ['Name', 'Pump Running'],
+    optional: ['Pump Fault', 'Pump Fuse Blown', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+  },
+  {
+    name: 'SumpMainsPowerService',
+    displayName: 'Sump Mains Power',
+    subtype: 'sump-mains-power',
+    required: ['Name', 'Mains Power Present'],
+    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+  },
+  {
+    name: 'BackupBatteryService',
+    displayName: 'Backup Battery Facts',
+    subtype: 'backup-battery',
+    required: ['Name', 'Battery Charging', 'Battery Voltage Low', 'Battery Health Code', 'Protection Hours Code'],
+    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+  },
+];
 
 // The stand-in answers the members the plugin reads and nothing else, which no structural type can
 // express; the widening is what lets it stand where the plugin takes the real namespace.
@@ -29,44 +76,66 @@ function displayNamesOf(characteristics: readonly { displayName: string }[]): re
   return characteristics.map((characteristic) => characteristic.displayName);
 }
 
+function publishedTypesOf(types: Readonly<Record<string, { readonly UUID: string }>>): readonly { readonly UUID: string }[] {
+  return Object.values(types);
+}
+
+function characteristicNamesOf(service: Service): readonly string[] {
+  return [...displayNamesOf(service.characteristics), ...displayNamesOf(service.optionalCharacteristics)];
+}
+
 describe('createCustomServices', () => {
-  test('carries the reported mains power fact as a required characteristic', () => {
+  test('declares exactly the vendor-defined services this plugin publishes', () => {
     // arrange
-    const { SumpMainsPowerService } = createCustomServices(hapNamespace());
+    const services = createCustomServices(hapNamespace());
 
     // act
-    const sumpMainsPower = new SumpMainsPowerService('Sump Mains Power', 'sump-mains-power');
-
-    // assert
-    assert.deepStrictEqual(displayNamesOf(sumpMainsPower.characteristics), ['Name', MAINS_POWER_PRESENT_NAME]);
-  });
-
-  test('declares the two status characteristics the accessory pushes as optional', () => {
-    // arrange
-    const { SumpMainsPowerService } = createCustomServices(hapNamespace());
-
-    // act
-    const sumpMainsPower = new SumpMainsPowerService('Sump Mains Power', 'sump-mains-power');
-
-    // assert
-    assert.deepStrictEqual(displayNamesOf(sumpMainsPower.optionalCharacteristics), [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME]);
-  });
-
-  test('keeps the display name and the subtype it is constructed with', () => {
-    // arrange
-    const { SumpMainsPowerService } = createCustomServices(hapNamespace());
-
-    // act
-    const sumpMainsPower = new SumpMainsPowerService('Sump Mains Power', 'sump-mains-power');
+    const names = Object.keys(services);
 
     // assert
     assert.deepStrictEqual(
-      { displayName: sumpMainsPower.displayName, subtype: sumpMainsPower.subtype, uuid: sumpMainsPower.UUID },
-      { displayName: 'Sump Mains Power', subtype: 'sump-mains-power', uuid: SumpMainsPowerService.UUID },
+      names,
+      SERVICES.map((expectation) => expectation.name),
     );
   });
 
-  for (const name of ['SumpMainsPowerService'] as const) {
+  for (const { name, displayName, subtype, required, optional } of SERVICES) {
+    test(`carries the exact vendor facts ${name} always reports as required characteristics`, () => {
+      // arrange
+      const services = createCustomServices(hapNamespace());
+
+      // act
+      const service = new services[name](displayName, subtype);
+
+      // assert
+      assert.deepStrictEqual(displayNamesOf(service.characteristics), required);
+    });
+
+    test(`declares the characteristics only some ${name} subtypes carry as optional`, () => {
+      // arrange
+      const services = createCustomServices(hapNamespace());
+
+      // act
+      const service = new services[name](displayName, subtype);
+
+      // assert
+      assert.deepStrictEqual(displayNamesOf(service.optionalCharacteristics), optional);
+    });
+
+    test(`keeps the display name and the subtype ${name} is constructed with`, () => {
+      // arrange
+      const services = createCustomServices(hapNamespace());
+
+      // act
+      const service = new services[name](displayName, subtype);
+
+      // assert
+      assert.deepStrictEqual(
+        { displayName: service.displayName, subtype: service.subtype, uuid: service.UUID },
+        { displayName, subtype, uuid: services[name].UUID },
+      );
+    });
+
     test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
       // arrange
       const services = createCustomServices(hapNamespace());
@@ -89,5 +158,49 @@ describe('createCustomServices', () => {
       // act & assert
       assert.strictEqual(first[name].UUID, second[name].UUID);
     });
+
+    test(`names no ${name} characteristic after diagnostics or filter maintenance`, () => {
+      // arrange
+      const services = createCustomServices(hapNamespace());
+
+      // act
+      const named = characteristicNamesOf(new services[name](displayName, subtype)).filter((characteristicName) =>
+        FORBIDDEN_NAME_WORDS.some((word) => characteristicName.includes(word)),
+      );
+
+      // assert
+      assert.deepStrictEqual(named, []);
+    });
   }
+
+  test('carries both pumps on one service class, each under its own subtype', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { PumpRunning, PumpFuseBlown } = createCustomCharacteristics(hap);
+    const { PumpService } = createCustomServices(hap);
+
+    // act
+    const pumps = [new PumpService('Primary Pump', 'primary-pump'), new PumpService('Backup Pump', 'backup-pump')];
+
+    // assert
+    assert.deepStrictEqual(
+      pumps.map((pump) => ({ subtype: pump.subtype, running: pump.testCharacteristic(PumpRunning), fuseBlown: pump.testCharacteristic(PumpFuseBlown) })),
+      [
+        { subtype: 'primary-pump', running: true, fuseBlown: false },
+        { subtype: 'backup-pump', running: true, fuseBlown: false },
+      ],
+    );
+  });
+
+  test('gives every published type of either factory its own identifier', () => {
+    // arrange
+    const hap = hapNamespace();
+    const published = publishedTypesOf({ ...createCustomCharacteristics(hap), ...createCustomServices(hap) });
+
+    // act
+    const uuids = new Set(published.map((publishedClass) => publishedClass.UUID));
+
+    // assert
+    assert.strictEqual(uuids.size, published.length);
+  });
 });
