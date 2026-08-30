@@ -173,16 +173,23 @@ class StandInCharacteristic implements FakeHapCharacteristic {
     this.value = this.getDefaultValue();
   }
 
-  // The real HAP answers `false` for a bool, the empty string for a string, and the declared
-  // minimum for a numeric format. Those defaults are this plugin's good-news values, so a service
-  // published before the first valid decode reads as a healthy sump pit; reproducing them exactly
-  // is what lets a scenario prove the accessory never leaves a service sitting there (D-014).
+  // The real HAP answers `false` for a bool, the empty string for a string, and for a numeric
+  // format the first declared valid value, then the declared minimum, then zero. The numeric order
+  // matters: a characteristic whose domain excludes zero would otherwise start at a code its own
+  // `validValues` forbids here while the real HAP started it at a legal one. Those defaults are
+  // this plugin's good-news values, so a service published before the first valid decode reads as
+  // a healthy sump pit; reproducing them exactly is what lets a scenario prove the accessory never
+  // leaves a service sitting there (D-014).
   getDefaultValue(): unknown {
     if (this.props.format === FORMATS.BOOL) {
       return false;
     }
 
-    return this.props.format === FORMATS.STRING ? '' : (this.props.minValue ?? 0);
+    if (this.props.format === FORMATS.STRING) {
+      return '';
+    }
+
+    return this.props.validValues?.[0] ?? this.props.minValue ?? 0;
   }
 }
 

@@ -193,6 +193,25 @@ describe('createCustomCharacteristics', () => {
     assert.strictEqual(mainsPowerPresent.value, false);
   });
 
+  // A characteristic that starts outside its own declared domain hands HomeKit a code the plugin
+  // itself says the vendor cannot send, from the moment the service carrying it is added.
+  for (const { name } of CHARACTERISTICS.filter((expectation) => expectation.format === 'uint8')) {
+    test(`starts ${name} at a value its own validValues admits`, () => {
+      // arrange
+      const characteristics = createCustomCharacteristics(hapNamespace());
+
+      // act
+      const characteristic = new characteristics[name]();
+      const validValues: readonly number[] = characteristic.props.validValues ?? [];
+
+      // assert
+      assert.deepStrictEqual(
+        { initial: characteristic.value, admitted: validValues.some((candidate) => candidate === characteristic.value) },
+        { initial: validValues[0], admitted: true },
+      );
+    });
+  }
+
   test('starts the controller timestamp at the empty string rather than a time nothing reported', () => {
     // arrange
     const { ControllerDataLastTrustedAt } = createCustomCharacteristics(hapNamespace());
