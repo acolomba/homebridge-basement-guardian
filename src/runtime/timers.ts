@@ -23,10 +23,21 @@ export interface Timers {
   clearInterval(handle: unknown): void;
 }
 
+// Only a handle this object itself answered ever reaches a cancel, and both
+// process cancels ignore a value that never named a timer, so the narrowing
+// costs nothing a runtime check would buy back.
+function toHandle(handle: unknown): NodeJS.Timeout {
+  return handle as NodeJS.Timeout;
+}
+
 /** The process timers. Wire this at the composition root only. */
 export const systemTimers: Timers = {
-  setTimeout: () => undefined,
-  setInterval: () => undefined,
-  clearTimeout: () => undefined,
-  clearInterval: () => undefined,
+  setTimeout: (handler, delayMs) => setTimeout(handler, delayMs),
+  setInterval: (handler, delayMs) => setInterval(handler, delayMs),
+  clearTimeout: (handle) => {
+    clearTimeout(toHandle(handle));
+  },
+  clearInterval: (handle) => {
+    clearInterval(toHandle(handle));
+  },
 };
