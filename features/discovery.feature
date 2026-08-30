@@ -81,6 +81,20 @@ Feature: Discovering a Gemini and publishing its accessory
     Then the plugin registers one accessory with a truthful accessory information service
     Then the plugin never unregisters the accessory
 
+  Scenario: A device removed and then rediscovered is watched again
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin registers one accessory with a truthful accessory information service
+    When the vendor reports no devices
+    Then the plugin unregisters the accessory
+    When the vendor reports these devices for the next inventory check:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the vendor reports these devices:
+      | deviceId           | name          | waterLevel |
+      | placeholder-gemini | Sump Guardian | 3          |
+    Then the plugin reports 1 canonical change
+
   Scenario: A payload that stops validating degrades the accessory in place
     Given a short poll interval
     When the plugin starts

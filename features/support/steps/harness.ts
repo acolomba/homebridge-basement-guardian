@@ -365,6 +365,18 @@ async function deviceOmittedFromNextChecks(this: BasementGuardianWorld, count: n
 
 When('the vendor omits the device from the next {int} inventory checks', deviceOmittedFromNextChecks);
 
+// Arms exactly the next `/devices` GET response with these devices, then falls back to the
+// standing device list a scenario already set. This lands a chosen inventory on one specific poll
+// regardless of how many polls a short interval has already run in the background, so a scenario
+// can prove what a later, distinct poll sees rather than racing a real poll timer.
+async function devicesReportedForNextCheck(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  const service = await this.restApi();
+
+  service.armDevicesAnswer(table.hashes().map((row) => toDevice(row)));
+}
+
+When('the vendor reports these devices for the next inventory check:', devicesReportedForNextCheck);
+
 async function userRenamesAccessory(this: BasementGuardianWorld, name: string): Promise<void> {
   const homebridge = await this.homebridge();
   const accessory = currentAccessory(homebridge);
