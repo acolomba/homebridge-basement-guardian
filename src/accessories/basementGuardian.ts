@@ -33,7 +33,7 @@ import { isNotificationServiceKind } from './services.js';
 import type { ProjectionInput } from './serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from './services.js';
 import type { FamilyValidation } from '../device/family.js';
-import type { TrustScope, UntrustedScope } from '../device/health.js';
+import type { DistrustReason, TrustScope, UntrustedScope } from '../device/health.js';
 import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceSnapshot } from '../device/state.js';
 import type { Timers } from '../runtime/timers.js';
@@ -121,11 +121,16 @@ const DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT = 2;
 // Every scope that can lose trust, in the order `untrusted` reports them.
 const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity'];
 
-// Every scope but `connectivity` degrades together when no adapter resolves at
-// all: `connectivity` is governed by the separately-validated wire envelope,
-// not by family validation, so a profile failure never touches it (D-014,
-// DEV-08).
-const DEGRADED_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
+// Every scope but `connectivity`, which is the same set for the two conditions
+// that reach past a single field.
+//
+// No adapter resolving at all degrades them together, because `connectivity` is
+// governed by the separately-validated wire envelope rather than by family
+// validation, so a profile failure never touches it (D-014, DEV-08). A lost
+// pump-controller link poisons the same five, because every one of them is
+// derived from the controller while `connectivity` reports the vendor cloud,
+// which is still answering (D-11, RES-02).
+const NON_CONNECTIVITY_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -182,14 +187,62 @@ function violatedScopesOf(validation: FamilyValidation): ReadonlySet<TrustScope>
   return scopes;
 }
 
+function reasonsOf(scopes: Iterable<TrustScope>, reason: DistrustReason): Map<TrustScope, DistrustReason> {
+  const reasons = new Map<TrustScope, DistrustReason>();
+
+  for (const scope of scopes) {
+    reasons.set(scope, reason);
+  }
+
+  return reasons;
+}
+
+// `serial_communications === false` is a condition the device reports, not a
+// field that failed its shape, so the payload still validates and the `fault`
+// group still decodes. A group that did not decode says nothing about the link,
+// and an absent field is never read as evidence that the link is up (D-11).
+function isControllerLinkLost(decoded: unknown): boolean {
+  const fault = isRecord(decoded) ? decoded.fault : undefined;
+
+  return isRecord(fault) && fault.controllerLinkPresent === false;
+}
+
+// A failed field and a lost controller link are different failures, so they
+// carry different reasons and neither overwrites the other: a scope already
+// untrusted because its own field violated keeps saying so, and the lost link
+// adds the scopes that had nothing wrong with them. `connectivity` is left out
+// deliberately -- the vendor cloud answering is exactly what makes the rest
+// doubtful (D-11, RES-02).
+function distrustReasonsOf(violated: ReadonlySet<TrustScope>, controllerLinkLost: boolean): ReadonlyMap<TrustScope, DistrustReason> {
+  const reasons = reasonsOf(violated, 'invalid');
+
+  if (controllerLinkLost) {
+    for (const scope of NON_CONNECTIVITY_SCOPES) {
+      if (!reasons.has(scope)) {
+        reasons.set(scope, 'controller-link-lost');
+      }
+    }
+  }
+
+  return reasons;
+}
+
 // Each untrusted scope carries its own `lastTrustedAt`, the receipt time of the
-// last snapshot in which that scope decoded -- `undefined` when it never has.
-function untrustedScopesOf(scopes: ReadonlySet<TrustScope>, lastTrustedAt: ReadonlyMap<TrustScope, number>): readonly UntrustedScope[] {
-  return TRUST_SCOPES.filter((scope) => scopes.has(scope)).map((scope): UntrustedScope => ({
-    scope,
-    reason: 'invalid',
-    lastTrustedAt: lastTrustedAt.get(scope),
-  }));
+// last snapshot in which that scope both decoded and was still vouched for --
+// `undefined` when it never has. Reporting them in `TRUST_SCOPES` order keeps
+// the exposed list stable however the reasons were assembled.
+function untrustedScopesOf(reasons: ReadonlyMap<TrustScope, DistrustReason>, lastTrustedAt: ReadonlyMap<TrustScope, number>): readonly UntrustedScope[] {
+  const untrusted: UntrustedScope[] = [];
+
+  for (const scope of TRUST_SCOPES) {
+    const reason = reasons.get(scope);
+
+    if (reason !== undefined) {
+      untrusted.push({ scope, reason, lastTrustedAt: lastTrustedAt.get(scope) });
+    }
+  }
+
+  return untrusted;
 }
 
 // A connected poll resets the run, and the count is clamped at the threshold so
@@ -242,12 +295,14 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   const offlineThreshold = options.offlineConfirmationPollCount ?? DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT;
 
   // Local to this accessory: per scope, the receipt time of the last snapshot
-  // in which it decoded; whether the accessory is currently degraded (so a
-  // repeated degraded `update()` logs nothing further); the currently exposed
+  // in which it was still vouched for; whether the accessory is currently
+  // degraded and whether the controller link is currently lost (so a repeated
+  // `update()` in either condition logs nothing further); the currently exposed
   // untrusted scopes; the run of consecutive disconnected polls; and the
   // services currently published.
   const lastTrustedAt = new Map<TrustScope, number>();
   let degraded = false;
+  let controllerLinkLost = false;
   let untrusted: readonly UntrustedScope[] = [];
   let offlineCount = 0;
   let published: readonly ServiceDescriptor[] = [];
@@ -288,9 +343,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
 
   // The transition into a degraded state logs once; recovery clears the flag,
   // so a sustained degradation says nothing further while a later relapse still
-  // reports itself (D-05).
+  // reports itself (D-05). A lost controller link is deliberately not a
+  // degradation: nothing stopped validating, it has its own report below, and
+  // naming a validation failure here would state a cause that did not happen.
   function reportDegradation(): void {
-    if (untrusted.length === 0) {
+    if (!untrusted.some((scope) => scope.reason !== 'controller-link-lost')) {
       degraded = false;
 
       return;
@@ -307,9 +364,36 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     degraded = true;
   }
 
-  function recordTrustedScopes(violated: ReadonlySet<TrustScope>, receivedAt: number): void {
+  // The same log-once discipline for the other sustained condition. The message
+  // names the `deviceId`, which is not sensitive, and quotes no credential,
+  // token, or account identifier; it says the values are retained rather than
+  // refreshed, because that is what an owner needs to know about a reading that
+  // still looks current (D-11, WR-01).
+  function reportControllerLink(linkLost: boolean): void {
+    if (!linkLost) {
+      controllerLinkLost = false;
+
+      return;
+    }
+
+    if (controllerLinkLost) {
+      return;
+    }
+
+    log.warn(
+      `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so water, pump, power, ` +
+        'battery, and fault values are retained rather than refreshed until the link returns.',
+    );
+    controllerLinkLost = true;
+  }
+
+  // A scope's last trusted time advances only while nothing untrusts it, so a
+  // scope poisoned by a lost link keeps the receipt time of the last snapshot
+  // that arrived with the link present -- which is what a service publishes as
+  // the moment trustworthy controller data last arrived (RES-02).
+  function recordTrustedScopes(reasons: ReadonlyMap<TrustScope, DistrustReason>, receivedAt: number): void {
     for (const scope of TRUST_SCOPES) {
-      if (!violated.has(scope)) {
+      if (!reasons.has(scope)) {
         lastTrustedAt.set(scope, receivedAt);
       }
     }
@@ -327,26 +411,35 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     },
 
     update(snapshot: DeviceSnapshot, source: SnapshotSource): void {
-      void source;
       const outcome = registry.lookup(snapshot.identity.deviceTypeId);
 
       if (outcome.kind !== 'implemented') {
         // An unresolved family cannot say which scope a value belongs to, so
         // this is the one failure that still degrades every scope at once. It
-        // never calls `decode()` and never touches `AccessoryInformation`.
-        untrusted = untrustedScopesOf(DEGRADED_SCOPES, lastTrustedAt);
+        // never calls `decode()` and never touches `AccessoryInformation`. The
+        // controller-link flag is left where it was, because a family that no
+        // longer resolves reports nothing about the link either way.
+        untrusted = untrustedScopesOf(reasonsOf(NON_CONNECTIVITY_SCOPES, 'invalid'), lastTrustedAt);
         reportDegradation();
 
         return;
       }
 
-      const violated = violatedScopesOf(outcome.family.validate(snapshot));
       const decoded = outcome.family.decode(snapshot);
+      const linkLost = isControllerLinkLost(decoded);
+      const reasons = distrustReasonsOf(violatedScopesOf(outcome.family.validate(snapshot)), linkLost);
       const metadata = decodedMetadataOf(decoded);
 
-      recordTrustedScopes(violated, snapshot.receivedAt);
-      untrusted = untrustedScopesOf(violated, lastTrustedAt);
-      offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
+      recordTrustedScopes(reasons, snapshot.receivedAt);
+      untrusted = untrustedScopesOf(reasons, lastTrustedAt);
+
+      // Only a successful REST inventory response observed whether the vendor
+      // can still reach the device, so a between-poll update publishes
+      // everything else and leaves the confirmation run exactly where the last
+      // poll left it (RES-03, D-09).
+      if (source === 'poll') {
+        offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
+      }
 
       if (metadata !== undefined) {
         populateAccessoryInformation(accessory, hap, snapshot, metadata);
@@ -359,6 +452,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
       });
 
+      reportControllerLink(linkLost);
       reportDegradation();
     },
   };

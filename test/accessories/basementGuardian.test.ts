@@ -1148,20 +1148,16 @@ describe('createBasementGuardianAccessory', () => {
 
   test('records no call on the injected timer port across a source change to a published value', () => {
     // arrange
-    const accessory = accessoryStandIn();
     const { timers, calls } = recordingTimers();
     const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
-    const basementGuardianAccessory = accessoryWith(accessory, { registry, timers });
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry, timers });
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // act
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
-    assert.deepStrictEqual(
-      { calls, adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState) },
-      { calls: [], adapter: CONTACT_NOT_DETECTED },
-    );
+    assert.deepStrictEqual(calls, []);
   });
 
   test('calls no global scheduling function across a source change to a published value', (t) => {
