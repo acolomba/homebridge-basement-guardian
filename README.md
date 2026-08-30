@@ -105,7 +105,20 @@ Add a name to remove that one sensor:
 
 CAUTION: Removing a sensor also removes whatever you attached to it in your home. Its automations, its scenes, and its Activity History go with it. Apple Home does not move them to another service.
 
-A removed sensor is the only thing you lose. The plugin still reads the condition, still reports it on the status characteristics of the service that owns it, and still writes it to the log.
+A removed sensor is the only thing you lose. The plugin still reads the condition and still uses it. How much of the condition stays visible depends on which sensor you remove.
+
+Five of the seven conditions stay on the service that owns them:
+
+- `primary-pump-fault` stays on `Primary Pump`, as `Pump Fault` and `Status Fault`.
+- `backup-pump-fault` stays on `Backup Pump`, as `Pump Fault`, `Pump Fuse Blown`, and `Status Fault`.
+- `water-sensor-fault` stays on `Sump Pit Level`, as `Water Sensor Fault Reported` and `Status Fault`.
+- `mains-power-lost` stays on `Sump Mains Power`, as `Mains Power Present`. That service reports no `Status Fault`, because a mains loss is a condition the system reports and not a fault of the service.
+- `backup-pump-activated` stays on `Backup Pump`, as `Pump Running`.
+
+Two do not:
+
+- `pump-controller-link-lost` is the only service that reports the controller link state. The plugin also writes that condition to the log, so you keep a record of it.
+- `basement-guardian-offline` is the only service that reports a confirmed offline system, and the plugin writes nothing about it to the log. Remove it and you lose that signal completely.
 
 CAUTION: If `ignoredFaults` holds a name the plugin does not publish, or holds the same name twice, the plugin refuses the configuration and does not start. The log names the entry that is wrong and lists all seven valid names. A typo therefore leaves your pump unmonitored until you correct it.
 
