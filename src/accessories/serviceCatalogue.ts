@@ -636,11 +636,31 @@ export function publishedService(accessory: PlatformAccessory, row: ServiceRow):
 }
 
 /**
- * Answers the service a row publishes on, adding it when the accessory does not
- * carry it yet.
+ * Answers the service a row publishes on, adding it only when the row has
+ * something to publish onto it and the accessory does not carry it yet.
+ *
+ * A row with nothing to vouch for never earns a new service. HAP constructs
+ * every characteristic at its format default, and for this plugin's alarm
+ * convention those defaults are the good-news values, so an added-but-never-
+ * written service reads as a healthy sump pit that no device ever reported:
+ * "Leak Not Detected" on an empty pit, a quiet fault sensor, a normal battery.
+ * `StatusActive = false` is the only marker of that state, and Apple Home does
+ * not show it on the tile. A device whose water field is out of domain from the
+ * moment the plugin is installed therefore publishes no `Sump Pit Flood`
+ * service at all rather than one reading "no leak" (D-014, D-05, RES-01).
+ *
+ * A service the accessory already carries is answered whatever the row can
+ * publish, so a scope that stops validating keeps its last trustworthy values
+ * and still receives its `StatusActive` push.
  */
-export function ensureService(accessory: PlatformAccessory, row: ServiceRow): Service {
-  return publishedService(accessory, row) ?? accessory.addService(row.serviceClass, row.displayName, row.subtype);
+export function ensureService(accessory: PlatformAccessory, row: ServiceRow, projected: readonly ProjectedValue[]): Service | undefined {
+  const service = publishedService(accessory, row);
+
+  if (service !== undefined) {
+    return service;
+  }
+
+  return projected.length === 0 ? undefined : accessory.addService(row.serviceClass, row.displayName, row.subtype);
 }
 
 /**

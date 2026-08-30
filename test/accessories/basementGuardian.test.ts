@@ -283,10 +283,19 @@ function fakeFamily(overrides: Partial<DeviceFamily<unknown>>): DeviceFamily<unk
   };
 }
 
-// The family-neutral decoded shape every adapter answers: one group per scope, absent when that
-// scope's own fields did not validate.
+// The family-neutral decoded shape every adapter answers: one group per scope, and the `power`
+// group absent when a case makes `ac_power` fail its shape. Every other group decodes, because a
+// family omits only the scopes whose own fields did not validate (D-04).
 function decodedState(mainsPresent?: boolean): Record<string, unknown> {
-  return { metadata: { mcuFirmwareVersion: '1.2.3' }, ...(mainsPresent === undefined ? {} : { power: { mainsPresent } }) };
+  return {
+    metadata: { mcuFirmwareVersion: '1.2.3' },
+    water: { levelCode: 0, levelPercent: 0, flooded: false },
+    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+    battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+    fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+    connectivity: { reportedOffline: false },
+    ...(mainsPresent === undefined ? {} : { power: { mainsPresent } }),
+  };
 }
 
 // A family that reports mains power until a case makes `ac_power` fail its shape, which is the one
@@ -750,7 +759,13 @@ describe('createBasementGuardianAccessory', () => {
   test('deactivates only the services of the scope that stopped validating', () => {
     // arrange
     const accessory = accessoryStandIn();
-    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(undefined) }) });
+    const outcomes: FamilyOutcome<unknown>[] = [
+      { kind: 'implemented', family: powerFamily(true) },
+      { kind: 'implemented', family: powerFamily(undefined) },
+    ];
+    const registry: FamilyRegistry = { lookup: () => outcomes.shift() ?? { kind: 'implemented', family: powerFamily(undefined) }, shouldLog: () => true };
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // act
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
@@ -759,6 +774,53 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
       PUBLISHED_SCOPES.map((scope) => scope !== 'power'),
+    );
+  });
+
+  test('publishes no service for a scope whose fields have never validated', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: powerFamily(undefined) }) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      basementGuardianAccessory.services,
+      PUBLISHED_SERVICES.filter((_, index) => PUBLISHED_SCOPES[index] !== 'power'),
+    );
+    assert.deepStrictEqual(
+      {
+        reported: accessory.getServiceById(rowNamed('Sump Mains Power').serviceClass as unknown as FakeServiceClass, 'sump-mains-power'),
+        adapter: accessory.getServiceById(rowNamed('Mains Power Lost').serviceClass as unknown as FakeServiceClass, 'mains-power-lost'),
+      },
+      { reported: undefined, adapter: undefined },
+    );
+  });
+
+  test('publishes the service for a scope on the first update in which its fields validate', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const outcomes: FamilyOutcome<unknown>[] = [
+      { kind: 'implemented', family: powerFamily(undefined) },
+      { kind: 'implemented', family: powerFamily(false) },
+    ];
+    const registry: FamilyRegistry = { lookup: () => outcomes.shift() ?? { kind: 'implemented', family: powerFamily(false) }, shouldLog: () => true };
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
+    assert.deepStrictEqual(
+      {
+        reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
+        adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
+      },
+      { reported: false, adapter: CONTACT_NOT_DETECTED },
     );
   });
 
@@ -1037,7 +1099,9 @@ describe('createBasementGuardianAccessory', () => {
   test('leaves connectivity trusted while the controller link is lost, because the cloud still answers', () => {
     // arrange
     const accessory = accessoryStandIn();
-    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: false })) });
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // act
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
@@ -1046,6 +1110,20 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
       PUBLISHED_SERVICES.map((descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || PUBLISHED_SCOPES[index] === 'connectivity'),
+    );
+  });
+
+  test('publishes only the rows that can still vouch for themselves when the link is lost from the first poll', () => {
+    // arrange
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith(linkOutcome({ linkPresent: false })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      basementGuardianAccessory.services,
+      PUBLISHED_SERVICES.filter((descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || PUBLISHED_SCOPES[index] === 'connectivity'),
     );
   });
 

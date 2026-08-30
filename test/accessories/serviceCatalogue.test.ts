@@ -17,7 +17,7 @@ import {
 
 import type { ProjectedValue, ProjectionInput, RowTrust, ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { ServiceKind } from '../../src/accessories/services.js';
-import type { API, CharacteristicValue, PlatformAccessory } from 'homebridge';
+import type { API, CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
 const ACCESSORY_NAME = 'Sump System';
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
@@ -192,6 +192,23 @@ function rowNamed(hap: API['hap'], displayName: string): ServiceRow {
   }
 
   return row;
+}
+
+// One value to publish, for a case that is about something other than which value a row projects.
+// A row earns a service only when it has something to vouch for, so a case that wants the service
+// present says so with a projection rather than with nothing at all.
+function somethingToPublish(hap: API['hap']): readonly ProjectedValue[] {
+  return [{ characteristic: hap.Characteristic.StatusActive, value: true }];
+}
+
+function addedService(accessory: PlatformAccessory, hap: API['hap'], row: ServiceRow): Service {
+  const service = ensureService(accessory, row, somethingToPublish(hap));
+
+  if (service === undefined) {
+    throw new Error(`ensureService added no ${row.displayName} service`);
+  }
+
+  return service;
 }
 
 // A projected value is compared by the identity of the characteristic that carries it, because the
@@ -1020,7 +1037,7 @@ describe('publishedService', () => {
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
     const row = rowOf(hap, 'mains-power-lost');
-    const added = ensureService(accessory, row);
+    const added = addedService(accessory, hap, row);
 
     // act & assert
     assert.strictEqual(publishedService(accessory, row), added);
@@ -1031,7 +1048,7 @@ describe('publishedService', () => {
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
     const facts = rowNamed(hap, 'Backup Battery Facts');
-    ensureService(accessory, facts);
+    addedService(accessory, hap, facts);
 
     // act
     const carried = { battery: publishedService(accessory, rowNamed(hap, 'Backup Battery')), facts: publishedService(accessory, facts)?.displayName };
@@ -1049,7 +1066,7 @@ describe('ensureService', () => {
     const row = rowOf(hap, 'mains-power-lost');
 
     // act
-    const service = ensureService(accessory, row);
+    const service = addedService(accessory, hap, row);
 
     // assert
     assert.deepStrictEqual(
@@ -1062,15 +1079,58 @@ describe('ensureService', () => {
     );
   });
 
+  // HAP's format defaults are this plugin's good-news values, so a service added before its row has
+  // anything to vouch for would read as a healthy sump pit the device never reported (D-014).
+  test('adds no service for a row with nothing to publish', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'sump-pit-flood');
+
+    // act
+    const service = ensureService(accessory, row, []);
+
+    // assert
+    assert.deepStrictEqual({ service, carried: publishedService(accessory, row) }, { service: undefined, carried: undefined });
+  });
+
+  test('adds the service on the first update in which the row has a value to publish', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'sump-pit-flood');
+    ensureService(accessory, row, []);
+
+    // act
+    const service = ensureService(accessory, row, [{ characteristic: hap.Characteristic.LeakDetected, value: LEAK_DETECTED }]);
+
+    // assert
+    assert.deepStrictEqual({ subtype: service?.subtype, carried: publishedService(accessory, row) === service }, { subtype: 'sump-pit-flood', carried: true });
+  });
+
+  test('answers a service the accessory already carries even when the row has nothing to publish', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const first = addedService(accessory, hap, row);
+
+    // act
+    const second = ensureService(accessory, row, []);
+
+    // assert
+    assert.strictEqual(second, first);
+  });
+
   test('answers the same service on a second call rather than adding a duplicate', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
     const row = rowOf(hap, 'mains-power-lost');
-    const first = ensureService(accessory, row);
+    const first = addedService(accessory, hap, row);
 
     // act
-    const second = ensureService(accessory, row);
+    const second = addedService(accessory, hap, row);
 
     // assert
     assert.strictEqual(second, first);
@@ -1082,8 +1142,8 @@ describe('ensureService', () => {
     const accessory = accessoryStandIn();
 
     // act
-    const mainsPowerLost = ensureService(accessory, rowOf(hap, 'mains-power-lost'));
-    const offline = ensureService(accessory, rowOf(hap, 'basement-guardian-offline'));
+    const mainsPowerLost = addedService(accessory, hap, rowOf(hap, 'mains-power-lost'));
+    const offline = addedService(accessory, hap, rowOf(hap, 'basement-guardian-offline'));
 
     // assert
     assert.deepStrictEqual([mainsPowerLost.subtype, offline.subtype], ['mains-power-lost', 'basement-guardian-offline']);
@@ -1095,7 +1155,7 @@ describe('ensureService', () => {
     const accessory = accessoryStandIn();
 
     // act
-    const pumps = [ensureService(accessory, rowOf(hap, 'primary-pump')), ensureService(accessory, rowOf(hap, 'backup-pump'))];
+    const pumps = [addedService(accessory, hap, rowOf(hap, 'primary-pump')), addedService(accessory, hap, rowOf(hap, 'backup-pump'))];
 
     // assert
     assert.deepStrictEqual(
@@ -1113,8 +1173,8 @@ describe('ensureService', () => {
     const accessory = accessoryStandIn();
     const battery = rowNamed(hap, 'Backup Battery');
     const facts = rowNamed(hap, 'Backup Battery Facts');
-    ensureService(accessory, battery);
-    ensureService(accessory, facts);
+    addedService(accessory, hap, battery);
+    addedService(accessory, hap, facts);
 
     // act
     const retrieved = {
@@ -1126,25 +1186,6 @@ describe('ensureService', () => {
     assert.deepStrictEqual(
       { battery: retrieved.battery?.displayName, facts: retrieved.facts?.displayName, distinct: retrieved.battery !== retrieved.facts },
       { battery: 'Backup Battery', facts: 'Backup Battery Facts', distinct: true },
-    );
-  });
-
-  test('leaves a freshly added service at its construction defaults, with no value pushed', () => {
-    // arrange
-    const hap = hapNamespace();
-    const accessory = accessoryStandIn();
-    const row = rowOf(hap, 'sump-mains-power');
-
-    // act
-    const service = ensureService(accessory, row);
-
-    // assert
-    assert.deepStrictEqual(
-      {
-        statusActivePushed: service.testCharacteristic(hap.Characteristic.StatusActive),
-        declaredStatusActive: service.optionalCharacteristics.find((declared) => declared.UUID === hap.Characteristic.StatusActive.UUID)?.value,
-      },
-      { statusActivePushed: false, declaredStatusActive: false },
     );
   });
 });
@@ -1168,8 +1209,8 @@ describe('removeServiceIfPresent', () => {
     const accessory = accessoryStandIn();
     const mainsPowerLost = rowOf(hap, 'mains-power-lost');
     const offline = rowOf(hap, 'basement-guardian-offline');
-    ensureService(accessory, mainsPowerLost);
-    ensureService(accessory, offline);
+    addedService(accessory, hap, mainsPowerLost);
+    addedService(accessory, hap, offline);
 
     // act
     const removed = removeServiceIfPresent(accessory, mainsPowerLost);
@@ -1194,7 +1235,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
 
     // act
     publishValue(service, hap.Characteristic.StatusActive, true);
@@ -1213,7 +1254,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
     publishValue(service, hap.Characteristic.StatusActive, true);
 
     // act
@@ -1236,7 +1277,7 @@ describe('publishValue', () => {
       // arrange
       const hap = hapNamespace();
       const accessory = accessoryStandIn();
-      const service = ensureService(accessory, rowNamed(hap, displayName));
+      const service = addedService(accessory, hap, rowNamed(hap, displayName));
 
       // act
       publishValue(service, hap.Characteristic.StatusActive, true);
@@ -1256,7 +1297,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = ensureService(accessory, rowOf(hap, 'mains-power-lost'));
+    const service = addedService(accessory, hap, rowOf(hap, 'mains-power-lost'));
 
     // act
     publishValue(service, hap.Characteristic.ContactSensorState, CONTACT_NOT_DETECTED);

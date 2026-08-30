@@ -35,6 +35,17 @@ Feature: Publishing safety state to HomeKit
     Then the "Sump Mains Power" service reports "Status Active" as "false"
     Then the "Sump Mains Power" service reports "Mains Power Present" as "true"
 
+  Scenario: A field that never validates publishes no service at all
+    A service added before its row has a value to vouch for sits at the hap format defaults, and
+    those read as an empty pit that reports no leak.
+
+    When the vendor changes these device fields:
+      | water_level | 12 |
+    When the plugin starts
+    Then the plugin publishes the "Sump Mains Power" service
+    Then the plugin publishes no "Sump Pit Flood" service
+    Then the plugin publishes no "Sump Pit Level" service
+
   Scenario: The offline adapter stays quiet while the vendor answers for the device
     When the plugin starts
     Then the plugin publishes the "Basement Guardian Offline" service

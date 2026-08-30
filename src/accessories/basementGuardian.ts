@@ -293,8 +293,10 @@ function populateAccessoryInformation(accessory: PlatformAccessory, hap: API['ha
  * registry for validation and decoding, and every value it publishes traces
  * to a field the family adapter already confirmed. Building it touches nothing
  * outside itself: no service is added and no characteristic is pushed until the
- * first `update()` arrives, so an accessory that has never heard from its
- * device shows no service at all rather than a board of format defaults.
+ * first `update()` arrives, and a row still adds no service until it has a
+ * value it can vouch for, so an accessory that has never heard from its device
+ * -- or that has never heard a valid value for one scope -- shows no service
+ * for that scope at all rather than a board of format defaults (D-014).
  */
 export function createBasementGuardianAccessory(options: BasementGuardianAccessoryOptions): BasementGuardianAccessory {
   const { accessory, hap, registry, log } = options;
@@ -337,6 +339,10 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // never depends on which adapters an administrator suppressed. A row that
   // cannot vouch for its scope receives its `StatusActive` push and nothing
   // else, which leaves the last trustworthy value exactly where it was.
+  //
+  // The row is asked what it can publish before the service exists, because a
+  // service added with nothing pushed onto it would sit at HAP's format
+  // defaults, and those are this plugin's good-news values (D-014, D-05).
   function publishRows(input: ProjectionInput): readonly ServiceDescriptor[] {
     const descriptors: ServiceDescriptor[] = [];
 
@@ -347,10 +353,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         continue;
       }
 
-      const service = ensureService(accessory, row);
+      const projected = row.project(input);
+      const service = ensureService(accessory, row, projected);
 
-      for (const projected of row.project(input)) {
-        publishValue(service, projected.characteristic, projected.value);
+      if (service === undefined) {
+        continue;
+      }
+
+      for (const value of projected) {
+        publishValue(service, value.characteristic, value.value);
       }
 
       publishValue(service, hap.Characteristic.StatusActive, isRowTrusted(row, input.untrustedScopes));

@@ -164,14 +164,25 @@ const FAKE_FAMILY: DeviceFamily<unknown> = {
   command: () => ({ desiredData: {} }),
 };
 
-// A family that decodes the one telemetry field the live-state cases change, so a shadow patch
-// produces an observable characteristic change rather than only a call the suite could have mocked.
+// A family that decodes every scope, with the one telemetry field the live-state cases change
+// driving the power group, so a shadow patch produces an observable characteristic change rather
+// than only a call the suite could have mocked. Every scope decodes because a row publishes no
+// service until it has something to vouch for, so a case about the published service set needs a
+// family that vouches for every scope.
 const POWER_FAMILY: DeviceFamily<unknown> = {
   deviceTypeId: DEVICE_TYPE_ID,
   displayName: 'Power Family',
   implemented: true,
   validate: () => ({ valid: true }),
-  decode: (snapshot) => ({ metadata: {}, power: { mainsPresent: snapshot.data.ac_power === true } }),
+  decode: (snapshot) => ({
+    metadata: {},
+    water: { levelCode: 0, levelPercent: 0, flooded: false },
+    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+    power: { mainsPresent: snapshot.data.ac_power === true },
+    battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+    fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+    connectivity: { reportedOffline: false },
+  }),
   capabilities: () => [],
   command: () => ({ desiredData: {} }),
 };
