@@ -98,12 +98,52 @@ function resolveVendorName(accessory: BasementGuardianPlatformAccessory, vendorN
   };
 }
 
-// Returns the one `BasementGuardianAccessory` this physical accessory owns
-// for the life of the plugin run, creating it on the first poll that ever
+// Builds one accessory's HomeKit half over an already-constructed
+// `PlatformAccessory`, recording it nowhere. The caller decides when the
+// instance becomes the one this `uuid` owns, which is what lets the
+// never-registered path publish first and record afterwards.
+function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory: BasementGuardianPlatformAccessory): BasementGuardianAccessory {
+  return createBasementGuardianAccessory({
+    accessory,
+    hap: context.api.hap,
+    registry: context.registry,
+    log: context.log,
+    ignoredFaults: context.ignoredFaults,
+    offlineConfirmationPollCount: context.offlineConfirmationPollCount,
+    timers: context.timers,
+  });
+}
+
+// Without this, `update()` is reached only once per successful REST poll. A
+// backup pump runs for seven to fifteen seconds and the default poll interval
+// is about fifteen minutes, so an activation would almost never be observed
+// at all; canonical state that changes between polls has to reach HomeKit on
+// the store's own change notification instead (SAFE-03, SAFE-07). The store
+// notifies only when a telemetry value actually moved, and it contains a
+// failing listener itself, so nothing here filters or guards again.
+//
+// No unsubscribe handle is kept: `store.remove(deviceId)`, which
+// `removeDiscoveredDevice` already calls, drops this device's whole listener
+// entry in the same breath as the cached accessory, so a later re-discovery
+// builds a fresh instance and subscribes it again.
+function subscribeToLiveState(basementGuardianAccessory: BasementGuardianAccessory, deviceId: string, store: DeviceStateStore): void {
+  store.subscribe(deviceId, (next) => {
+    basementGuardianAccessory.update(next, 'live');
+  });
+}
+
+// Returns the one `BasementGuardianAccessory` an already-registered accessory
+// owns for the life of the plugin run, creating it on the first poll that ever
 // sees this `uuid`. A fresh instance per poll would reset the DEV-08
 // degrade-in-place closure state (the log-once flag, the last family-valid
 // `receivedAt`) on every call, so the same instance is reused for as long as
 // the accessory itself stays registered.
+//
+// Caching before the first `update()` is safe here and only here: the
+// `PlatformAccessory` this instance is bound to is one Homebridge already
+// holds, either because an earlier inventory registered it or because
+// `configureAccessory` restored it, so a throw during that update costs this
+// poll and leaves the next one publishing onto the same accessory.
 function basementGuardianAccessoryFor(
   context: DiscoveryContext,
   uuid: string,
@@ -117,32 +157,9 @@ function basementGuardianAccessoryFor(
     return existing;
   }
 
-  const created = createBasementGuardianAccessory({
-    accessory,
-    hap: context.api.hap,
-    registry: context.registry,
-    log: context.log,
-    ignoredFaults: context.ignoredFaults,
-    offlineConfirmationPollCount: context.offlineConfirmationPollCount,
-    timers: context.timers,
-  });
+  const created = createBasementGuardianAccessoryFor(context, accessory);
   context.basementGuardianAccessories.set(uuid, created);
-
-  // Without this, `update()` is reached only once per successful REST poll. A
-  // backup pump runs for seven to fifteen seconds and the default poll interval
-  // is about fifteen minutes, so an activation would almost never be observed
-  // at all; canonical state that changes between polls has to reach HomeKit on
-  // the store's own change notification instead (SAFE-03, SAFE-07). The store
-  // notifies only when a telemetry value actually moved, and it contains a
-  // failing listener itself, so nothing here filters or guards again.
-  //
-  // No unsubscribe handle is kept: `store.remove(deviceId)`, which
-  // `removeDiscoveredDevice` already calls, drops this device's whole listener
-  // entry in the same breath as the cached accessory, so a later re-discovery
-  // builds a fresh instance and subscribes it again.
-  store.subscribe(deviceId, (next) => {
-    created.update(next, 'live');
-  });
+  subscribeToLiveState(created, deviceId, store);
 
   return created;
 }
@@ -241,9 +258,25 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
   // adoption is set here (DEV-06).
   accessory.context.lastVendorName = snapshot.identity.name;
 
-  const basementGuardianAccessory = basementGuardianAccessoryFor(context, uuid, accessory, deviceId, store);
+  const basementGuardianAccessory = createBasementGuardianAccessoryFor(context, accessory);
+
+  // The device publishes before anything records it, and nothing between the
+  // four statements below can throw, so a first update that raises leaves no
+  // cached instance, no live subscription, and no registration at all: the next
+  // inventory rebuilds the device from scratch.
+  //
+  // Caching first and registering last left exactly the orphan that costs an
+  // owner their monitoring. The cached instance stayed bound to a
+  // `PlatformAccessory` Homebridge was never handed, `context.accessories` was
+  // still empty, so every later inventory took this same new-device path,
+  // published all fifteen services onto that orphan, and registered a fresh
+  // accessory carrying none. The home then showed a Basement Guardian with no
+  // flood sensor, no pump, and no offline sensor for as long as the plugin ran,
+  // while the plugin's own state reported fifteen healthy services.
   basementGuardianAccessory.update(snapshot, 'poll');
 
+  context.basementGuardianAccessories.set(uuid, basementGuardianAccessory);
+  subscribeToLiveState(basementGuardianAccessory, deviceId, store);
   context.accessories.set(uuid, accessory);
   context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 }

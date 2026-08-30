@@ -9,12 +9,14 @@ import { It, mock, verify, when } from 'strong-mock';
 
 import { createFakeHap } from '../features/support/fakeHap.js';
 import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.js';
+import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
+import type { FakeServiceClass } from '../features/support/fakeHap.js';
 import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
@@ -205,6 +207,25 @@ const THROWING_FAMILY: DeviceFamily<unknown> = {
   },
 };
 
+// A family that raises on its first decode and decodes normally afterwards, so a case can drive one
+// device through a failed first registration and the inventory that follows it.
+function recoveringFamily(): DeviceFamily<unknown> {
+  let decodes = 0;
+
+  return {
+    ...POWER_FAMILY,
+    decode: (snapshot) => {
+      decodes += 1;
+
+      if (decodes === 1) {
+        throw new TypeError('decode() expected ac_power to be a boolean');
+      }
+
+      return POWER_FAMILY.decode(snapshot);
+    },
+  };
+}
+
 function implementedRegistry(): FamilyRegistry {
   return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: FAKE_FAMILY }), shouldLog: () => true };
 }
@@ -283,6 +304,26 @@ function builtAccessory(basementGuardianAccessories: Map<string, BasementGuardia
 
 function reportedPatch(data: Readonly<Record<string, unknown>>): ReportedPatch {
   return { data, state: undefined, version: undefined };
+}
+
+// The one accessory the platform handed Homebridge, so a case reads what an owner would find in
+// their home rather than what the plugin believes it published.
+function onlyRegisteredAccessory(registerCalls: readonly FakeApiCall[]): FakeAccessory {
+  const registered = registerCalls.flatMap((call) => call.accessories);
+  const accessory = registered[0];
+
+  if (accessory === undefined || registered.length !== 1) {
+    throw new Error(`the platform registered ${String(registered.length)} accessories rather than one`);
+  }
+
+  return accessory;
+}
+
+// Every catalogue service that accessory carries, by the name HomeKit shows.
+function publishedServiceNames(accessory: FakeAccessory): readonly string[] {
+  return createServiceCatalogue(HAP_NAMESPACE)
+    .filter((row) => accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype) !== undefined)
+    .map((row) => row.displayName);
 }
 
 function contactStateOf(accessory: FakeAccessory, subtype: string): unknown {
@@ -1019,6 +1060,43 @@ describe('registerDiscoveredDevices', () => {
         messages: [`Skipping ${THROWING_DEVICE_ID} on this inventory; every other device still updates.`],
       },
     );
+  });
+
+  test('publishes onto the accessory it registered after a first update on a new device throws', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+    const family = recoveringFamily();
+    const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family }), shouldLog: () => true };
+    const context = discoveryContext({ api, accessories, registry, log: createSilentLog() });
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // act
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    const registered = onlyRegisteredAccessory(registerCalls);
+    assert.deepStrictEqual(publishedServiceNames(registered), [
+      'Sump Pit Flood',
+      'Sump Pit Level',
+      'Primary Pump',
+      'Primary Pump Running',
+      'Backup Pump',
+      'Backup Pump Activated',
+      'Sump Mains Power',
+      'Mains Power Lost',
+      'Backup Battery',
+      'Backup Battery Facts',
+      'Primary Pump Fault',
+      'Backup Pump Fault',
+      'Water Sensor Fault',
+      'Pump Controller Link Lost',
+      'Basement Guardian Offline',
+    ]);
+    assert.strictEqual(contactStateOf(registered, 'mains-power-lost'), CONTACT_NOT_DETECTED);
   });
 
   test('reuses the same BasementGuardianAccessory across polls so the DEV-08 log-once state persists', () => {
