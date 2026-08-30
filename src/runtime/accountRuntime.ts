@@ -248,13 +248,21 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
     try {
       const freshDevices = await options.api.devices(root.signal);
-      const freshDeviceIds = freshDevices.map((device) => device.deviceId);
-      reconciliation.observe(freshDeviceIds);
+      const stillPresent = new Set(freshDevices.map((device) => device.deviceId));
 
-      const stillPresent = new Set(freshDeviceIds);
-
+      // Only the deviceIds actually under confirmation are re-observed here
+      // (CR-01): replaying the whole fleet through `reconciliation.observe()`
+      // let a transient omission on this extra request advance an unrelated,
+      // otherwise-healthy deviceId's absence count.
       for (const deviceId of confirmedAbsent) {
-        if (!stillPresent.has(deviceId)) {
+        if (stillPresent.has(deviceId)) {
+          // Reappeared since the confirming poll: forget it so a future
+          // absence starts a fresh epoch.
+          reconciliation.forget(deviceId);
+        } else {
+          // Confirmed and about to be removed: stop tracking it so it can
+          // never re-trigger this final check again once it is gone.
+          reconciliation.forget(deviceId);
           options.onDeviceRemoved(deviceId);
         }
       }
