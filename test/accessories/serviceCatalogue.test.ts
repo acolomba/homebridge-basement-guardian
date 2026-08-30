@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
+import { isDeepStrictEqual } from 'node:util';
 
 import { createFakeHap } from '../../features/support/fakeHap.js';
 import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
@@ -9,6 +10,7 @@ import { createCustomServices } from '../../src/accessories/customServices.js';
 import {
   createServiceCatalogue,
   ensureService,
+  isRowFullyTrusted,
   isRowTrusted,
   publishedService,
   publishValue,
@@ -17,6 +19,7 @@ import {
 
 import type { ProjectedValue, ProjectionInput, RowTrust, ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { ServiceKind } from '../../src/accessories/services.js';
+import type { TrustScope } from '../../src/device/health.js';
 import type { API, CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
 const ACCESSORY_NAME = 'Sump System';
@@ -71,6 +74,10 @@ const PROTECTION_BANDS: readonly { protectionHoursCode: number; levelPercent: nu
   { protectionHoursCode: 4, levelPercent: 75 },
   { protectionHoursCode: 8, levelPercent: 100 },
 ];
+
+// Every scope a row can read, written out here rather than imported, so a scope added to the union
+// without a row reading it is visible at this boundary too.
+const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity'];
 
 // Every equipment-fault adapter, in the order the catalogue publishes them.
 const FAULT_ADAPTERS: readonly ServiceKind[] = [
@@ -814,26 +821,59 @@ describe('createServiceCatalogue', () => {
     const catalogue = createServiceCatalogue(hapNamespace());
 
     // act
-    const rows = catalogue.map((row) => ({ displayName: row.displayName, scope: row.scope, toleratedDistrust: row.toleratedDistrust }));
+    const rows = catalogue.map((row) => ({
+      displayName: row.displayName,
+      scope: row.scope,
+      readScopes: row.readScopes,
+      toleratedDistrust: row.toleratedDistrust,
+    }));
 
     // assert
     assert.deepStrictEqual(rows, [
-      { displayName: 'Sump Pit Flood', scope: 'water', toleratedDistrust: [] },
-      { displayName: 'Sump Pit Level', scope: 'water', toleratedDistrust: [] },
-      { displayName: 'Primary Pump', scope: 'pump', toleratedDistrust: [] },
-      { displayName: 'Primary Pump Running', scope: 'pump', toleratedDistrust: [] },
-      { displayName: 'Backup Pump', scope: 'pump', toleratedDistrust: [] },
-      { displayName: 'Backup Pump Activated', scope: 'pump', toleratedDistrust: [] },
-      { displayName: 'Sump Mains Power', scope: 'power', toleratedDistrust: [] },
-      { displayName: 'Mains Power Lost', scope: 'power', toleratedDistrust: [] },
-      { displayName: 'Backup Battery', scope: 'battery', toleratedDistrust: [] },
-      { displayName: 'Backup Battery Facts', scope: 'battery', toleratedDistrust: [] },
-      { displayName: 'Primary Pump Fault', scope: 'fault', toleratedDistrust: [] },
-      { displayName: 'Backup Pump Fault', scope: 'fault', toleratedDistrust: [] },
-      { displayName: 'Water Sensor Fault', scope: 'fault', toleratedDistrust: [] },
-      { displayName: 'Pump Controller Link Lost', scope: 'fault', toleratedDistrust: ['controller-link-lost'] },
-      { displayName: 'Basement Guardian Offline', scope: 'connectivity', toleratedDistrust: [] },
+      { displayName: 'Sump Pit Flood', scope: 'water', readScopes: ['water'], toleratedDistrust: [] },
+      { displayName: 'Sump Pit Level', scope: 'water', readScopes: ['water', 'fault'], toleratedDistrust: [] },
+      { displayName: 'Primary Pump', scope: 'pump', readScopes: ['pump', 'fault'], toleratedDistrust: [] },
+      { displayName: 'Primary Pump Running', scope: 'pump', readScopes: ['pump'], toleratedDistrust: [] },
+      { displayName: 'Backup Pump', scope: 'pump', readScopes: ['pump', 'fault'], toleratedDistrust: [] },
+      { displayName: 'Backup Pump Activated', scope: 'pump', readScopes: ['pump'], toleratedDistrust: [] },
+      { displayName: 'Sump Mains Power', scope: 'power', readScopes: ['power'], toleratedDistrust: [] },
+      { displayName: 'Mains Power Lost', scope: 'power', readScopes: ['power'], toleratedDistrust: [] },
+      { displayName: 'Backup Battery', scope: 'battery', readScopes: ['battery'], toleratedDistrust: [] },
+      { displayName: 'Backup Battery Facts', scope: 'battery', readScopes: ['battery'], toleratedDistrust: [] },
+      { displayName: 'Primary Pump Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
+      { displayName: 'Backup Pump Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
+      { displayName: 'Water Sensor Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
+      { displayName: 'Pump Controller Link Lost', scope: 'fault', readScopes: ['fault'], toleratedDistrust: ['controller-link-lost'] },
+      { displayName: 'Basement Guardian Offline', scope: 'connectivity', readScopes: ['connectivity'], toleratedDistrust: [] },
     ]);
+  });
+
+  // The declared list above is what `StatusActive` answers for, so a row that grew a second scope
+  // read without declaring it would publish that scope's retained value as current. This derives the
+  // list from behaviour instead: a scope a row reads is a scope whose loss changes what the row
+  // publishes, so the two lists disagree the moment the declaration drifts from the projection.
+  test('declares every scope whose loss changes what a row publishes', () => {
+    // arrange
+    const hap = hapNamespace();
+    const catalogue = createServiceCatalogue(hap);
+    const trustworthy = projectionInput();
+
+    // act
+    const observed = catalogue.map((row) =>
+      TRUST_SCOPES.filter(
+        (scope) =>
+          !isDeepStrictEqual(
+            summarise(row.project(projectionInput({ untrustedScopes: [{ scope, reason: 'invalid', lastTrustedAt: undefined }] }))),
+            summarise(row.project(trustworthy)),
+          ),
+      ),
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      observed,
+      catalogue.map((row) => [...row.readScopes]),
+    );
   });
 
   test('shows the fifteen service names HomeKit renders, in publication order', () => {
@@ -1019,6 +1059,45 @@ describe('isRowTrusted', () => {
   test('trusts a row while a different scope is untrusted', () => {
     // act & assert
     assert.strictEqual(isRowTrusted({ scope: 'connectivity', toleratedDistrust: [] }, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
+  });
+});
+
+describe('isRowFullyTrusted', () => {
+  test('trusts a two-scope row while both scopes it reads carry no distrust', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act & assert
+    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'primary-pump'), []), true);
+  });
+
+  test('distrusts a two-scope row when the second scope it reads stops validating', () => {
+    // arrange
+    const hap = hapNamespace();
+    const untrustedScopes = [{ scope: 'fault' as const, reason: 'invalid' as const, lastTrustedAt: 7 }];
+
+    // act
+    const trusted = { own: isRowTrusted(rowOf(hap, 'primary-pump'), untrustedScopes), every: isRowFullyTrusted(rowOf(hap, 'primary-pump'), untrustedScopes) };
+
+    // assert
+    assert.deepStrictEqual(trusted, { own: true, every: false });
+  });
+
+  test('trusts a two-scope row through a distrust reason it tolerates on the second scope', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row: ServiceRow = { ...rowOf(hap, 'primary-pump'), toleratedDistrust: ['controller-link-lost'] };
+
+    // act & assert
+    assert.strictEqual(isRowFullyTrusted(row, [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }]), true);
+  });
+
+  test('distrusts a one-scope row when its own scope stops validating', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act & assert
+    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]), false);
   });
 });
 

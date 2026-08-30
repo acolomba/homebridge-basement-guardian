@@ -86,6 +86,18 @@ export interface ServiceRow extends RowTrust {
   displayName: string;
   serviceClass: ServiceClass;
   /**
+   * Every scope this row reads, in `TrustScope` order, starting with the one it
+   * is filed under.
+   *
+   * Several rows read a second scope group beside their own: `Sump Pit Level`
+   * reads the reported water sensor fault, and both pump services read their
+   * pump's own fault and fuse. A row that answered for its own scope alone
+   * would keep calling those values current after the `fault` scope stopped
+   * validating, which publishes stale fault telemetry as a normal reading --
+   * the exact false normal the trust scoping exists to prevent (D-014, D-05).
+   */
+  readScopes: readonly TrustScope[];
+  /**
    * The values to publish, or nothing at all when this row cannot vouch for them.
    *
    * The rule is per value rather than per row, because several rows read more
@@ -109,6 +121,8 @@ interface RowDefinition extends RowTrust {
   kind: ServiceKind;
   displayName: string;
   serviceClass: ServiceClass;
+  /** Absent for a row that reads its own scope and nothing else, which is most of them. */
+  readScopes?: readonly TrustScope[];
   values: (input: ProjectionInput, trust: RowTrust) => readonly ProjectedValue[];
 }
 
@@ -141,6 +155,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
+}
+
+/**
+ * Answers whether a row can vouch for every scope it reads, not only the one it
+ * is filed under.
+ *
+ * This is what `StatusActive` reports. A row that reads a second scope group
+ * withholds that group's values as soon as the scope owning it stops
+ * validating, so the service keeps the values the last trustworthy snapshot
+ * produced; calling itself active would publish those retained values as the
+ * device's current report. `Status Fault` on a pump service is the reading an
+ * owner acts on, so it says nothing about a scope the accessory has already
+ * told itself it cannot vouch for (D-014, D-05).
+ */
+export function isRowFullyTrusted(row: ServiceRow, untrustedScopes: readonly UntrustedScope[]): boolean {
+  return row.readScopes.every((scope) => isRowTrusted({ scope, toleratedDistrust: row.toleratedDistrust }, untrustedScopes));
 }
 
 // One scope group of the family-neutral decoded state, read structurally so this
@@ -421,7 +451,7 @@ function offlineValues(hap: API['hap'], input: ProjectionInput): readonly Projec
 }
 
 function toRow(definition: RowDefinition): ServiceRow {
-  const { kind, displayName, scope, toleratedDistrust, serviceClass, values } = definition;
+  const { kind, displayName, scope, toleratedDistrust, serviceClass, readScopes = [scope], values } = definition;
 
   return {
     kind,
@@ -430,6 +460,7 @@ function toRow(definition: RowDefinition): ServiceRow {
     scope,
     toleratedDistrust,
     serviceClass,
+    readScopes,
 
     project(input) {
       return isRowTrusted(this, input.untrustedScopes) ? values(input, this) : [];
@@ -452,6 +483,9 @@ function waterDefinitions(hap: API['hap'], characteristics: CustomCharacteristic
       displayName: 'Sump Pit Level',
       scope: 'water',
       toleratedDistrust: [],
+      // The reported water sensor fault publishes beside the level, so this row
+      // answers for the `fault` scope as well as its own.
+      readScopes: ['water', 'fault'],
       serviceClass: services.SumpPitService,
       values: (input, trust) => sumpPitLevelValues(hap, characteristics, input, trust),
     },
@@ -465,6 +499,9 @@ function pumpDefinitions(hap: API['hap'], characteristics: CustomCharacteristics
       displayName: 'Primary Pump',
       scope: 'pump',
       toleratedDistrust: [],
+      // The pump's own reported fault publishes beside its running state, so
+      // this row answers for the `fault` scope as well as its own.
+      readScopes: ['pump', 'fault'],
       serviceClass: services.PumpService,
       values: (input, trust) => primaryPumpValues(hap, characteristics, input, trust),
     },
@@ -481,6 +518,9 @@ function pumpDefinitions(hap: API['hap'], characteristics: CustomCharacteristics
       displayName: 'Backup Pump',
       scope: 'pump',
       toleratedDistrust: [],
+      // The pump's own reported fault and its fuse publish beside its running
+      // state, so this row answers for the `fault` scope as well as its own.
+      readScopes: ['pump', 'fault'],
       serviceClass: services.PumpService,
       values: (input, trust) => backupPumpValues(hap, characteristics, input, trust),
     },

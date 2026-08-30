@@ -94,6 +94,20 @@ const PUBLISHED_SCOPES: readonly TrustScope[] = [
 // network module reports that link state directly, so the adapter for it stays truthful (D-11).
 const CONTROLLER_LINK_ROW = 'Pump Controller Link Lost';
 
+// Every published service that reads the `fault` scope, whether or not it is filed under it.
+// `Sump Pit Level` reads the reported water sensor fault beside its level, and both pump services
+// read their pump's own fault and fuse, so one bad `fault` field costs all three the right to call
+// what they publish current (D-014).
+const FAULT_READING_SERVICES: readonly string[] = [
+  'Sump Pit Level',
+  'Primary Pump',
+  'Backup Pump',
+  'Primary Pump Fault',
+  'Backup Pump Fault',
+  'Water Sensor Fault',
+  CONTROLLER_LINK_ROW,
+];
+
 // The whole controller-link report, written out here rather than matched on a fragment, so a case
 // asserts what an owner reads: the device it names, the condition, and what happens to the values.
 const CONTROLLER_LINK_WARNING =
@@ -774,6 +788,48 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
       PUBLISHED_SCOPES.map((scope) => scope !== 'power'),
+    );
+  });
+
+  test('deactivates every service that reads the fault scope when one fault field stops validating', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const violations: readonly FieldViolation[] = [{ field: 'backup_pump_fault', reason: 'wrong-type', scope: 'fault' }];
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: true, violations })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
+      PUBLISHED_SERVICES.map((descriptor) => !FAULT_READING_SERVICES.includes(descriptor.name)),
+    );
+  });
+
+  test('retains the quiet fault values it published while the fault scope is untrusted', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { PumpFault, WaterSensorFaultReported } = createCustomCharacteristics(HAP_NAMESPACE);
+    const violations: readonly FieldViolation[] = [{ field: 'backup_pump_fault', reason: 'wrong-type', scope: 'fault' }];
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: true, violations })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        primaryFault: valueOf(accessory, 'Primary Pump', PumpFault),
+        primaryStatus: valueOf(accessory, 'Primary Pump', HAP.Characteristic.StatusFault),
+        waterSensorFault: valueOf(accessory, 'Sump Pit Level', WaterSensorFaultReported),
+        adapter: valueOf(accessory, 'Backup Pump Fault', HAP.Characteristic.ContactSensorState),
+      },
+      { primaryFault: false, primaryStatus: HAP.Characteristic.StatusFault.NO_FAULT, waterSensorFault: false, adapter: CONTACT_DETECTED },
     );
   });
 

@@ -29,7 +29,7 @@
  * requires the accessory to keep (D-014, DEV-08).
  */
 
-import { createServiceCatalogue, ensureService, isRowTrusted, publishedService, publishValue, removeServiceIfPresent } from './serviceCatalogue.js';
+import { createServiceCatalogue, ensureService, isRowFullyTrusted, publishedService, publishValue, removeServiceIfPresent } from './serviceCatalogue.js';
 import { isNotificationServiceKind } from './services.js';
 
 import type { ProjectionInput } from './serviceCatalogue.js';
@@ -340,6 +340,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // cannot vouch for its scope receives its `StatusActive` push and nothing
   // else, which leaves the last trustworthy value exactly where it was.
   //
+  // `StatusActive` answers for every scope the row reads rather than for the
+  // one it is filed under, so a service carrying a value from a second scope
+  // group stops calling that value current the moment the scope owning it stops
+  // validating (D-014, D-05).
+  //
   // The row is asked what it can publish before the service exists, because a
   // service added with nothing pushed onto it would sit at HAP's format
   // defaults, and those are this plugin's good-news values (D-014, D-05).
@@ -364,7 +369,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         publishValue(service, value.characteristic, value.value);
       }
 
-      publishValue(service, hap.Characteristic.StatusActive, isRowTrusted(row, input.untrustedScopes));
+      publishValue(service, hap.Characteristic.StatusActive, isRowFullyTrusted(row, input.untrustedScopes));
       descriptors.push({ kind: row.kind, subtype: row.subtype, serviceUuid: row.serviceClass.UUID, name: row.displayName });
     }
 
