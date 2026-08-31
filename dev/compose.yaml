@@ -1,0 +1,24 @@
+services:
+  homebridge:
+    image: homebridge/homebridge:latest
+    container_name: bg-dev-homebridge
+    restart: unless-stopped
+    # HAP pairing needs mDNS and LAN reachability from an iPhone, so the
+    # container shares the host network stack. The Config UI is pinned to
+    # 127.0.0.1 in config.json, so only HAP itself reaches the LAN.
+    network_mode: host
+    environment:
+      - PUID=${BG_PUID:-1000}
+      - PGID=${BG_PGID:-1000}
+      - TZ=${BG_TZ:-UTC}
+      # Lets the UI read characteristic values, which is what makes
+      # `./dev/hb observe` work. Also allows unauthenticated HAP reads on the
+      # LAN. Every characteristic this plugin publishes is read-only, so the
+      # exposure is telemetry, not control. Set BG_INSECURE=0 to turn it off.
+      - HOMEBRIDGE_INSECURE=${BG_INSECURE:-1}
+    volumes:
+      - ./homebridge:/homebridge
+      # Deliberately NOT under node_modules: bind-mounting there makes npm's
+      # rename fail EBUSY and aborts the whole plugin install. The generated
+      # package.json declares it as `file:/plugin`, so npm symlinks it instead.
+      - ../:/plugin

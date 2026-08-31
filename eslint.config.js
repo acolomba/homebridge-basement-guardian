@@ -101,6 +101,13 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    // The local Homebridge harness is a developer CLI; printing is its purpose.
+    files: ['dev/**/*.mjs'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     files: ['eslint.config.js'],
     ...tseslint.configs.disableTypeChecked,
   },

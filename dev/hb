@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+#
+# Runs this plugin inside a Homebridge container against the real vendor cloud.
+#
+# Account credentials come from a gitignored .env at the repo root; copy
+# .env.example and fill it in. The Config UI is preseeded with admin/admin and
+# bound to 127.0.0.1.
+set -euo pipefail
+
+DEV="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$DEV/.." && pwd)"
+STORAGE="$DEV/homebridge"
+COMPOSE=(docker compose -f "$DEV/compose.yaml")
+
+export BG_PUID="$(id -u)" BG_PGID="$(id -g)"
+export BG_TZ="$(timedatectl show -p Timezone --value 2>/dev/null || echo UTC)"
+
+load_env() {
+  [ -f "$ROOT/.env" ] || { echo "ERROR: no $ROOT/.env -- copy .env.example and fill it in." >&2; exit 1; }
+  set -a; . "$ROOT/.env"; set +a
+  : "${BG_EMAIL:?BG_EMAIL missing from .env}"
+  : "${BG_PASSWORD:?BG_PASSWORD missing from .env}"
+  export BG_INSECURE="${BG_INSECURE:-1}"
+}
+
+# Renders the Homebridge storage directory. Rewritten on every `up` so .env
+# stays the single source of truth; nothing here is committed.
+render() {
+  mkdir -p "$STORAGE"
+
+  # The image reads package.json BEFORE any startup hook, so the plugin has to
+  # be declared as a dependency here or it never gets installed.
+  cat > "$STORAGE/package.json" <<JSON
+{
+  "private": true,
+  "name": "homebridge-basement-guardian-dev",
+  "dependencies": { "homebridge-basement-guardian": "file:/plugin" }
+}
+JSON
+
+  node -e '
+    const fs = require("node:fs");
+    const crypto = require("node:crypto");
+    const [storage] = process.argv.slice(1);
+    const env = process.env;
+
+    fs.writeFileSync(`${storage}/config.json`, JSON.stringify({
+      bridge: {
+        name: env.BG_BRIDGE_NAME || "Basement Guardian Dev",
+        username: env.BG_BRIDGE_MAC || "0E:BA:5E:3E:00:01",
+        port: Number(env.BG_BRIDGE_PORT || 51826),
+        pin: env.BG_BRIDGE_PIN || "031-45-154",
+      },
+      plugins: ["homebridge-basement-guardian", "homebridge-config-ui-x"],
+      platforms: [
+        { name: "Config", platform: "config", port: 8581, host: "127.0.0.1", auth: "form", sudo: false, theme: "auto", tempUnits: "c", lang: "auto" },
+        {
+          name: "Basement Guardian",
+          platform: "BasementGuardian",
+          email: env.BG_EMAIL,
+          password: env.BG_PASSWORD,
+          pollInterval: Number(env.BG_POLL_INTERVAL || 300),
+        },
+      ],
+      accessories: [],
+    }, null, 2) + "\n", { mode: 0o600 });
+
+    // The UI verifies with pbkdf2(password, salt, iterations, 64, "sha512").
+    // Preseeding auth.json skips the first-run wizard. Left alone once written,
+    // so a password changed in the UI survives the next `up`.
+    const authPath = `${storage}/auth.json`;
+    if (!fs.existsSync(authPath)) {
+      const user = env.BG_UI_USER || "admin";
+      const pass = env.BG_UI_PASSWORD || "admin";
+      const salt = crypto.randomBytes(32).toString("hex");
+      const iterations = 210000;
+      fs.writeFileSync(authPath, JSON.stringify([{
+        id: 1,
+        username: user,
+        name: user,
+        hashedPassword: crypto.pbkdf2Sync(pass, salt, iterations, 64, "sha512").toString("hex"),
+        salt,
+        passwordIterations: iterations,
+        sessionVersion: 0,
+        admin: true,
+      }], null, 2) + "\n", { mode: 0o600 });
+      console.log(`seeded UI login ${user}/${pass}`);
+    }
+  ' "$STORAGE"
+}
+
+case "${1-}" in
+  up)
+    load_env; render
+    ( cd "$ROOT" && npm run build )
+    "${COMPOSE[@]}" up -d
+    echo
+    echo "UI      http://127.0.0.1:8581   (admin/admin unless changed in .env)"
+    echo "pairing $(node -e 'console.log(require("'"$STORAGE"'/config.json").bridge.pin)')"
+    echo "logs    ./dev/hb logs"
+    ;;
+  down)    "${COMPOSE[@]}" down ;;
+  restart) ( cd "$ROOT" && npm run build ) && "${COMPOSE[@]}" restart ;;
+  logs)    "${COMPOSE[@]}" logs -f --tail "${2:-80}" ;;
+  shell)   docker exec -it bg-dev-homebridge bash ;;
+  reset)
+    "${COMPOSE[@]}" down 2>/dev/null || true
+    docker run --rm -v "$STORAGE":/s alpine:3 sh -c 'rm -rf /s/* /s/.[!.]*' 2>/dev/null || true
+    echo "storage cleared -- next \`up\` starts fresh (re-pairing required)"
+    ;;
+  watch)
+    # Rebuilds and restarts the container whenever a source file changes.
+    ( cd "$ROOT" && npx nodemon --watch src --ext ts,json \
+        --exec "npm run build && docker compose -f '$DEV/compose.yaml' restart" )
+    ;;
+  observe)
+    # Reads the live HAP accessory database. Needs BG_INSECURE=1.
+    node "$DEV/observe.mjs" "${2-}"
+    ;;
+  *)
+    cat <<'USAGE'
+usage: ./dev/hb <command>
+
+  up        build, render config from .env, start the container
+  down      stop and remove it
+  restart   rebuild and restart (picks up source changes)
+  watch     rebuild + restart automatically on any src change
+  logs [n]  follow container logs
+  observe   dump live HAP services and characteristic values
+  shell     bash inside the container
+  reset     wipe storage -- forces re-pairing
+USAGE
+    exit 1 ;;
+esac

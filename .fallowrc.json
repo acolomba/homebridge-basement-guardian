@@ -2,7 +2,7 @@
   "entry": ["src/index.ts"],
   "ignoreDependencies": ["aedes", "mqtt", "ws"],
   "ignoreFindings": ["src/device/events.ts"],
-  "ignorePatterns": ["dist-test/**"],
+  "ignorePatterns": ["dist-test/**", "dev/homebridge/**"],
   "production": false,
   "health": {
     "maxCyclomatic": 20,
