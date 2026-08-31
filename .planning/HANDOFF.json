@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-08-31T00:06:23.898Z",
+  "timestamp": "2026-08-31T01:26:40.568Z",
   "phase": "3",
   "phase_name": "Safety Monitoring in HomeKit",
   "phase_dir": ".planning/phases/03-safety-monitoring-in-homekit",
@@ -12,66 +12,78 @@
     { "id": 1, "name": "03-01 HAP stand-in at real signatures", "status": "done", "commit": "424b64d" },
     { "id": 2, "name": "03-02 Water ladder and per-field trust scoping", "status": "done", "commit": "a484fce" },
     { "id": 3, "name": "03-03 ignoredFaults surface and D-17 refusal", "status": "done", "commit": "120c49d" },
-    { "id": 4, "name": "03-04 Tracer, end to end (D-12 checkpoint confirmed by user)", "status": "done", "commit": "79533d6" },
+    { "id": 4, "name": "03-04 Tracer, end to end", "status": "done", "commit": "79533d6" },
     { "id": 5, "name": "03-05 Full service catalogue, 15 rows", "status": "done", "commit": "300d2ef" },
     { "id": 6, "name": "03-06 Controller-link distrust, live wiring, immediacy gate", "status": "done", "commit": "c203820" },
     { "id": 7, "name": "03-07 End-to-end scenarios and static immediacy gate", "status": "done", "commit": "f73f692" },
-    { "id": 8, "name": "03-08 Retire stale exemptions, README and CHANGELOG", "status": "done", "commit": "6fd9dfd" }
+    { "id": 8, "name": "03-08 Retire stale exemptions, README and CHANGELOG", "status": "done", "commit": "6fd9dfd" },
+    { "id": 9, "name": "UAT harness for the three human checks (throwaway, uncommitted)", "status": "done", "progress": "Docker Homebridge + dist-only water_level override, validated end to end" }
   ],
   "remaining_tasks": [
-    { "id": 9, "name": "Human validation of 3 real-home items (/gsd-verify-work 3)", "status": "not_started" },
-    { "id": 10, "name": "Phase 4 — Pump Records and Official Controls", "status": "not_started" },
-    { "id": 11, "name": "Phase 5 — Degraded Operation and Recovery", "status": "not_started" },
-    { "id": 12, "name": "Phase 6 — Validated Release Candidate", "status": "not_started" }
+    { "id": 10, "name": "Human check 3 — ignoredFaults renders in the Plugin Settings GUI", "status": "not_started" },
+    { "id": 11, "name": "Human checks 1 and 2 — need a paired Apple home", "status": "blocked" },
+    { "id": 12, "name": "Phase 4 — Pump Records and Official Controls", "status": "not_started" },
+    { "id": 13, "name": "Phase 5 — Degraded Operation and Recovery", "status": "not_started" },
+    { "id": 14, "name": "Phase 6 — Validated Release Candidate", "status": "not_started" }
   ],
   "blockers": [
     {
-      "description": "Phase 3 verification is human_needed. Three checks require a real Apple home with a current hub; none is an evidence gap in the shipped code.",
+      "description": "Checks 1 and 2 ask what Apple Home does — whether its automation engine drops an inactive sensor, and what it draws in Details. The user declined to pair the UAT bridge, and the Homebridge UI has no automation engine, so neither can close from this session.",
       "type": "human_action",
-      "workaround": "Fold into the G-003/G-004 real-home session the project already requires before 1.0.0."
+      "workaround": "Both were already scheduled to ride along with the G-003/G-004 real-home session required before 1.0.0. Nothing is lost; the plugin-side half is now hardened with real-HAP evidence."
+    },
+    {
+      "description": "Check 3 is fully doable in the running container but was not performed — it needs a human to click through the Plugin Settings form.",
+      "type": "human_action",
+      "workaround": "UI is live at http://127.0.0.1:8581 while the container runs."
     }
   ],
   "async_jobs": [],
   "human_actions_pending": [
     {
-      "action": "Build an automation on the Sump Pit Flood Leak Sensor, force a degraded water scope with an out-of-domain water_level, confirm the automation still exists and still fires.",
-      "context": "LOAD-BEARING. A failure reopens 03-CONTEXT.md D-05, which the entire degradation design rests on. Research refuted the specific claim that inactive sensors drop out of automations, but could not prove the safe behaviour on current iOS.",
+      "action": "Homebridge UI -> Plugins -> Basement Guardian -> Settings. Add two ignoredFaults entries and remove one; confirm the seven-slug enum array renders acceptably and round-trips to config.json.",
+      "context": "Check 3. strictValidation is ALREADY true in config.schema.json (the STATE.md pending todo saying otherwise is stale). src/config.ts is authoritative either way.",
+      "blocking": false
+    },
+    {
+      "action": "Build an automation on the Sump Pit Flood Leak Sensor in a real Apple home, force a degraded water scope, confirm the automation still exists and still fires.",
+      "context": "LOAD-BEARING. A failure reopens 03-CONTEXT.md D-05. Requires pairing, which the user declined this session. Needs a positive control first: force 31 and confirm the automation fires BEFORE degrading, or a survival result proves nothing.",
       "blocking": true
     },
     {
       "action": "Confirm Apple Home renders StatusActive = false as a 'Status Active - No' row under accessory Details.",
-      "context": "The plugin provably pushes it; what Apple draws is controller-side and unobservable from the plugin. README.md:80 states this to users.",
-      "blocking": true
-    },
-    {
-      "action": "Load the plugin in a running Homebridge instance and confirm the ignoredFaults enum array renders acceptably in the Plugin Settings GUI under strictValidation: true.",
-      "context": "src/config.ts runtime validation is authoritative either way; administrators can fall back to editing config.json.",
+      "context": "Controller-side rendering. The plugin side is now proven twice: by execution against the HAP stand-in (03-VERIFICATION.md SC-6) and, new this session, against a real HAP accessory database in a real Homebridge process. A negative finding is therefore Apple's rendering, not a plugin defect. README.md:80 states this to users.",
       "blocking": true
     }
   ],
   "decisions": [
     {
-      "decision": "Subtypes are the ServiceKind slug verbatim; custom service and characteristic UUIDs are hard-coded literal v4 values outside Apple's base namespace.",
-      "rationale": "Confirmed by the user at a blocking checkpoint. Seed-derived UUIDs were rejected because a later seed edit would silently orphan every installed custom service with a green test suite. A literal cannot drift. Pinned by a source-condition test forbidding uuid.generate under src/accessories/.",
+      "decision": "The UAT water_level override patches COMPILED dist/device/state.js, never src/.",
+      "rationale": "dist/ is gitignored and package.json main is dist/index.js, so the scaffold cannot reach a commit structurally rather than by discipline, and npm run build erases it. A test hook that overrides safety telemetry must never ship in this plugin.",
       "phase": "3"
     },
     {
-      "decision": "An unknown or duplicated ignoredFaults slug refuses the configuration; the plugin does not start.",
-      "rationale": "User decision against the recommendation, on consistency with validateConfig's existing refusals. Accepted risk: a typo leaves the pump unmonitored until fixed. Mitigation lives entirely in message quality, so naming the bad slug and enumerating all seven valid ones is a requirement of the decision, not a nicety.",
+      "decision": "The override reads a control FILE on every snapshot rather than an env var.",
+      "rationale": "The forced value must change without restarting Homebridge. A restart mid-test would confound the load-bearing D-05 result: if the automation broke, you could not tell whether the restart or StatusActive = false caused it.",
       "phase": "3"
     },
     {
-      "decision": "No sixth fault adapter for battery_health == 32; D-008 stays at five.",
-      "rationale": "Resolves the open proposal in PROJECT.md against the adapter. The condition surfaces through the standard Battery service's StatusLowBattery, which Apple Home renders.",
+      "decision": "The /gsd-quick task for the harness was stood down after the design changed.",
+      "rationale": "GSD workflow entry exists to keep planning artifacts in sync with repo edits. The dist-only design touches zero tracked files, so there was nothing to commit or track. git status stayed clean throughout.",
       "phase": "3"
     },
     {
-      "decision": "RES-01 and RES-03 are split across Phase 3 and Phase 5.",
-      "rationale": "Phase 3 ships field-validity plus the offline confirmation counter and adapter. Phase 5 owns the ~898s heartbeat, the two-missed-heartbeat rule, shadow silence, and restart persistence. Recorded in REQUIREMENTS.md delivery-split sub-bullets. Verified: no Phase 5 over-reach in any Phase 3 module.",
+      "decision": "'./level reset' replaced './level clear'; simply removing the override is unsafe.",
+      "rationale": "Discovered by failure. The override sits in freeze(), the store's persistence chokepoint, so a forced value is written into canonical state. Once the shadow owns telemetry, pollTelemetry returns previous.data, so removing the override leaves the last forced value STUCK and the scope permanently degraded. Observed live: after clearing, the next snapshot still read water_level=9.",
+      "phase": "3"
+    },
+    {
+      "decision": "Observing StatusActive in the Homebridge UI does NOT close check 1 or check 2.",
+      "rationale": "Both questions are about Apple Home specifically. Substituting a different controller and reporting its result as settling the question is the exact anti-pattern already recorded for this phase. Recorded as hardening evidence only.",
       "phase": "3"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd-verify-work 3 after the real-home session to close the three human items, then /gsd-autonomous --from 4. If item 1 fails, do NOT close the phase — reopen 03-CONTEXT.md D-05 instead.",
-  "context_notes": "Phase 3 is implementation-complete and gate-complete in 73 commits: 998 unit tests (from 588), 62 Cucumber scenarios (from 35), 100% line/branch/function across src/, npm run check green on three consecutive runs at every gate. Code review converged over three iterations (2 blockers, then 2, then 0) and security closed 34/35 threats with threats_open: 0. The verifier confirmed 6/6 success criteria by executing the shipped code with its own probes plus two live mutation tests, not by reading summaries. The single most important carried lesson: four blockers, all false-normal paths, shipped inside a fully green suite at 100% coverage — coverage measures whether existing branches ran, not whether the right branches exist."
+  "next_action": "Decide whether to do check 3 in the running container (5 minutes, closes one of three) or tear down. Checks 1 and 2 stay deferred to the G-003/G-004 real-home session. Before ANY packaging or release work, run `npm run build` to erase the dist scaffold.",
+  "context_notes": "Phase 3 remains implementation-complete and gate-complete at 75 commits; this session closed ZERO of the three human checks and changed no tracked file. What it produced is a working UAT harness and genuinely new evidence: SC-6 reproduced against a real HAP accessory database rather than the repo's stand-in. A bad water_level deactivated exactly 2 of 15 services (Sump Pit Flood, Sump Pit Level), left 13 trusted, retained Water Level=20 / Raw Code=1 / Leak Detected=0 rather than blanking them, kept Status Fault at 0, let Controller Data Last Trusted At keep advancing while water was poisoned, and recovered unprompted on the next valid snapshot. Three of this session's failures are recorded as anti-patterns below; all three are the same family the phase already knew about, which is the point."
 }
