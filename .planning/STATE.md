@@ -98,6 +98,24 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 - [Phase 3]: Truthful standards-first HomeKit mapping with separate actionable fault adapters; the `D-014` preserve-and-mark invariant keeps the last valid value and faults only the narrowest owning scope.
 - [Phase 4]: Only self-test and boolean alarm mute are writable; reported state remains authoritative. Validation gates no longer block phase completion; they block only the `1.0.0` release.
+
+- [Phase 4, decided 2026-08-31]: Phase 4 is built and verified against the existing Cucumber
+  fake-pump harness, extended for commands. No command is ever sent to a live pump during
+  development. `features/support/fakeShadowBroker.ts` is read-only today — it publishes
+  `get/accepted`, `get/rejected` and `update/accepted` and handles no desired state — so the
+  phase adds `update/rejected`, handling of the plugin's `{"desiredData": ...}` publish, and the
+  five `CTRL-05` outcomes: accepted, rejected, timed out, late, and externally initiated.
+
+  The fake must be built from the measured wire shapes in `.planning/intel/constraints.md`,
+  never from invention. A fake we author answers our own design, so anything not grounded in a
+  real observation is an assumption wearing a passing test.
+
+  Consequence, and the reason this is written down: **self-test has real hardware evidence
+  behind its wire shape; alarm mute has none.** Nobody has observed a real Gemini's
+  acknowledgement, state change, duration, latency, or failure behaviour for mute — which is
+  what `G-001` exists for. Mute constants therefore ship named `PROVISIONAL_`, exactly as the
+  Phase 3 water ladder did under `G-002`, and `G-001` stays open and blocks `1.0.0`. Phase 4
+  completion is not blocked by it.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
