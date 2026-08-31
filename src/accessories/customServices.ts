@@ -3,25 +3,30 @@
  *
  * Apple publishes no service that carries a sump pit, a pump, mains power at a
  * sump controller, or a backup battery's exact vendor facts, so each of those
- * needs a service of the plugin's own. Every one carries only read-only
- * characteristics, so no controller can write reported safety state back onto
- * the device (SAFE-08).
+ * needs a service of the plugin's own. Every vendor-defined characteristic they
+ * carry is read-only, so no controller can write reported safety state back
+ * onto the device (SAFE-08). The one writable member is Apple's own
+ * `ConfiguredName`, which names the service for a controller and carries no
+ * device state: the plugin registers no set handler for it, HAP stores the
+ * write and Homebridge persists it to the accessory cache, and nothing written
+ * there reaches the device. The subtype is untouched, so a rename orphans no
+ * automation, scene, or notification.
  *
  * The subclasses are declared inside the factory because `api.hap` is a runtime
  * value: HAP-NodeJS is never imported directly, so the base class and every
  * standard characteristic arrive through the injected namespace (D-006).
  *
- * `StatusActive` and `StatusFault` are declared optional on every service here
- * rather than added on first use, because HAP warns on every restored accessory
- * when a service receives a characteristic its definition never declared, and
- * because a service restored from the Homebridge cache is a plain `Service`
- * whose class the running code no longer recognises. The same rule is what lets
- * a later release add the pump observation-epoch, observed-count, and
- * last-activation characteristics to an already-published `PumpService` without
- * changing its subtype: the accessory's characteristic-repair guard declares an
- * undeclared characteristic before pushing it, which suppresses the warning HAP
- * otherwise emits, and the subtype -- the one string that must never change --
- * is untouched.
+ * `StatusActive`, `StatusFault`, and `ConfiguredName` are declared optional on
+ * every service here rather than added on first use, because HAP warns on every
+ * restored accessory when a service receives a characteristic its definition
+ * never declared, and because a service restored from the Homebridge cache is a
+ * plain `Service` whose class the running code no longer recognises. The same
+ * rule is what lets a later release add the pump observation-epoch,
+ * observed-count, and last-activation characteristics to an already-published
+ * `PumpService` without changing its subtype: the accessory's
+ * characteristic-repair guard declares an undeclared characteristic before
+ * pushing it, which suppresses the warning HAP otherwise emits, and the subtype
+ * -- the one string that must never change -- is untouched.
  *
  * `PumpService` declares `PumpFuseBlown` optional for the same reason: the
  * backup pump reports a fuse fact and the primary pump does not, so one service
@@ -93,10 +98,14 @@ interface ServiceDefinition {
 export function createCustomServices(hap: API['hap']): CustomServices {
   const characteristics = createCustomCharacteristics(hap);
 
-  // Every service here declares both, because the accessory pushes
-  // `StatusActive` on every published row and `StatusFault` on the service that
-  // owns a condition.
-  const statusCharacteristics: readonly CharacteristicClass[] = [hap.Characteristic.StatusActive, hap.Characteristic.StatusFault];
+  // Every service here declares all three, because the accessory pushes
+  // `StatusActive` on every published row, `StatusFault` on the service that
+  // owns a condition, and `ConfiguredName` on every service it names.
+  const sharedCharacteristics: readonly CharacteristicClass[] = [
+    hap.Characteristic.StatusActive,
+    hap.Characteristic.StatusFault,
+    hap.Characteristic.ConfiguredName,
+  ];
 
   // One class factory, so four near-identical class bodies never exist.
   function define({ uuid, required, optional = [] }: ServiceDefinition): ServiceClass {
@@ -110,7 +119,7 @@ export function createCustomServices(hap: API['hap']): CustomServices {
           this.addCharacteristic(characteristic);
         }
 
-        for (const characteristic of [...optional, ...statusCharacteristics]) {
+        for (const characteristic of [...optional, ...sharedCharacteristics]) {
           this.addOptionalCharacteristic(characteristic);
         }
       }

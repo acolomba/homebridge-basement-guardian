@@ -13,7 +13,7 @@ import type { FakeHapService, FakeServiceClass } from '../../features/support/fa
 import type { FakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
-import type { NotificationServiceKind, ServiceDescriptor } from '../../src/accessories/services.js';
+import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from '../../src/accessories/services.js';
 import type { DeviceFamily, FieldViolation } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
@@ -113,6 +113,10 @@ const FAULT_READING_SERVICES: readonly string[] = [
 const CONTROLLER_LINK_WARNING =
   `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so water, pump, power, ` +
   'battery, and fault values are retained rather than refreshed until the link returns.';
+
+// A name a user typed, deliberately unlike anything the catalogue publishes, so a case that asserts
+// it survived cannot be satisfied by a seed.
+const USER_RENAME = 'Fuse Box';
 
 // Every module under `src/accessories/`, read as source so a prohibited idiom fails here by name
 // rather than through some downstream symptom.
@@ -364,6 +368,18 @@ function rowNamed(displayName: string): ServiceRow {
 
   if (row === undefined) {
     throw new Error(`the catalogue publishes no ${displayName} row`);
+  }
+
+  return row;
+}
+
+// A row resolved by the slug it publishes under, so a case that is about the published name writes
+// no name of its own: the expected value is read back from the row.
+function rowOfKind(kind: ServiceKind): ServiceRow {
+  const row = CATALOGUE.find((candidate) => candidate.kind === kind);
+
+  if (row === undefined) {
+    throw new Error(`the catalogue publishes no ${kind} row`);
   }
 
   return row;
@@ -1569,6 +1585,79 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(readImmediately, CONTACT_DETECTED);
   });
 
+  // Apple Home labels a secondary service of a bridged accessory by `ConfiguredName`, so a sensor
+  // published without one reads as "Contact Sensor 4" where SAFE-04 promised a named cause. The
+  // expected names are read from the catalogue rather than restated here, because a second list of
+  // fifteen names is exactly the drift this case exists to catch.
+  test('names every published service with the catalogue display name it publishes under', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      CATALOGUE.map((row) => valueOf(accessory, row.displayName, HAP.Characteristic.ConfiguredName)),
+      CATALOGUE.map((row) => row.displayName),
+    );
+  });
+
+  // `ConfiguredName` is paired-write, and `Characteristic.serialize` writes its value into the
+  // Homebridge accessory cache, so a name a controller wrote survives a restart. Seeding on every
+  // update would therefore not flicker: it would destroy a name the user set and expected to keep,
+  // on every poll, forever (D-14). The sibling is asserted too, because without it the case would
+  // also pass against an implementation that stopped naming anything at all.
+  test('leaves a name a controller wrote in place across a later update', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith(linkOutcome({ linkPresent: true })) });
+    const renamed = rowOfKind('backup-pump-fault');
+    const sibling = rowOfKind('primary-pump-fault');
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+    serviceOf(accessory, renamed.displayName).setCharacteristic(HAP.Characteristic.ConfiguredName, USER_RENAME);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        renamed: valueOf(accessory, renamed.displayName, HAP.Characteristic.ConfiguredName),
+        sibling: valueOf(accessory, sibling.displayName, HAP.Characteristic.ConfiguredName),
+      },
+      { renamed: USER_RENAME, sibling: sibling.displayName },
+    );
+  });
+
+  // An accessory whose family has stopped resolving never reaches the publishing loop again, so the
+  // republishing loop is the only path left that can name a service restored from the Homebridge
+  // cache without one. The emptied name stands for that restored service; without a seed on the
+  // second loop it would stay unnamed for as long as the profile does not resolve.
+  test('names a published service carrying no name after the family stops resolving', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry });
+    const unnamed = rowOfKind('mains-power-lost');
+    const retained = rowOfKind('primary-pump-fault');
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_000_000 }), 'poll');
+    serviceOf(accessory, unnamed.displayName).setCharacteristic(HAP.Characteristic.ConfiguredName, '');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ receivedAt: 1_700_000_060_000 }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        reseeded: valueOf(accessory, unnamed.displayName, HAP.Characteristic.ConfiguredName),
+        retained: valueOf(accessory, retained.displayName, HAP.Characteristic.ConfiguredName),
+      },
+      { reseeded: unnamed.displayName, retained: retained.displayName },
+    );
+  });
+
   for (const module of ACCESSORY_MODULES) {
     test(`${module} signals no untrusted scope through an errored characteristic`, async () => {
       // act
@@ -1584,6 +1673,18 @@ describe('createBasementGuardianAccessory', () => {
 
       // assert
       assert.deepStrictEqual({ onGet: code.includes('onGet'), getEvent: /\.on\(\s*['"`]get/i.test(code) }, { onGet: false, getEvent: false });
+    });
+
+    // `ConfiguredName` is the one paired-write characteristic this plugin publishes, so a controller
+    // can write to a safety accessory for the first time. A set handler is what would turn that
+    // write into a path toward the device; there is none, and nothing reads the value back into
+    // decoded state or into a command (SAFE-08).
+    test(`${module} registers no set handler, so a controller write never reaches the device`, async () => {
+      // act
+      const code = codeOf(await sourceOf(module));
+
+      // assert
+      assert.deepStrictEqual({ onSet: code.includes('onSet'), setEvent: /\.on\(\s*['"`]set/i.test(code) }, { onSet: false, setEvent: false });
     });
 
     test(`${module} derives no published identifier from a seed string`, async () => {

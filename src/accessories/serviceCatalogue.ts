@@ -732,20 +732,66 @@ export function removeServiceIfPresent(accessory: PlatformAccessory, row: Servic
   return true;
 }
 
-/**
- * Pushes one value onto a service, declaring the characteristic first when the
- * service does not already carry or declare it.
- *
- * The guard is required rather than cosmetic: `addOptionalCharacteristic` is
- * not idempotent, so a second call appends a second entry, and a service
- * restored from the Homebridge cache carries neither the class nor its
- * declaration. Without the declaration HAP warns on every restored accessory
- * that the characteristic belongs to no section of the service.
- */
-export function publishValue(service: Service, characteristic: CharacteristicClass, value: CharacteristicValue): void {
+// Declares a characteristic on a service that neither carries nor declares it,
+// which is what every writer below does before it pushes.
+//
+// The guard is required rather than cosmetic: `addOptionalCharacteristic` is
+// not idempotent, so a second call appends a second entry, and a service
+// restored from the Homebridge cache carries neither the class nor its
+// declaration. Without the declaration HAP warns on every restored accessory
+// that the characteristic belongs to no section of the service.
+function declareCharacteristic(service: Service, characteristic: CharacteristicClass): void {
   if (!service.testCharacteristic(characteristic) && !service.optionalCharacteristics.some((declared) => declared.UUID === characteristic.UUID)) {
     service.addOptionalCharacteristic(characteristic);
   }
+}
+
+/**
+ * Pushes one value onto a service, declaring the characteristic first when the
+ * service does not already carry or declare it.
+ */
+export function publishValue(service: Service, characteristic: CharacteristicClass, value: CharacteristicValue): void {
+  declareCharacteristic(service, characteristic);
 
   service.updateCharacteristic(characteristic, value);
+}
+
+/**
+ * Names a service for a controller, and never over a name a user already gave
+ * it.
+ *
+ * A controller labels a secondary service of a bridged accessory by
+ * `ConfiguredName` rather than by `Name`, so a sensor published without one
+ * reads as "Contact Sensor 4" where `SAFE-04` promised the owner a named cause.
+ *
+ * The write happens once. `ConfiguredName` is paired-write, and
+ * `Characteristic.serialize` writes its value into the Homebridge accessory
+ * cache, so a rename a user makes survives a restart; pushing on every update
+ * would destroy a name the user set and expected to keep, on every poll. This
+ * is the rule the plugin applies to reported device state, applied to a name
+ * the user rather than the device is the authority on (D-14). The verb is the
+ * contract: this seeds where `publishValue` publishes, and the two must not be
+ * confused.
+ *
+ * The name comes from `RowDefinition.displayName` alone, which is the same
+ * string `Name` already carries, so no second list of service names can drift
+ * from the catalogue.
+ *
+ * `testCharacteristic` is asked before `getCharacteristic` because the real HAP
+ * creates a declared-but-absent characteristic on the way out of
+ * `getCharacteristic`, which would name a service the caller only meant to
+ * inspect.
+ */
+export function seedConfiguredName(hap: API['hap'], service: Service, displayName: string): void {
+  const characteristic = hap.Characteristic.ConfiguredName;
+
+  declareCharacteristic(service, characteristic);
+
+  const current = service.testCharacteristic(characteristic) ? service.getCharacteristic(characteristic).value : undefined;
+
+  if (typeof current === 'string' && current !== '') {
+    return;
+  }
+
+  service.updateCharacteristic(characteristic, displayName);
 }

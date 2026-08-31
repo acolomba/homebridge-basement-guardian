@@ -15,6 +15,7 @@ import {
   publishedService,
   publishValue,
   removeServiceIfPresent,
+  seedConfiguredName,
 } from '../../src/accessories/serviceCatalogue.js';
 
 import type { ProjectedValue, ProjectionInput, RowTrust, ServiceRow } from '../../src/accessories/serviceCatalogue.js';
@@ -41,6 +42,10 @@ const NOT_CHARGEABLE = 2;
 // Apple's filter-maintenance service, written out so a row that reached for it fails here. Battery
 // health and replacement are never represented through filter semantics (D-021, SAFE-06).
 const FILTER_MAINTENANCE_UUID = '000000BA-0000-1000-8000-0026BB765291';
+
+// A name a user typed, deliberately unlike anything the catalogue publishes, so a case that asserts
+// it survived cannot be satisfied by a seed.
+const USER_RENAME = 'Fuse Box';
 
 /** One backup-battery reading, and the low-battery verdict `D-07` gives it. */
 interface BatteryReading {
@@ -1443,5 +1448,88 @@ describe('publishValue', () => {
       },
       { value: CONTACT_NOT_DETECTED, declared: 0 },
     );
+  });
+});
+
+// What a service carries under `ConfiguredName`, beside the number of times its definition declares
+// it. The count is the half a dropped guard fails: `addOptionalCharacteristic` appends rather than
+// replaces, so a second declaration is a silent duplicate rather than an error.
+function carriedName(hap: API['hap'], service: Service): { value: unknown; declared: number } {
+  const characteristic = hap.Characteristic.ConfiguredName;
+
+  return {
+    value: service.getCharacteristic(characteristic).value,
+    declared: service.optionalCharacteristics.filter((declared) => declared.UUID === characteristic.UUID).length,
+  };
+}
+
+describe('seedConfiguredName', () => {
+  // Apple's sensor definitions declare no `ConfiguredName`, so a standard sensor is the service
+  // whose seed has to declare the characteristic before pushing it.
+  test('declares the characteristic once and names a service that carries no name', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowNamed(hap, 'Mains Power Lost');
+    const service = addedService(accessory, hap, row);
+
+    // act
+    seedConfiguredName(hap, service, row.displayName);
+
+    // assert
+    assert.deepStrictEqual(carriedName(hap, service), { value: row.displayName, declared: 1 });
+  });
+
+  // A vendor-defined service declares `ConfiguredName` itself, so the seed must push onto it without
+  // appending a second declaration.
+  test('declares no second entry on a service whose definition already declares the characteristic', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowNamed(hap, 'Sump Mains Power');
+    const service = addedService(accessory, hap, row);
+
+    // act
+    seedConfiguredName(hap, service, row.displayName);
+
+    // assert
+    assert.deepStrictEqual(carriedName(hap, service), { value: row.displayName, declared: 1 });
+  });
+
+  // HAP constructs a string characteristic it names no default for at the empty string, which is
+  // what a service restored from the Homebridge cache with no name reads. That is an unnamed
+  // service rather than a renamed one, so it earns the catalogue name.
+  test('names a service carrying the characteristic at its construction default', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowNamed(hap, 'Mains Power Lost');
+    const service = addedService(accessory, hap, row);
+    service.addCharacteristic(hap.Characteristic.ConfiguredName);
+
+    // act
+    seedConfiguredName(hap, service, row.displayName);
+
+    // assert
+    assert.strictEqual(carriedName(hap, service).value, row.displayName);
+  });
+
+  // `ConfiguredName` is paired-write, and `Characteristic.serialize` writes its value into the
+  // Homebridge accessory cache, so a name a controller wrote survives a restart. Writing on every
+  // update would therefore not merely flicker: it would destroy a name the user set and expected to
+  // keep, again on every poll, forever (D-14).
+  test('leaves a name already on the service exactly as it is', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowNamed(hap, 'Mains Power Lost');
+    const service = addedService(accessory, hap, row);
+    service.setCharacteristic(hap.Characteristic.ConfiguredName, USER_RENAME);
+
+    // act
+    seedConfiguredName(hap, service, row.displayName);
+
+    // assert
+    assert.strictEqual(carriedName(hap, service).value, USER_RENAME);
   });
 });

@@ -24,6 +24,7 @@ const HAP = createFakeHap();
 // assertion fails when the stand-in's own literal drifts.
 const LEAK_DETECTED_UUID = '00000070-0000-1000-8000-0026BB765291';
 const CONTACT_SENSOR_STATE_UUID = '0000006A-0000-1000-8000-0026BB765291';
+const CONFIGURED_NAME_UUID = '000000E3-0000-1000-8000-0026BB765291';
 const CONTACT_SENSOR_UUID = '00000080-0000-1000-8000-0026BB765291';
 
 const ACCESSORY_NAME = 'Sump System';
@@ -60,8 +61,12 @@ class ScratchService extends HAP.Service {
 
 function assertStandardIdentifiers(): void {
   assert.deepEqual(
-    { leakDetected: HAP.Characteristic.LeakDetected.UUID, contactSensorState: HAP.Characteristic.ContactSensorState.UUID },
-    { leakDetected: LEAK_DETECTED_UUID, contactSensorState: CONTACT_SENSOR_STATE_UUID },
+    {
+      leakDetected: HAP.Characteristic.LeakDetected.UUID,
+      contactSensorState: HAP.Characteristic.ContactSensorState.UUID,
+      configuredName: HAP.Characteristic.ConfiguredName.UUID,
+    },
+    { leakDetected: LEAK_DETECTED_UUID, contactSensorState: CONTACT_SENSOR_STATE_UUID, configuredName: CONFIGURED_NAME_UUID },
   );
 }
 

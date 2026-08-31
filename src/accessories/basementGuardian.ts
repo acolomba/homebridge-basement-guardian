@@ -33,7 +33,15 @@
  * requires the accessory to keep (D-014, DEV-08).
  */
 
-import { createServiceCatalogue, ensureService, isRowFullyTrusted, publishedService, publishValue, removeServiceIfPresent } from './serviceCatalogue.js';
+import {
+  createServiceCatalogue,
+  ensureService,
+  isRowFullyTrusted,
+  publishedService,
+  publishValue,
+  removeServiceIfPresent,
+  seedConfiguredName,
+} from './serviceCatalogue.js';
 import { isNotificationServiceKind } from './services.js';
 
 import type { ProjectionInput } from './serviceCatalogue.js';
@@ -369,6 +377,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         continue;
       }
 
+      seedConfiguredName(hap, service, row.displayName);
+
       for (const value of projected) {
         publishValue(service, value.characteristic, value.value);
       }
@@ -414,6 +424,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       if (service === undefined) {
         continue;
       }
+
+      seedConfiguredName(hap, service, row.displayName);
 
       for (const value of row.project(input)) {
         publishValue(service, value.characteristic, value.value);

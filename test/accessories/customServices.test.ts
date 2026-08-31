@@ -20,6 +20,12 @@ const RANDOM_V4_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-
 const STATUS_ACTIVE_NAME = 'Status Active';
 const STATUS_FAULT_NAME = 'Status Fault';
 
+// Apple's own name characteristic, which a controller shows a secondary service by and a user
+// renames through. It is declared here for the reason the two status characteristics are: HAP warns
+// on every restored accessory when a service receives a characteristic its definition never
+// declared.
+const CONFIGURED_NAME = 'Configured Name';
+
 // Wi-Fi signal strength is module diagnostics rather than a basement-protection condition (D-016),
 // and battery health is never represented through filter-maintenance semantics (D-021, SAFE-06).
 const FORBIDDEN_NAME_WORDS: readonly string[] = ['Filter', 'Wi-Fi', 'WiFi', 'Signal', 'dBm'];
@@ -41,28 +47,28 @@ const SERVICES: readonly ServiceExpectation[] = [
     displayName: 'Sump Pit Level',
     subtype: 'sump-pit-level',
     required: ['Name', 'Water Level', 'Raw Water Level Code'],
-    optional: ['Water Sensor Fault Reported', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+    optional: ['Water Sensor Fault Reported', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
   {
     name: 'PumpService',
     displayName: 'Primary Pump',
     subtype: 'primary-pump',
     required: ['Name', 'Pump Running'],
-    optional: ['Pump Fault', 'Pump Fuse Blown', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+    optional: ['Pump Fault', 'Pump Fuse Blown', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
   {
     name: 'SumpMainsPowerService',
     displayName: 'Sump Mains Power',
     subtype: 'sump-mains-power',
     required: ['Name', 'Mains Power Present'],
-    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
   {
     name: 'BackupBatteryService',
     displayName: 'Backup Battery Facts',
     subtype: 'backup-battery',
     required: ['Name', 'Battery Charging', 'Battery Voltage Low', 'Battery Health Code', 'Protection Hours Code'],
-    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME],
+    optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
 ];
 

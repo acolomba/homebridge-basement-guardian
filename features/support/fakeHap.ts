@@ -87,6 +87,11 @@ export interface FakeCharacteristicProps {
 
 const NAMED_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ], maxLen: 64 };
 const PLAIN_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ] };
+// The one paired-write characteristic this plugin publishes. A controller writes the name a user
+// typed, and the real HAP names no default for this identifier, so it constructs at the empty
+// string -- which is the sentinel the seeding rule reads to tell an unnamed service from a renamed
+// one. A stand-in answering anything else would satisfy the no-clobber case vacuously.
+const WRITABLE_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
 const WRITE_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.PAIRED_WRITE] };
 const READ_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ] };
 const BINARY_STATE: FakeCharacteristicProps = {
@@ -171,6 +176,7 @@ export interface FakeCharacteristicNamespace {
   readonly SerialNumber: FakeCharacteristicClass;
   readonly FirmwareRevision: FakeCharacteristicClass;
   readonly Name: FakeCharacteristicClass;
+  readonly ConfiguredName: FakeCharacteristicClass;
   readonly Identify: FakeCharacteristicClass;
   readonly LeakDetected: FakeCharacteristicClass & FakeLeakDetectedValues;
   readonly ContactSensorState: FakeCharacteristicClass & FakeContactSensorStateValues;
@@ -237,6 +243,7 @@ const CHARACTERISTIC: FakeCharacteristicNamespace = Object.assign(StandInCharact
   SerialNumber: defineCharacteristic('Serial Number', `00000030${APPLE_BASE_UUID}`, NAMED_STRING),
   FirmwareRevision: defineCharacteristic('Firmware Revision', `00000052${APPLE_BASE_UUID}`, PLAIN_STRING),
   Name: defineCharacteristic('Name', `00000023${APPLE_BASE_UUID}`, NAMED_STRING),
+  ConfiguredName: defineCharacteristic('Configured Name', `000000E3${APPLE_BASE_UUID}`, WRITABLE_STRING),
   Identify: defineCharacteristic('Identify', `00000014${APPLE_BASE_UUID}`, WRITE_ONLY_BOOL),
   LeakDetected: Object.assign(defineCharacteristic('Leak Detected', `00000070${APPLE_BASE_UUID}`, BINARY_STATE), {
     LEAK_NOT_DETECTED: 0,
