@@ -131,6 +131,15 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 ### Pending Todos
 
+1 captured todo in `.planning/todos/pending/` — `/gsd-capture --list` to review:
+
+- [major, docs] Document which services Apple Home renders. The README implies `Sump Pit
+  Level` and the pump, mains-power, and battery-facts services are visible in a user's home.
+  They are vendor-defined services, so Apple Home draws no tile for any of them. Confirmed
+  against a real Homebridge instance on 2026-08-30.
+
+Carried inline below (not files):
+
 - Backup-battery fault adapter: RESOLVED in the Phase 3 discussion (2026-08-30) against a sixth
   adapter. `D-008` stays locked at five; `battery_health == 32` surfaces through the standard
   Battery service's `StatusLowBattery`. Remove the open proposal from PROJECT.md when Phase 3
