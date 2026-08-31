@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
 Plan: 8 of 8
 Status: Phase complete — ready for verification
-Last activity: 2026-08-31 — Completed quick task 260831-c7f: human-readable ignoredFaults labels
+Last activity: 2026-08-31 — Completed quick task 260831-dlv: labelled ignoredFaults checkboxes
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
 three UAT items passed against real hardware.
@@ -205,6 +205,7 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260831-dlv | Render ignoredFaults as labelled checkboxes in the settings form | 2026-08-31 | cdb183d |  | [260831-dlv-render-ignoredfaults-as-labelled-checkbo](./quick/260831-dlv-render-ignoredfaults-as-labelled-checkbo/) |
 | 260831-c7f | Render ignoredFaults options as human-readable names in the plugin settings GUI | 2026-08-31 | 645208b |  | [260831-c7f-render-ignoredfaults-options-as-human-re](./quick/260831-c7f-render-ignoredfaults-options-as-human-re/) |
 | 260829-idd | Correct vendor API intel to the measured wire shape | 2026-08-29 | cd7c651 |  | [260829-idd-correct-vendor-api-intel-to-the-measured](./quick/260829-idd-correct-vendor-api-intel-to-the-measured/) |
 | 260829-gx6 | Fix vendor REST wire-shape defects in device discovery | 2026-08-29 | 6826afd | Verified | [260829-gx6-fix-vendor-rest-wire-shape-defects-in-de](./quick/260829-gx6-fix-vendor-rest-wire-shape-defects-in-de/) |
