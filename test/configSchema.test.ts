@@ -171,17 +171,20 @@ test('CONF-06 offers the removable notification sensors as a list that cannot re
 });
 
 // The seven names are written out here rather than imported from NOTIFICATION_SERVICE_KINDS, so a
-// name that drifts on the runtime side fails this case instead of travelling with it.
+// name that drifts on the runtime side fails this case instead of travelling with it. The order is
+// deliberately alphabetical by the label an administrator reads in the settings form, and no longer
+// tracks NOTIFICATION_SERVICE_KINDS: the form presents this list to a person, so it sorts for a
+// person. The runtime accepts any order, so the two are free to differ.
 test('CONF-06 offers exactly the seven removable notification sensors and no other value', () => {
   // arrange
   const expectedValues = [
     'backup-pump-activated',
+    'backup-pump-fault',
+    'basement-guardian-offline',
     'mains-power-lost',
     'primary-pump-fault',
-    'backup-pump-fault',
-    'water-sensor-fault',
     'pump-controller-link-lost',
-    'basement-guardian-offline',
+    'water-sensor-fault',
   ];
 
   // act
