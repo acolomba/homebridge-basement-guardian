@@ -239,6 +239,6 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-08-31T10:20:00.000Z
-Stopped at: Session resumed — Phase 03 awaiting three human verification checks
+Last session: 2026-08-31T18:40:00.000Z
+Stopped at: Checks 2 and 3 closed; check 1 open, needs the bridge in a hub-bearing home
 Resume file: .planning/phases/03-safety-monitoring-in-homekit/.continue-here.md
