@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
 Plan: 8 of 8
 Status: Phase complete — ready for verification
-Last activity: 2026-08-30 — Phase 03 execution started
+Last activity: 2026-08-31 — Completed quick task 260831-c7f: human-readable ignoredFaults labels
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
 three UAT items passed against real hardware.
@@ -205,6 +205,7 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260831-c7f | Render ignoredFaults options as human-readable names in the plugin settings GUI | 2026-08-31 | 645208b |  | [260831-c7f-render-ignoredfaults-options-as-human-re](./quick/260831-c7f-render-ignoredfaults-options-as-human-re/) |
 | 260829-idd | Correct vendor API intel to the measured wire shape | 2026-08-29 | cd7c651 |  | [260829-idd-correct-vendor-api-intel-to-the-measured](./quick/260829-idd-correct-vendor-api-intel-to-the-measured/) |
 | 260829-gx6 | Fix vendor REST wire-shape defects in device discovery | 2026-08-29 | 6826afd | Verified | [260829-gx6-fix-vendor-rest-wire-shape-defects-in-de](./quick/260829-gx6-fix-vendor-rest-wire-shape-defects-in-de/) |
 | 260828-bq0 | Refine planning artifacts against ingested intel | 2026-08-28 | 76b3edd |  | [260828-bq0-refine-planning-artifacts-against-ingest](./quick/260828-bq0-refine-planning-artifacts-against-ingest/) |
@@ -221,6 +222,6 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 
 ## Session Continuity
 
-Last session: 2026-08-30T20:11:37.176Z
-Stopped at: Completed 03-08-PLAN.md
-Resume file: None
+Last session: 2026-08-31T10:20:00.000Z
+Stopped at: Session resumed — Phase 03 awaiting three human verification checks
+Resume file: .planning/phases/03-safety-monitoring-in-homekit/.continue-here.md
