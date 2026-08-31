@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-08-31T00:06:23.898Z",
+  "phase": "3",
+  "phase_name": "Safety Monitoring in HomeKit",
+  "phase_dir": ".planning/phases/03-safety-monitoring-in-homekit",
+  "plan": 8,
+  "task": 8,
+  "total_tasks": 8,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "03-01 HAP stand-in at real signatures", "status": "done", "commit": "424b64d" },
+    { "id": 2, "name": "03-02 Water ladder and per-field trust scoping", "status": "done", "commit": "a484fce" },
+    { "id": 3, "name": "03-03 ignoredFaults surface and D-17 refusal", "status": "done", "commit": "120c49d" },
+    { "id": 4, "name": "03-04 Tracer, end to end (D-12 checkpoint confirmed by user)", "status": "done", "commit": "79533d6" },
+    { "id": 5, "name": "03-05 Full service catalogue, 15 rows", "status": "done", "commit": "300d2ef" },
+    { "id": 6, "name": "03-06 Controller-link distrust, live wiring, immediacy gate", "status": "done", "commit": "c203820" },
+    { "id": 7, "name": "03-07 End-to-end scenarios and static immediacy gate", "status": "done", "commit": "f73f692" },
+    { "id": 8, "name": "03-08 Retire stale exemptions, README and CHANGELOG", "status": "done", "commit": "6fd9dfd" }
+  ],
+  "remaining_tasks": [
+    { "id": 9, "name": "Human validation of 3 real-home items (/gsd-verify-work 3)", "status": "not_started" },
+    { "id": 10, "name": "Phase 4 — Pump Records and Official Controls", "status": "not_started" },
+    { "id": 11, "name": "Phase 5 — Degraded Operation and Recovery", "status": "not_started" },
+    { "id": 12, "name": "Phase 6 — Validated Release Candidate", "status": "not_started" }
+  ],
+  "blockers": [
+    {
+      "description": "Phase 3 verification is human_needed. Three checks require a real Apple home with a current hub; none is an evidence gap in the shipped code.",
+      "type": "human_action",
+      "workaround": "Fold into the G-003/G-004 real-home session the project already requires before 1.0.0."
+    }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {
+      "action": "Build an automation on the Sump Pit Flood Leak Sensor, force a degraded water scope with an out-of-domain water_level, confirm the automation still exists and still fires.",
+      "context": "LOAD-BEARING. A failure reopens 03-CONTEXT.md D-05, which the entire degradation design rests on. Research refuted the specific claim that inactive sensors drop out of automations, but could not prove the safe behaviour on current iOS.",
+      "blocking": true
+    },
+    {
+      "action": "Confirm Apple Home renders StatusActive = false as a 'Status Active - No' row under accessory Details.",
+      "context": "The plugin provably pushes it; what Apple draws is controller-side and unobservable from the plugin. README.md:80 states this to users.",
+      "blocking": true
+    },
+    {
+      "action": "Load the plugin in a running Homebridge instance and confirm the ignoredFaults enum array renders acceptably in the Plugin Settings GUI under strictValidation: true.",
+      "context": "src/config.ts runtime validation is authoritative either way; administrators can fall back to editing config.json.",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Subtypes are the ServiceKind slug verbatim; custom service and characteristic UUIDs are hard-coded literal v4 values outside Apple's base namespace.",
+      "rationale": "Confirmed by the user at a blocking checkpoint. Seed-derived UUIDs were rejected because a later seed edit would silently orphan every installed custom service with a green test suite. A literal cannot drift. Pinned by a source-condition test forbidding uuid.generate under src/accessories/.",
+      "phase": "3"
+    },
+    {
+      "decision": "An unknown or duplicated ignoredFaults slug refuses the configuration; the plugin does not start.",
+      "rationale": "User decision against the recommendation, on consistency with validateConfig's existing refusals. Accepted risk: a typo leaves the pump unmonitored until fixed. Mitigation lives entirely in message quality, so naming the bad slug and enumerating all seven valid ones is a requirement of the decision, not a nicety.",
+      "phase": "3"
+    },
+    {
+      "decision": "No sixth fault adapter for battery_health == 32; D-008 stays at five.",
+      "rationale": "Resolves the open proposal in PROJECT.md against the adapter. The condition surfaces through the standard Battery service's StatusLowBattery, which Apple Home renders.",
+      "phase": "3"
+    },
+    {
+      "decision": "RES-01 and RES-03 are split across Phase 3 and Phase 5.",
+      "rationale": "Phase 3 ships field-validity plus the offline confirmation counter and adapter. Phase 5 owns the ~898s heartbeat, the two-missed-heartbeat rule, shadow silence, and restart persistence. Recorded in REQUIREMENTS.md delivery-split sub-bullets. Verified: no Phase 5 over-reach in any Phase 3 module.",
+      "phase": "3"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-verify-work 3 after the real-home session to close the three human items, then /gsd-autonomous --from 4. If item 1 fails, do NOT close the phase — reopen 03-CONTEXT.md D-05 instead.",
+  "context_notes": "Phase 3 is implementation-complete and gate-complete in 73 commits: 998 unit tests (from 588), 62 Cucumber scenarios (from 35), 100% line/branch/function across src/, npm run check green on three consecutive runs at every gate. Code review converged over three iterations (2 blockers, then 2, then 0) and security closed 34/35 threats with threats_open: 0. The verifier confirmed 6/6 success criteria by executing the shipped code with its own probes plus two live mutation tests, not by reading summaries. The single most important carried lesson: four blockers, all false-normal paths, shipped inside a fully green suite at 100% coverage — coverage measures whether existing branches ran, not whether the right branches exist."
+}
