@@ -3,16 +3,33 @@ phase: "3"
 slug: "safety-monitoring-in-homekit"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-08-30"
+validated: "2026-08-30"
 ---
 
 # Phase 3 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
 > Derived from `03-RESEARCH.md` § Validation Architecture.
+
+**Post-execution status (2026-08-30).** Every Wave 0 file below was created and passes; the
+requirement→test map is satisfied. Confirmed by `03-VERIFICATION.md`, which verified all six success
+criteria by executing the shipped code rather than by reading these rows. Final gate: `npm run check`
+exit 0, 998 unit tests, 62 scenarios / 548 steps, 100% line/branch/function across `src/`.
+
+Two corrections to the map as written, both found after execution:
+
+- The SAFE-01 row and the Wave 0 list originally named `test/accessories/waterLevel.test.ts`. The
+  ladder shipped at `src/device/waterLevel.ts` with its test at `test/device/waterLevel.test.ts` —
+  domain decode belongs behind the family boundary, per `src/device/family.ts`'s own header. The
+  paths below are corrected.
+- The feature file is `features/safetyMonitoring.feature`, not `features/safetyConditions.feature`.
+
+The per-row `⬜ pending` markers below were not individually flipped during execution. They record
+the plan, not the outcome; the outcome is in `03-VERIFICATION.md`.
 
 ---
 

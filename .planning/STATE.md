@@ -164,6 +164,31 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   positive finding there reopens `D-05`.
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
 
+## Deferred Verification
+
+| Phase | State | Resume |
+|-------|-------|--------|
+| 3 | verification_deferred_human | /gsd-verify-work 3 |
+
+Phase 3 is implementation-complete and gate-complete. `03-VERIFICATION.md` verified all six success
+criteria and 6/6 must-haves **by executing the shipped code** — a 36-check behavioural probe against
+the real accessory factory, registry and Gemini adapter; a 7-check backstop probe; and two live
+mutation tests confirming the static import gate and the suppression fix are not vacuous. No gaps,
+no Phase 5 over-reach, 109 plan truths and 30 prohibitions hold.
+
+Three human-verification items remain, all needing a real Apple home with a current hub, and all
+already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0`:
+
+1. **A flood automation survives a degraded `water` scope.** Build an automation on the
+   `Sump Pit Flood` Leak Sensor, force a degraded scope (send an out-of-domain `water_level`),
+   confirm the automation still exists and still fires. **A failure here reopens `03-CONTEXT.md`
+   D-05**, which the whole degradation design rests on — this is the load-bearing one.
+2. **Apple Home renders `StatusActive = false`** as a "Status Active — No" row under accessory
+   Details. The plugin provably pushes it; what Apple draws is controller-side and unobservable from
+   here.
+3. **The `ignoredFaults` array renders acceptably in the Homebridge Plugin Settings GUI** under
+   `strictValidation: true`. `src/config.ts` is authoritative either way.
+
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
