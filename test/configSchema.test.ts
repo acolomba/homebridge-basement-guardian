@@ -4,12 +4,22 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { createFakeHap } from '../features/support/fakeHap.js';
+import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { PLATFORM_NAME } from '../src/settings.js';
+
+import type { API } from 'homebridge';
+
+/** One labelled option of a list field: the name a user reads, and the single value it writes. */
+interface SettingsFormOption {
+  title: string;
+  enum: string[];
+}
 
 /** The value domain of a list field in the generated settings form. */
 interface SettingsFormItems {
   type: string;
-  enum: string[];
+  oneOf: SettingsFormOption[];
 }
 
 /** One field of the generated settings form. */
@@ -61,6 +71,14 @@ function readSettingsSchema(): SettingsSchema {
 
   // JSON.parse answers `any`; the cases below assert every field this type promises.
   return JSON.parse(shippedSchema) as SettingsSchema;
+}
+
+// `items` is optional on a form field, so the list cases name the missing domain rather than
+// reporting a property read of `undefined`.
+function readIgnoredFaultItems(): SettingsFormItems {
+  const { ignoredFaults } = readSettingsSchema().schema.properties;
+
+  return ignoredFaults.items ?? assert.fail('the ignoredFaults field declares no item domain');
 }
 
 test('advertises the plugin alias the platform registers under', () => {
@@ -157,26 +175,55 @@ test('CONF-06 offers the removable notification sensors as a list that cannot re
   assert.strictEqual(ignoredFaults.uniqueItems, true);
 });
 
+// The seven names are written out here rather than imported from NOTIFICATION_SERVICE_KINDS, so a
+// name that drifts on the runtime side fails this case instead of travelling with it.
 test('CONF-06 offers exactly the seven removable notification sensors and no other value', () => {
   // arrange
-  const expectedItems = {
-    type: 'string',
-    enum: [
-      'backup-pump-activated',
-      'mains-power-lost',
-      'primary-pump-fault',
-      'backup-pump-fault',
-      'water-sensor-fault',
-      'pump-controller-link-lost',
-      'basement-guardian-offline',
-    ],
-  };
+  const expectedValues = [
+    'backup-pump-activated',
+    'mains-power-lost',
+    'primary-pump-fault',
+    'backup-pump-fault',
+    'water-sensor-fault',
+    'pump-controller-link-lost',
+    'basement-guardian-offline',
+  ];
 
   // act
-  const { ignoredFaults } = readSettingsSchema().schema.properties;
+  const items = readIgnoredFaultItems();
 
   // assert
-  assert.deepStrictEqual(ignoredFaults.items, expectedItems);
+  assert.strictEqual(items.type, 'string');
+  assert.strictEqual(Object.hasOwn(items, 'enum'), false);
+  assert.deepStrictEqual(
+    items.oneOf.map((option) => option.enum[0]),
+    expectedValues,
+  );
+});
+
+// A label is a display affordance; the value behind it is what reaches `validateConfig`. An option
+// holding two values would widen what the form can write past the name the user read.
+test('CONF-06 lets each labelled option write one value and no other', () => {
+  // act
+  const optionSizes = readIgnoredFaultItems().oneOf.map((option) => option.enum.length);
+
+  // assert
+  assert.deepStrictEqual(optionSizes, [1, 1, 1, 1, 1, 1, 1]);
+});
+
+// The label a user picks in the settings form is the name their home shows for that sensor, so the
+// two are read off the shipped schema and the shipped catalogue and compared as pairs: a label that
+// drifts on either side names itself in the diff.
+test('CONF-06 labels each option with the name the accessory publishes that sensor under', () => {
+  // arrange
+  const catalogue = createServiceCatalogue(createFakeHap() as unknown as API['hap']);
+
+  // act
+  const offeredOptions = readIgnoredFaultItems().oneOf.map((option) => ({ kind: option.enum[0], displayName: option.title }));
+
+  // assert
+  const publishedOptions = offeredOptions.map(({ kind }) => ({ kind, displayName: catalogue.find((row) => row.kind === kind)?.displayName }));
+  assert.deepStrictEqual(offeredOptions, publishedOptions);
 });
 
 // SAFE-07 forbids a plugin-side delay from existing at all, and absence is not provable by watching
