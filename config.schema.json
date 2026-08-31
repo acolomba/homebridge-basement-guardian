@@ -59,14 +59,14 @@
         "uniqueItems": true,
         "items": {
           "type": "string",
-          "enum": [
-            "backup-pump-activated",
-            "mains-power-lost",
-            "primary-pump-fault",
-            "backup-pump-fault",
-            "water-sensor-fault",
-            "pump-controller-link-lost",
-            "basement-guardian-offline"
+          "oneOf": [
+            { "title": "Backup Pump Activated", "enum": ["backup-pump-activated"] },
+            { "title": "Mains Power Lost", "enum": ["mains-power-lost"] },
+            { "title": "Primary Pump Fault", "enum": ["primary-pump-fault"] },
+            { "title": "Backup Pump Fault", "enum": ["backup-pump-fault"] },
+            { "title": "Water Sensor Fault", "enum": ["water-sensor-fault"] },
+            { "title": "Pump Controller Link Lost", "enum": ["pump-controller-link-lost"] },
+            { "title": "Basement Guardian Offline", "enum": ["basement-guardian-offline"] }
           ]
         },
         "description": "Leaving a sensor out removes only that Apple Home notification sensor. The condition, the owning service's status characteristics, the diagnostics, and the truthful service all remain. Apple builds Activity History from the published service, so leaving a sensor out also removes its history view. An unrecognised or repeated name stops the plugin from starting."
