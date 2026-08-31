@@ -131,12 +131,15 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 ### Pending Todos
 
-1 captured todo in `.planning/todos/pending/` — `/gsd-capture --list` to review:
+2 captured todos in `.planning/todos/pending/` — `/gsd-capture --list` to review:
 
 - [major, docs] Document which services Apple Home renders. The README implies `Sump Pit
   Level` and the pump, mains-power, and battery-facts services are visible in a user's home.
   They are vendor-defined services, so Apple Home draws no tile for any of them. Confirmed
   against a real Homebridge instance on 2026-08-30.
+- [minor, api] Define the user-agent string and additional headers for Auth0, vendor REST,
+  and, if necessary, the MQTT WebSocket handshake. Use `homebridge-adt-pulse` as comparative
+  research without assuming its Chrome browser impersonation fits this API integration.
 
 Carried inline below (not files):
 
