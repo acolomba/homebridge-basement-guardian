@@ -28,6 +28,9 @@ human_verification:
   - test: "Load the plugin in a running Homebridge instance and open its settings form. Add and remove `ignoredFaults` entries through the generated GUI under `strictValidation: true`."
     expected: "The seven-slug enum array renders acceptably and round-trips to `config.json`."
     why_human: "The generated Homebridge Plugin Settings GUI cannot be exercised from `node:test`. Runtime validation in `src/config.ts` is authoritative either way, and administrators can fall back to editing `config.json`."
+    status: passed
+    verified: 2026-08-31
+    evidence: "A human drove the generated form in Homebridge 2.4.0 under `strictValidation: true`. Ticking one box wrote `[\"backup-pump-activated\"]` as a 1-element array and moved the Gemini service count 15 to 14, removing exactly the named sensor and no other; unticking it removed the key entirely and restored all 15 services with 8 of 8 contact sensors. Both directions were read back off the live HAP accessory database, not off the form. The form initially rendered raw slugs rather than service names, which is a defect this check found and which `260831-c7f`, `260831-dlv` and `c268b34` corrected: the options now render as seven alphabetised, human-named checkboxes with no `None` entry, and a checkbox list cannot express a duplicate."
 ---
 
 # Phase 3: Safety Monitoring in HomeKit — Verification Report

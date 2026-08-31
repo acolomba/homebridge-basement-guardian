@@ -186,7 +186,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 | Phase | State | Resume |
 |-------|-------|--------|
-| 3 | verification_deferred_human | /gsd-verify-work 3 |
+| 3 | verification_deferred_human (2 of 3 checks open) | /gsd-verify-work 3 |
 
 Phase 3 is implementation-complete and gate-complete. `03-VERIFICATION.md` verified all six success
 criteria and 6/6 must-haves **by executing the shipped code** — a 36-check behavioural probe against
@@ -194,7 +194,8 @@ the real accessory factory, registry and Gemini adapter; a 7-check backstop prob
 mutation tests confirming the static import gate and the suppression fix are not vacuous. No gaps,
 no Phase 5 over-reach, 109 plan truths and 30 prohibitions hold.
 
-Three human-verification items remain, all needing a real Apple home with a current hub, and all
+Check 3 is CLOSED as of 2026-08-31, verified against a real Homebridge 2.4.0 instance. Two
+human-verification items remain, both needing a real Apple home with a current hub, and both
 already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0`:
 
 1. **A flood automation survives a degraded `water` scope.** Build an automation on the
@@ -204,8 +205,13 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 2. **Apple Home renders `StatusActive = false`** as a "Status Active — No" row under accessory
    Details. The plugin provably pushes it; what Apple draws is controller-side and unobservable from
    here.
-3. **The `ignoredFaults` array renders acceptably in the Homebridge Plugin Settings GUI** under
-   `strictValidation: true`. `src/config.ts` is authoritative either way.
+3. ~~**The `ignoredFaults` array renders acceptably in the Homebridge Plugin Settings GUI**~~ —
+   **CLOSED 2026-08-31.** A human drove the generated form under `strictValidation: true`. Ticking
+   one box wrote `["backup-pump-activated"]` as a 1-element array and dropped the Gemini service
+   count 15 to 14, removing exactly the named sensor; unticking it dropped the key entirely and
+   restored all 15 with 8 of 8 contact sensors. The form was found rendering raw slugs, which the
+   `260831-c7f`, `260831-dlv` and `c268b34` changes corrected to seven alphabetised, human-named
+   checkboxes with no `None` option and duplicates structurally impossible.
 
 ### Quick Tasks Completed
 
