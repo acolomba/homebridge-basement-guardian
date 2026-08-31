@@ -25,6 +25,9 @@ human_verification:
   - test: "In the same session, open the degraded accessory's Details in Apple Home."
     expected: "Apple Home renders `StatusActive = false` as a `Status Active` settings row and does not hide the tile."
     why_human: "Controller-side rendering. The plugin can prove it pushed `StatusActive = false` (it does — see SC-6 below); it cannot prove what Apple Home draws. README.md line 80 states this rendering to users, so a negative finding is a documentation defect as well as a D-05 question."
+    status: passed
+    verified: 2026-08-31
+    evidence: "Confirmed in a real Apple Home against a real paired bridge. With an out-of-domain `water_level` forcing the `water` scope untrusted, the accessory's Details showed a `Status Active` row reading `No`, and the tile stayed present and openable rather than being hidden. On recovery to a legal code the same row read active again. Both directions were observed by a human; the underlying characteristic was read back off the live HAP database at each step. README.md line 80 is accurate as written."
   - test: "Load the plugin in a running Homebridge instance and open its settings form. Add and remove `ignoredFaults` entries through the generated GUI under `strictValidation: true`."
     expected: "The seven-slug enum array renders acceptably and round-trips to `config.json`."
     why_human: "The generated Homebridge Plugin Settings GUI cannot be exercised from `node:test`. Runtime validation in `src/config.ts` is authoritative either way, and administrators can fall back to editing `config.json`."

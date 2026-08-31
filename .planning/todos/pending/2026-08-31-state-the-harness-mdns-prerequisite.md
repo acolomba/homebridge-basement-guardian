@@ -57,5 +57,20 @@ tuning advertisers. Wire it into `./dev/hb up` as a warning, or expose it as
 Record the firewall ports and the tunnel form next to it, so a reader meets all
 three obstacles in one place instead of one per hour.
 
+Record the one sequence that did work on this host, found on 2026-08-31 after
+several failures: set `promisc` on the parent interface **first**, then restart
+Homebridge. Order matters, because the bridge announces itself at startup and
+needs the interface already in promiscuous mode. Pairing succeeded reliably that
+way and failed every time the two were done in the other order or with `promisc`
+off. Note it as an observation about this host, not a general rule.
+
+Also record that a Home app "Remove Accessory" does NOT reach the bridge when the
+bridge is unreachable, which leaves the pairing stale: the accessory disappears
+from the home while `AccessoryInfo.*.json` still lists a paired client and the
+bridge keeps advertising `sf=0`, refusing every new pairing. It happened twice.
+Clearing `pairedClients` and `pairedClientsPermission` with the container stopped
+restores `sf=1`, and is far lighter than `./dev/hb reset`, which wipes the whole
+storage directory.
+
 Do not document the `macvlan` attempt as a remedy. It did not work here, and
 presenting it as an option would send the next reader down the same path.

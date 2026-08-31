@@ -194,17 +194,19 @@ the real accessory factory, registry and Gemini adapter; a 7-check backstop prob
 mutation tests confirming the static import gate and the suppression fix are not vacuous. No gaps,
 no Phase 5 over-reach, 109 plan truths and 30 prohibitions hold.
 
-Check 3 is CLOSED as of 2026-08-31, verified against a real Homebridge 2.4.0 instance. Two
-human-verification items remain, both needing a real Apple home with a current hub, and both
-already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0`:
+Checks 2 and 3 are CLOSED as of 2026-08-31, both verified against a real paired Apple Home. One
+human-verification item remains — check 1, the load-bearing one — still scheduled to ride along
+with the `G-003` / `G-004` session before `1.0.0`:
 
 1. **A flood automation survives a degraded `water` scope.** Build an automation on the
    `Sump Pit Flood` Leak Sensor, force a degraded scope (send an out-of-domain `water_level`),
    confirm the automation still exists and still fires. **A failure here reopens `03-CONTEXT.md`
    D-05**, which the whole degradation design rests on — this is the load-bearing one.
-2. **Apple Home renders `StatusActive = false`** as a "Status Active — No" row under accessory
-   Details. The plugin provably pushes it; what Apple draws is controller-side and unobservable from
-   here.
+2. ~~**Apple Home renders `StatusActive = false`**~~ — **CLOSED 2026-08-31.** Confirmed in a real
+   paired Apple Home: a degraded `water` scope drew a `Status Active` row reading `No` under the
+   sensor's Details, the tile stayed present rather than hidden, and recovery flipped the same row
+   back. `README.md:80` is accurate as written. Preserve-and-mark held throughout — the retained
+   `Leak Detected` value was never blanked.
 3. ~~**The `ignoredFaults` array renders acceptably in the Homebridge Plugin Settings GUI**~~ —
    **CLOSED 2026-08-31.** A human drove the generated form under `strictValidation: true`. Ticking
    one box wrote `["backup-pump-activated"]` as a 1-element array and dropped the Gemini service
@@ -217,6 +219,7 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260831-knc | Name every published service with ConfiguredName so Apple Home shows it | 2026-08-31 | 39560ac |  | [260831-knc-name-every-published-service-with-config](./quick/260831-knc-name-every-published-service-with-config/) |
 | 260831-dlv | Render ignoredFaults as labelled checkboxes in the settings form | 2026-08-31 | cdb183d |  | [260831-dlv-render-ignoredfaults-as-labelled-checkbo](./quick/260831-dlv-render-ignoredfaults-as-labelled-checkbo/) |
 | 260831-c7f | Render ignoredFaults options as human-readable names in the plugin settings GUI | 2026-08-31 | 645208b |  | [260831-c7f-render-ignoredfaults-options-as-human-re](./quick/260831-c7f-render-ignoredfaults-options-as-human-re/) |
 | 260829-idd | Correct vendor API intel to the measured wire shape | 2026-08-29 | cd7c651 |  | [260829-idd-correct-vendor-api-intel-to-the-measured](./quick/260829-idd-correct-vendor-api-intel-to-the-measured/) |
