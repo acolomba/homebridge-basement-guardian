@@ -4,10 +4,10 @@ current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: verifying
 stopped_at: Completed 03-08-PLAN.md
-last_updated: "2026-08-30T20:11:37.481Z"
-last_activity: 2026-08-30
+last_updated: "2026-08-31T14:31:43.088Z"
+last_activity: 2026-08-31
 last_activity_desc: Phase 03 execution started
-state_head: c2fda9660346a83172a1aa0ec641347aac915b2a
+state_head: c268b3420c2ef1875baae0c83b3520a92b83b07b
 progress:
   total_phases: 6
   completed_phases: 2
@@ -131,7 +131,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 
 ### Pending Todos
 
-2 captured todos in `.planning/todos/pending/` — `/gsd-capture --list` to review:
+4 captured todos in `.planning/todos/pending/` — `/gsd-capture --list` to review:
 
 - [major, docs] Document which services Apple Home renders. The README implies `Sump Pit
   Level` and the pump, mains-power, and battery-facts services are visible in a user's home.
@@ -140,6 +140,12 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [minor, api] Define the user-agent string and additional headers for Auth0, vendor REST,
   and, if necessary, the MQTT WebSocket handshake. Use `homebridge-adt-pulse` as comparative
   research without assuming its Chrome browser impersonation fits this API integration.
+- [major, general] Record the G-002 natural water-level evidence. A real unforced `1` to `3`
+  transition was observed on live hardware on 2026-08-31 and mapped 20% to 40%. It exists only
+  in a session transcript. Codes `0`, `7`, `15`, `31` and the flood threshold stay unvalidated.
+- [major, docs] State the harness mDNS prerequisite in `dev/README.md`. Pairing needs the host
+  to carry multicast; `floyd` sees 0 responders where the LAN shows 25, so pairing there is
+  impossible. Add a fail-fast precheck, the firewall ports, and the tunnel form.
 
 Carried inline below (not files):
 
@@ -213,6 +219,7 @@ already scheduled to ride along with the `G-003` / `G-004` session before `1.0.0
 | 2 | Set the package version to 0.1.0 | 2026-08-28 | 4e46bd1 |  | — |
 | 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 |  | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
 | 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 |  | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
+| 9 | Sort the ignoredFaults options alphabetically by their label | 2026-08-31 | c268b34 | — | — |
 
 ## Deferred Items
 
