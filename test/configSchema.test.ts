@@ -10,16 +10,11 @@ import { PLATFORM_NAME } from '../src/settings.js';
 
 import type { API } from 'homebridge';
 
-/** One labelled option of a list field: the name a user reads, and the single value it writes. */
-interface SettingsFormOption {
-  title: string;
-  enum: string[];
-}
-
 /** The value domain of a list field in the generated settings form. */
 interface SettingsFormItems {
   type: string;
-  oneOf: SettingsFormOption[];
+  enum: string[];
+  enumNames: string[];
 }
 
 /** One field of the generated settings form. */
@@ -194,21 +189,26 @@ test('CONF-06 offers exactly the seven removable notification sensors and no oth
 
   // assert
   assert.strictEqual(items.type, 'string');
-  assert.strictEqual(Object.hasOwn(items, 'enum'), false);
-  assert.deepStrictEqual(
-    items.oneOf.map((option) => option.enum[0]),
-    expectedValues,
-  );
+  // Keep the existence check. It does not restate the deep-equal below it: the settings form
+  // chooses the checkbox control by testing `enum` as an own property of the item schema, and
+  // draws a row of per-item dropdowns when it is absent. Spelling the same seven values another
+  // way keeps the deep-equal green and loses the control, which is what regressed once.
+  assert.strictEqual(Object.hasOwn(items, 'enum'), true);
+  assert.deepStrictEqual(items.enum, expectedValues);
+  assert.strictEqual(Object.hasOwn(items, 'oneOf'), false);
 });
 
-// A label is a display affordance; the value behind it is what reaches `validateConfig`. An option
-// holding two values would widen what the form can write past the name the user read.
-test('CONF-06 lets each labelled option write one value and no other', () => {
+// The settings form pairs a label with its value by position and stops at the end of the shorter
+// list, so a short name list drops boxes off the end of the control and a reordered one puts one
+// sensor's name on another sensor's box. Both are silent. The count is pinned here and the
+// pairing itself in the case below.
+test('CONF-06 gives every offered value a label to pair with', () => {
   // act
-  const optionSizes = readIgnoredFaultItems().oneOf.map((option) => option.enum.length);
+  const items = readIgnoredFaultItems();
 
   // assert
-  assert.deepStrictEqual(optionSizes, [1, 1, 1, 1, 1, 1, 1]);
+  assert.strictEqual(items.enum.length, 7);
+  assert.strictEqual(items.enumNames.length, items.enum.length);
 });
 
 // The label a user picks in the settings form is the name their home shows for that sensor, so the
@@ -217,9 +217,10 @@ test('CONF-06 lets each labelled option write one value and no other', () => {
 test('CONF-06 labels each option with the name the accessory publishes that sensor under', () => {
   // arrange
   const catalogue = createServiceCatalogue(createFakeHap() as unknown as API['hap']);
+  const items = readIgnoredFaultItems();
 
   // act
-  const offeredOptions = readIgnoredFaultItems().oneOf.map((option) => ({ kind: option.enum[0], displayName: option.title }));
+  const offeredOptions = items.enum.map((kind, position) => ({ kind, displayName: items.enumNames[position] }));
 
   // assert
   const publishedOptions = offeredOptions.map(({ kind }) => ({ kind, displayName: catalogue.find((row) => row.kind === kind)?.displayName }));
