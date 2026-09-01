@@ -162,6 +162,7 @@ interface ControlDefinition {
 // map holds the field name and nothing else (D-02).
 const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKind, ControlDefinition>([
   ['system-self-test', { capability: 'self-test', field: 'running' }],
+  ['alarm-mute', { capability: 'alarm-mute', field: 'muted' }],
 ]);
 
 // Every scope but `connectivity`, which is the same set for the two conditions

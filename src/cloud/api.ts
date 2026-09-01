@@ -1,3 +1,5 @@
+import { PLUGIN_NAME } from '../settings.js';
+
 import { CloudRequestError } from './errors.js';
 import { isAwsCredentialsResponse, isCommandResult, isWireDeviceListResponse, isWireDeviceResponse, toApiDevice } from './types.js';
 
@@ -30,6 +32,22 @@ export const ROUTES = {
   command: 'PUT /devices/{deviceId}/data',
   awsCredentials: 'GET /credentials/aws',
 } as const;
+
+/**
+ * How the plugin identifies itself on a request carrying a body.
+ *
+ * It is the plugin name and nothing else, built from the one product string
+ * this codebase declares so no second one exists to drift. It carries no
+ * version: no runtime version source exists under `src/`, `package.json` is
+ * imported nowhere at runtime, and adding that import would create a packaging
+ * dependency and a drift risk in exchange for a fact the vendor cannot use.
+ *
+ * It carries no hostname, operating-system detail, bridge name, account
+ * identifier, or device identifier either, so it says nothing about the
+ * installation it came from. It does not present the plugin as the official
+ * vendor application (AUTH-02).
+ */
+export const COMMAND_USER_AGENT = PLUGIN_NAME;
 
 const DEVICES_PATH = '/devices';
 const CREDENTIALS_PATH = '/credentials/aws';
@@ -109,12 +127,25 @@ async function narrow<T>(call: VendorCall<T>, response: Response): Promise<T> {
 
 // A read carries no body and so declares no content type; a command declares
 // one, because the vendor reads its command bodies as JSON.
+//
+// The command branch is also where the plugin identifies itself and states the
+// answer it can read. Both belong to the body-carrying branch alone: adding
+// either to the read branch would change every read request's wire shape as a
+// side effect of a decision about commands, which is a decision rather than a
+// side effect. Neither header carries a credential, an account identifier, a
+// device identifier, a hostname, an operating-system detail, or a bridge name,
+// and neither presents the plugin as the official vendor application (AUTH-02).
+//
+// The Auth0 token exchange and the AWS IoT SigV4 WebSocket handshake are out of
+// scope here and gain no header of any kind.
 function requestInit(method: string, body: string | undefined, authorization: string, deadline: AbortSignal): RequestInit {
   if (body === undefined) {
     return { method, headers: { Authorization: authorization }, signal: deadline };
   }
 
-  return { method, headers: { Authorization: authorization, 'Content-Type': JSON_CONTENT_TYPE }, body, signal: deadline };
+  const headers = { Authorization: authorization, 'Content-Type': JSON_CONTENT_TYPE, 'User-Agent': COMMAND_USER_AGENT, Accept: JSON_CONTENT_TYPE };
+
+  return { method, headers, body, signal: deadline };
 }
 
 // Every request carries the bearer token and two deadlines: the caller's root

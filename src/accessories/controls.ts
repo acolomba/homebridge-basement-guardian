@@ -33,6 +33,7 @@
  * here and every caller uses `publishValue`, which updates rather than sets.
  */
 
+import { PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE } from './alarmMute.js';
 import { publishValue } from './serviceCatalogue.js';
 
 import type { DeviceCapability } from '../device/family.js';
@@ -128,6 +129,8 @@ interface PendingRequest {
 // press.
 interface ControlRequest {
   value: CharacteristicValue;
+  /** The one value this capability will ever be asked for. */
+  accepted: boolean;
   reported: boolean | undefined;
   offlineConfirmed: boolean;
 }
@@ -142,12 +145,19 @@ interface LocalRefusal {
   cause: string;
 }
 
+// The one value a capability will ever be asked for. Self-test's is the measured
+// `true`; mute's is the provisional constant, so the value the plugin accepts
+// and the value it sends move together when `G-001` closes (D-16, D-019).
+function acceptedValueOf(capability: DeviceCapability): boolean {
+  return capability === 'alarm-mute' ? PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE : true;
+}
+
 // A write of anything but the capability's one accepted value is a cancel or an
 // unmute. The device owns when a test stops, the vendor exposes no cancel, and
 // mute has no off command, so this plugin answers neither rather than inventing
 // one (D-018, D-019, CTRL-03).
 function isNotAnOnRequest(request: ControlRequest): boolean {
-  return request.value !== true;
+  return request.value !== request.accepted;
 }
 
 // The capability's own reported field has not decoded. Without a decoded value
@@ -174,11 +184,11 @@ function isConfirmedOffline(request: ControlRequest): boolean {
   return request.offlineConfirmed;
 }
 
-// The capability already reads active, so this press is a duplicate. The
+// The capability already reads what was asked for, so this press is a duplicate. The
 // official client refuses one and `CTRL-03` requires it regardless: a second
 // request would operate a real sump pump the vendor would not have (D-07).
 function isAlreadyActive(request: ControlRequest): boolean {
-  return request.reported === true;
+  return request.reported === request.accepted;
 }
 
 function notAllowedInCurrentState(hap: API['hap']): number {
@@ -328,7 +338,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   }
 
   async function answerWrite(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, value: CharacteristicValue): Promise<void> {
-    const refusal = localRefusalFor({ value, reported: reported(), offlineConfirmed: offlineConfirmed() });
+    const accepted = acceptedValueOf(capability);
+    const refusal = localRefusalFor({ value, accepted, reported: reported(), offlineConfirmed: offlineConfirmed() });
 
     if (refusal !== undefined) {
       refuseLocally(service, capability, reported, refusal);
@@ -339,13 +350,13 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     // created immediately before the request leaves, with its own deadline, so
     // no path can leave one behind with no way out.
     requested.set(capability, {
-      value: true,
+      value: accepted,
       handle: timers.setTimeout(() => {
         expire(capability);
       }, PENDING_WINDOW_MS),
     });
 
-    const outcome = await commands.send(deviceId, capability, true);
+    const outcome = await commands.send(deviceId, capability, accepted);
 
     if (!outcome.accepted) {
       refuseOutcome(service, capability, reported, outcome.failure);

@@ -818,7 +818,7 @@ function registerAbsentStateCases(): void {
         .map((row) => row.project(input));
 
       // assert
-      assert.deepStrictEqual(projected, [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []]);
+      assert.deepStrictEqual(projected, [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]);
     });
   }
 
@@ -1000,7 +1000,7 @@ describe('createServiceCatalogue', () => {
     );
   });
 
-  test('shows the sixteen service names HomeKit renders, in publication order', () => {
+  test('shows the seventeen service names HomeKit renders, in publication order', () => {
     // arrange
     const catalogue = createServiceCatalogue(hapNamespace());
 
@@ -1024,6 +1024,7 @@ describe('createServiceCatalogue', () => {
       'Water Sensor Fault',
       'Pump Controller Link Lost',
       'System Self-Test',
+      'Alarm Mute',
       'Basement Guardian Offline',
     ]);
   });
@@ -1083,6 +1084,7 @@ describe('createServiceCatalogue', () => {
       hap.Service.ContactSensor.UUID,
       hap.Service.ContactSensor.UUID,
       hap.Service.ContactSensor.UUID,
+      hap.Service.Switch.UUID,
       hap.Service.Switch.UUID,
       hap.Service.ContactSensor.UUID,
     ]);

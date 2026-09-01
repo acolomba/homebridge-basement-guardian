@@ -384,6 +384,12 @@ function pumpActivityValues(hap: API['hap'], input: ProjectionInput, trust: RowT
 
 // A control's Switch follows what the device reports, and publishes nothing at
 // all for `On` while a HomeKit request for that capability is unresolved.
+//
+// The capability is read from the parameter on every call, never closed over
+// and never hard-coded: withholding lives in the row, so a helper consulting
+// the wrong capability would leave both pending sets perfectly correct and
+// still freeze the other control's Switch for the whole window every time this
+// one was pressed.
 // Withholding rather than publishing is what stops the accessory's per-update
 // push from snapping the toggle back before the device confirms; because nothing
 // is pushed, HAP keeps serving the value the accepted write left. The whole of
@@ -667,6 +673,15 @@ function controlDefinitions(hap: API['hap']): readonly RowDefinition[] {
       serviceClass: hap.Service.Switch,
       alwaysPublish: true,
       values: (input, trust) => controlValues(hap, input, trust, 'self-test', 'running'),
+    },
+    {
+      kind: 'alarm-mute',
+      displayName: 'Alarm Mute',
+      scope: 'alarm-mute',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.Switch,
+      alwaysPublish: true,
+      values: (input, trust) => controlValues(hap, input, trust, 'alarm-mute', 'muted'),
     },
   ];
 }

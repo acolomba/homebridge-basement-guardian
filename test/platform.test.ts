@@ -1131,6 +1131,7 @@ describe('registerDiscoveredDevices', () => {
       'Water Sensor Fault',
       'Pump Controller Link Lost',
       'System Self-Test',
+      'Alarm Mute',
       'Basement Guardian Offline',
     ]);
     assert.strictEqual(contactStateOf(registered, 'mains-power-lost'), CONTACT_NOT_DETECTED);

@@ -71,6 +71,7 @@ const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
   { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Water Sensor Fault' },
   { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost', serviceUuid: CONTACT_SENSOR_UUID, name: 'Pump Controller Link Lost' },
   { kind: 'system-self-test', subtype: 'system-self-test', serviceUuid: SWITCH_UUID, name: 'System Self-Test' },
+  { kind: 'alarm-mute', subtype: 'alarm-mute', serviceUuid: SWITCH_UUID, name: 'Alarm Mute' },
   { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', serviceUuid: CONTACT_SENSOR_UUID, name: 'Basement Guardian Offline' },
 ];
 
@@ -92,6 +93,7 @@ const PUBLISHED_SCOPES: readonly TrustScope[] = [
   'fault',
   'fault',
   'self-test',
+  'alarm-mute',
   'connectivity',
 ];
 
@@ -99,13 +101,15 @@ const PUBLISHED_SCOPES: readonly TrustScope[] = [
 // network module reports that link state directly, so the adapter for it stays truthful (D-11).
 const CONTROLLER_LINK_ROW = 'Pump Controller Link Lost';
 
-// The one control row this version publishes. It is published from the first update whatever its
-// scope reports, because a room holding only sensors does not render in Apple Home at all and this
-// Switch is what makes the accessory's room visible (D-03).
+// The two control rows. Both are published from the first update whatever their scope reports,
+// because a room holding only sensors does not render in Apple Home at all and these Switches are
+// what make the accessory's room visible (D-03).
 const SELF_TEST_ROW = 'System Self-Test';
+const ALARM_MUTE_ROW = 'Alarm Mute';
 
-// The status a refused write answers, written out here rather than read off the namespace (D-04).
+// The statuses a refused write answers, written out here rather than read off the namespace (D-04).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
+const RESOURCE_BUSY = -70403;
 
 // Every published service that reads the `fault` scope, whether or not it is filed under it.
 // `Sump Pit Level` reads the reported water sensor fault beside its level, and both pump services
@@ -742,7 +746,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
-      [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
     );
   });
 
@@ -1351,7 +1355,11 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       basementGuardianAccessory.services,
       PUBLISHED_SERVICES.filter(
-        (descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || descriptor.name === SELF_TEST_ROW || PUBLISHED_SCOPES[index] === 'connectivity',
+        (descriptor, index) =>
+          descriptor.name === CONTROLLER_LINK_ROW ||
+          descriptor.name === SELF_TEST_ROW ||
+          descriptor.name === ALARM_MUTE_ROW ||
+          PUBLISHED_SCOPES[index] === 'connectivity',
       ),
     );
   });
@@ -1872,6 +1880,78 @@ describe('createBasementGuardianAccessory', () => {
       },
       { statusCode: 0, on: false, statusActive: true },
     );
+  });
+
+  test('D-03 publishes the alarm mute switch on the first update even though alarm_audio_muted never decoded', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiAccessory(accessory, { alarm_audio_muted: 'not-a-boolean' });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        published: serviceOf(accessory, ALARM_MUTE_ROW).UUID,
+        on: serviceOf(accessory, ALARM_MUTE_ROW).characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.On.UUID)?.pushed,
+        statusActive: statusActiveOf(accessory, ALARM_MUTE_ROW),
+      },
+      { published: SWITCH_UUID, on: false, statusActive: false },
+    );
+  });
+
+  test('CTRL-04 follows the reported alarm_audio_muted with no HomeKit write behind it', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiAccessory(accessory, { alarm_audio_muted: true });
+
+    // assert
+    assert.deepStrictEqual(
+      { on: valueOf(accessory, ALARM_MUTE_ROW, HAP.Characteristic.On), statusActive: statusActiveOf(accessory, ALARM_MUTE_ROW) },
+      { on: true, statusActive: true },
+    );
+  });
+
+  // The vendor exposes no unmute command and refuses a duplicate mute, so both writes are answered
+  // here without anything leaving the plugin (D-019, CTRL-04).
+  for (const { written, muted, status } of [
+    { written: false, muted: false, status: NOT_ALLOWED_IN_CURRENT_STATE },
+    { written: true, muted: true, status: RESOURCE_BUSY },
+  ]) {
+    test(`CTRL-04 answers ${String(status)} for a write of ${String(written)} while alarm_audio_muted reads ${String(muted)}, and sends nothing`, async () => {
+      // arrange
+      const accessory = accessoryStandIn();
+      const { commands, sends } = recordingCommands();
+      geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands });
+
+      // act
+      await assert.rejects(
+        () => onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(written),
+        (thrown: unknown) => {
+          assert.strictEqual(thrown, status);
+
+          return true;
+        },
+      );
+
+      // assert
+      assert.deepStrictEqual(sends, []);
+    });
+  }
+
+  test('CTRL-04 sends one mute request carrying the only value the plugin will ever ask for', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { commands, sends } = recordingCommands();
+    geminiAccessory(accessory, { alarm_audio_muted: false }, { commands });
+
+    // act
+    await onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(true);
+
+    // assert
+    assert.deepStrictEqual(sends, [`${DEVICE_ID} alarm-mute true`]);
   });
 
   // Equipment faults are not eligibility. The official Gemini client permits a self-test while
