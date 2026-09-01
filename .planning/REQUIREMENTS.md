@@ -51,11 +51,11 @@
 
 ### Pump Records and Official Controls
 
-- [ ] **CTRL-01**: Each pump exposes a persisted read-only observation start, observed activation count, and last-observed-activation UTC timestamp that survives normal restarts/upgrades and never claims to be a lifetime total.
-- [ ] **CTRL-02**: Documentation makes clear that Activity History is controller-owned, is not safety delivery, has no configurable retention, and is not a source of missed-event backfill.
-- [ ] **CTRL-03**: `System Self-Test` follows reported `test_running`, accepts one valid on request, rejects cancellation and duplicates, permits tests during physical faults, and reflects tests started outside HomeKit.
-- [ ] **CTRL-04**: `Alarm Mute` follows reported `alarm_audio_muted`, sends only the official `{"alarm_audio_muted": true}` boolean on command, and provides no duration, timer, simulated unmute, or off write while mute is active. G-001 blocks only the `1.0.0` release.
-- [ ] **CTRL-05**: Each HomeKit command waits at most 2.5 seconds for vendor acceptance, keeps reported state authoritative, tracks one 30-second pending/uncertain request, returns appropriate HAP errors, and never automatically retries or writes requested state into safety data.
+- [x] **CTRL-01**: Each pump exposes a persisted read-only observation start, observed activation count, and last-observed-activation UTC timestamp that survives normal restarts/upgrades and never claims to be a lifetime total.
+- [x] **CTRL-02**: Documentation makes clear that Activity History is controller-owned, is not safety delivery, has no configurable retention, and is not a source of missed-event backfill.
+- [x] **CTRL-03**: `System Self-Test` follows reported `test_running`, accepts one valid on request, rejects cancellation and duplicates, permits tests during physical faults, and reflects tests started outside HomeKit.
+- [x] **CTRL-04**: `Alarm Mute` follows reported `alarm_audio_muted`, sends only the official `{"alarm_audio_muted": true}` boolean on command, and provides no duration, timer, simulated unmute, or off write while mute is active. G-001 blocks only the `1.0.0` release.
+- [x] **CTRL-05**: Each HomeKit command waits at most 2.5 seconds for vendor acceptance, keeps reported state authoritative, tracks one 30-second pending/uncertain request, returns appropriate HAP errors, and never automatically retries or writes requested state into safety data.
 
 ### Degraded Operation and Recovery
 
@@ -136,11 +136,11 @@
 | SAFE-06 | Phase 3 | Complete |
 | SAFE-07 | Phase 3 | Complete |
 | SAFE-08 | Phase 3 | Complete |
-| CTRL-01 | Phase 4 | Pending |
-| CTRL-02 | Phase 4 | Pending |
-| CTRL-03 | Phase 4 | Pending |
-| CTRL-04 | Phase 4 | Pending |
-| CTRL-05 | Phase 4 | Pending |
+| CTRL-01 | Phase 4 | Complete |
+| CTRL-02 | Phase 4 | Complete |
+| CTRL-03 | Phase 4 | Complete |
+| CTRL-04 | Phase 4 | Complete |
+| CTRL-05 | Phase 4 | Complete |
 | RES-01 | Phase 3, Phase 5 | Complete |
 | RES-02 | Phase 3 | Complete |
 | RES-03 | Phase 3, Phase 5 | Complete |
