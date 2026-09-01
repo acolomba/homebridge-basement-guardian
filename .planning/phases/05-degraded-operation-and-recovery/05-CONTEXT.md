@@ -48,10 +48,21 @@ distinguishable.
   values are retained, only trust is withdrawn. The accepted cost is that a whole home of
   accessories goes `Status Active — No` at once, which is the truthful reading.
 
+  **Narrowed 2026-09-01 after research, and the narrowing is load-bearing.** Applied literally this
+  decision would silence `Basement Guardian Offline`: its catalogue row is `scope: 'connectivity'`
+  with `toleratedDistrust: []`, and `toRow` returns `[]` for an untrusted row, so withdrawing every
+  scope withholds the very adapter that reports the device offline. Correct when both transports are
+  down — the plugin genuinely cannot say — and wrong in the shadow-only case, where REST is still
+  feeding `offlineConfirmed`. Therefore:
+  - **Shadow silence** withdraws the existing `NON_CONNECTIVITY_SCOPES` set and **spares
+    `connectivity`**, because REST still sources that claim.
+  - **REST degradation** additionally withdraws `connectivity`, because then nothing sources it.
+  - **Both down** withdraws everything.
+
 - **D-03 — The resulting double meaning is accepted and resolved outside HomeKit:** `StatusActive`
   now means both "this field failed validation" (Phase 3) and "we cannot see the device at all"
-  (this phase). `03-CONTEXT.md` D-06 refused to overload `StatusActive` for the pending window on
-  exactly this ground, and the distinction here is different in kind: the two are not rival
+  (this phase). `04-CONTEXT.md` D-06 refused to overload `StatusActive` for the pending-window
+  expiry on exactly this ground, and the distinction here is different in kind: the two are not rival
   explanations, because when the monitoring path is down every field is untrustworthy anyway. The
   distinction matters for diagnosis, not for safety. HomeKit therefore carries one signal with one
   meaning — untrustworthy — while the `FailureLog` line and the existing
@@ -69,6 +80,13 @@ distinguishable.
     counting work at all.
   - *Both down:* everything is marked.
 
+  **Implementation constraint found by research.** The distinction does not exist in the code today:
+  `monitoringPathNow()` returns `'unavailable'` whenever `!polling`, whatever the shadow is doing
+  `[VERIFIED: src/runtime/accountRuntime.ts:337-343]`, so REST-down/shadow-up and both-down already
+  produce the identical value — and it is the *more* severe one, the opposite of what this decision
+  asks. Fourteen existing assertions depend on those values. **Add a second projection carrying the
+  trust decision; do not edit `monitoringPathNow()` in place.**
+
 - **D-05 — The threshold mirrors the shapes already ratified, rather than inventing a number:** Two
   consecutive failed REST polls, or two missed heartbeats of shadow silence, marks the path
   degraded. `RES-01` already fixes the shadow half — the device heartbeat is approximately 898
@@ -79,14 +97,42 @@ distinguishable.
   snapshots reporting disconnected, a failed request is explicitly not a snapshot (`D-016`), and
   raising it to 8 for offline confirmation must not silently slow degradation reporting.
 
+  **Where the shadow signal comes from — settled by research, because two obvious sources are
+  wrong.** `shadowConnected` is socket state, and the provider closes established connections at an
+  unpublished ceiling, so "at least one reconnect a day is expected operation"
+  `[VERIFIED: src/cloud/shadow.ts:306-309]`; using it would flap daily *and* miss a device that stops
+  heartbeating while the socket stays open. `snapshot.receivedAt` is also unusable, because a REST
+  poll bumps it too `[VERIFIED: src/device/state.ts:177-198]` — which would let a poll clear a
+  shadow degradation, forbidden by D-11.
+
+  Derive silence from **message arrival times observed at `onReportedPatch`**
+  `[VERIFIED: src/runtime/accountRuntime.ts:419-421]`, the only place that sees every arrival,
+  compared against the injected `Clock`. Evaluate it **lazily on the poll tick**, not from a
+  real-time loop: the runtime schedules on `node:timers/promises`, which `advanceClock()` cannot
+  move, so a real-time loop would be untestable in the Cucumber harness.
+
 ### Restart on cached state
 
-- **D-06 — Cached values publish with `StatusActive = false` immediately, from the first update:**
-  `RES-04` requires accessories to stay present and visibly stale. There is no unmarked window: a
-  restart before the first poll means the plugin has never had current data this run, and a stale
-  value that reads as trustworthy is the false normal the project forbids. A restart is usually
-  seconds from its first poll, so the marked window is short in practice — and when it is not short,
-  that is precisely when a user should see it.
+- **D-06 — Restored cached values are MARKED `StatusActive = false` at `configureAccessory`, before
+  any poll:** `RES-04` requires accessories to stay present and visibly stale, with no unmarked
+  window — a stale value that reads as trustworthy is the false normal the project forbids.
+
+  **Restated 2026-09-01 after research corrected a false premise in the original wording.** The
+  first draft named `src/persistence/accessoryContext.ts` as "the cached state D-06 publishes
+  from". That module holds no telemetry by design and says why
+  `[VERIFIED: src/persistence/accessoryContext.ts:11-16]`: a stored snapshot "would be a second
+  source of safety state that nothing refreshes, and it would read as current after a restart." The
+  cached values come from the **Homebridge accessory cache** — HAP serializes each characteristic's
+  `value` and restores it. So this is a **marking pass, not a publishing pass**.
+
+  It also cannot run "from the first update". `configureAccessory` only does
+  `this.accessories.set(accessory.UUID, accessory)` `[VERIFIED: src/platform.ts:501-504]`, and no
+  `update()` runs until the first successful REST poll — unbounded in exactly the failed-restart
+  case `RES-04` names, which would leave restored values reading as fully trustworthy indefinitely.
+  The pass therefore runs when Homebridge hands each cached accessory back.
+
+  **The pass must be an exported function that both `configureAccessory` and the Cucumber harness
+  call** — see D-12. `statusCode` is not serialized, so nothing survives a restart on its own.
 
 - **D-07 — Commands gate on two separate predicates, refused separately:** Success criterion 3 says
   commands stay disabled until valid state **and** command transport return, and those can differ —
@@ -95,6 +141,12 @@ distinguishable.
   so a user diagnosing a refused press learns whether the plugin lacks state or lacks a way to send.
   Phase 4's binder already takes `offlineConfirmed` as an injected predicate, so this is a known
   shape rather than a new one.
+
+  **Cheaper than assumed.** The "valid state" half already exists and already answers -70412:
+  `hasNoFreshState` fires on `reported === undefined` `[VERIFIED: src/accessories/controls.ts:168-170]`,
+  and `reportedControlValue` already returns `undefined` for an untrusted scope
+  `[VERIFIED: src/accessories/basementGuardian.ts:446-449]`. D-02's withdrawal switches it on for
+  free. **Only the command-transport predicate is new.**
 
 - **D-08 — The new refusal cause answers `NOT_ALLOWED_IN_CURRENT_STATE` (-70412):** It reuses the
   status the offline refusal already answers, because the condition is the same shape — the plugin
@@ -116,6 +168,10 @@ distinguishable.
 
   The gate must be proven non-vacuous the way Phase 3 proved its own — plant a violating read path,
   watch the gate fail, remove it. An unlisted module and a clean module produce the identical green.
+
+  **Confirmed already true by research, provable two ways:** there are zero `onGet` handlers in
+  `src/` (the only `on*` write path is `controls.ts`'s `onSet`), and no `src/accessories/` module
+  imports anything under `src/cloud/`. The work here is the gate, not a removal.
 
 ### Credential rejection
 
@@ -139,9 +195,48 @@ distinguishable.
   of the same question and nobody has tested it. This phase must raise a human-verification item:
   confirm a No Response accessory still lets a user reach cached values, and confirm what happens to
   automations built on it. A negative finding reopens D-10, not `RES-04`.
+  **The collision with D-09 that looked likely is not there.** `updateValue` assigns `statusCode`
+  and returns before touching `this.value`, and `handleGetRequest` throws it with no getter
+  registered `[VERIFIED: node_modules/@homebridge/hap-nodejs/dist/lib/Characteristic.js:1627-1634,
+  1727-1731]`. So No Response is reachable through the push path alone: **D-10 needs no `onGet` and
+  does not conflict with D-09.** `statusCode` is not serialized, so it does not survive a restart.
+
+  **Two sub-decisions taken by the orchestrator on 2026-09-01, flagged for override.** Research
+  listed both as open; each follows from a decision already made, so they were not put to the
+  maintainer separately:
+  - **Status pushed: `SERVICE_COMMUNICATION_FAILURE` (-70402).** `04-CONTEXT.md` D-04 already maps a
+    vendor-answered error to that status, and a refused credential is exactly that — the vendor
+    answered, and the plugin cannot communicate until the user acts. Reusing it keeps the per-cause
+    table honest rather than inventing a status for one case.
+  - **Applies to every service on every accessory.** A credential is account-wide, so every accessory
+    is equally unreadable; marking one would imply the others are fine.
+
   — **Reversibility:** costly — the amendment is one narrow branch, but it edits a locked Phase 3
   decision that the whole degradation design rests on, so reversing it means revisiting D-05's text
   as well as the code.
+
+### Test harness
+
+- **D-12 — The Cucumber harness must carry services across a restart, and the marking pass must be
+  real code both callers share:** `features/support/fakeHomebridgeApi.ts:106-110` deliberately drops
+  the service surface on restart, arguing that is "a stricter question than a real restart asks and
+  never a laxer one." That was true for Phase 4's question and is **false for Phase 5's**: with no
+  restored services there is nothing stale to read, so every D-06 scenario would pass whether or not
+  the plugin marks anything. That is the same shape as the six positives Phase 4 produced that passed
+  for the wrong reason — the fixture sitting at the value the defect produces.
+
+  The harness must restore services and their values across a restart. **All 78 existing scenarios
+  must be re-run immediately after that change**, because it could shift any of them.
+
+  Separately, `features/support/world.ts:571-585` *stands in for* `configureAccessory` rather than
+  calling it, so a marking pass living inside the platform method would be tested only through the
+  harness's copy. Extract the pass into an exported function that both the platform method and the
+  harness call, so Cucumber drives real code.
+
+  This decision exists because `04-VERIFICATION.md` carried forward that mutating away the
+  pending-window withholding leaves all 78 scenarios green — the end-to-end tier is blind to that
+  projection path, and this phase touches the same one. Inheriting that blindness is not acceptable
+  for the phase's central behaviour.
 
 ### Clearing
 
@@ -153,6 +248,15 @@ distinguishable.
   clears its own scope's validation failure. A REST poll must not clear a shadow-silence
   degradation — shadow silence is precisely the case where REST still works while live signals go
   unobserved, so that would restore trust the plugin has not earned.
+
+### Incidental findings the phase must not ignore
+
+- **`reportDegradation()` will log a false cause.** It reports *"the profile or payload stopped
+  validating"*, which is wrong for a transport outage and would fire from the first cloud hiccup.
+  Fix it alongside D-01; a log line naming the wrong cause is the diagnostic half of D-03 failing.
+- **`REQUIREMENTS.md` marks `RES-01` and `RES-03` `Complete` while its own delivery-split notes say
+  Phase 5 still owes part of both.** Pre-existing, introduced in Phase 3's `f73f692`, not caused by
+  this phase. Reconcile the rows at phase close-out rather than mid-flight.
 
 ### Claude's Discretion
 
@@ -188,8 +292,9 @@ distinguishable.
 ### Locked decisions this phase depends on or amends
 - `.planning/phases/03-safety-monitoring-in-homekit/03-CONTEXT.md` D-05 — forbids `HapStatusError`
   for degradation reporting. **D-10 amends it, narrowly.** Read D-05's own reasoning before acting.
-- `.planning/phases/03-safety-monitoring-in-homekit/03-CONTEXT.md` D-06 — refused to overload
-  `StatusActive` for the pending window. D-03 accepts a different overload and says why.
+- `.planning/phases/04-pump-records-and-official-controls/04-CONTEXT.md` D-06 — refused to overload
+  `StatusActive` for the pending-window expiry. D-03 accepts a different overload and says why.
+  (`03-CONTEXT.md` D-06 is a different decision — it refuses a sixth fault adapter.)
 - `.planning/phases/03-safety-monitoring-in-homekit/03-CONTEXT.md` D-09 — the Phase 3 / Phase 5
   delivery split for the offline counter.
 - `.planning/phases/04-pump-records-and-official-controls/04-CONTEXT.md` D-04 — the per-cause HAP
@@ -226,8 +331,8 @@ distinguishable.
   and `published()` already drops `undefined` candidates, which is the whole withholding mechanism.
 - `src/accessories/controls.ts` — the binder already takes `offlineConfirmed` as an injected
   predicate and already owns the six-cause local refusal table D-08 extends.
-- `src/runtime/reconciliation.ts` — an existing consecutive-observation counter with confirmation
-  semantics, the closest analog to D-05's REST failure counter.
+- `src/accessories/reconciliation.ts` — an existing consecutive-observation counter with
+  confirmation semantics, the closest analog to D-05's REST failure counter.
 - `src/cloud/auth.ts` — `AuthRejectedError`, the `HALTED` message and the rejection advice already
   exist; D-10 changes how that state reaches HomeKit, not how it is detected.
 - `src/persistence/accessoryContext.ts` — the typed accessory context Phase 4 widened; the cached
