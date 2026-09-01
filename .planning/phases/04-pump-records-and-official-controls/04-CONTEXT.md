@@ -444,8 +444,12 @@ that needs one.
 - `src/runtime/accountRuntime.ts` — currently asserts in tests that the runtime never reaches the
   command route (`accountRuntime.test.ts:306`). Check whether that stand-in stays truthful once a
   command path exists, and update the assertion deliberately rather than by accident.
-- `features/support/fakeShadowBroker.ts` — `ShadowTopicLeaf` gains `update/rejected`; the broker
-  gains desired-state handling and a publish for it.
+- `features/support/fakeShadowBroker.ts` — the broker gains the fake pump's *reaction* only: an
+  accepted command flips `test_running` and it reports that on `update/accepted`. Per the narrowed
+  `D-15`, `ShadowTopicLeaf` gains **no** `update/rejected` member and the broker gains **no**
+  desired-state handling and no publish for it — the plugin never sends a shadow update and never
+  subscribes to that leaf, so neither has a real counterpart. Rejected, timed-out and late outcomes
+  come from `features/support/fakeRestApi.ts`.
 - `README.md` — the record characteristics, the primary/backup asymmetry, the Apple Home rendering
   list from the folded todo, and the `CTRL-02` Activity History wording.
 

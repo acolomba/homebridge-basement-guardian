@@ -915,10 +915,23 @@ PumpService: define({
 | A9 | `update/rejected` exists as an AWS IoT device-shadow topic at all | Open Question 1 | General AWS knowledge, not measured and not in `.planning/intel/constraints.md`. Low consequence: the recommendation is to drop the leaf, so the claim is load-bearing only if someone argues the leaf *should* be added. |
 | A8 | The header policy should be a version-bearing product identifier sourced from a constant with a manifest test guarding drift | Project Constraints | `src/settings.ts` holds no version constant today and `package.json` is not imported at runtime anywhere in `src/`. A version-free `homebridge-basement-guardian` is the simplest alternative and creates no drift at all. Folded todo, so the phase decides it. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `update/rejected` belong in the fake broker at all? Recommended answer: no — but this is STILL OPEN and needs the maintainer.**
-   - **Provenance, corrected 2026-09-01.** An earlier revision of this file marked this "RESOLVED by the user" and said the narrowing was settled. That was an overreach and is retracted. What actually happened: the maintainer asked whether the real system produces a rejected update notification and agreed with the answer, then said "let's continue". That confirms the **fact** below. It is not a ruling that locked `D-15` may be amended, which is a separate act. **`D-15` in `04-CONTEXT.md` reads as originally written and is the binding text until the maintainer rules.** The planner must not treat the narrowing as settled.
+Nothing in this section is open. Every question here was answered before planning began, and the
+answers are recorded elsewhere: Q1 was ruled on by the maintainer on 2026-09-01 and `04-CONTEXT.md`
+`D-15` carries the outcome; Q2 is adopted in `04-02-PLAN.md` task 2, Q3 in `04-06-PLAN.md` task 3,
+and Q4 in `04-03-PLAN.md` task 3. The reasoning is kept below because it is the evidence behind each
+answer. It is not an invitation to decide any of them again.
+
+1. **Does `update/rejected` belong in the fake broker at all? Answer: no. RULED by the maintainer on 2026-09-01.**
+   - **The ruling, 2026-09-01.** The maintainer narrowed `D-15` to exactly the outcome recommended
+     below, and `04-CONTEXT.md` records it: the broker gains the fake pump's *reaction* only — an
+     accepted command flips `test_running` and the broker reports it on `update/accepted` — with no
+     `update/rejected` member on `ShadowTopicLeaf` and no desired-state handling. Rejected, timed-out
+     and late are driven from `features/support/fakeRestApi.ts`. The provenance note that follows
+     describes the state *before* that ruling. It is kept because it records how an earlier overreach
+     was retracted, not because the question is still live.
+   - **Provenance, corrected 2026-09-01 (superseded by the ruling above).** An earlier revision of this file marked this "RESOLVED by the user" and said the narrowing was settled. That was an overreach and is retracted. What actually happened: the maintainer asked whether the real system produces a rejected update notification and agreed with the answer, then said "let's continue". That confirms the **fact** below. It is not a ruling that locked `D-15` may be amended, which is a separate act. **`D-15` in `04-CONTEXT.md` reads as originally written and is the binding text until the maintainer rules.** The planner must not treat the narrowing as settled. *That instruction expired on 2026-09-01: the maintainer ruled, `D-15` was amended, and the binding text is now the narrowed one.*
    - What we know: `04-CONTEXT.md` D-15 says the phase adds `update/rejected` to `ShadowTopicLeaf`. But the plugin's own topic surface has no such leaf and no update-publish helper, deliberately. `SHADOW_TOPICS` `[VERIFIED: src/cloud/shadow.ts:32-37]` is verbatim:
      ```typescript
      export const SHADOW_TOPICS = {
@@ -932,7 +945,7 @@ PumpService: define({
    - **The stronger reason, established from source: the real system never produces a rejection of anything this plugin does.** An `update/rejected` message is the shadow service's answer to a publish on `$aws/things/{thing}/shadow/update`. This plugin issues exactly one publish, ever, and it is not that one `[VERIFIED: src/cloud/shadow.ts:345 — `await target.transport.publish(SHADOW_TOPICS.get(deviceId), '');`, the only `publish` call in the module]`. Commands travel over `PUT /devices/{deviceId}/data`, and the `{"desiredData": ...}` body D-15 refers to is that route's **HTTP body** `[VERIFIED: src/cloud/api.ts:169 — `body: JSON.stringify({ desiredData: command.desiredData })`; and .planning/intel/constraints.md:88-92, which shows it under `PUT /devices/{deviceId}/data` with `Content-Type: application/json`]`, not an MQTT publish. So there is no plugin-issued shadow update for the service to accept or reject.
    - What's also true: the plugin does not subscribe to the leaf either `[VERIFIED: src/cloud/shadow.ts:151-158, `fillRoutes` registers `getAccepted`, `getRejected`, and `updateAccepted` per device and nothing else]`, so even a rejection caused by someone else's update — the device's own, or the vendor cloud's — would not reach it.
    - What is **not** established: whether the vendor's shadow ever emits on that leaf at all. The 2026-08-29 measurement recorded `foreignStateChange` with `operation === 'update'` and says nothing about rejections `[VERIFIED: .planning/intel/constraints.md:148-157]`. That `update/rejected` exists as an AWS IoT topic at all is `[ASSUMED]` — general AWS knowledge, not measured here and not recorded in the repo's intel.
-   - Recommendation (not yet ratified): **do not add the subscription, and do not add the leaf.** A fake that publishes a message the real system would never send to a client that would never be listening is the definition of `04-CONTEXT.md` D-15's own warning — "a fake we author answers our own design". Drive all five CTRL-05 outcomes from the REST layer, where the plugin actually observes them, and where the wire shapes are measured. If the maintainer ratifies it, `D-15` would read: extend the broker to let the fake pump *react* to an accepted command by reporting `test_running: true` on `update/accepted`, and drop the `update/rejected` clause from `D-15` at the same time, since it describes something the plugin cannot cause. Until then, plan the harness against `D-15` as written and carry this as a decision the phase must take.
+   - Recommendation, **ratified on 2026-09-01 and now `D-15`**: **do not add the subscription, and do not add the leaf.** A fake that publishes a message the real system would never send to a client that would never be listening is the definition of `04-CONTEXT.md` D-15's own warning — "a fake we author answers our own design". Drive all five CTRL-05 outcomes from the REST layer, where the plugin actually observes them, and where the wire shapes are measured. If the maintainer ratifies it, `D-15` would read: extend the broker to let the fake pump *react* to an accepted command by reporting `test_running: true` on `update/accepted`, and drop the `update/rejected` clause from `D-15` at the same time, since it describes something the plugin cannot cause. The maintainer did ratify it, so `D-15` now reads exactly that and the harness is planned against the narrowed text.
 
 2. **Where does the pending-expiry republish run, given the accessory's synchronous-`update()` contract?**
    - What we know: `basementGuardian.ts`'s `update()` docblock promises *"It runs to completion synchronously: nothing is awaited and nothing is scheduled, so two updates cannot interleave."* The expiry callback must publish outside `update()`.
@@ -987,5 +1000,3 @@ PumpService: define({
 
 **Research date:** 2026-08-31
 **Valid until:** 2026-09-30 for the in-repo findings (they change only when the repo does). The HAP findings are pinned to `@homebridge/hap-nodejs@2.2.2` and must be re-probed if that resolution changes — `npm install` in CI runs `npm audit fix`, which can move a transitive version.
-</content>
-</invoke>

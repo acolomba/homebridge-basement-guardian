@@ -72,6 +72,7 @@ requirement can be dropped during planning.
 | TBD | TBD | TBD | CTRL-05 | Externally initiated: the Switch follows with no pending state and no `PUT` | cucumber | `npx cucumber-js --name "started outside HomeKit"` | ❌ W0 |
 | TBD | TBD | TBD | CTRL-05 | Requested state never reaches canonical safety state | cucumber | `npx cucumber-js --name "requested"` | ✅ extend |
 | TBD | TBD | TBD | CTRL-05 | After any rejection the characteristic's stored status returns to `0` | unit | `node --test dist-test/test/accessories/controls.test.js` | ❌ W0 |
+| TBD | TBD | TBD | CTRL-05 | Pending isolation at the row: with only `self-test` pending the `alarm-mute` row still projects reported state, and the mirror case | unit | `node --test dist-test/test/accessories/serviceCatalogue.test.js` | ✅ extend |
 | TBD | TBD | TBD | — | `TRUST_SCOPES` lists every `TrustScope` member | unit | `node --test dist-test/test/accessories/basementGuardian.test.js` | ✅ extend |
 | TBD | TBD | TBD | — | The fake HAP's write path agrees with the real pinned HAP | unit | `node --test dist-test/test/accessories/hapWriteFidelity.test.js` | ❌ W0 |
 
@@ -127,6 +128,12 @@ settled and `04-CONTEXT.md` was amended to match. Plan them as settled.
 - **`D-05` / `D-06` pending scope (ruling 6).** The window is per capability per accessory. A row
   must prove isolation in both directions: one accessory's pending self-test withholds neither the
   other accessory's control nor mute on the same accessory.
+
+  Both directions must be pinned **at the row**, not only at the binder. Withholding is implemented
+  in the row's projection helper, so a helper that consults the pending set against the wrong
+  capability leaves both binders' pending sets perfectly correct and still freezes the other control
+  for the whole window. That defect passes every binder-level assertion, so the same-accessory case
+  needs a row-level test of its own.
 
 ---
 
