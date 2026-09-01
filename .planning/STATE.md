@@ -199,7 +199,30 @@ Carried inline below (not files):
 
 ### Blockers/Concerns
 
-These are `1.0.0` release gates, not phase blockers. Each phase delivers its implementation and marks any unvalidated constant provisional.
+**TOOLING HAZARD — `gsd-tools query commit` can report success while committing nothing.**
+Observed three times on 2026-08-31/09-01 (orchestrator twice, research subagent once). The
+handler commits with a pathspec — `git commit -m <msg> -- <paths>` at
+`.claude/gsd-core/bin/lib/commands.cjs:1831` — which breaks against this repository's
+file-modifying pre-commit hooks. Two failure shapes were seen: an **empty commit returned as
+`{"committed": true, "hash": ...}`** (`70b99e1`, `02bdbc9` are both empty), and a spurious
+TruffleHog `files were modified by this hook` failure whose own scan reported
+`verified_secrets: 0, unverified_secrets: 0`.
+
+The pathspec form is not broken on its own — reproduced against a scratch repository with a
+trivial hook and both forms committed correctly, so the trigger needs this repo's real
+hook set. Which hook has not been isolated.
+
+**Workaround, proven four times:** `git add <paths>` then a plain `git commit -m <msg>` with
+no pathspec. Never rely on the handler's return value — verify with
+`git show --name-only --format="" HEAD` and re-commit if the list is empty.
+
+**This matters most for `/gsd-execute-phase`,** whose executors commit through the same
+handler once per task. An empty commit is silent: the work stays in the working tree and
+looks committed.
+
+---
+
+The remainder are `1.0.0` release gates, not phase blockers. Each phase delivers its implementation and marks any unvalidated constant provisional.
 
 - G-001: Validate Gemini alarm-mute acknowledgement, state changes, duration, latency, and failure behavior before the `1.0.0` release.
 - G-002: Validate all Gemini water-level codes and the flood threshold during a natural cycle.
