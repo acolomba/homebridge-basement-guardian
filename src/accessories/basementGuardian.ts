@@ -34,10 +34,14 @@
  */
 
 import { createControlBinder } from './controls.js';
+import { createPumpRecords } from './pumpRecords.js';
 import {
+  booleanOf,
   createServiceCatalogue,
+  decodedGroup,
   ensureService,
   isRowFullyTrusted,
+  numberOf,
   publishedService,
   publishValue,
   removeServiceIfPresent,
@@ -45,12 +49,14 @@ import {
 } from './serviceCatalogue.js';
 import { isNotificationServiceKind } from './services.js';
 
-import type { ProjectionInput, ServiceRow } from './serviceCatalogue.js';
+import type { PumpRecordsObservation, PumpRecordValues } from './pumpRecords.js';
+import type { ProjectionInput, PumpRecordProjection, ServiceRow } from './serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from './services.js';
 import type { DeviceCapability, FamilyValidation } from '../device/family.js';
 import type { DistrustReason, TrustScope, UntrustedScope } from '../device/health.js';
 import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceSnapshot } from '../device/state.js';
+import type { AccessoryStore } from '../runtime/accessoryStore.js';
 import type { CommandPort } from '../runtime/commandPort.js';
 import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
@@ -115,6 +121,17 @@ export interface BasementGuardianAccessoryOptions {
    * next macrotask and no earlier, so the binder arms it here (D-04, D-10).
    */
   timers: Timers;
+  /**
+   * The sink an accessory's own observation record reaches disk through.
+   *
+   * Mutating an accessory's context changes an object in memory and nothing on
+   * disk: Homebridge writes the cache only when it is told the accessory
+   * changed. The record writes through this narrow port rather than the
+   * accessory reaching for a Homebridge API handle it deliberately does not
+   * have, so a test hands in a recorder and asserts a write was not asked for
+   * (CTRL-01, D-008).
+   */
+  store: AccessoryStore;
   /** The command surface a HomeKit press on a control Switch reaches the vendor through (CTRL-05). */
   commands: CommandPort;
   /** The notification sensors to leave unpublished. Absent publishes every adapter (D-017, CONF-06). */
@@ -304,6 +321,41 @@ function isoTimestamp(at: number | undefined): string {
   return at === undefined ? '' : new Date(at).toISOString();
 }
 
+// One observation per snapshot, built from the decoded groups through the
+// catalogue's own narrowing rather than a second one written here: two
+// narrowings can disagree about the same payload, and the record would then
+// count something no row ever published (D-003).
+//
+// Every field is absent rather than defaulted when its group did not decode,
+// which is what keeps the record from advancing on a payload the family could
+// not vouch for (D-014).
+function observationOf(decoded: unknown, receivedAt: number): PumpRecordsObservation {
+  const pump = decodedGroup(decoded, 'pump');
+  const selfTest = decodedGroup(decoded, 'self-test');
+
+  return {
+    receivedAt,
+    primaryRunning: booleanOf(pump, 'primaryRunning'),
+    backupRunning: booleanOf(pump, 'backupRunning'),
+    backupActivatedAt: numberOf(pump, 'backupActivatedAt'),
+    testRunning: booleanOf(selfTest, 'running'),
+    testedAt: numberOf(selfTest, 'testedAt'),
+  };
+}
+
+// The accessory is the one place a stored millisecond value becomes a published
+// string, exactly as `controllerDataLastTrustedAt` already is, so no row reads a
+// clock or keeps state of its own. A record that has seen no activation
+// publishes the empty string rather than a fabricated time (CTRL-01, D-011).
+function recordProjectionOf(record: PumpRecordValues): PumpRecordProjection {
+  return {
+    observationStartedAt: isoTimestamp(record.observationStartedAt),
+    activationCount: record.activationCount,
+    lastActivationAt: isoTimestamp(record.lastActivationAt),
+    lastActivationWasTestActivity: record.lastActivationWasTestActivity,
+  };
+}
+
 // Every `PlatformAccessory` already carries this service from its own
 // construction, so it is fetched here and never added again.
 function populateAccessoryInformation(accessory: PlatformAccessory, hap: API['hap'], snapshot: DeviceSnapshot, metadata: Record<string, unknown>): void {
@@ -366,6 +418,19 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // itself reports without waiting for another update: a control refused
   // between polls has to answer from the same facts the rows publish from.
   let lastDecoded: unknown = undefined;
+  // Whether a snapshot has ever been observed, which is what says a record
+  // exists to publish. Reading one before the first observation throws rather
+  // than answering a count of zero from an epoch of 1970, so this is asked
+  // before either record is read (CTRL-01, D-020).
+  let observedASnapshot = false;
+
+  // One record instance per accessory, living as long as the accessory does,
+  // for the same reason the platform reuses one accessory instance across
+  // polls: a fresh instance per update would discard the observation epoch and
+  // the previously reported running values the watched-edge rule depends on, so
+  // every poll would re-seed and no activation would ever be counted
+  // (CTRL-01, D-010, D-014).
+  const records = createPumpRecords({ context: accessory.context, store: options.store, log });
 
   // Only a removable notification kind can be suppressed; a core kind reports
   // what the system reports, so removing one would hide a condition rather
@@ -400,13 +465,19 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // the resolved and unresolved paths cannot drift apart in what they hand a
   // row.
   function projectionInputOf(decoded: unknown, pendingControls: ReadonlySet<DeviceCapability>): ProjectionInput {
-    return {
+    const input: ProjectionInput = {
       decoded,
       untrustedScopes: untrusted,
       offlineConfirmed: offlineConfirmed(),
       controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
       pendingControls,
     };
+
+    if (!observedASnapshot) {
+      return input;
+    }
+
+    return { ...input, primaryPumpRecord: recordProjectionOf(records.primary), backupPumpRecord: recordProjectionOf(records.backup) };
   }
 
   // The one publish pass a service already on the accessory gets: everything its
@@ -688,6 +759,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       // device's confirmation is the same one that resumes publishing reported
       // state for that control.
       reconcileControls();
+
+      // Exactly one observation per snapshot, taken before the rows publish so
+      // the same update that advanced the record is the one that shows it. It
+      // is deliberately absent from the unresolved-family branch above: a family
+      // that no longer resolves cannot say whether a pump ran, so advancing a
+      // count from it would be a guess and blanking the record would discard
+      // evidence (CTRL-01, D-014).
+      records.observe(observationOf(decoded, snapshot.receivedAt));
+      observedASnapshot = true;
 
       published = publishRows(projectionInputOf(decoded, controls.pending));
 

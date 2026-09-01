@@ -564,6 +564,7 @@ describe('BasementGuardianPlatform', () => {
       return Promise.resolve(new Response('{}', { status: 503 }));
     });
     const registeredAccessories: FakeAccessory[] = [];
+    const persistedAccessories: FakeAccessory[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
@@ -587,6 +588,18 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
+    // The record the accessory seeds from its first snapshot mutates the accessory's context, and a
+    // context mutation Homebridge is not told about is invisible on disk, so the store asks for it
+    // to be stored exactly once (CTRL-01, D-008).
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((accessories: PlatformAccessory[]) => {
+          persistedAccessories.push(...(accessories as unknown as FakeAccessory[]));
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
     const [launch, shutdown] = listeners;
 
@@ -598,8 +611,12 @@ describe('BasementGuardianPlatform', () => {
 
     // assert
     assert.deepStrictEqual(
-      { count: registeredAccessories.length, device: registeredAccessories[0]?.context.device },
-      { count: 1, device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } },
+      {
+        count: registeredAccessories.length,
+        device: registeredAccessories[0]?.context.device,
+        persisted: persistedAccessories.map((accessory) => accessory.UUID),
+      },
+      { count: 1, device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }, persisted: [ACCESSORY_UUID] },
     );
     verify(user);
     verify(api);
@@ -671,6 +688,10 @@ describe('BasementGuardianPlatform', () => {
           return true;
         }),
       );
+    }).thenReturn(undefined);
+    // The record seeded from the one snapshot this device is ever seen in asks once to be stored.
+    when(() => {
+      api.updatePlatformAccessories(It.matches((accessories: PlatformAccessory[]) => accessories.length === 1));
     }).thenReturn(undefined);
     const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
     const [launch, shutdown] = listeners;
@@ -1211,7 +1232,9 @@ describe('registerDiscoveredDevices', () => {
     registerDiscoveredDevices(context, [DEVICE_ID], store);
 
     // assert
-    assert.deepStrictEqual({ afterFirstPoll, afterSecondPoll: updateCalls.length }, { afterFirstPoll: 1, afterSecondPoll: 1 });
+    // Two calls on the first poll: the record the accessory seeded from that snapshot, and the
+    // service set the suppression changed. The second poll changes neither, so it adds none.
+    assert.deepStrictEqual({ afterFirstPoll, afterSecondPoll: updateCalls.length }, { afterFirstPoll: 2, afterSecondPoll: 2 });
   });
 
   test('publishes every adapter but the one an administrator ignored', () => {

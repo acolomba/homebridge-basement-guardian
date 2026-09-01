@@ -19,6 +19,7 @@ import type { DeviceCapability, DeviceFamily, FieldViolation } from '../../src/d
 import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { AccessoryStore } from '../../src/runtime/accessoryStore.js';
 import type { CommandPort } from '../../src/runtime/commandPort.js';
 import type { Timers } from '../../src/runtime/timers.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
@@ -306,6 +307,23 @@ function recordingCommands(): { commands: CommandPort; sends: string[] } {
   return { commands, sends };
 }
 
+// An `AccessoryStore` stand-in that counts every write request and performs none. The accessory
+// mutates its own context and asks Homebridge to store it, so a case counts the asks; a case that
+// asserts none were made is stating something about an absence, which watching behaviour alone
+// cannot give (D-008, D-010).
+function recordingStore(): { store: AccessoryStore; persisted: () => number } {
+  let persists = 0;
+
+  return {
+    store: {
+      persist: () => {
+        persists += 1;
+      },
+    },
+    persisted: () => persists,
+  };
+}
+
 // A deliberately deferred variant of the same transition, private to this module and never a
 // production option. Every immediacy layer is shown to catch it, which is what makes a green layer
 // evidence that the accessory did not defer rather than evidence that the layer cannot tell.
@@ -364,6 +382,7 @@ function buildOptions(
     registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }),
     log: silentLog(),
     timers: recordingTimers().timers,
+    store: recordingStore().store,
     commands: recordingCommands().commands,
     ...rest,
     accessory: accessory as unknown as PlatformAccessory,
@@ -1863,6 +1882,104 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(
       { count: whileTrusted.activationCount, record: pumpRecordOf(accessory, 'Backup Pump'), active: statusActiveOf(accessory, 'Backup Pump') },
       { count: 1, record: whileTrusted, active: false },
+    );
+  });
+
+  // The other half of the same rule, and the half a record kept where it was cannot show on its own:
+  // an undecoded running value must leave the previously reported one alone rather than settling to
+  // `false`. A record that read it as `false` would manufacture an edge on the next `true` and count
+  // a second activation for one physical run (D-009, D-014).
+  test('counts no second activation when the pump scope recovers still reporting the same run', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiUpdates(accessory, [
+      {},
+      { data: { backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS },
+      { data: { backup_pump_running: 'yes' }, receivedAt: RECORD_RECEIVED_AT + 2 * ONE_POLL_LATER_MS },
+    ]);
+
+    // act
+    basementGuardianAccessory.update(
+      buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + 3 * ONE_POLL_LATER_MS }),
+      'poll',
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { count: valueOf(accessory, 'Backup Pump', ObservedActivationCount), active: statusActiveOf(accessory, 'Backup Pump') },
+      { count: 1, active: true },
+    );
+  });
+
+  // An unresolved profile says nothing about whether a pump ran, so the branch that handles one
+  // drives no observation at all: it neither advances a count nor asks for a write.
+  test('drives no observation and asks for no write when the family has never resolved', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { store, persisted } = recordingStore();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }), store });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { persists: persisted(), pumpServices: basementGuardianAccessory.services.filter((service) => service.kind === 'primary-pump') },
+      { persists: 0, pumpServices: [] },
+    );
+  });
+
+  // A profile that stops resolving neither advances a count nor blanks a record: the record the
+  // accessory already published stays exactly where it is, and no write is asked for.
+  test('leaves a published record where it is when the family stops resolving', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { store, persisted } = recordingStore();
+    const registry = registryOver([
+      { kind: 'implemented', family: geminiFamily },
+      { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID },
+    ]);
+    const basementGuardianAccessory = accessoryWith(accessory, { registry, store });
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+    const afterTheResolvedUpdate = { record: pumpRecordOf(accessory, 'Backup Pump'), persists: persisted() };
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { record: pumpRecordOf(accessory, 'Backup Pump'), furtherPersists: persisted() - afterTheResolvedUpdate.persists },
+      {
+        record: { observationStartedAt: RECORD_RECEIVED_AT_ISO, activationCount: 0, lastActivationAt: '', lastActivationWasTestActivity: undefined },
+        furtherPersists: 0,
+      },
+    );
+  });
+
+  // A record that counted an activation and never asked to be stored is lost on the next restart,
+  // so the ask is what the accessory owes Homebridge for every change it made (D-008, D-010).
+  test('asks for one write for the snapshot that counted an activation and none for an unchanged one', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { store, persisted } = recordingStore();
+    const basementGuardianAccessory = geminiUpdates(accessory, [{}], { store });
+    const afterTheSeed = persisted();
+
+    // act
+    basementGuardianAccessory.update(
+      buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }),
+      'poll',
+    );
+    const afterTheActivation = persisted();
+    basementGuardianAccessory.update(
+      buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + 2 * ONE_POLL_LATER_MS }),
+      'poll',
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { afterTheSeed, afterTheActivation, afterAnUnchangedSnapshot: persisted() },
+      { afterTheSeed: 1, afterTheActivation: 2, afterAnUnchangedSnapshot: 2 },
     );
   });
 

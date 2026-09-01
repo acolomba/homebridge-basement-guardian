@@ -114,6 +114,19 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
     ignoredFaults: context.ignoredFaults,
     offlineConfirmationPollCount: context.offlineConfirmationPollCount,
     timers: context.timers,
+    // The one implementation of the persist port, built here per accessory so no
+    // shared or process-wide store exists for a consumer to reach. It is a
+    // second, independent caller of the call `updateDiscoveredDevice` already
+    // makes, and the API is idempotent, so two callers are safe. The record
+    // members are deliberately absent from that function's change comparison --
+    // which covers the display name, the vendor name, the device record, and the
+    // service list -- so without this a counted activation would mutate the
+    // context and never reach disk (CTRL-01, D-008, D-010).
+    store: {
+      persist: () => {
+        context.api.updatePlatformAccessories([accessory]);
+      },
+    },
     commands: context.commands,
   });
 }
