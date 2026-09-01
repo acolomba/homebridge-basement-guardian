@@ -108,6 +108,20 @@ function stubFetch(t: TestContext, respond: () => Response): RecordedRequest[] {
   return vendorRequests;
 }
 
+// Records the complete header set each request declares, so a case asserts the exact keys and values
+// rather than the presence of the ones it thought to ask about.
+function stubHeaderRecordingFetch(t: TestContext, respond: () => Response): Record<string, string>[] {
+  const declaredHeaders: Record<string, string>[] = [];
+
+  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
+    declaredHeaders.push(Object.fromEntries(new Headers(init?.headers).entries()));
+
+    return Promise.resolve(respond());
+  });
+
+  return declaredHeaders;
+}
+
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
 function stubHangingFetch(t: TestContext): void {
   t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
@@ -677,4 +691,35 @@ test('touches no excluded account-management path family (SYNC-01)', async (t) =
     pathFamilies.filter((family) => excluded.includes(family)),
     [],
   );
+});
+
+// The plugin's first request with a body is also its first that says anything about itself. What it
+// may declare is asserted as a complete key set rather than as the presence of one header, so a
+// fifth header cannot appear without this case saying so (AUTH-02).
+test('declares exactly four headers on a command request', async (t) => {
+  // arrange
+  const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(declaredHeaders, [
+    { authorization: 'Bearer id-token-1', 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian', accept: 'application/json' },
+  ]);
+});
+
+// The read branch carries the bearer token and nothing else. Adding the command headers here would
+// change every read request's wire shape as a side effect of a decision about commands.
+test('declares only the bearer token on a read request', async (t) => {
+  // arrange
+  const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions());
+
+  // act
+  await cloudApi.devices(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(declaredHeaders, [{ authorization: 'Bearer id-token-1' }]);
 });

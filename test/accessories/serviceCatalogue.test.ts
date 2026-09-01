@@ -194,6 +194,19 @@ function projectionInput(overrides: Partial<ProjectionInput> = {}): ProjectionIn
   };
 }
 
+// The two control rows, each with the capability it withholds `On` for and the other capability
+// whose pending request must leave it alone.
+const CONTROL_ROWS = [
+  { kind: 'system-self-test', capability: 'self-test', other: 'alarm-mute' },
+  { kind: 'alarm-mute', capability: 'alarm-mute', other: 'self-test' },
+] as const satisfies readonly { kind: ServiceKind; capability: DeviceCapability; other: DeviceCapability }[];
+
+// A decoded state in which both controls read active, so a row that projects `On` is telling the
+// two apart from an absent value rather than answering a format default.
+function activeControls(): Record<string, unknown> {
+  return decodedState({ 'self-test': { running: true, testedAt: undefined }, 'alarm-mute': { muted: true } });
+}
+
 function rowOf(hap: API['hap'], kind: ServiceKind): ServiceRow {
   const row = createServiceCatalogue(hap).find((candidate) => candidate.kind === kind);
 
@@ -826,20 +839,37 @@ function registerAbsentStateCases(): void {
   // The whole of the withholding rule: while a request is unresolved the row publishes no `On` at
   // all, so the accessory's per-update push cannot snap the toggle back before the device confirms
   // (D-05, D-037).
-  test('projects no On at all while the control carries an unresolved request', () => {
-    // arrange
-    const hap = hapNamespace();
-    const input = projectionInput({
-      decoded: decodedState({ 'self-test': { running: false, testedAt: undefined } }),
-      pendingControls: new Set<DeviceCapability>(['self-test']),
+  for (const { kind, capability } of CONTROL_ROWS) {
+    test(`projects no On at all while ${kind} carries an unresolved request`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const input = projectionInput({ decoded: activeControls(), pendingControls: new Set<DeviceCapability>([capability]) });
+
+      // act
+      const projected = rowOf(hap, kind).project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), []);
     });
+  }
 
-    // act
-    const projected = rowOf(hap, 'system-self-test').project(input);
+  // Withholding lives in the row, so the row is where the isolation is proved. A helper that read
+  // one hard-coded capability, or closed over the wrong one, would keep both pending sets perfectly
+  // correct and still freeze the other Switch for the whole window every time this one was pressed
+  // (D-05, D-06).
+  for (const { kind, other } of CONTROL_ROWS) {
+    test(`projects the reported On on the ${kind} row while only ${other} is pending`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const input = projectionInput({ decoded: activeControls(), pendingControls: new Set<DeviceCapability>([other]) });
 
-    // assert
-    assert.deepStrictEqual(summarise(projected), []);
-  });
+      // act
+      const projected = rowOf(hap, kind).project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.On.UUID, value: true }]);
+    });
+  }
 
   test('projects nothing on the control row while its own scope is untrusted', () => {
     // arrange
@@ -903,6 +933,7 @@ describe('createServiceCatalogue', () => {
       { kind: 'water-sensor-fault', subtype: 'water-sensor-fault' },
       { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost' },
       { kind: 'system-self-test', subtype: 'system-self-test' },
+      { kind: 'alarm-mute', subtype: 'alarm-mute' },
       { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline' },
     ]);
   });
@@ -936,6 +967,7 @@ describe('createServiceCatalogue', () => {
       { displayName: 'Water Sensor Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
       { displayName: 'Pump Controller Link Lost', scope: 'fault', readScopes: ['fault'], toleratedDistrust: ['controller-link-lost'] },
       { displayName: 'System Self-Test', scope: 'self-test', readScopes: ['self-test'], toleratedDistrust: [] },
+      { displayName: 'Alarm Mute', scope: 'alarm-mute', readScopes: ['alarm-mute'], toleratedDistrust: [] },
       { displayName: 'Basement Guardian Offline', scope: 'connectivity', readScopes: ['connectivity'], toleratedDistrust: [] },
     ]);
   });
@@ -1056,19 +1088,37 @@ describe('createServiceCatalogue', () => {
     ]);
   });
 
-  test('publishes the self-test control as a Switch on its own trust scope, under its kind slug', () => {
-    // arrange
-    const hap = hapNamespace();
+  for (const { kind, capability } of CONTROL_ROWS) {
+    test(`publishes the ${kind} control as a Switch on its own trust scope, under its kind slug`, () => {
+      // arrange
+      const hap = hapNamespace();
 
-    // act
-    const row = rowOf(hap, 'system-self-test');
+      // act
+      const row = rowOf(hap, kind);
 
-    // assert
-    assert.deepStrictEqual(
-      { subtype: row.subtype, scope: row.scope, alwaysPublish: row.alwaysPublish, serviceUuid: row.serviceClass.UUID },
-      { subtype: 'system-self-test', scope: 'self-test', alwaysPublish: true, serviceUuid: hap.Service.Switch.UUID },
-    );
-  });
+      // assert
+      assert.deepStrictEqual(
+        { subtype: row.subtype, scope: row.scope, alwaysPublish: row.alwaysPublish, serviceUuid: row.serviceClass.UUID },
+        { subtype: kind, scope: capability, alwaysPublish: true, serviceUuid: hap.Service.Switch.UUID },
+      );
+    });
+  }
+
+  // The vendor exposes no duration selector and no unmute command, so the plugin publishes nothing
+  // that would suggest either. A simulated duration would report a mute ending that the device
+  // never ended (D-019, CTRL-04).
+  for (const forbidden of ['Duration', 'Timer', 'Schedule', 'Unmute']) {
+    test(`publishes no row, subtype, or display name naming ${forbidden}`, () => {
+      // arrange
+      const catalogue = createServiceCatalogue(hapNamespace());
+
+      // act
+      const naming = catalogue.filter((row) => `${row.kind} ${row.subtype} ${row.displayName}`.includes(forbidden));
+
+      // assert
+      assert.deepStrictEqual(naming, []);
+    });
+  }
 
   test('claims the always-publish exemption on the control row alone', () => {
     // arrange
@@ -1080,7 +1130,7 @@ describe('createServiceCatalogue', () => {
     // assert
     assert.deepStrictEqual(
       exempt.map((row) => row.displayName),
-      ['System Self-Test'],
+      ['System Self-Test', 'Alarm Mute'],
     );
   });
 
