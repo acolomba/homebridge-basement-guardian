@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: verifying
-stopped_at: Phase 4 context gathered
-last_updated: "2026-09-01T02:52:50.169Z"
+stopped_at: Phase 4 research complete
+last_updated: "2026-09-01T04:20:00.000Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase 03 execution started
 state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
@@ -116,6 +116,18 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   what `G-001` exists for. Mute constants therefore ship named `PROVISIONAL_`, exactly as the
   Phase 3 water ladder did under `G-002`, and `G-001` stays open and blocks `1.0.0`. Phase 4
   completion is not blocked by it.
+
+- [Phase 4, decided 2026-09-01]: `D-15` is narrowed — the fake shadow broker gains **no**
+  `update/rejected` leaf. The plugin sends no shadow update at all, so the real service
+  never has one of its updates to reject: `src/cloud/shadow.ts:345` is the module's only
+  `publish` call and it targets `.../shadow/get` with an empty payload. The
+  `{"desiredData": ...}` body `D-15` called "the plugin's publish" is the REST body at
+  `src/cloud/api.ts:169`, not an MQTT message. The broker instead gains the fake pump's
+  *reaction* — an accepted command flips `test_running` and reports it on
+  `update/accepted`. The rejected, timed-out and late outcomes are driven from
+  `fakeRestApi`, where the wire shapes are measured. Recorded because publishing a message
+  the real system never sends, to a client that never subscribes, is exactly the invented
+  fake `D-15` warns against.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
