@@ -67,6 +67,14 @@ export interface CustomCharacteristics {
   ControllerLinkPresent: CharacteristicClass;
   /** When controller-derived state last carried trustworthy values, or the empty string when it never has (RES-02). */
   ControllerDataLastTrustedAt: CharacteristicClass;
+  /** When this plugin began watching one pump, which is what the count below is counted from (CTRL-01, D-020). */
+  ObservationStartedAt: CharacteristicClass;
+  /** Activations of one pump this plugin watched since that start -- never a device or whole-of-life total (CTRL-01, D-020). */
+  ObservedActivationCount: CharacteristicClass;
+  /** When the last watched or recovered activation of one pump happened, or the empty string when none has (CTRL-01). */
+  LastObservedActivationAt: CharacteristicClass;
+  /** Whether that last activation was self-test activity, left unwritten until the plugin has earned the label (CTRL-01, D-013). */
+  LastActivationWasTestActivity: CharacteristicClass;
 }
 
 // Fixed published identities: none of them may ever change, and each is
@@ -85,11 +93,21 @@ const BATTERY_HEALTH_CODE_UUID = '89ff0a75-adab-4ec2-9254-446681dd5fa2';
 const PROTECTION_HOURS_CODE_UUID = '72432447-f7ae-4d5e-b551-7da3538267d0';
 const CONTROLLER_LINK_PRESENT_UUID = '39f9112e-cdad-41f5-9247-f5379b0d6c11';
 const CONTROLLER_DATA_LAST_TRUSTED_AT_UUID = 'd4d0209b-1472-4a39-8d1b-1c48d94efc7f';
+const OBSERVATION_STARTED_AT_UUID = 'f36376db-47a7-4c59-a76f-6bdc234d5634';
+const OBSERVED_ACTIVATION_COUNT_UUID = '88734156-8e55-4697-af69-68e9576d1352';
+const LAST_OBSERVED_ACTIVATION_AT_UUID = '39226a7e-0b92-4f41-b9a4-a602cdc8cca3';
+const LAST_ACTIVATION_WAS_TEST_ACTIVITY_UUID = '217042ab-ad7e-481b-8e7e-2510e9ad74d9';
 
-// The three HAP formats these declarations use, named here rather than read from
+// The four HAP formats these declarations use, named here rather than read from
 // `hap.Formats` so the definition table stays a plain module-level value; the
 // factory resolves each name against the injected namespace.
-type CharacteristicFormat = 'bool' | 'uint8' | 'string';
+//
+// `uint32` exists for the activation count alone. `uint8` caps at 255 and HAP
+// *clamps* a larger value into the domain rather than refusing it, so a count
+// past 255 would silently stop advancing while still reading as a fact about
+// the basement. That is a false normal a pump running a few times a day reaches
+// in months, not years (D-12, CTRL-01).
+type CharacteristicFormat = 'bool' | 'uint8' | 'uint32' | 'string';
 
 /** The value domain one declaration adds, beside the format and permissions every one shares. */
 type CharacteristicDomain = Pick<CharacteristicProps, 'minValue' | 'maxValue' | 'minStep' | 'validValues'>;
@@ -114,6 +132,7 @@ export function createCustomCharacteristics(hap: API['hap']): CustomCharacterist
   const formats: Readonly<Record<CharacteristicFormat, string>> = {
     bool: hap.Formats.BOOL,
     uint8: hap.Formats.UINT8,
+    uint32: hap.Formats.UINT32,
     string: hap.Formats.STRING,
   };
 
@@ -173,6 +192,33 @@ export function createCustomCharacteristics(hap: API['hap']): CustomCharacterist
       displayName: 'Controller Data Last Trusted At',
       uuid: CONTROLLER_DATA_LAST_TRUSTED_AT_UUID,
       format: 'string',
+    }),
+    // The four pump record types. The plugin cannot see an activation from
+    // before it ran, so the count is what it watched and the start is what the
+    // count is counted from; both display names say so, because a controller
+    // showing one characteristic and nothing else must still read true
+    // (CTRL-01, D-12, D-020). Both timestamps follow
+    // `ControllerDataLastTrustedAt`: an ISO-8601 string, with the empty string
+    // meaning none observed rather than a fabricated time.
+    ObservationStartedAt: define({
+      displayName: 'Observation Start',
+      uuid: OBSERVATION_STARTED_AT_UUID,
+      format: 'string',
+    }),
+    ObservedActivationCount: define({
+      displayName: 'Activations Observed Since Observation Start',
+      uuid: OBSERVED_ACTIVATION_COUNT_UUID,
+      format: 'uint32',
+    }),
+    LastObservedActivationAt: define({
+      displayName: 'Last Observed Activation At',
+      uuid: LAST_OBSERVED_ACTIVATION_AT_UUID,
+      format: 'string',
+    }),
+    LastActivationWasTestActivity: define({
+      displayName: 'Last Activation Was Self-Test',
+      uuid: LAST_ACTIVATION_WAS_TEST_ACTIVITY_UUID,
+      format: 'bool',
     }),
   };
 }

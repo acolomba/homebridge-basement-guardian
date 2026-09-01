@@ -374,6 +374,29 @@ test('survives a push queued as a microtask inside the handler, on both implemen
   assert.strictEqual(real.statusCode, HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
 });
 
+// The stand-in every other test in this repository declares its characteristics against. A format
+// name that drifted from the real enum would let a declaration typecheck and pass everywhere while
+// the real HAP read it as an unknown format, which is the whole reason this file exists.
+test('carries the same format names the real enum carries', () => {
+  // act
+  const formats = {
+    bool: { real: Formats.BOOL, fake: FAKE.Formats.BOOL },
+    uint8: { real: Formats.UINT8, fake: FAKE.Formats.UINT8 },
+    uint32: { real: Formats.UINT32, fake: FAKE.Formats.UINT32 },
+    string: { real: Formats.STRING, fake: FAKE.Formats.STRING },
+    float: { real: Formats.FLOAT, fake: FAKE.Formats.FLOAT },
+  };
+
+  // assert
+  assert.deepStrictEqual(formats, {
+    bool: { real: 'bool', fake: 'bool' },
+    uint8: { real: 'uint8', fake: 'uint8' },
+    uint32: { real: 'uint32', fake: 'uint32' },
+    string: { real: 'string', fake: 'string' },
+    float: { real: 'float', fake: 'float' },
+  });
+});
+
 test('carries the same numbers for every status the controls answer', () => {
   // act
   const statuses = {

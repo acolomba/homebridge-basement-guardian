@@ -46,6 +46,7 @@ const NAMED_STRING_DEFAULTS: ReadonlyMap<string, string> = new Map([
 export interface FakeFormats {
   readonly BOOL: string;
   readonly UINT8: string;
+  readonly UINT32: string;
   readonly STRING: string;
   readonly FLOAT: string;
 }
@@ -82,7 +83,7 @@ export interface FakeUuid {
   generate(data: string): string;
 }
 
-const FORMATS: FakeFormats = { BOOL: 'bool', UINT8: 'uint8', STRING: 'string', FLOAT: 'float' };
+const FORMATS: FakeFormats = { BOOL: 'bool', UINT8: 'uint8', UINT32: 'uint32', STRING: 'string', FLOAT: 'float' };
 const PERMS: FakePerms = { PAIRED_READ: 'pr', PAIRED_WRITE: 'pw', NOTIFY: 'ev' };
 const UNITS: FakeUnits = { PERCENTAGE: 'percentage' };
 const HAP_STATUS: FakeHapStatus = {

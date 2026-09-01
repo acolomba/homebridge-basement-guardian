@@ -132,10 +132,27 @@ export function createCustomServices(hap: API['hap']): CustomServices {
       required: [hap.Characteristic.WaterLevel, characteristics.RawWaterLevelCode],
       optional: [characteristics.WaterSensorFaultReported],
     }),
+    // The four record characteristics are optional and `PumpRunning` stays the
+    // one required fact. `ensureService` gates a row on its projection length,
+    // and that gate is sound only while every *required* characteristic of a
+    // service class comes from a scope the row is still publishing from. The
+    // record values come from the accessory's own observation rather than from
+    // the `pump` scope, so a required record characteristic would be
+    // constructed the moment the row published its pump boolean and left at
+    // HAP's format default -- presenting a count of zero, an empty observation
+    // start, and a last activation that was not a self-test as fact
+    // (CTRL-01, D-009, SAFE-08).
     PumpService: define({
       uuid: PUMP_SERVICE_UUID,
       required: [characteristics.PumpRunning],
-      optional: [characteristics.PumpFault, characteristics.PumpFuseBlown],
+      optional: [
+        characteristics.PumpFault,
+        characteristics.PumpFuseBlown,
+        characteristics.ObservationStartedAt,
+        characteristics.ObservedActivationCount,
+        characteristics.LastObservedActivationAt,
+        characteristics.LastActivationWasTestActivity,
+      ],
     }),
     SumpMainsPowerService: define({ uuid: SUMP_MAINS_POWER_SERVICE_UUID, required: [characteristics.MainsPowerPresent] }),
     BackupBatteryService: define({
