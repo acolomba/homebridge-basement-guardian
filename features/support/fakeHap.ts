@@ -55,6 +55,21 @@ export interface FakeUnits {
   readonly PERCENTAGE: string;
 }
 
+/**
+ * The HAP status codes a write path answers, carrying the values the real enum carries.
+ *
+ * Only the statuses this plugin can answer are declared. `test/accessories/hapWriteFidelity.test.ts`
+ * reads each one off both namespaces and asserts the pairs are equal, so a drifted number fails
+ * there rather than in a scenario that would still have looked green.
+ */
+export interface FakeHapStatus {
+  readonly SUCCESS: number;
+  readonly SERVICE_COMMUNICATION_FAILURE: number;
+  readonly RESOURCE_BUSY: number;
+  readonly OPERATION_TIMED_OUT: number;
+  readonly NOT_ALLOWED_IN_CURRENT_STATE: number;
+}
+
 /** The deterministic accessory-identifier derivation a scenario reads back. */
 export interface FakeUuid {
   generate(data: string): string;
@@ -63,6 +78,38 @@ export interface FakeUuid {
 const FORMATS: FakeFormats = { BOOL: 'bool', UINT8: 'uint8', STRING: 'string', FLOAT: 'float' };
 const PERMS: FakePerms = { PAIRED_READ: 'pr', PAIRED_WRITE: 'pw', NOTIFY: 'ev' };
 const UNITS: FakeUnits = { PERCENTAGE: 'percentage' };
+const HAP_STATUS: FakeHapStatus = {
+  SUCCESS: 0,
+  SERVICE_COMMUNICATION_FAILURE: -70402,
+  RESOURCE_BUSY: -70403,
+  OPERATION_TIMED_OUT: -70408,
+  NOT_ALLOWED_IN_CURRENT_STATE: -70412,
+};
+
+/**
+ * The error a write handler throws to refuse a write with a named status.
+ *
+ * The real class carries the status on `hapStatus` and nothing else, which is the member
+ * `handleSetRequest` reads; a handler throwing anything else is converted rather than read.
+ */
+/**
+ * One refused write, carrying the status the handler named.
+ *
+ * `hapStatus` is the one member `handleSetRequest` reads: a handler throwing anything else is
+ * converted rather than read. The class implementing it is module-local, so every caller
+ * constructs one through `hap.HapStatusError` as the plugin does through the injected namespace,
+ * and no test reaches a HAP type by a route production does not have.
+ */
+export interface FakeHapStatusError extends Error {
+  readonly hapStatus: number;
+}
+
+class StandInHapStatusError extends Error implements FakeHapStatusError {
+  constructor(readonly hapStatus: number) {
+    super(`status code: ${String(hapStatus)}`);
+    this.name = 'HapStatusError';
+  }
+}
 
 const UUID: FakeUuid = {
   // Deterministic (same input -> same output, different input -> different output), never HAP's
@@ -93,6 +140,9 @@ const PLAIN_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [
 // one. A stand-in answering anything else would satisfy the no-clobber case vacuously.
 const WRITABLE_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
 const WRITE_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.PAIRED_WRITE] };
+// The one characteristic a controller both reads and writes on this plugin, and the only route a
+// HomeKit press reaches the vendor through.
+const WRITABLE_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
 const READ_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ] };
 const BINARY_STATE: FakeCharacteristicProps = {
   format: FORMATS.UINT8,
@@ -128,8 +178,32 @@ export interface FakeHapCharacteristic {
    * and never wrote to -- and would pass against an implementation that publishes nothing at all.
    */
   pushed: boolean;
+  /**
+   * The status the last write left on this characteristic, or `0` when there is none.
+   *
+   * The real HAP carries this member too, and it is the whole reason the write path is modelled
+   * here rather than assumed: a rejected write stores the thrown status and every later read
+   * answers it until something pushes a value, which is a service reading as unavailable long
+   * after the press that refused it. Any push clears it, whatever value it carries.
+   */
+  statusCode: number;
   getDefaultValue(): unknown;
+  /** Registers the one write handler this characteristic answers through. */
+  onSet(handler: FakeSetHandler): FakeHapCharacteristic;
+  /**
+   * Answers a controller write, as the real HAP answers one.
+   *
+   * An accepted write clears the stored status and stores the value; a rejected one leaves the
+   * value exactly where it was and stores the status the handler named, then rejects with that
+   * status as a bare number.
+   */
+  handleSetRequest(value: unknown): Promise<void>;
+  /** Answers a controller read: the stored status when there is one, and the stored value otherwise. */
+  handleGetRequest(): unknown;
 }
+
+/** The one write handler a characteristic answers through. */
+export type FakeSetHandler = (value: unknown) => void | Promise<void>;
 
 /** A stand-in characteristic type: constructed with no arguments, and carrying the type's own identifier. */
 export interface FakeCharacteristicClass {
@@ -186,6 +260,18 @@ export interface FakeCharacteristicNamespace {
   readonly StatusLowBattery: FakeCharacteristicClass & FakeStatusLowBatteryValues;
   readonly BatteryLevel: FakeCharacteristicClass;
   readonly ChargingState: FakeCharacteristicClass & FakeChargingStateValues;
+  readonly On: FakeCharacteristicClass;
+}
+
+// A handler may throw a status error, a bare status number, or anything else. Only the first two
+// name a status; everything else is a defect in the handler, which the real HAP reports as a
+// communication failure and warns about.
+function thrownStatusOf(error: unknown): number {
+  if (typeof error === 'number') {
+    return error;
+  }
+
+  return error instanceof StandInHapStatusError ? error.hapStatus : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
 }
 
 class StandInCharacteristic implements FakeHapCharacteristic {
@@ -193,12 +279,63 @@ class StandInCharacteristic implements FakeHapCharacteristic {
 
   pushed = false;
 
+  statusCode = HAP_STATUS.SUCCESS;
+
+  private setHandler: FakeSetHandler | undefined = undefined;
+
   constructor(
     readonly displayName: string,
     readonly UUID: string,
     readonly props: FakeCharacteristicProps,
   ) {
     this.value = this.getDefaultValue();
+  }
+
+  onSet(handler: FakeSetHandler): FakeHapCharacteristic {
+    this.setHandler = handler;
+
+    return this;
+  }
+
+  // The real order matters and is reproduced exactly: the handler runs first, the status is
+  // cleared and the value stored only on the success path, and a rejection leaves the value
+  // untouched. Nothing snaps a refused toggle back, because HAP never moved it.
+  //
+  // `pushed` deliberately stays where it was. It marks a value the plugin published, and a
+  // controller write is not that; a scenario reading a control back is reading a characteristic the
+  // plugin already published to.
+  async handleSetRequest(value: unknown): Promise<void> {
+    if (this.setHandler === undefined) {
+      this.statusCode = HAP_STATUS.SUCCESS;
+      this.value = value;
+
+      return;
+    }
+
+    try {
+      await this.setHandler(value);
+    } catch (error: unknown) {
+      this.statusCode = thrownStatusOf(error);
+
+      // The real HAP rethrows the status as a bare number rather than the error it caught, so a
+      // caller reading `error.hapStatus` off it would be reading a member that is not there.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- reproducing the real HAP write path, which rejects with a bare status number
+      throw this.statusCode;
+    }
+
+    this.statusCode = HAP_STATUS.SUCCESS;
+    this.value = value;
+  }
+
+  // A stored status answers before the value is ever read, which is what makes a refused write
+  // outlive the press that caused it.
+  handleGetRequest(): unknown {
+    if (this.statusCode !== HAP_STATUS.SUCCESS) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- reproducing the real HAP read path, which throws a bare status number
+      throw this.statusCode;
+    }
+
+    return this.value;
   }
 
   // The real HAP answers `false` for a bool; for a string, one of four named defaults by identifier
@@ -269,6 +406,7 @@ const CHARACTERISTIC: FakeCharacteristicNamespace = Object.assign(StandInCharact
     CHARGING: 1,
     NOT_CHARGEABLE: 2,
   }),
+  On: defineCharacteristic('On', `00000025${APPLE_BASE_UUID}`, WRITABLE_BOOL),
 });
 
 /** One service on a stand-in accessory. */
@@ -299,6 +437,7 @@ export interface FakeServiceNamespace {
   readonly LeakSensor: FakeServiceClass;
   readonly ContactSensor: FakeServiceClass;
   readonly Battery: FakeServiceClass;
+  readonly Switch: FakeServiceClass;
 }
 
 class StandInService implements FakeHapService {
@@ -345,9 +484,14 @@ class StandInService implements FakeHapService {
     return this.updateCharacteristic(characteristicClass, value);
   }
 
+  // The real `updateValue` clears the stored status unconditionally before it stores, so any push
+  // -- even one carrying the value the characteristic already holds -- makes a refused
+  // characteristic readable again. The clearing is per characteristic: pushing `StatusActive`
+  // leaves a status stored on `On` exactly where it was.
   updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
     const characteristic = this.getCharacteristic(characteristicClass) ?? this.addCharacteristic(characteristicClass);
 
+    characteristic.statusCode = HAP_STATUS.SUCCESS;
     characteristic.value = value;
     characteristic.pushed = true;
 
@@ -423,6 +567,14 @@ const SERVICE: FakeServiceNamespace = Object.assign(StandInService, {
     required: [CHARACTERISTIC.StatusLowBattery],
     optional: [CHARACTERISTIC.BatteryLevel, CHARACTERISTIC.ChargingState, CHARACTERISTIC.Name],
   }),
+  // The real `Switch` requires `On` and declares `Name` optional, and nothing else. `StatusActive`
+  // is in neither list, so the plugin's push of it goes through the declaring branch here as it
+  // does in production.
+  Switch: defineService({
+    uuid: `00000049${APPLE_BASE_UUID}`,
+    required: [CHARACTERISTIC.On],
+    optional: [CHARACTERISTIC.Name],
+  }),
 });
 
 /** The hand-built HAP namespace, in the shape a plugin consumes `api.hap` in. */
@@ -433,9 +585,20 @@ export interface FakeHap {
   readonly Perms: FakePerms;
   readonly Units: FakeUnits;
   readonly uuid: FakeUuid;
+  readonly HAPStatus: FakeHapStatus;
+  readonly HapStatusError: new (hapStatus: number) => FakeHapStatusError;
 }
 
-const HAP: FakeHap = { Service: SERVICE, Characteristic: CHARACTERISTIC, Formats: FORMATS, Perms: PERMS, Units: UNITS, uuid: UUID };
+const HAP: FakeHap = {
+  Service: SERVICE,
+  Characteristic: CHARACTERISTIC,
+  Formats: FORMATS,
+  Perms: PERMS,
+  Units: UNITS,
+  uuid: UUID,
+  HAPStatus: HAP_STATUS,
+  HapStatusError: StandInHapStatusError,
+};
 
 /**
  * Answers the HAP namespace stand-in.
