@@ -24,13 +24,13 @@ import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
-import { systemTimers } from '../../src/runtime/timers.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 
 import { createFakeAuth0 } from './fakeAuth0.js';
 import { createFakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import { createFakeRestApi } from './fakeRestApi.js';
 import { createFakeShadowBroker } from './fakeShadowBroker.js';
+import { createFakeTimers } from './fakeTimers.js';
 
 import type { FakeAuth0 } from './fakeAuth0.js';
 import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
@@ -162,6 +162,10 @@ export class BasementGuardianWorld extends World {
 
   private scenarioTime = SCENARIO_START_TIME;
 
+  // The deferred work the plugin arms, held against this world's own clock rather than a process
+  // timer, so `advanceClock` is the only thing that ever runs it.
+  private readonly timers = createFakeTimers(this);
+
   private pollIntervalSeconds = DEFAULT_POLL_INTERVAL_SECONDS;
 
   private shortRotation = false;
@@ -216,9 +220,16 @@ export class BasementGuardianWorld extends World {
     return this.scenarioTime;
   }
 
-  /** Moves the scenario clock forward. */
+  /**
+   * Moves the scenario clock forward and runs whatever that made due.
+   *
+   * The plugin's deferred work is armed against this clock through the controllable timers the
+   * harness supplies, so advancing past a deadline is how a scenario observes the work behind it.
+   * A scenario never sleeps and never races a process timer.
+   */
   advanceClock(milliseconds: number): void {
     this.scenarioTime += milliseconds;
+    this.timers.runDue();
   }
 
   /** Registers a teardown step. The world runs registered steps in reverse order. */
@@ -544,9 +555,14 @@ export class BasementGuardianWorld extends World {
     this.watchDevices(runtime);
   }
 
-  // The harness stands in for `BasementGuardianPlatform`, so it is the one other place the concrete
-  // process timers and the runtime's command port are wired, and it supplies the same validated
-  // configuration members the platform reads from `validateConfig`.
+  // The harness stands in for `BasementGuardianPlatform`, so it wires the runtime's command port and
+  // supplies the same validated configuration members the platform reads from `validateConfig`.
+  //
+  // Where the platform wires the process timers, this supplies the controllable ones instead. The
+  // accessory tier's one deferral is the control write path's, and a scenario has to observe both
+  // the clearing push and the pending window closing; on process timers the first would race the
+  // step that reads it and the second would cost a real thirty seconds. Driven from the scenario
+  // clock, both are observed by advancing it.
   private discoveryContext(
     api: API,
     accessories: Map<string, BasementGuardianPlatformAccessory>,
@@ -562,7 +578,7 @@ export class BasementGuardianWorld extends World {
       log: this.logger(),
       ignoredFaults: this.ignoredFaults,
       offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
-      timers: systemTimers,
+      timers: this.timers,
       commands,
     };
   }

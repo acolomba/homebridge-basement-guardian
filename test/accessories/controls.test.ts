@@ -13,6 +13,7 @@ import type { API, Logging, Service } from 'homebridge';
 
 const DEVICE_ID = 'account-1_serial-1';
 const SELF_TEST = 'system-self-test';
+const ALARM_MUTE = 'alarm-mute';
 
 // Fixture secrets a log line must never quote. Neither reaches this module, which is the point: the
 // assertion states what may not appear rather than trusting that nothing passes it in.
@@ -155,6 +156,11 @@ function boundSwitch(overrides: BinderOverrides = {}, reported: () => boolean | 
   return { binder, service };
 }
 
+// The refusal's clearing push, told apart from any other deferral by the delay it was armed at.
+function clearingPushesIn(deferrals: readonly Deferral[]): readonly Deferral[] {
+  return deferrals.filter((deferral) => deferral.delayMs === 0);
+}
+
 async function assertRefused(service: FakeHapService, value: unknown, status: number): Promise<void> {
   await assert.rejects(
     () => onCharacteristic(service).handleSetRequest(value),
@@ -247,8 +253,8 @@ test('sends one on request, holds the capability pending, and pushes nothing bac
   assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
   assert.deepStrictEqual([...binder.pending], ['self-test']);
   assert.deepStrictEqual(
-    { value: onCharacteristic(service).value, pushed: onCharacteristic(service).pushed, deferrals: deferrals.length, republished },
-    { value: true, pushed: false, deferrals: 0, republished: [] },
+    { value: onCharacteristic(service).value, pushed: onCharacteristic(service).pushed, clearingPushes: clearingPushesIn(deferrals).length, republished },
+    { value: true, pushed: false, clearingPushes: 0, republished: [] },
   );
 });
 
@@ -288,17 +294,20 @@ test('keeps the capability pending while the scope carrying its reported value h
   assert.deepStrictEqual([...binder.pending], ['self-test']);
 });
 
-test('reconciles a capability that was never pending without raising and without creating one', () => {
-  // arrange
-  const { binder } = boundSwitch();
+for (const reported of [true, false, undefined]) {
+  test(`reconciles a capability that was never pending against a reported ${String(reported)} without creating one`, () => {
+    // arrange
+    const { timers, cancelled } = recordingTimers();
+    const { binder } = boundSwitch({ timers });
 
-  // act
-  binder.reconcile('self-test', true);
-  binder.reconcile('self-test', true);
+    // act
+    binder.reconcile('self-test', reported);
+    binder.reconcile('self-test', reported);
 
-  // assert
-  assert.deepStrictEqual([...binder.pending], []);
-});
+    // assert
+    assert.deepStrictEqual({ pending: [...binder.pending], cancelled }, { pending: [], cancelled: [] });
+  });
+}
 
 test('registers one handler however many times a service is bound', () => {
   // arrange
@@ -333,7 +342,7 @@ for (const { failure, status } of [
 
     // act
     await assertRefused(service, true, status);
-    deferrals[0]?.run();
+    clearingPushesIn(deferrals)[0]?.run();
 
     // assert
     assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
@@ -441,11 +450,6 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
 ];
 
 const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS];
-
-// The refusal's clearing push, told apart from any other deferral by the delay it was armed at.
-function clearingPushesIn(deferrals: readonly Deferral[]): readonly Deferral[] {
-  return deferrals.filter((deferral) => deferral.delayMs === 0);
-}
 
 // One write against one row of the table, with everything the assertions read back.
 async function refuse(
@@ -616,3 +620,71 @@ test('resumes reported state with one warning and no second request when the win
     },
   );
 });
+
+// Whichever of the two runs first wins and the second is a no-op, so a confirming report landing at
+// the instant the window closes needs no ordering rule beyond that (D-06).
+test('ignores a confirming report that lands after the window already closed', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { timers, deferrals } = recordingTimers();
+  const { binder, service } = boundSwitch({ timers, log: warningLog(warnings) });
+  await onCharacteristic(service).handleSetRequest(true);
+  windowsIn(deferrals)[0]?.run();
+
+  // act
+  binder.reconcile('self-test', true);
+
+  // assert
+  assert.deepStrictEqual({ warnings: warnings.length, pending: [...binder.pending] }, { warnings: 1, pending: [] });
+});
+
+test('ignores a window that closes after the device already confirmed the request', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { timers, deferrals } = recordingTimers();
+  const { binder, service } = boundSwitch({ timers, log: warningLog(warnings) });
+  await onCharacteristic(service).handleSetRequest(true);
+  binder.reconcile('self-test', true);
+
+  // act
+  windowsIn(deferrals)[0]?.run();
+
+  // assert
+  assert.deepStrictEqual({ warnings, pending: [...binder.pending] }, { warnings: [], pending: [] });
+});
+
+test('holds one independent entry per capability, so clearing one leaves the other pending', async () => {
+  // arrange
+  const { binder, service } = boundSwitch();
+  const muteService = new HAP.Service.Switch('Alarm Mute', ALARM_MUTE);
+  binder.bind(muteService as unknown as Service, 'alarm-mute', () => false);
+  await onCharacteristic(service).handleSetRequest(true);
+  await onCharacteristic(muteService).handleSetRequest(true);
+
+  // act
+  binder.reconcile('self-test', true);
+
+  // assert
+  assert.deepStrictEqual([...binder.pending], ['alarm-mute']);
+});
+
+// One binder exists per accessory, so this is the whole of the per-accessory claim: no state outside
+// a binder's own closure records that anything is pending (D-05, D-06).
+for (const capability of ['self-test', 'alarm-mute'] as const) {
+  test(`sends ${capability} on a second accessory while the first carries a pending request`, async () => {
+    // arrange
+    const { service } = boundSwitch();
+    await onCharacteristic(service).handleSetRequest(true);
+    const { commands, sends } = recordingCommands();
+    const other = createControlBinder(binderOptions({ commands }));
+    const otherService = new HAP.Service.Switch('Control', capability);
+    other.bind(otherService as unknown as Service, capability, () => false);
+    const beforeTheWrite = [...other.pending];
+
+    // act
+    await onCharacteristic(otherService).handleSetRequest(true);
+
+    // assert
+    assert.deepStrictEqual({ beforeTheWrite, sends }, { beforeTheWrite: [], sends: [`${DEVICE_ID} ${capability} true`] });
+  });
+}

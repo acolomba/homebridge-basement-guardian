@@ -90,6 +90,19 @@ async function assertOneSelfTestCommand(this: BasementGuardianWorld): Promise<vo
 
 Then('the vendor receives one self-test command', assertOneSelfTestCommand);
 
+// Wider than the window the plugin arms, so the step's own literal states what "past" means rather
+// than the scenario depending on a delay declared somewhere else.
+const PAST_THE_PENDING_WINDOW_MS = 30_001;
+
+// The plugin holds the request open for a fixed window and then gives up on it. Advancing the
+// scenario clock past that window runs the deadline the plugin armed, so a scenario observes the
+// window closing without sleeping and without racing a process timer.
+function movePastThePendingWindow(this: BasementGuardianWorld): void {
+  this.advanceClock(PAST_THE_PENDING_WINDOW_MS);
+}
+
+When('the scenario clock moves past the control pending window', movePastThePendingWindow);
+
 async function assertNoCommand(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 

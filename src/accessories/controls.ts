@@ -106,6 +106,23 @@ export interface ControlBinder {
   reconcile(capability: DeviceCapability, reported: boolean | undefined): void;
 }
 
+/**
+ * How long a request waits for the device's own confirming report.
+ *
+ * The observed self-test duration is about sixteen seconds, so this is a window
+ * wide enough for a device to answer rather than a guess at how long a test
+ * takes. When it closes the row resumes projecting reported state and nothing
+ * is retried (D-037, D-06).
+ */
+const PENDING_WINDOW_MS = 30_000;
+
+// One unresolved request: what was asked for, and the handle of the deadline
+// that ends the wait for it.
+interface PendingRequest {
+  value: boolean;
+  handle: unknown;
+}
+
 // Everything a local rule reads about one write. Both device facts are sampled
 // once, before the first rule runs, so no two rules can disagree about the same
 // press.
@@ -225,11 +242,57 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   const { hap, log, timers, commands, deviceId, offlineConfirmed, republish } = options;
 
   // What was asked for, per capability, from the moment a write is accepted for
-  // sending until the device confirms it. The value is kept beside the key
-  // because reconciliation compares the two: a report that does not match the
-  // request resolves nothing.
-  const requested = new Map<DeviceCapability, boolean>();
+  // sending until the device confirms it or the window closes. The value is kept
+  // beside the key because reconciliation compares the two: a report that does
+  // not match the request resolves nothing. The window's handle is kept beside
+  // it so a confirming report can cancel the deadline it no longer needs.
+  //
+  // One binder exists per accessory and one entry exists per capability, so the
+  // window is per capability per accessory by construction rather than by a rule
+  // someone has to remember: no process-wide or cross-accessory state exists for
+  // two requests to contend over (D-05, D-06).
+  const requested = new Map<DeviceCapability, PendingRequest>();
   const bound = new Set<Service>();
+
+  // Drops the entry and cancels the deadline that was ending the wait for it.
+  //
+  // A capability with no entry is a no-op, which is what makes this and the
+  // expiry idempotent deletes of the same thing: whichever runs first wins and
+  // the second changes nothing, so a confirming report landing at the instant
+  // the window closes needs no ordering rule beyond that. It also covers a
+  // report that resolved the request while its own command was still in flight.
+  function resolvePending(capability: DeviceCapability): void {
+    const entry = requested.get(capability);
+
+    if (entry === undefined) {
+      return;
+    }
+
+    timers.clearTimeout(entry.handle);
+    requested.delete(capability);
+  }
+
+  // The window closed with no confirming report. The entry goes, the control
+  // rows republish so the Switch returns to what the device says, and one
+  // warning names the capability.
+  //
+  // Nothing is retried: a command that outlived its deadline may already have
+  // reached the device, and a second attempt would operate a real sump pump
+  // twice. `StatusActive` is deliberately not used to mark this either -- it
+  // already means the reported field did not decode, and one signal carrying two
+  // meanings would leave a user unable to tell which happened (D-038, D-06).
+  //
+  // The republish is the control rows alone, as `republish` documents: nothing
+  // else changed, and a full republish driven from a timer would make the
+  // accessory's "two updates cannot interleave" claim harder to hold.
+  function expire(capability: DeviceCapability): void {
+    if (!requested.delete(capability)) {
+      return;
+    }
+
+    republish();
+    log.warn(`The ${capability} request was never confirmed by the device. It is not retried.`);
+  }
 
   function armClearingPush(service: Service, reported: () => boolean | undefined): void {
     timers.setTimeout(() => {
@@ -257,7 +320,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   // the row resumes publishing reported state, and nothing is retried: a command
   // that outlived its deadline may already have reached the device (D-038).
   function refuseOutcome(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, failure: CommandFailure): never {
-    requested.delete(capability);
+    resolvePending(capability);
     armClearingPush(service, reported);
     log.warn(`The ${capability} request did not take effect: ${failure}. It is not retried.`);
 
@@ -272,8 +335,15 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }
 
     // From here the row withholds `On`, so the accessory's next update cannot
-    // snap the toggle back before the device confirms (D-05).
-    requested.set(capability, true);
+    // snap the toggle back before the device confirms (D-05). The entry is
+    // created immediately before the request leaves, with its own deadline, so
+    // no path can leave one behind with no way out.
+    requested.set(capability, {
+      value: true,
+      handle: timers.setTimeout(() => {
+        expire(capability);
+      }, PENDING_WINDOW_MS),
+    });
 
     const outcome = await commands.send(deviceId, capability, true);
 
@@ -302,8 +372,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     },
 
     reconcile(capability: DeviceCapability, reported: boolean | undefined): void {
-      if (requested.get(capability) === reported) {
-        requested.delete(capability);
+      if (requested.get(capability)?.value === reported) {
+        resolvePending(capability);
       }
     },
   };
