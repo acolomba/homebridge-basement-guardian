@@ -41,16 +41,24 @@ function characteristicValue(service: FakeHapService | undefined, displayName: s
   return pushedValue(service?.characteristics.find((candidate) => candidate.displayName === displayName));
 }
 
-// A scenario states a published value as the value HomeKit carries, so it reads `true` and `80`
-// rather than the text of either. Every characteristic these scenarios read carries a boolean or a
-// whole number, so anything else is a scenario naming a value no service can publish.
-function publishedValue(text: string): boolean | number {
+// A published time is an ISO-8601 instant, and a record that has observed nothing publishes the
+// empty string rather than a fabricated one.
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+// A scenario states a published value as the value HomeKit carries, so it reads `true`, `80`, and
+// the instant itself rather than the text of any of them. Anything else is a scenario naming a
+// value no service can publish.
+function publishedValue(text: string): boolean | number | string {
   if (text === 'true' || text === 'false') {
     return text === 'true';
   }
 
+  if (text === '' || ISO_INSTANT.test(text)) {
+    return text;
+  }
+
   if (!/^-?\d+$/.test(text)) {
-    throw new Error(`a scenario states a published value as "true", "false", or a whole number, not ${text}`);
+    throw new Error(`a scenario states a published value as "true", "false", a whole number, or an instant, not ${text}`);
   }
 
   return Number(text);

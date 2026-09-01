@@ -84,6 +84,32 @@ export interface FakeHomebridgeApi {
   /** Every `unregisterPlatformAccessories` call the plugin made, in call order. */
   readonly unregisterPlatformAccessoryCalls: readonly UnregisterPlatformAccessoriesCall[];
 
+  /**
+   * Every accessory the plugin has been handed, in the order it received them.
+   *
+   * A registration hands one over, and so does a restore from the cache after a restart. A step
+   * reading published state reads the newest, because that is the one the plugin is publishing onto
+   * now: after a restart the accessory registered before it is a detached object holding whatever
+   * the previous run left on it.
+   */
+  readonly handedAccessories: readonly FakeAccessory[];
+
+  /**
+   * Rebuilds the accessories a restarted Homebridge would restore from its cache.
+   *
+   * Homebridge writes an accessory's context to disk when it is registered and whenever the plugin
+   * says it changed, and hands each one back after a restart through `configureAccessory`. This
+   * reproduces that: each restored accessory carries the same identity and the context as it
+   * survives a round trip through JSON, so state the plugin never asked to be persisted, and state
+   * that cannot be serialized, does not come back.
+   *
+   * What deliberately does not come back is the published service surface. The real cache carries
+   * services and their last values too, so a restored accessory answers reads before the plugin has
+   * republished anything. Leaving them out makes an assertion after a restart read only what this
+   * run published, which is a stricter question than a real restart asks and never a laxer one.
+   */
+  restoreCachedAccessories(): readonly FakeAccessory[];
+
   /** Runs the handlers registered for a lifecycle event and awaits what each one returns. */
   emit(event: 'didFinishLaunching' | 'shutdown'): Promise<void>;
 
@@ -179,6 +205,17 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
   const registerPlatformAccessoryCalls: RegisterPlatformAccessoriesCall[] = [];
   const updatePlatformAccessoryCalls: UpdatePlatformAccessoriesCall[] = [];
   const unregisterPlatformAccessoryCalls: UnregisterPlatformAccessoriesCall[] = [];
+  const handedAccessories: FakeAccessory[] = [];
+  // What the cache on disk would hold, keyed the way Homebridge keys it. The context is stored as
+  // the text a cache file carries rather than as the live object, so a later mutation the plugin
+  // never persisted cannot reach a restored accessory through a shared reference.
+  const cached = new Map<string, { displayName: string; context: string }>();
+
+  function writeToCache(accessories: readonly FakeAccessory[]): void {
+    for (const accessory of accessories) {
+      cached.set(accessory.UUID, { displayName: accessory.displayName, context: JSON.stringify(accessory.context) });
+    }
+  }
 
   const standIn = {
     hap,
@@ -195,12 +232,19 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     },
     registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
       registerPlatformAccessoryCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
+      handedAccessories.push(...accessories);
+      writeToCache(accessories);
     },
     updatePlatformAccessories(accessories: FakeAccessory[]) {
       updatePlatformAccessoryCalls.push({ accessories: [...accessories] });
+      writeToCache(accessories);
     },
     unregisterPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
       unregisterPlatformAccessoryCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
+
+      for (const accessory of accessories) {
+        cached.delete(accessory.UUID);
+      }
     },
   };
 
@@ -215,6 +259,19 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     registerPlatformAccessoryCalls,
     updatePlatformAccessoryCalls,
     unregisterPlatformAccessoryCalls,
+    handedAccessories,
+    restoreCachedAccessories(): readonly FakeAccessory[] {
+      const restored = [...cached.entries()].map(([uuid, entry]) => {
+        const accessory = new HarnessPlatformAccessory(entry.displayName, uuid);
+        Object.assign(accessory.context, JSON.parse(entry.context) as Record<string, unknown>);
+
+        return accessory;
+      });
+
+      handedAccessories.push(...restored);
+
+      return restored;
+    },
     async emit(event: 'didFinishLaunching' | 'shutdown'): Promise<void> {
       for (const listener of handlers.get(event) ?? []) {
         await listener();

@@ -15,13 +15,16 @@ import type { FakeAccessory, FakeHomebridgeApi } from './fakeHomebridgeApi.js';
 import type { API } from 'homebridge';
 
 /**
- * The one accessory a scenario's plugin registered.
+ * The accessory a scenario's plugin is publishing onto now.
  *
- * Every scenario seeds exactly one physical device, so a step reads state back through the one
- * accessory the plugin ever registers.
+ * Every scenario seeds exactly one physical device, so a step reads state back through the newest
+ * accessory the plugin was handed. It is the registered one until a restart, and the one restored
+ * from the cache afterwards: reading the registered one after a restart would read a detached
+ * object still holding whatever the previous run published to it, which passes an assertion about
+ * a value that came back without anything having brought it back.
  */
 export function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
-  return homebridge.registerPlatformAccessoryCalls[0]?.accessories[0];
+  return homebridge.handedAccessories.at(-1);
 }
 
 /** Answers the service the catalogue publishes a named row on, or `undefined` when it is absent. */

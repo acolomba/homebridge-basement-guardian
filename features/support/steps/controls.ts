@@ -62,8 +62,12 @@ const ALARM_MUTE_COMMAND = { alarm_audio_muted: true };
 // than the scenario depending on a delay declared somewhere else.
 const PAST_THE_PENDING_WINDOW_MS = 30_001;
 
+function characteristicOf(homebridge: FakeHomebridgeApi, serviceName: string, characteristicName: string): FakeHapCharacteristic | undefined {
+  return serviceOf(homebridge, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName);
+}
+
 function onCharacteristicOf(homebridge: FakeHomebridgeApi, displayName: string): FakeHapCharacteristic | undefined {
-  return serviceOf(homebridge, displayName)?.characteristics.find((candidate) => candidate.displayName === ON);
+  return characteristicOf(homebridge, displayName, ON);
 }
 
 function publishedSwitch(homebridge: FakeHomebridgeApi, displayName: string): FakeHapCharacteristic {
@@ -185,6 +189,22 @@ function turnOffTheSwitch(this: BasementGuardianWorld, displayName: string): Pro
 
 When('a controller turns off the {string} switch', { timeout: STEP_TIMEOUT_MS }, turnOffTheSwitch);
 
+// A published record value, read through the pushed gate and kept for a later step to compare
+// against. Reading it is what makes the comparison after a restart a comparison of two published
+// values rather than of a value against the scenario's own arithmetic (CTRL-01).
+async function readPublishedValue(this: BasementGuardianWorld, characteristicName: string, serviceName: string): Promise<void> {
+  const homebridge = await this.homebridge();
+  const value = pushedValue(characteristicOf(homebridge, serviceName, characteristicName));
+
+  if (value === undefined) {
+    throw new Error(`the ${serviceName} service published no ${characteristicName}`);
+  }
+
+  this.remember(`${serviceName} ${characteristicName}`, value);
+}
+
+When('the scenario reads {string} on the {string} service', { timeout: STEP_TIMEOUT_MS }, readPublishedValue);
+
 // The plugin holds the request open for a fixed window and then gives up on it. Advancing the
 // scenario clock past that window runs the deadline the plugin armed, so a scenario observes the
 // window closing without sleeping and without racing a process timer.
@@ -253,6 +273,18 @@ function assertNotAllowedNow(this: BasementGuardianWorld): Promise<void> {
 }
 
 Then('the write reports that the control is not allowed now', assertNotAllowedNow);
+
+// The value the plugin published after a restart, against the one it published before it. The read
+// waits, because a restarted plugin publishes nothing until its first poll has landed.
+async function assertPublishedValueCameBack(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  const homebridge = await this.homebridge();
+  const expected = this.recall(`${serviceName} ${characteristicName}`);
+  const failure = `the ${serviceName} service never published ${characteristicName} again`;
+
+  await this.untilTrue(() => pushedValue(characteristicOf(homebridge, serviceName, characteristicName)) === expected, PUBLISH_DEADLINE_MS, failure);
+}
+
+Then('the {string} service reports {string} as the value the scenario read', { timeout: STEP_TIMEOUT_MS }, assertPublishedValueCameBack);
 
 // The whole line, not a fragment of it. The vendor deviceId is in it deliberately: without it a
 // multi-pump account cannot tell which pump never confirmed a control, so an assertion that

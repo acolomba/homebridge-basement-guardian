@@ -194,6 +194,9 @@ export class BasementGuardianWorld extends World {
 
   private readonly watchedDeviceIds = new Set<string>();
 
+  // Published values a step read, so a later step can assert the same value came back.
+  private readonly remembered = new Map<string, unknown>();
+
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
 
   // What the last controller write answered. The wrapper distinguishes an accepted write, which
@@ -462,6 +465,26 @@ export class BasementGuardianWorld extends World {
     return this.lastResponse;
   }
 
+  /**
+   * Remembers a published value a step read, under a name a later step names it by.
+   *
+   * A record assertion across a restart compares what the plugin published before with what it
+   * published after, rather than recomputing the expected value: a scenario that recomputed one
+   * would assert its own arithmetic instead of the record that came back.
+   */
+  remember(name: string, value: unknown): void {
+    this.remembered.set(name, value);
+  }
+
+  /** The value a step read under that name earlier in the scenario. */
+  recall(name: string): unknown {
+    if (!this.remembered.has(name)) {
+      throw new Error(`no step has read ${name} yet`);
+    }
+
+    return this.remembered.get(name);
+  }
+
   /** Records how a controller write ended: the HAP status that refused it, or nothing when it was accepted. */
   recordWriteOutcome(status: number | undefined): void {
     this.lastWrite = { status };
@@ -546,10 +569,27 @@ export class BasementGuardianWorld extends World {
     };
   }
 
+  // What `BasementGuardianPlatform.configureAccessory` does, which is the one thing the harness
+  // stands in for that a restart depends on: Homebridge hands every cached accessory back before
+  // the launch event, and the platform puts each one in the map discovery then finds it in. On a
+  // first start the cache is empty and this is the empty map it was before.
+  //
+  // The accessory stand-in answers the members the plugin reads and no structural type expresses
+  // that, which is the same seam the widened `api` member documents.
+  private restoredAccessories(homebridge: FakeHomebridgeApi): Map<string, BasementGuardianPlatformAccessory> {
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+
+    for (const accessory of homebridge.restoreCachedAccessories()) {
+      accessories.set(accessory.UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+    }
+
+    return accessories;
+  }
+
   private async launch(): Promise<void> {
     const homebridge = await this.homebridge();
     const registry = createFamilyRegistry();
-    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const accessories = this.restoredAccessories(homebridge);
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const runtime = createAccountRuntimeFromConfig({
       config: {
