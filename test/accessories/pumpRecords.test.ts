@@ -22,9 +22,9 @@ const PRIOR_TEST_SECONDS = 1_700_000_005;
 const NEW_BACKUP_SECONDS = 1_700_000_100;
 const NEW_TEST_SECONDS = 1_700_000_105;
 
-// What the prior backup-pump timestamp is worth once it reaches a stored time, which is the one
-// piece of arithmetic this module does on a device value.
-const PRIOR_BACKUP_MS = 1_700_000_000_000;
+// What a backup-pump timestamp is worth once it reaches a stored time, which is the one piece of
+// arithmetic this module does on a device value.
+const NEW_BACKUP_MS = 1_700_000_100_000;
 
 /** The recorder a case reads the module's whole outward behaviour off. */
 interface RecordedSubject {
@@ -191,26 +191,65 @@ test('counts an activation across a snapshot whose running value did not decode'
 
 test('recovers one activation from a device timestamp and stores it in milliseconds', () => {
   // arrange
-  const { records } = pumpRecords();
+  const { records } = pumpRecords(storedContext());
+
+  // act
+  records.observe(observation({ backupActivatedAt: NEW_BACKUP_SECONDS }));
+
+  // assert
+  assert.deepStrictEqual(
+    { count: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt },
+    { count: 1, lastActivationAt: NEW_BACKUP_MS },
+  );
+});
+
+// The first timestamp a record ever sees establishes the baseline rather than recovering a run. The
+// device timed it from before the observation start that the same first observation seeded, so
+// counting it would report an activation from before the plugin was watching -- a number an owner
+// reads describing something nobody observed. Ruled 2026-09-01, reversing the plan as written.
+test('seeds the first device timestamp as a baseline and counts no activation for it', () => {
+  // arrange
+  const { records, context } = pumpRecords();
 
   // act
   records.observe(observation({ backupActivatedAt: PRIOR_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual(
+    { count: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt, watermark: context.watermarks?.backupPumpTimestamp },
+    { count: 0, lastActivationAt: undefined, watermark: PRIOR_BACKUP_SECONDS },
+  );
+});
+
+// The seed absorbs whatever the device was reporting, so an edge already awaiting its timestamp is
+// accounted for by that same seed and its flag must clear with it. Were the flag left set, the NEXT
+// advance would be absorbed too and a genuinely missed run would go uncounted -- so this case drives
+// a watched edge FIRST, which is the only way the flag is ever set when the seed arrives.
+test('counts a later advance after a seed that also absorbed a watched edge', () => {
+  // arrange
+  const { records } = pumpRecords();
+  records.observe(observation({ backupRunning: false }));
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupRunning: true }));
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+
+  // act
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupActivatedAt: NEW_BACKUP_SECONDS }));
+
+  // assert
+  assert.deepStrictEqual(
     { count: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt },
-    { count: 1, lastActivationAt: PRIOR_BACKUP_MS },
+    { count: 2, lastActivationAt: NEW_BACKUP_MS },
   );
 });
 
 test('recovers nothing and asks for no write from a repeated identical device timestamp', () => {
   // arrange
-  const { records, persistCount } = pumpRecords();
-  records.observe(observation({ backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  const { records, persistCount } = pumpRecords(storedContext());
+  records.observe(observation({ backupActivatedAt: NEW_BACKUP_SECONDS }));
   const afterTheFirst = persistCount();
 
   // act
-  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupActivatedAt: NEW_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual({ count: records.backup.activationCount, persistedAgain: persistCount() - afterTheFirst }, { count: 1, persistedAgain: 0 });
@@ -250,10 +289,10 @@ test('absorbs the device timestamp that follows a watched backup activation', ()
 // nothing else. A backup timestamp reaching the primary record would be evidence out of thin air.
 test('recovers nothing at all for the primary pump, which the device never timestamps', () => {
   // arrange
-  const { records } = pumpRecords();
+  const { records } = pumpRecords(storedContext());
 
   // act
-  records.observe(observation({ backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  records.observe(observation({ backupActivatedAt: NEW_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual({ primary: records.primary, backupCount: records.backup.activationCount }, { primary: freshRecord(), backupCount: 1 });

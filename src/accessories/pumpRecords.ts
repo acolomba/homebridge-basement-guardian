@@ -270,7 +270,21 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
       return false;
     }
 
+    const seedingTheFirstWatermark = stored.watermarks.backupPumpTimestamp === undefined;
+
     stored.watermarks.backupPumpTimestamp = reportedAt;
+
+    // The first timestamp this record ever sees establishes the baseline; it is not a recovered
+    // activation. The device times it from before the observation start that the same first
+    // observation seeded, so counting it would report a run from before the plugin was watching --
+    // a number an owner reads describing something nobody observed. Any edge already awaiting its
+    // timestamp is accounted for by the same seed, so the flag clears here too rather than leaking
+    // into the next advance.
+    if (seedingTheFirstWatermark) {
+      backupEdgeAwaitingItsTimestamp = false;
+
+      return true;
+    }
 
     if (backupEdgeAwaitingItsTimestamp) {
       backupEdgeAwaitingItsTimestamp = false;
