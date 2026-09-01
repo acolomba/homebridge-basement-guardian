@@ -20,16 +20,26 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 
-import { Characteristic, HAPStatus, HapStatusError, Service } from '@homebridge/hap-nodejs';
+import { Characteristic, Formats, HAPStatus, HapStatusError, Perms, Service } from '@homebridge/hap-nodejs';
 
 import { createFakeHap } from '../../features/support/fakeHap.js';
 
 import type { FakeHapService } from '../../features/support/fakeHap.js';
+import type { CharacteristicProps } from '@homebridge/hap-nodejs';
 
 const HAP_SPECIFIER = '@homebridge/hap-nodejs';
 const HOMEBRIDGE_SPECIFIER = 'homebridge';
 const SWITCH_NAME = 'System Self-Test';
 const SWITCH_SUBTYPE = 'system-self-test';
+
+// One past what a `uint8` can carry. A pump that runs a few times a day reaches this in well under a
+// year, so the difference between the two formats below is a false normal reachable in weeks.
+const COUNT_PAST_UINT8 = 256;
+
+// Two identifiers used by this file alone, for characteristics that exist only inside the clamping
+// case; neither is a published identity and neither appears in any accessory.
+const NARROW_COUNT_UUID = '951ad4d2-c092-4ec6-ab9f-f024662219e5';
+const WIDE_COUNT_UUID = 'f0e7799e-4687-4bb7-b594-6fd52a084625';
 
 // How far up from a resolved entry point the manifest that owns it can sit. `homebridge` does not
 // export its own `package.json`, so it is read from disk instead, and the walk is bounded rather
@@ -181,6 +191,37 @@ async function bothRecords(script: WriteScript): Promise<{ real: WriteRecord; fa
 
   return { real, fake };
 }
+
+// Pushes a count onto a real HAP characteristic declared exactly as `props` says, and answers what
+// it held afterwards. The warning listener keeps a clamped push from writing to the console; it
+// changes nothing about the value being measured.
+function countAfterPush(uuid: string, props: CharacteristicProps): unknown {
+  const characteristic = new Characteristic('Observed Count', uuid, props);
+  characteristic.on('characteristic-warning', () => undefined);
+
+  characteristic.updateValue(COUNT_PAST_UINT8);
+
+  return characteristic.value;
+}
+
+// The reason the observed activation count is declared `uint32` rather than `uint8`, demonstrated
+// against the real pinned package instead of argued about. HAP does not refuse a value above the
+// declared maximum -- it *clamps* it into the domain, silently, and answers a plausible number. On
+// a count that means the characteristic stops advancing at 255 and keeps reading as a fact about
+// the basement, which is the false normal the safety rule forbids (D-12, CTRL-01, SAFE-08).
+test('clamps a count past 255 on the narrow numeric format and keeps it whole on the wide one', () => {
+  // arrange
+  const perms = [Perms.PAIRED_READ, Perms.NOTIFY];
+
+  // act
+  const counts = {
+    narrow: countAfterPush(NARROW_COUNT_UUID, { format: Formats.UINT8, perms, maxValue: 255 }),
+    wide: countAfterPush(WIDE_COUNT_UUID, { format: Formats.UINT32, perms }),
+  };
+
+  // assert
+  assert.deepStrictEqual(counts, { narrow: 255, wide: COUNT_PAST_UINT8 });
+});
 
 test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
   // arrange

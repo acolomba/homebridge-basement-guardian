@@ -5,6 +5,7 @@ import { createFakeHap } from '../../features/support/fakeHap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 
+import type { CharacteristicClass } from '../../src/accessories/customCharacteristics.js';
 import type { CustomServices } from '../../src/accessories/customServices.js';
 import type { API, Service } from 'homebridge';
 
@@ -30,6 +31,15 @@ const CONFIGURED_NAME = 'Configured Name';
 // and battery health is never represented through filter-maintenance semantics (D-021, SAFE-06).
 const FORBIDDEN_NAME_WORDS: readonly string[] = ['Filter', 'Wi-Fi', 'WiFi', 'Signal', 'dBm'];
 
+// The four characteristics carrying what the plugin observed about a pump rather than what the
+// device reported, named as the plain keys they are published under (CTRL-01).
+const RECORD_CHARACTERISTIC_NAMES: readonly string[] = [
+  'ObservationStartedAt',
+  'ObservedActivationCount',
+  'LastObservedActivationAt',
+  'LastActivationWasTestActivity',
+];
+
 /** One vendor-defined service and the characteristic sections it declares. */
 interface ServiceExpectation {
   name: keyof CustomServices;
@@ -54,7 +64,17 @@ const SERVICES: readonly ServiceExpectation[] = [
     displayName: 'Primary Pump',
     subtype: 'primary-pump',
     required: ['Name', 'Pump Running'],
-    optional: ['Pump Fault', 'Pump Fuse Blown', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
+    optional: [
+      'Pump Fault',
+      'Pump Fuse Blown',
+      'Observation Start',
+      'Activations Observed Since Observation Start',
+      'Last Observed Activation At',
+      'Last Activation Was Self-Test',
+      STATUS_ACTIVE_NAME,
+      STATUS_FAULT_NAME,
+      CONFIGURED_NAME,
+    ],
   },
   {
     name: 'SumpMainsPowerService',
@@ -195,6 +215,34 @@ describe('createCustomServices', () => {
         { subtype: 'primary-pump', running: true, fuseBlown: false },
         { subtype: 'backup-pump', running: true, fuseBlown: false },
       ],
+    );
+  });
+
+  // The record values come from the plugin's own observation rather than from the `pump` scope the
+  // row publishes from, so a record characteristic declared *required* would be constructed the
+  // moment the row published its pump boolean and left at HAP's format default -- presenting a
+  // count of zero and an empty observation start as fact (CTRL-01, D-009, SAFE-08).
+  test('declares every pump record optional, so none is constructed before a record writes it', () => {
+    // arrange
+    const hap = hapNamespace();
+    const declared: Readonly<Record<string, CharacteristicClass>> = { ...createCustomCharacteristics(hap) };
+    const { PumpService } = createCustomServices(hap);
+
+    // act
+    const pump = new PumpService('Backup Pump', 'backup-pump');
+
+    // assert
+    assert.deepStrictEqual(
+      RECORD_CHARACTERISTIC_NAMES.map((key) => {
+        const record = declared[key];
+
+        return {
+          key,
+          constructed: record !== undefined && pump.testCharacteristic(record),
+          declaredOptional: record !== undefined && pump.optionalCharacteristics.some((optional) => optional.UUID === record.UUID),
+        };
+      }),
+      RECORD_CHARACTERISTIC_NAMES.map((key) => ({ key, constructed: false, declaredOptional: true })),
     );
   });
 
