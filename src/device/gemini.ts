@@ -98,10 +98,9 @@ const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set(PROTECTION_HOURS
 // WW-GEM-ALERT-1, -2, -3, and -11).
 const LOW_BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 32]);
 
-// `undefined` names the command surface and the metadata fields. No published
-// service reads either, so a violation on one is still recorded and diagnosable
-// without deactivating anything, and no member is added to `TrustScope` for
-// them.
+// `undefined` names the metadata fields. No published service reads them, so a
+// violation on one is still recorded and diagnosable without deactivating
+// anything, and no member is added to `TrustScope` for them.
 type GeminiFieldScope = TrustScope | undefined;
 
 /** How one field failed, before the scope that owns it is stamped on. */
@@ -181,9 +180,14 @@ const TELEMETRY_CHECKS: readonly TelemetryCheck[] = [
   { scope: 'battery', check: requiredEnum('hours_of_protection', HOURS_OF_PROTECTION_VALUES) },
   { scope: 'fault', check: requiredBoolean('water_sensor_fault') },
   { scope: 'fault', check: requiredBoolean('serial_communications') },
-  { scope: undefined, check: requiredBoolean('alarm_audio_muted') },
-  { scope: undefined, check: requiredBoolean('test_running') },
-  { scope: undefined, check: optionalNumber('test_timestamp') },
+  { scope: 'alarm-mute', check: requiredBoolean('alarm_audio_muted') },
+  { scope: 'self-test', check: requiredBoolean('test_running') },
+  // `test_timestamp` belongs to `self-test` and to no other scope. Filed under
+  // `pump` a wrong-typed timestamp would deactivate both Pump services and both
+  // pump Contact Sensors -- live safety signals -- and the field says nothing
+  // about whether a pump is running. It labels a record; it never feeds the
+  // running verdict (D-02, D-014).
+  { scope: 'self-test', check: optionalNumber('test_timestamp') },
   { scope: 'connectivity', check: requiredBoolean('offline') },
 ];
 
@@ -335,9 +339,9 @@ function decodeMetadata(metadata: Readonly<Record<string, unknown>>): DeviceMeta
   };
 }
 
-// The scopes at least one telemetry field stopped vouching for. A violation on
-// a command-surface field lands here as `undefined`, which no group consults, so
-// it is recorded without deactivating anything.
+// The scopes at least one telemetry field stopped vouching for. Every telemetry
+// field now names one, so a violation always costs exactly the scope its own
+// field owns and never more (D-014).
 function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<GeminiFieldScope> {
   return new Set(violationsOf(TELEMETRY_CHECKS, data).map((violation) => violation.scope));
 }
