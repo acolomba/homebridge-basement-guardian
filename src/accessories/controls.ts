@@ -301,7 +301,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }
 
     republish();
-    log.warn(`The ${capability} request was never confirmed by the device. It is not retried.`);
+    log.warn(`The ${capability} request on ${deviceId} was never confirmed by the device. It is not retried.`);
   }
 
   function armClearingPush(service: Service, reported: () => boolean | undefined): void {
@@ -315,13 +315,16 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   // stores the status on the characteristic and answers it to every later read
   // until something pushes a value.
   //
-  // The line names the capability and a cause and nothing else. It carries no
-  // device identifier, because a vendor `deviceId` reads
-  // `<account-id>_<serial-number>` and an account identifier does not belong in
-  // a log, and no URL, header value, token, or response body (AUTH-02).
+  // The line names the device, the capability and a cause, and nothing else: no
+  // URL, header value, token, or response body (AUTH-02). The `deviceId` is
+  // deliberate. It reads `<account-id>_<serial-number>`, and the 2026-08-29
+  // ruling treats it as non-sensitive and admits it to logs and accessory
+  // context; `D-027` still keeps it out of public artifacts. Without it a
+  // multi-pump account cannot tell which pump refused a control, which matters
+  // more here than the residual the ruling already weighed.
   function refuseLocally(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, refusal: LocalRefusal): never {
     armClearingPush(service, reported);
-    log.warn(`Refused ${capability}: ${refusal.cause}.`);
+    log.warn(`Refused ${capability} on ${deviceId}: ${refusal.cause}.`);
 
     return refuse(hap, refusal.status(hap));
   }
@@ -332,7 +335,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   function refuseOutcome(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, failure: CommandFailure): never {
     resolvePending(capability);
     armClearingPush(service, reported);
-    log.warn(`The ${capability} request did not take effect: ${failure}. It is not retried.`);
+    log.warn(`The ${capability} request on ${deviceId} did not take effect: ${failure}. It is not retried.`);
 
     return refuse(hap, statusOf(hap, failure));
   }

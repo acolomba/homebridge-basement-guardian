@@ -383,7 +383,7 @@ for (const held of [true, false]) {
   });
 }
 
-test('names the capability and the cause in the one line a refusal logs, and quotes nothing else', async () => {
+test('names the capability, the device and the cause in the one line a refusal logs, and quotes nothing else', async () => {
   // arrange
   const warnings: string[] = [];
   const log = warningLog(warnings);
@@ -394,7 +394,7 @@ test('names the capability and the cause in the one line a refusal logs, and quo
   await assertRefused(service, true, OPERATION_TIMED_OUT);
 
   // assert
-  assert.deepStrictEqual(warnings, ['The self-test request did not take effect: timed-out. It is not retried.']);
+  assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
 });
 
 // The six ways one write can end, in the order the binder evaluates them: four the plugin answers
@@ -522,10 +522,12 @@ for (const refusalCase of VENDOR_REFUSALS) {
 }
 
 // Every line a refusal writes, across all six causes. A log is a channel the plugin controls, so
-// what it may not carry is asserted directly: a bearer token, the vendor base URL, or the device
-// identifier, which reads `<account-id>_<serial-number>` and so carries an account identifier
-// (AUTH-02).
-test('names the capability in every refusal line and quotes no token, URL, or device identifier', async () => {
+// what it may not carry is asserted directly: a bearer token, the vendor base URL, or a response
+// body (AUTH-02). The device identifier is asserted PRESENT, not absent: the 2026-08-29 ruling
+// treats a vendor `deviceId` as non-sensitive and admits it to logs and accessory context, and
+// without it a multi-pump account cannot tell which pump refused. `D-027` still keeps it out of
+// public artifacts, which is a different channel from this one.
+test('names the capability and the device in every refusal line and quotes no token or URL', async () => {
   // arrange
   const warnings: string[] = [];
   const log = warningLog(warnings);
@@ -546,7 +548,7 @@ test('names the capability in every refusal line and quotes no token, URL, or de
       baseUrl: warning.includes(BASE_URL),
       deviceId: warning.includes(DEVICE_ID),
     })),
-    Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: false })),
+    Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: true })),
   );
 });
 
@@ -615,7 +617,7 @@ test('resumes reported state with one warning and no second request when the win
     {
       pending: [],
       republished: ['republish'],
-      warnings: ['The self-test request was never confirmed by the device. It is not retried.'],
+      warnings: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
       sends: [`${DEVICE_ID} self-test true`],
     },
   );
