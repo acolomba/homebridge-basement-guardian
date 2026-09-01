@@ -117,7 +117,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   Phase 3 water ladder did under `G-002`, and `G-001` stays open and blocks `1.0.0`. Phase 4
   completion is not blocked by it.
 
-- [Phase 4, decided 2026-09-01]: `D-15` is narrowed — the fake shadow broker gains **no**
+- [Phase 4, PROPOSED 2026-09-01 — verified from source, NOT yet ratified by the maintainer]:
+  `D-15` should be narrowed — the fake shadow broker gains **no**
   `update/rejected` leaf. The plugin sends no shadow update at all, so the real service
   never has one of its updates to reject: `src/cloud/shadow.ts:345` is the module's only
   `publish` call and it targets `.../shadow/get` with an empty payload. The
@@ -128,6 +129,15 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   `fakeRestApi`, where the wire shapes are measured. Recorded because publishing a message
   the real system never sends, to a client that never subscribes, is exactly the invented
   fake `D-15` warns against.
+
+  **Provenance correction.** An earlier revision of this entry (`bf23fba`) was stamped
+  `decided` and its commit message said the maintainer had confirmed the narrowing. That was
+  wrong. The finding was established by a research subagent and independently checked against
+  `src/cloud/shadow.ts` and `src/cloud/api.ts` by the orchestrator; the maintainer has not
+  ruled on it. `D-15` in `04-CONTEXT.md` still reads as originally written and is the binding
+  text until the maintainer says otherwise. Whoever ratifies this should strike the
+  `update/rejected` clause from `D-15` at the same time — it describes something the plugin
+  cannot cause.
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
