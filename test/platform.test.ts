@@ -24,7 +24,7 @@ import type { ApiDevice } from '../src/cloud/types.js';
 import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
 import type { DeviceStateStore, ReportedPatch } from '../src/device/state.js';
-import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
+import type { BasementGuardianAccessoryContext, BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
 import type { CommandPort } from '../src/runtime/commandPort.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 import type { TestContext } from 'node:test';
@@ -111,6 +111,22 @@ async function modulesNaming(symbol: string): Promise<readonly string[]> {
   return naming;
 }
 
+// A module read as text, for the one claim that is about what a comparison does not cover rather
+// than about what it answers. The name is interpolated so the path is a runtime value rather than a
+// static import.
+async function sourceOf(module: string): Promise<string> {
+  return readFile(new URL(`../../src/${module}`, import.meta.url), 'utf8');
+}
+
+// The keys one of the two change-detection state objects compares, read from the source. A key list
+// is what the claim is about: the record members are deliberately absent from it, and a value the
+// comparison never looks at cannot be shown missing by any call the comparison makes.
+function comparedKeys(source: string, name: string): readonly string[] {
+  const block = new RegExp(`const ${name} = \\{([\\s\\S]*?)\\n\\s*\\};`, 'u').exec(source)?.[1] ?? '';
+
+  return [...block.matchAll(/^\s*(\w+): .*,$/gmu)].map((match) => match[1] ?? '');
+}
+
 const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
 
 const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
@@ -118,7 +134,30 @@ const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account
 const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
 
 const DEVICE_ID = 'account-1_serial-1';
+const SECOND_DEVICE_ID = 'account-1_serial-2';
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
+
+// The stored context of an accessory restored from before this release: the device identity and the
+// vendor name, and none of the three record members, which is the ordinary first-run state.
+void ({
+  device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+  lastVendorName: 'Sump System',
+} satisfies BasementGuardianAccessoryContext);
+
+// The same context once the plugin has observed both pumps, in the units the persisted record holds:
+// milliseconds for everything the plugin timed, and the device's own Unix seconds for the watermarks.
+void ({
+  device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+  lastVendorName: 'Sump System',
+  primaryPump: { observationStartedAt: 1_756_684_800_000, activationCount: 4, lastActivationAt: 1_756_685_800_000 },
+  backupPump: { observationStartedAt: 1_756_684_800_000, activationCount: 1, lastActivationAt: undefined, lastActivationWasTestActivity: true },
+  watermarks: { backupPumpTimestamp: undefined, testTimestamp: 1_700_000_000 },
+} satisfies BasementGuardianAccessoryContext);
+
+// @ts-expect-error a stored pump record is what the plugin observed, never a bare count
+void ({ primaryPump: 4 } satisfies BasementGuardianAccessoryContext);
+// @ts-expect-error the watermarks hold the device's own timestamps, never a boolean
+void ({ watermarks: true } satisfies BasementGuardianAccessoryContext);
 
 const CONTACT_DETECTED = 0;
 const CONTACT_NOT_DETECTED = 1;
@@ -172,6 +211,10 @@ const FAKE_FAMILY: DeviceFamily<unknown> = {
 // than only a call the suite could have mocked. Every scope decodes because a row publishes no
 // service until it has something to vouch for, so a case about the published service set needs a
 // family that vouches for every scope.
+//
+// The backup pump follows its own reported field for the same reason: an activation a record case
+// counts has to be one the accessory watched a payload report, not one this module asserted. No
+// other case supplies that field, so every one of them keeps reading the `false` it read before.
 const POWER_FAMILY: DeviceFamily<unknown> = {
   deviceTypeId: DEVICE_TYPE_ID,
   displayName: 'Power Family',
@@ -180,7 +223,7 @@ const POWER_FAMILY: DeviceFamily<unknown> = {
   decode: (snapshot) => ({
     metadata: {},
     water: { levelCode: 0, levelPercent: 0, flooded: false },
-    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+    pump: { primaryRunning: false, backupRunning: snapshot.data.backup_pump_running === true, backupActivatedAt: undefined },
     power: { mainsPresent: snapshot.data.ac_power === true },
     battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
     fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
@@ -1235,6 +1278,52 @@ describe('registerDiscoveredDevices', () => {
     // Two calls on the first poll: the record the accessory seeded from that snapshot, and the
     // service set the suppression changed. The second poll changes neither, so it adds none.
     assert.deepStrictEqual({ afterFirstPoll, afterSecondPoll: updateCalls.length }, { afterFirstPoll: 2, afterSecondPoll: 2 });
+  });
+
+  // The store is built per accessory at the one call site that builds an accessory, so no shared or
+  // process-wide store exists. A shared one would ask Homebridge to store whichever accessory it
+  // closed over, which is what this case would catch: only the accessory that observed the
+  // activation is named (CTRL-01, D-008).
+  test('asks Homebridge to store the accessory whose snapshot counted an activation, and no other', () => {
+    // arrange
+    const updateCalls: FakeAccessory[][] = [];
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry() });
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2', name: 'Second System' });
+    registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
+    const afterTheSeeds = updateCalls.length;
+
+    // act
+    store.applyDiscovery({ ...geminiDevice(), data: { backup_pump_running: true } });
+    registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        seeds: afterTheSeeds,
+        sinceTheSeeds: updateCalls.slice(afterTheSeeds).map((call) => call.map((persisted) => persisted.UUID)),
+      },
+      { seeds: 2, sinceTheSeeds: [[ACCESSORY_UUID]] },
+    );
+  });
+
+  // The record members are deliberately absent from this comparison, which is the whole reason the
+  // persist port exists: a counted activation changes none of these four, so without a second and
+  // independent caller it would mutate the context and never reach disk (CTRL-01, D-010).
+  test('compares the display name, the vendor name, the device record, and the service list, and nothing else', async () => {
+    // arrange
+    const source = await sourceOf('platform.ts');
+
+    // act
+    const compared = { previous: comparedKeys(source, 'previousState'), next: comparedKeys(source, 'nextState') };
+
+    // assert
+    assert.deepStrictEqual(compared, {
+      previous: ['displayName', 'lastVendorName', 'device', 'services'],
+      next: ['displayName', 'lastVendorName', 'device', 'services'],
+    });
   });
 
   test('publishes every adapter but the one an administrator ignored', () => {
