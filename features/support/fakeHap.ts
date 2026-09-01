@@ -14,8 +14,15 @@
  * real one does. A stand-in that recorded a display name as a subtype would let every safety
  * assertion built on it pass while proving nothing.
  *
- * `@homebridge/hap-nodejs` is never imported: it is a transitive dependency rather than a declared
- * one, and the project keeps HAP-NodeJS out of direct imports.
+ * This module imports `@homebridge/hap-nodejs` nowhere, and neither does any other module the
+ * plugin ships. The package is now an explicit development dependency pinned at the version the
+ * plugin host itself pins, and exactly one file imports it: `test/accessories/hapWriteFidelity.test.ts`,
+ * which runs the same write cases against the real package and against this stand-in and asserts
+ * the two agree. That file exists to hold this one honest -- without it every write semantic the
+ * controls rely on would be one this stand-in invented, and a green suite would prove only that the
+ * stand-in agrees with itself. The rule it excepts is a runtime rule and is unchanged: no module
+ * under `src/` reaches HAP-NodeJS directly, and every HomeKit type comes from the injected
+ * `api.hap` namespace (D-17, SAFE-08).
  */
 
 import { createHash } from 'node:crypto';

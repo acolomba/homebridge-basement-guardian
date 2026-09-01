@@ -16,9 +16,10 @@ import assert from 'node:assert/strict';
 import { Then } from '@cucumber/cucumber';
 
 import { createServiceCatalogue } from '../../../src/accessories/serviceCatalogue.js';
+import { currentAccessory, pushedValue, serviceOf } from '../publishedServices.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../fakeHap.js';
-import type { FakeAccessory, FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
+import type { FakeHapService, FakeServiceClass } from '../fakeHap.js';
+import type { FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
 import type { BasementGuardianWorld } from '../world.js';
 import type { API } from 'homebridge';
 
@@ -35,33 +36,6 @@ const STEP_TIMEOUT_MS = 15_000;
 const ALARM_CHARACTERISTICS: readonly string[] = ['Contact Sensor State', 'Leak Detected'];
 const ALARM_ACTIVATED = 1;
 const ALARM_QUIET = 0;
-
-// Every scenario here seeds exactly one physical device, so a step reads state back through the one
-// accessory the plugin ever registers.
-function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
-  return homebridge.registerPlatformAccessoryCalls[0]?.accessories[0];
-}
-
-function serviceOf(homebridge: FakeHomebridgeApi, displayName: string): FakeHapService | undefined {
-  const row = createServiceCatalogue(homebridge.hap as unknown as API['hap']).find((candidate) => candidate.displayName === displayName);
-
-  if (row === undefined) {
-    throw new Error(`the plugin publishes no ${displayName} service`);
-  }
-
-  // The catalogue declares its service classes against the real HAP types while the accessory
-  // stand-in answers its own; the class is one runtime object, so the lookup needs the other view.
-  return currentAccessory(homebridge)?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
-}
-
-// A value only the plugin can have written. HAP constructs every characteristic at its format
-// default, and for both alarm characteristics that default is `0`, which is also the quiet state,
-// so reading the value alone cannot tell a published quiet sensor from one the plugin never wrote
-// to. Anything not pushed reads as absent, which fails the step by name rather than passing on a
-// default (D-014).
-function pushedValue(characteristic: FakeHapCharacteristic | undefined): unknown {
-  return characteristic?.pushed === true ? characteristic.value : undefined;
-}
 
 function characteristicValue(service: FakeHapService | undefined, displayName: string): unknown {
   return pushedValue(service?.characteristics.find((candidate) => candidate.displayName === displayName));

@@ -6,22 +6,20 @@
  * here reaches into the plugin -- the write goes through the same HAP entry point a paired
  * controller uses, and the request assertions read the fake service's own record.
  *
- * A named service is resolved through the catalogue, which is the one place a display name, a
- * service type, and a subtype are declared together, so a step never restates a published identity
- * a user's automations attach to (D-12).
+ * A named service is resolved through the shared catalogue lookup, so a step never restates a
+ * published identity a user's automations attach to (D-12).
  */
 
 import assert from 'node:assert/strict';
 
 import { Then, When } from '@cucumber/cucumber';
 
-import { createServiceCatalogue } from '../../../src/accessories/serviceCatalogue.js';
+import { pushedValue, serviceOf } from '../publishedServices.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../fakeHap.js';
-import type { FakeAccessory, FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
+import type { FakeHapCharacteristic } from '../fakeHap.js';
+import type { FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
 import type { FakeRestRequest } from '../fakeRestApi.js';
 import type { BasementGuardianWorld } from '../world.js';
-import type { API } from 'homebridge';
 
 // The command route's own suffix, so a step names what the vendor receives rather than a path this
 // module rebuilt.
@@ -35,33 +33,8 @@ const STEP_TIMEOUT_MS = 15_000;
 // The characteristic a controller writes to on a switch.
 const ON = 'On';
 
-// Every scenario here seeds exactly one physical device, so a step reads back through the one
-// accessory the plugin ever registers.
-function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
-  return homebridge.registerPlatformAccessoryCalls[0]?.accessories[0];
-}
-
-function serviceOf(homebridge: FakeHomebridgeApi, displayName: string): FakeHapService | undefined {
-  const row = createServiceCatalogue(homebridge.hap as unknown as API['hap']).find((candidate) => candidate.displayName === displayName);
-
-  if (row === undefined) {
-    throw new Error(`the plugin publishes no ${displayName} service`);
-  }
-
-  // The catalogue declares its service classes against the real HAP types while the accessory
-  // stand-in answers its own; the class is one runtime object, so the lookup needs the other view.
-  return currentAccessory(homebridge)?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
-}
-
 function onCharacteristicOf(homebridge: FakeHomebridgeApi, displayName: string): FakeHapCharacteristic | undefined {
   return serviceOf(homebridge, displayName)?.characteristics.find((candidate) => candidate.displayName === ON);
-}
-
-// A value only the plugin can have written. HAP constructs every characteristic at its format
-// default, and `false` is also the resting state of a control, so reading the value alone cannot
-// tell a published switch from one the plugin never wrote to (D-014).
-function pushedValue(characteristic: FakeHapCharacteristic | undefined): unknown {
-  return characteristic?.pushed === true ? characteristic.value : undefined;
 }
 
 function commandsIn(requests: readonly FakeRestRequest[]): readonly FakeRestRequest[] {
