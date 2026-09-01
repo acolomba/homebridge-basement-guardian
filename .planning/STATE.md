@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
-status: ready_to_discuss
-stopped_at: Phase 4 executed and verified 17/17; deferred on six human items
-last_updated: "2026-09-01T20:30:00.000Z"
+status: ready_to_plan
+stopped_at: Phase 5 discussed and researched; ready for pattern mapper then plan
+last_updated: "2026-09-01T21:30:00.000Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 04 complete, verification deferred; starting Phase 05
+last_activity_desc: Phase 05 discussed and researched; four decisions amended
 state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
 progress:
   total_phases: 6
@@ -373,24 +373,30 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-01T12:00:00.000Z
-Stopped at: All six Phase 4 decisions ruled on and applied; ready for `/gsd-plan-phase 4`
-Resume file: .planning/phases/04-pump-records-and-official-controls/.continue-here.md
+Last session: 2026-09-01T21:30:00.000Z
+Stopped at: Phase 5 discussed and researched; next is the pattern mapper, then `/gsd-plan-phase 5`
+Resume file: .planning/phases/05-degraded-operation-and-recovery/.continue-here.md
 
-Phase 4 research is complete and committed; no code has been written (empty `src/`, `test/`,
-`features/` diff against the branch point `552c57e`). **All six decisions were ruled on by the
-maintainer on 2026-09-01**, each accepting the research recommendation. The rulings were applied to
-`04-CONTEXT.md` first, because that is the file the planner reads — `D-15` narrowed, `D-04` gains
-the clearing push, `D-10`'s prose corrected, `D-11` gains the unit conversion, `D-12` gains
-`uint32`, `D-05` and `D-06` gain the per-capability-per-accessory scope, and a new `D-17`
-authorises the one test-only HAP import. `04-VALIDATION.md`'s blocked-rows section was resolved and
-now lists what each ruling adds to the test surface.
+**Read the resume file before doing anything.** It carries one operational fact that costs an hour
+to rediscover: executor dispatch is blocked by an isolation guard, and the obvious fix is dangerous.
+`dispatch-isolation` reports the host *capability* (`harness-worktree`) while `worktree base-check`
+returns `shouldDegrade: true`, because a harness worktree would fork from `origin/HEAD` — which is
+`origin/main`, where Phase 3 does not exist. Force the sentinel to `none` before every dispatch, and
+verify by reading `.gsd/dispatch-isolation-sentinel.json` rather than re-querying, because a bare
+query re-persists the capability and silently undoes the force.
 
-Nothing is open. Next step is `/gsd-plan-phase 4`. Do not re-run research — `04-RESEARCH.md` is
-complete and its findings are traced to quoted source lines.
+Phase 5 has `05-CONTEXT.md` (12 decisions) and `05-RESEARCH.md`, both committed. **Four of the
+original eleven decisions were amended after research proved they could not be built as written** —
+`D-04` (the transport distinction does not exist in code), `D-05` (both obvious shadow signals are
+wrong), `D-06` (rested on a false premise about `accessoryContext.ts`), and `D-02` (applied
+literally it silences `Basement Guardian Offline`). Two came out cheaper than assumed: `D-09` is
+already true and `D-07`'s valid-state predicate already exists.
 
-**Backed up.** `features/phase-04-pump-records-and-official-controls` was pushed to `origin` on
-2026-09-01 at the maintainer's instruction and now tracks it; local and remote heads both read
-`b8a5673`, verified. Phase 3's shipped implementation is preserved inside this branch's history.
-No PR was opened and nothing merged. Commits made after `b8a5673` are unpushed until someone
-pushes them.
+New `D-12` records that the Cucumber harness drops services on restart, which would make every
+`D-06` scenario pass vacuously — the seventh instance on this project of a test passing because the
+fixture sat at the value the defect produces.
+
+Do not re-run discuss or research. Next is the pattern mapper, then plan.
+
+**Pushed through `c63469a`.** Commits after that — the Phase 5 context, research and amendments —
+are unpushed until someone pushes them.
