@@ -183,13 +183,50 @@ function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record
   };
 }
 
-function projectionInput(overrides: Partial<ProjectionInput> = {}): ProjectionInput {
+/**
+ * One pump's record as a row is handed it, declared here rather than read off the projection input.
+ *
+ * The cases below pin the shape a row publishes from instead of following whatever the module
+ * declares, so a renamed or retyped member fails here rather than renaming the expectation with it.
+ * Both times are strings because the accessory formats them before a row ever sees one.
+ */
+interface PumpRecordRow {
+  observationStartedAt: string;
+  activationCount: number;
+  lastActivationAt: string;
+  lastActivationWasTestActivity: boolean | undefined;
+}
+
+/** A projection input carrying one record per pump, which is what every row is handed. */
+interface RecordedProjectionInput extends ProjectionInput {
+  primaryPumpRecord: PumpRecordRow;
+  backupPumpRecord: PumpRecordRow;
+}
+
+// The two record times every case starts from, written out rather than derived from a clock or a
+// millisecond value, so a row that formatted or recomputed one would publish something else.
+const OBSERVATION_START = '2026-08-01T00:00:00.000Z';
+const LAST_ACTIVATION = '2026-08-30T12:34:56.000Z';
+
+function pumpRecord(overrides: Partial<PumpRecordRow> = {}): PumpRecordRow {
+  return {
+    observationStartedAt: OBSERVATION_START,
+    activationCount: 0,
+    lastActivationAt: '',
+    lastActivationWasTestActivity: undefined,
+    ...overrides,
+  };
+}
+
+function projectionInput(overrides: Partial<RecordedProjectionInput> = {}): RecordedProjectionInput {
   return {
     decoded: decodedState(),
     untrustedScopes: [],
     offlineConfirmed: false,
     controllerDataLastTrustedAt: '',
     pendingControls: new Set<DeviceCapability>(),
+    primaryPumpRecord: pumpRecord(),
+    backupPumpRecord: pumpRecord(),
     ...overrides,
   };
 }
@@ -528,6 +565,194 @@ function registerPumpCases(): void {
 
     // assert
     assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
+  });
+}
+
+// Every case about the record each pump service carries beside its live state.
+function registerPumpRecordCases(): void {
+  test('publishes the observed activation count the record carries on the primary pump row', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ObservedActivationCount } = createCustomCharacteristics(hap);
+    const input = projectionInput({ primaryPumpRecord: pumpRecord({ activationCount: 7 }) });
+
+    // act
+    const projected = rowOf(hap, 'primary-pump').project(input);
+
+    // assert
+    assert.strictEqual(valueOf(projected, ObservedActivationCount), 7);
+  });
+
+  test('publishes the observation start and the last activation the record carries on the backup pump row', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ObservationStartedAt, LastObservedActivationAt } = createCustomCharacteristics(hap);
+    const input = projectionInput({ backupPumpRecord: pumpRecord({ activationCount: 3, lastActivationAt: LAST_ACTIVATION }) });
+
+    // act
+    const projected = rowOf(hap, 'backup-pump').project(input);
+
+    // assert
+    assert.deepStrictEqual(
+      { start: valueOf(projected, ObservationStartedAt), last: valueOf(projected, LastObservedActivationAt) },
+      { start: OBSERVATION_START, last: LAST_ACTIVATION },
+    );
+  });
+
+  // The primary pump carries no self-test label at all: the device reports no primary activation
+  // timestamp and a self-test runs the backup pump, so nothing about a primary run could be
+  // classified (D-013, C-001).
+  test('publishes no self-test label on the primary pump row even when the record carries one', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { LastActivationWasTestActivity } = createCustomCharacteristics(hap);
+    const input = projectionInput({ primaryPumpRecord: pumpRecord({ lastActivationWasTestActivity: true }) });
+
+    // act
+    const projected = rowOf(hap, 'primary-pump').project(input);
+
+    // assert
+    assert.deepStrictEqual(
+      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      [],
+    );
+  });
+
+  for (const lastActivationWasTestActivity of [true, false]) {
+    test(`publishes a self-test label of ${String(lastActivationWasTestActivity)} on the backup pump row`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { LastActivationWasTestActivity } = createCustomCharacteristics(hap);
+      const input = projectionInput({ backupPumpRecord: pumpRecord({ lastActivationWasTestActivity }) });
+
+      // act
+      const projected = rowOf(hap, 'backup-pump').project(input);
+
+      // assert
+      assert.deepStrictEqual(
+        summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+        [{ uuid: LastActivationWasTestActivity.UUID, value: lastActivationWasTestActivity }],
+      );
+    });
+  }
+
+  // Absent is a different claim from `false`. `false` asserts the last activation was not a test,
+  // and the plugin has not earned that until both device timestamps have settled, so an absent
+  // label publishes nothing rather than the quiet half of a two-state adapter (D-013).
+  test('publishes no self-test label on the backup pump row while the record carries none', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { LastActivationWasTestActivity } = createCustomCharacteristics(hap);
+
+    // act
+    const projected = rowOf(hap, 'backup-pump').project(projectionInput());
+
+    // assert
+    assert.deepStrictEqual(
+      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      [],
+    );
+  });
+
+  // The empty string is what a record that has never seen an activation reports, exactly as
+  // `ControllerDataLastTrustedAt` already does. Publishing nothing at all would leave whatever the
+  // characteristic last carried standing (CTRL-01, RES-02).
+  for (const kind of ['primary-pump', 'backup-pump'] satisfies readonly ServiceKind[]) {
+    test(`publishes an empty last activation on the ${kind} row rather than nothing at all`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { LastObservedActivationAt } = createCustomCharacteristics(hap);
+
+      // act
+      const projected = rowOf(hap, kind).project(projectionInput());
+
+      // assert
+      assert.deepStrictEqual(
+        summarise(projected).filter((value) => value.uuid === LastObservedActivationAt.UUID),
+        [{ uuid: LastObservedActivationAt.UUID, value: '' }],
+      );
+    });
+  }
+
+  test('publishes a pump record on the two pump services and on no other row', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ObservationStartedAt, ObservedActivationCount, LastObservedActivationAt, LastActivationWasTestActivity } = createCustomCharacteristics(hap);
+    const recordUuids = new Set([ObservationStartedAt.UUID, ObservedActivationCount.UUID, LastObservedActivationAt.UUID, LastActivationWasTestActivity.UUID]);
+    const input = projectionInput({ backupPumpRecord: pumpRecord({ lastActivationWasTestActivity: true }) });
+
+    // act
+    const publishing = createServiceCatalogue(hap)
+      .filter((row) => row.project(input).some((value) => recordUuids.has(value.characteristic.UUID)))
+      .map((row) => row.displayName);
+
+    // assert
+    assert.deepStrictEqual(publishing, ['Primary Pump', 'Backup Pump']);
+  });
+
+  // The record is additional and displaces nothing, so the live values each pump row published
+  // before it existed are compared against an inline list rather than against the row's own answer.
+  test('keeps publishing the live pump and fault values beside the record on both pump rows', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { PumpRunning, PumpFault, PumpFuseBlown } = createCustomCharacteristics(hap);
+    const live = new Set([PumpRunning.UUID, PumpFault.UUID, PumpFuseBlown.UUID, hap.Characteristic.StatusFault.UUID]);
+    const decoded = decodedState({
+      pump: { primaryRunning: true, backupRunning: true },
+      fault: { ...CLEAR_FAULTS, primaryPumpFault: true, backupPumpFuseBlown: true },
+    });
+    const input = projectionInput({ decoded });
+
+    // act
+    const projected = {
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => live.has(value.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => live.has(value.uuid)),
+    };
+
+    // assert
+    assert.deepStrictEqual(projected, {
+      primary: [
+        { uuid: PumpRunning.UUID, value: true },
+        { uuid: PumpFault.UUID, value: true },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: GENERAL_FAULT },
+      ],
+      backup: [
+        { uuid: PumpRunning.UUID, value: true },
+        { uuid: PumpFault.UUID, value: false },
+        { uuid: PumpFuseBlown.UUID, value: true },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: GENERAL_FAULT },
+      ],
+    });
+  });
+
+  // `ensureService` adds a service as soon as a row projects anything, and `Pump Running` is the one
+  // characteristic `PumpService` requires. A row that earned its service on the record alone would
+  // therefore add a service whose required characteristic sits at HAP's `false` default -- a pump
+  // reported as not running that no device ever reported (D-014, RES-01).
+  test('publishes no record at all on a pump row whose reported running state did not decode', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { PumpFault, PumpFuseBlown } = createCustomCharacteristics(hap);
+    const input = projectionInput({ decoded: decodedState({ pump: {} }) });
+
+    // act
+    const projected = {
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)),
+    };
+
+    // assert
+    assert.deepStrictEqual(projected, {
+      primary: [
+        { uuid: PumpFault.UUID, value: false },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+      ],
+      backup: [
+        { uuid: PumpFault.UUID, value: false },
+        { uuid: PumpFuseBlown.UUID, value: false },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+      ],
+    });
   });
 }
 
@@ -1189,6 +1414,8 @@ describe('createServiceCatalogue', () => {
   registerWaterCases();
 
   registerPumpCases();
+
+  registerPumpRecordCases();
 
   registerPowerCases();
 
