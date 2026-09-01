@@ -197,29 +197,29 @@ Plans:
   4. Accepted, rejected, timed-out, late, and externally initiated control state reconciles within the 2.5-second API and 30-second pending policies without changing canonical safety state optimistically.
   5. Documentation does not treat Activity History as safety delivery or claim configurable retention/backfill; the G-003 real-home check of both pump Contact Sensors belongs to Phase 6 release validation.
 
-**Plans**: 6 plans
+**Plans**: 6/6 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Tracer: a HomeKit press of System Self-Test reaches the vendor and the device's report is what leaves the Switch on, plus the HAP write-path fidelity gate
+- [x] 04-01-PLAN.md — Tracer: a HomeKit press of System Self-Test reaches the vendor and the device's report is what leaves the Switch on, plus the HAP write-path fidelity gate
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — Every refusal cause and its HAP status, the 30-second pending window, the Alarm Mute Switch, and the command request header policy
-- [ ] 04-03-PLAN.md — The four record characteristics, the persist port, and the records module: epoch, watched edges, de-duplicated recovery, and classification
+- [x] 04-02-PLAN.md — Every refusal cause and its HAP status, the 30-second pending window, the Alarm Mute Switch, and the command request header policy
+- [x] 04-03-PLAN.md — The four record characteristics, the persist port, and the records module: epoch, watched edges, de-duplicated recovery, and classification
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-04-PLAN.md — Wire the records into the catalogue, the accessory, and the composition root
+- [x] 04-04-PLAN.md — Wire the records into the catalogue, the accessory, and the composition root
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 04-05-PLAN.md — The five CTRL-05 outcomes and record survival across a restart, against the fake vendor cloud
+- [x] 04-05-PLAN.md — The five CTRL-05 outcomes and record survival across a restart, against the fake vendor cloud
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 04-06-PLAN.md — Documentation, the single-import and module-floor gates, and the real-home verification items
+- [x] 04-06-PLAN.md — Documentation, the single-import and module-floor gates, and the real-home verification items
 
 ### Phase 5: Degraded Operation and Recovery
 

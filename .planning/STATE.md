@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 03
-current_phase_name: Safety Monitoring in HomeKit
-status: verifying
-stopped_at: Phase 4 decisions all ruled on; ready to plan
-last_updated: "2026-09-01T12:00:00.000Z"
+current_phase: 05
+current_phase_name: Degraded Operation and Recovery
+status: ready_to_discuss
+stopped_at: Phase 4 executed and verified 17/17; deferred on six human items
+last_updated: "2026-09-01T20:30:00.000Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 04 six open decisions ruled on; planning unblocked
+last_activity_desc: Phase 04 complete, verification deferred; starting Phase 05
 state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 31
-  completed_plans: 31
-  percent: 33
+  completed_phases: 3
+  total_plans: 37
+  completed_plans: 37
+  percent: 50
 ---
 
 # Project State
@@ -299,7 +299,28 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 | Phase | State | Resume |
 |-------|-------|--------|
-| 3 | verification_deferred_human (2 of 3 checks open) | /gsd-verify-work 3 |
+| 3 | verification_deferred_human (1 of 3 checks open) | /gsd-verify-work 3 |
+| 4 | verification_deferred_human (6 human items, 17/17 must-haves verified) | /gsd-verify-work 4 |
+
+Phase 4 is implementation-complete. `04-VERIFICATION.md` verified 17/17 must-haves **by executing
+the shipped code** — 100 behavioural probe checks against the compiled modules, a loopback HTTP
+server driving the real command path, a probe against the real pinned HAP, and six live mutations of
+shipped source proving the load-bearing assertions are not vacuous. Deferred by the maintainer on
+2026-09-01 so Phase 5 could start; the six items are enumerated in `04-UAT.md`.
+
+The load-bearing one is item 1: whether a `PumpService` cached BEFORE this release adopts the four
+new record characteristics on upgrade. Nothing in this phase has met a real Homebridge cache — the
+harness restores context through a JSON round trip but restores no services, so a real restored
+Service carrying cached characteristics is a shape no test has produced. Items 2-4 join Phase 3's
+open flood-automation check and the `G-003`/`G-004` gates in one real-paired-home session. Item 5 is
+a desk task. Item 6 is `G-001`, which blocks `1.0.0` only.
+
+**Carried warning from `04-VERIFICATION.md`:** mutating away the pending-window withholding kills 2
+unit cases but leaves all 78 Cucumber scenarios green. The behaviour is real and the accessory probe
+catches it, but the end-to-end tier is blind to it. Phase 5 touches the same projection path.
+
+Phase 3's row previously read "2 of 3 checks open"; that label was stale — checks 2 and 3 closed on
+2026-08-31 and only the flood-automation check remains. Corrected here.
 
 Phase 3 is implementation-complete and gate-complete. `03-VERIFICATION.md` verified all six success
 criteria and 6/6 must-haves **by executing the shipped code** — a 36-check behavioural probe against
