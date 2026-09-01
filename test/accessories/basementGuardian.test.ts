@@ -147,7 +147,15 @@ const HAP = createFakeHap();
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
-const { ControllerDataLastTrustedAt, ControllerLinkPresent, MainsPowerPresent } = createCustomCharacteristics(HAP_NAMESPACE);
+const {
+  ControllerDataLastTrustedAt,
+  ControllerLinkPresent,
+  LastActivationWasTestActivity,
+  LastObservedActivationAt,
+  MainsPowerPresent,
+  ObservationStartedAt,
+  ObservedActivationCount,
+} = createCustomCharacteristics(HAP_NAMESPACE);
 const CATALOGUE = createServiceCatalogue(HAP_NAMESPACE);
 
 void ({
@@ -200,6 +208,15 @@ const PUMP_SERVICES: readonly string[] = ['Primary Pump', 'Backup Pump', 'Primar
 
 // The one device identity a case asks for when it wants the platform to have set none at all.
 const NO_DEVICE_CONTEXT = Symbol('no device context');
+
+// The receipt time every record case starts from, written as the string the record must publish and
+// parsed into the milliseconds a snapshot carries, so the expectation is a literal rather than
+// whatever the production formatter would answer.
+const RECORD_RECEIVED_AT_ISO = '2026-09-01T12:00:00.000Z';
+const RECORD_RECEIVED_AT = Date.parse(RECORD_RECEIVED_AT_ISO);
+
+// One default poll interval later, which is when the second snapshot of a two-snapshot case arrives.
+const ONE_POLL_LATER_MS = 900_000;
 
 function accessoryStandIn(device: unknown = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }): FakeAccessory {
   const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
@@ -430,6 +447,35 @@ function accessoryWith(accessory: FakeAccessory, overrides: Partial<Omit<Basemen
   return createBasementGuardianAccessory(buildOptions({ accessory, ...overrides }));
 }
 
+// One snapshot in a sequence a case drives, named by the wire fields that moved and by the moment
+// the plugin received them. The receipt time matters here in a way it does not elsewhere: it is
+// what the observation start and every watched activation are recorded from.
+interface TelemetryUpdate {
+  data?: Readonly<Record<string, unknown>>;
+  receivedAt?: number;
+}
+
+// One accessory driven by the real Gemini adapter over a sequence of payloads, so a case states the
+// wire fields that moved and reads back the record they produced. The adapter is the real one
+// because the claim is about the whole chain -- a wire field, the scope that owns it, and the record
+// the accessory built from it -- and a stand-in family would let this module assert its own answer.
+function geminiUpdates(
+  accessory: FakeAccessory,
+  updates: readonly TelemetryUpdate[],
+  overrides: Partial<Omit<BasementGuardianAccessoryOptions, 'accessory'>> = {},
+): BasementGuardianAccessory {
+  const basementGuardianAccessory = accessoryWith(accessory, {
+    registry: registryWith({ kind: 'implemented', family: geminiFamily }),
+    ...overrides,
+  });
+
+  for (const { data = {}, receivedAt = RECORD_RECEIVED_AT } of updates) {
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, ...data }, receivedAt }), 'poll');
+  }
+
+  return basementGuardianAccessory;
+}
+
 // One accessory driven by the real Gemini adapter over one snapshot, so a case states a wire field
 // and reads back the services it reached.
 function geminiAccessory(
@@ -505,6 +551,27 @@ function onCharacteristicOf(accessory: FakeAccessory, displayName: string): Fake
 
 async function sourceOf(module: string): Promise<string> {
   return readFile(new URL(`../../../src/accessories/${module}`, import.meta.url), 'utf8');
+}
+
+// Everything one pump service publishes about what the plugin observed it do, read back by the
+// identifiers of the four record characteristics rather than by position.
+function pumpRecordOf(accessory: FakeAccessory, displayName: string): Record<string, unknown> {
+  return {
+    observationStartedAt: valueOf(accessory, displayName, ObservationStartedAt),
+    activationCount: valueOf(accessory, displayName, ObservedActivationCount),
+    lastActivationAt: valueOf(accessory, displayName, LastObservedActivationAt),
+    lastActivationWasTestActivity: valueOf(accessory, displayName, LastActivationWasTestActivity),
+  };
+}
+
+// The declared members of the accessory's injected options, read from the source rather than from
+// the type, because the claim is about what the interface does not declare. A member typed `API`
+// would hand the accessories tier a live Homebridge handle; the narrow persist port exists so that
+// boundary is never crossed, and a type cannot be asked what it refuses to carry (D-008).
+function declaredOptions(source: string): { members: readonly string[]; block: string } {
+  const block = /export interface BasementGuardianAccessoryOptions \{([\s\S]*?)\n\}/u.exec(codeOf(source))?.[1] ?? '';
+
+  return { members: [...block.matchAll(/^ {2}(\w+)\??:/gmu)].map((match) => match[1] ?? ''), block };
 }
 
 describe('createBasementGuardianAccessory', () => {
@@ -1690,6 +1757,129 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.strictEqual(readImmediately, CONTACT_DETECTED);
+  });
+
+  test('counts one activation for a backup pump it watched start', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiUpdates(accessory, [{}, { data: { backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }]);
+
+    // assert
+    assert.strictEqual(valueOf(accessory, 'Backup Pump', ObservedActivationCount), 1);
+  });
+
+  // The count means nothing without the moment it is counted from, and nothing has been observed
+  // yet, so the last activation is the empty string rather than a fabricated time (CTRL-01, D-020).
+  test('publishes an observation start at the first snapshot receipt time and an empty last activation', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiUpdates(accessory, [{}]);
+
+    // assert
+    assert.deepStrictEqual(pumpRecordOf(accessory, 'Primary Pump'), {
+      observationStartedAt: RECORD_RECEIVED_AT_ISO,
+      activationCount: 0,
+      lastActivationAt: '',
+      lastActivationWasTestActivity: undefined,
+    });
+  });
+
+  // The record instance lives as long as the accessory does, for the same reason the platform reuses
+  // one accessory instance across polls: a fresh instance per update would discard the observation
+  // epoch and re-seed it from every snapshot (D-010, D-020).
+  test('continues one record across updates rather than reseeding the observation start', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+    const afterTheFirstUpdate = valueOf(accessory, 'Primary Pump', ObservationStartedAt);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { afterTheFirstUpdate, afterTheSecond: valueOf(accessory, 'Primary Pump', ObservationStartedAt) },
+      { afterTheFirstUpdate: RECORD_RECEIVED_AT_ISO, afterTheSecond: RECORD_RECEIVED_AT_ISO },
+    );
+  });
+
+  // The counted activation is asserted beside the four call counts on purpose: without it a broken
+  // record path would report the same four zeroes as a working one, and the case would pass for
+  // having driven nothing rather than for having deferred nothing (SAFE-07, D-18).
+  test('calls no global scheduling function across an update that counts an activation', (t) => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+    const setTimeoutSpy = t.mock.method(globalThis, 'setTimeout');
+    const setIntervalSpy = t.mock.method(globalThis, 'setInterval');
+    const setImmediateSpy = t.mock.method(globalThis, 'setImmediate');
+    const queueMicrotaskSpy = t.mock.method(globalThis, 'queueMicrotask');
+
+    // act
+    basementGuardianAccessory.update(
+      buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }),
+      'poll',
+    );
+    const scheduled = {
+      setTimeout: setTimeoutSpy.mock.callCount(),
+      setInterval: setIntervalSpy.mock.callCount(),
+      setImmediate: setImmediateSpy.mock.callCount(),
+      queueMicrotask: queueMicrotaskSpy.mock.callCount(),
+    };
+
+    // assert
+    assert.deepStrictEqual(
+      { ...scheduled, counted: valueOf(accessory, 'Backup Pump', ObservedActivationCount) },
+      { setTimeout: 0, setInterval: 0, setImmediate: 0, queueMicrotask: 0, counted: 1 },
+    );
+  });
+
+  // A pump field that failed its shape costs the whole `pump` scope, so the row publishes nothing at
+  // all and the count the last trustworthy update published stays exactly where it was. Advancing it
+  // from a payload the family could not vouch for is the one thing the record must never do
+  // (D-014, RES-01).
+  test('keeps the count the last trustworthy update published while the pump scope is untrusted', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiUpdates(accessory, [
+      {},
+      { data: { backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS },
+    ]);
+    const whileTrusted = pumpRecordOf(accessory, 'Backup Pump');
+
+    // act
+    basementGuardianAccessory.update(
+      buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: 'yes' }, receivedAt: RECORD_RECEIVED_AT + 2 * ONE_POLL_LATER_MS }),
+      'poll',
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { count: whileTrusted.activationCount, record: pumpRecordOf(accessory, 'Backup Pump'), active: statusActiveOf(accessory, 'Backup Pump') },
+      { count: 1, record: whileTrusted, active: false },
+    );
+  });
+
+  test('declares exactly the collaborators the accessory takes by injection', async () => {
+    // act
+    const { members } = declaredOptions(await sourceOf('basementGuardian.ts'));
+
+    // assert
+    assert.deepStrictEqual(members, ['accessory', 'hap', 'registry', 'log', 'timers', 'store', 'commands', 'ignoredFaults', 'offlineConfirmationPollCount']);
+  });
+
+  test('declares no injected option typed API and none named api', async () => {
+    // act
+    const { members, block } = declaredOptions(await sourceOf('basementGuardian.ts'));
+
+    // assert
+    assert.deepStrictEqual({ named: members.includes('api'), typedAsApi: /:\s*API\s*;/u.test(block) }, { named: false, typedAsApi: false });
   });
 
   // Apple Home labels a secondary service of a bridged accessory by `ConfiguredName`, so a sensor
