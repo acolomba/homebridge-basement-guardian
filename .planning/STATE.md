@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: verifying
-stopped_at: Phase 4 research complete
-last_updated: "2026-09-01T04:20:00.000Z"
-last_activity: 2026-08-31
-last_activity_desc: Phase 03 execution started
+stopped_at: Phase 4 research complete; six decisions open, awaiting maintainer
+last_updated: "2026-09-01T04:40:00.000Z"
+last_activity: 2026-09-01
+last_activity_desc: Phase 04 research complete; paused on six open decisions
 state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
 progress:
   total_phases: 6
@@ -30,7 +30,15 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
 Plan: 8 of 8
 Status: Phase complete — ready for verification
-Last activity: 2026-08-31 — Completed quick task 260831-dlv: labelled ignoredFaults checkboxes
+Last activity: 2026-09-01 — Phase 04 research complete; paused on six open decisions
+
+Phase 04 (Pump Records and Official Controls) has completed research on branch
+`features/phase-04-pump-records-and-official-controls`. No implementation exists. It is
+blocked on six maintainer decisions listed in
+`.planning/phases/04-pump-records-and-official-controls/.continue-here.md`.
+
+Phase 03 check 1 (flood automation survives a degraded `water` scope) remains OPEN and
+gates the `1.0.0` release, not Phase 04.
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
 three UAT items passed against real hardware.
@@ -302,6 +310,13 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-01T02:52:49.751Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-pump-records-and-official-controls/04-CONTEXT.md
+Last session: 2026-09-01T04:40:00.000Z
+Stopped at: Phase 4 research complete; six decisions put to the maintainer, none ruled on
+Resume file: .planning/phases/04-pump-records-and-official-controls/.continue-here.md
+
+Phase 4 research is complete and committed; no code was written. Six decisions are OPEN
+and are enumerated in the resume file with a recommendation each. Decisions 1 (narrow
+`D-15` to drop the fake broker's `update/rejected` leaf), 2 (allow a test-only
+`@homebridge/hap-nodejs` import for a fake-fidelity check) and 3 (accept a deferred push
+to clear HAP's sticky `statusCode` after a refused write) must be settled before planning
+starts. A recommendation is not a ruling: `04-CONTEXT.md` `D-15` still binds as written.
