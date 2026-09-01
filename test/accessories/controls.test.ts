@@ -43,6 +43,26 @@ const HAP_NAMESPACE = HAP as unknown as API['hap'];
 interface Deferral {
   delayMs: number;
   run: () => void;
+  handle: number;
+}
+
+// A log stand-in that collects the warnings a case reads back and discards every other level.
+function warningLog(warnings: string[]): Logging {
+  const noop = (): void => {
+    // only the warning channel is read back
+  };
+
+  return Object.assign(noop, {
+    prefix: 'basement guardian',
+    debug: noop,
+    error: noop,
+    info: noop,
+    log: noop,
+    success: noop,
+    warn: (message: string) => {
+      warnings.push(message);
+    },
+  });
 }
 
 function silentLog(): Logging {
@@ -55,20 +75,24 @@ function silentLog(): Logging {
 
 // A `Timers` stand-in that records the deferral rather than arming one, so a case reads back the
 // delay the binder asked for and runs the handler itself.
-function recordingTimers(): { timers: Timers; deferrals: Deferral[] } {
+function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: unknown[] } {
   const deferrals: Deferral[] = [];
+  const cancelled: unknown[] = [];
   const timers: Timers = {
     setTimeout: (run: () => void, delayMs: number) => {
-      deferrals.push({ delayMs, run });
+      const handle = deferrals.length;
+      deferrals.push({ delayMs, run, handle });
 
-      return undefined;
+      return handle;
     },
     setInterval: () => undefined,
-    clearTimeout: () => undefined,
+    clearTimeout: (handle: unknown) => {
+      cancelled.push(handle);
+    },
     clearInterval: () => undefined,
   };
 
-  return { timers, deferrals };
+  return { timers, deferrals, cancelled };
 }
 
 // A `CommandPort` stand-in that records every send and answers a scripted outcome. A refusal that
@@ -353,17 +377,7 @@ for (const held of [true, false]) {
 test('names the capability and the cause in the one line a refusal logs, and quotes nothing else', async () => {
   // arrange
   const warnings: string[] = [];
-  const log = Object.assign(() => undefined, {
-    prefix: 'basement guardian',
-    debug: () => undefined,
-    error: () => undefined,
-    info: () => undefined,
-    log: () => undefined,
-    success: () => undefined,
-    warn: (message: string) => {
-      warnings.push(message);
-    },
-  });
+  const log = warningLog(warnings);
   const { commands } = recordingCommands({ accepted: false, failure: 'timed-out' });
   const { service } = boundSwitch({ commands, log });
 
@@ -510,17 +524,7 @@ for (const refusalCase of VENDOR_REFUSALS) {
 test('names the capability in every refusal line and quotes no token, URL, or device identifier', async () => {
   // arrange
   const warnings: string[] = [];
-  const log = Object.assign(() => undefined, {
-    prefix: 'basement guardian',
-    debug: () => undefined,
-    error: () => undefined,
-    info: () => undefined,
-    log: () => undefined,
-    success: () => undefined,
-    warn: (message: string) => {
-      warnings.push(message);
-    },
-  });
+  const log = warningLog(warnings);
 
   // act
   for (const refusalCase of REFUSALS) {
@@ -539,5 +543,76 @@ test('names the capability in every refusal line and quotes no token, URL, or de
       deviceId: warning.includes(DEVICE_ID),
     })),
     Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: false })),
+  );
+});
+
+// The window a request waits in for the device's own confirming report. Thirty seconds against an
+// observed test duration of about sixteen: long enough for the device to answer, short enough that
+// a Switch never stops following reported state for long (D-037, D-06).
+const PENDING_WINDOW_MS = 30_000;
+
+// The deferral the pending window is armed with, told apart from the clearing push by its delay.
+function windowsIn(deferrals: readonly Deferral[]): readonly Deferral[] {
+  return deferrals.filter((deferral) => deferral.delayMs === PENDING_WINDOW_MS);
+}
+
+test('arms one 30000 millisecond window when a command is sent', async () => {
+  // arrange
+  const { timers, deferrals } = recordingTimers();
+  const { service } = boundSwitch({ timers });
+
+  // act
+  await onCharacteristic(service).handleSetRequest(true);
+
+  // assert
+  assert.deepStrictEqual(
+    deferrals.map((deferral) => deferral.delayMs),
+    [PENDING_WINDOW_MS],
+  );
+});
+
+test('cancels the window and clears the entry when the device confirms the request', async () => {
+  // arrange
+  const { timers, deferrals, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch({ timers });
+  await onCharacteristic(service).handleSetRequest(true);
+
+  // act
+  binder.reconcile('self-test', true);
+
+  // assert
+  assert.deepStrictEqual({ cancelled, pending: [...binder.pending] }, { cancelled: [windowsIn(deferrals)[0]?.handle], pending: [] });
+});
+
+// Nothing is retried when the window closes: a command that outlived its deadline may already have
+// reached the device, and a second attempt would operate a real sump pump twice (D-038).
+test('resumes reported state with one warning and no second request when the window closes', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const republished: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { timers, deferrals } = recordingTimers();
+  const { binder, service } = boundSwitch({
+    commands,
+    timers,
+    log: warningLog(warnings),
+    republish: () => {
+      republished.push('republish');
+    },
+  });
+  await onCharacteristic(service).handleSetRequest(true);
+
+  // act
+  windowsIn(deferrals)[0]?.run();
+
+  // assert
+  assert.deepStrictEqual(
+    { pending: [...binder.pending], republished, warnings, sends },
+    {
+      pending: [],
+      republished: ['republish'],
+      warnings: ['The self-test request was never confirmed by the device. It is not retried.'],
+      sends: [`${DEVICE_ID} self-test true`],
+    },
   );
 });
