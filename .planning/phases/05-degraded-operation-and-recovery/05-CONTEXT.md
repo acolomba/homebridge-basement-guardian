@@ -113,8 +113,7 @@ distinguishable.
 
 ### Restart on cached state
 
-- **D-06 — Restored cached values are MARKED `StatusActive = false` at `configureAccessory`, before
-  any poll:** `RES-04` requires accessories to stay present and visibly stale, with no unmarked
+- **D-06 — Restored cached values are MARKED `StatusActive = false` at `configureAccessory`, before any poll:** `RES-04` requires accessories to stay present and visibly stale, with no unmarked
   window — a stale value that reads as trustworthy is the false normal the project forbids.
 
   **Restated 2026-09-01 after research corrected a false premise in the original wording.** The
@@ -217,8 +216,7 @@ distinguishable.
 
 ### Test harness
 
-- **D-12 — The Cucumber harness must carry services across a restart, and the marking pass must be
-  real code both callers share:** `features/support/fakeHomebridgeApi.ts:106-110` deliberately drops
+- **D-12 — The Cucumber harness must carry services across a restart, and the marking pass must be real code both callers share:** `features/support/fakeHomebridgeApi.ts:106-110` deliberately drops
   the service surface on restart, arguing that is "a stricter question than a real restart asks and
   never a laxer one." That was true for Phase 4's question and is **false for Phase 5's**: with no
   restored services there is nothing stale to read, so every D-06 scenario would pass whether or not

@@ -212,12 +212,25 @@ restored accessory should carry a refusing binder at all. It belongs in its own 
 none, which is the whole reason plan 05-04 walks the platform's own accessory map — so the behaviour
 cannot live in that file. The map was wrong, not the plan.
 
-**`check.decision-coverage-plan` is non-functional against this repository.** Run against
-`05-CONTEXT.md` it reports `passed: true`, `skipped: true`, "no trackable decisions". Its bullet
-parser does not match the `- **D-01 — Title:**` form this project uses, so it does not report a
-parse failure — it passes vacuously, and would have passed for a plan set covering zero decisions.
-Treat the gate as carrying no signal here until it is fixed upstream; decision coverage for Phase 5
-was confirmed by reading `05-CONTEXT.md` against the five plans by hand.
+**`check.decision-coverage-plan` failed on two wrapped decision titles, and now passes.** The
+paragraph here previously recorded the gate as non-functional against this repository. That was
+half right, and the half it got wrong matters, so the correction is kept rather than the claim.
+
+Two things were true at once. Called as the plan-phase workflow calls it —
+`check.decision-coverage-plan <phase-dir> <context-path>` — the gate returned
+`passed: false, reason: "could-not-parse"`, naming D-06 and D-12. Called with the arguments the
+other way round it returned `passed: true, skipped: true, "no trackable decisions"` — a vacuous
+pass, which is the more dangerous reading and the one first recorded here.
+
+The cause was formatting, not the `- **D-01 — Title:**` form. D-06's and D-12's titles were long
+enough to wrap, putting the closing `:**` on a second line where the parser could not see it. The
+two titles were joined onto one line on 2026-09-01 — whitespace only, since a soft break inside a
+bold span renders as a space, so no decision text changed. The gate now reports
+`passed: true, total: 12, covered: 12`, which agrees with the coverage the plan checker had already
+derived by hand.
+
+**The lesson worth keeping is the argument order.** A reversed call turns this gate's failure into a
+silent pass, and nothing in its output says which call it answered. Pass the phase directory first.
 
 **Plan 05-01 is over the smart-zone context budget and is not split.** 115000 calibrated against
 100000, 13 files, confidence `low` on `sample_count: 0`. The declined split is argued in the plan
