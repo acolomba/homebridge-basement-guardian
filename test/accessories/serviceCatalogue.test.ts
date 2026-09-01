@@ -8,10 +8,13 @@ import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 import {
+  booleanOf,
   createServiceCatalogue,
+  decodedGroup,
   ensureService,
   isRowFullyTrusted,
   isRowTrusted,
+  numberOf,
   publishedService,
   publishValue,
   removeServiceIfPresent,
@@ -723,6 +726,32 @@ function registerPumpRecordCases(): void {
         { uuid: hap.Characteristic.StatusFault.UUID, value: GENERAL_FAULT },
       ],
     });
+  });
+
+  // An accessory that has observed no snapshot has no record to hand a row: before the first
+  // update, and on an accessory whose family has never resolved, there is nothing to publish. A
+  // count of zero counted from 1970 is exactly the claim the record exists to avoid making (D-020).
+  test('publishes no record on either pump row before the accessory has observed anything', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ObservationStartedAt, ObservedActivationCount, LastObservedActivationAt } = createCustomCharacteristics(hap);
+    const recordUuids = new Set([ObservationStartedAt.UUID, ObservedActivationCount.UUID, LastObservedActivationAt.UUID]);
+    const input: ProjectionInput = {
+      decoded: decodedState(),
+      untrustedScopes: [],
+      offlineConfirmed: false,
+      controllerDataLastTrustedAt: '',
+      pendingControls: new Set<DeviceCapability>(),
+    };
+
+    // act
+    const projected = {
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
+    };
+
+    // assert
+    assert.deepStrictEqual(projected, { primary: [], backup: [] });
   });
 
   // `ensureService` adds a service as soon as a row projects anything, and `Pump Running` is the one
@@ -1457,6 +1486,65 @@ describe('createServiceCatalogue', () => {
     // assert
     assert.strictEqual(source.includes('waterLevel.js'), false);
   });
+});
+
+// The one structural narrowing of a decoded scope group, which the accessory reads through rather
+// than repeating. Two narrowings can disagree about the same payload, and a row would then publish
+// a value the accessory's own observation never saw (D-003).
+describe('decodedGroup', () => {
+  test('answers the group a decoded state carries for the scope asked for', () => {
+    // act & assert
+    assert.deepStrictEqual(decodedGroup({ pump: { primaryRunning: true }, water: { levelCode: 1 } }, 'pump'), { primaryRunning: true });
+  });
+
+  for (const { label, decoded } of [
+    { label: 'a decoded state that is not a record', decoded: null },
+    { label: 'a decoded state that is an array', decoded: [] },
+    { label: 'a decoded state carrying no such group', decoded: {} },
+    { label: 'a group that did not decode', decoded: { pump: undefined } },
+    { label: 'a group that is not a record', decoded: { pump: 'absent' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act & assert
+      assert.strictEqual(decodedGroup(decoded, 'pump'), undefined);
+    });
+  }
+});
+
+describe('booleanOf', () => {
+  test('answers a decoded boolean field', () => {
+    // act & assert
+    assert.strictEqual(booleanOf({ primaryRunning: false }, 'primaryRunning'), false);
+  });
+
+  for (const { label, group } of [
+    { label: 'a group that did not decode', group: undefined },
+    { label: 'a group carrying no such field', group: {} },
+    { label: 'a field of the wrong type', group: { primaryRunning: 'yes' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act & assert
+      assert.strictEqual(booleanOf(group, 'primaryRunning'), undefined);
+    });
+  }
+});
+
+describe('numberOf', () => {
+  test('answers a decoded number field', () => {
+    // act & assert
+    assert.strictEqual(numberOf({ backupActivatedAt: 1_700_000_000 }, 'backupActivatedAt'), 1_700_000_000);
+  });
+
+  for (const { label, group } of [
+    { label: 'a group that did not decode', group: undefined },
+    { label: 'a group carrying no such field', group: {} },
+    { label: 'a field of the wrong type', group: { backupActivatedAt: '1700000000' } },
+  ]) {
+    test(`answers nothing for ${label}`, () => {
+      // act & assert
+      assert.strictEqual(numberOf(group, 'backupActivatedAt'), undefined);
+    });
+  }
 });
 
 describe('isRowTrusted', () => {

@@ -36,6 +36,28 @@ export interface ProjectedValue {
   value: CharacteristicValue;
 }
 
+/**
+ * What one pump's record says, in the form a row publishes it.
+ *
+ * Every member arrives already formatted, because this module's own contract is
+ * that a published value is one of the characteristic's declared constants or a
+ * value read verbatim from its input, and no arithmetic and no date
+ * construction reaches a projection. The accessory holds the stored
+ * milliseconds and turns them into these strings, exactly as it already does
+ * for `controllerDataLastTrustedAt`, so no row reads a clock or keeps state of
+ * its own (CTRL-01).
+ */
+export interface PumpRecordProjection {
+  /** ISO-8601 UTC at which observation of this pump began, or the empty string when it never has (CTRL-01, D-020). */
+  observationStartedAt: string;
+  /** Activations of this pump the plugin watched since that start, never a device or whole-of-life total (CTRL-01, D-020). */
+  activationCount: number;
+  /** ISO-8601 UTC of the last observed activation, or the empty string when none has been observed (CTRL-01, D-012). */
+  lastActivationAt: string;
+  /** Whether that last activation was self-test activity, absent until the plugin has earned the label (CTRL-01, D-013). */
+  lastActivationWasTestActivity: boolean | undefined;
+}
+
 /** Everything a row reads to decide what it publishes. */
 export interface ProjectionInput {
   /**
@@ -77,6 +99,19 @@ export interface ProjectionInput {
    * canonical safety state.
    */
   pendingControls: ReadonlySet<DeviceCapability>;
+  /**
+   * What the plugin observed the primary pump do, counted from its own
+   * observation start (CTRL-01, D-012).
+   *
+   * Absent until the accessory has observed a snapshot, which is the state
+   * before the first update and the state of an accessory whose family has
+   * never resolved. An absent record publishes nothing at all rather than a
+   * count of zero counted from 1970, which is the whole class of claim the
+   * record exists to avoid making (D-020).
+   */
+  primaryPumpRecord?: PumpRecordProjection;
+  /** The same for the backup pump, which is the only one that can carry a self-test label (CTRL-01, D-013). */
+  backupPumpRecord?: PumpRecordProjection;
 }
 
 /** The trust facts a row is judged by. */
@@ -158,6 +193,10 @@ interface PumpFacts {
   fuseBlown: boolean | undefined;
   /** The condition the owning service's `StatusFault` follows, which merges the fuse on the backup pump. */
   serviceFaulted: boolean | undefined;
+  /** What the plugin observed this pump do, already formatted by the accessory, or nothing observed yet (CTRL-01). */
+  record: PumpRecordProjection | undefined;
+  /** Whether this pump's row carries the self-test label. Only the backup pump's does (D-013). */
+  publishesTestActivity: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -192,31 +231,56 @@ export function isRowFullyTrusted(row: ServiceRow, untrustedScopes: readonly Unt
   return row.readScopes.every((scope) => isRowTrusted({ scope, toleratedDistrust: row.toleratedDistrust }, untrustedScopes));
 }
 
-// One scope group of the family-neutral decoded state, read structurally so this
-// module stays ignorant of any one family's type (D-003), and answered only
-// while this row may still vouch for the scope that owns it. `undefined` means
-// the group did not decode or the scope is untrusted, never that the facts in it
-// are absent from the device.
-function trustedGroup(input: ProjectionInput, trust: RowTrust, scope: TrustScope): Record<string, unknown> | undefined {
-  if (!isRowTrusted({ scope, toleratedDistrust: trust.toleratedDistrust }, input.untrustedScopes)) {
-    return undefined;
-  }
-
-  const group = isRecord(input.decoded) ? input.decoded[scope] : undefined;
+/**
+ * Answers one scope group of the family-neutral decoded state, or `undefined`
+ * when the state or the group is not a record.
+ *
+ * This is the one structural narrowing of a decoded scope group in the codebase.
+ * `decode()` is generic over the family, so the state arrives as `unknown`;
+ * reading it here, once, is what stops the accessory and the rows disagreeing
+ * about the same payload. Two narrowings can differ about which fields a group
+ * carries, and a row would then publish a value the accessory's own observation
+ * never saw (D-003).
+ *
+ * `undefined` means the group did not decode, never that the facts in it are
+ * absent from the device.
+ */
+export function decodedGroup(decoded: unknown, scope: TrustScope): Record<string, unknown> | undefined {
+  const group = isRecord(decoded) ? decoded[scope] : undefined;
 
   return isRecord(group) ? group : undefined;
 }
 
-function booleanOf(group: Record<string, unknown> | undefined, field: string): boolean | undefined {
+/**
+ * Answers a decoded field as a boolean, or `undefined` when the group did not
+ * decode or the field is not one.
+ */
+export function booleanOf(group: Record<string, unknown> | undefined, field: string): boolean | undefined {
   const value = group?.[field];
 
   return typeof value === 'boolean' ? value : undefined;
 }
 
-function numberOf(group: Record<string, unknown> | undefined, field: string): number | undefined {
+/**
+ * Answers a decoded field as a number, or `undefined` when the group did not
+ * decode or the field is not one.
+ */
+export function numberOf(group: Record<string, unknown> | undefined, field: string): number | undefined {
   const value = group?.[field];
 
   return typeof value === 'number' ? value : undefined;
+}
+
+// The same group, answered only while this row may still vouch for the scope that
+// owns it. The structural read is `decodedGroup`'s and is never repeated here.
+// `undefined` means the group did not decode or the scope is untrusted, never
+// that the facts in it are absent from the device.
+function trustedGroup(input: ProjectionInput, trust: RowTrust, scope: TrustScope): Record<string, unknown> | undefined {
+  if (!isRowTrusted({ scope, toleratedDistrust: trust.toleratedDistrust }, input.untrustedScopes)) {
+    return undefined;
+  }
+
+  return decodedGroup(input.decoded, scope);
 }
 
 // A row publishes only the facts it can vouch for: an absent one is omitted
@@ -336,12 +400,37 @@ function sumpPitLevelValues(hap: API['hap'], characteristics: CustomCharacterist
   ]);
 }
 
+// The record publishes beside the pump's own reported running state and never
+// instead of it. `ensureService` adds a service as soon as its row projects
+// anything, and `Pump Running` is the one characteristic `PumpService` requires,
+// so a row that earned its service on the record alone would add one whose
+// required characteristic sat at HAP's `false` default -- a pump reported as not
+// running that no device ever reported. This is the same rule that keeps
+// `ControllerDataLastTrustedAt` beside the link state it describes (D-014,
+// RES-01).
+//
+// Only the backup pump carries the self-test label: the device reports no
+// primary activation timestamp and a self-test runs the backup pump, so nothing
+// about a primary run could ever be classified (D-013, C-001).
+function recordCandidates(characteristics: CustomCharacteristics, facts: PumpFacts): readonly Candidate[] {
+  const record = facts.running === undefined ? undefined : facts.record;
+  const classification = facts.publishesTestActivity ? record?.lastActivationWasTestActivity : undefined;
+
+  return [
+    { characteristic: characteristics.ObservationStartedAt, value: record?.observationStartedAt },
+    { characteristic: characteristics.ObservedActivationCount, value: record?.activationCount },
+    { characteristic: characteristics.LastObservedActivationAt, value: record?.lastActivationAt },
+    { characteristic: characteristics.LastActivationWasTestActivity, value: classification },
+  ];
+}
+
 function pumpValues(hap: API['hap'], characteristics: CustomCharacteristics, facts: PumpFacts): readonly ProjectedValue[] {
   return published([
     { characteristic: characteristics.PumpRunning, value: facts.running },
     { characteristic: characteristics.PumpFault, value: facts.faulted },
     { characteristic: characteristics.PumpFuseBlown, value: facts.fuseBlown },
     { characteristic: hap.Characteristic.StatusFault, value: faultState(hap, facts.serviceFaulted) },
+    ...recordCandidates(characteristics, facts),
   ]);
 }
 
@@ -355,6 +444,8 @@ function primaryPumpValues(hap: API['hap'], characteristics: CustomCharacteristi
     // declares that characteristic optional rather than required.
     fuseBlown: undefined,
     serviceFaulted: faulted,
+    record: input.primaryPumpRecord,
+    publishesTestActivity: false,
   });
 }
 
@@ -366,6 +457,8 @@ function backupPumpValues(hap: API['hap'], characteristics: CustomCharacteristic
     faulted: booleanOf(fault, 'backupPumpFault'),
     fuseBlown: booleanOf(fault, 'backupPumpFuseBlown'),
     serviceFaulted: backupPumpFaulted(fault),
+    record: input.backupPumpRecord,
+    publishesTestActivity: true,
   });
 }
 
