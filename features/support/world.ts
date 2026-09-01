@@ -253,6 +253,9 @@ export class BasementGuardianWorld extends World {
     if (this.restService === undefined) {
       const service = await createFakeRestApi();
       this.own(() => service.close());
+      service.onCommandAccepted((deviceId, desiredData) => {
+        this.reactToAcceptedCommand(deviceId, desiredData);
+      });
       this.restService = service;
     }
 
@@ -464,6 +467,30 @@ export class BasementGuardianWorld extends World {
     for (const cleanup of cleanups) {
       await cleanup();
     }
+  }
+
+  // The fake pump reacting to a command it accepted: the device starts the test it was asked for
+  // and says so where it says everything else, on the accepted-update topic through the broker's
+  // existing publish (D-15, SYNC-02).
+  //
+  // No shadow topic leaf is added and no desired-state publish is handled, because neither has a
+  // real counterpart. The plugin makes exactly one MQTT publish in its whole life and it is a
+  // shadow get with an empty payload, so the service never has one of the plugin's updates to
+  // reject, and the plugin does not subscribe to that leaf either. The `desiredData` body reaches
+  // the vendor over the command route as an HTTP body, never as an MQTT message.
+  //
+  // Only a self-test is reacted to. Nobody has observed a real Gemini acknowledge a mute request,
+  // report the resulting state, or time either, which is what `G-001` exists for, so a fake mute
+  // acknowledgement would be this harness answering its own design (D-16).
+  //
+  // A scenario that started no broker gets no reaction, because there is no device to react: the
+  // assertion that expected one then fails by name.
+  private reactToAcceptedCommand(deviceId: string, desiredData: Record<string, unknown>): void {
+    if (this.shadowBroker === undefined || desiredData.test_running !== true) {
+      return;
+    }
+
+    this.shadowBroker.publishReported(deviceId, { data: { test_running: true } }, this.nextShadowVersion());
   }
 
   private recordingLog(): Logging {

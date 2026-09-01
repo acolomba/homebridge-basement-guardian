@@ -64,6 +64,44 @@ export interface FakeRestApi {
    */
   holdNextRequest(): void;
 
+  /**
+   * Records the next command and never answers it, so the client's own deadline is what ends it.
+   *
+   * `holdNextRequest` holds whichever request arrives first, which on a running plugin can be the
+   * inventory poll rather than the command. This one is consumed inside the command branch, so a
+   * scenario arming it while a poll is due still holds the command. The held response is destroyed
+   * with every other connection when the service closes.
+   */
+  holdNextCommand(): void;
+
+  /**
+   * Arms exactly one subsequent command to fail with this status.
+   *
+   * The error body is the one `failNextWith` already answers, because no measurement records what
+   * the vendor sends with a refused command and a second invented shape would answer only itself.
+   */
+  rejectNextCommand(status: number): void;
+
+  /**
+   * Arms exactly one subsequent command to answer HTTP 200 with this body verbatim.
+   *
+   * This is how a scenario drives the resolved-but-not-accepted branch, where the vendor answers a
+   * success status carrying `{ "success": false }`. The fake pump does not react to a command
+   * answered this way, which is also what lets a scenario accept a command and then decide for
+   * itself when the device's confirming report arrives.
+   */
+  answerNextCommandWith(body: Record<string, unknown>): void;
+
+  /**
+   * Registers the fake pump's reaction to a command this service accepted.
+   *
+   * The handler runs with the device the command was addressed to and the parsed `desiredData` the
+   * plugin sent, after the service answered with its standing accepted body. It does not run for a
+   * command that was held, rejected, or answered from `answerNextCommandWith`: none of those is a
+   * command the device accepted.
+   */
+  onCommandAccepted(handler: (deviceId: string, desiredData: Record<string, unknown>) => void): void;
+
   /** Stops the service and resolves once every open connection is destroyed. */
   close(): Promise<void>;
 }
@@ -76,7 +114,20 @@ interface ServiceState {
   credentials: AwsCredentialsResponse;
   armedStatus: number | undefined;
   holdNext: boolean;
+  // The three command-scoped arms, each one-shot. They are deliberately separate from `holdNext`
+  // and `armedStatus` above, which the pre-route gate consumes: that gate runs before the method
+  // and the path are inspected, so a scenario arming a held command through it while a
+  // fifteen-minute inventory poll is due would hold the poll instead and fail on the wrong thing.
+  heldCommand: boolean;
+  commandStatus: number | undefined;
+  commandBody: Record<string, unknown> | undefined;
+  commandAccepted: ((deviceId: string, desiredData: Record<string, unknown>) => void) | undefined;
 }
+
+// What the vendor answers a command it accepted. `constraints.md:103` records the shape and also
+// records that it is unverified, because the 2026-08-29 measurement sent no command: a command
+// operates a real sump pump. It is the body this service has always answered.
+const ACCEPTED_COMMAND_BODY: Record<string, unknown> = { success: true };
 
 const DEFAULT_CREDENTIALS: AwsCredentialsResponse = {
   endpoint: LOOPBACK_ADDRESS,
@@ -136,7 +187,57 @@ function answerDevice(state: ServiceState, deviceId: string, response: ServerRes
   respondJson(response, 200, { device: wireDevice(device) });
 }
 
-function answer(state: ServiceState, method: string, pathname: string, response: ServerResponse): void {
+// The command body the plugin sent, as the vendor would read it. Anything the plugin could not have
+// sent answers an empty object rather than throwing, so a malformed body fails on the assertion a
+// scenario makes about it rather than inside the service.
+function desiredDataIn(body: string): Record<string, unknown> {
+  const parsed: unknown = body === '' ? undefined : JSON.parse(body);
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return {};
+  }
+
+  const desiredData = (parsed as Record<string, unknown>).desiredData;
+
+  return typeof desiredData === 'object' && desiredData !== null ? (desiredData as Record<string, unknown>) : {};
+}
+
+// Every command outcome a scenario can arm, consumed here rather than in the pre-route gate so that
+// arming one cannot capture an inventory poll or a credentials fetch. Each arm is one-shot: the
+// standing accepted answer resumes with the command after it.
+//
+// The reaction runs only for that standing answer. A held, refused, or scenario-authored answer is
+// not a command the device accepted, so the pump has nothing to react to.
+function answerCommand(state: ServiceState, deviceId: string, body: string, response: ServerResponse): void {
+  if (state.heldCommand) {
+    state.heldCommand = false;
+
+    return;
+  }
+
+  const status = state.commandStatus;
+  state.commandStatus = undefined;
+
+  if (status !== undefined) {
+    respondJson(response, status, { error: 'request_failed' });
+
+    return;
+  }
+
+  const armedBody = state.commandBody;
+  state.commandBody = undefined;
+
+  if (armedBody !== undefined) {
+    respondJson(response, 200, armedBody);
+
+    return;
+  }
+
+  respondJson(response, 200, ACCEPTED_COMMAND_BODY);
+  state.commandAccepted?.(deviceId, desiredDataIn(body));
+}
+
+function answer(state: ServiceState, method: string, pathname: string, body: string, response: ServerResponse): void {
   if (method === 'GET' && pathname === DEVICES_PATH) {
     const queued = state.queuedDeviceAnswers.shift();
     const devices = queued ?? state.devices;
@@ -151,8 +252,10 @@ function answer(state: ServiceState, method: string, pathname: string, response:
     return;
   }
 
-  if (method === 'PUT' && deviceIdIn(pathname, COMMAND_SUFFIX) !== undefined) {
-    respondJson(response, 200, { success: true });
+  const commandDeviceId = method === 'PUT' ? deviceIdIn(pathname, COMMAND_SUFFIX) : undefined;
+
+  if (commandDeviceId !== undefined) {
+    answerCommand(state, commandDeviceId, body, response);
 
     return;
   }
@@ -173,8 +276,9 @@ function answer(state: ServiceState, method: string, pathname: string, response:
 async function route(state: ServiceState, request: IncomingMessage, response: ServerResponse): Promise<void> {
   const path = request.url ?? '';
   const method = request.method ?? '';
+  const body = await readBody(request);
 
-  state.requests.push({ method, path, authorization: request.headers.authorization, body: await readBody(request) });
+  state.requests.push({ method, path, authorization: request.headers.authorization, body });
 
   if (state.holdNext) {
     state.holdNext = false;
@@ -191,7 +295,7 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
     return;
   }
 
-  answer(state, method, new URL(path, `http://${LOOPBACK_ADDRESS}`).pathname, response);
+  answer(state, method, new URL(path, `http://${LOOPBACK_ADDRESS}`).pathname, body, response);
 }
 
 /**
@@ -207,6 +311,10 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     credentials: DEFAULT_CREDENTIALS,
     armedStatus: undefined,
     holdNext: false,
+    heldCommand: false,
+    commandStatus: undefined,
+    commandBody: undefined,
+    commandAccepted: undefined,
   };
   const server = await startLoopbackServer((request, response) => route(state, request, response));
 
@@ -227,6 +335,18 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     },
     holdNextRequest(): void {
       state.holdNext = true;
+    },
+    holdNextCommand(): void {
+      state.heldCommand = true;
+    },
+    rejectNextCommand(status: number): void {
+      state.commandStatus = status;
+    },
+    answerNextCommandWith(body: Record<string, unknown>): void {
+      state.commandBody = body;
+    },
+    onCommandAccepted(handler: (deviceId: string, desiredData: Record<string, unknown>) => void): void {
+      state.commandAccepted = handler;
     },
     close(): Promise<void> {
       return server.close();
