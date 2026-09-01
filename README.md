@@ -66,10 +66,61 @@ The plugin publishes one HomeKit accessory for each Basement Guardian system on 
 - `Sump Mains Power` reports the presence of mains power, with a `Mains Power Lost` sensor beside it.
 - `Backup Battery` is a standard battery service. `Backup Battery Facts` carries the exact values the system reports.
 - Five sensors report equipment faults: `Primary Pump Fault`, `Backup Pump Fault`, `Water Sensor Fault`, `Pump Controller Link Lost`, and `Basement Guardian Offline`.
+- `System Self-Test` is a switch. Press it on to ask the system to run a self-test. The switch follows the test state the system reports.
+- `Alarm Mute` is a switch. Press it on to ask the system to mute its audible alarm. The switch follows the mute state the system reports.
 
 The plugin updates these services each time it polls the vendor cloud. It also updates them when the cloud reports a change between two polls. A backup pump run can last as little as 7 seconds. If the message for a short run does not arrive, that run stays unseen until the next poll.
 
 The plugin publishes state to HomeKit. Whether your devices notify you, and how quickly, depends on your home and on Apple rather than on this plugin.
+
+## What the Home app draws a tile for
+
+The Home app draws a tile only for a service type Apple defines. Five of the services above are vendor-defined. Their type identifiers sit outside the range Apple assigns, so the Home app has no tile to draw for them.
+
+The Home app draws a tile for these services:
+
+- `Sump Pit Flood`
+- `Primary Pump Running`
+- `Backup Pump Activated`
+- `Mains Power Lost`
+- `Primary Pump Fault`
+- `Backup Pump Fault`
+- `Water Sensor Fault`
+- `Pump Controller Link Lost`
+- `Basement Guardian Offline`
+- `System Self-Test`
+- `Alarm Mute`
+
+The Home app draws no tile for these services:
+
+- `Sump Pit Level`
+- `Primary Pump`
+- `Backup Pump`
+- `Sump Mains Power`
+- `Backup Battery Facts`
+
+`Backup Battery` is a standard battery service and is also not a tile. It appears in the accessory details and in the Home app battery list.
+
+The five vendor-defined services still publish every value. You reach them through the accessory details in the Home app. A controller such as Eve shows them directly.
+
+A room that holds only sensors does not appear in the main Home view. You can still select that room from the room list, and the Security summary shows only the sensors that are triggered at that moment. `System Self-Test` is a switch, so it makes the room appear. Keep the switch even if you never press it.
+
+## The two controls
+
+`System Self-Test` and `Alarm Mute` are the only two things this plugin can ask a system to do. Both are official commands of the vendor. The plugin sends one request and waits up to 2.5 seconds for the vendor cloud to accept it. It never sends the request again by itself, because a request that timed out can already have reached the system.
+
+The switch follows what the system reports, not what you asked for. After the vendor accepts a request, the plugin holds the switch at the value you pressed for up to 30 seconds. If the system does not confirm the change in that time, the switch returns to the reported state and the log says so. A self-test started from the vendor application or from an automatic schedule moves the same switch.
+
+The plugin refuses a press and sends nothing in these cases:
+
+- You press the switch off. The system owns when a self-test stops, and the vendor exposes no cancel command and no unmute command.
+- The plugin has no fresh state for that control. It cannot tell a running self-test from an idle system, so it does not act on a guess.
+- The plugin has confirmed that the system is offline.
+- The control already reads on. A second request would run a real pump that the vendor application would have refused.
+
+The plugin does not refuse a self-test while the system reports an equipment fault. The vendor application permits one, and that self-test is the one you run to examine a suspect pump. A self-test runs the backup pump for about 16 seconds, and the system reports when it ends.
+
+The behavior of `Alarm Mute` is provisional. Nobody has yet observed a real system answer a mute request, so four things stay unconfirmed until validation against real hardware is complete: the acknowledgement itself, how long the reported state takes to change, how long the mute lasts, and what the system does when the request fails.
 
 ## When the plugin cannot vouch for a value
 
@@ -122,7 +173,38 @@ Two do not:
 
 CAUTION: If `ignoredFaults` holds a name the plugin does not publish, or holds the same name twice, the plugin refuses the configuration and does not start. The log names the entry that is wrong and lists all seven valid names. A typo therefore leaves your pump unmonitored until you correct it.
 
-Those seven names are the only names `ignoredFaults` accepts. Every other service the plugin publishes reports what the system reports, so it cannot be removed. `Sump Pit Flood`, `Sump Pit Level`, `Primary Pump`, `Primary Pump Running`, `Backup Pump`, `Sump Mains Power`, and both backup battery services stay in your home.
+Those seven names are the only names `ignoredFaults` accepts. Every other service either reports what the system reports or carries an official control, so you cannot remove it. `Sump Pit Flood`, `Sump Pit Level`, `Primary Pump`, `Primary Pump Running`, `Backup Pump`, `Sump Mains Power`, both backup battery services, `System Self-Test`, and `Alarm Mute` stay in your home.
+
+## What the activation record counts
+
+`Primary Pump` and `Backup Pump` each carry a record of what this plugin watched. `Observation Start` is the time the plugin first observed that pump. `Activations Observed Since Observation Start` counts the runs it saw after that time. `Last Observed Activation At` is when it saw the most recent one.
+
+The count is not a figure the system reports about its own life. The system publishes no such total. The count holds the runs this plugin watched, and nothing else.
+
+If the plugin stops, or the vendor cloud stops answering, the pump keeps running and the plugin does not see it. The record does not fill that gap afterward. The count and the last-activation time both stay where the outage left them.
+
+The two counts are not built the same way:
+
+- The primary count holds only the runs the plugin watched live. The system reports no timestamp for the primary pump, so a missed primary run is lost.
+- The backup count holds the runs the plugin watched live plus runs it recovered afterward. The system reports the time of the last backup run. When that time moves past the last one the plugin recorded, the plugin adds exactly one run.
+
+A recovered timestamp proves that at least one run happened. It does not prove how many. Neither count is a lifetime total for the pump.
+
+A backup pump run lasts about 7 to 15 seconds. The plugin polls the vendor cloud about every 15 minutes by default. A run that starts and ends between two polls is invisible to polling. The vendor cloud also pushes a change as it happens, and that live push is what makes a count of primary runs possible at all.
+
+On a fresh install the plugin does not count a run from before it started to watch. The first backup timestamp it sees becomes the starting point rather than an activation. `Observation Start` records that moment.
+
+The plugin publishes no measure of how complete a count is. A count of 4 does not tell you whether the plugin watched for a day or for a year without a break. `Observation Start` tells you when the record began, and nothing tells you how much of the time since then the plugin was watching.
+
+`Backup Pump` also carries `Last Activation Was Self-Test`. A self-test runs the backup pump, so a self-test run is in the count like any other run. This value records whether the last run was a self-test. `Primary Pump` does not carry it, because the system reports no timestamp that can classify a primary run.
+
+## Apple's Activity History
+
+Apple Home keeps its own Activity History for eligible accessories, including contact sensors. Apple documents up to 30 days. It needs a supported home hub and the current Home architecture. See Apple's [Activity History requirements](https://support.apple.com/en-gb/105011).
+
+Activity History belongs to your controller, not to this plugin. The plugin cannot give it a retention setting. The plugin cannot put a missed event into it afterward. If the plugin did not see a pump run, no history shows that run.
+
+Activity History is not how this plugin delivers safety state. The plugin publishes state to HomeKit. Whether your devices notify you, and how quickly, depends on your home and on Apple rather than on this plugin.
 
 ## Values that are estimates
 
