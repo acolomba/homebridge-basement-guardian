@@ -174,6 +174,7 @@ const HAP_NAMESPACE = HAP as unknown as API['hap'];
 // The accessory identifier the plugin derives for this device, taken from the same derivation the
 // plugin uses rather than restated as a literal.
 const ACCESSORY_UUID = HAP.uuid.generate(DEVICE_ID);
+const SECOND_ACCESSORY_UUID = HAP.uuid.generate(SECOND_DEVICE_ID);
 
 function geminiDevice(): ApiDevice {
   return {
@@ -1281,22 +1282,23 @@ describe('registerDiscoveredDevices', () => {
   });
 
   // The store is built per accessory at the one call site that builds an accessory, so no shared or
-  // process-wide store exists. A shared one would ask Homebridge to store whichever accessory it
-  // closed over, which is what this case would catch: only the accessory that observed the
-  // activation is named (CTRL-01, D-008).
+  // process-wide store exists. The pump that runs here is deliberately the second device's: a store
+  // that closed over one accessory for the whole process would name the first one, and a case that
+  // ran the first device's pump would pass against exactly that defect (CTRL-01, D-008).
   test('asks Homebridge to store the accessory whose snapshot counted an activation, and no other', () => {
     // arrange
     const updateCalls: FakeAccessory[][] = [];
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry() });
+    const secondDevice = { ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2', name: 'Second System' };
     store.applyDiscovery(geminiDevice());
-    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2', name: 'Second System' });
+    store.applyDiscovery(secondDevice);
     registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
     const afterTheSeeds = updateCalls.length;
 
     // act
-    store.applyDiscovery({ ...geminiDevice(), data: { backup_pump_running: true } });
+    store.applyDiscovery({ ...secondDevice, data: { backup_pump_running: true } });
     registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
 
     // assert
@@ -1305,7 +1307,7 @@ describe('registerDiscoveredDevices', () => {
         seeds: afterTheSeeds,
         sinceTheSeeds: updateCalls.slice(afterTheSeeds).map((call) => call.map((persisted) => persisted.UUID)),
       },
-      { seeds: 2, sinceTheSeeds: [[ACCESSORY_UUID]] },
+      { seeds: 2, sinceTheSeeds: [[SECOND_ACCESSORY_UUID]] },
     );
   });
 

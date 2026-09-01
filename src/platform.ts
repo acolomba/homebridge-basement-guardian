@@ -32,11 +32,23 @@ const SALT_BYTES = 16;
  * `device` is optional so an accessory restored from before this field
  * existed does not fail its structural type; the platform sets it on every
  * accessory it creates from now on.
+ *
+ * The three record members are optional for the same reason: an accessory
+ * restored from before this release carries none of them, and absent is the
+ * ordinary first-run state rather than an error. Each is typed by indexing
+ * `AccessoryContext`, so one declaration stays the source of what is stored
+ * (CTRL-01, D-008).
  */
 export interface BasementGuardianAccessoryContext extends UnknownContext {
   device?: { deviceId: string; deviceTypeId: string };
   /** The vendor name last adopted for this accessory's display name (DEV-06). */
   lastVendorName?: AccessoryContext['lastVendorName'];
+  /** What the plugin observed the primary pump do since it began watching it (CTRL-01). */
+  primaryPump?: AccessoryContext['primaryPump'];
+  /** The same for the backup pump (CTRL-01). */
+  backupPump?: AccessoryContext['backupPump'];
+  /** The device timestamps already turned into an activation record (CTRL-01). */
+  watermarks?: AccessoryContext['watermarks'];
 }
 
 /** A Homebridge accessory carrying this plugin's context. */
