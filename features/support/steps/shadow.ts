@@ -146,16 +146,21 @@ async function acceptedConnections(this: BasementGuardianWorld): Promise<void> {
 
 When('the broker accepts connections', acceptedConnections);
 
-async function publishHeartbeat(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+async function publishReportedFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const broker = await this.broker();
   await awaitSubscription(this);
 
-  // The vendor carries telemetry under `reported.data`, so a heartbeat's fields go there rather
-  // than directly under `reported`.
+  // The vendor carries telemetry under `reported.data`, so a report's fields go there rather than
+  // directly under `reported`.
   broker.publishReported(theDeviceId(this), { data: fieldsOf(table) }, this.nextShadowVersion());
 }
 
-When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishHeartbeat);
+When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
+
+// The same reported patch under a name that claims nothing about a heartbeat. A heartbeat carries
+// seven fields and `test_running` is not among them, so a scenario driving a control's reported
+// state says what it means: the device reported a state change.
+When('the device reports these fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
 
 async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();

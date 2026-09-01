@@ -49,6 +49,20 @@ Feature: Merging device state
       | primary_pump_running | true |
     Then the plugin reports 0 canonical changes
 
+  # The other half of the same rule. A requested value the device sends is rejected above, and a
+  # value this plugin itself requested never reaches device state either: reported state stays
+  # authoritative between an accepted command and the device's own report (CTRL-05, D-037).
+  Scenario: A requested self-test never becomes device state
+    Given the vendor accepts the next command with no device report
+    When the plugin starts
+    Then the plugin publishes the "System Self-Test" service
+    When a controller turns on the "System Self-Test" switch
+    Then the vendor receives 1 self-test command
+    Then the "System Self-Test" switch reads on
+    Then the canonical snapshot carries these fields:
+      | test_running | false |
+    Then the canonical snapshot carries no shadow version
+
   Scenario: An identical heartbeat reports no change
     When the plugin starts
     When the device publishes these heartbeat fields:

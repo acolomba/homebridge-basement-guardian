@@ -196,6 +196,10 @@ export class BasementGuardianWorld extends World {
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
 
+  // What the last controller write answered. The wrapper distinguishes an accepted write, which
+  // carries no status, from a scenario in which no step has written to a control at all.
+  private lastWrite: { status: number | undefined } | undefined = undefined;
+
   private publishedVersion = 0;
 
   // A stable bound reference, because the listener has to be removed again at the end of the
@@ -456,6 +460,20 @@ export class BasementGuardianWorld extends World {
     }
 
     return this.lastResponse;
+  }
+
+  /** Records how a controller write ended: the HAP status that refused it, or nothing when it was accepted. */
+  recordWriteOutcome(status: number | undefined): void {
+    this.lastWrite = { status };
+  }
+
+  /** The status the last controller write was refused with, or `undefined` when it was accepted. */
+  writeStatus(): number | undefined {
+    if (this.lastWrite === undefined) {
+      throw new Error('no step has written to a control yet');
+    }
+
+    return this.lastWrite.status;
   }
 
   /** Runs every registered teardown step in reverse order. */
