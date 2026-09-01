@@ -17,6 +17,7 @@ const SELF_TEST = 'system-self-test';
 // The statuses this binder answers, written out here rather than read off the namespace, so a
 // drifted mapping fails at the assertion as well as behind it (D-04).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
+const RESOURCE_BUSY = -70403;
 const SERVICE_COMMUNICATION_FAILURE = -70402;
 const OPERATION_TIMED_OUT = -70408;
 const SUCCESS = 0;
@@ -360,4 +361,32 @@ test('names the capability and the cause in the one line a refusal logs, and quo
 
   // assert
   assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
+});
+
+// Without a decoded value the plugin cannot tell a running test from an idle one, so an on request
+// on that basis would operate a real sump pump on a guess (D-031, D-014).
+test('refuses an on request while the capability has no decoded reported value, and sends nothing', async () => {
+  // arrange
+  const { commands, sends } = recordingCommands();
+  const { binder, service } = boundSwitch({ commands }, () => undefined);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ sends, pending: [...binder.pending] }, { sends: [], pending: [] });
+});
+
+// The official Gemini client refuses a duplicate, and CTRL-03 requires it regardless: a second
+// press must not operate a real sump pump the vendor would have refused (D-07).
+test('refuses an on request while the capability already reads active, and sends nothing', async () => {
+  // arrange
+  const { commands, sends } = recordingCommands();
+  const { binder, service } = boundSwitch({ commands }, () => true);
+
+  // act
+  await assertRefused(service, true, RESOURCE_BUSY);
+
+  // assert
+  assert.deepStrictEqual({ sends, pending: [...binder.pending] }, { sends: [], pending: [] });
 });
