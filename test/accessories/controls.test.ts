@@ -14,6 +14,15 @@ import type { API, Logging, Service } from 'homebridge';
 const DEVICE_ID = 'account-1_serial-1';
 const SELF_TEST = 'system-self-test';
 
+// Fixture secrets a log line must never quote. Neither reaches this module, which is the point: the
+// assertion states what may not appear rather than trusting that nothing passes it in.
+const BEARER_TOKEN = 'id-token-1';
+const BASE_URL = 'https://api.example.test';
+
+// The outcome the command port answers for a write no local rule refuses. A local refusal never
+// reaches it, so the value it carries is irrelevant to those rows.
+const ACCEPTED: CommandOutcome = { accepted: true };
+
 // The statuses this binder answers, written out here rather than read off the namespace, so a
 // drifted mapping fails at the assertion as well as behind it (D-04).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
@@ -97,6 +106,7 @@ interface BinderOverrides {
   timers?: Timers;
   republish?: () => void;
   log?: Logging;
+  offlineConfirmed?: () => boolean;
 }
 
 function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
@@ -106,6 +116,7 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
     timers: overrides.timers ?? recordingTimers().timers,
     commands: overrides.commands ?? recordingCommands().commands,
     deviceId: DEVICE_ID,
+    offlineConfirmed: overrides.offlineConfirmed ?? ((): boolean => false),
     republish: overrides.republish ?? ((): void => undefined),
   };
 }
@@ -360,33 +371,173 @@ test('names the capability and the cause in the one line a refusal logs, and quo
   await assertRefused(service, true, OPERATION_TIMED_OUT);
 
   // assert
-  assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
+  assert.deepStrictEqual(warnings, ['The self-test request did not take effect: timed-out. It is not retried.']);
 });
 
-// Without a decoded value the plugin cannot tell a running test from an idle one, so an on request
-// on that basis would operate a real sump pump on a guess (D-031, D-014).
-test('refuses an on request while the capability has no decoded reported value, and sends nothing', async () => {
-  // arrange
-  const { commands, sends } = recordingCommands();
-  const { binder, service } = boundSwitch({ commands }, () => undefined);
+// The six ways one write can end, in the order the binder evaluates them: four the plugin answers
+// by itself and two the vendor answers. Every case below is read off this one table, so a cause
+// that stops being refused, or that starts answering a different status, fails by name.
+interface RefusalCase {
+  cause: string;
+  value: unknown;
+  reported: boolean | undefined;
+  offlineConfirmed: boolean;
+  outcome: CommandOutcome;
+  status: number;
+}
 
+const LOCAL_REFUSALS: readonly RefusalCase[] = [
+  { cause: 'a write of anything but on', value: false, reported: false, offlineConfirmed: false, outcome: ACCEPTED, status: NOT_ALLOWED_IN_CURRENT_STATE },
+  {
+    cause: 'a capability whose reported field has not decoded',
+    value: true,
+    reported: undefined,
+    offlineConfirmed: false,
+    outcome: ACCEPTED,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+  },
+  { cause: 'a device confirmed offline', value: true, reported: false, offlineConfirmed: true, outcome: ACCEPTED, status: NOT_ALLOWED_IN_CURRENT_STATE },
+  {
+    cause: 'a duplicate request while the capability already reads active',
+    value: true,
+    reported: true,
+    offlineConfirmed: false,
+    outcome: ACCEPTED,
+    status: RESOURCE_BUSY,
+  },
+];
+
+const VENDOR_REFUSALS: readonly RefusalCase[] = [
+  {
+    cause: 'a vendor error',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    outcome: { accepted: false, failure: 'vendor-error' },
+    status: SERVICE_COMMUNICATION_FAILURE,
+  },
+  {
+    cause: 'an exceeded deadline',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    outcome: { accepted: false, failure: 'timed-out' },
+    status: OPERATION_TIMED_OUT,
+  },
+];
+
+const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS];
+
+// The refusal's clearing push, told apart from any other deferral by the delay it was armed at.
+function clearingPushesIn(deferrals: readonly Deferral[]): readonly Deferral[] {
+  return deferrals.filter((deferral) => deferral.delayMs === 0);
+}
+
+// One write against one row of the table, with everything the assertions read back.
+async function refuse(
+  refusalCase: RefusalCase,
+): Promise<{ thrown: unknown; sends: string[]; deferrals: Deferral[]; binder: ControlBinder; service: FakeHapService }> {
+  const { commands, sends } = recordingCommands(refusalCase.outcome);
+  const { timers, deferrals } = recordingTimers();
+  const { binder, service } = boundSwitch({ commands, timers, offlineConfirmed: () => refusalCase.offlineConfirmed }, () => refusalCase.reported);
+  let thrown: unknown = undefined;
+
+  try {
+    await onCharacteristic(service).handleSetRequest(refusalCase.value);
+  } catch (error: unknown) {
+    thrown = error;
+  }
+
+  return { thrown, sends, deferrals, binder, service };
+}
+
+test('answers each of the six refusal causes with the status that describes it', async () => {
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const answered = [];
+
+  for (const refusalCase of REFUSALS) {
+    answered.push((await refuse(refusalCase)).thrown);
+  }
 
   // assert
-  assert.deepStrictEqual({ sends, pending: [...binder.pending] }, { sends: [], pending: [] });
+  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70403, -70402, -70408]);
 });
 
-// The official Gemini client refuses a duplicate, and CTRL-03 requires it regardless: a second
-// press must not operate a real sump pump the vendor would have refused (D-07).
-test('refuses an on request while the capability already reads active, and sends nothing', async () => {
+for (const refusalCase of LOCAL_REFUSALS) {
+  test(`sends nothing at all for ${refusalCase.cause}`, async () => {
+    // act
+    const { thrown, sends, binder } = await refuse(refusalCase);
+
+    // assert
+    assert.deepStrictEqual({ thrown, sends, pending: [...binder.pending] }, { thrown: refusalCase.status, sends: [], pending: [] });
+  });
+}
+
+for (const refusalCase of REFUSALS) {
+  test(`arms one clearing push for ${refusalCase.cause} and leaves the characteristic readable`, async () => {
+    // arrange
+    const { deferrals, service } = await refuse(refusalCase);
+
+    // act
+    const pushes = clearingPushesIn(deferrals);
+
+    for (const push of pushes) {
+      push.run();
+    }
+
+    // assert
+    assert.deepStrictEqual({ pushes: pushes.length, statusCode: onCharacteristic(service).statusCode }, { pushes: 1, statusCode: SUCCESS });
+  });
+}
+
+for (const refusalCase of VENDOR_REFUSALS) {
+  test(`attempts ${refusalCase.cause} exactly once and drops the pending entry`, async () => {
+    // act
+    const { thrown, sends, binder } = await refuse(refusalCase);
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, sends, pending: [...binder.pending] },
+      { thrown: refusalCase.status, sends: [`${DEVICE_ID} self-test true`], pending: [] },
+    );
+  });
+}
+
+// Every line a refusal writes, across all six causes. A log is a channel the plugin controls, so
+// what it may not carry is asserted directly: a bearer token, the vendor base URL, or the device
+// identifier, which reads `<account-id>_<serial-number>` and so carries an account identifier
+// (AUTH-02).
+test('names the capability in every refusal line and quotes no token, URL, or device identifier', async () => {
   // arrange
-  const { commands, sends } = recordingCommands();
-  const { binder, service } = boundSwitch({ commands }, () => true);
+  const warnings: string[] = [];
+  const log = Object.assign(() => undefined, {
+    prefix: 'basement guardian',
+    debug: () => undefined,
+    error: () => undefined,
+    info: () => undefined,
+    log: () => undefined,
+    success: () => undefined,
+    warn: (message: string) => {
+      warnings.push(message);
+    },
+  });
 
   // act
-  await assertRefused(service, true, RESOURCE_BUSY);
+  for (const refusalCase of REFUSALS) {
+    const { commands } = recordingCommands(refusalCase.outcome);
+    const { service } = boundSwitch({ commands, log, offlineConfirmed: () => refusalCase.offlineConfirmed }, () => refusalCase.reported);
+
+    await assertRefused(service, refusalCase.value, refusalCase.status);
+  }
 
   // assert
-  assert.deepStrictEqual({ sends, pending: [...binder.pending] }, { sends: [], pending: [] });
+  assert.deepStrictEqual(
+    warnings.map((warning) => ({
+      capability: warning.includes('self-test'),
+      token: warning.includes(BEARER_TOKEN),
+      baseUrl: warning.includes(BASE_URL),
+      deviceId: warning.includes(DEVICE_ID),
+    })),
+    Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: false })),
+  );
 });

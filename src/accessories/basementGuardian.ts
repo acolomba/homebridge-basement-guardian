@@ -388,6 +388,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return typeof reported === 'boolean' ? reported : undefined;
   }
 
+  // Whether the confirmation run has been reached. One expression, read by both
+  // the rows and the write path, so the fact a row publishes from and the fact a
+  // write is refused on cannot disagree (RES-03, D-09).
+  function offlineConfirmed(): boolean {
+    return offlineCount >= offlineThreshold;
+  }
+
   // Everything a row reads, assembled once from the accessory's own state so
   // the resolved and unresolved paths cannot drift apart in what they hand a
   // row.
@@ -395,7 +402,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return {
       decoded,
       untrustedScopes: untrusted,
-      offlineConfirmed: offlineCount >= offlineThreshold,
+      offlineConfirmed: offlineConfirmed(),
       controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
       pendingControls,
     };
@@ -439,6 +446,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     timers: options.timers,
     commands: options.commands,
     deviceId,
+    offlineConfirmed,
     republish: () => {
       republishControlRows(controls.pending);
     },

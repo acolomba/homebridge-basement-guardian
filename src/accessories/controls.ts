@@ -57,6 +57,14 @@ export interface ControlBinderOptions {
   /** The device every command from this binder is addressed to. */
   deviceId: string;
   /**
+   * Whether the configured run of consecutive disconnected polls has been reached.
+   *
+   * The accessory answers this from the same count it hands `ProjectionInput`,
+   * so the fact a row publishes from and the fact a write is refused on cannot
+   * disagree (RES-03, D-09).
+   */
+  offlineConfirmed: () => boolean;
+  /**
    * Republishes the control rows, and only those.
    *
    * Nothing else changed when a write was refused, and a full republish from a
@@ -96,6 +104,81 @@ export interface ControlBinder {
    * and a second confirming report both harmless (CTRL-03, D-037).
    */
   reconcile(capability: DeviceCapability, reported: boolean | undefined): void;
+}
+
+// Everything a local rule reads about one write. Both device facts are sampled
+// once, before the first rule runs, so no two rules can disagree about the same
+// press.
+interface ControlRequest {
+  value: CharacteristicValue;
+  reported: boolean | undefined;
+  offlineConfirmed: boolean;
+}
+
+// One refusal the plugin answers on its own: what decides it, the status that
+// describes it, and the cause its log line names. Nothing reaches the network
+// for any of them, so a press the official Gemini client would itself have
+// refused never operates a real sump pump (D-07, CTRL-03).
+interface LocalRefusal {
+  applies: (request: ControlRequest) => boolean;
+  status: (hap: API['hap']) => number;
+  cause: string;
+}
+
+// A write of anything but the capability's one accepted value is a cancel or an
+// unmute. The device owns when a test stops, the vendor exposes no cancel, and
+// mute has no off command, so this plugin answers neither rather than inventing
+// one (D-018, D-019, CTRL-03).
+function isNotAnOnRequest(request: ControlRequest): boolean {
+  return request.value !== true;
+}
+
+// The capability's own reported field has not decoded. Without a decoded value
+// the plugin cannot tell a running test from an idle one, and issuing a command
+// on that basis would operate a real sump pump on a guess, so this answers the
+// same status a confirmed-offline device does: the command is not allowed in
+// the state the plugin can actually vouch for (D-031, D-014).
+function hasNoFreshState(request: ControlRequest): boolean {
+  return request.reported === undefined;
+}
+
+// The device is confirmed offline. This is the one condition the official
+// Gemini client disables both commands on, and refusing here also stops a press
+// on an unreachable device from blocking HomeKit for the whole command deadline
+// (D-07).
+//
+// Equipment faults are deliberately absent. The official client permits a
+// self-test while equipment faults are present and disables the command only
+// when the device is offline, so the binder reads confirmed-offline state and
+// the capability's own reported value and nothing else. Inventing a physical
+// eligibility rule the official client does not have would refuse exactly the
+// test an owner runs to check a suspect pump (D-018).
+function isConfirmedOffline(request: ControlRequest): boolean {
+  return request.offlineConfirmed;
+}
+
+// The capability already reads active, so this press is a duplicate. The
+// official client refuses one and `CTRL-03` requires it regardless: a second
+// request would operate a real sump pump the vendor would not have (D-07).
+function isAlreadyActive(request: ControlRequest): boolean {
+  return request.reported === true;
+}
+
+function notAllowedInCurrentState(hap: API['hap']): number {
+  return hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE;
+}
+
+// The rules in the order they are evaluated, cheapest and most local first. The
+// first that applies answers the write; the rest are never consulted.
+const LOCAL_REFUSALS: readonly LocalRefusal[] = [
+  { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
+  { applies: hasNoFreshState, status: notAllowedInCurrentState, cause: 'the plugin has no fresh state for it' },
+  { applies: isConfirmedOffline, status: notAllowedInCurrentState, cause: 'the device is confirmed offline' },
+  { applies: isAlreadyActive, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'it already reads active' },
+];
+
+function localRefusalFor(request: ControlRequest): LocalRefusal | undefined {
+  return LOCAL_REFUSALS.find((refusal) => refusal.applies(request));
 }
 
 // The status each cause answers, so a log line and an Eve-class controller read
@@ -139,7 +222,7 @@ function clearRefusal(hap: API['hap'], service: Service, republish: () => void, 
  * one, and it is called with a service the catalogue has already published.
  */
 export function createControlBinder(options: ControlBinderOptions): ControlBinder {
-  const { hap, log, timers, commands, deviceId, republish } = options;
+  const { hap, log, timers, commands, deviceId, offlineConfirmed, republish } = options;
 
   // What was asked for, per capability, from the moment a write is accepted for
   // sending until the device confirms it. The value is kept beside the key
@@ -154,15 +237,20 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }, 0);
   }
 
-  // A write of anything but `true` is a cancel or an unmute. The device owns
-  // when a test stops, the vendor exposes no cancel, and mute has no off
-  // command, so this plugin answers neither rather than inventing one
-  // (D-018, D-019, CTRL-03).
-  function refuseValue(service: Service, capability: DeviceCapability, reported: () => boolean | undefined): never {
+  // A refusal the plugin answered by itself. Nothing was sent, so nothing is
+  // pending to drop; the clearing push is armed before the throw because HAP
+  // stores the status on the characteristic and answers it to every later read
+  // until something pushes a value.
+  //
+  // The line names the capability and a cause and nothing else. It carries no
+  // device identifier, because a vendor `deviceId` reads
+  // `<account-id>_<serial-number>` and an account identifier does not belong in
+  // a log, and no URL, header value, token, or response body (AUTH-02).
+  function refuseLocally(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, refusal: LocalRefusal): never {
     armClearingPush(service, reported);
-    log.warn(`Refused ${capability} on ${deviceId}: only an on request is supported, and the device reports when the condition ends.`);
+    log.warn(`Refused ${capability}: ${refusal.cause}.`);
 
-    return refuse(hap, hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
+    return refuse(hap, refusal.status(hap));
   }
 
   // The vendor refused or never answered. The pending entry is dropped first, so
@@ -171,14 +259,16 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   function refuseOutcome(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, failure: CommandFailure): never {
     requested.delete(capability);
     armClearingPush(service, reported);
-    log.warn(`The ${capability} request on ${deviceId} did not take effect: ${failure}. It is not retried.`);
+    log.warn(`The ${capability} request did not take effect: ${failure}. It is not retried.`);
 
     return refuse(hap, statusOf(hap, failure));
   }
 
   async function answerWrite(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, value: CharacteristicValue): Promise<void> {
-    if (value !== true) {
-      refuseValue(service, capability, reported);
+    const refusal = localRefusalFor({ value, reported: reported(), offlineConfirmed: offlineConfirmed() });
+
+    if (refusal !== undefined) {
+      refuseLocally(service, capability, reported, refusal);
     }
 
     // From here the row withholds `On`, so the accessory's next update cannot

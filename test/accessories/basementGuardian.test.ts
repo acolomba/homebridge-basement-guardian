@@ -1874,6 +1874,57 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // Equipment faults are not eligibility. The official Gemini client permits a self-test while
+  // equipment faults are present and disables the command only when the device is offline, so a
+  // plugin that refused here would refuse exactly the test an owner runs to check a suspect pump
+  // (D-018).
+  test('CTRL-03 sends a self-test while every reported equipment fault is active', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { commands, sends } = recordingCommands();
+    geminiAccessory(
+      accessory,
+      {
+        primary_pump_fault: true,
+        backup_pump_fault: true,
+        backup_pump_fuse_blown: true,
+        water_sensor_fault: true,
+        battery_voltage_low: true,
+        test_running: false,
+      },
+      { commands },
+    );
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+
+    // assert
+    assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
+  });
+
+  // The write path reads the same confirmation run the rows publish from, so a device HomeKit is
+  // already told is offline never has a command sent to it (D-07, RES-03).
+  test('CTRL-03 refuses a self-test on a confirmed-offline device and sends nothing', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, offlineConfirmationPollCount: 1 });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ connected: false, data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert
+    assert.deepStrictEqual(sends, []);
+  });
+
   for (const module of ACCESSORY_MODULES) {
     test(`${module} signals no untrusted scope through an errored characteristic`, async () => {
       // act
