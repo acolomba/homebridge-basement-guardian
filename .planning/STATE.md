@@ -33,7 +33,8 @@ Status: Phase complete — ready for verification
 Last activity: 2026-09-01 — Phase 04 research complete; paused on six open decisions
 
 Phase 04 (Pump Records and Official Controls) has completed research on branch
-`features/phase-04-pump-records-and-official-controls`. No implementation exists. It is
+`features/phase-04-pump-records-and-official-controls`. No implementation exists: the
+diff over `src/`, `test/` and `features/` against the branch point `552c57e` is empty. It is
 blocked on six maintainer decisions listed in
 `.planning/phases/04-pump-records-and-official-controls/.continue-here.md`.
 
@@ -314,7 +315,8 @@ Last session: 2026-09-01T04:40:00.000Z
 Stopped at: Phase 4 research complete; six decisions put to the maintainer, none ruled on
 Resume file: .planning/phases/04-pump-records-and-official-controls/.continue-here.md
 
-Phase 4 research is complete and committed; no code was written. Six decisions are OPEN
+Phase 4 research is complete and committed; no code was written (empty `src/`, `test/`,
+`features/` diff against the branch point `552c57e`). Six decisions are OPEN
 and are enumerated in the resume file with a recommendation each. Decisions 1 (narrow
 `D-15` to drop the fake broker's `update/rejected` leaf), 2 (allow a test-only
 `@homebridge/hap-nodejs` import for a fake-fidelity check) and 3 (accept a deferred push
