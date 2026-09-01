@@ -349,6 +349,8 @@ now lists what each ruling adds to the test surface.
 Nothing is open. Next step is `/gsd-plan-phase 4`. Do not re-run research — `04-RESEARCH.md` is
 complete and its findings are traced to quoted source lines.
 
-**Still unpushed.** `origin` holds only `main`, `phase-01` and `phase-02`. Neither the Phase 3 nor
-the Phase 4 branch has ever been pushed — roughly 25,400 insertions across ~100 files exist on one
-disk only. Phase 4 contains all of Phase 3, so one push preserves both.
+**Backed up.** `features/phase-04-pump-records-and-official-controls` was pushed to `origin` on
+2026-09-01 at the maintainer's instruction and now tracks it; local and remote heads both read
+`b8a5673`, verified. Phase 3's shipped implementation is preserved inside this branch's history.
+No PR was opened and nothing merged. Commits made after `b8a5673` are unpushed until someone
+pushes them.
