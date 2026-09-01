@@ -7,17 +7,19 @@ import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
+import { geminiFamily } from '../../src/device/gemini.js';
 import { systemTimers } from '../../src/runtime/timers.js';
 
-import type { FakeHapService, FakeServiceClass } from '../../features/support/fakeHap.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../../features/support/fakeHap.js';
 import type { FakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from '../../src/accessories/services.js';
-import type { DeviceFamily, FieldViolation } from '../../src/device/family.js';
+import type { DeviceCapability, DeviceFamily, FieldViolation } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { CommandPort } from '../../src/runtime/commandPort.js';
 import type { Timers } from '../../src/runtime/timers.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
 
@@ -37,7 +39,7 @@ const FLOODING_LEVEL_PERCENT = 100;
 
 // Every scope the accessory degrades when no adapter resolves, in the stable order `untrusted` must
 // expose them -- written independently of the production constant.
-const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault'];
+const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'self-test', 'alarm-mute'];
 
 // The published HAP service type of every row, written out here rather than read off the catalogue,
 // so a row that changed service type fails at the descriptor as well as behind it. The two backup
@@ -50,6 +52,7 @@ const SUMP_PIT_SERVICE_UUID = 'ed31d704-44c8-4f20-9de0-6f29b33ef607';
 const PUMP_SERVICE_UUID = '523f059e-deaa-4674-bbb2-980f9f7da7ec';
 const SUMP_MAINS_POWER_SERVICE_UUID = 'fbb41424-0697-4ebe-ba89-7ba8ea254623';
 const BACKUP_BATTERY_SERVICE_UUID = 'eb139c1e-aa1d-4318-bee9-60a338d99686';
+const SWITCH_UUID = '00000049-0000-1000-8000-0026BB765291';
 
 // Every service this accessory publishes, in the catalogue's declared order.
 const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
@@ -67,6 +70,7 @@ const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
   { kind: 'backup-pump-fault', subtype: 'backup-pump-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Fault' },
   { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Water Sensor Fault' },
   { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost', serviceUuid: CONTACT_SENSOR_UUID, name: 'Pump Controller Link Lost' },
+  { kind: 'system-self-test', subtype: 'system-self-test', serviceUuid: SWITCH_UUID, name: 'System Self-Test' },
   { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline', serviceUuid: CONTACT_SENSOR_UUID, name: 'Basement Guardian Offline' },
 ];
 
@@ -87,12 +91,21 @@ const PUBLISHED_SCOPES: readonly TrustScope[] = [
   'fault',
   'fault',
   'fault',
+  'self-test',
   'connectivity',
 ];
 
 // The one row that keeps publishing while a lost controller link makes its own scope untrusted: the
 // network module reports that link state directly, so the adapter for it stays truthful (D-11).
 const CONTROLLER_LINK_ROW = 'Pump Controller Link Lost';
+
+// The one control row this version publishes. It is published from the first update whatever its
+// scope reports, because a room holding only sensors does not render in Apple Home at all and this
+// Switch is what makes the accessory's room visible (D-03).
+const SELF_TEST_ROW = 'System Self-Test';
+
+// The status a refused write answers, written out here rather than read off the namespace (D-04).
+const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
 
 // Every published service that reads the `fault` scope, whether or not it is filed under it.
 // `Sump Pit Level` reads the reported water sensor fault beside its level, and both pump services
@@ -148,6 +161,38 @@ void ({ deviceId: DEVICE_ID, services: [], untrusted: [] } satisfies BasementGua
 void ({ deviceId: DEVICE_ID, services: ['sump-pit-flood'], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
 // @ts-expect-error a degraded scope is a keyed descriptor, not a bare name
 void ({ deviceId: DEVICE_ID, services: [], untrusted: ['water'], update: () => undefined } satisfies BasementGuardianAccessory);
+
+// A full, legal Gemini telemetry payload. The trust-scope cases below run the real adapter rather
+// than a stand-in, because the claim they check is about the whole chain -- a wire field, the scope
+// that owns it, and the services that scope deactivates -- and a stand-in family would let this
+// module assert its own answer (D-02, D-014).
+const GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
+  water_level: 1,
+  primary_pump_running: false,
+  primary_pump_fault: false,
+  backup_pump_running: false,
+  backup_pump_fault: false,
+  backup_pump_fuse_blown: false,
+  ac_power: true,
+  battery_charging: false,
+  battery_voltage_low: false,
+  battery_health: 8,
+  hours_of_protection: 8,
+  water_sensor_fault: false,
+  serial_communications: true,
+  alarm_audio_muted: false,
+  test_running: false,
+  offline: false,
+};
+
+// Every `TrustScope` member, written out here rather than imported, so the accessory's own list and
+// the union cannot drift apart without a case saying so.
+const EVERY_TRUST_SCOPE: readonly TrustScope[] = ['alarm-mute', 'battery', 'connectivity', 'fault', 'power', 'pump', 'self-test', 'water'];
+
+// The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
+// field would deactivate two live safety signals, and it says nothing about whether a pump is
+// running (D-02, D-014).
+const PUMP_SERVICES: readonly string[] = ['Primary Pump', 'Backup Pump', 'Primary Pump Running', 'Backup Pump Activated'];
 
 // The one device identity a case asks for when it wants the platform to have set none at all.
 const NO_DEVICE_CONTEXT = Symbol('no device context');
@@ -225,6 +270,21 @@ function recordingTimers(): { timers: Timers; calls: string[] } {
   return { timers, calls };
 }
 
+// A `CommandPort` stand-in that records every send and accepts it. The accessory never sends on its
+// own, so a case asserts this recorder stayed empty across a whole update.
+function recordingCommands(): { commands: CommandPort; sends: string[] } {
+  const sends: string[] = [];
+  const commands: CommandPort = {
+    send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
+      sends.push(`${deviceId} ${capability} ${String(requested)}`);
+
+      return Promise.resolve({ accepted: true });
+    },
+  };
+
+  return { commands, sends };
+}
+
 // A deliberately deferred variant of the same transition, private to this module and never a
 // production option. Every immediacy layer is shown to catch it, which is what makes a green layer
 // evidence that the accessory did not defer rather than evidence that the layer cannot tell.
@@ -283,6 +343,7 @@ function buildOptions(
     registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }),
     log: silentLog(),
     timers: recordingTimers().timers,
+    commands: recordingCommands().commands,
     ...rest,
     accessory: accessory as unknown as PlatformAccessory,
   };
@@ -312,6 +373,8 @@ function decodedState(mainsPresent?: boolean): Record<string, unknown> {
     battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
     fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
     connectivity: { reportedOffline: false },
+    'self-test': { running: false, testedAt: undefined },
+    'alarm-mute': { muted: false },
     ...(mainsPresent === undefined ? {} : { power: { mainsPresent } }),
   };
 }
@@ -349,6 +412,8 @@ function linkFamily({ linkPresent, mainsPresent = true, flooded = false, violati
       battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
       fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: linkPresent },
       connectivity: { reportedOffline: false },
+      'self-test': { running: false, testedAt: undefined },
+      'alarm-mute': { muted: false },
     }),
   });
 }
@@ -359,6 +424,23 @@ function linkOutcome(overrides: LinkOverrides): FamilyOutcome<unknown> {
 
 function accessoryWith(accessory: FakeAccessory, overrides: Partial<Omit<BasementGuardianAccessoryOptions, 'accessory'>>): BasementGuardianAccessory {
   return createBasementGuardianAccessory(buildOptions({ accessory, ...overrides }));
+}
+
+// One accessory driven by the real Gemini adapter over one snapshot, so a case states a wire field
+// and reads back the services it reached.
+function geminiAccessory(
+  accessory: FakeAccessory,
+  data: Readonly<Record<string, unknown>>,
+  overrides: Partial<Omit<BasementGuardianAccessoryOptions, 'accessory'>> = {},
+): BasementGuardianAccessory {
+  const basementGuardianAccessory = accessoryWith(accessory, {
+    registry: registryWith({ kind: 'implemented', family: geminiFamily }),
+    ...overrides,
+  });
+
+  basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, ...data } }), 'poll');
+
+  return basementGuardianAccessory;
 }
 
 // A service is resolved by the name HomeKit shows rather than by its subtype, because the two
@@ -404,6 +486,17 @@ function valueOf(accessory: FakeAccessory, displayName: string, characteristic: 
 
 function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
   return valueOf(accessory, displayName, HAP.Characteristic.StatusActive);
+}
+
+// The `On` characteristic of a published Switch, which is where a controller write enters.
+function onCharacteristicOf(accessory: FakeAccessory, displayName: string): FakeHapCharacteristic {
+  const characteristic = serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.On);
+
+  if (characteristic === undefined) {
+    throw new Error(`the ${displayName} service carries no On characteristic`);
+  }
+
+  return characteristic;
 }
 
 async function sourceOf(module: string): Promise<string> {
@@ -649,7 +742,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(basementGuardianAccessory.services, PUBLISHED_SERVICES);
     assert.deepStrictEqual(
       PUBLISHED_SERVICES.map((descriptor) => statusActiveOf(accessory, descriptor.name)),
-      [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
+      [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
     );
   });
 
@@ -1205,6 +1298,8 @@ describe('createBasementGuardianAccessory', () => {
       { scope: 'power', reason: 'controller-link-lost', lastTrustedAt: undefined },
       { scope: 'battery', reason: 'controller-link-lost', lastTrustedAt: undefined },
       { scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'self-test', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'alarm-mute', reason: 'controller-link-lost', lastTrustedAt: undefined },
     ]);
   });
 
@@ -1223,6 +1318,8 @@ describe('createBasementGuardianAccessory', () => {
       { scope: 'power', reason: 'controller-link-lost', lastTrustedAt: undefined },
       { scope: 'battery', reason: 'controller-link-lost', lastTrustedAt: undefined },
       { scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'self-test', reason: 'controller-link-lost', lastTrustedAt: undefined },
+      { scope: 'alarm-mute', reason: 'controller-link-lost', lastTrustedAt: undefined },
     ]);
   });
 
@@ -1253,7 +1350,9 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       basementGuardianAccessory.services,
-      PUBLISHED_SERVICES.filter((descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || PUBLISHED_SCOPES[index] === 'connectivity'),
+      PUBLISHED_SERVICES.filter(
+        (descriptor, index) => descriptor.name === CONTROLLER_LINK_ROW || descriptor.name === SELF_TEST_ROW || PUBLISHED_SCOPES[index] === 'connectivity',
+      ),
     );
   });
 
@@ -1307,7 +1406,7 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       basementGuardianAccessory.untrusted.map((untrusted) => untrusted.lastTrustedAt),
-      [1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000],
+      [1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000, 1_700_000_000_000],
     );
   });
 
@@ -1655,6 +1754,123 @@ describe('createBasementGuardianAccessory', () => {
         retained: valueOf(accessory, retained.displayName, HAP.Characteristic.ConfiguredName),
       },
       { reseeded: unnamed.displayName, retained: retained.displayName },
+    );
+  });
+
+  test('lists one trust scope per member of the union it reports from', () => {
+    // arrange
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }) });
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    const reported = basementGuardianAccessory.untrusted.map((untrusted) => untrusted.scope);
+
+    // assert
+    assert.deepStrictEqual(
+      [...reported, 'connectivity'].sort((left, right) => left.localeCompare(right)),
+      [...EVERY_TRUST_SCOPE],
+    );
+  });
+
+  test('D-03 publishes the self-test switch on the first update even though test_running never decoded', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiAccessory(accessory, { test_running: 'not-a-boolean' });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        published: serviceOf(accessory, SELF_TEST_ROW).UUID,
+        on: serviceOf(accessory, SELF_TEST_ROW).characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.On.UUID)?.pushed,
+        statusActive: statusActiveOf(accessory, SELF_TEST_ROW),
+      },
+      { published: SWITCH_UUID, on: false, statusActive: false },
+    );
+  });
+
+  test('D-02 deactivates the alarm mute scope alone for an out-of-domain alarm_audio_muted', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    const basementGuardianAccessory = geminiAccessory(accessory, { alarm_audio_muted: 12 });
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'alarm-mute', reason: 'invalid', lastTrustedAt: undefined }]);
+    assert.strictEqual(statusActiveOf(accessory, SELF_TEST_ROW), true);
+  });
+
+  test('D-02 deactivates the self-test scope alone for a wrong-typed test_timestamp, leaving every pump service active', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_timestamp: 'not-a-number' });
+
+    // assert
+    assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined }]);
+    assert.deepStrictEqual(
+      PUMP_SERVICES.map((displayName) => statusActiveOf(accessory, displayName)),
+      PUMP_SERVICES.map(() => true),
+    );
+  });
+
+  test('CTRL-03 follows a reported test_running the device raised with no HomeKit write behind it', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+
+    // act
+    geminiAccessory(accessory, { test_running: true });
+
+    // assert
+    assert.deepStrictEqual(
+      { on: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On), statusActive: statusActiveOf(accessory, SELF_TEST_ROW) },
+      { on: true, statusActive: true },
+    );
+  });
+
+  // The clearing push is what stops one refused press from leaving the Switch answering an error to
+  // every read until the next poll. It is a macrotask through the injected port, so this case runs
+  // the deferral the accessory recorded rather than waiting on a clock (D-04).
+  test('CTRL-03 refuses an off write, sends nothing, and makes the switch readable again on the deferral it recorded', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers, calls } = recordingTimers();
+    const { commands, sends } = recordingCommands();
+    const deferred: (() => void)[] = [];
+    const recording: Timers = {
+      ...timers,
+      setTimeout: (handler, delayMs) => {
+        deferred.push(handler);
+
+        return timers.setTimeout(handler, delayMs);
+      },
+    };
+    geminiAccessory(accessory, { test_running: false }, { timers: recording, commands });
+
+    // act
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(false),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+    const beforeThePush = onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode;
+    deferred[0]?.();
+
+    // assert
+    assert.deepStrictEqual({ sends, calls, beforeThePush }, { sends: [], calls: ['setTimeout 0'], beforeThePush: NOT_ALLOWED_IN_CURRENT_STATE });
+    assert.deepStrictEqual(
+      {
+        statusCode: onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode,
+        on: onCharacteristicOf(accessory, SELF_TEST_ROW).value,
+        statusActive: statusActiveOf(accessory, SELF_TEST_ROW),
+      },
+      { statusCode: 0, on: false, statusActive: true },
     );
   });
 

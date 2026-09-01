@@ -25,6 +25,7 @@ import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
 import type { DeviceStateStore, ReportedPatch } from '../src/device/state.js';
 import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
+import type { CommandPort } from '../src/runtime/commandPort.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 import type { TestContext } from 'node:test';
 
@@ -273,6 +274,13 @@ interface ContextOptions {
   log?: Logging;
   ignoredFaults?: readonly NotificationServiceKind[];
   offlineConfirmationPollCount?: number;
+  commands?: CommandPort;
+}
+
+// The discovery path never sends a command, so the stand-in every case gets rejects: an accessory
+// that reached the command route while merely publishing would fail by name here.
+function refusingCommands(): CommandPort {
+  return { send: () => Promise.reject(new Error('the discovery path must not send a command')) };
 }
 
 // Every DiscoveryContext this suite builds carries the same wiring apart from the members a case is
@@ -287,6 +295,7 @@ function discoveryContext(options: ContextOptions): DiscoveryContext {
     ignoredFaults: options.ignoredFaults ?? [],
     offlineConfirmationPollCount: options.offlineConfirmationPollCount ?? 2,
     timers: systemTimers,
+    commands: options.commands ?? refusingCommands(),
   };
 }
 
@@ -1121,6 +1130,7 @@ describe('registerDiscoveredDevices', () => {
       'Backup Pump Fault',
       'Water Sensor Fault',
       'Pump Controller Link Lost',
+      'System Self-Test',
       'Basement Guardian Offline',
     ]);
     assert.strictEqual(contactStateOf(registered, 'mains-power-lost'), CONTACT_NOT_DETECTED);

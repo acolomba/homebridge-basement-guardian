@@ -33,6 +33,7 @@
  * requires the accessory to keep (D-014, DEV-08).
  */
 
+import { createControlBinder } from './controls.js';
 import {
   createServiceCatalogue,
   ensureService,
@@ -44,14 +45,15 @@ import {
 } from './serviceCatalogue.js';
 import { isNotificationServiceKind } from './services.js';
 
-import type { ProjectionInput } from './serviceCatalogue.js';
+import type { ProjectionInput, ServiceRow } from './serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from './services.js';
-import type { FamilyValidation } from '../device/family.js';
+import type { DeviceCapability, FamilyValidation } from '../device/family.js';
 import type { DistrustReason, TrustScope, UntrustedScope } from '../device/health.js';
 import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceSnapshot } from '../device/state.js';
+import type { CommandPort } from '../runtime/commandPort.js';
 import type { Timers } from '../runtime/timers.js';
-import type { API, Logging, PlatformAccessory } from 'homebridge';
+import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
 /**
  * Where one snapshot came from.
@@ -100,15 +102,21 @@ export interface BasementGuardianAccessoryOptions {
   registry: FamilyRegistry;
   log: Logging;
   /**
-   * Deferred execution, taken and never called.
+   * Deferred execution.
    *
-   * The accessory publishes synchronously inside `update()`, so nothing here
-   * schedules anything. The port is required rather than optional because its
-   * whole purpose is to be observed: a test hands in a stand-in that records
-   * calls and asserts it recorded none, which is evidence about an absence that
-   * watching behaviour alone cannot give (SAFE-07, D-18).
+   * The accessory schedules nothing across `update()`: it publishes
+   * synchronously, so a test hands in a stand-in that records calls and asserts
+   * it recorded none across a whole transition, which is evidence about an
+   * absence that watching behaviour alone cannot give (SAFE-07, D-18).
+   *
+   * The write path is the one place a deferral exists, and it exists because
+   * HAP requires it: the push that makes a refused control readable again has
+   * to run after HAP's own catch has stored the refusal status. That is the
+   * next macrotask and no earlier, so the binder arms it here (D-04, D-10).
    */
   timers: Timers;
+  /** The command surface a HomeKit press on a control Switch reaches the vendor through (CTRL-05). */
+  commands: CommandPort;
   /** The notification sensors to leave unpublished. Absent publishes every adapter (D-017, CONF-06). */
   ignoredFaults?: readonly NotificationServiceKind[];
   /**
@@ -140,7 +148,21 @@ const UNKNOWN_FIRMWARE = 'unknown';
 const DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT = 2;
 
 // Every scope that can lose trust, in the order `untrusted` reports them.
-const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity'];
+const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
+
+/** One control row, and the reported fact its Switch follows. */
+interface ControlDefinition {
+  capability: DeviceCapability;
+  /** The field inside the capability's own decoded group that carries the reported value. */
+  field: string;
+}
+
+// The capability each control row drives. A capability, the trust scope that
+// owns it, and the decoded group carrying it are one string by design, so this
+// map holds the field name and nothing else (D-02).
+const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKind, ControlDefinition>([
+  ['system-self-test', { capability: 'self-test', field: 'running' }],
+]);
 
 // Every scope but `connectivity`, which is the same set for the two conditions
 // that reach past a single field.
@@ -339,12 +361,101 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   let untrusted: readonly UntrustedScope[] = [];
   let offlineCount = 0;
   let published: readonly ServiceDescriptor[] = [];
+  // The last decoded state, kept so the write path can read what the device
+  // itself reports without waiting for another update: a control refused
+  // between polls has to answer from the same facts the rows publish from.
+  let lastDecoded: unknown = undefined;
 
   // Only a removable notification kind can be suppressed; a core kind reports
   // what the system reports, so removing one would hide a condition rather
   // than hide a notification (CONF-06).
   function isSuppressed(kind: ServiceKind): boolean {
     return isNotificationServiceKind(kind) && ignoredFaults.includes(kind);
+  }
+
+  // What the device itself last said about one control, read structurally so
+  // this module stays ignorant of any one family's type (D-003), and withheld
+  // while the scope owning it is untrustworthy: a value the accessory cannot
+  // vouch for is absent rather than defaulted (D-014).
+  function reportedControlValue(control: ControlDefinition): boolean | undefined {
+    if (untrusted.some((scope) => scope.scope === control.capability)) {
+      return undefined;
+    }
+
+    const group = isRecord(lastDecoded) ? lastDecoded[control.capability] : undefined;
+    const reported = isRecord(group) ? group[control.field] : undefined;
+
+    return typeof reported === 'boolean' ? reported : undefined;
+  }
+
+  // Everything a row reads, assembled once from the accessory's own state so
+  // the resolved and unresolved paths cannot drift apart in what they hand a
+  // row.
+  function projectionInputOf(decoded: unknown, pendingControls: ReadonlySet<DeviceCapability>): ProjectionInput {
+    return {
+      decoded,
+      untrustedScopes: untrusted,
+      offlineConfirmed: offlineCount >= offlineThreshold,
+      controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
+      pendingControls,
+    };
+  }
+
+  // The one publish pass a service already on the accessory gets: everything its
+  // row can currently vouch for, then the `StatusActive` that reports whether it
+  // could vouch for every scope it reads.
+  function publishRow(row: ServiceRow, service: Service, input: ProjectionInput): void {
+    for (const value of row.project(input)) {
+      publishValue(service, value.characteristic, value.value);
+    }
+
+    publishValue(service, hap.Characteristic.StatusActive, isRowFullyTrusted(row, input.untrustedScopes));
+  }
+
+  // Refreshes the control rows alone. This is what a refused write's clearing
+  // push runs, and it deliberately touches nothing else: nothing else changed,
+  // and a full republish from a deferred callback would make `update()`'s "two
+  // updates cannot interleave" claim harder to hold.
+  function republishControlRows(pendingControls: ReadonlySet<DeviceCapability>): void {
+    const input = projectionInputOf(lastDecoded, pendingControls);
+
+    for (const row of catalogue) {
+      const service = CONTROLS.has(row.kind) ? publishedService(accessory, row) : undefined;
+
+      if (service === undefined) {
+        continue;
+      }
+
+      publishRow(row, service, input);
+    }
+  }
+
+  // The write half of the control Switches. It is created here, once, because
+  // its pending set is accessory-local: one accessory's unresolved self-test
+  // must not withhold another accessory's control (D-05, D-06).
+  const controls = createControlBinder({
+    hap,
+    log,
+    timers: options.timers,
+    commands: options.commands,
+    deviceId,
+    republish: () => {
+      republishControlRows(controls.pending);
+    },
+  });
+
+  // A control row's Switch is where a HomeKit press enters the plugin. The
+  // handler attaches to the service the row already published, so the catalogue
+  // stays projection-only and one service list keeps feeding every identity
+  // (D-01).
+  function bindControlRow(row: ServiceRow, service: Service): void {
+    const control = CONTROLS.get(row.kind);
+
+    if (control === undefined) {
+      return;
+    }
+
+    controls.bind(service, control.capability, () => reportedControlValue(control));
   }
 
   // One pass over the catalogue in its declared order, so the published order
@@ -378,6 +489,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       }
 
       seedConfiguredName(hap, service, row.displayName);
+      bindControlRow(row, service);
 
       for (const value of projected) {
         publishValue(service, value.characteristic, value.value);
@@ -426,12 +538,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       }
 
       seedConfiguredName(hap, service, row.displayName);
-
-      for (const value of row.project(input)) {
-        publishValue(service, value.characteristic, value.value);
-      }
-
-      publishValue(service, hap.Characteristic.StatusActive, isRowFullyTrusted(row, input.untrustedScopes));
+      publishRow(row, service, input);
     }
   }
 
@@ -493,16 +600,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     }
   }
 
-  // Everything a row reads, assembled once from the accessory's own state so
-  // the resolved and unresolved paths cannot drift apart in what they hand a
-  // row.
-  function projectionInputOf(decoded: unknown): ProjectionInput {
-    return {
-      decoded,
-      untrustedScopes: untrusted,
-      offlineConfirmed: offlineCount >= offlineThreshold,
-      controllerDataLastTrustedAt: isoTimestamp(lastTrustedAt.get('fault')),
-    };
+  // The device's own report is what resolves a pending request, so a request the
+  // device never confirms is never resolved by anything the plugin decided
+  // (CTRL-03, D-037).
+  function reconcileControls(): void {
+    for (const control of CONTROLS.values()) {
+      controls.reconcile(control.capability, reportedControlValue(control));
+    }
   }
 
   return {
@@ -539,7 +643,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         }
 
         untrusted = untrustedScopesOf(reasonsOf(NON_CONNECTIVITY_SCOPES, 'invalid'), lastTrustedAt);
-        republishPublishedRows(projectionInputOf(undefined));
+        republishPublishedRows(projectionInputOf(undefined, controls.pending));
         reportDegradation();
 
         return;
@@ -570,7 +674,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         populateAccessoryInformation(accessory, hap, snapshot, metadata);
       }
 
-      published = publishRows(projectionInputOf(decoded));
+      lastDecoded = decoded;
+      // Reconciled before the rows publish, so the update that carries the
+      // device's confirmation is the same one that resumes publishing reported
+      // state for that control.
+      reconcileControls();
+
+      published = publishRows(projectionInputOf(decoded, controls.pending));
 
       reportControllerLink(linkLost);
       reportDegradation();

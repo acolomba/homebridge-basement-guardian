@@ -26,6 +26,7 @@ import { createCustomServices } from './customServices.js';
 import type { CharacteristicClass, CustomCharacteristics } from './customCharacteristics.js';
 import type { CustomServices, ServiceClass } from './customServices.js';
 import type { ServiceKind } from './services.js';
+import type { DeviceCapability } from '../device/family.js';
 import type { DistrustReason, TrustScope, UntrustedScope } from '../device/health.js';
 import type { API, CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
@@ -67,6 +68,15 @@ export interface ProjectionInput {
    * that no row reads a clock or keeps state of its own.
    */
   controllerDataLastTrustedAt: string;
+  /**
+   * The capabilities carrying an unresolved HomeKit request, whose rows publish
+   * nothing for `On` until the device answers (D-05, D-037).
+   *
+   * Requested control state reaches a row through this member and no other. No
+   * reported patch and no shadow topic carries it, so it can never become
+   * canonical safety state.
+   */
+  pendingControls: ReadonlySet<DeviceCapability>;
 }
 
 /** The trust facts a row is judged by. */
@@ -112,6 +122,13 @@ export interface ServiceRow extends RowTrust {
    * `toleratedDistrust` is judged by its own list.
    */
   project(this: ServiceRow, input: ProjectionInput): readonly ProjectedValue[];
+  /**
+   * Whether this row earns its service even when it projects nothing.
+   *
+   * `false` for every row but the controls. See `ensureService` for why the
+   * gate exists and why those two are exempt from it (D-03).
+   */
+  alwaysPublish: boolean;
 }
 
 // One row before its trust gate is attached. `values` answers what the row
@@ -123,6 +140,8 @@ interface RowDefinition extends RowTrust {
   serviceClass: ServiceClass;
   /** Absent for a row that reads its own scope and nothing else, which is most of them. */
   readScopes?: readonly TrustScope[];
+  /** Absent for a row that earns its service only when it has something to publish, which is every row but the controls. */
+  alwaysPublish?: boolean;
   values: (input: ProjectionInput, trust: RowTrust) => readonly ProjectedValue[];
 }
 
@@ -363,6 +382,18 @@ function pumpActivityValues(hap: API['hap'], input: ProjectionInput, trust: RowT
   return published([{ characteristic: hap.Characteristic.ContactSensorState, value: contactState(hap, running) }]);
 }
 
+// A control's Switch follows what the device reports, and publishes nothing at
+// all for `On` while a HomeKit request for that capability is unresolved.
+// Withholding rather than publishing is what stops the accessory's per-update
+// push from snapping the toggle back before the device confirms; because nothing
+// is pushed, HAP keeps serving the value the accepted write left. The whole of
+// the rule is one `undefined`, which `published()` already drops (D-05, D-037).
+function controlValues(hap: API['hap'], input: ProjectionInput, trust: RowTrust, capability: DeviceCapability, field: string): readonly ProjectedValue[] {
+  const reported = booleanOf(trustedGroup(input, trust, capability), field);
+
+  return published([{ characteristic: hap.Characteristic.On, value: input.pendingControls.has(capability) ? undefined : reported }]);
+}
+
 function mainsPowerValues(characteristics: CustomCharacteristics, input: ProjectionInput, trust: RowTrust): readonly ProjectedValue[] {
   const mainsPresent = booleanOf(trustedGroup(input, trust, 'power'), 'mainsPresent');
 
@@ -451,7 +482,7 @@ function offlineValues(hap: API['hap'], input: ProjectionInput): readonly Projec
 }
 
 function toRow(definition: RowDefinition): ServiceRow {
-  const { kind, displayName, scope, toleratedDistrust, serviceClass, readScopes = [scope], values } = definition;
+  const { kind, displayName, scope, toleratedDistrust, serviceClass, readScopes = [scope], alwaysPublish = false, values } = definition;
 
   return {
     kind,
@@ -461,6 +492,7 @@ function toRow(definition: RowDefinition): ServiceRow {
     toleratedDistrust,
     serviceClass,
     readScopes,
+    alwaysPublish,
 
     project(input) {
       return isRowTrusted(this, input.untrustedScopes) ? values(input, this) : [];
@@ -620,6 +652,25 @@ function faultDefinitions(hap: API['hap'], characteristics: CustomCharacteristic
   ];
 }
 
+// The controls are the two things an owner can do rather than only watch. Each
+// is a standard `Switch` whose `On` follows the capability's own reported field,
+// and each is filed under its own trust scope, so a bad `alarm_audio_muted`
+// deactivates the mute control and leaves self-test fully trustworthy (D-01,
+// D-02).
+function controlDefinitions(hap: API['hap']): readonly RowDefinition[] {
+  return [
+    {
+      kind: 'system-self-test',
+      displayName: 'System Self-Test',
+      scope: 'self-test',
+      toleratedDistrust: [],
+      serviceClass: hap.Service.Switch,
+      alwaysPublish: true,
+      values: (input, trust) => controlValues(hap, input, trust, 'self-test', 'running'),
+    },
+  ];
+}
+
 function connectivityDefinitions(hap: API['hap']): readonly RowDefinition[] {
   return [
     {
@@ -651,6 +702,7 @@ export function createServiceCatalogue(hap: API['hap']): readonly ServiceRow[] {
     ...powerDefinitions(hap, characteristics, services),
     ...batteryDefinitions(hap, characteristics, services),
     ...faultDefinitions(hap, characteristics),
+    ...controlDefinitions(hap),
     ...connectivityDefinitions(hap),
   ];
 
@@ -701,6 +753,16 @@ export function publishedService(accessory: PlatformAccessory, row: ServiceRow):
  * exists to prevent. That alignment is a precondition rather than a
  * coincidence, and the catalogue's own case over every row in every trust state
  * is what holds it.
+ *
+ * The gate has one named exemption, and a row claims it by setting
+ * `alwaysPublish`. It is waived for the control Switches alone, on two grounds
+ * that do not hold for any sensor. `On = false` is what the device reports in
+ * the overwhelmingly common case -- no test running, no alarm muted -- so the
+ * format default is the truth rather than a good-news guess, and a row that
+ * cannot vouch for it still carries `StatusActive = false` to say so. And a
+ * room holding only sensors does not render in Apple Home at all: the Self-Test
+ * Switch is what makes the accessory's room visible, so withholding it until
+ * its field first decodes would hide every other service with it (D-03).
  */
 export function ensureService(accessory: PlatformAccessory, row: ServiceRow, projected: readonly ProjectedValue[]): Service | undefined {
   const service = publishedService(accessory, row);
@@ -709,7 +771,7 @@ export function ensureService(accessory: PlatformAccessory, row: ServiceRow, pro
     return service;
   }
 
-  return projected.length === 0 ? undefined : accessory.addService(row.serviceClass, row.displayName, row.subtype);
+  return projected.length === 0 && !row.alwaysPublish ? undefined : accessory.addService(row.serviceClass, row.displayName, row.subtype);
 }
 
 /**

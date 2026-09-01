@@ -43,10 +43,10 @@ const DEFERRED_EXECUTION_MODULES: readonly string[] = ['node:timers', 'node:time
 const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const ACCESSORIES_DIRECTORY = join(REPOSITORY_ROOT, 'src', 'accessories');
 
-// The accessories tier holds six modules. A gate that enumerated fewer than this
-// read the wrong directory, and every assertion built on that read would pass
-// without examining a single accessory module.
-const ACCESSORIES_MODULE_FLOOR = 6;
+// The accessories tier holds seven modules. A gate that enumerated fewer than
+// this read the wrong directory, and every assertion built on that read would
+// pass without examining a single accessory module.
+const ACCESSORIES_MODULE_FLOOR = 7;
 
 // A comment naming a module is not an import of it, and this gate's whole
 // content is that something does not exist, so the detector reads the three

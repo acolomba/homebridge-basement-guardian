@@ -20,6 +20,7 @@ import {
 
 import type { ProjectedValue, ProjectionInput, RowTrust, ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { ServiceKind } from '../../src/accessories/services.js';
+import type { DeviceCapability } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
 import type { API, CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
@@ -82,7 +83,7 @@ const PROTECTION_BANDS: readonly { protectionHoursCode: number; levelPercent: nu
 
 // Every scope a row can read, written out here rather than imported, so a scope added to the union
 // without a row reading it is visible at this boundary too.
-const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity'];
+const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
 
 // Every equipment-fault adapter, in the order the catalogue publishes them.
 const FAULT_ADAPTERS: readonly ServiceKind[] = [
@@ -176,12 +177,21 @@ function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record
     battery: batteryGroup(),
     fault: { ...CLEAR_FAULTS },
     connectivity: { reportedOffline: false },
+    'self-test': { running: false, testedAt: undefined },
+    'alarm-mute': { muted: false },
     ...overrides,
   };
 }
 
 function projectionInput(overrides: Partial<ProjectionInput> = {}): ProjectionInput {
-  return { decoded: decodedState(), untrustedScopes: [], offlineConfirmed: false, controllerDataLastTrustedAt: '', ...overrides };
+  return {
+    decoded: decodedState(),
+    untrustedScopes: [],
+    offlineConfirmed: false,
+    controllerDataLastTrustedAt: '',
+    pendingControls: new Set<DeviceCapability>(),
+    ...overrides,
+  };
 }
 
 function rowOf(hap: API['hap'], kind: ServiceKind): ServiceRow {
@@ -795,9 +805,53 @@ function registerAbsentStateCases(): void {
         .map((row) => row.project(input));
 
       // assert
-      assert.deepStrictEqual(projected, [[], [], [], [], [], [], [], [], [], [], [], [], [], []]);
+      assert.deepStrictEqual(projected, [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []]);
     });
   }
+
+  for (const running of [true, false]) {
+    test(`projects the reported test_running of ${String(running)} onto On while nothing is pending`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const input = projectionInput({ decoded: decodedState({ 'self-test': { running, testedAt: undefined } }) });
+
+      // act
+      const projected = rowOf(hap, 'system-self-test').project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.On.UUID, value: running }]);
+    });
+  }
+
+  // The whole of the withholding rule: while a request is unresolved the row publishes no `On` at
+  // all, so the accessory's per-update push cannot snap the toggle back before the device confirms
+  // (D-05, D-037).
+  test('projects no On at all while the control carries an unresolved request', () => {
+    // arrange
+    const hap = hapNamespace();
+    const input = projectionInput({
+      decoded: decodedState({ 'self-test': { running: false, testedAt: undefined } }),
+      pendingControls: new Set<DeviceCapability>(['self-test']),
+    });
+
+    // act
+    const projected = rowOf(hap, 'system-self-test').project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), []);
+  });
+
+  test('projects nothing on the control row while its own scope is untrusted', () => {
+    // arrange
+    const hap = hapNamespace();
+    const input = projectionInput({ untrustedScopes: [{ scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined }] });
+
+    // act
+    const projected = rowOf(hap, 'system-self-test').project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), []);
+  });
 
   test('projects nothing on a power row whose own scope is untrusted', () => {
     // arrange
@@ -848,6 +902,7 @@ describe('createServiceCatalogue', () => {
       { kind: 'backup-pump-fault', subtype: 'backup-pump-fault' },
       { kind: 'water-sensor-fault', subtype: 'water-sensor-fault' },
       { kind: 'pump-controller-link-lost', subtype: 'pump-controller-link-lost' },
+      { kind: 'system-self-test', subtype: 'system-self-test' },
       { kind: 'basement-guardian-offline', subtype: 'basement-guardian-offline' },
     ]);
   });
@@ -880,6 +935,7 @@ describe('createServiceCatalogue', () => {
       { displayName: 'Backup Pump Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
       { displayName: 'Water Sensor Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
       { displayName: 'Pump Controller Link Lost', scope: 'fault', readScopes: ['fault'], toleratedDistrust: ['controller-link-lost'] },
+      { displayName: 'System Self-Test', scope: 'self-test', readScopes: ['self-test'], toleratedDistrust: [] },
       { displayName: 'Basement Guardian Offline', scope: 'connectivity', readScopes: ['connectivity'], toleratedDistrust: [] },
     ]);
   });
@@ -912,7 +968,7 @@ describe('createServiceCatalogue', () => {
     );
   });
 
-  test('shows the fifteen service names HomeKit renders, in publication order', () => {
+  test('shows the sixteen service names HomeKit renders, in publication order', () => {
     // arrange
     const catalogue = createServiceCatalogue(hapNamespace());
 
@@ -935,6 +991,7 @@ describe('createServiceCatalogue', () => {
       'Backup Pump Fault',
       'Water Sensor Fault',
       'Pump Controller Link Lost',
+      'System Self-Test',
       'Basement Guardian Offline',
     ]);
   });
@@ -994,8 +1051,51 @@ describe('createServiceCatalogue', () => {
       hap.Service.ContactSensor.UUID,
       hap.Service.ContactSensor.UUID,
       hap.Service.ContactSensor.UUID,
+      hap.Service.Switch.UUID,
       hap.Service.ContactSensor.UUID,
     ]);
+  });
+
+  test('publishes the self-test control as a Switch on its own trust scope, under its kind slug', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act
+    const row = rowOf(hap, 'system-self-test');
+
+    // assert
+    assert.deepStrictEqual(
+      { subtype: row.subtype, scope: row.scope, alwaysPublish: row.alwaysPublish, serviceUuid: row.serviceClass.UUID },
+      { subtype: 'system-self-test', scope: 'self-test', alwaysPublish: true, serviceUuid: hap.Service.Switch.UUID },
+    );
+  });
+
+  test('claims the always-publish exemption on the control row alone', () => {
+    // arrange
+    const catalogue = createServiceCatalogue(hapNamespace());
+
+    // act
+    const exempt = catalogue.filter((row) => row.alwaysPublish);
+
+    // assert
+    assert.deepStrictEqual(
+      exempt.map((row) => row.displayName),
+      ['System Self-Test'],
+    );
+  });
+
+  test('adds the control service even when the row projects nothing, and adds no sensor service on the same terms', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const control = rowOf(hap, 'system-self-test');
+    const sensor = rowOf(hap, 'sump-pit-flood');
+
+    // act
+    const added = { control: ensureService(accessory, control, []), sensor: ensureService(accessory, sensor, []) };
+
+    // assert
+    assert.deepStrictEqual({ control: added.control?.UUID, sensor: added.sensor }, { control: hap.Service.Switch.UUID, sensor: undefined });
   });
 
   test('answers the same row order whatever the input carries', () => {

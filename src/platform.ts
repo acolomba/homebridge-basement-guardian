@@ -19,6 +19,7 @@ import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
 import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
 import type { AccessoryContext } from './persistence/accessoryContext.js';
+import type { CommandPort } from './runtime/commandPort.js';
 import type { Timers } from './runtime/timers.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
@@ -65,8 +66,10 @@ export interface DiscoveryContext {
   ignoredFaults: readonly NotificationServiceKind[];
   /** The validated run of consecutive disconnected polls before the offline adapter activates (RES-03, D-09). */
   offlineConfirmationPollCount: number;
-  /** Deferred execution, taken by injection so a test can prove the accessory never defers (SAFE-07, D-18). */
+  /** Deferred execution, taken by injection so a test can prove the accessory schedules nothing across an update (SAFE-07, D-18). */
   timers: Timers;
+  /** The command surface a HomeKit press on a control Switch reaches the vendor through (CTRL-05). */
+  commands: CommandPort;
 }
 
 // A HALO or unknown outcome never becomes an accessory (DEV-01), so the
@@ -111,6 +114,7 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
     ignoredFaults: context.ignoredFaults,
     offlineConfirmationPollCount: context.offlineConfirmationPollCount,
     timers: context.timers,
+    commands: context.commands,
   });
 }
 
@@ -430,6 +434,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
             ignoredFaults: validated.config.ignoredFaults,
             offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
             timers: systemTimers,
+            commands: runtime.commands,
           },
           deviceIds,
           runtime.store,
@@ -446,6 +451,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
             ignoredFaults: validated.config.ignoredFaults,
             offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
             timers: systemTimers,
+            commands: runtime.commands,
           },
           deviceId,
           runtime.store,

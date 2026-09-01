@@ -45,6 +45,7 @@ import type { RedactingLogger } from '../../src/logging.js';
 import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../../src/platform.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
+import type { CommandPort } from '../../src/runtime/commandPort.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
 import type { API, LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
@@ -514,11 +515,19 @@ export class BasementGuardianWorld extends World {
       // Drives the same registration logic `BasementGuardianPlatform` runs, so a scenario proves
       // the real discovery pipeline rather than a parallel copy of it.
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
-        registerDiscoveredDevices(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry), deviceIds, runtime.store);
+        registerDiscoveredDevices(
+          this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry, runtime.commands),
+          deviceIds,
+          runtime.store,
+        );
         this.watchDevices(runtime);
       },
       onDeviceRemoved: (deviceId: string): void => {
-        removeDiscoveredDevice(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry), deviceId, runtime.store);
+        removeDiscoveredDevice(
+          this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry, runtime.commands),
+          deviceId,
+          runtime.store,
+        );
         // The store deletes this deviceId's whole listener registry entry on removal, so a later
         // re-discovery needs watchDevices() to subscribe it again rather than skip it as already
         // watched (WR-03).
@@ -536,13 +545,14 @@ export class BasementGuardianWorld extends World {
   }
 
   // The harness stands in for `BasementGuardianPlatform`, so it is the one other place the concrete
-  // process timers are wired, and it supplies the same validated configuration members the platform
-  // reads from `validateConfig`.
+  // process timers and the runtime's command port are wired, and it supplies the same validated
+  // configuration members the platform reads from `validateConfig`.
   private discoveryContext(
     api: API,
     accessories: Map<string, BasementGuardianPlatformAccessory>,
     basementGuardianAccessories: Map<string, BasementGuardianAccessory>,
     registry: FamilyRegistry,
+    commands: CommandPort,
   ): DiscoveryContext {
     return {
       api,
@@ -553,6 +563,7 @@ export class BasementGuardianWorld extends World {
       ignoredFaults: this.ignoredFaults,
       offlineConfirmationPollCount: CONFIRMATION_POLL_COUNT,
       timers: systemTimers,
+      commands,
     };
   }
 
