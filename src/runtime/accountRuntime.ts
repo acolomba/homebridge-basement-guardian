@@ -12,14 +12,17 @@ import { createFailureLog, FAILURE_REMINDER_MS } from './failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from './retryPolicy.js';
 
 import type { Clock } from './clock.js';
+import type { CommandFailure, CommandOutcome, CommandPort } from './commandPort.js';
 import type { FailureLog } from './failureLog.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
 import type { MqttConnect } from '../cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnectReason } from '../cloud/shadow.js';
-import type { ApiDevice, AwsCredentialsResponse } from '../cloud/types.js';
+import type { ApiDevice, AwsCredentialsResponse, DeviceCommand } from '../cloud/types.js';
 import type { BgConfig } from '../config.js';
+import type { DeviceCapability } from '../device/family.js';
 import type { MonitoringPath } from '../device/health.js';
+import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceStateStore, ReportedPatch } from '../device/state.js';
 import type { RedactingLogger, SecretRole } from '../logging.js';
 import type { ProtocolConstants } from '../protocol.js';
@@ -73,6 +76,14 @@ export type TrustworthyInventoryListener = (deviceIds: readonly string[]) => voi
 export interface AccountRuntimeOptions {
   api: CloudApi;
   store: DeviceStateStore;
+  /**
+   * The family lookup a command body is built through.
+   *
+   * The runtime holds it because it is the only object holding the cloud client
+   * and the root abort controller as well, and the wire body for one intent
+   * differs per family (CTRL-05).
+   */
+  registry: FamilyRegistry;
   createShadow: (options: ShadowRuntimeOptions) => ShadowClient;
   /**
    * Builds one reconnect policy over the root signal.
@@ -125,8 +136,42 @@ export interface AccountRuntime {
    * and subscribes here rather than keeping a second copy that can disagree.
    */
   readonly store: DeviceStateStore;
+  /**
+   * The command surface a HomeKit control reaches the vendor through.
+   *
+   * The runtime owns it because it holds both the cloud client and the root
+   * abort controller, so a shutdown cancels a command in flight through the one
+   * mechanism every other wait and request already ends on (CTRL-05, SYNC-05).
+   */
+  readonly commands: CommandPort;
   start(): Promise<void>;
   stop(): Promise<void>;
+}
+
+// The vendor deadline aborts with a `TimeoutError`; every other rejection -- a
+// non-2xx answer, an unreadable body, a shutdown -- is a vendor error. The two
+// are told apart here, at the only place that can still see which happened,
+// because the HomeKit tier answers a different HAP status for each (D-04,
+// D-038).
+function commandFailureOf(error: unknown): CommandFailure {
+  return error instanceof Error && error.name === 'TimeoutError' ? 'timed-out' : 'vendor-error';
+}
+
+// The wire body for one intent differs per family and the wrong shape is
+// accepted and ignored rather than refused, so the family the device's own
+// `deviceTypeId` selects is what builds it. A device the store never held, or
+// one whose family this version cannot drive, yields no body at all rather than
+// a guessed one.
+function commandBodyOf(options: AccountRuntimeOptions, deviceId: string, capability: DeviceCapability, requested: boolean): DeviceCommand | undefined {
+  const deviceTypeId = options.store.snapshot(deviceId)?.identity.deviceTypeId;
+
+  if (deviceTypeId === undefined) {
+    return undefined;
+  }
+
+  const outcome = options.registry.lookup(deviceTypeId);
+
+  return outcome.kind === 'implemented' ? outcome.family.command(capability, requested) : undefined;
 }
 
 // The cache the signing hook reads, plus the one write the rotation makes.
@@ -573,12 +618,38 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
+  // Exactly one attempt, under the root signal, with no retry anywhere: a
+  // command that outlived its deadline may already have reached the device, and
+  // a second attempt would operate a real sump pump twice (D-038). A resolved
+  // body carrying `success: false` is the vendor refusing the command, not the
+  // route failing, so it is answered as a refusal rather than falling out of the
+  // rejection path.
+  const commands: CommandPort = {
+    async send(deviceId: string, capability: DeviceCapability, requested: boolean): Promise<CommandOutcome> {
+      const command = commandBodyOf(options, deviceId, capability, requested);
+
+      if (command === undefined) {
+        return { accepted: false, failure: 'vendor-error' };
+      }
+
+      try {
+        const result = await options.api.sendCommand(deviceId, command, root.signal);
+
+        return result.success ? { accepted: true } : { accepted: false, failure: 'vendor-error' };
+      } catch (error: unknown) {
+        return { accepted: false, failure: commandFailureOf(error) };
+      }
+    },
+  };
+
   return {
     get monitoringPath(): MonitoringPath {
       return monitoringPathNow();
     },
 
     store: options.store,
+
+    commands,
 
     // Resolves once the first attempt has been made. A launch that must be
     // tried again waits in the background, so the Homebridge launch event is
@@ -635,6 +706,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 export interface AccountRuntimeDeps {
   config: BgConfig;
   constants: ProtocolConstants;
+  /**
+   * The one family registry this plugin run holds.
+   *
+   * The composition root passes the same instance the discovery path uses, so a
+   * command and the accessory it came from can never resolve two different
+   * families for one device.
+   */
+  registry: FamilyRegistry;
   /** The Homebridge storage directory; the token cache lives there and nowhere else. */
   storagePath: string;
   clock: Clock;
@@ -682,6 +761,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
   return createAccountRuntime({
     api: createCloudApi({ baseUrl: deps.constants.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS }),
     store: createDeviceStateStore({ clock: deps.clock, log: deps.log }),
+    registry: deps.registry,
     createShadow: (shadowOptions: ShadowRuntimeOptions) =>
       createShadowClient({
         ...shadowOptions,

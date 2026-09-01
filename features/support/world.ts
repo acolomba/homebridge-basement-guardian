@@ -505,6 +505,7 @@ export class BasementGuardianWorld extends World {
         ignoredFaults: this.ignoredFaults,
       },
       constants: await this.harnessConstants(),
+      registry,
       storagePath: homebridge.storagePath,
       clock: this,
       log: this.logger(),

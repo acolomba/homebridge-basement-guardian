@@ -413,6 +413,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     const runtime = createAccountRuntimeFromConfig({
       config: validated.config,
       constants: PROTOCOL,
+      registry: this.registry,
       storagePath: this.api.user.storagePath(),
       clock: systemClock,
       log: this.log,

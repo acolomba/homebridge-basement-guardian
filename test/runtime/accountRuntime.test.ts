@@ -8,6 +8,7 @@ import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
+import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
@@ -17,7 +18,7 @@ import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy
 import type { CloudApi } from '../../src/cloud/api.js';
 import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient } from '../../src/cloud/shadow.js';
-import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
+import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
 import type { BgConfig } from '../../src/config.js';
 import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
 import type { SecretRole } from '../../src/logging.js';
@@ -242,6 +243,14 @@ interface Script {
   pollIntervalMs: number;
   rotationLeadMs: number;
   minRotationDelayMs: number;
+  /**
+   * How the vendor answers a command.
+   *
+   * Absent leaves the rejecting stand-in in place, which is what asserts the
+   * monitoring path never reaches the command route; a case about commands
+   * supplies its own answer and gets the recording stand-in instead.
+   */
+  command: (deviceId: string, command: DeviceCommand, signal: AbortSignal) => Promise<CommandResult>;
 }
 
 interface Harness {
@@ -256,7 +265,17 @@ interface Harness {
   trustworthyInventories: string[][];
   /** One entry per deviceId the runtime reported confirmed absent, in report order. */
   removed: string[];
+  /** One entry per command the runtime sent, in send order. */
+  commandRequests: CommandRequest[];
   advance: (ms: number) => Promise<void>;
+}
+
+/** One command the runtime sent, as the cloud client received it. */
+interface CommandRequest {
+  deviceId: string;
+  desiredData: Readonly<Record<string, unknown>>;
+  /** Whether the root signal was already aborted when the attempt was made. */
+  aborted: boolean;
 }
 
 // Drains the promise chains a timer wakes, so a scheduled fetch and everything
@@ -280,6 +299,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const calls: string[] = [];
   const trustworthyInventories: string[][] = [];
   const removed: string[] = [];
+  const commandRequests: CommandRequest[] = [];
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
@@ -303,12 +323,25 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
       return nextCredentials(signal);
     },
     device: () => Promise.reject(new Error('the runtime must not reach the device route')),
-    sendCommand: () => Promise.reject(new Error('the runtime must not reach the command route')),
+    // The monitoring path -- polling, shadow, credential rotation, removal --
+    // must never reach the command route, and this is what asserts it. A case
+    // about commands supplies `script.command` and gets the recorder below
+    // instead, so the deliberate assertion stays deliberate.
+    sendCommand: (deviceId: string, command: DeviceCommand, signal: AbortSignal) => {
+      if (script.command === undefined) {
+        return Promise.reject(new Error('the monitoring path must not reach the command route'));
+      }
+
+      commandRequests.push({ deviceId, desiredData: command.desiredData, aborted: signal.aborted });
+
+      return script.command(deviceId, command, signal);
+    },
   };
 
   const runtime = createAccountRuntime({
     api,
     store,
+    registry: createFamilyRegistry(),
     createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => {
       calls.push('shadow');
 
@@ -360,6 +393,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     calls,
     trustworthyInventories,
     removed,
+    commandRequests,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
@@ -1460,6 +1494,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
   const runtime = createAccountRuntime({
     api,
     store,
+    registry: createFamilyRegistry(),
     createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => fakeShadow(shadowOptions).client,
     createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
     pollIntervalMs: POLL_INTERVAL_MS,
@@ -1508,6 +1543,117 @@ function credentialRequestCount(requests: readonly { url: string }[]): number {
   return requests.filter((request) => request.url.endsWith('/credentials/aws')).length;
 }
 
+describe('commands', () => {
+  test('sends the family wire body for a self-test to the device the caller names', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: true });
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
+  });
+
+  test('sends the family wire body for an alarm mute', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    await runtime.start();
+
+    // act
+    await runtime.commands.send(DEVICE_ID, 'alarm-mute', true);
+
+    // assert
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { alarm_audio_muted: true }, aborted: false }]);
+  });
+
+  test('reports a vendor error when the route rejects, and sends nothing further', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, {
+      command: () => Promise.reject(new CloudRequestError('PUT /devices/{deviceId}/data failed with HTTP 500.', 500, 'PUT /devices/{deviceId}/data')),
+    });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.strictEqual(commandRequests.length, 1);
+  });
+
+  test('reports a vendor error for a resolved body the vendor refused', async (t) => {
+    // arrange
+    const { runtime } = harness(t, { command: () => Promise.resolve({ success: false }) });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+  });
+
+  test('reports a timeout when the deadline aborted the attempt', async (t) => {
+    // arrange
+    const timedOut = new Error('The operation was aborted due to timeout');
+    timedOut.name = 'TimeoutError';
+    const { runtime, commandRequests } = harness(t, { command: () => Promise.reject(timedOut) });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: false, failure: 'timed-out' });
+    assert.strictEqual(commandRequests.length, 1);
+  });
+
+  test('sends nothing for a deviceId the store never held', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(OTHER_DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
+  test('sends nothing for a device whose family this version cannot drive', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, {
+      command: () => Promise.resolve({ success: true }),
+      devices: [() => Promise.resolve([{ ...geminiDevice(), deviceTypeId: 'wayneWaterHalo' }])],
+    });
+    await runtime.start();
+
+    // act
+    const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
+  test('passes the root signal, so a shutdown cancels an attempt in flight', async (t) => {
+    // arrange
+    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    await runtime.start();
+    await runtime.stop();
+
+    // act
+    await runtime.commands.send(DEVICE_ID, 'self-test', true);
+
+    // assert
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: true }]);
+  });
+});
+
 describe('createAccountRuntimeFromConfig', () => {
   test('builds every collaborator without opening a connection, reading a file, or starting a timer', async (t) => {
     // arrange
@@ -1529,6 +1675,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
       constants: testConstants,
+      registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
@@ -1554,6 +1701,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
       constants: testConstants,
+      registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
       log,
@@ -1586,6 +1734,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
       constants: testConstants,
+      registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
@@ -1643,6 +1792,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
       constants: testConstants,
+      registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
