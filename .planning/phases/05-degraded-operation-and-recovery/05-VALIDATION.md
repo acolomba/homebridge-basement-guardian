@@ -64,6 +64,15 @@ evidence — that is the rule this project paid for six times in Phase 4, and th
 Task IDs are assigned by the planner; the behaviour, command, and mutation columns are binding as
 written here.
 
+**Two rows depend on how D-02 and D-04 are read, and they are written for D-02.** `05-CONTEXT.md`
+D-02 (narrowed) has a REST degradation *additionally* withdraw `connectivity`; D-04 says a REST-only
+degradation does not mark HomeKit. They differ for exactly that one scope. The plans implement D-02,
+so `Basement Guardian Offline` — whose row is `scope: 'connectivity'` — reports `Status Active` as
+`false` on a REST-only degradation while every live-value service stays `true`. The
+`REST down + shadow alive` rows in both tables below are written that way. **If the 05-01 decision
+checkpoint answers `d-04`, revert both rows to "every service stays active" and drop the scope
+qualifier from the paired mutation.**
+
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | TBD | TBD | 0 | RES-03 | — | Two consecutive REST failures mark the path degraded; one does not | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 — `test/runtime/monitoringHealth.test.ts` | ⬜ pending |
@@ -71,7 +80,7 @@ written here.
 | TBD | TBD | 0 | RES-03 | — | One missed heartbeat is not silence; two is | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⬜ pending |
 | TBD | TBD | 0 | RES-03 | — | A REST poll does not clear a shadow-silence degradation (D-11) | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⬜ pending |
 | TBD | TBD | — | RES-03 | — | A monitoring-path failure never activates `Basement Guardian Offline` | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-03 | — | REST down + shadow alive leaves every service `Status Active = true` | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
+| TBD | TBD | — | RES-03 | — | REST down + shadow alive leaves every live-value service `Status Active = true`, while `Basement Guardian Offline` alone withdraws (D-02) | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
 | TBD | TBD | — | RES-03 | — | Shadow silent + REST alive sets `Status Active = false` on `Sump Pit Flood` while its `Leak Detected` value is retained | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
 | TBD | TBD | — | RES-01 (not contradicted) | — | An **identical** heartbeat clears shadow silence | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
 | TBD | TBD | — | RES-04 | — | A restored accessory reads `Status Active = false` before any poll lands | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` — **requires the Wave 0 harness change** | ⬜ pending |
@@ -101,7 +110,7 @@ fails, revert, confirm green.
 | One missed heartbeat is not silence | Change `MISSED_HEARTBEATS_BEFORE_SILENT` to `1` |
 | A REST poll does not clear shadow silence | Make `recordRestSuccess()` also clear `lastShadowMessageAt`'s effect |
 | Monitoring failure never activates Offline | Make `offlineValues` read the degradation instead of `offlineConfirmed` |
-| REST down + shadow alive stays active | Mark on any degradation rather than on shadow loss alone |
+| REST down + shadow alive keeps live-value services active | Mark a **live-value** scope on any degradation rather than on shadow loss alone |
 | Shadow silent + REST alive withdraws | Withdraw only on `polling === false` |
 | Identical heartbeat clears silence | Drive the clearing from `store.subscribe` instead of `onReportedPatch` |
 | Restored accessory reads inactive | Delete the `configureAccessory` marking pass |
