@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: verifying
-stopped_at: Completed 03-08-PLAN.md
-last_updated: "2026-08-31T14:31:43.088Z"
+stopped_at: Phase 4 context gathered
+last_updated: "2026-09-01T02:52:50.169Z"
 last_activity: 2026-08-31
 last_activity_desc: Phase 03 execution started
-state_head: c268b3420c2ef1875baae0c83b3520a92b83b07b
+state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
 progress:
   total_phases: 6
   completed_phases: 2
@@ -257,6 +257,6 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-08-31T18:40:00.000Z
-Stopped at: Checks 2 and 3 closed; check 1 open, needs the bridge in a hub-bearing home
-Resume file: .planning/phases/03-safety-monitoring-in-homekit/.continue-here.md
+Last session: 2026-09-01T02:52:49.751Z
+Stopped at: Phase 4 context gathered
+Resume file: .planning/phases/04-pump-records-and-official-controls/04-CONTEXT.md
