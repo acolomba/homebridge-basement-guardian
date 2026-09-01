@@ -233,7 +233,14 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Shadow silence, REST failure and both-down withdraw trust end to end, with clearing matched to cause
+- [ ] 05-02-PLAN.md — Restored cached accessories are marked stale at `configureAccessory`, through a function the harness also calls
+- [ ] 05-03-PLAN.md — Presses are refused for the right reason with the cause named, and the accessory read path is gated
+- [ ] 05-04-PLAN.md — Credential rejection makes every accessory unreadable, on a HAP stand-in held against the pinned real one
+- [ ] 05-05-PLAN.md — No threshold became a setting, the new states are documented, and the requirements table agrees with itself
 
 ### Phase 6: Validated Release Candidate
 
