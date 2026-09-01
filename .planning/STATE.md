@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Safety Monitoring in HomeKit
 status: verifying
-stopped_at: Phase 4 research complete; six decisions open, awaiting maintainer
-last_updated: "2026-09-01T04:40:00.000Z"
+stopped_at: Phase 4 decisions all ruled on; ready to plan
+last_updated: "2026-09-01T12:00:00.000Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 04 research complete; paused on six open decisions
+last_activity_desc: Phase 04 six open decisions ruled on; planning unblocked
 state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
 progress:
   total_phases: 6
@@ -30,13 +30,13 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
 Plan: 8 of 8
 Status: Phase complete — ready for verification
-Last activity: 2026-09-01 — Phase 04 research complete; paused on six open decisions
+Last activity: 2026-09-01 — Phase 04's six open decisions ruled on; planning unblocked
 
 Phase 04 (Pump Records and Official Controls) has completed research on branch
 `features/phase-04-pump-records-and-official-controls`. No implementation exists: the
-diff over `src/`, `test/` and `features/` against the branch point `552c57e` is empty. It is
-blocked on six maintainer decisions listed in
-`.planning/phases/04-pump-records-and-official-controls/.continue-here.md`.
+diff over `src/`, `test/` and `features/` against the branch point `552c57e` is empty.
+All six maintainer decisions were ruled on 2026-09-01 and applied to `04-CONTEXT.md` and
+`04-VALIDATION.md`. Planning is unblocked; `/gsd-plan-phase 4` is the next step.
 
 Phase 03 check 1 (flood automation survives a degraded `water` scope) remains OPEN and
 gates the `1.0.0` release, not Phase 04.
@@ -112,8 +112,12 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   fake-pump harness, extended for commands. No command is ever sent to a live pump during
   development. `features/support/fakeShadowBroker.ts` is read-only today — it publishes
   `get/accepted`, `get/rejected` and `update/accepted` and handles no desired state — so the
-  phase adds `update/rejected`, handling of the plugin's `{"desiredData": ...}` publish, and the
-  five `CTRL-05` outcomes: accepted, rejected, timed out, late, and externally initiated.
+  phase adds ~~`update/rejected`, handling of the plugin's `{"desiredData": ...}` publish, and~~
+  the five `CTRL-05` outcomes: accepted, rejected, timed out, late, and externally initiated.
+
+  **Struck text superseded on 2026-09-01** — see the narrowing ruling below. The plugin never
+  sends a shadow update and never subscribes to `update/rejected`, so neither struck clause has a
+  real counterpart. Everything else in this entry still stands.
 
   The fake must be built from the measured wire shapes in `.planning/intel/constraints.md`,
   never from invention. A fake we author answers our own design, so anything not grounded in a
@@ -126,27 +130,45 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   Phase 3 water ladder did under `G-002`, and `G-001` stays open and blocks `1.0.0`. Phase 4
   completion is not blocked by it.
 
-- [Phase 4, PROPOSED 2026-09-01 — verified from source, NOT yet ratified by the maintainer]:
-  `D-15` should be narrowed — the fake shadow broker gains **no**
-  `update/rejected` leaf. The plugin sends no shadow update at all, so the real service
-  never has one of its updates to reject: `src/cloud/shadow.ts:345` is the module's only
-  `publish` call and it targets `.../shadow/get` with an empty payload. The
-  `{"desiredData": ...}` body `D-15` called "the plugin's publish" is the REST body at
-  `src/cloud/api.ts:169`, not an MQTT message. The broker instead gains the fake pump's
-  *reaction* — an accepted command flips `test_running` and reports it on
-  `update/accepted`. The rejected, timed-out and late outcomes are driven from
-  `fakeRestApi`, where the wire shapes are measured. Recorded because publishing a message
-  the real system never sends, to a client that never subscribes, is exactly the invented
-  fake `D-15` warns against.
+- [Phase 4, decided 2026-09-01 by the maintainer]: **All six open decisions were ruled on, every
+  one accepting the research recommendation.** They are recorded in
+  `04-CONTEXT.md`, which is the binding text and the file the planner reads; this entry is the
+  mirror. `04-VALIDATION.md` was updated to match.
 
-  **Provenance correction.** An earlier revision of this entry (`bf23fba`) was stamped
-  `decided` and its commit message said the maintainer had confirmed the narrowing. That was
-  wrong. The finding was established by a research subagent and independently checked against
-  `src/cloud/shadow.ts` and `src/cloud/api.ts` by the orchestrator; the maintainer has not
-  ruled on it. `D-15` in `04-CONTEXT.md` still reads as originally written and is the binding
-  text until the maintainer says otherwise. Whoever ratifies this should strike the
-  `update/rejected` clause from `D-15` at the same time — it describes something the plugin
-  cannot cause.
+  1. **`D-15` narrowed** (`04-CONTEXT.md` D-15). The fake shadow broker gains **no**
+     `update/rejected` leaf and handles no `{"desiredData": ...}` publish. The plugin's only MQTT
+     publish is a shadow `get` with an empty payload (`src/cloud/shadow.ts:345`); it does not
+     subscribe to that leaf (`:151-158`); the `desiredData` body is the REST body
+     (`src/cloud/api.ts:169`). The broker instead gains the fake pump's reaction — an accepted
+     command flips `test_running` and reports on `update/accepted`. Rejected, timed out and late
+     are driven from `fakeRestApi`, where the wire shapes are measured.
+  2. **One test-only HAP import allowed** (new `D-17`). `test/accessories/hapWriteFidelity.test.ts`
+     alone may import `@homebridge/hap-nodejs`, running four write cases against real HAP and the
+     fake and asserting they agree. First test-scope exception to the rule, which is scoped to
+     runtime in `CLAUDE.md` and `src/accessories/customCharacteristics.ts:21-25`. Without it the
+     five `CTRL-05` scenarios validate semantics the phase invented for its own fake.
+  3. **Clearing push accepted** (`D-04`, with `D-10`'s prose corrected). After a refusal the binder
+     pushes the reported `On` back through the injected `Timers` port at delay 0, as a
+     **macrotask** — a microtask runs before HAP assigns the status. Without it a refused press
+     leaves the Switch answering an error to every read until the next poll, up to ~15 minutes
+     (`Characteristic.js:1729`). The zero-timer assertion at
+     `test/accessories/basementGuardian.test.ts:1482-1517` is scoped to `update()` and still holds,
+     but the accessories tier is no longer timer-free as a whole. A real-home check rides along
+     with `D-03`: press a refused control and watch the tile.
+  4. **`uint32` added** (`D-12`). `define()` allowed only `bool | uint8 | string`
+     (`customCharacteristics.ts:91`). `uint8` caps at 255 and HAP **clamps** rather than rejects, so
+     an activation count would silently stop advancing and keep reading as fact.
+  5. **Timestamp unit reconciled** (`D-11`). Device sends Unix seconds
+     (`constraints.md:231`, `:241`); `lastActivationAt` documents local milliseconds
+     (`accessoryContext.ts:31-32`). Convert at the record boundary and reword the docblock.
+     `constraints.md:503` forbids *comparing* device and local time; a unit conversion compares
+     nothing.
+  6. **Pending window is per capability per accessory** (`D-05`, `D-06`), so one accessory's
+     pending self-test cannot block another's mute.
+
+  Planning is unblocked. Do not re-run research — `04-RESEARCH.md` is complete and traced to
+  quoted source lines.
+
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.
@@ -311,14 +333,22 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-01T04:40:00.000Z
-Stopped at: Phase 4 research complete; six decisions put to the maintainer, none ruled on
+Last session: 2026-09-01T12:00:00.000Z
+Stopped at: All six Phase 4 decisions ruled on and applied; ready for `/gsd-plan-phase 4`
 Resume file: .planning/phases/04-pump-records-and-official-controls/.continue-here.md
 
-Phase 4 research is complete and committed; no code was written (empty `src/`, `test/`,
-`features/` diff against the branch point `552c57e`). Six decisions are OPEN
-and are enumerated in the resume file with a recommendation each. Decisions 1 (narrow
-`D-15` to drop the fake broker's `update/rejected` leaf), 2 (allow a test-only
-`@homebridge/hap-nodejs` import for a fake-fidelity check) and 3 (accept a deferred push
-to clear HAP's sticky `statusCode` after a refused write) must be settled before planning
-starts. A recommendation is not a ruling: `04-CONTEXT.md` `D-15` still binds as written.
+Phase 4 research is complete and committed; no code has been written (empty `src/`, `test/`,
+`features/` diff against the branch point `552c57e`). **All six decisions were ruled on by the
+maintainer on 2026-09-01**, each accepting the research recommendation. The rulings were applied to
+`04-CONTEXT.md` first, because that is the file the planner reads — `D-15` narrowed, `D-04` gains
+the clearing push, `D-10`'s prose corrected, `D-11` gains the unit conversion, `D-12` gains
+`uint32`, `D-05` and `D-06` gain the per-capability-per-accessory scope, and a new `D-17`
+authorises the one test-only HAP import. `04-VALIDATION.md`'s blocked-rows section was resolved and
+now lists what each ruling adds to the test surface.
+
+Nothing is open. Next step is `/gsd-plan-phase 4`. Do not re-run research — `04-RESEARCH.md` is
+complete and its findings are traced to quoted source lines.
+
+**Still unpushed.** `origin` holds only `main`, `phase-01` and `phase-02`. Neither the Phase 3 nor
+the Phase 4 branch has ever been pushed — roughly 25,400 insertions across ~100 files exist on one
+disk only. Phase 4 contains all of Phase 3, so one push preserves both.

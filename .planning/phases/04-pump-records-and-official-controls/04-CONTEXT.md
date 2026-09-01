@@ -94,6 +94,16 @@ that needs one.
   The last row is the one `D-038` names directly. The rest are chosen so a log line and an
   Eve-class controller read true; Apple Home shows a generic failure for all of them.
 
+  **A refused write is followed by a clearing push.** HAP stores the status on the characteristic
+  and answers it to every later *read* until something pushes a value
+  `[VERIFIED: node_modules/@homebridge/hap-nodejs/dist/lib/Characteristic.js:1729, read and
+  executed 2026-09-01]`, so a refused press would otherwise leave that Switch unreadable until the
+  next poll — up to ~15 minutes. After answering the refusal, the binder pushes the reported `On`
+  value back through the injected `Timers` port at delay 0. It must be a **macrotask**: a microtask
+  queued in the handler runs *before* HAP assigns the status and would be overwritten. This is the
+  first deferral in the accessories tier — see `D-10`. Decided by the maintainer on 2026-09-01.
+  What Apple Home draws between the error and the push is unknown and is a human-verification item.
+
 - **D-05 — A pending row withholds `On`:** While a control has an unresolved request, its row
   projects nothing for `On`. This is the same per-value rule every other row already follows —
   publish a value only when the row can vouch for it — and it solves the clobber directly: the
@@ -102,9 +112,14 @@ that needs one.
   write left, which is the behaviour `constraints.md:537` records. Pending state reaches the
   catalogue through `ProjectionInput`, not through a second publish path.
 
+  The pending window is scoped **per capability per accessory** (decided by the maintainer on
+  2026-09-01). One accessory's pending self-test cannot withhold another accessory's `On`, and a
+  pending self-test cannot withhold mute on the same accessory.
+
 - **D-06 — Expiry snaps back to reported state:** When the 30-second window closes with no
   confirming report, the row resumes projecting reported state and the Switch returns to what the
-  device actually says. One warning names the capability and that the device never confirmed. The
+  device actually says, on its own clock — the window is per capability per accessory, matching
+  `D-05`'s scope. One warning names the capability and that the device never confirmed. The
   command is never retried, because a command that timed out may already have reached the device
   (`D-038`). `StatusActive` is not used to mark this: it already means "the reported field did not
   decode", and giving one signal two meanings would leave a user unable to tell which happened.
@@ -143,9 +158,15 @@ that needs one.
 
 - **D-10 — Persist on change only:** `persist()` runs when a value actually changed — a counted
   edge, a recovered activation, or a new epoch. That is a few small writes per pump cycle and none
-  at all while the basement is dry. No timer is involved, which matters: `basementGuardian.test.ts`
-  asserts zero `setTimeout` / `setInterval` / `setImmediate` / `queueMicrotask` across an
-  `update()`, and that assertion must keep passing.
+  at all while the basement is dry. No timer is involved **in persistence**, which matters:
+  `basementGuardian.test.ts` asserts zero `setTimeout` / `setInterval` / `setImmediate` /
+  `queueMicrotask` across an `update()`, and that assertion must keep passing.
+
+  Read that assertion's scope precisely: it covers `update()` only
+  `[VERIFIED: test/accessories/basementGuardian.test.ts:1482-1517]`. `D-04`'s clearing push fires
+  on the `onSet` path, which no such assertion covers, so the assertion still holds unchanged. But
+  the accessories tier is no longer timer-free *as a whole* — it is timer-free across `update()`.
+  Do not restate the broader claim.
 
 - **D-11 — A recovered activation carries the device's timestamp:** When reconciliation finds a
   `backup_pump_timestamp` newer than the watermark, the count advances by exactly one — the
@@ -156,10 +177,25 @@ that needs one.
   is never pulsed and no late notification is sent, because either would claim a current activation
   that no longer exists.
 
+  **Unit reconciliation.** Device timestamps are Unix *seconds*
+  `[VERIFIED: .planning/intel/constraints.md:231, :241]`, while `lastActivationAt` is documented as
+  local *milliseconds* `[VERIFIED: src/persistence/accessoryContext.ts:31-32]` and `isoTimestamp`
+  expects milliseconds `[VERIFIED: src/accessories/basementGuardian.ts:288-290]`. Convert the device
+  value to milliseconds at the record boundary and reword that field's docblock to say so; left
+  unreconciled the characteristic renders a 1970 date. `constraints.md:503` forbids *comparing* a
+  device timestamp against local time — a unit conversion compares nothing. Decided by the
+  maintainer on 2026-09-01.
+
 - **D-12 — The characteristics carry the "not a lifetime total" claim themselves:** The display
   names state it, so a controller showing only the characteristic still reads true, and the README
   explains the epoch and the outage gap. `Last Activation` follows the ISO-8601 string precedent
   `ControllerDataLastTrustedAt` already set, with the empty string meaning none observed.
+
+  `define()`'s format union gains `'uint32'` — `src/accessories/customCharacteristics.ts:91`
+  currently allows `'bool' | 'uint8' | 'string'`. The activation counts need it: `uint8` caps at 255
+  and HAP **clamps** rather than rejects, so a count would silently stop advancing and keep reading
+  as fact. That is a false-normal reachable in weeks, not years. Decided by the maintainer on
+  2026-09-01.
 
   The README must also name the primary/backup asymmetry plainly: the primary count holds only runs
   observed live, the backup count additionally recovers missed runs from the device timestamp, and
@@ -186,12 +222,23 @@ that needs one.
   `ignoredFaults` cannot remove either — it removes `NotificationServiceKind` only.
 
 - **D-15 — Built against the Cucumber fake, never a live pump:** Recorded in STATE.md on
-  2026-08-31 and unchanged. No command reaches a live pump during development.
-  `features/support/fakeShadowBroker.ts` is read-only today — it publishes `get/accepted`,
-  `get/rejected` and `update/accepted` and handles no desired state — so the phase adds
-  `update/rejected`, handling of the plugin's `{"desiredData": ...}` publish, and the five
-  `CTRL-05` outcomes. `features/support/fakeRestApi.ts` already answers
-  `PUT /devices/{id}/data` with `{ success: true }` and records every request.
+  2026-08-31, **narrowed by the maintainer on 2026-09-01**. No command reaches a live pump during
+  development. `features/support/fakeShadowBroker.ts` is read-only today — it publishes
+  `get/accepted`, `get/rejected` and `update/accepted` and handles no desired state — so the phase
+  adds the fake pump's *reaction*: an accepted command flips `test_running` and the broker reports
+  it on `update/accepted`. The rejected, timed-out and late `CTRL-05` outcomes are driven from
+  `features/support/fakeRestApi.ts`, which already answers `PUT /devices/{id}/data` with
+  `{ success: true }` and records every request.
+
+  **No `update/rejected` leaf is added, and no `{"desiredData": ...}` publish is handled.** The
+  original text called for both; both describe something the plugin cannot cause. The plugin makes
+  exactly one MQTT publish in its whole life and it is a shadow `get` with an empty payload
+  `[VERIFIED: src/cloud/shadow.ts:345, the only publish call in the module]`, so the service never
+  has one of its updates to reject. It does not subscribe to that leaf either
+  `[VERIFIED: src/cloud/shadow.ts:151-158]`. The `{"desiredData": ...}` body is the REST request
+  body `[VERIFIED: src/cloud/api.ts:169]`, not an MQTT message. Publishing a message the real system
+  never sends, to a client that never subscribes, is exactly the invented fake this decision warns
+  against.
 
   The fake must be built from the measured wire shapes in `.planning/intel/constraints.md`, never
   from invention. A fake we author answers our own design, so anything not grounded in a real
@@ -202,6 +249,22 @@ that needs one.
   duration, latency, or failure behaviour for mute, which is what `G-001` exists for. Mute constants
   ship named `PROVISIONAL_`, exactly as the Phase 3 water ladder did under `G-002`. `G-001` stays
   open and blocks `1.0.0`. Phase 4 completion is not blocked by it.
+
+- **D-17 — One test-only import of `@homebridge/hap-nodejs`:** The file
+  `test/accessories/hapWriteFidelity.test.ts` may import the pinned HAP package directly. It runs
+  the same four write cases against real HAP and against `features/support/fakeHap.ts` and asserts
+  the two agree. No other test file and no `src/` module may do this.
+
+  The reason: `fakeHap.ts` has no `Switch`, no `On`, no `onSet` and no `HAPStatus`
+  `[VERIFIED: features/support/fakeHap.ts:172-190, 296-300]`. Without this check the phase authors
+  every write-path semantic it then tests, and the five `CTRL-05` scenarios become
+  self-confirming — a green suite proving only that the fake agrees with itself.
+
+  This is the first **test-scope** exception to the "never import HAP-NodeJS directly" rule. That
+  rule is scoped to runtime in both `CLAUDE.md` and
+  `src/accessories/customCharacteristics.ts:21-25`, so nothing changes at runtime. The package
+  resolves as a bare specifier `[VERIFIED: require.resolve('@homebridge/hap-nodejs')]`. Decided by
+  the maintainer on 2026-09-01.
 
 ### Claude's Discretion
 

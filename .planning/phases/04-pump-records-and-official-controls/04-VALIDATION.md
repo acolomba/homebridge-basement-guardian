@@ -73,7 +73,7 @@ requirement can be dropped during planning.
 | TBD | TBD | TBD | CTRL-05 | Requested state never reaches canonical safety state | cucumber | `npx cucumber-js --name "requested"` | ✅ extend |
 | TBD | TBD | TBD | CTRL-05 | After any rejection the characteristic's stored status returns to `0` | unit | `node --test dist-test/test/accessories/controls.test.js` | ❌ W0 |
 | TBD | TBD | TBD | — | `TRUST_SCOPES` lists every `TrustScope` member | unit | `node --test dist-test/test/accessories/basementGuardian.test.js` | ✅ extend |
-| TBD | TBD | TBD | — | The fake HAP's write path agrees with the real pinned HAP | unit | `node --test dist-test/test/accessories/hapWriteFidelity.test.js` | ❌ W0 — **conditional, see below** |
+| TBD | TBD | TBD | — | The fake HAP's write path agrees with the real pinned HAP | unit | `node --test dist-test/test/accessories/hapWriteFidelity.test.js` | ❌ W0 |
 
 *Status legend: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Status column added once tasks exist.*
 
@@ -87,24 +87,46 @@ requirement can be dropped during planning.
 - [ ] `features/officialControls.feature` + `features/support/steps/controls.ts` — the five CTRL-05 outcomes
 - [ ] `features/pumpRecords.feature` — record survival across restart
 - [ ] `features/support/fakeHap.ts` extension — `Switch`, `On`, `onSet`, `handleSetRequest`, `statusCode`, `HAPStatus`, `HapStatusError`
+- [ ] `test/accessories/hapWriteFidelity.test.ts` — the only file permitted to import `@homebridge/hap-nodejs` (`D-17`)
 - [ ] `features/support/fakeTimers.ts` — a controllable `Timers` driven from `World.advanceClock`, wired into `World.discoveryContext()` in place of `systemTimers`
 - [ ] `features/support/fakeRestApi.ts` extension — command-scoped arming (`holdNextCommand`, `rejectNextCommand`, `answerNextCommandWith`) and a device reaction flipping `test_running` on acceptance
 - [ ] Framework install: none — every framework is already present.
 
-### Rows blocked on unratified decisions
+### Rows previously blocked — both ruled on 2026-09-01
 
-Two Wave 0 items depend on decisions the maintainer has **not** ruled on. Neither may be
-planned as settled.
+Nothing here is open. The two items below were parked awaiting the maintainer; both were
+settled and `04-CONTEXT.md` was amended to match. Plan them as settled.
 
-- [ ] `test/accessories/hapWriteFidelity.test.ts` — **requires a test-only import of
-  `@homebridge/hap-nodejs`.** CLAUDE.md scopes the ban to runtime, but this would be the
-  first test-scope exception and it is the maintainer's rule. If refused, every CTRL-05
-  scenario validates semantics this phase invented for its own fake, and the row above is
-  dropped.
-- [ ] `features/support/fakeShadowBroker.ts` extension — the fake pump's *reaction*: an
-  accepted command flips `test_running` and the broker reports it on `update/accepted`.
-  Whether an `update/rejected` leaf is also added depends on the D-15 narrowing, which is
-  **proposed, not ratified**. `D-15` in `04-CONTEXT.md` binds until the maintainer rules.
+- [x] `test/accessories/hapWriteFidelity.test.ts` — **allowed.** `D-17` grants this one file a
+  test-only import of `@homebridge/hap-nodejs`. It runs the same four write cases against real
+  HAP and against `features/support/fakeHap.ts` and asserts the two agree, so the five CTRL-05
+  scenarios stop being self-confirming. No other test file and no `src/` module may import it.
+- [x] `features/support/fakeShadowBroker.ts` extension — **narrowed.** The broker gains the fake
+  pump's *reaction* only: an accepted command flips `test_running` and the broker reports it on
+  `update/accepted`. **No `update/rejected` leaf, and no `{"desiredData": ...}` publish handling.**
+  The plugin's only MQTT publish is a shadow `get` with an empty payload
+  (`src/cloud/shadow.ts:345`) and it does not subscribe to that leaf, so neither has a real
+  counterpart. Rejected, timed-out and late are driven from `fakeRestApi`, where the wire shapes
+  are measured.
+
+### Rulings that change existing rows
+
+- **`D-04` clearing push (ruling 3).** After a refusal the binder pushes the reported `On` back
+  through the injected `Timers` port at delay 0, as a **macrotask**. The row "After any rejection
+  the characteristic's stored status returns to `0`" now has a mechanism to assert against, and
+  the test must prove the microtask form fails — a `queueMicrotask` push runs before HAP assigns
+  the status. Add a row asserting the deferral is a macrotask, not merely that the status cleared.
+- **`D-10` scope (ruling 3).** The zero-timer assertion at
+  `test/accessories/basementGuardian.test.ts:1482-1517` is scoped to `update()` and must keep
+  passing unchanged. Do not widen it to the `onSet` path; the clearing push lives there by design.
+- **`D-12` `uint32` (ruling 4).** `define()` gains `'uint32'`. A row must prove `uint8` is wrong
+  for the counts: HAP **clamps** at 255 rather than rejecting, so assert a count above 255 survives
+  the round trip intact rather than reading as 255.
+- **`D-11` timestamp unit (ruling 5).** Device seconds convert to milliseconds at the record
+  boundary. A row must assert a real device timestamp renders its true date, not 1970.
+- **`D-05` / `D-06` pending scope (ruling 6).** The window is per capability per accessory. A row
+  must prove isolation in both directions: one accessory's pending self-test withholds neither the
+  other accessory's control nor mute on the same accessory.
 
 ---
 
