@@ -169,6 +169,25 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   Planning is unblocked. Do not re-run research — `04-RESEARCH.md` is complete and traced to
   quoted source lines.
 
+- [Phase 4, decided 2026-09-01 by the maintainer, mid-execution]: Two rulings taken while Phase 4
+  was executing, both reversing what a subagent had done or a plan had specified.
+
+  1. **The vendor `deviceId` stays in control log lines.** The 04-02 executor removed it on its own
+     reading of the privacy rule, which reversed the ratified 2026-08-29 decision above and left
+     `platform.ts:82` and `reconciliation.ts:91` logging it inconsistently. Restored in `263cae0`,
+     and extended to all three lines the binder writes. Without it a multi-pump account cannot tell
+     which pump refused a control or which never confirmed a request. The privacy test now asserts
+     the identifier is PRESENT and that no token or base URL appears; removing it fails by name.
+
+  2. **The first device timestamp seeds the watermark instead of being counted.** On a fresh install
+     the recovery rule read an absent watermark as "anything reported is newer", so the first
+     snapshot carrying a `backup_pump_timestamp` recovered an activation dated before the
+     observation start that same snapshot seeded. `CTRL-01` says the record never claims a lifetime
+     total, and a count an owner reads must describe runs the plugin watched. Fixed in `69c203d`.
+     The plan had specified the counting behaviour in its behaviour list, truth statements and an
+     acceptance criterion, so this is a deliberate deviation from a checked plan, recorded in
+     `04-03-SUMMARY.md`.
+
 - [Phase 6]: `1.0.0` remains blocked by G-001, G-002, G-003, G-004, automated checks, read-only real-pump tests, and real-home validation.
 - [Cross-phase tests]: Unit tests mirror `src/` under `test/`. Cucumber fake-pump tests run in CI. Real-pump tests are opt-in and read-only.
 - [Cross-phase architecture]: Manual constructor dependency injection is preferred for plugin-owned services. This preference is not ADR-locked and can change during phase discussion.

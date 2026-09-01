@@ -365,6 +365,16 @@ Modified:
 
 This is what the plan specifies — the behaviour list, the truth statements, and the acceptance criterion "observes a `backupActivatedAt` of 1700000000 **with the watermark absent** and no watched edge, and asserts `backup.activationCount` is `1`" all say it plainly, so it was implemented that way and is pinned by `recovers one activation from a device timestamp and stores it in milliseconds`. It is nonetheless the one place in this module where a number an owner reads can describe something that happened before the plugin was watching, which is the claim `D-020` and the characteristic display names exist to deny. Reversing it is a one-line change — seed `watermarks.backupPumpTimestamp` from the first observation's device value instead of leaving it absent — plus that one case and its sibling. **Flagged for the phase owner rather than decided here.**
 
+> **RULED 2026-09-01 — reversed.** The maintainer chose to seed rather than count. The first
+> timestamp a record ever sees now establishes the baseline and counts no activation, so the count
+> only ever describes runs the plugin watched. The seed also clears the pending-edge flag, because
+> it absorbs whatever the device was reporting and a flag left set would absorb the next advance too
+> and lose a genuinely missed run. Applied by the orchestrator in `69c203d`, after this plan closed.
+> Both halves are mutation-checked: removing the seeding branch fails two cases by name, and leaving
+> the flag set fails `counts a later advance after a seed that also absorbed a watched edge`.
+> The acceptance criterion quoted above, and the case that pinned it, no longer describe the shipped
+> behaviour — `seeds the first device timestamp as a baseline and counts no activation for it` does.
+
 **Classification can relabel a live run from stale timestamps.** Between a backup activation starting and the device publishing its new timestamp, the stability rule is satisfied by the *previous* pair, so the label computed describes the previous run while the count already advanced for the new one. It self-corrects within two observations, which on the default fifteen-minute poll is up to half an hour. The plan does not ask for a guard and none was invented; the label decorates a record and never touches a live sensor.
 
 **Nothing here is wired to an accessory yet.** `createPumpRecords` has no caller under `src/`, `AccessoryStore` has no implementation, and the four characteristics are declared but never pushed. `npm run fallow`'s dead-code pass is satisfied because the test modules reach both. That wiring is a later plan's work, and until it lands no owner sees any of this in Apple Home.
