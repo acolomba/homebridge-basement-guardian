@@ -32,6 +32,21 @@ void (storedContext() satisfies AccessoryContext);
 void ({ observationStartedAt: OBSERVATION_START, activationCount: 0, lastActivationAt: undefined } satisfies PumpObservation);
 void ({ backupPumpTimestamp: 1_700_000_111, testTimestamp: undefined } satisfies ActivationWatermarks);
 
+// A record the plugin has not yet labelled, and one it has. Absent is not `false`: the label is
+// only written once the plugin has earned it (D-13).
+void ({ observationStartedAt: OBSERVATION_START, activationCount: 1, lastActivationAt: LAST_ACTIVATION } satisfies PumpObservation);
+void ({
+  observationStartedAt: OBSERVATION_START,
+  activationCount: 1,
+  lastActivationAt: LAST_ACTIVATION,
+  lastActivationWasTestActivity: true,
+} satisfies PumpObservation);
+
+// What an installation restored from before this release actually carries: the device identity and
+// the vendor name, and none of the three record members. That is the ordinary first-run state, so
+// it has to typecheck -- there is no earlier record shape to migrate from (D-08, D-020).
+void ({ deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', serialNumber: 'serial-1', lastVendorName: 'Sump System' } satisfies AccessoryContext);
+
 // @ts-expect-error a count means nothing without the time the plugin began watching
 void ({ activationCount: 4, lastActivationAt: LAST_ACTIVATION } satisfies PumpObservation);
 // @ts-expect-error stored state carries no credential
@@ -40,8 +55,7 @@ void ({ ...storedContext(), idToken: 'id-token-1' } satisfies AccessoryContext);
 void ({ ...storedContext(), data: { water_level: 1 } } satisfies AccessoryContext);
 
 const { backupPump, ...withoutBackupPump } = storedContext();
-void (backupPump satisfies PumpObservation);
-// @ts-expect-error both pumps are observed, so neither record is optional
+void (backupPump satisfies PumpObservation | undefined);
 void (withoutBackupPump satisfies AccessoryContext);
 
 void ({ ...storedContext(), lastVendorName: 'Sump System' } satisfies AccessoryContext);
