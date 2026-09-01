@@ -24,7 +24,7 @@
 export type MonitoringPath = 'shadow-and-poll' | 'poll-only' | 'unavailable';
 
 /** The parts of a device's state that can lose trust on their own. */
-export type TrustScope = 'connectivity' | 'water' | 'pump' | 'power' | 'battery' | 'fault';
+export type TrustScope = 'connectivity' | 'water' | 'pump' | 'power' | 'battery' | 'fault' | 'self-test' | 'alarm-mute';
 
 /**
  * Why one scope stopped being trustworthy.

@@ -1,4 +1,5 @@
 import type {
+  AlarmMuteState,
   BatteryState,
   ConnectivityState,
   DeviceCapability,
@@ -12,6 +13,7 @@ import type {
   PowerState,
   PumpState,
   ScopedDomainState,
+  SelfTestState,
   WaterState,
 } from '../../src/device/family.js';
 
@@ -34,7 +36,8 @@ const geminiAdapter = {
 void ('self-test' satisfies DeviceCapability);
 void ('out-of-domain' satisfies FieldViolationReason);
 void ({ field: 'water_level', reason: 'out-of-domain', scope: 'water' } satisfies FieldViolation);
-void ({ field: 'test_running', reason: 'wrong-type', scope: undefined } satisfies FieldViolation);
+void ({ field: 'test_running', reason: 'wrong-type', scope: 'self-test' } satisfies FieldViolation);
+void ({ field: 'mcu_firmware_version', reason: 'wrong-type', scope: undefined } satisfies FieldViolation);
 void ({ valid: true } satisfies FamilyValidation);
 void ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] } satisfies FamilyValidation);
 void ({ desiredData: { test_running: true } } satisfies FamilyCommand);
@@ -52,6 +55,9 @@ void ({
   controllerLinkPresent: true,
 } satisfies FaultState);
 void ({ reportedOffline: false } satisfies ConnectivityState);
+void ({ running: true, testedAt: 1_699_998_000 } satisfies SelfTestState);
+void ({ running: false, testedAt: undefined } satisfies SelfTestState);
+void ({ muted: true } satisfies AlarmMuteState);
 void ({ mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 } satisfies DeviceMetadataState);
 
 void ({
@@ -61,6 +67,8 @@ void ({
   battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
   fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
   connectivity: { reportedOffline: false },
+  'self-test': { running: false, testedAt: undefined },
+  'alarm-mute': { muted: false },
   metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
 } satisfies ScopedDomainState);
 
@@ -72,6 +80,8 @@ void ({
   battery: undefined,
   fault: undefined,
   connectivity: { reportedOffline: false },
+  'self-test': undefined,
+  'alarm-mute': undefined,
   metadata: undefined,
 } satisfies ScopedDomainState);
 
@@ -87,6 +97,10 @@ void ({ reason: 'missing', scope: 'water' } satisfies FieldViolation);
 void ({ field: 'water_level', reason: 'missing' } satisfies FieldViolation);
 // @ts-expect-error a family that forgets a scope states its absence rather than omitting the member
 void ({ water: undefined, pump: undefined, power: undefined, battery: undefined, fault: undefined, connectivity: undefined } satisfies ScopedDomainState);
+// @ts-expect-error the self-test scope carries the device's own timestamp beside the running flag
+void ({ running: true } satisfies SelfTestState);
+// @ts-expect-error the alarm mute scope reports what the device says about its audible alarm
+void ({} satisfies AlarmMuteState);
 
 const { implemented, ...withoutSupportFlag } = geminiAdapter;
 void (implemented satisfies boolean);

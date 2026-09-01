@@ -67,7 +67,14 @@ export interface WaterState {
 export interface PumpState {
   primaryRunning: boolean;
   backupRunning: boolean;
-  /** Device time of the last reported backup activation, or `undefined` when the device reports none. */
+  /**
+   * The device's own time of the last reported backup activation, in Unix
+   * seconds, or `undefined` when the device reports none.
+   *
+   * The unit is the device's, carried through unconverted: a consumer that
+   * renders it converts at its own boundary, so no two readers can disagree
+   * about which unit this member holds.
+   */
   backupActivatedAt: number | undefined;
 }
 
@@ -97,6 +104,24 @@ export interface FaultState {
   waterSensorFault: boolean;
   /** Reported rather than inverted: `true` means the network module still has its link to the pump controller. */
   controllerLinkPresent: boolean;
+}
+
+/** What the system self-test is doing, and when the device last ran one. */
+export interface SelfTestState {
+  running: boolean;
+  /**
+   * The device's own `test_timestamp`, in Unix seconds, carried through
+   * unconverted, or `undefined` when the device has reported none.
+   *
+   * It is the device's clock, never the plugin's, so it is compared only
+   * against other device timestamps and never against local time.
+   */
+  testedAt: number | undefined;
+}
+
+/** Whether the device's audible alarm is currently muted. */
+export interface AlarmMuteState {
+  muted: boolean;
 }
 
 /** What a device says about its own connection to the vendor cloud. */
@@ -130,6 +155,11 @@ export interface ScopedDomainState {
   battery: BatteryState | undefined;
   fault: FaultState | undefined;
   connectivity: ConnectivityState | undefined;
+  // The two control scopes are keyed by the `DeviceCapability` they answer for,
+  // so the capability, the trust scope, and the decoded group are one string and
+  // no mapping table can drift (D-02).
+  'self-test': SelfTestState | undefined;
+  'alarm-mute': AlarmMuteState | undefined;
   metadata: DeviceMetadataState | undefined;
 }
 

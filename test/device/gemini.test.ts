@@ -92,9 +92,9 @@ const TELEMETRY_SCOPES: readonly TelemetryScopeRow[] = [
   { field: 'hours_of_protection', scope: 'battery', wrongValue: 'not-a-number', required: true },
   { field: 'water_sensor_fault', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
   { field: 'serial_communications', scope: 'fault', wrongValue: 'not-a-boolean', required: true },
-  { field: 'alarm_audio_muted', scope: undefined, wrongValue: 'not-a-boolean', required: true },
-  { field: 'test_running', scope: undefined, wrongValue: 'not-a-boolean', required: true },
-  { field: 'test_timestamp', scope: undefined, wrongValue: 'not-a-number', required: false },
+  { field: 'alarm_audio_muted', scope: 'alarm-mute', wrongValue: 'not-a-boolean', required: true },
+  { field: 'test_running', scope: 'self-test', wrongValue: 'not-a-boolean', required: true },
+  { field: 'test_timestamp', scope: 'self-test', wrongValue: 'not-a-number', required: false },
   { field: 'offline', scope: 'connectivity', wrongValue: 'not-a-boolean', required: true },
 ];
 
@@ -221,7 +221,7 @@ describe('validate', () => {
 
 // The trustworthy scopes a caller reads off a decoded state, in the order
 // `ScopedDomainState` declares them.
-const DECODED_SCOPES = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'metadata'] as const;
+const DECODED_SCOPES = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute', 'metadata'] as const;
 
 function absentScopesOf(state: GeminiDomainState): string[] {
   return DECODED_SCOPES.filter((scope) => state[scope] === undefined);
@@ -258,6 +258,8 @@ describe('decode', () => {
       battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
       fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
       connectivity: { reportedOffline: false },
+      'self-test': { running: false, testedAt: 1_699_998_000 },
+      'alarm-mute': { muted: false },
       metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
     };
 
@@ -290,6 +292,8 @@ describe('decode', () => {
       battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
       fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
       connectivity: { reportedOffline: false },
+      'self-test': { running: false, testedAt: undefined },
+      'alarm-mute': { muted: false },
       metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
     };
 
@@ -348,8 +352,17 @@ describe('decode', () => {
     });
   }
 
-  for (const field of ['alarm_audio_muted', 'test_running', 'test_timestamp'] satisfies readonly GeminiTelemetryField[]) {
-    test(`RES-01 keeps every scope when the command-surface field ${field} is invalid`, () => {
+  // The three control fields own two scopes of their own rather than sharing one
+  // or borrowing `pump`. Filing `test_timestamp` under `pump` would let a
+  // wrong-typed timestamp deactivate two live pump services and two contact
+  // sensors, and the field says nothing about whether a pump is running
+  // (D-02, D-014).
+  for (const { scope, field } of [
+    { scope: 'alarm-mute', field: 'alarm_audio_muted' },
+    { scope: 'self-test', field: 'test_running' },
+    { scope: 'self-test', field: 'test_timestamp' },
+  ] satisfies readonly { scope: TrustScope; field: GeminiTelemetryField }[]) {
+    test(`D-02 omits the ${scope} scope and no other when the control field ${field} is invalid`, () => {
       // arrange
       const snapshot = buildSnapshot({ ...validTelemetry(), [field]: 'not-the-declared-type' }, validMetadata());
 
@@ -357,9 +370,20 @@ describe('decode', () => {
       const state = geminiFamily.decode(snapshot);
 
       // assert
-      assert.deepStrictEqual(absentScopesOf(state), []);
+      assert.deepStrictEqual(absentScopesOf(state), [scope]);
     });
   }
+
+  test('D-02 keeps the alarm mute scope trustworthy while a wrong-typed test_running deactivates the self-test scope', () => {
+    // arrange
+    const snapshot = buildSnapshot({ ...validTelemetry(), alarm_audio_muted: true, test_running: 'not-a-boolean' }, validMetadata());
+
+    // act
+    const state = geminiFamily.decode(snapshot);
+
+    // assert
+    assert.deepStrictEqual({ selfTest: state['self-test'], alarmMute: state['alarm-mute'] }, { selfTest: undefined, alarmMute: { muted: true } });
+  });
 
   for (const { field, wrongValue } of METADATA_SCOPES) {
     test(`RES-01 omits only the metadata scope when ${field} has the wrong type`, () => {

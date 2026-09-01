@@ -16,6 +16,7 @@
 import { isPitFlooded, waterLevelPercentage } from './waterLevel.js';
 
 import type {
+  AlarmMuteState,
   BatteryState,
   ConnectivityState,
   DeviceCapability,
@@ -29,6 +30,7 @@ import type {
   PowerState,
   PumpState,
   ScopedDomainState,
+  SelfTestState,
   WaterState,
 } from './family.js';
 import type { TrustScope } from './health.js';
@@ -312,6 +314,14 @@ function decodeFault(data: Readonly<Record<string, unknown>>): FaultState {
   };
 }
 
+function decodeSelfTest(data: Readonly<Record<string, unknown>>): SelfTestState {
+  return { running: booleanField(data, 'test_running'), testedAt: optionalNumberField(data, 'test_timestamp') };
+}
+
+function decodeAlarmMute(data: Readonly<Record<string, unknown>>): AlarmMuteState {
+  return { muted: booleanField(data, 'alarm_audio_muted') };
+}
+
 function decodeConnectivity(data: Readonly<Record<string, unknown>>): ConnectivityState {
   return { reportedOffline: booleanField(data, 'offline') };
 }
@@ -353,6 +363,8 @@ function decode(snapshot: DeviceSnapshot): GeminiDomainState {
     battery: untrusted.has('battery') ? undefined : decodeBattery(data),
     fault: untrusted.has('fault') ? undefined : decodeFault(data),
     connectivity: untrusted.has('connectivity') ? undefined : decodeConnectivity(data),
+    'self-test': untrusted.has('self-test') ? undefined : decodeSelfTest(data),
+    'alarm-mute': untrusted.has('alarm-mute') ? undefined : decodeAlarmMute(data),
     metadata: isMetadataTrustworthy(metadata) ? decodeMetadata(metadata) : undefined,
   };
 }
