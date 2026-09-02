@@ -9,7 +9,9 @@ import { It, mock, verify, when } from 'strong-mock';
 
 import { createFakeHap } from '../features/support/fakeHap.js';
 import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.js';
+import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
+import { markServicesUnreadable } from '../src/accessories/staleMarking.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
@@ -427,6 +429,10 @@ function recordingBasementGuardianAccessory(deviceId: string, marks: string[]): 
 const COMMUNICATION_FAILURE = -70402;
 const LEAK_DETECTED = 1;
 
+// The status a characteristic carries once an ordinary push has cleared a stored failure, written
+// independently of the stand-in for the same reason the failure above is.
+const READ_SUCCEEDS = 0;
+
 /** Two accessories as a halted restart holds them, with the flood sensor of each held for reading. */
 interface RestoredAccessories {
   accessories: Map<string, BasementGuardianPlatformAccessory>;
@@ -451,6 +457,56 @@ function restoredAccessories(): RestoredAccessories {
   }
 
   return { accessories, floods };
+}
+
+/** One restored accessory with the live instance that publishes onto its services. */
+interface RepublishingAccessory {
+  accessories: Map<string, BasementGuardianPlatformAccessory>;
+  basementGuardianAccessories: Map<string, BasementGuardianAccessory>;
+  floods: readonly FakeHapService[];
+}
+
+// A restored accessory with a real `BasementGuardianAccessory` built over the same
+// `PlatformAccessory`, so the boolean fan-out and the error push touch one set of services.
+//
+// This is what `recordingBasementGuardianAccessory` cannot be. That stand-in pushes nothing, so the
+// services the error push walks are not the services the fan-out touched, and an inverted push order
+// leaves every reading exactly where it was. A case that means to observe the clobber has to read a
+// characteristic both loops reach, which means an instance that republishes its own rows onto the
+// accessory the second loop walks (WR-01).
+//
+// The row is reached through the subtype the catalogue publishes under, which is the same subtype
+// `restoredAccessories` seeds above -- so a rename on either side fails here rather than silently
+// handing back a second, unwatched service.
+function restoredAccessoryRepublishingItsRows(): RepublishingAccessory {
+  const accessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+
+  accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+
+  const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+  const built = createBasementGuardianAccessory({
+    accessory: accessory as unknown as PlatformAccessory,
+    hap: HAP_NAMESPACE,
+    registry: powerRegistry(),
+    log: createSilentLog(),
+    timers: systemTimers,
+    store: { persist: () => undefined },
+    commands: refusingCommands(),
+  });
+
+  built.update(store.applyDiscovery(geminiDevice()), 'poll');
+
+  const flood = accessory.getServiceById(HAP.Service.LeakSensor, 'sump-pit-flood');
+
+  if (flood === undefined) {
+    throw new Error('the accessory published no Sump Pit Flood service for this case to read');
+  }
+
+  return {
+    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+    basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, built]]),
+    floods: [flood],
+  };
 }
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
@@ -1222,9 +1278,15 @@ describe('applyMonitoringHealth', () => {
     );
   });
 
-  // The ordering inside the fan-out is load-bearing and this is what pins it: an ordinary push clears
-  // a stored status, so an error pushed before `markMonitoring` republished its rows would be
-  // silently undone by the boolean that followed it.
+  // What this case pins is the fan-out's reach, not its ordering: every accessory in the map hears the
+  // same account-wide answer in the same pass that makes the restored accessories unreadable.
+  //
+  // It cannot pin the ordering, and the comment that said it did was wrong. The stand-in pushes
+  // nothing, so the flood services the error push walks are not services it ever touched, and
+  // inverting the two loops in `applyMonitoringHealth` leaves this case green. The case below --
+  // "leaves the pushed status standing over an accessory that republishes its own rows" -- is the one
+  // that pins the ordering, because the instance it drives republishes onto the very services the
+  // error push then marks (WR-01).
   test('leaves the pushed status standing after the boolean fan-out has run', () => {
     // arrange
     const marks: string[] = [];
@@ -1243,6 +1305,81 @@ describe('applyMonitoringHealth', () => {
     assert.deepStrictEqual(
       { marks, statuses: statusesOf(restored.floods) },
       { marks: [`${DEVICE_ID} rest true shadow true`], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] },
+    );
+  });
+
+  // The ordering inside the fan-out is load-bearing and this is what pins it: an ordinary push clears
+  // a stored status, so an error pushed before `markMonitoring` republished its rows would be
+  // silently undone by the boolean that followed it. The accessory here is real and publishes onto
+  // the same flood service the error push walks, so an inverted order is observable as a readable
+  // value where a status should stand.
+  //
+  // The value *under* the status is `false`, while the fixture-driven case two above reads `true`
+  // under the same status. Neither is wrong and neither should be "corrected" to match the other. A
+  // refused credential withdraws every trust scope, so a real accessory republishes its trust report
+  // as `false` before the error lands on it; the fixture's `true` was written by
+  // `restoredAccessories` and no accessory ever republished it, because that case holds no instance
+  // bound to those services (05-16).
+  test('leaves the pushed status standing over an accessory that republishes its own rows', () => {
+    // arrange
+    const live = restoredAccessoryRepublishingItsRows();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: live.accessories,
+      registry: powerRegistry(),
+      basementGuardianAccessories: live.basementGuardianAccessories,
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(trustReadsOf(live.floods), [
+      { statusActive: { value: false, threw: COMMUNICATION_FAILURE }, leakDetected: { value: 0, threw: undefined } },
+    ]);
+  });
+
+  // The case above is only as good as the fixture it reads, and the fixture it replaced was
+  // indistinguishable from a working one: it reported the same green under both push orders. So this
+  // case asserts the discriminating property directly, over two identically built fixtures -- the
+  // plugin's own order leaves a status standing, the inversion leaves a readable value, and the two
+  // readings differ.
+  //
+  // Built on a stand-in that pushes nothing, both orders leave the same status standing, the readings
+  // do not differ, and this case fails. That is the whole point: the vacuity nobody noticed is caught
+  // by the suite rather than by an executor's report of a mutation they applied by hand.
+  //
+  // The two halves are driven by calling the collaborators directly rather than by copying
+  // `applyMonitoringHealth`'s body, so this case measures the instrument and not a second copy of the
+  // production loop.
+  test('reads a different trust report under each push order, which is what makes the ordering case able to fail', () => {
+    // arrange
+    const inPluginOrder = restoredAccessoryRepublishingItsRows();
+    const inverted = restoredAccessoryRepublishingItsRows();
+    const refusal = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
+    const markUnreadable = (accessories: Map<string, BasementGuardianPlatformAccessory>): void => {
+      for (const accessory of accessories.values()) {
+        markServicesUnreadable(accessory, HAP_NAMESPACE, HAP_NAMESPACE.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
+    };
+
+    // act
+    for (const built of inPluginOrder.basementGuardianAccessories.values()) {
+      built.markMonitoring(refusal);
+    }
+
+    markUnreadable(inPluginOrder.accessories);
+    markUnreadable(inverted.accessories);
+
+    for (const built of inverted.basementGuardianAccessories.values()) {
+      built.markMonitoring(refusal);
+    }
+
+    // assert
+    assert.notDeepStrictEqual(statusesOf(inPluginOrder.floods), statusesOf(inverted.floods));
+    assert.deepStrictEqual(
+      { pluginOrder: statusesOf(inPluginOrder.floods), inverted: statusesOf(inverted.floods) },
+      { pluginOrder: [COMMUNICATION_FAILURE], inverted: [READ_SUCCEEDS] },
     );
   });
 
