@@ -66,7 +66,8 @@
 - [x] **RES-02**: `serial_communications === false` immediately activates `Pump Controller Link Lost`, faults controller-derived services, preserves their values, and exposes when trustworthy controller data was last received.
 - [x] **RES-03**: `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report `connectivity.connected === false`. `data.offline === true` is corroboration and diagnostics only and never activates the adapter by itself (`D-016`). Failed REST requests or monitoring-path loss are logged and diagnosed separately without a false physical-device alert.
   - *Delivery split (Phase 3 discussion, `03-CONTEXT.md` D-09):* Phase 3 delivers the confirmation counter and the adapter, since `SAFE-04` publishes `Basement Guardian Offline` among its five adapters and an adapter without the counter would flap. Phase 5 delivers the remaining sentence — separating a lost monitoring path from a confirmed-offline device without a false physical-device alert.
-- [ ] **RES-04**: After a failed restart, getters return cached values without network calls, accessories remain present and visibly stale, commands stay disabled until fresh valid state returns, and only explicit credential rejection yields a persistent communication failure requiring user action.
+- [x] **RES-04**: After a failed restart, getters return cached values without network calls, accessories remain present and visibly stale, commands stay disabled until fresh valid state returns, and only explicit credential rejection yields a persistent communication failure requiring user action.
+  - *Closed 2026-09-02 by plan 05-10, on one named passing assertion per clause.* Cached reads: `test/accessories/accessoryReadPathScope.test.ts` — `no module under src registers a HomeKit read handler in any spelling that reaches one (RES-04, D-09)` and `no module in the accessories tier can reach the vendor (RES-04, D-09)`. Present and stale: `features/degradedOperation.feature` — `A restarted plugin marks restored values stale before any poll` and `A restart retains the values it marks stale`. Commands disabled: `test/platform.test.ts` — `refuses a press on every restored control, so a press before the first poll is not silently accepted (RES-04, D-07)`, which plan 05-09 added for the failed-restart window the clause names. Credential rejection: `test/runtime/accountRuntime.test.ts` — `D-13 pushes a rejected credential and records the authentication stop for a refusal that follows a healthy start`, which plan 05-07 added for the mid-run refusal, with `test/platform.test.ts` — `leaves every restored accessory readable for a shadow silence` and its three siblings holding the `only` direction.
 
 ### Release Quality, Privacy, and Distribution
 
@@ -146,7 +147,7 @@
 | RES-01 | Phase 3, Phase 5 | Complete |
 | RES-02 | Phase 3 | Complete |
 | RES-03 | Phase 3, Phase 5 | Complete |
-| RES-04 | Phase 5 | Pending |
+| RES-04 | Phase 5 | Complete |
 | REL-01 | Phase 6 | Pending |
 | REL-02 | Phase 6 | Pending |
 | REL-03 | Phase 6 | Pending |

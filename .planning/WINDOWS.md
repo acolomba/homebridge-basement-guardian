@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 7
+open_count: 11
 waived_count: 1
 fixed_count: 2
-total_count: 10
-last_updated: 2026-09-02T15:54:13.289Z
+total_count: 14
+last_updated: 2026-09-02T16:16:04.212Z
 ---
 
 # Broken Windows Ledger
@@ -25,6 +25,10 @@ last_updated: 2026-09-02T15:54:13.289Z
 | 8 | 05 | deviation | features/degradedOperation.feature |  | A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check | fixed |  | 2026-09-02T14:31:08.555Z | 2026-09-02T15:53:59.999Z |
 | 9 | 05 | deviation | features/degradedOperation.feature |  | Scenario 'Shadow silence withdraws trust while polling continues' now rests its 'sensor is not activated' assertion on the polled water_level 1 rather than the retained heartbeat 3; still honest, but the heartbeat step no longer carries that assertion | open |  | 2026-09-02T15:54:12.932Z |  |
 | 10 | 05 | deviation | features/support/steps/harness.ts |  | Plan 05-11 prescribed repairing scenarios with 'Given these reported device fields:'; that step wipes the full valid telemetry these scenarios need and the matching-value repair also destroys the heartbeat barrier the snapshot step provides. Repair used the second heartbeat instead | open |  | 2026-09-02T15:54:13.289Z |  |
+| 11 | 05 | unrun-verify | test/accessories/staleMarking.test.ts |  | lets the accessory own binder replace the refusal: no mutation in 05-09's five reaches it, so the assertion carries no discriminating mutation; the candidate (bind as an additional listener rather than into HAP's single onSet slot) is named in 05-VALIDATION.md and was not run | open |  | 2026-09-02T16:15:52.222Z |  |
+| 12 | 05 | deviation | .planning/REQUIREMENTS.md |  | Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit | open |  | 2026-09-02T16:16:03.522Z |  |
+| 13 | 05 | unrun-verify | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The 22 first-round Per-Task Verification Map rows still read pending. Plan 05-10 reconciled the gap-closure rows against their summaries and had no equivalent basis for the first round; three of those rows are the ones 05-VERIFICATION.md found green but blind | open |  | 2026-09-02T16:16:03.873Z |  |
+| 14 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md |  | WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md | open |  | 2026-09-02T16:16:04.212Z |  |
 
 ````json
 [
@@ -146,6 +150,54 @@ last_updated: 2026-09-02T15:54:13.289Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T15:54:13.289Z",
+    "resolved_at": null
+  },
+  {
+    "id": 11,
+    "kind": "unrun-verify",
+    "phase": "05",
+    "file": "test/accessories/staleMarking.test.ts",
+    "line": null,
+    "description": "lets the accessory own binder replace the refusal: no mutation in 05-09's five reaches it, so the assertion carries no discriminating mutation; the candidate (bind as an additional listener rather than into HAP's single onSet slot) is named in 05-VALIDATION.md and was not run",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T16:15:52.222Z",
+    "resolved_at": null
+  },
+  {
+    "id": 12,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/REQUIREMENTS.md",
+    "line": null,
+    "description": "Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T16:16:03.522Z",
+    "resolved_at": null
+  },
+  {
+    "id": 13,
+    "kind": "unrun-verify",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
+    "line": null,
+    "description": "The 22 first-round Per-Task Verification Map rows still read pending. Plan 05-10 reconciled the gap-closure rows against their summaries and had no equivalent basis for the first round; three of those rows are the ones 05-VERIFICATION.md found green but blind",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T16:16:03.873Z",
+    "resolved_at": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md",
+    "line": null,
+    "description": "WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T16:16:04.212Z",
     "resolved_at": null
   }
 ]
