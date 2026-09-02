@@ -192,7 +192,8 @@ export interface FakeHapCharacteristic {
    * The real HAP carries this member too, and it is the whole reason the write path is modelled
    * here rather than assumed: a rejected write stores the thrown status and every later read
    * answers it until something pushes a value, which is a service reading as unavailable long
-   * after the press that refused it. Any push clears it, whatever value it carries.
+   * after the press that refused it. A push of an ordinary value clears it, whatever that value
+   * is; a push of an error sets it and stores nothing.
    */
   statusCode: number;
   getDefaultValue(): unknown;
@@ -492,12 +493,31 @@ class StandInService implements FakeHapService {
     return this.updateCharacteristic(characteristicClass, value);
   }
 
-  // The real `updateValue` clears the stored status unconditionally before it stores, so any push
-  // -- even one carrying the value the characteristic already holds -- makes a refused
-  // characteristic readable again. The clearing is per characteristic: pushing `StatusActive`
-  // leaves a status stored on `On` exactly where it was.
+  // The real `updateValue` takes two branches, and which one it takes decides whether the stored
+  // value survives.
+  //
+  // Handed an error it assigns the stored status and returns *before* it validates or stores
+  // anything, so the value and the published flag stay exactly where they were. That ordering is
+  // what makes an unreadable characteristic still carry the last reading the plugin vouched for,
+  // and it is the whole reason a persistent failure can be published without erasing anything
+  // (D-10, D-014).
+  //
+  // Handed anything else it clears the stored status and stores, so any ordinary push -- even one
+  // carrying the value the characteristic already holds -- makes an unreadable or refused
+  // characteristic readable again.
+  //
+  // Either way the effect is per characteristic: pushing `StatusActive` leaves a status stored on
+  // `On` exactly where it was.
   updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
     const characteristic = this.getCharacteristic(characteristicClass) ?? this.addCharacteristic(characteristicClass);
+
+    // The same mapping the write path reads, so the two cannot disagree about what a given error
+    // means.
+    if (value instanceof Error) {
+      characteristic.statusCode = thrownStatusOf(value);
+
+      return this;
+    }
 
     characteristic.statusCode = HAP_STATUS.SUCCESS;
     characteristic.value = value;
