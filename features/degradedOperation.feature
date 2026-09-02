@@ -175,6 +175,40 @@ Feature: Degraded monitoring
       | water_level | 3 |
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
 
+  Scenario: A returning heartbeat clears the shadow silence before the next poll
+    The scenario above runs under a short poll interval, so a poll tick lands within milliseconds of
+    the heartbeat and it cannot tell the arrival clearing from the poll-tick clearing. This one parks
+    the plugin's device polling at the vendor first, which takes that cover away: no poll can finish
+    from then on, so the arriving message is the only event left that could restore the trust. An
+    owner whose live connection returns sees the tile stop saying the plugin cannot vouch for it at
+    the message that proves the connection, rather than at a poll the configuration lets run an hour
+    late.
+
+    The closing step is here because the hold is not indefinite. The client puts a ten-second
+    real-clock deadline on every request, and an abort reaches the poll loop's failure branch, which
+    reports the monitoring trust and would clear the silence with no message involved. The step reads
+    the inventory-request count, which that abort moves, so a run slow enough for the deadline to
+    fire fails loudly instead of crediting a poll report to the message.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Given the vendor never answers the device list
+    Then the plugin stops asking for the device list
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    Then the "Sump Pit Level" service reports "Water Level" as "40"
+    Then the plugin records no poll outcome
+
   Scenario: A restarted plugin marks restored values stale before any poll
     Homebridge serves the values it cached from the moment the bridge publishes, and this plugin
     publishes nothing until a poll succeeds, which never happens while the cloud is unreachable. The

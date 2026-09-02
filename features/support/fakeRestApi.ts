@@ -78,6 +78,18 @@ export interface FakeRestApi {
   holdNextRequest(): void;
 
   /**
+   * Records every subsequent request for the device list and answers none of them.
+   *
+   * `holdNextRequest` holds whichever request arrives first, which on a running plugin can be the
+   * credential rotation rather than the inventory poll; a scenario that parked the rotation instead
+   * would starve a loop it is not about. This hold is scoped to the inventory route and stands, so
+   * a scenario can park the poll loop while every other route keeps answering, and the poll loop
+   * then records no outcome at all. Every held response is destroyed with the rest when the service
+   * closes.
+   */
+  holdEveryDeviceRequest(): void;
+
+  /**
    * Records the next command and never answers it, so the client's own deadline is what ends it.
    *
    * `holdNextRequest` holds whichever request arrives first, which on a running plugin can be the
@@ -131,6 +143,9 @@ interface ServiceState {
   // exactly one to.
   standingStatus: number | undefined;
   holdNext: boolean;
+  // The standing inventory hold, scoped to one route where `holdNext` above is first-come. It is
+  // what parks a running plugin's poll loop without touching the credential rotation.
+  holdEveryDevice: boolean;
   // The three command-scoped arms, each one-shot. They are deliberately separate from `holdNext`
   // and `armedStatus` above, which the pre-route gate consumes: that gate runs before the method
   // and the path are inspected, so a scenario arming a held command through it while a
@@ -294,12 +309,19 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
   const path = request.url ?? '';
   const method = request.method ?? '';
   const body = await readBody(request);
+  const pathname = new URL(path, `http://${LOOPBACK_ADDRESS}`).pathname;
 
   state.requests.push({ method, path, authorization: request.headers.authorization, body });
 
   if (state.holdNext) {
     state.holdNext = false;
 
+    return;
+  }
+
+  // Recorded above like every other request and then answered by nothing, so a scenario can watch
+  // the count stop advancing and know the poll loop is parked inside this request.
+  if (state.holdEveryDevice && method === 'GET' && pathname === DEVICES_PATH) {
     return;
   }
 
@@ -312,7 +334,7 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
     return;
   }
 
-  answer(state, method, new URL(path, `http://${LOOPBACK_ADDRESS}`).pathname, body, response);
+  answer(state, method, pathname, body, response);
 }
 
 /**
@@ -329,6 +351,7 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     armedStatus: undefined,
     standingStatus: undefined,
     holdNext: false,
+    holdEveryDevice: false,
     heldCommand: false,
     commandStatus: undefined,
     commandBody: undefined,
@@ -359,6 +382,9 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     },
     holdNextRequest(): void {
       state.holdNext = true;
+    },
+    holdEveryDeviceRequest(): void {
+      state.holdEveryDevice = true;
     },
     holdNextCommand(): void {
       state.heldCommand = true;
