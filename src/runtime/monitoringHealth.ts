@@ -101,18 +101,27 @@ function isShadowSilent(lastMessageAt: number, now: number): boolean {
  * clock reading beyond that one seed.
  */
 export function createMonitoringHealth(options: MonitoringHealthOptions): MonitoringHealth {
-  const lastShadowMessageAt = options.clock.now();
+  let consecutiveRestFailures = 0;
+  let lastShadowMessageAt = options.clock.now();
 
   return {
-    recordRestSuccess: () => undefined,
+    recordRestSuccess(): void {
+      consecutiveRestFailures = 0;
+    },
 
-    recordRestFailure: () => undefined,
+    recordRestFailure(): void {
+      consecutiveRestFailures += 1;
+    },
 
-    recordShadowMessage: () => undefined,
+    recordShadowMessage(): void {
+      lastShadowMessageAt = options.clock.now();
+    },
 
-    trustNow: (): MonitoringTrust => ({
-      restDegraded: isRestDegraded(0),
-      shadowSilent: isShadowSilent(lastShadowMessageAt, options.clock.now()),
-    }),
+    trustNow(): MonitoringTrust {
+      return {
+        restDegraded: isRestDegraded(consecutiveRestFailures),
+        shadowSilent: isShadowSilent(lastShadowMessageAt, options.clock.now()),
+      };
+    },
   };
 }
