@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 6/11 plans executed — 5 executed, 6 planned to close the gaps `05-VERIFICATION.md` found and the ruling `05-CONTEXT.md` D-13 records
+**Plans**: 7/11 plans executed — 5 executed, 6 planned to close the gaps `05-VERIFICATION.md` found and the ruling `05-CONTEXT.md` D-13 records
 
 Plans:
 **Wave 1**
@@ -264,7 +264,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-07-PLAN.md — A credential refused after a healthy start reaches the terminal branch, and a shutdown tells the tier the transport is gone
+- [x] 05-07-PLAN.md — A credential refused after a healthy start reaches the terminal branch, and a shutdown tells the tier the transport is gone
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -308,5 +308,5 @@ Plans:
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
 | 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 6/10 | In Progress|  |
+| 5. Degraded Operation and Recovery | 7/11 | In Progress|  |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |

@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-06-PLAN.md
-last_updated: "2026-09-02T12:37:38.375Z"
+stopped_at: Completed 05-07-PLAN.md
+last_updated: "2026-09-02T13:46:59.947Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: 0b94b74a874d977232a8a9f23e0510055c37fc18
+state_head: c398523b2209b0b3f57329c77984958a9c178231
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 47
-  completed_plans: 43
+  total_plans: 48
+  completed_plans: 44
   percent: 33
 ---
 
@@ -98,6 +98,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P04 | 28min | 2 tasks | 15 files |
 | Phase 05 P05 | 20min | 2 tasks | 4 files |
 | Phase 05 P06 | 47min | 3 tasks | 9 files |
+| Phase 05 P07 | 25min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -253,6 +254,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: D-014 was read, not amended: withholding is how retention is achieved when the arriving value is bad, and against a family-valid value from a working transport it retains nothing
 - [Phase 05]: The exempt set holds unreachable alone; stale was excluded because nothing in src/ assigns it
 - [Phase 05]: The write gate keeps reading the withdrawn scopes directly, so a press is still refused while values flow to the tile
+- [Phase 05]: Phase 5 plan 07: the halt flag keeps one assignment site — it moved into haltOnTerminalAuthFailure, which the launch, the poll loop and the rotation loop all route through, so no second flag was raised beside it.
+- [Phase 05]: Phase 5 plan 07: waitWhileRunning reads the halt flag before and after every loop wait; one read alone either lets a sleeping loop wake and call once more, or arms a timer the halting loop will never use.
+- [Phase 05]: Phase 5 plan 07: stop() pushes the final monitoring trust directly rather than through reportMonitoringHealth, and moves commandTransportReady alone, so a shutdown marks no scope and writes no live-reporting observation.
 
 ### Pending Todos
 
@@ -409,8 +413,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T12:37:37.746Z
-Stopped at: Completed 05-06-PLAN.md
+Last session: 2026-09-02T13:46:39.049Z
+Stopped at: Completed 05-07-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour

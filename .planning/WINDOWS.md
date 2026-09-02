@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 1
 fixed_count: 0
-total_count: 6
-last_updated: 2026-09-02T12:34:29.998Z
+total_count: 7
+last_updated: 2026-09-02T13:47:07.171Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,7 @@ last_updated: 2026-09-02T12:34:29.998Z
 | 4 | 05 | todo | README.md | 220 | Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/ | open |  | 2026-09-02T03:35:44.625Z |  |
 | 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | open |  | 2026-09-02T12:34:29.654Z |  |
 | 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | open |  | 2026-09-02T12:34:29.998Z |  |
+| 7 | 05 | unrun-verify | test/platform.test.ts |  | makes an accessory a successful inventory built unreadable in the same pass as a restored one: passes without the fix and fails no mutation; keep D1-D4 as the coverage of CR-03 | open |  | 2026-09-02T13:47:07.171Z |  |
 
 ````json
 [
@@ -94,6 +95,18 @@ last_updated: 2026-09-02T12:34:29.998Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T12:34:29.998Z",
+    "resolved_at": null
+  },
+  {
+    "id": 7,
+    "kind": "unrun-verify",
+    "phase": "05",
+    "file": "test/platform.test.ts",
+    "line": null,
+    "description": "makes an accessory a successful inventory built unreadable in the same pass as a restored one: passes without the fix and fails no mutation; keep D1-D4 as the coverage of CR-03",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T13:47:07.171Z",
     "resolved_at": null
   }
 ]
