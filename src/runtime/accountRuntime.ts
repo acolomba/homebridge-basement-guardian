@@ -582,11 +582,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
-  // Whether a shutdown has begun. It is asked through a function so that a
-  // check after an await asks again rather than reusing the answer from before
-  // it, which is the whole point of checking twice.
-  function hasStopped(): boolean {
-    return stopped;
+  // Whether the runtime will ever open a connection again. A shutdown has
+  // begun, or a refused credential has halted it for good. Neither ends, so a
+  // connection opened after either is one nothing will use and nothing will
+  // close, and one answer covers both because the question the connect path
+  // asks is the same either way.
+  //
+  // It is asked through a function so that a check after an await asks again
+  // rather than reusing the answer from before it, which is the whole point of
+  // checking twice (SYNC-05, D-13).
+  function hasFinished(): boolean {
+    return stopped || halted;
   }
 
   // Opens the connection once there is both a credential cache to sign from and
@@ -596,7 +602,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
-    if (hasStopped() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
+    if (hasFinished() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
       return false;
     }
 
@@ -642,11 +648,16 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       });
       await client.start(deviceIds);
 
-      // The start has already opened the socket, so a shutdown that landed
-      // while it was resolving found no client to close and would leave that
-      // socket with nothing to close it. It is closed here and never recorded
-      // (SYNC-05).
-      if (hasStopped()) {
+      // The start has already opened the socket, so a shutdown or a refusal
+      // that landed while it was resolving found no client to close and would
+      // leave that socket with nothing to close it. It is closed here and never
+      // recorded (SYNC-05).
+      //
+      // The guard above the try is not enough on its own. Another loop can meet
+      // the refusal during the start, and a connection opened into a runtime
+      // that has stopped for good is the same defect the halt's own close
+      // exists to prevent, arrived at one function later (D-13).
+      if (hasFinished()) {
         await closeQuietly(client);
 
         return false;

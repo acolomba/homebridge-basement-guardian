@@ -1795,6 +1795,62 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  // Closing the connection at the halt is only half the answer, because the loop that halted is
+  // rarely the only one in flight. The first credential grant is still travelling here, and it opens
+  // the connection when it lands. A runtime that has stopped for good must not be holding an open
+  // connection to the vendor: the socket would keep delivering values that overwrite the one
+  // presentation an owner has to act on, and it is signed with credentials nothing will rotate again
+  // (D-13, D-10, SYNC-05).
+  test('D-13 opens no live connection for a credential grant that lands after a refusal has halted the runtime', async (t) => {
+    // arrange
+    // The placeholder only gives the binding a value before the executor runs, which it does in this
+    // same statement; the grant below is always the promise's own resolver.
+    let grantCredentials: (response: AwsCredentialsResponse) => void = () => undefined;
+    const granted = new Promise<AwsCredentialsResponse>((resolve) => {
+      grantCredentials = resolve;
+    });
+    const { runtime, calls, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      credentials: [() => granted],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    grantCredentials(credentialsAt(START_TIME + ONE_HOUR_MS));
+    await settle();
+
+    // assert
+    assert.strictEqual(
+      calls.filter((call) => call === 'shadow').length,
+      0,
+      'a halted runtime built a shadow client for a credential grant that landed after the refusal',
+    );
+  });
+
+  // The other half of the same claim, one function later. The connection was already opening when the
+  // poll met the refusal, so the halt found no client to close and the check after the start is what
+  // is left. A runtime that kept this one would be holding a socket it will never use (D-13, SYNC-05).
+  test('D-13 keeps no live connection that opened while a refusal was halting the runtime', async (t) => {
+    // arrange
+    const halting = { advance: undefined as ((ms: number) => Promise<void>) | undefined };
+    const { runtime, shadows, calls, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      whileShadowStarts: () => halting.advance?.(FAST_POLL_INTERVAL_MS) ?? Promise.resolve(),
+    });
+    halting.advance = advance;
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual({ closes: shadows[0]?.closes(), clients: calls.filter((call) => call === 'shadow').length }, { closes: 1, clients: 1 });
+  });
+
   // The shutdown's own push is the runtime telling the tier the transport has gone, so it is named
   // here rather than counted with the poll reports. The poll a shutdown aborted still reports
   // nothing, which is what the two lists say: the second holds the shutdown push and nothing else
