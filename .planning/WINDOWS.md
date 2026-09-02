@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 5
 waived_count: 1
 fixed_count: 0
-total_count: 4
-last_updated: 2026-09-02T03:35:44.625Z
+total_count: 6
+last_updated: 2026-09-02T12:34:29.998Z
 ---
 
 # Broken Windows Ledger
@@ -19,6 +19,8 @@ last_updated: 2026-09-02T03:35:44.625Z
 | 2 | 05 | unrun-verify | src/runtime/accountRuntime.ts |  | commandTransportReadyNow()'s !halted term is redundant given polling and no test fails when it is removed; kept as deliberate defence, recorded in 05-03-SUMMARY mutation 4 | open |  | 2026-09-02T02:30:06.953Z |  |
 | 3 | 05 | deviation | README.md |  | The 30-day vendor-block figure is sourced from src/cloud/auth.ts:35, outside the two files plan 05-05's acceptance criterion names | open |  | 2026-09-02T03:35:44.273Z |  |
 | 4 | 05 | todo | README.md | 220 | Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/ | open |  | 2026-09-02T03:35:44.625Z |  |
+| 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | open |  | 2026-09-02T12:34:29.654Z |  |
+| 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | open |  | 2026-09-02T12:34:29.998Z |  |
 
 ````json
 [
@@ -68,6 +70,30 @@ last_updated: 2026-09-02T03:35:44.625Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T03:35:44.625Z",
+    "resolved_at": null
+  },
+  {
+    "id": 5,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/device/state.ts",
+    "line": 173,
+    "description": "A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T12:34:29.654Z",
+    "resolved_at": null
+  },
+  {
+    "id": 6,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/accessories/basementGuardian.ts",
+    "line": null,
+    "description": "reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T12:34:29.998Z",
     "resolved_at": null
   }
 ]

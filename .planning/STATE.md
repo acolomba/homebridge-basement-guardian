@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-05-PLAN.md
-last_updated: "2026-09-02T03:36:02.846Z"
+stopped_at: Completed 05-06-PLAN.md
+last_updated: "2026-09-02T12:37:38.375Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: 16adbe036e559f8726f2049546c3c1591df53068
+state_head: 0b94b74a874d977232a8a9f23e0510055c37fc18
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 42
-  completed_plans: 42
+  total_plans: 47
+  completed_plans: 43
   percent: 33
 ---
 
@@ -97,6 +97,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P03 | 23min | 2 tasks | 12 files |
 | Phase 05 P04 | 28min | 2 tasks | 15 files |
 | Phase 05 P05 | 20min | 2 tasks | 4 files |
+| Phase 05 P06 | 47min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -249,6 +250,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: The config key-set mutation split 61 pass to 1 fail: every fixture-derived expectation widened silently, so the inline literal is the whole of the evidence
 - [Phase 05]: RES-01 and RES-03 were left Complete unchanged; their contradiction was resolved by this phase shipping the owed halves, not by an edit. Only RES-04 moved to Complete
 - [Phase 05]: The shadow-silence threshold is deliberately not published in the README; the reader needs the state, not the constant
+- [Phase 05]: D-014 was read, not amended: withholding is how retention is achieved when the arriving value is bad, and against a family-valid value from a working transport it retains nothing
+- [Phase 05]: The exempt set holds unreachable alone; stale was excluded because nothing in src/ assigns it
+- [Phase 05]: The write gate keeps reading the withdrawn scopes directly, so a press is still refused while values flow to the tile
 
 ### Pending Todos
 
@@ -325,6 +329,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   build an automation on `Sump Pit Flood`, force a degraded scope, confirm it still fires. Only a
   positive finding there reopens `D-05`.
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
+- A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision
 
 ## Deferred Verification
 
@@ -404,8 +409,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T03:36:02.246Z
-Stopped at: Completed 05-05-PLAN.md
+Last session: 2026-09-02T12:37:37.746Z
+Stopped at: Completed 05-06-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
