@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-15-PLAN.md
-last_updated: "2026-09-02T21:58:36.532Z"
+stopped_at: Completed 05-16-PLAN.md
+last_updated: "2026-09-02T22:39:39.593Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 19908818220150d1e6548659104a6a0730eeb8ed
+state_head: 2bbf0c4ab30864dd676083e196119e6cc80dc594
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 56
-  completed_plans: 52
+  completed_plans: 53
   percent: 33
 ---
 
@@ -117,6 +117,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P13 | 26 min | 2 tasks | 6 files |
 | Phase 05 P14 | 50 min | 3 tasks | 9 files |
 | Phase 05 P15 | 38min | 2 tasks | 7 files |
+| Phase 05 P16 | 32 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -298,6 +299,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Shadow-silence marking stays account-wide: any silent device makes every accessory stop vouching — No requirement asks for per-device marking, over-marking cannot produce a false normal, and a per-device MonitoringTrust would be a second design change riding on a blocker fix
 - [Phase 05]: Telemetry ownership reads the telemetry section alone; the wider observation test stays wide for the receipt time, so a metadata-only report may order but may not own (CR-03)
 - [Phase 05]: The suite gained its first step that reads snapshot.metadata, so a scenario publishing a shadow document proves the document arrived instead of assuming it
+- [Phase 05]: Guarded the republish callback the control binder holds, not clearRefusal: the request-expiry path calls the callback directly, so guarding the function above would close two of three refusal paths while reading as three
+- [Phase 05]: Refused the review's option of teaching publishRow to push the persistent failure; it would add a second production call site of the act 03-CONTEXT D-05 forbids. The count is still one
 
 ### Pending Todos
 
@@ -455,8 +458,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T21:58:14.481Z
-Stopped at: Completed 05-15-PLAN.md
+Last session: 2026-09-02T22:39:37.178Z
+Stopped at: Completed 05-16-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
