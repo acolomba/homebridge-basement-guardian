@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-08-PLAN.md
-last_updated: "2026-09-02T14:30:38.462Z"
+stopped_at: Completed 05-09-PLAN.md
+last_updated: "2026-09-02T15:13:37.551Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: 8d7d6faaa49bed76f0c61ee415e219fdce178035
+state_head: f508fc4fdca12f48a08cd95885ef9454b7424894
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 48
-  completed_plans: 45
+  completed_plans: 46
   percent: 33
 ---
 
@@ -100,6 +100,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P06 | 47min | 3 tasks | 9 files |
 | Phase 05 P07 | 25min | 3 tasks | 6 files |
 | Phase 05 P08 | 78min | 2 tasks | 5 files |
+| Phase 05 P09 | 39min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -260,6 +261,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Phase 5 plan 07: stop() pushes the final monitoring trust directly rather than through reportMonitoringHealth, and moves commandTransportReady alone, so a shutdown marks no scope and writes no live-reporting observation.
 - [Phase 05]: The arrival callback reports the monitoring trust, guarded by the silence state last reported, so a returning live path is vouched for at the message and once per recovery (CR-02, D-11)
 - [Phase 05]: The recovery scenario parks device polling at the vendor instead of lengthening the poll interval: a long interval removes the defect's cover and the test's setup together
+- [Phase 05]: WR-02 is inside RES-04: the clause opens 'After a failed restart', so a press on a restored control is refused by name rather than silently accepted. This reverses 05-04's PA-08 deferral.
+- [Phase 05]: The restored-control refusal reuses the transport rule's status (-70412) and its exact cause text through one shared constant, so one condition answers one status with one wording (D-08).
+- [Phase 05]: Measured: three near-copies of the accessory walk do NOT fail this repository's duplication gate. The shared walk stands on IN-01's drift argument, not on the gate.
 
 ### Pending Todos
 
@@ -416,8 +420,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T14:30:37.803Z
-Stopped at: Completed 05-08-PLAN.md
+Last session: 2026-09-02T15:13:34.294Z
+Stopped at: Completed 05-09-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour

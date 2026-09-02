@@ -214,10 +214,18 @@ Final state: `✗ 26 lines (0.2%) duplicated across 1 file` — the pre-existing
 - **Files modified:** `test/accessories/controls.test.ts`
 - **Committed in:** `9471c3e`
 
+**3. [Rule 3 — Blocking] Reverted a premature `RES-04` completion in `REQUIREMENTS.md`**
+
+- **Found during:** State update
+- **Issue:** The close-out step ran `requirements mark-complete RES-04` from this plan's frontmatter, which flipped `RES-04` from pending to complete in both the checklist and the traceability table. That is wrong: `0b94b74` deliberately returned `RES-04` to pending after verification, and `05-10-PLAN.md` still carries `requirements: [RES-03, RES-04]` and names `.planning/REQUIREMENTS.md` in its `files_modified`. `05-10` is the plan that closes `RES-04` out, after `WR-03`'s README and CHANGELOG corrections.
+- **Fix:** Reverted `.planning/REQUIREMENTS.md`. `RES-04` stays pending until `05-10` runs.
+- **Files modified:** none — the change was reverted before it was committed
+- **Verification:** `git diff .planning/REQUIREMENTS.md` is empty; the traceability row still reads `RES-04 | Phase 5 | Pending`
+
 ---
 
-**Total deviations:** 2 auto-fixed (both blocking).
-**Impact on plan:** None on behaviour. No assertion was weakened and no scope was added.
+**Total deviations:** 3 auto-fixed (all blocking).
+**Impact on plan:** None on behaviour. No assertion was weakened, no scope was added, and no requirement was claimed early.
 
 ## Issues Encountered
 
