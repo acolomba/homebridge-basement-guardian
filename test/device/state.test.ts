@@ -479,7 +479,8 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
 
     // act
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(SECOND_DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -500,7 +501,7 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
 
     // act
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
     const snapshot = store.applyDiscovery(geminiDevice());
 
     // assert
@@ -511,7 +512,7 @@ describe('releaseShadowSource', () => {
     // arrange
     const store = versionedStore();
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
     store.applyDiscovery(geminiDevice());
 
     // act
@@ -528,7 +529,7 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(notifications, []);
@@ -547,8 +548,8 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource();
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -568,7 +569,7 @@ describe('releaseShadowSource', () => {
     const store = versionedStore();
 
     // act
-    store.releaseShadowSource();
+    store.releaseShadowSource(DEVICE_ID);
 
     // assert
     assert.strictEqual(Object.isFrozen(store.snapshot(DEVICE_ID)), true);

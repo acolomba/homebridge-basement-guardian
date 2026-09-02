@@ -8,6 +8,9 @@ import type { MonitoringHealth } from '../../src/runtime/monitoringHealth.js';
 
 const START_TIME = 1_700_000_000_000;
 
+// The one system on the account every single-device case is about.
+const DEVICE_ID = 'placeholder-device';
+
 // The two boundary moments, written as the millisecond figures a reader can
 // check against the measured heartbeat rather than recomputed from the
 // production constants: a projection that halved the window would otherwise
@@ -37,7 +40,7 @@ function movableClock(): MovableClock {
 // is the state every elapsed-time case measures from.
 function healthWithAMessageAtStart(clock: Clock): MonitoringHealth {
   const health = createMonitoringHealth({ clock });
-  health.recordShadowMessage();
+  health.recordShadowMessage(DEVICE_ID);
 
   return health;
 }
@@ -123,7 +126,7 @@ test('measures the silence from the newest message, so a late arrival restarts t
   const { clock, moveTo } = movableClock();
   const health = healthWithAMessageAtStart(clock);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
-  health.recordShadowMessage();
+  health.recordShadowMessage(DEVICE_ID);
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1 + TWO_MISSED_HEARTBEATS_MS - 1);
@@ -137,7 +140,7 @@ test('goes silent a full window after a late arrival rather than a full window a
   const { clock, moveTo } = movableClock();
   const health = healthWithAMessageAtStart(clock);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
-  health.recordShadowMessage();
+  health.recordShadowMessage(DEVICE_ID);
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1 + TWO_MISSED_HEARTBEATS_MS);
@@ -168,7 +171,7 @@ test('leaves the polling path degraded when a shadow message arrives, because a 
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
 
   // act
-  health.recordShadowMessage();
+  health.recordShadowMessage(DEVICE_ID);
 
   // assert
   assert.strictEqual(health.trustNow().restDegraded, true);

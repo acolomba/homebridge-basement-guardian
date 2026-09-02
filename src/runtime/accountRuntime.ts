@@ -329,11 +329,22 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     //
     // A failed poll is deliberately not a release site: it writes no telemetry,
     // so there is nothing to hand over.
-    if (health.trustNow().shadowSilent) {
-      options.store.releaseShadowSource();
+    //
+    // The release names the devices it releases, so a fact about one quiet
+    // controller is not spent on its neighbours: a pump whose live path is
+    // working keeps the readings that path delivered instead of having every
+    // poll of the silence next door overwrite them (SYNC-03). A device admitted
+    // by the loop below is therefore never released on the same poll, because
+    // the loop runs after this one and the device holds no watermark yet.
+    for (const deviceId of health.silentDevices()) {
+      options.store.releaseShadowSource(deviceId);
     }
 
     for (const device of devices) {
+      // Admission starts the device's silence window, so a pump the account
+      // gained an hour into the run is judged from when the plugin first knew
+      // about it rather than from when the runtime was built (D-05).
+      health.admitDevice(device.deviceId);
       options.store.applyDiscovery(device);
     }
 
@@ -363,6 +374,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // Confirmed and about to be removed: stop tracking it so it can
           // never re-trigger this final check again once it is gone.
           reconciliation.forget(deviceId);
+          // The stamps are pruned here and nowhere else. A device missing from
+          // one inventory is not a removed device -- that is what these two
+          // confirming polls decide -- and dropping its stamp on every poll
+          // that omitted it would re-admit it on the next one and reset the
+          // silence window of a pump that is genuinely quiet, forever.
+          health.forgetDevice(deviceId);
           options.onDeviceRemoved(deviceId);
         }
       }
@@ -575,7 +592,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // re-establishes ownership. Two missed heartbeats are the other way, and
     // `applyDevices` owns it, because a socket that is still open says nothing
     // about a device that has stopped speaking (D-15, D-13, SYNC-03).
-    options.store.releaseShadowSource();
+    //
+    // The two now differ in signature as well as in cause, and this one is
+    // fleet-wide on purpose: the connection that ended carried every device, so
+    // no device still has a live path. The silence one names its device,
+    // because silence is a fact about one controller.
+    for (const deviceId of options.store.deviceIds()) {
+      options.store.releaseShadowSource(deviceId);
+    }
 
     if (reason !== 'transport-closed') {
       options.failures.recordFailure(SHADOW, SHADOW_DEGRADED);
@@ -636,7 +660,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // and the whole projection stays drivable from the injected clock and
           // the injected timers -- which is the constraint the lazy evaluation
           // was chosen for (D-05, D-11).
-          health.recordShadowMessage();
+          // The stamp belongs to the device the message came from. An account
+          // stamp is re-armed by whichever pump spoke last, so on a multi-pump
+          // account one heartbeat vouches for a neighbour that has stopped
+          // speaking, and that controller's silence is never noticed at all.
+          health.recordShadowMessage(deviceId);
           options.store.applyReportedPatch(deviceId, patch);
 
           if (reportedShadowSilent) {

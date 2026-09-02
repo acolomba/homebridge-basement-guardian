@@ -99,8 +99,31 @@ export interface MonitoringHealth {
   recordRestSuccess(): void;
   /** Records one failed REST poll, which advances the failure run and nothing else. */
   recordRestFailure(): void;
-  /** Records one shadow message arriving, whatever it carried. */
-  recordShadowMessage(): void;
+  /**
+   * Records one shadow message arriving for one device, whatever it carried.
+   *
+   * The device is named because silence is a fact about a controller rather
+   * than about an account: one pump's heartbeat answering for another pump's
+   * silence is what leaves a permanently quiet controller fully vouched for on
+   * a multi-pump account (D-05, D-13).
+   */
+  recordShadowMessage(deviceId: string): void;
+  /**
+   * Starts a device's silence window, so a device the plugin has never heard
+   * from is judged from when it was first admitted.
+   *
+   * A device already tracked is left exactly as it was. Re-stamping one on
+   * every poll would reset the window of a pump that has been quiet for hours,
+   * which is the same false normal on a slower clock.
+   */
+  admitDevice(deviceId: string): void;
+  /** Drops a removed device's stamp, so the tracked set cannot grow for the life of the process. */
+  forgetDevice(deviceId: string): void;
+  /**
+   * Every admitted device whose live path has been silent for two heartbeats,
+   * in admission order so a caller and a test read the same list.
+   */
+  silentDevices(): readonly string[];
   /** The verdict, evaluated against the injected clock at the moment of the call. */
   trustNow(): TransportTrust;
 }
@@ -127,18 +150,33 @@ function isShadowSilent(lastMessageAt: number, now: number): boolean {
 /**
  * Creates the monitoring-trust projection.
  *
- * The arrival stamp is seeded from the clock at construction rather than left
- * absent, so a broker the plugin can never reach goes silent two heartbeats
- * after the runtime was built rather than never. An absent stamp read as "not
- * silence" would leave a shadow that never connects permanently trusted, which
- * is the same false normal by a slower route.
+ * An arrival stamp is seeded when discovery admits a device rather than when
+ * the runtime is built, and the false normal the construction seed guarded is
+ * still guarded by that later clock: a broker the plugin can never reach makes
+ * every admitted device silent two heartbeats after the poll that found it, so
+ * a shadow that never connects is never permanently trusted.
+ *
+ * Admission is the right zero and construction is not. A pump added to the
+ * account an hour into the run would inherit an hour of silence it never had,
+ * and the first poll after it appeared would take telemetry back from a shadow
+ * that had legitimately just delivered it (D-05).
  *
  * Creating it touches nothing outside itself: no connection, no timer, and no
- * clock reading beyond that one seed.
+ * clock reading at all until something is recorded or asked.
  */
 export function createMonitoringHealth(options: MonitoringHealthOptions): MonitoringHealth {
   let consecutiveRestFailures = 0;
-  let lastShadowMessageAt = options.clock.now();
+  // One stamp per admitted device, because the question "has this controller
+  // stopped speaking" has one answer per controller. A single account stamp is
+  // re-armed by whichever pump spoke last, which vouches for the ones that did
+  // not (D-05, D-13).
+  const lastShadowMessageAt = new Map<string, number>();
+
+  function silentDevices(): readonly string[] {
+    const now = options.clock.now();
+
+    return [...lastShadowMessageAt].filter(([, lastMessageAt]) => isShadowSilent(lastMessageAt, now)).map(([deviceId]) => deviceId);
+  }
 
   return {
     recordRestSuccess(): void {
@@ -149,14 +187,29 @@ export function createMonitoringHealth(options: MonitoringHealthOptions): Monito
       consecutiveRestFailures += 1;
     },
 
-    recordShadowMessage(): void {
-      lastShadowMessageAt = options.clock.now();
+    recordShadowMessage(deviceId: string): void {
+      lastShadowMessageAt.set(deviceId, options.clock.now());
     },
 
+    admitDevice(deviceId: string): void {
+      if (!lastShadowMessageAt.has(deviceId)) {
+        lastShadowMessageAt.set(deviceId, options.clock.now());
+      }
+    },
+
+    forgetDevice(deviceId: string): void {
+      lastShadowMessageAt.delete(deviceId);
+    },
+
+    silentDevices,
+
+    // Any device the plugin has stopped hearing costs the account its claim to
+    // be watching, because the marking every accessory hears is one answer.
+    // Which device it was is the failure log's line, not this one (D-02, D-03).
     trustNow(): TransportTrust {
       return {
         restDegraded: isRestDegraded(consecutiveRestFailures),
-        shadowSilent: isShadowSilent(lastShadowMessageAt, options.clock.now()),
+        shadowSilent: silentDevices().length > 0,
       };
     },
   };

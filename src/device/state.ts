@@ -103,19 +103,26 @@ export interface DeviceStateStore {
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
   /**
-   * Reports that the shadow is no longer the source of telemetry.
+   * Reports that the shadow is no longer the source of telemetry for one
+   * device.
    *
-   * Clearing the watermark on every stored device hands telemetry back to the
-   * poll and lets the complete shadow requested after a reconnect be applied
-   * rather than refused as stale, which is what makes the reconnect refresh
-   * restore anything (SYNC-03).
+   * Clearing that device's watermark hands its telemetry back to the poll and
+   * lets the complete shadow requested after a reconnect be applied rather than
+   * refused as stale, which is what makes the reconnect refresh restore
+   * anything (SYNC-03). A caller handing back a whole fleet loops, which is
+   * what keeps a fact about one controller from being spent on its neighbours:
+   * a healthy pump released alongside a silent one has every poll overwrite the
+   * fresher readings its own live path just delivered. A `deviceId` the store
+   * does not hold changes nothing.
    *
-   * Two conditions call for it. A connection that ended is one. A device the
-   * monitoring-trust projection reports silent, with its socket still open, is
-   * the other, and it is the one an owner meets: silence is not a
-   * disconnection, and a poll that cannot refresh telemetry during it leaves a
-   * flooding pit unreported (D-13). It is therefore reachable on every poll of
-   * a silence that can last hours, which it is written to cost nothing.
+   * Two conditions call for it. A connection that ended is one, and that one is
+   * genuinely fleet-wide, because the connection carried every device. A device
+   * the monitoring-trust projection reports silent, with its socket still open,
+   * is the other, and it is the one an owner meets: silence is not a
+   * disconnection, it belongs to one controller, and a poll that cannot refresh
+   * that controller's telemetry leaves a flooding pit unreported (D-13). It is
+   * therefore reachable on every poll of a silence that can last hours, which
+   * it is written to cost nothing.
    *
    * Ownership returns on the next document carrying an observation, through
    * `applyReportedPatch`: with no watermark held the patch is not stale, and
@@ -131,7 +138,7 @@ export interface DeviceStateStore {
    * merges key by key, with the next heartbeat correcting it. The alternative
    * is a silently discarded refresh, which is a false normal.
    */
-  releaseShadowSource(): void;
+  releaseShadowSource(deviceId: string): void;
 }
 
 const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
@@ -347,8 +354,10 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     // Nobody is notified: clearing the watermark moves no telemetry key, and a
     // listener filtering on the change report would be handed a change that
     // did not happen.
-    releaseShadowSource(): void {
-      for (const [deviceId, snapshot] of snapshots) {
+    releaseShadowSource(deviceId: string): void {
+      const snapshot = snapshots.get(deviceId);
+
+      if (snapshot !== undefined) {
         snapshots.set(deviceId, freeze({ ...snapshot, shadowVersion: undefined }));
       }
     },

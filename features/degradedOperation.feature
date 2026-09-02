@@ -153,6 +153,63 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" sensor is activated
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
 
+  Scenario: A poll finds a flood on the pump that went quiet while its neighbour keeps reporting
+    Two basements, two Basement Guardians, one account. The controller in the front basement stops
+    speaking while the one in the back basement goes on heartbeating. The pit in the front basement
+    is filling. A tile that goes on reading "no leak" while claiming the plugin vouches for it is
+    the exact failure this plugin exists to prevent, and it is the one an owner cannot see: nothing
+    on that tile says the plugin stopped watching that basement.
+
+    Silence belongs to a device, so a heartbeat from the back basement is no evidence about the
+    front one. The poll answers for both pumps throughout, so once the quiet pump's live path stops
+    owning its telemetry the poll refreshes it and the flood arrives. The pump beside it keeps the
+    level its own heartbeat delivered, because its own live path never stopped, and 80 is a level
+    only that heartbeat could have written -- its vendor body still reads the 60 its inventory row
+    seeded.
+
+    The heartbeats before the silence are the premise: both pumps' live messages moved both pumps'
+    readings, so the freeze afterwards belongs to the quiet controller rather than to a harness that
+    stopped delivering. 31 is the water level the Gemini family calls a flooding pit; 1, 3, 7 and 15
+    are ordinary rungs of the same ladder.
+
+    The clock moves in two heartbeat-length steps with a message from the back basement between
+    them, rather than in one jump, because that is what makes the account clock a lie. Every step
+    leaves the newest message on the account under a single heartbeat old, so an account-wide
+    silence never trips at all, while the front basement's own last message ages past two. A single
+    jump would trip the account-wide rule as well and release the quiet pump by accident, which
+    reads as a pass and measures nothing.
+
+    Each pair asserts the pump that moved before the pump that did not, for the reason the two-pump
+    scenarios above give: the moved assertion waits for the delivery to land, so the assertion after
+    it reads afterwards rather than before.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId                 | name            | waterLevel |
+      | placeholder-front-gemini | Front Sump Pump | 1          |
+      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+    When the plugin starts
+    When the "Front Sump Pump" device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "40"
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "40"
+    When the scenario clock moves forward by 898 seconds
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 1 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "20"
+    When the scenario clock moves forward by 898 seconds
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 15 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"
+    When the vendor changes the "Front Sump Pump" device fields:
+      | water_level | 31 |
+    Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Leak Detected" as "1"
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "100"
+    Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Status Active" as "false"
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"
+
   Scenario: Polling failure alone leaves the live values trustworthy
     Live pushes still arrive while the poll fails, so the readings a user watches are current and
     only the verdict the poll alone sources goes unfed. The plugin withdraws that one verdict and
