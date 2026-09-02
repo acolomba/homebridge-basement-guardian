@@ -1778,6 +1778,146 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  // The recovery an owner waits on. Both arrival cases above advance the clock after the message,
+  // which lets the poll tick that follows do the clearing, so neither can tell an arrival-driven
+  // recovery from a poll-driven one -- and the configured poll interval accepts an hour. This one
+  // moves nothing: the message is the only event between the silent report and the assertion, and
+  // the recorded call list says no request left the plugin in between (CR-02, D-11).
+  test('RES-03 restores the trust on the message that proves the live path is carrying, with no clock movement and no poll', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringHealth, calls, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+    const atSilence = [...calls];
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      { pushes: monitoringHealth, calls },
+      {
+        pushes: [
+          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+        ],
+        calls: atSilence,
+      },
+    );
+  });
+
+  // The guard the report is made through. A healthy live path delivers a heartbeat roughly every
+  // fifteen minutes and a busy one delivers many, so a report on every message would push a trust
+  // fan-out across every accessory for no new information. The latch has already moved by the
+  // second message, so it reports nothing (D-05).
+  test('reports once per recovery rather than once per message when two messages arrive together', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+    const atSilence = monitoringHealth.length;
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const afterFirstMessage = monitoringHealth.length;
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      { atSilence, afterFirstMessage, afterSecondMessage: monitoringHealth.length },
+      { atSilence: 3, afterFirstMessage: 4, afterSecondMessage: 4 },
+    );
+  });
+
+  // The same guard on the ordinary case: a live path that is working. It costs one push per poll
+  // and none per heartbeat, because a message that resolved nothing is not news (D-05).
+  test('reports nothing when a message arrives on a live path it never reported silent', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringHealth } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await settle();
+    const afterLaunch = monitoringHealth.length;
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual({ afterLaunch, afterTwoMessages: monitoringHealth.length }, { afterLaunch: 1, afterTwoMessages: 1 });
+  });
+
+  // The diagnostic half of the same recovery. The owner is told the live connection came back once,
+  // at the message that proves it, with the clock standing still (D-03).
+  test('announces the live connection recovered once at the arriving message, with no clock movement', async (t) => {
+    // arrange
+    const { runtime, shadows, logged, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), recovered: countOfLine(logged, `info ${LIVE_REPORTING_RECOVERED_LINE}`) },
+      { warnings: 1, recovered: 1 },
+    );
+  });
+
+  // Why the report is driven from the arrival callback and not from a snapshot listener. The
+  // canonical store notifies only when a telemetry value moved, so the heartbeat below reaches no
+  // subscriber at all, and it is still direct evidence that the live path is carrying (D-05, D-11).
+  test('clears the silence on a heartbeat carrying the values the store already holds, which notifies no subscriber', async (t) => {
+    // arrange
+    const { runtime, store, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+    let notifications = 0;
+    store.subscribe(DEVICE_ID, () => {
+      notifications += 1;
+    });
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      { notifications, pushed: monitoringHealth.at(-1) },
+      {
+        notifications: 0,
+        pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+      },
+    );
+  });
+
+  // D-11's matching of clearing to cause, re-asserted against the arrival report. The arrival
+  // changed which event clears the shadow cause, never which cause it clears: the successful poll
+  // in the middle here still reports the silence unresolved, and the message after it clears it.
+  test('D-11 leaves the shadow silence for the successful poll and clears it for the message that follows', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+
+    // act
+    await advance(HEARTBEAT_MS);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      monitoringHealth.map((trust) => trust.shadowSilent),
+      [false, false, true, true, false],
+    );
+  });
+
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
     // arrange
     const { runtime, calls, advance } = harness(t, {
