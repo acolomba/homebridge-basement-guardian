@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-12-PLAN.md
-last_updated: "2026-09-02T18:00:47.895Z"
+stopped_at: Completed 05-13-PLAN.md
+last_updated: "2026-09-02T20:43:53.510Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 41c12c0b2a33815c3e6ccde1e3a167bb04eaf09f
+state_head: 82fcb6cf21bfe3adabcf36a266a718b54c7aa199
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 49
-  completed_plans: 49
+  total_plans: 56
+  completed_plans: 50
   percent: 33
 ---
 
@@ -114,6 +114,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P11 | 43min | 3 tasks | 7 files |
 | Phase 05 P10 | 46min | 2 tasks | 6 files |
 | Phase 05 P12 | ~50 minutes | 3 tasks | 9 files |
+| Phase 05 P13 | 26 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -287,6 +288,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: A refused credential closes the live connection at the halt, rather than guarding the arrival callback or re-applying the marking; that removes the cause instead of the symptom
 - [Phase 05]: The connect path reads one predicate, hasFinished(), that answers for both a shutdown and a halt, so the halt is a state rather than an act performed once
 - [Phase 05]: RES-04 clause 4 re-cited to the persistence scenario after npm run check came back green; the CHANGELOG credential entry needed no change
+- [Phase 05]: accessoryNamed stays module-local: fallow dead-code fails on an export with no consumer outside its module
+- [Phase 05]: The polled half of a two-pump scenario is asserted before any heartbeat, because a live document takes ownership and a poll body is then discarded
+- [Phase 05]: Each two-pump assertion pair states the moved side before the not-moved side, so the delivery has landed before the second read
 
 ### Pending Todos
 
@@ -444,8 +448,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T18:00:47.387Z
-Stopped at: Completed 05-12-PLAN.md
+Last session: 2026-09-02T20:43:42.782Z
+Stopped at: Completed 05-13-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
