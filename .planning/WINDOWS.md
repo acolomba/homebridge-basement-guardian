@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 20
+open_count: 23
 waived_count: 1
 fixed_count: 2
-total_count: 23
-last_updated: 2026-09-02T22:32:05.472Z
+total_count: 26
+last_updated: 2026-09-02T23:29:30.939Z
 ---
 
 # Broken Windows Ledger
@@ -38,6 +38,9 @@ last_updated: 2026-09-02T22:32:05.472Z
 | 21 | 05 | deviation | features/degradedOperation.feature |  | Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case. | open |  | 2026-09-02T21:16:51.402Z |  |
 | 22 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-15-PLAN.md |  | Plan 05-15 stated that refusing to advance a held watermark on a metadata-only document would leave a later telemetry document at the same version judged stale, discarding a real reading. Measured: refusing the advance leaves the watermark BELOW the shadow's own version, so a superseded document is accepted over a newer reading. The shipped case pins the measured consequence. | open |  | 2026-09-02T21:52:45.278Z |  |
 | 23 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-16 task 1 listed only the feature file and the accessory source, but its own coverage verify demands 100 percent branch coverage of basementGuardian.js and the new seam guard adds a branch no scenario can reach. Three unit cases were added in task 1, one per refusal path, which is also what proves all three leaking callers closed | open |  | 2026-09-02T22:32:05.472Z |  |
+| 24 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-17's first draft of the withholding case used a field that failed family validation. gemini.ts:370 drops a violated scope's whole group before the accessory sees it, so the value was already absent for a second reason and mutation F left the case green. Rebuilt on a lost controller link, a valid boolean the decode keeps. Any later case asserting that a trust rule hides a control value must not use an invalid field. | open |  | 2026-09-02T23:29:21.047Z |  |
+| 25 | 05 | deviation | src/accessories/serviceCatalogue.ts |  | Plan 05-17 listed serviceCatalogue.ts in files_modified and its artifacts, expecting a possible new exported predicate over a scope and the untrusted list. None was needed: isRowPublishable already takes a RowTrust and ServiceRow extends it, so both callers pass the catalogue row itself and no toleratedDistrust list is copied. The file is unchanged and SEEING_LESS_REASONS still has one production location. | open |  | 2026-09-02T23:29:30.541Z |  |
+| 26 | 05 | unrun-verify | features/officialControls.feature |  | Plan 05-17 mutation B (move the quiet-live-connection rule above the transport rule) fails no Cucumber scenario: no shipped scenario sets a quiet live path and an unready transport together. It is pinned at the unit tier alone, by the case added for it at test/accessories/controls.test.ts:696. Without that case the mutation would have failed nothing. | open |  | 2026-09-02T23:29:30.939Z |  |
 
 ````json
 [
@@ -315,6 +318,42 @@ last_updated: 2026-09-02T22:32:05.472Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T22:32:05.472Z",
+    "resolved_at": null
+  },
+  {
+    "id": 24,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "test/accessories/basementGuardian.test.ts",
+    "line": null,
+    "description": "Plan 05-17's first draft of the withholding case used a field that failed family validation. gemini.ts:370 drops a violated scope's whole group before the accessory sees it, so the value was already absent for a second reason and mutation F left the case green. Rebuilt on a lost controller link, a valid boolean the decode keeps. Any later case asserting that a trust rule hides a control value must not use an invalid field.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T23:29:21.047Z",
+    "resolved_at": null
+  },
+  {
+    "id": 25,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/accessories/serviceCatalogue.ts",
+    "line": null,
+    "description": "Plan 05-17 listed serviceCatalogue.ts in files_modified and its artifacts, expecting a possible new exported predicate over a scope and the untrusted list. None was needed: isRowPublishable already takes a RowTrust and ServiceRow extends it, so both callers pass the catalogue row itself and no toleratedDistrust list is copied. The file is unchanged and SEEING_LESS_REASONS still has one production location.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T23:29:30.541Z",
+    "resolved_at": null
+  },
+  {
+    "id": 26,
+    "kind": "unrun-verify",
+    "phase": "05",
+    "file": "features/officialControls.feature",
+    "line": null,
+    "description": "Plan 05-17 mutation B (move the quiet-live-connection rule above the transport rule) fails no Cucumber scenario: no shipped scenario sets a quiet live path and an unready transport together. It is pinned at the unit tier alone, by the case added for it at test/accessories/controls.test.ts:696. Without that case the mutation would have failed nothing.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T23:29:30.939Z",
     "resolved_at": null
   }
 ]
