@@ -67,6 +67,15 @@ interface WriteSubject {
   get(): Promise<WriteRecord>;
   /** Pushes a value onto `On`, as the plugin's own publish does. */
   pushOn(value: boolean): void;
+  /**
+   * Pushes an error onto `On`, which is how a characteristic is made unreadable without a read
+   * handler.
+   *
+   * The same `updateCharacteristic` call the ordinary push goes through takes it: the real HAP
+   * declares an overload for an error and answers it on a separate branch, and the whole question
+   * these cases put is what that branch leaves behind.
+   */
+  pushErrorOn(error: Error): void;
   /** Pushes a value onto `StatusActive`, which is a different characteristic on the same service. */
   pushStatusActive(value: boolean): void;
   /** Answers the stored value and status without driving anything. */
@@ -142,6 +151,9 @@ function realSubject(): WriteSubject {
     pushOn(value) {
       service.updateCharacteristic(Characteristic.On, value);
     },
+    pushErrorOn(error) {
+      service.updateCharacteristic(Characteristic.On, error);
+    },
     pushStatusActive(value) {
       service.updateCharacteristic(Characteristic.StatusActive, value);
     },
@@ -172,6 +184,9 @@ function fakeSubject(): WriteSubject {
     get: () => recorded(read, () => Promise.resolve(service.getCharacteristic(FAKE.Characteristic.On)?.handleGetRequest())),
     pushOn(value) {
       service.updateCharacteristic(FAKE.Characteristic.On, value);
+    },
+    pushErrorOn(error) {
+      service.updateCharacteristic(FAKE.Characteristic.On, error);
     },
     pushStatusActive(value) {
       service.updateCharacteristic(FAKE.Characteristic.StatusActive, value);
@@ -372,6 +387,104 @@ test('survives a push queued as a microtask inside the handler, on both implemen
   assert.deepStrictEqual(real, fake);
   assert.notStrictEqual(real.statusCode, 0);
   assert.strictEqual(real.statusCode, HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
+});
+
+// The push path that makes a characteristic unreadable, which is the one act the credential-rejection
+// presentation rests on. The value is pushed to `true` first, deliberately away from the `bool`
+// format default, so a stand-in that erased the value on an error push could not answer `true` here
+// by accident (RES-04, D-10).
+test('keeps the published value and stores the pushed status when an error is pushed, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(true);
+    subject.pushErrorOn(refuse(HAPStatus.SERVICE_COMMUNICATION_FAILURE));
+
+    return subject.get();
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, {
+    rejectedWith: HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+    value: true,
+    statusCode: HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+  });
+});
+
+// The unreadable state is not permanent, and nothing has to undo it deliberately: the next ordinary
+// push clears it. That is also what makes the ordering inside the platform fan-out load-bearing, so
+// the property is pinned here rather than argued about there.
+test('returns an unreadable characteristic to readable on the next ordinary push, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(true);
+    subject.pushErrorOn(refuse(HAPStatus.SERVICE_COMMUNICATION_FAILURE));
+    subject.pushOn(false);
+
+    return subject.get();
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: false, statusCode: 0 });
+});
+
+// A plain `Error` carries no status, so the real HAP reads one out of the message text and falls back
+// to a communication failure. This plugin pushes only `HapStatusError`, and this case is what says
+// what the fallback is rather than leaving it to be discovered by a caller who forgot.
+test('converts a plain Error pushed onto a characteristic to a communication failure, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject) => {
+    subject.pushOn(true);
+    subject.pushErrorOn(new Error('boom'));
+
+    return subject.get();
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, {
+    rejectedWith: HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+    value: true,
+    statusCode: HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+  });
+});
+
+// The isolation the refused-write cases already assert, asserted for the push path too. It is what
+// lets a whole-accessory pass push an error onto one characteristic per service without a later push
+// onto a neighbour undoing it.
+test('leaves a pushed status on On when StatusActive is pushed, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords((subject, refuse) => {
+    subject.pushOn(true);
+    subject.pushErrorOn(refuse(HAPStatus.OPERATION_TIMED_OUT));
+    subject.pushStatusActive(false);
+
+    return Promise.resolve(subject.read());
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: HAPStatus.OPERATION_TIMED_OUT });
+});
+
+// `pushed` has no real counterpart to compare against: the real HAP carries no such member, and the
+// stand-in carries it to tell a value the plugin wrote from one HAP constructed. An error is not a
+// value the plugin published, so an error push must leave the flag where it was -- otherwise every
+// step reading through `pushedValue` would start reading a format default as a published one.
+test('leaves the stand-in published flag where it was when an error is pushed', () => {
+  // arrange
+  const service = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
+  const statusActive = service.addCharacteristic(FAKE.Characteristic.StatusActive);
+
+  // act
+  service.updateCharacteristic(FAKE.Characteristic.StatusActive, new FAKE.HapStatusError(FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE));
+
+  // assert
+  assert.deepStrictEqual(
+    { pushed: statusActive.pushed, statusCode: statusActive.statusCode },
+    { pushed: false, statusCode: FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
+  );
 });
 
 // The stand-in every other test in this repository declares its characteristics against. A format
