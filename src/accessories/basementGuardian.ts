@@ -472,7 +472,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   let published: readonly ServiceDescriptor[] = [];
   // What the plugin can currently say about its own ability to observe this
   // account. It starts fully trusted, because nothing has failed yet.
-  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false };
+  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true };
   // What the last update's own payload said about trust. It is held because an
   // account-wide monitoring change recomputes the whole reason map without a
   // fresh snapshot, and the two device-level causes must keep their precedence
@@ -534,6 +534,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return offlineCount >= offlineThreshold;
   }
 
+  // Whether the runtime currently has a proven way to reach the vendor. Read
+  // from the same account-wide trust the rows publish from, so a row and a
+  // refused write cannot disagree about the same account (RES-04, D-07).
+  function commandTransportReady(): boolean {
+    return monitoring.commandTransportReady;
+  }
+
   // Everything a row reads, assembled once from the accessory's own state so
   // the resolved and unresolved paths cannot drift apart in what they hand a
   // row.
@@ -592,6 +599,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     commands: options.commands,
     deviceId,
     offlineConfirmed,
+    commandTransportReady,
     republish: () => {
       republishControlRows(controls.pending);
     },

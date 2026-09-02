@@ -169,3 +169,29 @@ Feature: Operating the official controls from HomeKit
     When the scenario clock does not move
     Then the "Alarm Mute" switch answers a read
     Then the "Alarm Mute" service reports "On" as "true"
+
+  # The state half of the command gate. It fires from the account-wide trust withdrawal rather than
+  # from a rule of its own: once the control's own scope is untrusted the row withholds the reported
+  # value, and the existing no-fresh-state rule refuses the press (D-02, D-07).
+  Scenario: A press with no valid state is refused locally
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin publishes the "System Self-Test" service
+    When the scenario clock moves forward by 1796 seconds
+    Then the "System Self-Test" service reports "Status Active" as "false"
+    When a controller presses the "System Self-Test" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command
+
+  # The transport half, which fails on its own schedule. A command travels on the polling transport,
+  # so a poll that has just failed means the plugin has no proven way to send and refuses the press
+  # here rather than buying a round trip that ends as a vendor error (RES-04, D-07).
+  Scenario: A press with no command transport is refused locally
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin publishes the "System Self-Test" service
+    Given the service fails every request with status 503
+    Then the monitoring path is "unavailable"
+    When a controller presses the "System Self-Test" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command

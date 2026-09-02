@@ -369,8 +369,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // interval late -- an hour at the configuration maximum. A poll a shutdown
   // aborted returns before both recorders, so it advances nothing and reports
   // nothing.
+  // TODO: derive this from the runtime's own lifecycle flags.
+  function monitoringTrustNow(): MonitoringTrust {
+    return { ...health.trustNow(), commandTransportReady: true };
+  }
+
   function reportMonitoringHealth(): void {
-    const trust = health.trustNow();
+    const trust = monitoringTrustNow();
 
     // The condition is reported and pushed from the one value, so the cause the
     // log names and the condition HomeKit marks cannot disagree. The rate

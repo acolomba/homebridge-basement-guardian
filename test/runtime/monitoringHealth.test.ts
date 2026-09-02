@@ -223,3 +223,19 @@ test('goes silent two heartbeats after construction when no message ever arrives
   // assert
   assert.strictEqual(health.trustNow().shadowSilent, true);
 });
+
+// Whether a command can currently be sent depends on whether the runtime is stopped and whether
+// authentication has halted for good, and this module sees neither. Answering it here would mean
+// answering it by guess, so the projection stops at what its own two recorded facts support and the
+// runtime assembles the rest (RES-04, D-07).
+test('answers the two transport facts and nothing about the command transport', () => {
+  // arrange
+  const { clock } = movableClock();
+  const health = createMonitoringHealth({ clock });
+
+  // act
+  const trust = health.trustNow();
+
+  // assert
+  assert.deepStrictEqual(Object.keys(trust).sort(), ['restDegraded', 'shadowSilent']);
+});

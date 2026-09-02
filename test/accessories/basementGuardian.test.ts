@@ -223,10 +223,15 @@ const EVERY_TRUST_SCOPE: readonly TrustScope[] = ['alarm-mute', 'battery', 'conn
 const EVERY_SCOPE_IN_ORDER: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
 
 // The two transport facts, as the account runtime reports them.
-const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSilent: false };
-const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true };
-const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false };
-const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true };
+const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true };
+const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true };
+const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false, commandTransportReady: false };
+const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true, commandTransportReady: false };
+
+// The cause a refusal names when the runtime has no proven way to reach the vendor. Written out
+// here rather than read off the binder, so the accessory case fails if the two halves of the
+// command gate ever start naming each other's cause (D-07, D-08).
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
@@ -2218,7 +2223,7 @@ describe('createBasementGuardianAccessory', () => {
         return timers.setTimeout(handler, delayMs);
       },
     };
-    geminiAccessory(accessory, { test_running: false }, { timers: recording, commands });
+    geminiAccessory(accessory, { test_running: false }, { timers: recording, commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     await assert.rejects(
@@ -2286,7 +2291,7 @@ describe('createBasementGuardianAccessory', () => {
       // arrange
       const accessory = accessoryStandIn();
       const { commands, sends } = recordingCommands();
-      geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands });
+      geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
       // act
       await assert.rejects(
@@ -2307,7 +2312,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { commands, sends } = recordingCommands();
-    geminiAccessory(accessory, { alarm_audio_muted: false }, { commands });
+    geminiAccessory(accessory, { alarm_audio_muted: false }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     await onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(true);
@@ -2335,7 +2340,7 @@ describe('createBasementGuardianAccessory', () => {
         test_running: false,
       },
       { commands },
-    );
+    ).markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
@@ -2351,9 +2356,70 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const { commands, sends } = recordingCommands();
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, offlineConfirmationPollCount: 1 });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     basementGuardianAccessory.update(buildSnapshot({ connected: false, data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert
+    assert.deepStrictEqual(sends, []);
+  });
+
+  // The failing case a two-field comparison would swallow is the ordinary one, not an exotic
+  // interleaving. A single failed REST poll moves neither `restDegraded` -- the threshold is two --
+  // nor `shadowSilent`, so a stored trust the accessory declined to refresh would go on answering
+  // the binder with the previous value and the press would be sent into a route that has just
+  // failed (RES-04, D-07).
+  test('RES-04 refuses the next press after a push differing from the stored trust only in the command transport', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, log });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    const afterTheAcceptedPress = [...sends];
+    basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false });
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { afterTheAcceptedPress, sends, warnings },
+      {
+        afterTheAcceptedPress: [`${DEVICE_ID} self-test true`],
+        sends: [`${DEVICE_ID} self-test true`],
+        warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`],
+      },
+    );
+  });
+
+  // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that
+  // assumed it could would send the first press of a run into a route that has never answered
+  // (RES-04, D-07).
+  test('RES-04 refuses a press before the runtime has pushed any monitoring trust, and sends nothing', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { commands, sends } = recordingCommands();
+    geminiAccessory(accessory, { test_running: false }, { commands });
+
+    // act
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {

@@ -66,6 +66,22 @@ export interface ControlBinderOptions {
    */
   offlineConfirmed: () => boolean;
   /**
+   * Whether the plugin currently has a proven way to reach the vendor at all.
+   *
+   * This is a fact about the plugin, not about the device, and it is the other
+   * half of the gate: a press can be impossible either because the plugin
+   * cannot vouch for what the device is doing or because it has no route to
+   * send on, and the two fail independently. A fresh live report can arrive
+   * while REST authentication has not completed, and a poll can keep succeeding
+   * while the live path has gone quiet, so a single readiness answer would tell
+   * a user diagnosing a refused press the wrong thing half the time.
+   *
+   * The accessory answers this from the same account-wide monitoring trust its
+   * rows publish from, so the fact a row publishes from and the fact a write is
+   * refused on cannot disagree (RES-04, D-07).
+   */
+  commandTransportReady: () => boolean;
+  /**
    * Republishes the control rows, and only those.
    *
    * Nothing else changed when a write was refused, and a full republish from a

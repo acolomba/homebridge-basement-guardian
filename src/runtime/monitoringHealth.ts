@@ -46,10 +46,30 @@ export const HEARTBEAT_INTERVAL_MS = 898_000;
  */
 export const MISSED_HEARTBEATS_BEFORE_SILENT = 2;
 
-/** What the plugin can currently say about its own ability to observe this account. */
-export interface MonitoringTrust {
+/**
+ * What the two transport facts this module tracks can support on their own.
+ *
+ * This is the whole of what the projection answers, and deliberately less than
+ * what the runtime pushes. Both members are derived from something this module
+ * was told: a run of failed polls it counted, and a message arrival it stamped.
+ */
+export interface TransportTrust {
   restDegraded: boolean;
   shadowSilent: boolean;
+}
+
+/**
+ * What the plugin can currently say about its own ability to observe -- and to
+ * reach -- this account.
+ *
+ * `commandTransportReady` is assembled by the runtime rather than answered
+ * here, because it depends on facts this module has no sight of: whether the
+ * runtime is stopped, and whether authentication has halted for good. Moving it
+ * into `TransportTrust` would mean teaching a transport-fact recorder about the
+ * authentication lifecycle, and the answer it gave would be a guess (D-07).
+ */
+export interface MonitoringTrust extends TransportTrust {
+  commandTransportReady: boolean;
 }
 
 /** Everything the monitoring-trust projection needs, by injection. */
@@ -66,7 +86,7 @@ export interface MonitoringHealth {
   /** Records one shadow message arriving, whatever it carried. */
   recordShadowMessage(): void;
   /** The verdict, evaluated against the injected clock at the moment of the call. */
-  trustNow(): MonitoringTrust;
+  trustNow(): TransportTrust;
 }
 
 // One blip never withdraws trust, so the run is compared against the threshold
@@ -117,7 +137,7 @@ export function createMonitoringHealth(options: MonitoringHealthOptions): Monito
       lastShadowMessageAt = options.clock.now();
     },
 
-    trustNow(): MonitoringTrust {
+    trustNow(): TransportTrust {
       return {
         restDegraded: isRestDegraded(consecutiveRestFailures),
         shadowSilent: isShadowSilent(lastShadowMessageAt, options.clock.now()),

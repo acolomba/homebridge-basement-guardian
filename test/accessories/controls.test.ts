@@ -132,6 +132,7 @@ interface BinderOverrides {
   republish?: () => void;
   log?: Logging;
   offlineConfirmed?: () => boolean;
+  commandTransportReady?: () => boolean;
 }
 
 function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
@@ -142,6 +143,7 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
     commands: overrides.commands ?? recordingCommands().commands,
     deviceId: DEVICE_ID,
     offlineConfirmed: overrides.offlineConfirmed ?? ((): boolean => false),
+    commandTransportReady: overrides.commandTransportReady ?? ((): boolean => true),
     republish: overrides.republish ?? ((): void => undefined),
   };
 }
@@ -405,26 +407,54 @@ interface RefusalCase {
   value: unknown;
   reported: boolean | undefined;
   offlineConfirmed: boolean;
+  transportReady: boolean;
   outcome: CommandOutcome;
   status: number;
 }
 
 const LOCAL_REFUSALS: readonly RefusalCase[] = [
-  { cause: 'a write of anything but on', value: false, reported: false, offlineConfirmed: false, outcome: ACCEPTED, status: NOT_ALLOWED_IN_CURRENT_STATE },
+  {
+    cause: 'a write of anything but on',
+    value: false,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    outcome: ACCEPTED,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+  },
+  {
+    cause: 'a runtime with no way to reach the vendor',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: false,
+    outcome: ACCEPTED,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+  },
   {
     cause: 'a capability whose reported field has not decoded',
     value: true,
     reported: undefined,
     offlineConfirmed: false,
+    transportReady: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
   },
-  { cause: 'a device confirmed offline', value: true, reported: false, offlineConfirmed: true, outcome: ACCEPTED, status: NOT_ALLOWED_IN_CURRENT_STATE },
+  {
+    cause: 'a device confirmed offline',
+    value: true,
+    reported: false,
+    offlineConfirmed: true,
+    transportReady: true,
+    outcome: ACCEPTED,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+  },
   {
     cause: 'a duplicate request while the capability already reads active',
     value: true,
     reported: true,
     offlineConfirmed: false,
+    transportReady: true,
     outcome: ACCEPTED,
     status: RESOURCE_BUSY,
   },
@@ -436,6 +466,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     value: true,
     reported: false,
     offlineConfirmed: false,
+    transportReady: true,
     outcome: { accepted: false, failure: 'vendor-error' },
     status: SERVICE_COMMUNICATION_FAILURE,
   },
@@ -444,6 +475,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     value: true,
     reported: false,
     offlineConfirmed: false,
+    transportReady: true,
     outcome: { accepted: false, failure: 'timed-out' },
     status: OPERATION_TIMED_OUT,
   },
@@ -457,7 +489,10 @@ async function refuse(
 ): Promise<{ thrown: unknown; sends: string[]; deferrals: Deferral[]; binder: ControlBinder; service: FakeHapService }> {
   const { commands, sends } = recordingCommands(refusalCase.outcome);
   const { timers, deferrals } = recordingTimers();
-  const { binder, service } = boundSwitch({ commands, timers, offlineConfirmed: () => refusalCase.offlineConfirmed }, () => refusalCase.reported);
+  const { binder, service } = boundSwitch(
+    { commands, timers, offlineConfirmed: () => refusalCase.offlineConfirmed, commandTransportReady: () => refusalCase.transportReady },
+    () => refusalCase.reported,
+  );
   let thrown: unknown = undefined;
 
   try {
@@ -469,7 +504,7 @@ async function refuse(
   return { thrown, sends, deferrals, binder, service };
 }
 
-test('answers each of the six refusal causes with the status that describes it', async () => {
+test('answers each of the seven refusal causes with the status that describes it', async () => {
   // act
   const answered = [];
 
@@ -478,7 +513,7 @@ test('answers each of the six refusal causes with the status that describes it',
   }
 
   // assert
-  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70403, -70402, -70408]);
+  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70412, -70403, -70402, -70408]);
 });
 
 for (const refusalCase of LOCAL_REFUSALS) {
@@ -535,7 +570,10 @@ test('names the capability and the device in every refusal line and quotes no to
   // act
   for (const refusalCase of REFUSALS) {
     const { commands } = recordingCommands(refusalCase.outcome);
-    const { service } = boundSwitch({ commands, log, offlineConfirmed: () => refusalCase.offlineConfirmed }, () => refusalCase.reported);
+    const { service } = boundSwitch(
+      { commands, log, offlineConfirmed: () => refusalCase.offlineConfirmed, commandTransportReady: () => refusalCase.transportReady },
+      () => refusalCase.reported,
+    );
 
     await assertRefused(service, refusalCase.value, refusalCase.status);
   }
@@ -549,6 +587,73 @@ test('names the capability and the device in every refusal line and quotes no to
       deviceId: warning.includes(DEVICE_ID),
     })),
     Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: true })),
+  );
+});
+
+// The exact cause text each half of the command gate writes. They are written out here rather than
+// read off the module, so a reworded line fails at the assertion as well as behind it: the whole
+// content of the two-predicate gate is that a user diagnosing a refused press learns which of the
+// two blocked it (D-07, D-08).
+const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+
+test('names the missing state when the capability has not decoded and there is a way to send', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => true }, () => undefined);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`], sends: [] });
+});
+
+test('names the missing transport when the capability has decoded and there is no way to send', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => false);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+});
+
+// Both conditions at once, which is the case the table's order decides. Naming the missing state to
+// a user who has no way to send anything is the less actionable of the two truths, so the transport
+// rule is evaluated first -- and this case is what stops an unrelated reordering of the table from
+// changing the answer silently (D-07).
+test('names the missing transport alone when the plugin has neither fresh state nor a way to send', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => undefined);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+});
+
+test('answers the transport refusal status to every read until the clearing push lands', async () => {
+  // arrange
+  const { timers, deferrals } = recordingTimers();
+  const { service } = boundSwitch({ timers, commandTransportReady: () => false });
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const afterTheRefusal = onCharacteristic(service).statusCode;
+  clearingPushesIn(deferrals)[0]?.run();
+
+  // assert
+  assert.deepStrictEqual(
+    { afterTheRefusal, afterTheClearingPush: onCharacteristic(service).statusCode },
+    { afterTheRefusal: NOT_ALLOWED_IN_CURRENT_STATE, afterTheClearingPush: SUCCESS },
   );
 });
 

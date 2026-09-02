@@ -1061,7 +1061,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true, commandTransportReady: true });
 
     // assert
     assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow true`]);
@@ -1077,7 +1077,7 @@ describe('applyMonitoringHealth', () => {
 
     // act & assert
     assert.doesNotThrow(() => {
-      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true });
+      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false });
     });
   });
 });

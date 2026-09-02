@@ -1420,6 +1420,53 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  // The two thresholds answer different questions, and this is the case that separates them. One
+  // failed poll must not withdraw trust in a displayed value -- the REST threshold is two, so a blip
+  // cannot flap a tile -- but it is enough to say the plugin has no proven way to reach the vendor,
+  // because sending into a route that has just failed buys a round trip ending as a vendor error,
+  // which is the blur the per-cause status table exists to prevent (RES-04, D-07).
+  test('reports the command transport unready after a single failed poll, with neither degradation field moved', async (t) => {
+    // arrange
+    const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const { runtime, monitoringHealth, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), failing, () => Promise.resolve([geminiDevice()])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(monitoringHealth, [
+      { restDegraded: false, shadowSilent: false, commandTransportReady: true },
+      { restDegraded: false, shadowSilent: false, commandTransportReady: false },
+      { restDegraded: false, shadowSilent: false, commandTransportReady: true },
+    ]);
+  });
+
+  // The one failure this project treats as final. Nothing polls, refreshes, or connects after it, so
+  // without a push from that branch the accessory tier would go on answering with whatever the last
+  // poll left and would send a press into a runtime that has stopped trying (D-13, D-07).
+  test('D-13 pushes an unready command transport from the terminal authentication branch and never pushes again', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, calls, advance } = harness(t, {
+      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { monitoringHealth, polls: calls.filter((call) => call === 'devices').length },
+      { monitoringHealth: [{ restDegraded: false, shadowSilent: false, commandTransportReady: false }], polls: 1 },
+    );
+  });
+
   test('reports nothing for a poll a shutdown aborted', async (t) => {
     // arrange
     const { runtime, monitoringHealth, advance } = harness(t, {
@@ -1434,7 +1481,7 @@ describe('the degraded monitoring path', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false }]);
+    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true }]);
   });
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
@@ -2029,7 +2076,7 @@ describe('createAccountRuntimeFromConfig', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false }]);
+    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true }]);
   });
 
   test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {
