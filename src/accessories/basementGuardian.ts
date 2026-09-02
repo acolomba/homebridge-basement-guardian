@@ -535,8 +535,18 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   }
 
   // What the device itself last said about one control, read structurally so this
-  // module stays ignorant of any one family's type (D-003), and withheld through
-  // the same rule that decides whether the control's own row may publish it.
+  // module stays ignorant of any one family's type (D-003), and read through no
+  // trust gate at all. This answers what arrived; each caller below decides what
+  // it may do with it, and they do not all decide the same thing.
+  function decodedControlValue(control: ControlDefinition): boolean | undefined {
+    const group = isRecord(lastDecoded) ? lastDecoded[control.capability] : undefined;
+    const reported = isRecord(group) ? group[control.field] : undefined;
+
+    return typeof reported === 'boolean' ? reported : undefined;
+  }
+
+  // The same value, withheld through the rule that decides whether the control's
+  // own row may publish it.
   //
   // The two withdrawals differ, and only one of them hides a value. A scope
   // withdrawn because the plugin is seeing less still carries exactly what a
@@ -551,14 +561,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // widened and this was not, so a press was refused for a state the plugin had
   // and the tile was showing (D-014, D-02, RES-04, D-07, WR-02).
   function reportedControlValue(row: ServiceRow, control: ControlDefinition): boolean | undefined {
-    if (!isRowPublishable(row, untrusted)) {
-      return undefined;
-    }
-
-    const group = isRecord(lastDecoded) ? lastDecoded[control.capability] : undefined;
-    const reported = isRecord(group) ? group[control.field] : undefined;
-
-    return typeof reported === 'boolean' ? reported : undefined;
+    return isRowPublishable(row, untrusted) ? decodedControlValue(control) : undefined;
   }
 
   // Every reason currently in force: what the last update's payload said, plus
@@ -849,13 +852,24 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // The device's own report is what resolves a pending request, so a request the
   // device never confirms is never resolved by anything the plugin decided
   // (CTRL-03, D-037).
+  //
+  // It reads the decoded value rather than the vouched-for one, which is why it
+  // needs no row. A confirmation is the device answering a request this plugin
+  // itself issued, so the question is what the device reported, not what the
+  // accessory can currently vouch for. The trust gate belongs on publishing and
+  // on the write, where a doubtful value would reach a tile or operate a pump;
+  // here it only decides whether the plugin is willing to hear an answer it
+  // already asked for. A request confirmed by a report the plugin then discarded
+  // stays pending and expires with a line saying the device never confirmed it --
+  // naming a device failure for a withdrawal made on this side.
+  //
+  // `update()`'s ordering is not the defect and is left exactly as it is.
+  // Recomputing the withdrawal before reconciling is right, because the rows
+  // published below it must reflect that withdrawal; what was wrong was
+  // reconciliation reading through the gate (CTRL-03, D-037, WR-06).
   function reconcileControls(): void {
-    for (const row of catalogue) {
-      const control = CONTROLS.get(row.kind);
-
-      if (control !== undefined) {
-        controls.reconcile(control.capability, reportedControlValue(row, control));
-      }
+    for (const control of CONTROLS.values()) {
+      controls.reconcile(control.capability, decodedControlValue(control));
     }
   }
 

@@ -262,6 +262,12 @@ const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 // until the rule behind it existed (D-07, D-08, WR-02).
 const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
 
+// The window a request waits in for the device's own confirming report, mirrored from the binder
+// because it does not export it. A case picks the deadline out of the deferrals by this delay rather
+// than running every deferral, which would also run a refusal's clearing push. A drift between the
+// two numbers leaves the deadline uncollected and fails the case on a count of zero (D-037).
+const PENDING_WINDOW_MS = 30_000;
+
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
 // running (D-02, D-014).
@@ -2746,6 +2752,127 @@ describe('createBasementGuardianAccessory', () => {
         sends: [],
         refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
       },
+    );
+  });
+
+  // A request the device confirmed on the very snapshot that withdrew the control's scope. The
+  // report and the withdrawal arrive together -- the device says the test is running and the same
+  // payload says the pump controller link is gone -- and reconciliation used to read the value
+  // through the trust gate, so it saw nothing, never matched the request, and thirty seconds later
+  // warned that the device had never confirmed a test it had confirmed. That line names a device
+  // failure for a withdrawal the plugin made on its own side, and an owner acts on it.
+  //
+  // A confirmation is the device answering a request this plugin issued, so the question here is
+  // what the device reported and not what the accessory can currently vouch for. The gate still
+  // stands on publishing and on the write: the row publishes no `On` throughout, so resolving the
+  // request shows nothing the plugin cannot vouch for (CTRL-03, D-037, D-11, WR-06).
+  test('WR-06 resolves a request the device confirmed on the snapshot that withdrew the control scope', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers } = recordingTimers();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const windowClosings: (() => void)[] = [];
+    const recording: Timers = {
+      ...timers,
+      setTimeout: (handler, delayMs) => {
+        if (delayMs === PENDING_WINDOW_MS) {
+          windowClosings.push(handler);
+        }
+
+        return timers.setTimeout(handler, delayMs);
+      },
+    };
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: true, serial_communications: false } }), 'poll');
+    runEvery(windowClosings);
+
+    // assert
+    assert.deepStrictEqual(
+      { sends, windowClosings: windowClosings.length, unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')) },
+      { sends: [`${DEVICE_ID} self-test true`], windowClosings: 1, unconfirmed: [] },
+    );
+  });
+
+  // The same moment under the other withdrawal, which the shared publishing rule already closed: a
+  // scope withdrawn because the plugin is seeing less never hid the reported value from the write
+  // path once both halves read one rule. This is the shape `WR-06` was reported against, kept as its
+  // own case so an edit that gives either half its own copy of the rule fails here too and not only
+  // where the tile is read (CTRL-03, D-037, D-02, WR-06).
+  test('WR-06 resolves a request the device confirmed on the snapshot that first went quiet', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers } = recordingTimers();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const windowClosings: (() => void)[] = [];
+    const recording: Timers = {
+      ...timers,
+      setTimeout: (handler, delayMs) => {
+        if (delayMs === PENDING_WINDOW_MS) {
+          windowClosings.push(handler);
+        }
+
+        return timers.setTimeout(handler, delayMs);
+      },
+    };
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: true } }), 'poll');
+    runEvery(windowClosings);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        sends,
+        on: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On),
+        unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')),
+      },
+      { sends: [`${DEVICE_ID} self-test true`], on: true, unconfirmed: [] },
+    );
+  });
+
+  // The other half of the same reader, and what stops the gate being removed from the report as
+  // well. A device that genuinely never reports the test still leaves the request unresolved, the
+  // window still closes on it, and the warning that names it still fires -- because nothing is
+  // retried and an owner has to be told a command may have reached the pump anyway (D-038, D-06).
+  test('WR-06 still warns when the window closes on a request no report ever confirmed', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers } = recordingTimers();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const windowClosings: (() => void)[] = [];
+    const recording: Timers = {
+      ...timers,
+      setTimeout: (handler, delayMs) => {
+        if (delayMs === PENDING_WINDOW_MS) {
+          windowClosings.push(handler);
+        }
+
+        return timers.setTimeout(handler, delayMs);
+      },
+    };
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
+    runEvery(windowClosings);
+
+    // assert
+    assert.deepStrictEqual(
+      { sends, unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')) },
+      { sends: [`${DEVICE_ID} self-test true`], unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`] },
     );
   });
 
