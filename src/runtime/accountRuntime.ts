@@ -835,6 +835,24 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       stopped = true;
+      // The accessory tier decides whether a press may leave the plugin from
+      // this fact, and it holds whatever the last poll left until something
+      // else arrives. A tier still reporting a ready transport against a
+      // runtime that has aborted every request sends a press into a route that
+      // answers a vendor error, which reports a vendor failure for a refusal
+      // that was entirely local (RES-04, D-07).
+      //
+      // It is pushed here rather than reported, because the reporting helper
+      // also writes a live-reporting observation to the failure log and a
+      // shutdown made no observation. It sits above the abort so the trust
+      // carries the fact the runtime is about to act on rather than the one it
+      // held.
+      //
+      // The push moves the command-transport member and no other. Homebridge
+      // restarts routinely, and a shutdown that withdrew value trust would mark
+      // a whole home of tiles for a condition that is over the moment the
+      // process ends (D-014, D-01).
+      options.onMonitoringHealth(monitoringTrustNow());
       root.abort();
       await closeQuietly(shadow);
     },
