@@ -57,6 +57,19 @@ export interface FakeRestApi {
   failNextWith(status: number): void;
 
   /**
+   * Holds the service failing every subsequent request with this status until `answerNormally`.
+   *
+   * A one-shot arm cannot produce the condition a consecutive-failure threshold is about: two
+   * failures in a row is the fact under test, and `failNextWith` can only ever produce one. The
+   * error body is the one `failNextWith` already answers, because no measurement records a second
+   * shape and an invented one would answer only itself.
+   */
+  failEveryRequestWith(status: number): void;
+
+  /** Stops the standing failure, so the next request is answered from the service's own state. */
+  answerNormally(): void;
+
+  /**
    * Records the next request and never answers it.
    *
    * A scenario uses this to hold a vendor call in flight while it shuts the plugin down. The held
@@ -113,6 +126,10 @@ interface ServiceState {
   readonly queuedDeviceAnswers: (readonly ApiDevice[])[];
   credentials: AwsCredentialsResponse;
   armedStatus: number | undefined;
+  // The standing failure, which outlives the one-shot arm above rather than replacing it: a
+  // scenario about a threshold needs every request to fail, and a scenario about one hiccup needs
+  // exactly one to.
+  standingStatus: number | undefined;
   holdNext: boolean;
   // The three command-scoped arms, each one-shot. They are deliberately separate from `holdNext`
   // and `armedStatus` above, which the pre-route gate consumes: that gate runs before the method
@@ -286,7 +303,7 @@ async function route(state: ServiceState, request: IncomingMessage, response: Se
     return;
   }
 
-  const armedStatus = state.armedStatus;
+  const armedStatus = state.armedStatus ?? state.standingStatus;
   state.armedStatus = undefined;
 
   if (armedStatus !== undefined) {
@@ -310,6 +327,7 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     queuedDeviceAnswers: [],
     credentials: DEFAULT_CREDENTIALS,
     armedStatus: undefined,
+    standingStatus: undefined,
     holdNext: false,
     heldCommand: false,
     commandStatus: undefined,
@@ -332,6 +350,12 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     },
     failNextWith(status: number): void {
       state.armedStatus = status;
+    },
+    failEveryRequestWith(status: number): void {
+      state.standingStatus = status;
+    },
+    answerNormally(): void {
+      state.standingStatus = undefined;
     },
     holdNextRequest(): void {
       state.holdNext = true;

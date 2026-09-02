@@ -48,9 +48,12 @@ const POLLING = 'Device polling';
 const ROTATION = 'Credential rotation';
 const SHADOW = 'The shadow connection';
 const AUTHENTICATION = 'Authentication';
+const LIVE_REPORTING = 'Live device reporting';
 
 const ROTATION_FAILED = 'The temporary shadow credentials could not be refreshed; the plugin will try again.';
 const SHADOW_DEGRADED = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
+const LIVE_REPORTING_SILENT =
+  'No device message has arrived on the live connection for two heartbeat intervals, so HomeKit is marking what it shows untrustworthy until one does.';
 const THROTTLED = 'Authentication is being throttled, so the plugin is waiting before it tries again.';
 const AUTHENTICATION_STOPPED =
   'Monitoring has stopped because the vendor refused the account credentials. Correct the account in Homebridge to start the plugin again.';
@@ -367,7 +370,21 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // aborted returns before both recorders, so it advances nothing and reports
   // nothing.
   function reportMonitoringHealth(): void {
-    options.onMonitoringHealth(health.trustNow());
+    const trust = health.trustNow();
+
+    // The condition is reported and pushed from the one value, so the cause the
+    // log names and the condition HomeKit marks cannot disagree. The rate
+    // limiting is the failure log's own: a silence that lasts an afternoon
+    // says so once and then on the reminder cadence, and there is no second
+    // warn-once flag beside it. A failing poll is not reported here, because
+    // `Device polling` already owns that line (D-03).
+    if (trust.shadowSilent) {
+      options.failures.recordFailure(LIVE_REPORTING, LIVE_REPORTING_SILENT);
+    } else {
+      options.failures.recordSuccess(LIVE_REPORTING);
+    }
+
+    options.onMonitoringHealth(trust);
   }
 
   // Whether the poll is succeeding is one of the facts the path is derived

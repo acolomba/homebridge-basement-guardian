@@ -73,6 +73,22 @@ async function heldRequest(this: BasementGuardianWorld): Promise<void> {
 
 Given('the service holds the next request', heldRequest);
 
+async function everyRequestFailing(this: BasementGuardianWorld, status: number): Promise<void> {
+  const service = await this.restApi();
+
+  service.failEveryRequestWith(status);
+}
+
+Given('the service fails every request with status {int}', everyRequestFailing);
+
+async function normalAnswers(this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+
+  service.answerNormally();
+}
+
+Given('the service answers normally again', normalAnswers);
+
 async function startPlugin(this: BasementGuardianWorld): Promise<void> {
   this.startPlugin();
   await this.awaitStart();

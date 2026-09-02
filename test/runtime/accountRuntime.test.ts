@@ -43,11 +43,30 @@ const FAST_POLL_INTERVAL_MS = 1_000;
 // measured figures rather than imported, so a projection that halved the window
 // does not agree with an expectation built the same wrong way.
 const HEARTBEAT_MS = 898_000;
+
+// The run of silence two missed heartbeats make.
+const TWO_MISSED_HEARTBEATS_MS = 1_796_000;
 const THROTTLE_RETRY_MS = 1_800_000;
 
 // The one actionable line a degraded monitoring path produces, restated here so
 // the case fails if the wording drifts.
 const DEGRADED_LINE = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
+
+// The line a failed credential refresh records, restated here for the same
+// reason.
+const ROTATION_FAILED_LINE = 'The temporary shadow credentials could not be refreshed; the plugin will try again.';
+
+// The line a failing inventory poll records for the status the removal cases
+// script, restated here for the same reason.
+const DISCOVERY_FAILED_LINE = 'Device discovery failed on GET /devices with HTTP 503.';
+
+// The line a live connection that has stopped delivering records, restated here
+// for the same reason.
+const LIVE_REPORTING_SILENT_LINE =
+  'No device message has arrived on the live connection for two heartbeat intervals, so HomeKit is marking what it shows untrustworthy until one does.';
+
+// The line the same condition records when it clears.
+const LIVE_REPORTING_RECOVERED_LINE = 'Live device reporting recovered.';
 
 // The line a terminal authentication answer records, restated here for the same
 // reason.
@@ -441,6 +460,10 @@ function countOf(logged: readonly string[], level: string): number {
   return logged.filter((line) => line.startsWith(`${level} `)).length;
 }
 
+function countOfLine(logged: readonly string[], line: string): number {
+  return logged.filter((candidate) => candidate === line).length;
+}
+
 describe('start', () => {
   test('discovers every device and stores its canonical snapshot', async (t) => {
     // arrange
@@ -741,7 +764,10 @@ describe('credential rotation', () => {
     await advance(MIN_ROTATION_DELAY_MS);
 
     // assert
-    assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), repeats: countOf(logged, 'debug') }, { warnings: 1, repeats: 2 });
+    assert.deepStrictEqual(
+      { warnings: countOfLine(logged, `warn ${ROTATION_FAILED_LINE}`), repeats: countOfLine(logged, `debug ${ROTATION_FAILED_LINE}`) },
+      { warnings: 1, repeats: 2 },
+    );
   });
 
   test('SYNC-04 replaces what the next handshake reads and leaves the live connection alone', async (t) => {
@@ -1427,6 +1453,62 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  test('reports the silent live connection once across three silent polls inside one reminder interval', async (t) => {
+    // arrange
+    const { runtime, logged, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    await runtime.start();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), repeats: countOfLine(logged, `debug ${LIVE_REPORTING_SILENT_LINE}`) },
+      { warnings: 1, repeats: 2 },
+    );
+  });
+
+  test('announces the live connection recovered once a message arrives after the silence', async (t) => {
+    // arrange
+    const { runtime, shadows, logged, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    await runtime.start();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), recovered: countOfLine(logged, `info ${LIVE_REPORTING_RECOVERED_LINE}`) },
+      { warnings: 1, recovered: 1 },
+    );
+  });
+
+  test('names no route, no header, and no credential in the line a silent live connection records', async (t) => {
+    // arrange
+    const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    await runtime.start();
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    const reported = logged.filter((line) => line.includes('live connection')).join(' ');
+    assert.deepStrictEqual(
+      {
+        reported: reported.length > 0,
+        scheme: /https?:\/\//.test(reported),
+        authorization: reported.toLowerCase().includes('authorization'),
+        secret: registrations.some((registration) => reported.includes(registration.split(' ')[1] ?? '')),
+        device: reported.includes(DEVICE_ID),
+      },
+      { reported: true, scheme: false, authorization: false, secret: false, device: false },
+    );
+  });
+
   test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
     // arrange
     const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
@@ -1561,7 +1643,10 @@ describe('DEV-05 removal reconciliation', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
-    assert.deepStrictEqual({ removed, warnings: countOf(logged, 'warn') }, { removed: [], warnings: 0 });
+    assert.deepStrictEqual(
+      { removed, warnings: countOfLine(logged, `warn ${DISCOVERY_FAILED_LINE}`), errors: countOf(logged, 'error') },
+      { removed: [], warnings: 0, errors: 0 },
+    );
 
     // act
     await advance(POLL_INTERVAL_MS);
