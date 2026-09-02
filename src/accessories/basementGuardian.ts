@@ -796,16 +796,19 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     },
 
     markMonitoring(trust: MonitoringTrust): void {
-      // The comparison covers every member, not only the two that decide which
-      // scopes are withdrawn. A single failed REST poll moves neither
-      // degradation field -- the REST threshold is two -- while the runtime has
-      // already flipped the command transport, so a comparison over those two
-      // alone would report "unchanged" for exactly the transport failure a press
-      // must be refused on (RES-04, D-07).
+      // The comparison covers every member of `MonitoringTrust`, not only the two
+      // that decide which scopes are withdrawn, and it grows with the type. A
+      // single failed REST poll moves neither degradation field -- the REST
+      // threshold is two -- while the runtime has already flipped the command
+      // transport, so a comparison over those two alone would report "unchanged"
+      // for exactly the transport failure a press must be refused on. Any member
+      // left out of this list is a fact the runtime has pushed and this accessory
+      // silently ignored (RES-04, D-07, D-10).
       const unchanged =
         trust.restDegraded === monitoring.restDegraded &&
         trust.shadowSilent === monitoring.shadowSilent &&
-        trust.commandTransportReady === monitoring.commandTransportReady;
+        trust.commandTransportReady === monitoring.commandTransportReady &&
+        trust.credentialsRejected === monitoring.credentialsRejected;
 
       // The store sits outside the early return below deliberately. The runtime
       // reports on every poll tick, so republishing per tick would be noise

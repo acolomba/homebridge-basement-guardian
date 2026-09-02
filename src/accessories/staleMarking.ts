@@ -1,5 +1,21 @@
 /**
- * @fileoverview Marking a restored accessory's services as no longer vouched for.
+ * @fileoverview The two passes that mark a whole accessory the plugin cannot
+ * vouch for, without constructing a `BasementGuardianAccessory`.
+ *
+ * Both run where no fresh data exists and none may be coming: one when
+ * Homebridge hands a cached accessory back, the other when the vendor has
+ * refused the account credentials and the runtime has stopped for good. Neither
+ * builds a `BasementGuardianAccessory`, because that constructor throws when the
+ * accessory context names no device -- the exact shape a cache written by an
+ * older release carries -- and because a run whose first grant was refused never
+ * reaches discovery and has none to build on.
+ *
+ * They differ in what they leave behind, and the difference is the whole of
+ * `D-10`. The restart pass withdraws trust and leaves the tile readable, because
+ * a restart recovers by itself once a poll succeeds. The credential pass makes
+ * the tile unreadable, because a refused credential never recovers by itself and
+ * an automatic retry extends the vendor's thirty-day block rather than merely
+ * failing.
  *
  * HAP serializes each characteristic's value into the Homebridge accessory
  * cache and serves it from the moment the bridge publishes. This plugin
@@ -27,7 +43,7 @@
  * against its own copy of the behaviour (D-12).
  */
 
-import { publishValue } from './serviceCatalogue.js';
+import { publishPersistentFailure, publishValue } from './serviceCatalogue.js';
 
 import type { API, PlatformAccessory } from 'homebridge';
 
@@ -87,9 +103,14 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
  * work rather than walk an empty list.
  */
 export function markServicesUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
-  void accessory;
-  void hap;
-  void status;
+  let marked = 0;
 
-  return 0;
+  for (const service of accessory.services) {
+    if (service.testCharacteristic(hap.Characteristic.StatusActive)) {
+      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
+      marked += 1;
+    }
+  }
+
+  return marked;
 }

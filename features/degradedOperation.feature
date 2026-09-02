@@ -165,6 +165,10 @@ Feature: Degraded monitoring
     again: the vendor lifts the block thirty days after the last attempt. The accessory therefore
     stops answering reads until the owner corrects the account, and keeps every reading it had.
 
+    The cached token belongs to another account, so the restart has to ask the tenant for a new one
+    and meets the refusal. Without that the restart reuses the cached token, never authenticates, and
+    the scenario passes on a run the vendor never refused.
+
     Given a short poll interval
     Given these devices:
       | deviceId           | name          |
@@ -172,10 +176,11 @@ Feature: Degraded monitoring
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
     Given the tenant refuses the account credentials
+    Given the storage holds a token for another account
     When the plugin restarts
+    Then the log names how to correct the account
     Then the "Sump Pit Flood" service answers no read for "Status Active"
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
-    Then the log names how to correct the account
 
   Scenario: A transport outage leaves every service readable
     Every other failure the plugin can have clears itself once the transport returns, so the tile

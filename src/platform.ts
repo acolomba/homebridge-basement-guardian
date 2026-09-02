@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { connect } from 'mqtt';
 
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
-import { markRestoredServicesStale } from './accessories/staleMarking.js';
+import { markRestoredServicesStale, markServicesUnreadable } from './accessories/staleMarking.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -371,6 +371,29 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
 export function applyMonitoringHealth(context: DiscoveryContext, trust: MonitoringTrust): void {
   for (const basementGuardianAccessory of context.basementGuardianAccessories.values()) {
     basementGuardianAccessory.markMonitoring(trust);
+  }
+
+  if (!trust.credentialsRejected) {
+    return;
+  }
+
+  // The one condition that presents as unreadable rather than as marked, and the
+  // one this plugin can be in that never clears itself. Every other degradation
+  // above reports through `Status Active` and leaves the tile readable, because
+  // greying out an accessory for something that will fix itself teaches an owner
+  // to ignore the signal that will not (D-10).
+  //
+  // The order matters. An ordinary push clears a stored status, so an error
+  // pushed before the fan-out above had republished its rows would be silently
+  // undone by the boolean that followed it.
+  //
+  // The walk is over the platform's own accessory map rather than over the
+  // `BasementGuardianAccessory` instances. A run whose first grant the vendor
+  // refused never reaches discovery, so that map is empty, while the accessories
+  // an owner is actually looking at are the ones Homebridge restored into this
+  // one.
+  for (const accessory of context.accessories.values()) {
+    markServicesUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 }
 

@@ -393,8 +393,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
   // What the runtime pushes: the two facts the projection tracks, plus the two
   // it cannot answer because it sees neither the lifecycle nor authentication.
+  //
+  // `credentialsRejected` is `halted` and nothing else. `halted` is set in
+  // exactly one place -- the terminal branch in `launchFailure` -- so reading it
+  // here rather than raising a second flag beside it is what keeps the fact
+  // HomeKit presents and the fact the runtime acts on from ever drifting apart
+  // (D-13, D-10).
   function monitoringTrustNow(): MonitoringTrust {
-    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow(), credentialsRejected: false };
+    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow(), credentialsRejected: halted };
   }
 
   function reportMonitoringHealth(): void {

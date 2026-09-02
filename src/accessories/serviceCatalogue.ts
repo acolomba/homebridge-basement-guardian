@@ -954,8 +954,7 @@ export function publishValue(service: Service, characteristic: CharacteristicCla
 export function publishPersistentFailure(hap: API['hap'], service: Service, characteristic: CharacteristicClass, status: number): void {
   declareCharacteristic(service, characteristic);
 
-  void hap;
-  void status;
+  service.updateCharacteristic(characteristic, new hap.HapStatusError(status));
 }
 
 /**

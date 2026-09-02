@@ -141,6 +141,15 @@ const USER_RENAME = 'Fuse Box';
 // rather than through some downstream symptom.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
 
+// The construction that turns a characteristic unreadable, named once so the gate below and the one
+// exception to it cannot drift apart.
+const ERRORED_CHARACTERISTIC = 'HapStatusError';
+
+// The modules that must never name it at all. `serviceCatalogue.ts` is deliberately absent:
+// `D-10` grants it exactly one, and the case below pins the count and where that one sits rather
+// than permitting the module wholesale (03-CONTEXT D-05).
+const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
+
 // The namespace holds no per-scenario state: a service and its characteristics live on the
 // accessory that added them, so one stand-in serves every case.
 const HAP = createFakeHap();
@@ -630,6 +639,10 @@ function onCharacteristicOf(accessory: FakeAccessory, displayName: string): Fake
 
 async function sourceOf(module: string): Promise<string> {
   return readFile(new URL(`../../../src/accessories/${module}`, import.meta.url), 'utf8');
+}
+
+function occurrences(code: string, needle: string): number {
+  return code.split(needle).length - 1;
 }
 
 // Everything one pump service publishes about what the plugin observed it do, read back by the
@@ -2598,15 +2611,33 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  for (const module of ACCESSORY_MODULES) {
+  for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
     test(`${module} signals no untrusted scope through an errored characteristic`, async () => {
       // act
       const code = codeOf(await sourceOf(module));
 
       // assert
-      assert.strictEqual(code.includes('HapStatusError'), false);
+      assert.strictEqual(occurrences(code, ERRORED_CHARACTERISTIC), 0);
     });
+  }
 
+  // The one exception `D-10` grants to the locked decision, pinned as a count and a location rather
+  // than as a permission for the module. A second construction anywhere in the catalogue fails here,
+  // which is what makes "a search for the forbidden act answers exactly one production call site" a
+  // checked claim rather than a promise.
+  test('serviceCatalogue.ts names an errored characteristic once, inside publishPersistentFailure', async () => {
+    // act
+    const code = codeOf(await sourceOf('serviceCatalogue.ts'));
+    const persistentFailure = /export function publishPersistentFailure\b[\s\S]*?\n\}/.exec(code)?.[0] ?? '';
+
+    // assert
+    assert.deepStrictEqual(
+      { file: occurrences(code, ERRORED_CHARACTERISTIC), insidePublishPersistentFailure: occurrences(persistentFailure, ERRORED_CHARACTERISTIC) },
+      { file: 1, insidePublishPersistentFailure: 1 },
+    );
+  });
+
+  for (const module of ACCESSORY_MODULES) {
     test(`${module} registers no get handler, so a read never reaches the network`, async () => {
       // act
       const code = codeOf(await sourceOf(module));
