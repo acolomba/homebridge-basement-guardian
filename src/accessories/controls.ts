@@ -377,6 +377,8 @@ export function bindRestoredControlRefusal(options: RestoredControlRefusalOption
       clearRefusal(hap, service, nothingToRepublish, undefined);
     }, 0);
     log.warn(`Refused ${service.displayName} on ${accessoryName}: ${NO_COMMAND_TRANSPORT_CAUSE}.`);
+
+    return refuse(hap, notAllowedInCurrentState(hap));
   });
 }
 
