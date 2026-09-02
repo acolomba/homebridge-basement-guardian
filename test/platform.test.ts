@@ -960,6 +960,8 @@ describe('configureAccessory', () => {
     const restoredAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'restored accessory' });
     when(() => restoredAccessory.UUID).thenReturn('accessory-uuid-1');
     when(() => restoredAccessory.displayName).thenReturn('Sump Pump');
+    when(() => restoredAccessory.services).thenReturn([]);
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 
     // act
@@ -982,6 +984,12 @@ describe('configureAccessory', () => {
       .times(2);
     when(() => restoredAccessory.displayName)
       .thenReturn('Sump Pump')
+      .times(2);
+    when(() => restoredAccessory.services)
+      .thenReturn([])
+      .times(2);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
       .times(2);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 
@@ -1024,6 +1032,8 @@ describe('configureAccessory', () => {
     const staleAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'stale accessory' });
     when(() => staleAccessory.UUID).thenReturn('accessory-uuid-gone');
     when(() => staleAccessory.displayName).thenReturn('Retired Pump');
+    when(() => staleAccessory.services).thenReturn([]);
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 
     // act

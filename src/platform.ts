@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { connect } from 'mqtt';
 
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
+import { markRestoredServicesStale } from './accessories/staleMarking.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -534,9 +535,20 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     });
   }
 
-  /** Records an accessory that Homebridge restored from its cache. */
+  /**
+   * Records an accessory that Homebridge restored from its cache, after
+   * withdrawing trust from every service that already reports it.
+   *
+   * This is the only code that runs while a restored accessory exists and no
+   * fresh data does. HAP serves the cached values from the moment the bridge
+   * publishes, and nothing here republishes until a REST inventory succeeds,
+   * which never happens while the vendor cloud is unreachable. Marking here
+   * rather than on the first update is what closes that window (RES-04, D-06).
+   */
   configureAccessory(accessory: PlatformAccessory): void {
-    this.log.info('Loading accessory from cache:', accessory.displayName);
+    const marked = markRestoredServicesStale(accessory, this.api.hap);
+
+    this.log.info('Loading accessory from cache:', accessory.displayName, `(${String(marked)} services no longer vouched for)`);
     this.accessories.set(accessory.UUID, accessory);
   }
 }

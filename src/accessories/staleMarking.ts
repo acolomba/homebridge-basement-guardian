@@ -27,13 +27,39 @@
  * against its own copy of the behaviour (D-12).
  */
 
+import { publishValue } from './serviceCatalogue.js';
+
 import type { API, PlatformAccessory } from 'homebridge';
 
-// The implementation lands in the commit after this one. Both parameters are
-// named already so the signature the tests drive is the signature that ships.
+/**
+ * Withdraws trust from every restored service that already reports it, and
+ * answers how many it withdrew.
+ *
+ * The count is the assertable evidence that the pass did work. A pass that
+ * walked an empty service list and a pass that marked every service report the
+ * same silent success otherwise, which is the failure this tier already pays a
+ * module floor to keep out of a static gate.
+ *
+ * `testCharacteristic` guards each push, so a service that never carried
+ * `Status Active` does not gain one. That narrowing is deliberate: adding a
+ * characteristic on upgrade changes a published identity a user's automations
+ * may already attach to, and a row the plugin never published has nothing stale
+ * to mark.
+ *
+ * The push goes through `publishValue` and never `setCharacteristic`. On a
+ * control's `On` the latter routes through the write path and becomes a command
+ * this plugin issued to the device, and the accessories tier carries one write
+ * verb precisely so that cannot happen by accident.
+ */
 export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): number {
-  void accessory;
-  void hap;
+  let marked = 0;
 
-  return 0;
+  for (const service of accessory.services) {
+    if (service.testCharacteristic(hap.Characteristic.StatusActive)) {
+      publishValue(service, hap.Characteristic.StatusActive, false);
+      marked += 1;
+    }
+  }
+
+  return marked;
 }

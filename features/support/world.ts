@@ -20,6 +20,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { After, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
+import { markRestoredServicesStale } from '../../src/accessories/staleMarking.js';
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
@@ -575,13 +576,20 @@ export class BasementGuardianWorld extends World {
   // the launch event, and the platform puts each one in the map discovery then finds it in. On a
   // first start the cache is empty and this is the empty map it was before.
   //
+  // The marking pass is deliberately not stood in for. It is the same exported function the
+  // platform method calls, because a copy here would be a copy this harness then asserted against,
+  // and the restart behaviour is exactly the one no scenario could otherwise see (D-12).
+  //
   // The accessory stand-in answers the members the plugin reads and no structural type expresses
   // that, which is the same seam the widened `api` member documents.
   private restoredAccessories(homebridge: FakeHomebridgeApi): Map<string, BasementGuardianPlatformAccessory> {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
 
     for (const accessory of homebridge.restoreCachedAccessories()) {
-      accessories.set(accessory.UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+      const restored = accessory as unknown as BasementGuardianPlatformAccessory;
+
+      markRestoredServicesStale(restored, homebridge.api.hap);
+      accessories.set(accessory.UUID, restored);
     }
 
     return accessories;
