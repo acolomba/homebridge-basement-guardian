@@ -18,9 +18,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createFakeHap } from './fakeHap.js';
+import { createFakeHap, deserializeService, serializeService } from './fakeHap.js';
 
-import type { FakeHap, FakeHapService, FakeServiceClass } from './fakeHap.js';
+import type { FakeHap, FakeHapService, FakeServiceClass, SerializedService } from './fakeHap.js';
 import type { API } from 'homebridge';
 
 type LifecycleEvent = 'didFinishLaunching' | 'shutdown';
@@ -33,6 +33,8 @@ export interface FakeAccessory {
   displayName: string;
   readonly UUID: string;
   readonly context: Record<string, unknown>;
+  /** Every service this accessory carries, as the real `PlatformAccessory` exposes its own. */
+  readonly services: readonly FakeHapService[];
   getService(serviceClass: FakeServiceClass): FakeHapService | undefined;
   getServiceById(serviceClass: FakeServiceClass, subtype: string): FakeHapService | undefined;
   addService(serviceClass: FakeServiceClass, displayName?: string, subtype?: string): FakeHapService;
@@ -97,16 +99,26 @@ export interface FakeHomebridgeApi {
   /**
    * Rebuilds the accessories a restarted Homebridge would restore from its cache.
    *
-   * Homebridge writes an accessory's context to disk when it is registered and whenever the plugin
-   * says it changed, and hands each one back after a restart through `configureAccessory`. This
-   * reproduces that: each restored accessory carries the same identity and the context as it
-   * survives a round trip through JSON, so state the plugin never asked to be persisted, and state
-   * that cannot be serialized, does not come back.
+   * Homebridge writes an accessory to disk when it is registered and whenever the plugin says it
+   * changed, and hands each one back after a restart through `configureAccessory`. This reproduces
+   * that: each restored accessory carries the same identity, the context as it survives a round
+   * trip through JSON, and the published service surface with every characteristic's last value.
    *
-   * What deliberately does not come back is the published service surface. The real cache carries
-   * services and their last values too, so a restored accessory answers reads before the plugin has
-   * republished anything. Leaving them out makes an assertion after a restart read only what this
-   * run published, which is a stricter question than a real restart asks and never a laxer one.
+   * The service surface used to be left out on purpose, arguing that an assertion after a restart
+   * should read only what this run published -- "a stricter question than a real restart asks and
+   * never a laxer one". That holds for one question, did the plugin republish, and fails for
+   * another, does a stale value read as trustworthy before anything republished it. With no
+   * restored services there is nothing stale to read, so an assertion about the second question
+   * passes whether or not the plugin marks anything (RES-04, D-12).
+   *
+   * The restore follows the real one. Homebridge rebuilds through `PlatformAccessory.deserialize`,
+   * which replaces the constructed accessory's services with the ones the cache held, and HAP's
+   * `Characteristic.serialize` persists each value and its properties but no status -- so a
+   * restored characteristic answers its last value and carries no stored status, here as there.
+   *
+   * The cache holds the surface as of the last registration or update call. A real bridge also
+   * saves on teardown, so this restores an older surface than a real restart would, never a fresher
+   * one: a value the plugin has since moved comes back at the moment it was persisted.
    */
   restoreCachedAccessories(): readonly FakeAccessory[];
 
@@ -152,7 +164,7 @@ function refuseDuplicateService(services: readonly FakeHapService[], uuid: strin
 export class HarnessPlatformAccessory implements FakeAccessory {
   readonly context: Record<string, unknown> = {};
 
-  private readonly services: FakeHapService[] = [];
+  readonly services: FakeHapService[] = [];
 
   constructor(
     public displayName: string,
@@ -190,6 +202,19 @@ export class HarnessPlatformAccessory implements FakeAccessory {
       this.services.splice(index, 1);
     }
   }
+
+  /**
+   * Replaces the constructed service surface with the one a cache restore rebuilt.
+   *
+   * The real `Accessory.deserialize` does exactly this: it constructs the accessory, which adds its
+   * own `AccessoryInformation`, then replaces the whole list with the services the cache held.
+   * Adding to the list instead would leave a second `AccessoryInformation` behind, which
+   * `addService` refuses.
+   */
+  sideloadServices(services: readonly FakeHapService[]): void {
+    this.services.length = 0;
+    this.services.push(...services);
+  }
 }
 
 /** Builds one accessory stand-in, for a scenario that reads the accessory service surface directly. */
@@ -206,14 +231,19 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
   const updatePlatformAccessoryCalls: UpdatePlatformAccessoriesCall[] = [];
   const unregisterPlatformAccessoryCalls: UnregisterPlatformAccessoriesCall[] = [];
   const handedAccessories: FakeAccessory[] = [];
-  // What the cache on disk would hold, keyed the way Homebridge keys it. The context is stored as
-  // the text a cache file carries rather than as the live object, so a later mutation the plugin
-  // never persisted cannot reach a restored accessory through a shared reference.
-  const cached = new Map<string, { displayName: string; context: string }>();
+  // What the cache on disk would hold, keyed the way Homebridge keys it. Both the context and the
+  // service surface are stored as the text a cache file carries rather than as the live objects, so
+  // a later mutation the plugin never persisted cannot reach a restored accessory through a shared
+  // reference.
+  const cached = new Map<string, { displayName: string; context: string; services: string }>();
 
   function writeToCache(accessories: readonly FakeAccessory[]): void {
     for (const accessory of accessories) {
-      cached.set(accessory.UUID, { displayName: accessory.displayName, context: JSON.stringify(accessory.context) });
+      cached.set(accessory.UUID, {
+        displayName: accessory.displayName,
+        context: JSON.stringify(accessory.context),
+        services: JSON.stringify(accessory.services.map(serializeService)),
+      });
     }
   }
 
@@ -264,6 +294,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
       const restored = [...cached.entries()].map(([uuid, entry]) => {
         const accessory = new HarnessPlatformAccessory(entry.displayName, uuid);
         Object.assign(accessory.context, JSON.parse(entry.context) as Record<string, unknown>);
+        accessory.sideloadServices((JSON.parse(entry.services) as readonly SerializedService[]).map(deserializeService));
 
         return accessory;
       });

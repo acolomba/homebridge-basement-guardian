@@ -517,6 +517,88 @@ class StandInService implements FakeHapService {
   }
 }
 
+/**
+ * One characteristic as the Homebridge accessory cache holds it.
+ *
+ * The members are the ones the real `Characteristic.serialize` persists, less the two this stand-in
+ * has no equivalent for, and plus `pushed`. `statusCode` is absent because the real serializer does
+ * not persist it either, so no stored status survives a restart in production.
+ *
+ * `pushed` is carried rather than forced true on every restore. It records that the plugin wrote
+ * the value, and what the cache holds is the value the plugin wrote, so the record is exactly as
+ * true after the restart as before it. Forcing it would make a characteristic HAP constructed and
+ * nothing ever wrote read as published, which is the one distinction the flag exists to draw.
+ */
+export interface SerializedCharacteristic {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly props: FakeCharacteristicProps;
+  readonly value: unknown;
+  readonly pushed: boolean;
+}
+
+/** One service as the Homebridge accessory cache holds it. */
+export interface SerializedService {
+  readonly displayName: string;
+  readonly UUID: string;
+  readonly subtype: string | undefined;
+  readonly characteristics: readonly SerializedCharacteristic[];
+  readonly optionalCharacteristics: readonly SerializedCharacteristic[];
+}
+
+function serializeCharacteristic(characteristic: FakeHapCharacteristic): SerializedCharacteristic {
+  return {
+    displayName: characteristic.displayName,
+    UUID: characteristic.UUID,
+    props: characteristic.props,
+    value: characteristic.value,
+    pushed: characteristic.pushed,
+  };
+}
+
+// The real `Characteristic.deserialize` assigns the stored value straight onto a freshly
+// constructed characteristic and stores no status, so a restored characteristic answers its last
+// value and reads as available.
+function deserializeCharacteristic(serialized: SerializedCharacteristic): FakeHapCharacteristic {
+  const characteristic = new StandInCharacteristic(serialized.displayName, serialized.UUID, serialized.props);
+
+  characteristic.value = serialized.value;
+  characteristic.pushed = serialized.pushed;
+
+  return characteristic;
+}
+
+/** Answers one service as the accessory cache holds it, as the real `Service.serialize` does. */
+export function serializeService(service: FakeHapService): SerializedService {
+  return {
+    displayName: service.displayName,
+    UUID: service.UUID,
+    subtype: service.subtype,
+    characteristics: service.characteristics.map(serializeCharacteristic),
+    optionalCharacteristics: service.optionalCharacteristics.map(serializeCharacteristic),
+  };
+}
+
+/**
+ * Rebuilds one service from the accessory cache, as the real `Service.deserialize` does.
+ *
+ * Both lists are replaced rather than added to, exactly as the real deserializer replaces them, so
+ * the `Name` the constructor derives from the display name does not survive beside the one the
+ * cache holds. The real one rebuilds the declared service type when the cache names one and falls
+ * back to a plain `Service` otherwise; this always takes the fallback, which is the shape
+ * `getCharacteristic` already matches by identifier rather than by class.
+ */
+export function deserializeService(serialized: SerializedService): FakeHapService {
+  const service = new StandInService(serialized.displayName, serialized.UUID, serialized.subtype);
+
+  service.characteristics.length = 0;
+  service.characteristics.push(...serialized.characteristics.map(deserializeCharacteristic));
+  service.optionalCharacteristics.length = 0;
+  service.optionalCharacteristics.push(...serialized.optionalCharacteristics.map(deserializeCharacteristic));
+
+  return service;
+}
+
 // One definition per standard service, each adding the characteristics the real definition requires
 // and declaring the ones it declares optional.
 //
