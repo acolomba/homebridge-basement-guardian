@@ -153,6 +153,51 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" sensor is activated
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
 
+  Scenario: A report carrying only device metadata leaves the readings with the poll
+    The pit is filling, the poll is working, and the poll is reporting it. The only thing standing
+    between that reading and the tile is a bookkeeping mark, set by a message that carried no reading
+    at all: the controller reported its wifi signal and its firmware revision, and nothing else.
+
+    That document is ordinary rather than exotic. The plugin subscribes to the delta a device just
+    reported, so a controller updating only its own metadata publishes exactly this shape. A store
+    that reads it as a telemetry delivery hands the readings to a transport that delivered none, and
+    the same message keeps the silence rule quiet, so nothing hands them back.
+
+    The metadata is read back off the canonical snapshot before the vendor's change, so a failure
+    says the document never arrived rather than saying the poll never won. The tile vouching for the
+    system again is the other half: the report carried no reading, but it is still a report, so the
+    controller has demonstrably spoken.
+
+    31 is the water level the Gemini family calls a flooding pit; 3 and 7 are ordinary rungs of the
+    same ladder. The heartbeat carries 7, which the vendor body does not, so the handover below is
+    read against a live path that really spoke.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          | waterLevel |
+      | placeholder-gemini | Sump Guardian | 3          |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 7 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 7 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the device reports these device metadata fields:
+      | wifi_signal_dbm      | -54   |
+      | mcu_firmware_version | 1.4.2 |
+    Then the canonical snapshot carries these device metadata fields:
+      | wifi_signal_dbm      | -54   |
+      | mcu_firmware_version | 1.4.2 |
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    When the vendor changes these device fields:
+      | water_level | 31 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 31 |
+    Then the "Sump Pit Flood" sensor is activated
+
   Scenario: A poll finds a flood on the pump that went quiet while its neighbour keeps reporting
     Two basements, two Basement Guardians, one account. The controller in the front basement stops
     speaking while the one in the back basement goes on heartbeating. The pit in the front basement

@@ -240,8 +240,16 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // document carrying no observation would take ownership from the poll on the
 // strength of having seen nothing, freezing telemetry at whatever the poll last
 // wrote (SYNC-02, D-014).
-function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch, observed: boolean): number | undefined {
-  if (!observed && previous.shadowVersion === undefined) {
+//
+// The section ownership governs is the telemetry one, which is why this reads
+// `patch.data` rather than the wider observation test above. A document
+// reporting only device metadata -- a firmware revision, a signal strength --
+// has observed the device without delivering a reading, so it may order but may
+// not own. Reading the wider test here lets such a document take the readings
+// from the poll while the same message keeps the silence rule quiet, leaving
+// nothing to hand them back (CR-03).
+function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch): number | undefined {
+  if (patch.data === undefined && previous.shadowVersion === undefined) {
     return undefined;
   }
 
@@ -261,7 +269,7 @@ function nextSnapshot(previous: DeviceSnapshot, patch: ReportedPatch, receivedAt
     connectivity: previous.connectivity,
     data: mergeRecord(previous.data, patch.data),
     metadata: mergeRecord(previous.metadata, patch.state),
-    shadowVersion: nextShadowVersion(previous, patch, observed),
+    shadowVersion: nextShadowVersion(previous, patch),
     deviceTimestamp: previous.deviceTimestamp,
     receivedAt: observed ? receivedAt : previous.receivedAt,
   });
