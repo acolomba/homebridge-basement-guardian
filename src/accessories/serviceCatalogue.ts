@@ -10,9 +10,12 @@
  * own declared constants or a value read verbatim from decoded state, and no
  * arithmetic reaches a projection.
  *
- * A row that cannot vouch for a fact projects nothing for it at all rather than
+ * A row whose fact is in doubt projects nothing for it at all rather than
  * projecting a default, so the last value a trustworthy snapshot produced stays
- * published while the accessory marks the row inactive (D-014, RES-01).
+ * published while the accessory marks the row inactive. A row that can no longer
+ * be vouched for only because a transport went quiet keeps projecting what the
+ * transport still answering delivered, and the accessory's marking carries the
+ * doubt on its own (D-014, RES-01).
  *
  * The subtype of every row is its `ServiceKind` slug verbatim. HomeKit
  * identifies a service by type together with subtype, so that string is a
@@ -143,14 +146,14 @@ export interface ServiceRow extends RowTrust {
    */
   readScopes: readonly TrustScope[];
   /**
-   * The values to publish, or nothing at all when this row cannot vouch for them.
+   * The values to publish, or nothing at all when they are in doubt.
    *
    * The rule is per value rather than per row, because several rows read more
    * than one decoded scope group: a row publishes a value only when the group
-   * that value reads decoded and the scope owning that group is either trusted
-   * or untrusted for a reason this row tolerates. `Sump Pit Level` therefore
-   * keeps publishing a trustworthy water level while the `fault` scope is
-   * untrusted, and withholds only the fault-sourced values.
+   * that value reads decoded and `isRowPublishable` answers for the scope owning
+   * that group. `Sump Pit Level` therefore keeps publishing a trustworthy water
+   * level while the `fault` scope is untrusted, and withholds only the
+   * fault-sourced values.
    *
    * The trust gate reads the row the call is made on rather than a copy captured
    * when the catalogue was built, so a row derived from another with a different
@@ -203,21 +206,57 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// The distrust reasons that say the plugin is seeing less, rather than that the
+// value it did receive is doubtful. A monitoring outage is the whole of that
+// set: the transport still answering keeps delivering family-valid values, and
+// withholding them replaces a fresh valid reading with a staler one while the
+// tile shows no marker Apple Home draws.
+//
+// `invalid` and `controller-link-lost` stay outside it. Both say the value
+// itself is in doubt, and publishing a field that failed family validation is
+// the false normal this plugin exists to prevent. `stale` stays outside it
+// because nothing assigns it: exempting a reason nothing produces buys nothing
+// and would change behaviour silently the day something starts producing it
+// (D-014, D-02, CR-01).
+const SEEING_LESS_REASONS: ReadonlySet<DistrustReason> = new Set<DistrustReason>(['unreachable']);
+
 /**
  * Answers whether a row can still vouch for what it publishes.
  *
  * A row is trustworthy while no untrusted scope of its own carries a reason it
- * does not tolerate. This is the one rule behind both halves of the safety
- * contract: an untrustworthy row projects nothing, and the accessory publishes
- * `StatusActive = false` for it (D-014, D-05).
+ * does not tolerate. Every reason counts here, including the one that says only
+ * that the plugin is seeing less, because this drives the marking half of the
+ * safety contract: the accessory publishes `StatusActive = false` for an
+ * untrustworthy row.
+ *
+ * The withholding half is `isRowPublishable`'s, and the two rules differ on
+ * exactly that one reason. Marking answers "can the plugin call this current?",
+ * which a lost transport makes false. Withholding answers "would publishing
+ * this overwrite a good value with a doubtful one?", which a lost transport
+ * does not make true (D-014, D-05).
  */
 export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
 }
 
-/** Answers whether a row may publish what arrived, which is not yet a different question. */
+/**
+ * Answers whether a row may publish what arrived, which is a different question
+ * from whether it can vouch for it.
+ *
+ * A row can only publish a value some transport delivered: the projection reads
+ * the last decoded snapshot, and a snapshot exists only because a poll or a
+ * shadow message carried it. So a scope withdrawn because the plugin is seeing
+ * less goes on publishing exactly what the working transport supplied, and
+ * `StatusActive` alone carries the doubt; with both transports down nothing new
+ * arrives and every tile holds the value the last trustworthy observation left.
+ * A scope withdrawn because the value is doubtful publishes nothing, because
+ * publishing it would overwrite the last family-valid value with a bad one
+ * (D-014, D-02).
+ */
 export function isRowPublishable(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
-  return isRowTrusted(row, untrustedScopes);
+  return !untrustedScopes.some(
+    (untrusted) => untrusted.scope === row.scope && !SEEING_LESS_REASONS.has(untrusted.reason) && !row.toleratedDistrust.includes(untrusted.reason),
+  );
 }
 
 /**
@@ -276,12 +315,13 @@ export function numberOf(group: Record<string, unknown> | undefined, field: stri
   return typeof value === 'number' ? value : undefined;
 }
 
-// The same group, answered only while this row may still vouch for the scope that
+// The same group, answered only while this row may still publish the scope that
 // owns it. The structural read is `decodedGroup`'s and is never repeated here.
-// `undefined` means the group did not decode or the scope is untrusted, never
-// that the facts in it are absent from the device.
+// `undefined` means the group did not decode or the scope carries a reason that
+// puts its values in doubt, never that the facts in it are absent from the
+// device.
 function trustedGroup(input: ProjectionInput, trust: RowTrust, scope: TrustScope): Record<string, unknown> | undefined {
-  if (!isRowTrusted({ scope, toleratedDistrust: trust.toleratedDistrust }, input.untrustedScopes)) {
+  if (!isRowPublishable({ scope, toleratedDistrust: trust.toleratedDistrust }, input.untrustedScopes)) {
     return undefined;
   }
 
@@ -599,7 +639,7 @@ function toRow(definition: RowDefinition): ServiceRow {
     alwaysPublish,
 
     project(input) {
-      return isRowTrusted(this, input.untrustedScopes) ? values(input, this) : [];
+      return isRowPublishable(this, input.untrustedScopes) ? values(input, this) : [];
     },
   };
 }
