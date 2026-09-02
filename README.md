@@ -146,9 +146,9 @@ The delay is to the report, never to a reading. The plugin holds no value back w
 
 A restart shows the same rule from a cold start. Homebridge keeps its own copy of each accessory, so your rooms, automations, and scenes come back at once. The plugin marks every restored service inactive before its first poll, and it changes nothing else. Each accessory is in place. It shows the reading the last run left on it, and it is marked. If the cloud is unreachable, the accessories stay that way until a poll succeeds.
 
-One failure is different from every other one here. If the vendor refuses your account email or password, the plugin stops and never tries again on its own. A vendor block of this kind lifts only 30 days after the last attempt, so each retry postpones it. The refusal has the same effect whenever it arrives, at the first sign-in or during a run.
+One failure is different from every other one here. If the vendor refuses your account email or password, the plugin stops and never tries again on its own. A vendor block of this kind lifts only 30 days after the last attempt, so each retry postpones it. The refusal has the same effect whenever it arrives, at the first sign-in or during a run. The plugin also closes the connection that carries live changes, so your system cannot send it anything more.
 
-Every service then stops answering whether the plugin vouches for it. Apple Home shows the whole accessory as `No Response`, not the inactive state the other failures use. Each service keeps the value it last published, and a controller that reads one of those values directly still gets it. The log names what happened. You must correct the email and the password in the Homebridge settings and then restart the plugin.
+Every service then stops answering whether the plugin vouches for it. Apple Home shows the whole accessory as `No Response`, not the inactive state the other failures use. Each service keeps the value it last published, and a controller that reads one of those values directly still gets it. This state does not clear itself. The log names what happened. You must correct the email and the password in the Homebridge settings and then restart the plugin.
 
 ## Removing a notification sensor
 

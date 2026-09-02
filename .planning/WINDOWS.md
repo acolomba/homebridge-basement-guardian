@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 11
+open_count: 13
 waived_count: 1
 fixed_count: 2
-total_count: 14
-last_updated: 2026-09-02T16:16:04.212Z
+total_count: 16
+last_updated: 2026-09-02T17:55:13.637Z
 ---
 
 # Broken Windows Ledger
@@ -29,6 +29,8 @@ last_updated: 2026-09-02T16:16:04.212Z
 | 12 | 05 | deviation | .planning/REQUIREMENTS.md |  | Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit | open |  | 2026-09-02T16:16:03.522Z |  |
 | 13 | 05 | unrun-verify | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The 22 first-round Per-Task Verification Map rows still read pending. Plan 05-10 reconciled the gap-closure rows against their summaries and had no equivalent basis for the first round; three of those rows are the ones 05-VERIFICATION.md found green but blind | open |  | 2026-09-02T16:16:03.873Z |  |
 | 14 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md |  | WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md | open |  | 2026-09-02T16:16:04.212Z |  |
+| 15 | 05 | deviation | features/degradedOperation.feature |  | Mutation B did not produce the outcome 05-12-PLAN.md predicted: the plan's own prescribed 'Then the broker holds no live connection' step sits before the settling steps and kills the scenario independently of the settle, so dropping the settle and reverting the fix still fails. Suppressing that one step isolates the half the mutation is about, and the scenario then passes against the defect. The finding stands; the plan's predicted mechanism did not | open |  | 2026-09-02T17:55:13.303Z |  |
+| 16 | 05 | deviation | src/runtime/accountRuntime.ts |  | closeQuietly was relocated above haltOnTerminalAuthFailure, which 05-12-PLAN.md did not anticipate: @typescript-eslint/no-use-before-define rejects the new call site otherwise. Body unchanged. Relatedly, the entry-guard case could not use Promise.withResolvers (needs lib es2024, outside this plan's files) and captures the resolver by hand instead | open |  | 2026-09-02T17:55:13.637Z |  |
 
 ````json
 [
@@ -198,6 +200,30 @@ last_updated: 2026-09-02T16:16:04.212Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T16:16:04.212Z",
+    "resolved_at": null
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "features/degradedOperation.feature",
+    "line": null,
+    "description": "Mutation B did not produce the outcome 05-12-PLAN.md predicted: the plan's own prescribed 'Then the broker holds no live connection' step sits before the settling steps and kills the scenario independently of the settle, so dropping the settle and reverting the fix still fails. Suppressing that one step isolates the half the mutation is about, and the scenario then passes against the defect. The finding stands; the plan's predicted mechanism did not",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T17:55:13.303Z",
+    "resolved_at": null
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/runtime/accountRuntime.ts",
+    "line": null,
+    "description": "closeQuietly was relocated above haltOnTerminalAuthFailure, which 05-12-PLAN.md did not anticipate: @typescript-eslint/no-use-before-define rejects the new call site otherwise. Body unchanged. Relatedly, the entry-guard case could not use Promise.withResolvers (needs lib es2024, outside this plan's files) and captures the resolver by hand instead",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T17:55:13.637Z",
     "resolved_at": null
   }
 ]

@@ -156,6 +156,38 @@ what the verifier measured.
 | T3 | 05-11 | 5 | SYNC-03 | T-05-46 | `01-CONTEXT.md` D-15 and `REQUIREMENTS.md` SYNC-03 record, in their own text, that shadow ownership ends on silence as well as on disconnection, each dated and each naming `05-CONTEXT.md` D-13 | other | `grep -c "Amended 2026-09-02" .planning/phases/01-secure-cloud-foundation/01-CONTEXT.md .planning/REQUIREMENTS.md` | `.planning/phases/01-secure-cloud-foundation/01-CONTEXT.md`, `.planning/REQUIREMENTS.md` | ✅ shipped |
 | T1 | 05-10 | 6 | RES-03, RES-04 | T-05-39 | Every documentation claim about degraded operation is traceable to a passing assertion. (Task ID corrected 2026-09-02: the documentation work is 05-10 task 1, not task 2) | manual | `npm run check` | `README.md`, `CHANGELOG.md` | ✅ shipped |
 
+### Plan 05-12 rows
+
+Added 2026-09-02 after `05-VERIFICATION.md` returned `gaps_found` a second time, on SC-4's second half
+alone. The gap sat in the state the previous round created: plan 05-07 made a mid-run credential
+refusal reach the terminal branch, and mutation testing confirmed that is real, but it delivered a
+one-shot push where a durable state was needed. The rows below state what an owner must observe after
+the refusal, not at the instant of it, because the instant was never the hard half.
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| T1 | 05-12 | 7 | RES-04 | T-05-12-01 | An owner whose vendor password was refused while Homebridge ran finds the accessory still refusing every read after the next device heartbeat, on a leak sensor, a contact sensor and a switch, with the reading it last published retained | e2e | `npm run test:cucumber -- --name "stays refused when the next heartbeat lands"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-12 | 7 | RES-04 | T-05-12-01 | The same owner, looking again two simulated hours and one further changed heartbeat later, finds the same greyed-out accessory rather than a normal one. The presentation is a state the runtime is in, not an act it performed once | e2e | `npm run test:cucumber -- --name "stays refused when the next heartbeat lands"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-12 | 7 | RES-04 | T-05-12-03 | A halted plugin holds no live connection to the vendor, so it stops consuming temporary cloud credentials it can no longer rotate. The step reads the broker's own socket count rather than a plugin-side flag | e2e | `npm run test:cucumber -- --name "stays refused when the next heartbeat lands"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-12 | 7 | RES-04 | T-05-12-05 | The halt records no shadow-degradation line, so the log names the cause an owner must act on and not a transport outage that did not happen. Closing raises no disconnection | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped |
+| T2 | 05-12 | 7 | RES-04 | T-05-12-02 | A credential grant still in flight when another loop meets the refusal opens no connection when it lands, so the overwrite path is not re-established one function later | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped |
+| T2 | 05-12 | 7 | RES-04 | T-05-12-02 | A connection that was already starting when the refusal landed is closed rather than kept, so the runtime is never left holding a socket it will never use | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped |
+| T1 | 05-12 | 7 | RES-04 | T-05-12-01 | The scenario can see the defect at all. `world.until` reads its condition before its first delay, so a plain refusal step placed straight after a publish answers from the marking already in place and passes whether or not the message was delivered. The settling step is what makes the read-refusal half evidence rather than decoration | e2e | `npm run test:cucumber -- --name "stays refused when the next heartbeat lands"` | `features/support/steps/homekit.ts` | ✅ shipped |
+| T1 | 05-12 | 7 | RES-04 | T-05-12-01 | The halted path and the shadow-silence recovery path are distinct mechanisms, and neither stands in for the other: reverting this plan's close kills the new scenario and leaves `A returning heartbeat clears the shadow silence before the next poll` green | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ✅ shipped |
+
+### Plan 05-12 mutations
+
+Each was applied to the source tree, watched, and reverted after `git status` showed the mutated file
+was the only changed one. Every commit preceded its mutation.
+
+| Behaviour | Mutation that must fail it |
+|---|---|
+| A refusal survives the next heartbeat | Mutation A. Remove `void closeQuietly(shadow);` from `haltOnTerminalAuthFailure`. The scenario fails at `Then the broker holds no live connection`, and with that step suppressed it fails at `Then the "Sump Pit Flood" service still answers no read for "Status Active"` with `it answered a read`. The unit case fails on `closes: 0` against `closes: 1` |
+| The scenario is not blind to it | Mutation B. Drop the settle from the new step and re-apply mutation A. **The plan predicted the scenario would pass and it does not**: it still fails at `Then the broker holds no live connection`, which sits before the settling steps and does not depend on the settle. Suppressing that one step isolates the half the mutation is about, and the scenario then **passes** against the defect in 0.3 s. That pass is the finding: without the settle the read-refusal steps are blind, and restoring the settle alone turns the same run red |
+| The two paths are distinct | Mutation C. Run mutation A against `A returning heartbeat clears the shadow silence before the next poll`. It stays green, 18 steps passed, while the new scenario is dead |
+| Nothing opens a connection after a halt | Mutation D. Narrow `attemptShadow`'s entry guard back to `stopped` alone. `D-13 opens no live connection for a credential grant that lands after a refusal has halted the runtime` fails naming the client that was built (`1 !== 0`); the post-start case stays green |
+| Nothing is kept from the halt's own start window | Mutation E. Narrow `attemptShadow`'s post-start check back to `stopped` alone. `D-13 keeps no live connection that opened while a refusal was halting the runtime` fails on `closes: 0` against `closes: 1`; the entry-guard case stays green |
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test
@@ -264,6 +296,7 @@ implemented behaviour move.
 |----------|-------------|------------|-------------------|
 | A restored accessory carrying **pre-release** cached characteristics marks stale on upgrade | RES-04 | No test has met a real Homebridge cache; the harness restores context through a JSON round trip. Inherited from Phase 4 human item 1. | Install over an existing cached accessory, restart Homebridge with the cloud unreachable, confirm the tile shows `Status Active — No` with its previous value retained |
 | Apple Home surfaces the degraded marking on a real paired home | RES-03, RES-04 | Apple Home rendering cannot be asserted from the plugin side | Force a degraded scope, confirm the `Status Active` row reads `No` and the tile stays present. Rides along with the open `G-003` / `G-004` session |
+| Apple Home renders a refused credential as `No Response`, and still does after a device heartbeat | RES-04 | Apple Home rendering cannot be asserted from the plugin side. **Premise shifted 2026-09-02 by plan 05-12:** `D-10` mandates the reading at the instant of the refusal, and that instant was never the hard half. `05-VERIFICATION.md` measured the presentation being undone by the first live message that followed, so the check must now span that transition. `05-VERIFICATION.md` `human_verification` item 2 already carries the restated premise; this row records it where the phase's own manual register lives rather than stating a second version of it | Force a credential rejection on a real paired home. Read the greyed-out accessory, reach its cached values, and trigger an automation built on one of its sensors. Then wait for at least one device heartbeat and look again. It must still read `No Response`. Rides along with the open `G-003` / `G-004` session |
 
 ---
 
