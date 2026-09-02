@@ -122,6 +122,45 @@ async function assertCharacteristicValue(this: BasementGuardianWorld, serviceNam
 
 Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
 
+// Whether a controller read of this characteristic answers the value or the status the plugin stored
+// on it. A characteristic made unreadable throws that status ahead of the value, which is what Apple
+// Home draws as No Response, and reading the stored value alone cannot tell the two apart. An absent
+// characteristic answers neither, so it reads as answering rather than as refusing and a step
+// asserting a refusal fails by name rather than passing on an absence.
+function readThrows(service: FakeHapService | undefined, displayName: string): boolean {
+  const characteristic = service?.characteristics.find((candidate) => candidate.displayName === displayName);
+
+  if (characteristic === undefined) {
+    return false;
+  }
+
+  try {
+    characteristic.handleGetRequest();
+  } catch {
+    return true;
+  }
+
+  return false;
+}
+
+async function assertNoReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  const homebridge = await this.homebridge();
+  const failure = `the ${serviceName} service went on answering a read for ${characteristicName}`;
+
+  await this.untilTrue(() => readThrows(serviceOf(homebridge, serviceName), characteristicName), PUBLISH_DEADLINE_MS, failure);
+}
+
+Then('the {string} service answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadAnswered);
+
+async function assertReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  const homebridge = await this.homebridge();
+  const failure = `the ${serviceName} service stopped answering a read for ${characteristicName}`;
+
+  await this.untilTrue(() => !readThrows(serviceOf(homebridge, serviceName), characteristicName), PUBLISH_DEADLINE_MS, failure);
+}
+
+Then('the {string} service answers a read for {string}', { timeout: STEP_TIMEOUT_MS }, assertReadAnswered);
+
 function assertSensorActivated(this: BasementGuardianWorld, displayName: string): Promise<void> {
   return untilAlarmState(this, displayName, ALARM_ACTIVATED, `the ${displayName} sensor never activated`);
 }

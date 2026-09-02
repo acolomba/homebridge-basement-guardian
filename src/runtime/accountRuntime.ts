@@ -391,10 +391,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return !stopped && !halted && polling;
   }
 
-  // What the runtime pushes: the two facts the projection tracks, plus the one
+  // What the runtime pushes: the two facts the projection tracks, plus the two
   // it cannot answer because it sees neither the lifecycle nor authentication.
   function monitoringTrustNow(): MonitoringTrust {
-    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow() };
+    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow(), credentialsRejected: false };
   }
 
   function reportMonitoringHealth(): void {

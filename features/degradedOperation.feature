@@ -159,3 +159,37 @@ Feature: Degraded monitoring
     When the plugin restarts
     Then the "Sump Pit Level" service reports "Status Active" as "false"
     Then the "Sump Pit Level" service reports "Water Level" as "20"
+
+  Scenario: Credential rejection makes every service unreadable
+    A vendor refusal of the account credentials never clears itself, and the plugin must not try
+    again: the vendor lifts the block thirty days after the last attempt. The accessory therefore
+    stops answering reads until the owner corrects the account, and keeps every reading it had.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    Given the tenant refuses the account credentials
+    When the plugin restarts
+    Then the "Sump Pit Flood" service answers no read for "Status Active"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+    Then the log names how to correct the account
+
+  Scenario: A transport outage leaves every service readable
+    Every other failure the plugin can have clears itself once the transport returns, so the tile
+    stays readable and says only that the plugin cannot currently vouch for what it shows. Greying
+    out an accessory for a condition that fixes itself teaches an owner to ignore the one that does
+    not.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the "Sump Pit Flood" service answers a read for "Status Active"
+    Then the "Sump Pit Flood" service answers a read for "Leak Detected"

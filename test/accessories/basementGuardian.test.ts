@@ -223,10 +223,10 @@ const EVERY_TRUST_SCOPE: readonly TrustScope[] = ['alarm-mute', 'battery', 'conn
 const EVERY_SCOPE_IN_ORDER: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
 
 // The two transport facts, as the account runtime reports them.
-const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true };
-const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true };
-const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false, commandTransportReady: false };
-const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true, commandTransportReady: false };
+const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
+const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false };
 
 // The cause a refusal names when the runtime has no proven way to reach the vendor. Written out
 // here rather than read off the binder, so the accessory case fails if the two halves of the
@@ -2389,7 +2389,7 @@ describe('createBasementGuardianAccessory', () => {
     // act
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
     const afterTheAcceptedPress = [...sends];
-    basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false });
+    basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false });
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {

@@ -1440,16 +1440,20 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(monitoringHealth, [
-      { restDegraded: false, shadowSilent: false, commandTransportReady: true },
-      { restDegraded: false, shadowSilent: false, commandTransportReady: false },
-      { restDegraded: false, shadowSilent: false, commandTransportReady: true },
+      { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
     ]);
   });
 
   // The one failure this project treats as final. Nothing polls, refreshes, or connects after it, so
   // without a push from that branch the accessory tier would go on answering with whatever the last
   // poll left and would send a press into a runtime that has stopped trying (D-13, D-07).
-  test('D-13 pushes an unready command transport from the terminal authentication branch and never pushes again', async (t) => {
+  //
+  // The recorded call list is the second half of the claim: a retry would extend the vendor's
+  // thirty-day block rather than merely fail, so an empty tail is the behaviour rather than an
+  // absence of interest (D-10).
+  test('D-13 pushes a rejected credential and an unready command transport, and never reaches the vendor again', async (t) => {
     // arrange
     const { runtime, monitoringHealth, calls, advance } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
@@ -1462,8 +1466,8 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { monitoringHealth, polls: calls.filter((call) => call === 'devices').length },
-      { monitoringHealth: [{ restDegraded: false, shadowSilent: false, commandTransportReady: false }], polls: 1 },
+      { monitoringHealth, calls },
+      { monitoringHealth: [{ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }], calls: ['devices'] },
     );
   });
 
@@ -1481,7 +1485,7 @@ describe('the degraded monitoring path', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true }]);
+    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]);
   });
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
@@ -2076,7 +2080,7 @@ describe('createAccountRuntimeFromConfig', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true }]);
+    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]);
   });
 
   test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {

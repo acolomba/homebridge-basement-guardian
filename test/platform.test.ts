@@ -16,7 +16,7 @@ import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevi
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
-import type { FakeServiceClass } from '../features/support/fakeHap.js';
+import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '../features/support/fakeHap.js';
 import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
@@ -396,6 +396,69 @@ function recordingBasementGuardianAccessory(deviceId: string, marks: string[]): 
       marks.push(`${deviceId} rest ${String(trust.restDegraded)} shadow ${String(trust.shadowSilent)}`);
     },
   };
+}
+
+// The status a refused credential is presented under, and the leak state the restored accessories
+// below carry. Both are written independently of the stand-in, so a drifted number fails here
+// (D-10, 04-CONTEXT D-04).
+const COMMUNICATION_FAILURE = -70402;
+const LEAK_DETECTED = 1;
+
+/** Two accessories as a halted restart holds them, with the flood sensor of each held for reading. */
+interface RestoredAccessories {
+  accessories: Map<string, BasementGuardianPlatformAccessory>;
+  floods: readonly FakeHapService[];
+}
+
+// Restored from the Homebridge cache, carrying the readings the previous run published, and
+// belonging to no `BasementGuardianAccessory` at all -- which is the state a run whose first grant
+// the vendor refused leaves the platform in, because it never reaches discovery.
+function restoredAccessories(): RestoredAccessories {
+  const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+  const floods: FakeHapService[] = [];
+
+  for (const uuid of [ACCESSORY_UUID, SECOND_ACCESSORY_UUID]) {
+    const accessory = new HarnessPlatformAccessory('Sump Guardian', uuid);
+    const flood = accessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
+
+    flood.updateCharacteristic(HAP.Characteristic.LeakDetected, LEAK_DETECTED);
+    flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    accessories.set(uuid, accessory as unknown as BasementGuardianPlatformAccessory);
+    floods.push(flood);
+  }
+
+  return { accessories, floods };
+}
+
+// What a characteristic holds, and what a controller read of it answers. The read is the whole
+// difference between unreadable and merely marked, so it is driven rather than inferred from the
+// stored status.
+function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): { value: unknown; threw: unknown } {
+  const held = service.getCharacteristic(characteristicClass);
+  let threw: unknown = undefined;
+
+  try {
+    held?.handleGetRequest();
+  } catch (error: unknown) {
+    threw = error;
+  }
+
+  return { value: held?.value, threw };
+}
+
+// The trust row beside a reading the pass must not touch, so preserve-and-erase fails here as
+// plainly as an unmarked accessory does.
+function trustReadsOf(
+  floods: readonly FakeHapService[],
+): readonly { statusActive: { value: unknown; threw: unknown }; leakDetected: { value: unknown; threw: unknown } }[] {
+  return floods.map((flood) => ({
+    statusActive: readOf(flood, HAP.Characteristic.StatusActive),
+    leakDetected: readOf(flood, HAP.Characteristic.LeakDetected),
+  }));
+}
+
+function statusesOf(floods: readonly FakeHapService[]): readonly (number | undefined)[] {
+  return floods.map((flood) => flood.getCharacteristic(HAP.Characteristic.StatusActive)?.statusCode);
 }
 
 // The accessory the platform built for this device, so a case can watch the calls the store's own
@@ -1061,7 +1124,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true, commandTransportReady: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false });
 
     // assert
     assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow true`]);
@@ -1077,9 +1140,79 @@ describe('applyMonitoringHealth', () => {
 
     // act & assert
     assert.doesNotThrow(() => {
-      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false });
+      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false });
     });
   });
+
+  // The walk is over the platform's own accessory map rather than over the `BasementGuardianAccessory`
+  // instances, because a run whose first grant the vendor refused never reaches discovery and has
+  // none of the latter. These two accessories are exactly what a halted restart holds: restored,
+  // carrying the values the previous run published, and belonging to no accessory instance at all
+  // (RES-04, D-10).
+  test('makes every restored accessory unreadable when the vendor has refused the credentials', () => {
+    // arrange
+    const restored = restoredAccessories();
+    const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(trustReadsOf(restored.floods), [
+      { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+      { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+    ]);
+  });
+
+  // The ordering inside the fan-out is load-bearing and this is what pins it: an ordinary push clears
+  // a stored status, so an error pushed before `markMonitoring` republished its rows would be
+  // silently undone by the boolean that followed it.
+  test('leaves the pushed status standing after the boolean fan-out has run', () => {
+    // arrange
+    const marks: string[] = [];
+    const restored = restoredAccessories();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(
+      { marks, statuses: statusesOf(restored.floods) },
+      { marks: [`${DEVICE_ID} rest true shadow true`], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] },
+    );
+  });
+
+  // Credential rejection is the only cause in this plugin that makes a characteristic unreadable.
+  // Every row here is a degradation that clears itself once its transport returns, and greying out an
+  // accessory for one of those teaches an owner to ignore the one signal that needs them
+  // (D-10, 03-CONTEXT D-05).
+  for (const { cause, trust } of [
+    { cause: 'a shadow silence', trust: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false } },
+    { cause: 'a REST degradation', trust: { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } },
+    { cause: 'an unready command transport', trust: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } },
+    { cause: 'both transports lost', trust: { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false } },
+  ] satisfies readonly { cause: string; trust: MonitoringTrust }[]) {
+    test(`leaves every restored accessory readable for ${cause}`, () => {
+      // arrange
+      const restored = restoredAccessories();
+      const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
+
+      // act
+      applyMonitoringHealth(context, trust);
+
+      // assert
+      assert.deepStrictEqual(trustReadsOf(restored.floods), [
+        { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+      ]);
+    });
+  }
 });
 
 describe('registerDiscoveredDevices', () => {

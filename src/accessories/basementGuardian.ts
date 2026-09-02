@@ -479,7 +479,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // the plugin. Nothing has told this accessory the runtime can reach the vendor
   // yet, so a press in that window is refused locally rather than sent into a
   // route that has never answered (RES-04, D-07).
-  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false };
+  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
   // What the last update's own payload said about trust. It is held because an
   // account-wide monitoring change recomputes the whole reason map without a
   // fresh snapshot, and the two device-level causes must keep their precedence

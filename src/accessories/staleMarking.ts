@@ -63,3 +63,33 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
 
   return marked;
 }
+
+/**
+ * Makes every service on one accessory unreadable under a named status, and
+ * answers how many it marked.
+ *
+ * A refused credential is account-wide: one account, one authentication, one
+ * poll loop. Marking a single service would imply the others are fine, so every
+ * service that reports whether the plugin vouches for it is made unreadable
+ * together (D-10).
+ *
+ * The pass lives here, beside the restart pass, for the same two reasons that
+ * one does. It walks the accessory's own services and constructs no
+ * `BasementGuardianAccessory`: a run whose first grant the vendor refused never
+ * reaches discovery, so none exists to walk, and building one would throw on a
+ * context that names no device anyway. And it is exported rather than written
+ * inside the platform, so the Cucumber harness drives this code rather than a
+ * copy of it (D-12).
+ *
+ * `testCharacteristic` guards each push exactly as it does above, so an upgrade
+ * over a cache an older release wrote adds no characteristic to a service that
+ * never carried one, and the count is the assertable evidence that the pass did
+ * work rather than walk an empty list.
+ */
+export function markServicesUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
+  void accessory;
+  void hap;
+  void status;
+
+  return 0;
+}

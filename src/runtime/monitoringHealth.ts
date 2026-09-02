@@ -70,6 +70,22 @@ export interface TransportTrust {
  */
 export interface MonitoringTrust extends TransportTrust {
   commandTransportReady: boolean;
+  /**
+   * Whether the vendor has refused the account credentials.
+   *
+   * This is the one condition the plugin can be in that never clears itself,
+   * and the only one the user must act on. The vendor lifts a brute-force block
+   * only thirty days after the last attempt, so an automatic retry does not
+   * merely fail -- it extends the lockout the user is trying to escape, and
+   * nothing in the plugin retries after it (D-13, D-10). Every other member of
+   * this type describes a degradation that recovers on its own once the
+   * transport does.
+   *
+   * Like `commandTransportReady` it is assembled by the runtime rather than
+   * answered here: it is the authentication lifecycle, which a recorder of
+   * transport facts has no sight of (D-07).
+   */
+  credentialsRejected: boolean;
 }
 
 /** Everything the monitoring-trust projection needs, by injection. */

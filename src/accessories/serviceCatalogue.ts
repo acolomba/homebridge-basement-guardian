@@ -927,6 +927,38 @@ export function publishValue(service: Service, characteristic: CharacteristicCla
 }
 
 /**
+ * Makes one characteristic unreadable under a named status, and leaves the
+ * value it holds exactly where it is.
+ *
+ * This is the one act `03-CONTEXT.md` D-05 otherwise forbids. Pushing a
+ * `HapStatusError` presents the accessory as "No Response", and a degradation
+ * that will clear itself must never present that way, because greying out a
+ * tile for a condition that fixes itself teaches an owner to ignore the one
+ * signal that needs them. `D-10` grants the exception to a single cause -- a
+ * vendor refusal of the account credentials -- which never self-clears and
+ * which an automatic retry makes worse rather than merely failing to fix, so
+ * "requires user action" is literal there and nowhere else (RES-04, D-10).
+ *
+ * It is a separate function beside `publishValue` rather than a widening of it.
+ * An error is not a `CharacteristicValue`, and widening that parameter would
+ * let any caller push one and reopen the locked decision for every row; as
+ * written, a search for the forbidden act answers exactly one production call
+ * site. The verb is the contract, exactly as it is between `publishValue` and
+ * `seedConfiguredName`.
+ *
+ * The stored value survives because HAP assigns the status and returns before
+ * it validates or stores anything, so preserve-and-mark does not become
+ * preserve-and-erase (D-014). `test/accessories/hapWriteFidelity.test.ts` holds
+ * the hand-built stand-in to that ordering against the pinned real package.
+ */
+export function publishPersistentFailure(hap: API['hap'], service: Service, characteristic: CharacteristicClass, status: number): void {
+  declareCharacteristic(service, characteristic);
+
+  void hap;
+  void status;
+}
+
+/**
  * Names a service for a controller, and never over a name a user already gave
  * it.
  *
