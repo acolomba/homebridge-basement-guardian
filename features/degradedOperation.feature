@@ -240,6 +240,30 @@ Feature: Degraded monitoring
     Then the "Sump Pit Level" service reports "Status Active" as "false"
     Then the "Sump Pit Level" service reports "Water Level" as "20"
 
+  Scenario: A press on a restored control is refused rather than silently accepted
+    The tile comes back and stays readable, and so does the control on it. Pressing that control
+    while the vendor cloud is unreachable tells the owner the plugin has no way to reach the vendor,
+    rather than flipping the toggle, reporting success, and doing nothing. A switch that reports
+    success for an act that never happened is a false normal on the control surface, and an
+    automation built on that switch would fire on the strength of it.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the plugin publishes the "System Self-Test" service
+    Given the service fails every request with status 503
+    When the plugin restarts
+    When a controller presses the "System Self-Test" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command
+    # The clearing push is a macrotask on the harness timers, so the scenario runs it rather than
+    # relying on incidental timing. Without it the refused switch would answer its status to every
+    # later read and Apple Home would grey the whole accessory out.
+    When the scenario clock does not move
+    Then the "System Self-Test" switch answers a read
+
   Scenario: Credential rejection makes every service unreadable
     A vendor refusal of the account credentials never clears itself, and the plugin must not try
     again: the vendor lifts the block thirty days after the last attempt. The accessory therefore
