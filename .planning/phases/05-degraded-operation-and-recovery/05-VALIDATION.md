@@ -261,6 +261,47 @@ new scenario, and it is recorded as the measurement it is rather than quietly dr
 | A release names one device | Mutation F. Make `releaseShadowSource` clear every snapshot regardless of the `deviceId` it was given. Fails `leaves the pump beside it owning its own telemetry` at `test/device/state.test.ts:582`, `changes nothing when it names a device the store never held` at `:609`, and the runtime's per-poll release case at `test/runtime/accountRuntime.test.ts:1097`. **This is WR-05's discriminating mutation**, and it is why WR-05 is closed here rather than deferred a second time |
 | The account verdict is still pinned after the redesign | Mutation G. Make `trustNow` answer `shadowSilent` false unconditionally. Fifteen cases fail, thirteen of them shipped before this plan -- including the silence-window table at `test/runtime/monitoringHealth.test.ts:100-118` and the whole `the degraded monitoring path` group in `test/runtime/accountRuntime.test.ts`. The account-wide verdict survived the move to per-device stamps with its coverage intact |
 
+### Plan 05-15 rows
+
+Added 2026-09-02, when the round closed `05-REVIEW-2.md` CR-03. Measured baseline before appending:
+`grep -c "05-15"` answered **4**, the number the plan derived its floor of 12 from, so the floor stands
+as written.
+
+The red result, quoted as the scenario found it before the guard changed: after two missed heartbeats
+the poll had taken the readings back and written **`water_level: 3`**, its own vendor body. A report
+carrying only `wifi_signal_dbm` and `mcu_firmware_version` then arrived. The vendor changed the polled
+level to **31**, the flooding code, and the snapshot still read **3** five seconds later. Confirmed
+rather than inferred: restating that assertion as `3` made the scenario pass against unmodified
+production code. The document had delivered no reading and had taken the readings anyway.
+
+The metadata half and the arrival half both passed in that red run -- 16 of the 18 steps did -- so the
+red is about ownership alone and not about a harness that failed to publish.
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| T1 | 05-15 | 10 | RES-03 | T-05-15-01 | A report carrying only firmware or signal strength does not take the pit reading away from the poll, so the flood the poll then finds reaches Apple Home. Mutation A must fail it | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-15 | 10 | RES-03 | T-05-15-02 | The metadata-only report the scenario claims to send really reached the store and was merged, so the scenario cannot pass against a harness that published nothing. Mutation D must fail it, on the metadata assertion rather than on the flood | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-15 | 10 | RES-03 | T-05-15-03 | That same report still counts as the device speaking, so the tile vouches for the system again rather than reading it as silent. Mutation E must fail it | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | `features/degradedOperation.feature` | ✅ shipped |
+| T2 | 05-15 | 10 | RES-03 | T-05-15-01, T-05-15-03 | The two questions a reported document answers are pinned in one case: a metadata-only report moves the receipt time and establishes no watermark. Mutation A fails the ownership half and mutation C fails the receipt-time half | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `test/device/state.test.ts` | ✅ shipped |
+| T2 | 05-15 | 10 | RES-03 | T-05-15-04 | A watermark that already exists still advances on a metadata-only report, so a document the shadow has already superseded cannot overwrite a newer reading. Mutation B must fail it | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `test/device/state.test.ts` | ✅ shipped |
+| T2 | 05-15 | 10 | RES-03 | T-05-15-02 | At the seam the review's reproduction was found at: after a release, a live message reporting only device metadata leaves the poll owning telemetry, so the next poll's flood reaches the store and the watermark stays absent. Mutation A must fail it | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped |
+| T2 | 05-15 | 10 | RES-03 | structural | A telemetry document still takes ownership on the terms it always did, and a document reporting neither section still establishes nothing and still leaves the receipt time where it was -- the control that says this change widened nothing. Both were shipped before this plan and both still pass unedited | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `test/device/state.test.ts` | ✅ shipped |
+
+### Plan 05-15 mutations
+
+Every mutation was applied after its task was committed, run, and reverted only once `git status`
+showed the mutated file was the only changed one. **Mutation A failed no unit case at the moment task
+1 was committed** -- the scenario alone caught it -- and that gap is recorded here as the measurement
+it is, beside the two cases task 2 added to close it.
+
+| Behaviour | Mutation that must fail it |
+|---|---|
+| A metadata-only report does not take the readings | Mutation A. Restore `nextShadowVersion` to the wider observation test, `!carriesObservation(patch)`. At task 1 it failed the new scenario at `features/degradedOperation.feature:197`, `Then the canonical snapshot carries these fields: \| water_level \| 31 \|`, and **no unit case at all** -- 1358 passed. After task 2 it also fails `advances the receipt time and establishes no watermark for a patch that reports only device metadata` at `test/device/state.test.ts:423` and `D-13 leaves the poll owning telemetry through a live message that reports only device metadata` at `test/runtime/accountRuntime.test.ts:1000` |
+| An existing watermark still advances | Mutation B. Make the guard return `previous.shadowVersion` whenever `patch.data` is absent, so a metadata-only document may not advance a watermark either. Fails `keeps shadow metadata and the applied version when a later poll refreshes telemetry` at `test/device/state.test.ts:140` and `leaves the receipt time alone and advances the watermark it already held for a patch that reports neither section` at `:379`, both shipped before this plan, plus `advances a watermark it already held on a patch that reports only device metadata, so a superseded telemetry patch stays refused` at `:450`, which task 2 added because the two shipped cases pin the advance without pinning what it is for. No scenario fails |
+| A metadata report still moves the receipt time | Mutation C. Narrow `carriesObservation` to `patch.data !== undefined`, the rejected fix. Fails one case: `advances the receipt time and establishes no watermark for a patch that reports only device metadata` at `test/device/state.test.ts:423`. No scenario fails, and that is correct rather than a gap: the arrival stamp the silence rule reads is `recordShadowMessage` in the runtime, which never consulted this predicate, so the end-to-end tier cannot see this mutation at all |
+| The metadata document really arrived | Mutation D. Make the metadata publish step send an empty metadata section. The scenario dies at `features/degradedOperation.feature:191`, `Then the canonical snapshot carries these device metadata fields:`, reporting that the snapshot never carried the device metadata fields the scenario expects -- on the metadata assertion, four steps before the flood. This is what proves the metadata half is load-bearing rather than decorative |
+| A metadata report still counts as the device speaking | Mutation E. Guard `health.recordShadowMessage(deviceId)` on `patch.data !== undefined`, so a report carrying no reading stops counting as an arrival. The scenario dies at `features/degradedOperation.feature:194`, `Then the "Sump Pit Flood" service reports "Status Active" as "true"`. **No unit case fails** -- 1360 passed -- so the scenario is the only thing pinning the half of D-11 the narrowing must not break, and it is pinned deliberately at the tier an owner would feel it |
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test

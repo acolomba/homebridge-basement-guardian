@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 18
+open_count: 19
 waived_count: 1
 fixed_count: 2
-total_count: 21
-last_updated: 2026-09-02T21:16:51.402Z
+total_count: 22
+last_updated: 2026-09-02T21:52:45.278Z
 ---
 
 # Broken Windows Ledger
@@ -36,6 +36,7 @@ last_updated: 2026-09-02T21:16:51.402Z
 | 19 | 05 | todo | src/accessories/basementGuardian.ts |  | Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth. | open |  | 2026-09-02T21:16:50.761Z |  |
 | 20 | 05 | deviation | test/runtime/monitoringHealth.test.ts |  | Plan 05-14 task 1 had to touch two test files it did not list: npm run test:cucumber runs build:test over the whole test tsconfig, so the releaseShadowSource and recordShadowMessage call sites had to compile before the tracer task could be verified at all. Only the call sites moved in that commit; the substantive restatement landed in task 2. | open |  | 2026-09-02T21:16:51.116Z |  |
 | 21 | 05 | deviation | features/degradedOperation.feature |  | Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case. | open |  | 2026-09-02T21:16:51.402Z |  |
+| 22 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-15-PLAN.md |  | Plan 05-15 stated that refusing to advance a held watermark on a metadata-only document would leave a later telemetry document at the same version judged stale, discarding a real reading. Measured: refusing the advance leaves the watermark BELOW the shadow's own version, so a superseded document is accepted over a newer reading. The shipped case pins the measured consequence. | open |  | 2026-09-02T21:52:45.278Z |  |
 
 ````json
 [
@@ -289,6 +290,18 @@ last_updated: 2026-09-02T21:16:51.402Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T21:16:51.402Z",
+    "resolved_at": null
+  },
+  {
+    "id": 22,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-15-PLAN.md",
+    "line": null,
+    "description": "Plan 05-15 stated that refusing to advance a held watermark on a metadata-only document would leave a later telemetry document at the same version judged stale, discarding a real reading. Measured: refusing the advance leaves the watermark BELOW the shadow's own version, so a superseded document is accepted over a newer reading. The shipped case pins the measured consequence.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T21:52:45.278Z",
     "resolved_at": null
   }
 ]

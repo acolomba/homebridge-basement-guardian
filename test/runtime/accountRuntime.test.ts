@@ -990,6 +990,45 @@ describe('the poll backstop', () => {
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
   });
 
+  // A report of device metadata delivered no reading, so it cannot take the
+  // readings back from the poll. The runtime is where the two halves of that
+  // meet, and the review's reproduction was at this seam: the same message
+  // stamps the arrival, so the silence rule goes quiet and nothing else would
+  // hand telemetry back. A guard reading the wider observation test leaves the
+  // owner a tile that reads normal over a level no transport delivered
+  // (CR-03, SYNC-02).
+  test('D-13 leaves the poll owning telemetry through a live message that reports only device metadata', async (t) => {
+    // arrange
+    const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([floodedDevice]),
+      ],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // act
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: undefined, state: { mcu_firmware_version: '1.4.2' }, version: 6 });
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        waterLevel: store.snapshot(DEVICE_ID)?.data.water_level,
+        metadata: store.snapshot(DEVICE_ID)?.metadata,
+        shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion,
+      },
+      { waterLevel: PROVISIONAL_FLOOD_WATER_LEVEL_CODE, metadata: { mcu_firmware_version: '1.4.2' }, shadowVersion: undefined },
+    );
+  });
+
   // Roughly fifteen minutes of quiet is ordinary, so one missed heartbeat is
   // evidence of nothing and the shadow still owns telemetry. A pump run the
   // live path reported is not erased by a poll that happens to arrive during

@@ -415,7 +415,12 @@ describe('applyReportedPatch', () => {
     assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
   });
 
-  test('advances the receipt time for a patch that reports only device metadata', () => {
+  // The two questions a reported document answers are pinned together here,
+  // because conflating them is what the wider guard did. A report of device
+  // metadata observed the device, so it moves the receipt time; it delivered no
+  // reading, so it establishes no watermark and the poll keeps the telemetry.
+  // Narrowing either question alone fails this case (CR-03, SYNC-02, D-014).
+  test('advances the receipt time and establishes no watermark for a patch that reports only device metadata', () => {
     // arrange
     let currentTime = FIRST_RECEIPT;
     const clock: Clock = { now: () => currentTime };
@@ -427,7 +432,31 @@ describe('applyReportedPatch', () => {
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { wifi_signal_dbm: -54 }, version: 1 });
 
     // assert
-    assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: SECOND_RECEIPT,
+    });
+  });
+
+  // Ordering is ordering, so a watermark that already exists still moves on a
+  // report that delivered no reading. Refusing that advance would leave the
+  // watermark behind the shadow's own version and let a document the shadow has
+  // already superseded overwrite a newer reading.
+  test('advances a watermark it already held on a patch that reports only device metadata, so a superseded telemetry patch stays refused', () => {
+    // arrange
+    const store = versionedStore();
+    store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { wifi_signal_dbm: -54 }, version: 8 });
+
+    // act
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 31 }, state: undefined, version: 7 });
+
+    // assert
+    assert.deepStrictEqual({ waterLevel: snapshot?.data.water_level, shadowVersion: snapshot?.shadowVersion }, { waterLevel: 1, shadowVersion: 8 });
   });
 
   test('reports nothing and stores nothing for a device REST discovery has never returned', () => {
