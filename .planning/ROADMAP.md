@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 11/11 plans executed — 5 executed, 6 planned to close the gaps `05-VERIFICATION.md` found and the ruling `05-CONTEXT.md` D-13 records
+**Plans**: 11/12 plans executed — 5 executed, 6 to close the gaps the first verification found and the ruling `05-CONTEXT.md` D-13 records, and 1 to close the single gap re-verification left at 3/4
 
 Plans:
 **Wave 1**
@@ -281,6 +281,10 @@ Plans:
 **Wave 6** *(blocked on Wave 5 completion)*
 
 - [x] 05-10-PLAN.md — The documentation, the requirement row and the phase's own truths are brought back into agreement with the code
+
+**Wave 7** *(blocked on Wave 6 completion; planned 2026-09-02 after re-verification returned `gaps_found` at 3/4)*
+
+- [ ] 05-12-PLAN.md — A credential refusal that lands mid-run stays landed: the halt ends the live connection, so the next heartbeat cannot make a dead plugin look normal
 
 ### Phase 6: Validated Release Candidate
 
