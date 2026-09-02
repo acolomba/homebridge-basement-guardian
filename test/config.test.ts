@@ -383,3 +383,33 @@ test('CONF-06 refuses an unrecognised removable sensor without quoting the accou
   assert.ok(!configResult.ok);
   assert.strictEqual(configResult.reason.includes('@'), false);
 });
+
+// The three degradation thresholds live in `src/runtime/monitoringHealth.ts` as constants, and this
+// case is what keeps them there: `REST_FAILURE_THRESHOLD` (two consecutive failed polls),
+// `MISSED_HEARTBEATS_BEFORE_SILENT` (two missed heartbeats) and `HEARTBEAT_INTERVAL_MS` (the 898
+// seconds measured on the wire). Each mirrors reasoning already ratified rather than introducing a
+// number of its own, and a setting for any of them would let an administrator widen the window in
+// which a stale reading still reads as trustworthy -- the false normal this plugin exists to
+// prevent (D-05, CONF-05).
+//
+// The names are written out here rather than derived from `BgConfig`, from a fixture, or from the
+// result, because an expectation taken from the thing under test cannot fail when the thing under
+// test grows a key.
+const RESOLVED_CONFIG_KEYS: readonly string[] = [
+  'clientId',
+  'email',
+  'ignoredFaults',
+  'name',
+  'offlineConfirmationPollCount',
+  'password',
+  'pollIntervalSeconds',
+];
+
+test('CONF-05 resolves exactly the seven documented settings, so no degradation threshold is configurable', () => {
+  // act
+  const configResult = validateConfig(accountConfig());
+
+  // assert
+  assert.ok(configResult.ok);
+  assert.deepStrictEqual([...Object.keys(configResult.config)].sort(), [...RESOLVED_CONFIG_KEYS].sort());
+});
