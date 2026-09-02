@@ -87,6 +87,24 @@ function theDeviceId(world: BasementGuardianWorld): string {
   return deviceId;
 }
 
+// A scenario names a system by the vendor name its account carries for it, not by its `deviceId`.
+// The identifier is a placeholder a reader cannot tell one of from another at a glance, while the
+// name is what the same scenario already reads the tile by, so one word identifies the system on
+// both halves of the assertion. A name the scenario never seeded throws rather than falling back to
+// position zero: a fallback would move a message onto a system the scenario was not talking about
+// and still let the assertion pass.
+function deviceIdNamed(world: BasementGuardianWorld, deviceName: string): string {
+  const device = world.devices.find((candidate) => candidate.name === deviceName);
+
+  if (device === undefined) {
+    const seeded = world.devices.map((candidate) => candidate.name).join(', ');
+
+    throw new Error(`no step has given the scenario a ${deviceName} device; it seeded: ${seeded}`);
+  }
+
+  return device.deviceId;
+}
+
 // The client publishes the complete-shadow request only after its subscription is established, so
 // the first published topic is what says a device message can now arrive.
 async function awaitSubscription(world: BasementGuardianWorld): Promise<void> {
@@ -150,13 +168,17 @@ async function acceptedConnections(this: BasementGuardianWorld): Promise<void> {
 
 When('the broker accepts connections', acceptedConnections);
 
-async function publishReportedFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  const broker = await this.broker();
-  await awaitSubscription(this);
+async function publishReported(world: BasementGuardianWorld, deviceId: string, table: DataTable): Promise<void> {
+  const broker = await world.broker();
+  await awaitSubscription(world);
 
   // The vendor carries telemetry under `reported.data`, so a report's fields go there rather than
   // directly under `reported`.
-  broker.publishReported(theDeviceId(this), { data: fieldsOf(table) }, this.nextShadowVersion());
+  broker.publishReported(deviceId, { data: fieldsOf(table) }, world.nextShadowVersion());
+}
+
+function publishReportedFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  return publishReported(this, theDeviceId(this), table);
 }
 
 When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
@@ -165,6 +187,15 @@ When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS 
 // seven fields and `test_running` is not among them, so a scenario driving a control's reported
 // state says what it means: the device reported a state change.
 When('the device reports these fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
+
+// The same heartbeat from one named system, for a scenario seeding more than one. The step above
+// publishes for position zero of the device table, which is right while an account carries one
+// system and cannot say which of several spoke.
+function publishNamedReportedFields(this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
+  return publishReported(this, deviceIdNamed(this, deviceName), table);
+}
+
+When('the {string} device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishNamedReportedFields);
 
 async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
@@ -195,16 +226,33 @@ function theScenarioClockDoesNotMove(this: BasementGuardianWorld): void {
 
 When('the scenario clock does not move', theScenarioClockDoesNotMove);
 
-async function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+// A vendor-side change rewrites the data of the devices the caller selects and leaves every other
+// seeded device's data exactly as it was, so the two steps below differ only in what they select.
+function changeFieldsOf(world: BasementGuardianWorld, table: DataTable, rewrites: (device: ApiDevice) => boolean): Promise<void> {
   const fields = fieldsOf(table);
 
-  await setDevices(
-    this,
-    this.devices.map((device) => withData(device, { ...device.data, ...fields })),
+  return setDevices(
+    world,
+    world.devices.map((device) => (rewrites(device) ? withData(device, { ...device.data, ...fields }) : device)),
   );
 }
 
+function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  return changeFieldsOf(this, table, () => true);
+}
+
 When('the vendor changes these device fields:', changeDeviceFields);
+
+// The same change to one named system. The step above says every pump on the account reports the
+// new body, so on a two-pump account it cannot say that one pit is filling while its neighbour is
+// not, which is the sentence a scenario about per-device state has to be able to write.
+function changeNamedDeviceFields(this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
+  const deviceId = deviceIdNamed(this, deviceName);
+
+  return changeFieldsOf(this, table, (device) => device.deviceId === deviceId);
+}
+
+When('the vendor changes the {string} device fields:', changeNamedDeviceFields);
 
 function assertSnapshotFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const expected = fieldsOf(table);

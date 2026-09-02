@@ -38,6 +38,37 @@ Feature: Degraded monitoring
     Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "20"
     Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
 
+  Scenario: A heartbeat from one pump moves only that pump's readings
+    A message from the pump in the front basement must never move the tile for the pump in the back
+    one. An owner acting on a level needs to know which basement it is about, and a reading that
+    arrives under the wrong tile sends them to the wrong stairs while the real pit keeps filling.
+
+    Each pair below asserts the pump that moved before the pump that did not. The moved assertion
+    waits for the change to land, so by the time the second assertion runs the message has already
+    been delivered and merged. Reversed, the second assertion would read before the delivery and
+    pass whatever the routing did, which is what gives the pair its meaning.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId                 | name            | waterLevel |
+      | placeholder-front-gemini | Front Sump Pump | 1          |
+      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+    When the plugin starts
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "20"
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
+    When the vendor changes the "Front Sump Pump" device fields:
+      | water_level | 15 |
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "80"
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
+    When the "Front Sump Pump" device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "40"
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 15 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "40"
+
   Scenario: The combined path returns when the connection recovers
     Given the broker refuses connections
     When the plugin starts
