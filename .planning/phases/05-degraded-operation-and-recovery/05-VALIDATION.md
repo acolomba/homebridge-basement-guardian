@@ -188,6 +188,37 @@ was the only changed one. Every commit preceded its mutation.
 | Nothing opens a connection after a halt | Mutation D. Narrow `attemptShadow`'s entry guard back to `stopped` alone. `D-13 opens no live connection for a credential grant that lands after a refusal has halted the runtime` fails naming the client that was built (`1 !== 0`); the post-start case stays green |
 | Nothing is kept from the halt's own start window | Mutation E. Narrow `attemptShadow`'s post-start check back to `stopped` alone. `D-13 keeps no live connection that opened while a refusal was halting the runtime` fails on `closes: 0` against `closes: 1`; the entry-guard case stays green |
 
+### Plan 05-13 rows
+
+Added 2026-09-02 after the round landed the two-device harness. Every one of the 96 scenarios that
+shipped used a single `deviceId`, so no end-to-end assertion in this phase could tell a per-device
+fact from an account-wide one. These rows are the first that can. All five pass against unmodified
+production code, which is the point: the capability is proved on behaviour that is already correct,
+so a later red result on the same harness is about the defect and not about the harness.
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| T1 | 05-13 | 8 | RES-03 | T-05-13-01 | An owner with a Basement Guardian in each basement gets a tile for each one, and each tile reads its own basement: the front pump publishes 20% while the back pump publishes 60%, from the same account and the same run | e2e | `npm run test:cucumber -- --name "Two pumps on one account publish two accessories"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-13 | 8 | RES-03 | T-05-13-01 | A scenario naming a system the plugin never published fails on the name and lists the names it did publish, rather than reading another basement's tile and passing | e2e | `npm run test:cucumber -- --name "Two pumps on one account publish two accessories"` | `features/support/publishedServices.ts` | ✅ shipped |
+| T2 | 05-13 | 8 | RES-03 | T-05-13-01 | A live message from the front basement moves the front tile and leaves the back tile at the level the back pump's own inventory carried, and a message from the back basement does the same in the other direction | e2e | `npm run test:cucumber -- --name "A heartbeat from one pump moves only"` | `features/degradedOperation.feature` | ✅ shipped |
+| T2 | 05-13 | 8 | RES-03 | T-05-13-01 | The vendor reporting a new body for one pump moves that pump's polled reading and leaves the other basement's tile where it was. Asserted while both pumps are still poll-owned, before any heartbeat takes ownership, so the half plan 05-14 inherits is measured rather than assumed | e2e | `npm run test:cucumber -- --name "A heartbeat from one pump moves only"` | `features/support/steps/shadow.ts` | ✅ shipped |
+| T2 | 05-13 | 8 | RES-03 | structural | The suite can express a two-device account at all. Three named steps now exist -- the named read, the named publish and the named vendor change -- and plan 05-14's `CR-01` scenario is written entirely in them, so 05-14 lands a source change alone and its red result cannot be about a harness that moved in the same commit | e2e | `npm run test:cucumber` | `features/support/publishedServices.ts`, `features/support/steps/homekit.ts`, `features/support/steps/shadow.ts` | ✅ shipped |
+
+### Plan 05-13 mutations
+
+Each was applied to the harness, watched, and reverted after `git status` showed the mutated file was
+the only changed one. Every commit preceded its mutation. No mutation was applied to `src/`, and no
+file under `src/` or `test/` changed at any point in the round.
+
+| Behaviour | Mutation that must fail it |
+|---|---|
+| Two accessories read apart | Mutation A. Make the named-accessory lookup answer `handedAccessories.at(-1)` regardless of the name asked for. The scenario fails at `Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "20"`, having read 60 -- the back pump's level. Confirmed by re-running the same mutation with that one assertion restated as `"60"`, which passes: the front read really is answering the back pump's tile |
+| A name matching nothing fails loudly | Mutation B. Make the named-accessory lookup answer `undefined` instead of throwing, and name a pump the plugin never published. Unmutated, the failure reads `the plugin published no Side Sump Pump accessory; it published: Front Sump Pump, Back Sump Pump` and arrives in 0.16 s. Mutated, it degrades to `the Sump Pit Level service on Side Sump Pump never reported Water Level as 20 within 2000 ms` -- a deadline that never says the pump was never published, and from which a reader cannot tell a misnamed scenario from a routing defect |
+| A heartbeat moves one pump and not the other | Mutation C. Resolve every named publish to `world.devices.at(0)`. The first heartbeat still lands on the front pump, so the first half survives; the scenario dies at `Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"`, the back pump still holding the 60 its own inventory row carried |
+| The name resolver's throw is worth having | Mutation D. Make the device-name resolver fall back to position zero instead of throwing, and name a pump the scenario never seeded. Unmutated, the step fails on the name in 0.36 s: `no step has given the scenario a Side Sump Pump device; it seeded: Front Sump Pump, Back Sump Pump`. Mutated, the scenario still fails -- but three steps later, on a value, with a 2000 ms deadline naming a pump that was never the problem. Both are red; only one is diagnosable |
+| A vendor change moves one named pump's polled reading and no other | Mutation E. Make the named vendor-change step rewrite every seeded device, the way the account-wide step does. The polled half dies at `Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"`, the back pump having read 80 -- the front pump's new body. Confirmed by re-running with that assertion restated as `"80"`, which passes it and moves the failure to the next `"60"` assertion. **This is the mutation that makes plan 05-14's inheritance real:** without it, 05-14 would rest on a step whose per-device behaviour nothing had ever measured |
+
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test
@@ -315,6 +346,11 @@ the withholding controls. Phase 5's answer is structural, not aspirational:
    the named test fails, revert, confirm green.
 4. **At least one recovery scenario publishes an identical heartbeat**, so the clearing path is
    tested against the case the store filters out rather than the case it passes through.
+5. **Every scenario used one `deviceId` until plan 05-13**, so no per-device rule this phase wrote
+   had end-to-end coverage of any kind, and three of the four blockers `05-REVIEW-2.md` found lived
+   in exactly that gap. A suite that cannot express the plural of a thing cannot observe a rule about
+   which one of them a message was for. The answer is the same shape as the four above: the harness
+   gains the capability first, alone, proved on behaviour that is already correct.
 
 ---
 

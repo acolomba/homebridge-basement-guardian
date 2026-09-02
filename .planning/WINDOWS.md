@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 13
+open_count: 15
 waived_count: 1
 fixed_count: 2
-total_count: 16
-last_updated: 2026-09-02T17:55:13.637Z
+total_count: 18
+last_updated: 2026-09-02T20:38:25.145Z
 ---
 
 # Broken Windows Ledger
@@ -31,6 +31,8 @@ last_updated: 2026-09-02T17:55:13.637Z
 | 14 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md |  | WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md | open |  | 2026-09-02T16:16:04.212Z |  |
 | 15 | 05 | deviation | features/degradedOperation.feature |  | Mutation B did not produce the outcome 05-12-PLAN.md predicted: the plan's own prescribed 'Then the broker holds no live connection' step sits before the settling steps and kills the scenario independently of the settle, so dropping the settle and reverting the fix still fails. Suppressing that one step isolates the half the mutation is about, and the scenario then passes against the defect. The finding stands; the plan's predicted mechanism did not | open |  | 2026-09-02T17:55:13.303Z |  |
 | 16 | 05 | deviation | src/runtime/accountRuntime.ts |  | closeQuietly was relocated above haltOnTerminalAuthFailure, which 05-12-PLAN.md did not anticipate: @typescript-eslint/no-use-before-define rejects the new call site otherwise. Body unchanged. Relatedly, the entry-guard case could not use Promise.withResolvers (needs lib es2024, outside this plan's files) and captures the resolver by hand instead | open |  | 2026-09-02T17:55:13.637Z |  |
+| 17 | 05 | todo | features/support/steps/harness.ts |  | harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed | open |  | 2026-09-02T20:38:24.798Z |  |
+| 18 | 05 | todo | features/support/steps/shadow.ts |  | awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is | open |  | 2026-09-02T20:38:25.145Z |  |
 
 ````json
 [
@@ -224,6 +226,30 @@ last_updated: 2026-09-02T17:55:13.637Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T17:55:13.637Z",
+    "resolved_at": null
+  },
+  {
+    "id": 17,
+    "kind": "todo",
+    "phase": "05",
+    "file": "features/support/steps/harness.ts",
+    "line": null,
+    "description": "harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T20:38:24.798Z",
+    "resolved_at": null
+  },
+  {
+    "id": 18,
+    "kind": "todo",
+    "phase": "05",
+    "file": "features/support/steps/shadow.ts",
+    "line": null,
+    "description": "awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T20:38:25.145Z",
     "resolved_at": null
   }
 ]
