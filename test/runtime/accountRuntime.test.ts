@@ -1124,6 +1124,67 @@ describe('stop', () => {
     );
   });
 
+  // The tier that decides whether a press may leave the plugin reads this fact from the runtime, and
+  // holds whatever the last poll left until something else arrives. A tier still reporting a ready
+  // transport against a runtime that has aborted every request sends a press into a route that
+  // answers a vendor error -- a HomeKit failure naming the vendor for a refusal that was entirely
+  // local (RES-04, D-07).
+  //
+  // The two degradation members are asserted unchanged in the same breath. Homebridge restarts
+  // routinely, and a shutdown that withdrew value trust would mark a whole home of tiles for a
+  // condition that is over the moment the process ends (D-014, D-01).
+  test('RES-04 pushes an unready command transport, and withdraws no scope, when the runtime stops', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth } = harness(t);
+    await runtime.start();
+    await settle();
+    const beforeStop = [...monitoringHealth];
+
+    // act
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { beforeStop, afterStop: monitoringHealth },
+      {
+        beforeStop: [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        afterStop: [
+          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+        ],
+      },
+    );
+  });
+
+  test('SYNC-05 pushes once when a shutdown runs twice, because the second call returns before anything else', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth } = harness(t);
+    await runtime.start();
+    await settle();
+    const beforeStop = monitoringHealth.length;
+
+    // act
+    await runtime.stop();
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual({ beforeStop, afterStop: monitoringHealth.length }, { beforeStop: 1, afterStop: 2 });
+  });
+
+  // A runtime nothing ever started has no poll behind it, so its transport was never ready and the
+  // push says so. The rule stays one-sided: the tier learns the transport is gone from the runtime
+  // saying so, never by inferring it from a report that did not arrive.
+  test('pushes the unready transport when a runtime that never started stops', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth } = harness(t);
+
+    // act
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]);
+  });
+
   test('SYNC-05 arms no timer that outlives it', async (t) => {
     // arrange
     const { runtime, calls, advance } = harness(t);
@@ -1597,6 +1658,10 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  // The shutdown's own push is the runtime telling the tier the transport has gone, so it is named
+  // here rather than counted with the poll reports. The poll a shutdown aborted still reports
+  // nothing, which is what the two lists say: the second holds the shutdown push and nothing else
+  // (SYNC-05, RES-04).
   test('reports nothing for a poll a shutdown aborted', async (t) => {
     // arrange
     const { runtime, monitoringHealth, advance } = harness(t, {
@@ -1605,13 +1670,23 @@ describe('the degraded monitoring path', () => {
     });
     await runtime.start();
     await advance(FAST_POLL_INTERVAL_MS);
+    const beforeShutdown = [...monitoringHealth];
 
     // act
     await runtime.stop();
     await settle();
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]);
+    assert.deepStrictEqual(
+      { beforeShutdown, afterShutdown: monitoringHealth },
+      {
+        beforeShutdown: [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        afterShutdown: [
+          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+        ],
+      },
+    );
   });
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
