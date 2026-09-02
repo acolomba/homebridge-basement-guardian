@@ -20,7 +20,7 @@ affects: [phase verification, RES-03 sign-off, SC-2 sign-off, any later work on 
 actuals:
   tokens: 64000
   tasks: 3
-  commits: 4
+  commits: 5
 
 tech-stack:
   added: []
@@ -452,3 +452,8 @@ One thing a later reader should know: `An identical heartbeat clears the shadow 
 ---
 *Phase: 05-degraded-operation-and-recovery*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+Every file this summary names exists on disk, and every commit hash it names is reachable in `git log`.
+Checked 2026-09-02: 8 files, 5 commits (`ade3e27`, `6230709`, `f8aea0c`, `ec606ac`, `2d09b10`).

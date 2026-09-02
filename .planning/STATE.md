@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-09-PLAN.md
-last_updated: "2026-09-02T15:13:37.551Z"
+stopped_at: Completed 05-11-PLAN.md
+last_updated: "2026-09-02T15:58:38.782Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: f508fc4fdca12f48a08cd95885ef9454b7424894
+state_head: 2d09b107846197857a1140da535f534b80619739
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 48
-  completed_plans: 46
+  completed_plans: 47
   percent: 33
 ---
 
@@ -101,6 +101,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P07 | 25min | 3 tasks | 6 files |
 | Phase 05 P08 | 78min | 2 tasks | 5 files |
 | Phase 05 P09 | 39min | 2 tasks | 8 files |
+| Phase 05 P11 | 43min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -264,6 +265,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: WR-02 is inside RES-04: the clause opens 'After a failed restart', so a press on a restored control is refused by name rather than silently accepted. This reverses 05-04's PA-08 deferral.
 - [Phase 05]: The restored-control refusal reuses the transport rule's status (-70412) and its exact cause text through one shared constant, so one condition answers one status with one wording (D-08).
 - [Phase 05]: Measured: three near-copies of the accessory walk do NOT fail this repository's duplication gate. The shared walk stands on IN-01's drift argument, not on the gate.
+- [Phase 05]: Shadow silence releases the shadow's ownership of telemetry at the head of applyDevices, so the poll that notices the silence is the one whose flood reaches HomeKit (05-CONTEXT D-13)
+- [Phase 05]: The Cucumber tier cannot detect a one-poll delay, so the timing property is asserted in the unit suite and the gap is recorded rather than papered over
+- [Phase 05]: 05-11's prescribed scenario repair was wrong twice over; the working repair fixes the second heartbeat so it is identical from the store's point of view again
 
 ### Pending Todos
 
@@ -420,8 +424,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T15:13:34.294Z
-Stopped at: Completed 05-09-PLAN.md
+Last session: 2026-09-02T15:58:26.011Z
+Stopped at: Completed 05-11-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
