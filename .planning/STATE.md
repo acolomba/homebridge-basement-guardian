@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
-status: ready_to_plan
-stopped_at: Phase 5 discussed and researched; ready for pattern mapper then plan
-last_updated: "2026-09-01T21:30:00.000Z"
+status: ready_to_execute
+stopped_at: Phase 5 planned — 5 plans, checker clean, ready for /gsd-execute-phase 5
+last_updated: "2026-09-01T23:57:57.433Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 05 discussed and researched; four decisions amended
-state_head: 9c68f89ece6b3eaa1060d26cde2f3e505aa0c70c
+last_activity_desc: Phase 05 planned — 5 plans through one revision cycle
+state_head: 30c444f4a4ff3a5388754c4a3725501e51313f39
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 37
+  total_plans: 42
   completed_plans: 37
-  percent: 50
+  percent: 33
 ---
 
 # Project State
@@ -23,23 +23,34 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 03 — Safety Monitoring in HomeKit
+**Current focus:** Phase 05 — Degraded Operation and Recovery
 
 ## Current Position
 
-Phase: 03 (Safety Monitoring in HomeKit) — EXECUTING
-Plan: 8 of 8
-Status: Phase complete — ready for verification
-Last activity: 2026-09-01 — Phase 04's six open decisions ruled on; planning unblocked
+Phase: 05 (Degraded Operation and Recovery) — READY TO EXECUTE
+Plan: 0 of 5
+Status: Ready to execute
+Last activity: 2026-09-01 — Phase 05 planned; 5 plans, checker clean
 
-Phase 04 (Pump Records and Official Controls) has completed research on branch
-`features/phase-04-pump-records-and-official-controls`. No implementation exists: the
-diff over `src/`, `test/` and `features/` against the branch point `552c57e` is empty.
-All six maintainer decisions were ruled on 2026-09-01 and applied to `04-CONTEXT.md` and
-`04-VALIDATION.md`. Planning is unblocked; `/gsd-plan-phase 4` is the next step.
+Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md` and five
+`05-NN-PLAN.md` files, all committed. The plan checker raised one blocker and six warnings on the
+first pass and none on the second. Waves are sequential (01 → 02 → 03 → 04 → 05) because four of the
+five plans touch `platform.ts`, `basementGuardian.ts`, `accountRuntime.ts` or
+`degradedOperation.feature`, which matches the constraint that executors run on the main working
+tree rather than in worktrees.
+
+**Plan 05-01 opens with a `checkpoint:decision` task and is therefore `autonomous: false`.** It asks
+which of two locked decisions governs a REST-only degradation: `D-02` (narrowed) has it withdraw the
+`connectivity` scope, so `Basement Guardian Offline` reads `Status Active = false`; `D-04` says a
+REST-only degradation does not mark HomeKit at all. The plans implement `D-02` and resolve that way
+unattended. The checkpoint names the six artifacts that change under `D-04`.
+
+Phase 04 (Pump Records and Official Controls) is implementation-complete on branch
+`features/phase-04-pump-records-and-official-controls`, verified 17/17 must-haves, with six human
+items deferred to `/gsd-verify-work 4`. Phase 5 continues on the same branch.
 
 Phase 03 check 1 (flood automation survives a degraded `water` scope) remains OPEN and
-gates the `1.0.0` release, not Phase 04.
+gates the `1.0.0` release, not Phase 05.
 
 Phase 01 is COMPLETE as of 2026-08-29. Verification is `passed` at 22/22, with all
 three UAT items passed against real hardware.
@@ -47,7 +58,7 @@ three UAT items passed against real hardware.
 Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
 backstop-tagged UAT items accepted on structural evidence and no defects found.
 
-Progress: [███░░░░░░░] 2 of 6 phases complete ([███░░░░░░░] 33%) — 23/23 plans
+Progress: [███░░░░░░░] 2 of 6 phases verified ([███░░░░░░░] 33%) — 37/42 plans complete; Phases 3 and 4 are implementation-complete with human verification deferred
 
 ## Performance Metrics
 
@@ -373,8 +384,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-01T21:30:00.000Z
-Stopped at: Phase 5 discussed and researched; next is the pattern mapper, then `/gsd-plan-phase 5`
+Last session: 2026-09-01T23:57:57.433Z
+Stopped at: Phase 5 planned — 5 plans, checker clean; next is `/gsd-execute-phase 5`
 Resume file: .planning/phases/05-degraded-operation-and-recovery/.continue-here.md
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
@@ -385,18 +396,28 @@ returns `shouldDegrade: true`, because a harness worktree would fork from `origi
 verify by reading `.gsd/dispatch-isolation-sentinel.json` rather than re-querying, because a bare
 query re-persists the capability and silently undoes the force.
 
-Phase 5 has `05-CONTEXT.md` (12 decisions) and `05-RESEARCH.md`, both committed. **Four of the
-original eleven decisions were amended after research proved they could not be built as written** —
-`D-04` (the transport distinction does not exist in code), `D-05` (both obvious shadow signals are
-wrong), `D-06` (rested on a false premise about `accessoryContext.ts`), and `D-02` (applied
-literally it silences `Basement Guardian Offline`). Two came out cheaper than assumed: `D-09` is
-already true and `D-07`'s valid-state predicate already exists.
+Phase 5 is planned. `05-CONTEXT.md` (12 decisions), `05-RESEARCH.md`, `05-PATTERNS.md`,
+`05-VALIDATION.md` and five `05-NN-PLAN.md` files are committed. Do not re-run discuss, research or
+plan.
 
-New `D-12` records that the Cucumber harness drops services on restart, which would make every
-`D-06` scenario pass vacuously — the seventh instance on this project of a test passing because the
-fixture sat at the value the defect produces.
+**Plan 05-01 starts with a `checkpoint:decision` and is `autonomous: false`.** Two locked decisions
+disagree about one scope: `D-02` (narrowed) has a REST-only degradation additionally withdraw
+`connectivity`, so `Basement Guardian Offline` reads `Status Active = false`; `D-04` says a REST-only
+degradation does not mark HomeKit. The plans implement `D-02` and an unattended run resolves that
+way. The checkpoint lists the six artifacts that change under `D-04`, and `05-VALIDATION.md` names
+the two rows that revert with them.
 
-Do not re-run discuss or research. Next is the pattern mapper, then plan.
+**Two findings from planning that no earlier document carries.** `features/support/fakeHap.ts`
+stores an error as the characteristic's value and clears the status, while the pinned real
+`Characteristic.js` short-circuits on an `Error` and returns before touching `value` — the inverse.
+Nothing in the suite has ever pushed an error, so no assertion noticed. Fixing the stand-in is plan
+05-04's first task. Separately, on a halted restart a press on a restored switch silently appears to
+succeed, because no binder is ever attached; that gap predates this phase and is recorded, not
+closed.
 
-**Pushed through `c63469a`.** Commits after that — the Phase 5 context, research and amendments —
-are unpushed until someone pushes them.
+`D-12` remains the item a reader will under-weight: the Cucumber harness drops services on restart,
+which would make every `D-06` scenario pass vacuously. Plan 05-02 restores services, their last
+values and the `pushed` flag, and re-runs all 78 existing scenarios in the same task.
+
+**Pushed through `c63469a`.** Everything after it — the Phase 5 context, research, patterns,
+validation and plans — is unpushed until someone pushes it.

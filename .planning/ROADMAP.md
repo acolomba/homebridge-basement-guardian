@@ -236,10 +236,24 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 05-01-PLAN.md — Shadow silence, REST failure and both-down withdraw trust end to end, with clearing matched to cause
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 05-02-PLAN.md — Restored cached accessories are marked stale at `configureAccessory`, through a function the harness also calls
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 05-03-PLAN.md — Presses are refused for the right reason with the cause named, and the accessory read path is gated
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 05-04-PLAN.md — Credential rejection makes every accessory unreadable, on a HAP stand-in held against the pinned real one
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 05-05-PLAN.md — No threshold became a setting, the new states are documented, and the requirements table agrees with itself
 
 ### Phase 6: Validated Release Candidate
