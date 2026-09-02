@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-11-PLAN.md
-last_updated: "2026-09-02T15:58:38.782Z"
-last_activity: 2026-09-01
-last_activity_desc: Phase 05 execution started
-state_head: 2d09b107846197857a1140da535f534b80619739
+stopped_at: Completed 05-10-PLAN.md
+last_updated: "2026-09-02T16:28:35.472Z"
+last_activity: 2026-09-02
+last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
+state_head: 2c5611db701bc8332eedaf0a748944adee544e48
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 48
-  completed_plans: 47
+  completed_plans: 48
   percent: 33
 ---
 
@@ -28,16 +28,26 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
-Plan: 5 of 5
-Status: Phase complete — ready for verification
-Last activity: 2026-09-01 — Phase 05 execution started
+Plan: 11 of 11
+Status: Phase complete — ready for re-verification
+Last activity: 2026-09-02 — Phase 05 closed out by plan 05-10
 
-Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md` and five
-`05-NN-PLAN.md` files, all committed. The plan checker raised one blocker and six warnings on the
-first pass and none on the second. Waves are sequential (01 → 02 → 03 → 04 → 05) because four of the
-five plans touch `platform.ts`, `basementGuardian.ts`, `accountRuntime.ts` or
-`degradedOperation.feature`, which matches the constraint that executors run on the main working
-tree rather than in worktrees.
+**The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
+`05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
+returned `gaps_found` on 2026-09-02. `state.advance-plan` had nothing to advance into because it
+reads a per-phase total that was never widened, so the counter is reconciled here by hand and
+`state.update-progress` recomputed the project totals from disk (48 of 48).
+
+Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md`,
+`05-VERIFICATION.md`, `05-REVIEW.md` and eleven `05-NN-PLAN.md` files, all committed. Waves are
+sequential (01 → 02 → 03 → 04 → 05, then 06 → 07 → 08 → 09 → 11 → 10) because the plans touch
+`platform.ts`, `basementGuardian.ts`, `accountRuntime.ts` or `degradedOperation.feature`, which
+matches the constraint that executors run on the main working tree rather than in worktrees.
+
+The gap-closure round closed all three critical review findings, the two partial roadmap success
+criteria, and all seven plan truths the verifier recorded as not done. The ledger of the seven is in
+`05-10-SUMMARY.md`. RES-04 is complete on clause-by-clause evidence; RES-01 and RES-03 stand;
+SYNC-03 stays pending with its reason recorded.
 
 **Plan 05-01 opens with a `checkpoint:decision` task and is therefore `autonomous: false`.** It asks
 which of two locked decisions governs a REST-only degradation: `D-02` (narrowed) has it withdraw the
@@ -58,7 +68,7 @@ three UAT items passed against real hardware.
 Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
 backstop-tagged UAT items accepted on structural evidence and no defects found.
 
-Progress: [███░░░░░░░] 2 of 6 phases verified ([███░░░░░░░] 33%) — 37/42 plans complete; Phases 3 and 4 are implementation-complete with human verification deferred
+Progress: [███░░░░░░░] 2 of 6 phases verified ([███░░░░░░░] 33%) — 48/48 plans complete; Phases 3, 4 and 5 are implementation-complete with human verification deferred. The `37/42` figure this line carried until 2026-09-02 predated phase 05's six gap-closure plans; `state.update-progress` recomputed both counts from disk.
 
 ## Performance Metrics
 
@@ -102,6 +112,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P08 | 78min | 2 tasks | 5 files |
 | Phase 05 P09 | 39min | 2 tasks | 8 files |
 | Phase 05 P11 | 43min | 3 tasks | 7 files |
+| Phase 05 P10 | 46min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -268,6 +279,10 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Shadow silence releases the shadow's ownership of telemetry at the head of applyDevices, so the poll that notices the silence is the one whose flood reaches HomeKit (05-CONTEXT D-13)
 - [Phase 05]: The Cucumber tier cannot detect a one-poll delay, so the timing property is asserted in the unit suite and the gap is recorded rather than papered over
 - [Phase 05]: 05-11's prescribed scenario repair was wrong twice over; the working repair fixes the second heartbeat so it is identical from the store's point of view again
+- [Phase 05]: RES-04 moved to complete on one named passing assertion per clause, not on schedule; the assertion is recorded in the row itself
+- [Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it
+- [Phase 05]: The seven plan truths 05-VERIFICATION.md found false are recorded once in 05-10-SUMMARY.md rather than corrected in the plans that got them wrong, because those plans are the evidence that the gap-closure round happened
+- [Phase 05]: The first-round Per-Task Verification Map was left untouched: three of its rows are the ones the verifier found green but blind, so marking them shipped would assert the opposite of what was measured
 
 ### Pending Todos
 
@@ -424,8 +439,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T15:58:26.011Z
-Stopped at: Completed 05-11-PLAN.md
+Last session: 2026-09-02T16:28:22.512Z
+Stopped at: Completed 05-10-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
