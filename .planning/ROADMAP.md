@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 12/12 plans executed — 5 executed, 6 to close the gaps the first verification found and the ruling `05-CONTEXT.md` D-13 records, and 1 to close the single gap re-verification left at 3/4
+**Plans**: 19 plans — 12 executed, and 7 planned 2026-09-02 to close the 4 blockers and 8 warnings the whole-phase code review found. Three of the four blockers are interactions between plans that each verified cleanly alone, which is why twelve rounds of per-plan verification missed them.
 
 Plans:
 **Wave 1**
@@ -285,6 +285,36 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion; planned 2026-09-02 after re-verification returned `gaps_found` at 3/4)*
 
 - [x] 05-12-PLAN.md — A credential refusal that lands mid-run stays landed: the halt ends the live connection, so the next heartbeat cannot make a dead plugin look normal
+
+**Gap closure** *(planned 2026-09-02 after the whole-phase code review returned 4 blockers and 8 warnings; sequential waves, because every plan touches the same modules on one working tree)*
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 05-13-PLAN.md — The end-to-end suite can describe a two-pump account at all, and proves the plugin observes two systems apart
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 05-14-PLAN.md — Shadow silence is a fact about one device, so a pump whose controller goes quiet is released, marked, and refreshed by the poll while its neighbour keeps reporting
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 05-15-PLAN.md — A report carrying only device metadata orders without owning, so it cannot take the readings away from polling and lock the poll out
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 05-16-PLAN.md — A press after a refused credential leaves the presentation standing, and the value under it is the truthful one
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 05-17-PLAN.md — The fact a control row publishes from and the fact a write is refused on are one fact, and a device's own confirmation resolves the request
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 05-18-PLAN.md — The platform's three blind spots: an ordering claim the unit tier cannot see, a context literal written three times, and a pass named for more than it does
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 05-19-PLAN.md — The README, the changelog and the requirement rows say what the code does, each sentence traced to a passing assertion
 
 ### Phase 6: Validated Release Candidate
 

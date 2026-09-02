@@ -318,10 +318,65 @@ the withholding controls. Phase 5's answer is structural, not aspirational:
 
 ---
 
+### Second gap-closure round rows (plans 05-13 to 05-19), planned 2026-09-02
+
+Seeded by the planner from `05-REVIEW-2.md`, ahead of execution. Each row is stated as what a basement
+owner must observe, and each names the mutation a *correct-but-different* implementation would have to
+survive. Every row reads `⬜ pending` until its plan's summary evidences it; each plan appends its own
+`### Plan 05-NN rows` and `### Plan 05-NN mutations` subsections above, and the closing plan reconciles
+these rows against those summaries.
+
+| Plan | Wave | Requirement | Finding | Secret an owner must observe | Named mutation that must fail it | Test type | Automated command | Status |
+|---|---|---|---|---|---|---|---|---|
+| 05-13 | 8 | RES-03 | structural | Two Basement Guardian systems on one account are two tiles, each reading its own basement | Make the named-accessory lookup answer the newest accessory regardless of the name it was given | e2e | `npm run test:cucumber -- --name "Two pumps on one account publish two accessories"` | ⬜ pending |
+| 05-13 | 8 | RES-03 | structural | A live message from one basement does not move the other basement's tile | Route every named publish to the first seeded device | e2e | `npm run test:cucumber -- --name "A heartbeat from one pump moves only"` | ⬜ pending |
+| 05-14 | 9 | RES-03 | CR-01 | A poll that finds the quiet pump's pit flooded reports that flood, on a two-pump account whose other pump is heartbeating normally | Stamp every admitted device on each arriving message rather than the one the message named | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | ⬜ pending |
+| 05-14 | 9 | RES-03 | CR-01 | The quiet pump's tile stops saying the plugin vouches for it | Revert the admit call, so no device is ever stamped and no device is ever silent | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | ⬜ pending |
+| 05-14 | 9 | RES-03 | WR-05 | The healthy pump keeps the live readings it is still receiving through its neighbour's silence | Release every stored device whenever any one is silent | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | ⬜ pending |
+| 05-14 | 9 | RES-03 | CR-01 | A pump added to the account later is judged from when the plugin first knew about it, not from when the plugin started | Re-stamp a device the arrival map already holds on every admission | unit | `npm run test:coverage:direct -- dist-test/src/runtime/monitoringHealth.js dist-test/test/runtime/monitoringHealth.test.js` | ⬜ pending |
+| 05-15 | 10 | RES-03 | CR-03 | A report carrying only firmware or signal strength does not stop the poll refreshing the pit reading | Restore the ownership guard to the wider observation test | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | ⬜ pending |
+| 05-15 | 10 | RES-03 | CR-03 | That same report still counts as the device speaking, so it does not make a live pump read as silent | Narrow the observation test to the telemetry section as well | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | ⬜ pending |
+| 05-16 | 11 | RES-04 | CR-02 | Pressing a switch on a greyed-out accessory does not make the accessory look normal again | Remove the credential guard from the accessory's republish callback | e2e | `npm run test:cucumber -- --name "leaves both controls still refusing reads"` | ⬜ pending |
+| 05-16 | 11 | RES-04 | WR-03 | The trust report under the refusal reads false, so the plugin is not claiming to vouch for what it shows | Remove the credential branch from the monitoring scope map | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ⬜ pending |
+| 05-16 | 11 | RES-04 | WR-03 | `Basement Guardian Offline` still shows its verdict under the wider withdrawal, marked rather than blank | Fill the credential branch's scopes with a withholding reason instead of the seeing-less one | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ⬜ pending |
+| 05-16 | 11 | RES-04 | WR-04 | A trust push that differs only in the credential member still republishes | Replace that member of `markMonitoring`'s comparison with a constant. **Before this round the same mutation left 1348 unit tests and 96 scenarios green** | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ⬜ pending |
+| 05-17 | 12 | RES-04 | WR-02 | A press refused while the live connection is quiet names the quiet connection, not a state the plugin has | Remove the live-confirmation rule from the local refusal table | e2e | `npm run test:cucumber -- --name "names the quiet connection"` | ⬜ pending |
+| 05-17 | 12 | RES-04 | WR-02 | The value the control tile shows and the value the write path reads are one value | Restore `reportedControlValue`'s own guard over every untrusted scope | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ⬜ pending |
+| 05-17 | 12 | RES-04 | WR-06 | A self-test the device confirmed is not reported as one the device never confirmed | Point reconciliation back at the vouched-for value instead of the decoded one | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ⬜ pending |
+| 05-18 | 13 | RES-04 | WR-01 | The greyed-out presentation survives an edit that reorders the two pushes behind it | Invert the two loops in `applyMonitoringHealth`. **Before this round the same mutation left all 1348 unit tests green** | unit | `npm run test:coverage:direct -- dist-test/src/platform.js dist-test/test/platform.test.js` | ⬜ pending |
+| 05-18 | 13 | RES-04 | WR-07 | A field added to the platform's runtime context reaches all three callbacks | Re-inline a second `DiscoveryContext` literal in one callback | unit (static) | `npm run test:coverage:direct -- dist-test/src/platform.js dist-test/test/platform.test.js` | ⬜ pending |
+| 05-18 | 13 | RES-04 | WR-08 | An operator is told when a credential refusal marked nothing at all — the one case that produces no signal in HomeKit | Log the line whatever the count | unit | `npm run test:coverage:direct -- dist-test/src/platform.js dist-test/test/platform.test.js` | ⬜ pending |
+| 05-18 | 13 | RES-04 | WR-08 | The marking pass still reaches exactly the services carrying a trust report, and adds a characteristic to none | Widen the walk to every service | unit | `npm run test:coverage:direct -- dist-test/src/accessories/staleMarking.js dist-test/test/accessories/staleMarking.test.js` | ⬜ pending |
+| 05-19 | 14 | RES-03 | CR-04 | An owner reading the README learns that a poll does not replace a reading the live path still owns, and learns when it starts to | *Documentation trace, not a test.* The sentence depends on `test/runtime/accountRuntime.test.ts` — the case that pins the poll losing inside the two-heartbeat window — and on the flood scenario for the half after the handover. A row that claimed a mutation of its own would be the defect this round exists to stop | doc | `npm run check` | ⬜ pending |
+| 05-19 | 14 | RES-04 | WR-08 | The README says the trust report on every service that carries one stops answering, which is what the pass does | *Documentation trace, not a test.* Depends on the staleMarking guard case above | doc | `npm run check` | ⬜ pending |
+
+---
+
 ## Planning hazards and deferrals recorded for this phase
 
 Recorded on 2026-09-01 during plan revision. None of these is a plan change; each is a fact a later
 reader would otherwise have to rediscover.
+
+**The suite had no multi-device coverage at all until plan 05-13. Recorded 2026-09-02 while planning
+the second gap-closure round.** Every one of the 96 scenarios that shipped used a single `deviceId`,
+and three separate harness helpers collapse an account to one device by construction:
+`features/support/publishedServices.ts` `currentAccessory` reads the newest accessory handed over,
+`features/support/steps/shadow.ts` `theDeviceId` reads position zero of the scenario's device table,
+and `features/support/steps/harness.ts` carries its own private copy of the first plus a module-constant
+topic. Each is documented with the single-device assumption stated plainly, so none of this was hidden
+— it was simply never revisited when the phase began writing per-device rules. `CR-01` is invisible to
+the end-to-end tier for that reason alone, and `WR-05` is the same per-device / per-account confusion
+from the other end. The lesson is not about devices: **a suite that cannot express the plural of a
+thing cannot test any rule about which one.**
+
+**Per-plan mutation testing cannot see a defect that lives between two correct plans. Recorded
+2026-09-02.** Twelve plans each ran their own mutations and each passed. Three of `05-REVIEW-2.md`'s
+four blockers are interactions: `05-11` handed telemetry to the poll on a silence predicate `05-01`
+built account-wide; `05-12` closed the message route into a marking whose write route stayed open;
+`05-11`'s ownership rule read one field more than ownership governs. None of the three is a defect in
+the plan that shipped it. The round that follows adds whole-phase mutations to the per-plan ones —
+every mutation in the table above is applied against the **whole** suite, not against the plan's own
+files.
 
 **A press after credential rejection has no e2e row, deliberately.** The map previously carried
 "A press after credential rejection is refused locally, not via a vendor round trip" as an e2e over
