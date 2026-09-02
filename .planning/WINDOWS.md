@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 1
 fixed_count: 0
-total_count: 7
-last_updated: 2026-09-02T13:47:07.171Z
+total_count: 8
+last_updated: 2026-09-02T14:31:08.555Z
 ---
 
 # Broken Windows Ledger
@@ -22,6 +22,7 @@ last_updated: 2026-09-02T13:47:07.171Z
 | 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | open |  | 2026-09-02T12:34:29.654Z |  |
 | 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | open |  | 2026-09-02T12:34:29.998Z |  |
 | 7 | 05 | unrun-verify | test/platform.test.ts |  | makes an accessory a successful inventory built unreadable in the same pass as a restored one: passes without the fix and fails no mutation; keep D1-D4 as the coverage of CR-03 | open |  | 2026-09-02T13:47:07.171Z |  |
+| 8 | 05 | deviation | features/degradedOperation.feature |  | A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check | open |  | 2026-09-02T14:31:08.555Z |  |
 
 ````json
 [
@@ -107,6 +108,18 @@ last_updated: 2026-09-02T13:47:07.171Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T13:47:07.171Z",
+    "resolved_at": null
+  },
+  {
+    "id": 8,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "features/degradedOperation.feature",
+    "line": null,
+    "description": "A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T14:31:08.555Z",
     "resolved_at": null
   }
 ]

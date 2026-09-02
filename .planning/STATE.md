@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-07-PLAN.md
-last_updated: "2026-09-02T13:46:59.947Z"
+stopped_at: Completed 05-08-PLAN.md
+last_updated: "2026-09-02T14:30:38.462Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: c398523b2209b0b3f57329c77984958a9c178231
+state_head: 8d7d6faaa49bed76f0c61ee415e219fdce178035
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 48
-  completed_plans: 44
+  completed_plans: 45
   percent: 33
 ---
 
@@ -99,6 +99,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P05 | 20min | 2 tasks | 4 files |
 | Phase 05 P06 | 47min | 3 tasks | 9 files |
 | Phase 05 P07 | 25min | 3 tasks | 6 files |
+| Phase 05 P08 | 78min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -257,6 +258,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Phase 5 plan 07: the halt flag keeps one assignment site — it moved into haltOnTerminalAuthFailure, which the launch, the poll loop and the rotation loop all route through, so no second flag was raised beside it.
 - [Phase 05]: Phase 5 plan 07: waitWhileRunning reads the halt flag before and after every loop wait; one read alone either lets a sleeping loop wake and call once more, or arms a timer the halting loop will never use.
 - [Phase 05]: Phase 5 plan 07: stop() pushes the final monitoring trust directly rather than through reportMonitoringHealth, and moves commandTransportReady alone, so a shutdown marks no scope and writes no live-reporting observation.
+- [Phase 05]: The arrival callback reports the monitoring trust, guarded by the silence state last reported, so a returning live path is vouched for at the message and once per recovery (CR-02, D-11)
+- [Phase 05]: The recovery scenario parks device polling at the vendor instead of lengthening the poll interval: a long interval removes the defect's cover and the test's setup together
 
 ### Pending Todos
 
@@ -413,8 +416,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T13:46:39.049Z
-Stopped at: Completed 05-07-PLAN.md
+Last session: 2026-09-02T14:30:37.803Z
+Stopped at: Completed 05-08-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
