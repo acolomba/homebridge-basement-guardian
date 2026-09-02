@@ -462,6 +462,20 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     options.onMonitoringHealth(trust);
   }
 
+  // Closing reports nothing. A connection that fails while it is being closed
+  // has still stopped being used, and an escaping rejection during shutdown
+  // would surface as an unhandled exception in the Homebridge process (D-20).
+  //
+  // It sits above the terminal act rather than beside the shutdown it also
+  // serves, because both ends of the runtime's life close the same connection.
+  async function closeQuietly(client: ShadowClient | undefined): Promise<void> {
+    try {
+      await client?.close();
+    } catch {
+      // Deliberately silent, for the reason above.
+    }
+  }
+
   /**
    * Answers whether this error was the one failure the project treats as final,
    * and performs the whole terminal act when it was.
@@ -476,6 +490,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
    * standing, and records the stop so the recovery discipline learns of it. The
    * trust is pushed rather than reported, because the live-reporting line
    * describes an observation this act never made.
+   *
+   * Ending the live connection is part of that act rather than a tidy-up after
+   * it. The socket is signed with temporary credentials this runtime will never
+   * rotate again, and it outlives the account credentials the vendor refused, so
+   * it keeps delivering values that would overwrite the one presentation an
+   * owner has to act on.
    *
    * Meeting it a second time performs nothing further and still answers `true`.
    * Two loops can be in flight against a tenant that has already said no, and
@@ -494,6 +514,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     halted = true;
     options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
     options.onMonitoringHealth(monitoringTrustNow());
+    // Nothing is awaited: three callers read this function as a guard clause
+    // answering a boolean, and the close needs no await to shut the arrival
+    // path. `close()` sets the client's own closing flag before it ends the
+    // transport, and every notification the client delivers is gated on that
+    // flag, so no message reaches the reported-patch callback after this line.
+    //
+    // The binding stays assigned, so a later `stop()` awaits the same memoized
+    // ending and the connect path keeps finding a connection here. Nothing
+    // releases the store's shadow source, for the reason `stop()` records
+    // (D-10, SYNC-05).
+    void closeQuietly(shadow);
 
     return true;
   }
@@ -556,17 +587,6 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // it, which is the whole point of checking twice.
   function hasStopped(): boolean {
     return stopped;
-  }
-
-  // Closing reports nothing. A connection that fails while it is being closed
-  // has still stopped being used, and an escaping rejection during shutdown
-  // would surface as an unhandled exception in the Homebridge process (D-20).
-  async function closeQuietly(client: ShadowClient | undefined): Promise<void> {
-    try {
-      await client?.close();
-    } catch {
-      // Deliberately silent, for the reason above.
-    }
   }
 
   // Opens the connection once there is both a credential cache to sign from and

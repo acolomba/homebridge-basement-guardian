@@ -12,6 +12,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { Then } from '@cucumber/cucumber';
 
@@ -27,6 +28,10 @@ import type { API } from 'homebridge';
 // read carries a deadline that turns a poll which never ran into a named failure.
 const PUBLISH_DEADLINE_MS = 2000;
 const STEP_TIMEOUT_MS = 15_000;
+
+// A message the plugin ignores leaves no trace a step can wait on, so a step asserting that the
+// refusal survived one gives the delivery, and the update it would have made, time to land first.
+const DELIVERY_SETTLE_MS = 200;
 
 // The two characteristics this plugin raises an alarm through, and the states they raise it in.
 // `ContactSensorState.CONTACT_NOT_DETECTED` and `LeakDetected.LEAK_DETECTED` are both 1, so an
@@ -177,6 +182,18 @@ function assertNoReadAnswered(this: BasementGuardianWorld, serviceName: string, 
 }
 
 Then('the {string} service answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadAnswered);
+
+// The same assertion about a later moment, and the settle above it is the whole difference. The wait
+// behind the step above reads its condition before its first delay, so a plain refusal step placed
+// straight after a publish answers from the marking that was already in place and passes whether or
+// not the message was ever delivered. This one lets the message arrive first, which is what makes a
+// scenario able to see a refusal that a later value push undid (D-10).
+async function assertNoReadStillAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  await delay(DELIVERY_SETTLE_MS);
+  await untilReadOutcome(this, serviceName, characteristicName, 'refused');
+}
+
+Then('the {string} service still answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadStillAnswered);
 
 function assertReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
   return untilReadOutcome(this, serviceName, characteristicName, 'answered');

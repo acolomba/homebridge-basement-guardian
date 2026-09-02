@@ -1685,6 +1685,35 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  // What makes the refusal a state rather than an act the runtime performed once. A socket left open
+  // on a runtime that will never poll, refresh or connect again keeps delivering values, and an
+  // ordinary value push clears the unreadable status the halt just stored, so the accessory goes back
+  // to a fully vouched-for read for good. The close raises no disconnection, so the halt must record
+  // no shadow degradation: an owner acts on the diagnostic, and a shadow line names a cause that did
+  // not happen (D-10, D-13, SYNC-05).
+  test('D-13 closes the live connection and opens no other for a refusal that follows a healthy start', async (t) => {
+    // arrange
+    const { runtime, shadows, calls, logged, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        closes: shadows[0]?.closes(),
+        clients: calls.filter((call) => call === 'shadow').length,
+        shadowFailures: logged.filter((line) => line.endsWith(DEGRADED_LINE)),
+      },
+      { closes: 1, clients: 1, shadowFailures: [] },
+    );
+  });
+
   // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
   // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
   test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {

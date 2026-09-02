@@ -352,6 +352,53 @@ Feature: Degraded monitoring
     Then the log names how to correct the account
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
+  Scenario: A credential refused mid-run stays refused when the next heartbeat lands
+    The scenario above reads the accessory at the instant the refusal lands and then stops. It
+    publishes nothing afterwards, so it cannot see what an owner meets next. The device keeps
+    sending. Its live connection is signed with temporary cloud credentials that outlive the account
+    password the vendor just refused, so a message arrives after the plugin has stopped for good.
+
+    A value push clears the refusal it lands on. One message therefore returned every service to a
+    normal, fully vouched-for read, and it stayed that way, because a stopped plugin never pushes
+    again. The plugin is dead until the owner corrects the account, and a vendor block lifts only 30
+    days after the last attempt, so an accessory that looks normal in the meantime is the false
+    all-clear this plugin exists to prevent.
+
+    The plugin now ends the live connection when it stops, so no later message reaches the accessory.
+    The heartbeat before the refusal proves the live path was carrying messages, which is what makes
+    the silence after it belong to the plugin rather than to a broker that delivered nothing. The
+    three services read here are a leak sensor, a contact sensor, and a switch, so "every service"
+    rests on more than one kind. 31 is the water level the Gemini family calls a flooding pit: a
+    stopped plugin reports no flood, and the refusal an owner must act on is the louder signal.
+
+    Given a short poll interval
+    Given the tenant issues tokens that expire in 3660 seconds
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    Given the tenant refuses the account credentials
+    When the scenario clock moves forward by 120 seconds
+    Then the "Sump Pit Flood" service answers no read for "Status Active"
+    Then the broker holds no live connection
+    When the device publishes these heartbeat fields:
+      | water_level | 7 |
+    Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then the "Basement Guardian Offline" service still answers no read for "Status Active"
+    Then the "System Self-Test" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+    When the scenario clock moves forward by 7200 seconds
+    When the device publishes these heartbeat fields:
+      | water_level | 31 |
+    Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then the "Basement Guardian Offline" service still answers no read for "Status Active"
+    Then the "System Self-Test" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
   Scenario: A transport outage leaves every service readable
     Every other failure the plugin can have clears itself once the transport returns, so the tile
     stays readable and says only that the plugin cannot currently vouch for what it shows. Greying
