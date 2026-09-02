@@ -129,15 +129,24 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
     offlineConfirmationPollCount: context.offlineConfirmationPollCount,
     timers: context.timers,
     // The one implementation of the persist port, built here per accessory so no
-    // shared or process-wide store exists for a consumer to reach. It is a
-    // second, independent caller of the call `updateDiscoveredDevice` already
-    // makes, and the API is idempotent, so two callers are safe. The record
-    // members are deliberately absent from that function's change comparison --
+    // shared or process-wide store exists for a consumer to reach. It persists
+    // only an accessory this platform has recorded as its own: calling the
+    // update API on a never-registered accessory merges it into Homebridge's
+    // cached-accessory list with no associated plugin, the cache save then
+    // throws, and the upcoming registration is skipped as a UUID duplicate, so
+    // the accessory never reaches HomeKit. Nothing is lost by refusing here --
+    // registration itself saves the cache, so the context mutations the
+    // pre-registration update made reach disk then. The record members are
+    // deliberately absent from `updateDiscoveredDevice`'s change comparison --
     // which covers the display name, the vendor name, the device record, and the
-    // service list -- so without this a counted activation would mutate the
+    // service list -- so without this port a counted activation would mutate the
     // context and never reach disk (CTRL-01, D-008, D-010).
     store: {
       persist: () => {
+        if (context.accessories.get(accessory.UUID) !== accessory) {
+          return;
+        }
+
         context.api.updatePlatformAccessories([accessory]);
       },
     },
