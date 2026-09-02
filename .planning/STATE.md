@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-09-02T02:30:00.823Z"
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-09-02T03:15:27.192Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: 5416360dc4528e9780452b93e84dc54106a29bd1
+state_head: c34f005d729a5fb5927f63f32eff39bf00639c89
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 42
-  completed_plans: 40
+  completed_plans: 41
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-09-01 — Phase 05 execution started
 
@@ -95,6 +95,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P01 | 47min | 3 tasks | 13 files |
 | Phase 05 P02 | 14min | 2 tasks | 9 files |
 | Phase 05 P03 | 23min | 2 tasks | 12 files |
+| Phase 05 P04 | 28min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -241,6 +242,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: 05-03: the transport refusal is evaluated before the no-fresh-state one, so a user with no route is told that rather than told a reading is stale (PA-05, D-07)
 - [Phase 05]: 05-03: markMonitoring stores unconditionally AND compares every MonitoringTrust member; a two-field comparison swallows the runtime's first healthy push and refuses every press for the life of the process
 - [Phase 05]: 05-03: the accessory's stored trust starts with commandTransportReady false while both degradation fields start false, because a safety fact defaults to the refusing value
+- [Phase 05]: Phase 5 plan 04: the HAP stand-in modelled the inverse of the real updateValue on the push-an-error path; corrected and pinned by four fidelity cases watched to fail against it.
+- [Phase 05]: Phase 5 plan 04: the Phase 3 gate forbidding HapStatusError under src/accessories/ was narrowed to a counted, located exception rather than relaxed; serviceCatalogue.ts may name it exactly once, inside publishPersistentFailure.
+- [Phase 05]: Phase 5 plan 04: the credential scenario needed a foreign cached token, or the restart reuses the cached one and never meets the refusal it claims to assert.
 
 ### Pending Todos
 
@@ -396,8 +400,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T02:30:00.257Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-09-02T03:15:24.355Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
