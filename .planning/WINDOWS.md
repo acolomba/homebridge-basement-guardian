@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 18
 waived_count: 1
 fixed_count: 2
-total_count: 18
-last_updated: 2026-09-02T20:38:25.145Z
+total_count: 21
+last_updated: 2026-09-02T21:16:51.402Z
 ---
 
 # Broken Windows Ledger
@@ -33,6 +33,9 @@ last_updated: 2026-09-02T20:38:25.145Z
 | 16 | 05 | deviation | src/runtime/accountRuntime.ts |  | closeQuietly was relocated above haltOnTerminalAuthFailure, which 05-12-PLAN.md did not anticipate: @typescript-eslint/no-use-before-define rejects the new call site otherwise. Body unchanged. Relatedly, the entry-guard case could not use Promise.withResolvers (needs lib es2024, outside this plan's files) and captures the resolver by hand instead | open |  | 2026-09-02T17:55:13.637Z |  |
 | 17 | 05 | todo | features/support/steps/harness.ts |  | harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed | open |  | 2026-09-02T20:38:24.798Z |  |
 | 18 | 05 | todo | features/support/steps/shadow.ts |  | awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is | open |  | 2026-09-02T20:38:25.145Z |  |
+| 19 | 05 | todo | src/accessories/basementGuardian.ts |  | Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth. | open |  | 2026-09-02T21:16:50.761Z |  |
+| 20 | 05 | deviation | test/runtime/monitoringHealth.test.ts |  | Plan 05-14 task 1 had to touch two test files it did not list: npm run test:cucumber runs build:test over the whole test tsconfig, so the releaseShadowSource and recordShadowMessage call sites had to compile before the tracer task could be verified at all. Only the call sites moved in that commit; the substantive restatement landed in task 2. | open |  | 2026-09-02T21:16:51.116Z |  |
+| 21 | 05 | deviation | features/degradedOperation.feature |  | Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case. | open |  | 2026-09-02T21:16:51.402Z |  |
 
 ````json
 [
@@ -250,6 +253,42 @@ last_updated: 2026-09-02T20:38:25.145Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T20:38:25.145Z",
+    "resolved_at": null
+  },
+  {
+    "id": 19,
+    "kind": "todo",
+    "phase": "05",
+    "file": "src/accessories/basementGuardian.ts",
+    "line": null,
+    "description": "Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T21:16:50.761Z",
+    "resolved_at": null
+  },
+  {
+    "id": 20,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "test/runtime/monitoringHealth.test.ts",
+    "line": null,
+    "description": "Plan 05-14 task 1 had to touch two test files it did not list: npm run test:cucumber runs build:test over the whole test tsconfig, so the releaseShadowSource and recordShadowMessage call sites had to compile before the tracer task could be verified at all. Only the call sites moved in that commit; the substantive restatement landed in task 2.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T21:16:51.116Z",
+    "resolved_at": null
+  },
+  {
+    "id": 21,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "features/degradedOperation.feature",
+    "line": null,
+    "description": "Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T21:16:51.402Z",
     "resolved_at": null
   }
 ]

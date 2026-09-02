@@ -219,6 +219,48 @@ file under `src/` or `test/` changed at any point in the round.
 | A vendor change moves one named pump's polled reading and no other | Mutation E. Make the named vendor-change step rewrite every seeded device, the way the account-wide step does. The polled half dies at `Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"`, the back pump having read 80 -- the front pump's new body. Confirmed by re-running with that assertion restated as `"80"`, which passes it and moves the failure to the next `"60"` assertion. **This is the mutation that makes plan 05-14's inheritance real:** without it, 05-14 would rest on a step whose per-device behaviour nothing had ever measured |
 
 
+### Plan 05-14 rows
+
+Added 2026-09-02, when the round closed `05-REVIEW-2.md` CR-01 and WR-05. The scenario is written
+entirely in plan 05-13's three named steps and `git status --porcelain -- features/support/` printed
+nothing at every commit, so the red result these rows record is about the defect and not about a
+harness that moved in the same commit.
+
+The red result, quoted as the scenario found it before any source changed: on a two-pump account
+whose second pump kept heartbeating, the quiet pump's tile held `Water Level` **40** -- the last
+level its own live path delivered -- while every poll reported `water_level: 31`; its `Leak Detected`
+read **0**; and its `Status Active` read **true**, so the plugin went on claiming to vouch for a
+basement it had stopped watching. Confirmed rather than inferred: restating those three assertions as
+`0`, `40` and `true` made the scenario pass against unmodified production code.
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| T1 | 05-14 | 9 | RES-03 | T-05-14-02 | A poll that finds the quiet pump's pit flooded reports that flood in Apple Home, on a two-pump account whose other pump is heartbeating normally. Mutation A must fail it | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-14 | 9 | RES-03 | T-05-14-01 | The quiet pump's tile stops saying the plugin vouches for it: its `Status Active` reads false while the poll refreshes it. Mutation A must fail it | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | `features/degradedOperation.feature` | ✅ shipped |
+| T1 | 05-14 | 9 | RES-03 | T-05-14-03 | The healthy pump keeps the level its own heartbeat delivered through its neighbour's silence, rather than having every poll of that silence write the vendor's older body over it. Mutation B must fail it | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | `features/degradedOperation.feature` | ✅ shipped |
+| T2 | 05-14 | 9 | RES-03 | T-05-14-01 | A message stamps only the device it came from, so two pumps are two silence windows and one pump's heartbeat is no evidence about the pump beside it. Mutation D must fail it | unit | `npm run test:coverage:direct -- dist-test/src/runtime/monitoringHealth.js dist-test/test/runtime/monitoringHealth.test.js` | `test/runtime/monitoringHealth.test.ts` | ✅ shipped |
+| T2 | 05-14 | 9 | RES-03 | T-05-14-01 | A device admitted late starts its own silence window at its admission, and a device the plugin was never told about is never reported silent. Mutation G must fail the account verdict these rest on | unit | `npm run test:coverage:direct -- dist-test/src/runtime/monitoringHealth.js dist-test/test/runtime/monitoringHealth.test.js` | `test/runtime/monitoringHealth.test.ts` | ✅ shipped |
+| T2 | 05-14 | 9 | RES-03 | T-05-14-01 | A device the arrival map already holds is not re-stamped when a later poll admits it again, so a pump quiet for hours still reaches its silence. Mutation E must fail it | unit | `npm run test:coverage:direct -- dist-test/src/runtime/monitoringHealth.js dist-test/test/runtime/monitoringHealth.test.js` | `test/runtime/monitoringHealth.test.ts` | ✅ shipped |
+| T2 | 05-14 | 9 | RES-03 | T-05-14-03 | A release names the one device it releases, and a release naming a device the store never held changes nothing. Mutation F must fail it | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `test/device/state.test.ts` | ✅ shipped |
+| T2 | 05-14 | 9 | RES-03 | T-05-14-04 | A disconnection releases the whole fleet, because the connection that ended carried every device, while a silence releases only the controller that stopped speaking | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped |
+| T1, T2 | 05-14 | 9 | RES-04 | structural | **The honest limit, measured rather than assumed.** The plan predicted that mutation B -- an account-wide release -- might pass the end-to-end tier, and reserved WR-05's discriminating evidence for mutation F at the unit tier. It does not pass: the scenario fails at its last assertion, the healthy pump reading 60 where 80 was expected, because the poll that carried the quiet pump's flood also wrote the healthy pump's older vendor body. The end-to-end tier therefore does see WR-05, and it sees it only because the healthy pump's live level and its polled level were deliberately made different. Mutation F remains the unit-tier evidence and is the one that fails when the release itself stops discriminating | e2e, unit | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"`, `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `features/degradedOperation.feature`, `test/device/state.test.ts` | ✅ shipped |
+
+### Plan 05-14 mutations
+
+Every mutation was applied after its task was committed, run, and reverted only once `git status`
+showed the mutated file was the only changed one. **Mutation C is the one that failed nothing in the
+new scenario, and it is recorded as the measurement it is rather than quietly dropped.**
+
+| Behaviour | Mutation that must fail it |
+|---|---|
+| A poll finds the quiet pump's flood | Mutation A. Make `recordShadowMessage` stamp every admitted device rather than the one named, which is the account-wide behaviour this plan replaced. The scenario dies at `features/degradedOperation.feature:208`, `Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Leak Detected" as "1"`: the quiet pump is never silent, is never released, and every poll body is discarded |
+| The healthy pump keeps its own reading | Mutation B. Make `applyDevices` release every stored device whenever any one is silent. The scenario dies at `features/degradedOperation.feature:211`, `Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"`, having read 60. Confirmed by re-running the same mutation with that assertion restated as `"60"`, which passes: the healthy pump's live level really was overwritten by its own vendor body |
+| A device is admitted when discovery finds it | Mutation C. Revert the admit call in `applyDevices`, so nothing is admitted. **This failed nothing in the new scenario, which passed unchanged.** The reason is structural rather than accidental: the quiet pump in that scenario heartbeats once before falling silent, and `recordShadowMessage` stamps whatever device a message came from, admitted or not, so the admit call is redundant for a pump that has ever spoken. The admit call's real subject is a device that has *never* spoken, which the scenario does not exercise. It is not unpinned: the same mutation fails five shipped scenarios -- `A flooded pit reaches Apple Home while the live path is silent`, `Both monitoring paths lost withdraws every scope`, `A blind plugin vouches for no controller-link verdict`, `A transport outage leaves every service readable`, `A press with no valid state is refused locally` -- and `goes silent two heartbeats after admission when no message ever arrives` at `test/runtime/monitoringHealth.test.ts:239` is the unit case that states it directly |
+| A message stamps only its own device | Mutation D. Make `recordShadowMessage` stamp every admitted device. Fails `names only the pump that stopped speaking when the pump beside it is still heartbeating` at `test/runtime/monitoringHealth.test.ts:256`, `stops vouching for the account while one pump is quiet and vouches again once it speaks` at `:274`, and `D-13 hands only the quiet pump back to the poll and leaves its neighbour owning its telemetry` at `test/runtime/accountRuntime.test.ts:1097` |
+| An already-tracked device is not re-stamped | Mutation E. Make `admitDevice` set the stamp unconditionally. Fails `leaves a quiet pump quiet when a later poll admits it again` at `test/runtime/monitoringHealth.test.ts:329`, and eleven cases in all: every poll re-arms the window, so no silence is ever reached and the whole degraded-monitoring group goes with it. This is the mutation that pins the prohibition against per-poll re-seeding |
+| A release names one device | Mutation F. Make `releaseShadowSource` clear every snapshot regardless of the `deviceId` it was given. Fails `leaves the pump beside it owning its own telemetry` at `test/device/state.test.ts:582`, `changes nothing when it names a device the store never held` at `:609`, and the runtime's per-poll release case at `test/runtime/accountRuntime.test.ts:1097`. **This is WR-05's discriminating mutation**, and it is why WR-05 is closed here rather than deferred a second time |
+| The account verdict is still pinned after the redesign | Mutation G. Make `trustNow` answer `shadowSilent` false unconditionally. Fifteen cases fail, thirteen of them shipped before this plan -- including the silence-window table at `test/runtime/monitoringHealth.test.ts:100-118` and the whole `the degraded monitoring path` group in `test/runtime/accountRuntime.test.ts`. The account-wide verdict survived the move to per-device stamps with its coverage intact |
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test
@@ -509,6 +551,24 @@ note in the intel document so a later monotonic-clock decision has the reason re
 itself: four modules sit between a transport fact and a HomeKit characteristic, and removing any one
 leaves the tracer's claim unproven end to end. Over-budget is advisory, never blocking. Recorded so
 the executor watches actual context use through that plan rather than assuming headroom.
+
+**Shadow-silence marking stays account-wide on a multi-device account, and plan 05-14 chose that
+deliberately.** Silence is now measured per device and telemetry is handed back per device, but
+`shadowSilent` remains one answer pushed identically to every accessory: true when any admitted device
+is silent. A two-pump owner whose front pump goes quiet therefore sees both tiles stop vouching, not
+one. Three reasons. No requirement asks for per-device marking -- `RES-03` asks that a monitoring-path
+loss be told apart from a confirmed-offline device without a false physical-device alert, and
+account-wide marking raises no adapter and activates nothing; `05-CONTEXT.md` D-02 already ratifies
+marking every accessory for a monitoring failure and names the accepted cost in those words.
+Over-marking cannot produce a false normal: it withdraws trust the plugin does have, and the defect
+class this project exists to prevent runs the other way. And the alternative is a second design change
+riding on a blocker fix -- a per-device `MonitoringTrust` crossing `onMonitoringHealth`,
+`applyMonitoringHealth` and the platform fan-out, plus every `MonitoringTrust` literal in the unit
+suite -- which is how this phase twice lost the ability to say which change a green result was
+measuring. The cost is real and is recorded rather than hidden: a two-pump owner is told the plugin
+cannot vouch for both systems when it can vouch for one, and the `FailureLog` line is where the
+distinction survives (`05-CONTEXT.md` D-03). `LIVE_REPORTING_SILENT` still names the account rather
+than the device, which is the same framing and is accepted with it (T-05-14-05).
 
 ---
 
