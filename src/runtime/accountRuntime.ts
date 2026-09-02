@@ -315,6 +315,24 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // nothing and leaves the pending deviceIds for the next successful poll's
   // own confirmedAbsent computation, with no separate retry state.
   async function applyDevices(devices: readonly ApiDevice[]): Promise<void> {
+    // A shadow that has missed two heartbeats has stopped being the source of
+    // telemetry, so the poll takes it back before this poll's bodies are
+    // written. Reading the silence predicate here rather than where the trust
+    // report reads it is the whole design: `runPoll` awaits this function and
+    // only then records the poll outcome, so a handover placed at the report
+    // would arrive after every `applyDiscovery` below had already kept the
+    // shadow's telemetry, and would take effect one poll interval late --
+    // `pollIntervalSeconds` accepts up to an hour. This is also the only place
+    // a poll's telemetry enters the store, from both the launch and the loop,
+    // so the ordering holds by construction rather than by two calls happening
+    // to sit in the right order (D-13, D-05).
+    //
+    // A failed poll is deliberately not a release site: it writes no telemetry,
+    // so there is nothing to hand over.
+    if (health.trustNow().shadowSilent) {
+      options.store.releaseShadowSource();
+    }
+
     for (const device of devices) {
       options.store.applyDiscovery(device);
     }
@@ -520,10 +538,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // capped-backoff attempt (D-14, D-15).
   function handleShadowDisconnected(reason: ShadowDisconnectReason): void {
     shadowConnected = false;
-    // The shadow stops being the source of telemetry the moment the connection
-    // ends, whatever ended it, so the poll takes it back over until the
-    // reconnect's complete-shadow request re-establishes ownership (D-15,
-    // SYNC-03).
+    // A connection ending is one of the two ways the shadow stops being the
+    // source of telemetry, and this handler owns that one: whatever ended it,
+    // the poll takes over until the reconnect's complete-shadow request
+    // re-establishes ownership. Two missed heartbeats are the other way, and
+    // `applyDevices` owns it, because a socket that is still open says nothing
+    // about a device that has stopped speaking (D-15, D-13, SYNC-03).
     options.store.releaseShadowSource();
 
     if (reason !== 'transport-closed') {
