@@ -534,6 +534,35 @@ describe('releaseShadowSource', () => {
     assert.deepStrictEqual(notifications, []);
   });
 
+  // The handover is reachable on every poll of a silence that can last hours,
+  // so a second call must cost exactly what the first one cost: no telemetry
+  // key moves, the receipt time -- the snapshot's only freshness field -- is
+  // not restamped, and no listener hears about a change that did not happen.
+  test('moves no value and notifies nobody when it runs again on a later poll of the same silence', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 4 }, state: { wifi_signal_dbm: -54 }, version: 90 });
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.releaseShadowSource();
+    store.releaseShadowSource();
+
+    // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 4, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+    assert.deepStrictEqual(notifications, []);
+  });
+
   test('returns a released snapshot no consumer can modify', () => {
     // arrange
     const store = versionedStore();

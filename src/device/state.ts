@@ -110,8 +110,22 @@ export interface DeviceStateStore {
    * rather than refused as stale, which is what makes the reconnect refresh
    * restore anything (SYNC-03).
    *
+   * Two conditions call for it. A connection that ended is one. A device the
+   * monitoring-trust projection reports silent, with its socket still open, is
+   * the other, and it is the one an owner meets: silence is not a
+   * disconnection, and a poll that cannot refresh telemetry during it leaves a
+   * flooding pit unreported (D-13). It is therefore reachable on every poll of
+   * a silence that can last hours, which it is written to cost nothing.
+   *
+   * Ownership returns on the next document carrying an observation, through
+   * `applyReportedPatch`: with no watermark held the patch is not stale, and
+   * `nextShadowVersion` establishes the watermark again. Nothing else restores
+   * it, and a document that observed nothing does not, so REST keeps feeding
+   * telemetry until a real report arrives.
+   *
    * It also gives up out-of-order protection for the first document after a
-   * reconnect. That is bounded: the connection is opened with a clean session
+   * release, which silence triggers on the same terms as a reconnect rather
+   * than on new ones. That is bounded: the connection is opened with a clean session
    * and no replay, so no queued backlog can arrive out of order, and a document
    * that did arrive late still carries telemetry the device genuinely sent and
    * merges key by key, with the next heartbeat correcting it. The alternative
@@ -167,6 +181,14 @@ function freeze(snapshot: DeviceSnapshot): DeviceSnapshot {
 // the shadow already delivered. With no watermark held the poll is the source
 // and its body replaces telemetry, which is the reconciliation backstop a
 // shadow outage runs on (D-15, SYNC-03).
+//
+// The watermark comes off in two ways, and a reader who knows only the first
+// will misread this function. The connection ending is one: the shadow is gone,
+// so the poll takes over. A device whose messages have stopped for long enough
+// that the monitoring-trust projection calls it silent, with its socket still
+// open, is the other, and it is the ordinary one: the provider closes an
+// established connection daily by design, while a device that has stopped
+// speaking says nothing about its socket at all (D-13).
 //
 // Every field is copied out of the vendor record, so a later change to the
 // vendor object cannot reach stored state.

@@ -980,6 +980,84 @@ describe('the poll backstop', () => {
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
   });
 
+  // Roughly fifteen minutes of quiet is ordinary, so one missed heartbeat is
+  // evidence of nothing and the shadow still owns telemetry. A pump run the
+  // live path reported is not erased by a poll that happens to arrive during
+  // it (SYNC-02, D-05).
+  test('D-13 keeps a pump run the live path reported when a poll arrives inside the two-heartbeat window', async (t) => {
+    // arrange
+    const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 5 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
+  });
+
+  // A REST degradation is not silence. `recordPollSuccess` runs after
+  // `await applyDevices(...)`, so on the poll that recovers, the failure run is
+  // still counted: a handover keyed on the REST degradation would fire on
+  // exactly the poll where doing so is wrong, and the recovering poll's older
+  // body would erase what the live path is still delivering (D-04, SYNC-02).
+  //
+  // The poll interval here is far below the silence window, so several polls
+  // run without the window opening under them.
+  test('D-13 keeps live telemetry through a poll that recovers from a REST degradation', async (t) => {
+    // arrange
+    const failing = (): Promise<ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
+    const { runtime, shadows, store, advance } = harness(t, {
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([stoppedPump])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 5 });
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
+  });
+
+  // Ownership returns through the patch path that already exists: the arriving
+  // document stamps the message, so the next poll performs no handover, and it
+  // re-establishes the watermark on its way through `applyReportedPatch`. Once
+  // the live path speaks again, a pump run it reports is not erased by the next
+  // poll's older body (SYNC-03, D-13).
+  test('D-13 lets the live path own telemetry again on the first message that carries an observation', async (t) => {
+    // arrange
+    const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { primary_pump_running: false }, state: undefined, version: 5 });
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // act
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 6 });
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { pumpRunning: store.snapshot(DEVICE_ID)?.data.primary_pump_running, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
+      { pumpRunning: true, shadowVersion: 6 },
+    );
+  });
+
   test('D-15 lets the poll write telemetry again once the shadow connection is gone', async (t) => {
     // arrange
     const { runtime, shadows, store, advance } = harness(t, {
