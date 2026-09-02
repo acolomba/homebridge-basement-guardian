@@ -24,6 +24,8 @@
 - [ ] **SYNC-01**: The account runtime uses typed vendor REST operations for device inventory/snapshots, Gemini commands, and temporary AWS IoT credentials, without using excluded account-management routes.
 - [ ] **SYNC-02**: The runtime maintains one canonical snapshot per device by merging REST state and partial shadow `reported` patches while ignoring `desired` values and preserving omitted fields.
 - [ ] **SYNC-03**: The runtime requests a complete shadow after startup and reconnect and polls successful REST snapshots as a reconciliation backstop without treating MQTT subscription persistence as event replay.
+
+  **Amended 2026-09-02.** The reconciliation backstop also carries telemetry while the live path is silent, not only while it is disconnected. A shadow that has missed two heartbeats no longer owns telemetry, so the poll takes it back and its readings reach HomeKit. The shadow owns telemetry again on its next message that carries an observation. The trust flags did not change: a REST poll still does not clear a shadow-silence degradation, so the readings arrive marked untrustworthy. Ruling: `05-CONTEXT.md` D-13.
 - [ ] **SYNC-04**: Temporary AWS credentials rotate in place about ten minutes before expiry, failed refreshes remain scheduled, and reconnect retries are capped and protected from duplicate loops.
 - [ ] **SYNC-05**: Homebridge shutdown, partial startup failure, timers, subscriptions, retry waits, commands, and the shadow socket share an idempotent abortable lifecycle with no unhandled rejection.
 
