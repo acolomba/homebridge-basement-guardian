@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
-status: ready_to_execute
-stopped_at: Phase 5 planned — 5 plans, checker clean, ready for /gsd-execute-phase 5
-last_updated: "2026-09-01T23:57:57.433Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-09-02T01:05:47.982Z"
 last_activity: 2026-09-01
-last_activity_desc: Phase 05 planned — 5 plans through one revision cycle
-state_head: 30c444f4a4ff3a5388754c4a3725501e51313f39
+last_activity_desc: Phase 05 execution started
+state_head: d7cf0c30f070f7d81d884b7746473e42c70408d1
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 42
-  completed_plans: 37
+  completed_plans: 38
   percent: 33
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 ## Current Position
 
-Phase: 05 (Degraded Operation and Recovery) — READY TO EXECUTE
-Plan: 0 of 5
+Phase: 05 (Degraded Operation and Recovery) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-09-01 — Phase 05 planned; 5 plans, checker clean
+Last activity: 2026-09-01 — Phase 05 execution started
 
 Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md` and five
 `05-NN-PLAN.md` files, all committed. The plan checker raised one blocker and six warnings on the
@@ -92,6 +92,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 03 P06 | 45 min | 3 tasks | 7 files |
 | Phase 03 P07 | 45 min | 2 tasks | 5 files |
 | Phase 03 P08 | 38 min | 2 tasks | 4 files |
+| Phase 05 P01 | 47min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -229,6 +230,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 03]: src/device/health.ts left .fallowrc.json ignoreFindings after measurement, not because DeviceHealth gained a production consumer — production: false makes fallow count test files as consumers, so DeviceHealth's test-only importer keeps the gate green. Three of the other four declarations gained real production consumers this phase.
 - [Phase 03]: An exemption removal is proven by planting a dead export in the newly checked module, because an unlisted module and a clean module produce the identical green
 - [Phase 03]: The src/device/events.ts exemption stays although it no longer suppresses a finding; every declaration in the module still has no production consumer
+- [Phase 05]: 05-01: a REST-only degradation withdraws connectivity and only connectivity (D-02 over D-04)
+- [Phase 05]: 05-01: the trust decision is a second projection; monitoringPathNow() stays byte-identical
+- [Phase 05]: 05-01: shadow silence is measured from arrival at onReportedPatch, seeded at construction, never from the socket flag or receivedAt
 
 ### Pending Todos
 
@@ -384,9 +388,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-01T23:57:57.433Z
-Stopped at: Phase 5 planned — 5 plans, checker clean; next is `/gsd-execute-phase 5`
-Resume file: .planning/phases/05-degraded-operation-and-recovery/.continue-here.md
+Last session: 2026-09-02T01:05:36.823Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
 to rediscover: executor dispatch is blocked by an isolation guard, and the obvious fix is dangerous.
