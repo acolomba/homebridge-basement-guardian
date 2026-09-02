@@ -2640,6 +2640,111 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // The value the tile shows and the value the write path reads are one value, asserted where an
+  // owner can see the two disagree. A press was accepted, so the row is withholding `On` and HAP is
+  // serving the `true` that press left behind. The live path then goes quiet and a second press is
+  // refused. The push that returns the Switch to a normal read has to publish something, and what it
+  // publishes is whatever the write path sampled -- so this is the one place the write path's own
+  // answer becomes visible to a controller. It must be the device's reported `false`, which is what
+  // the row publishes throughout the same withdrawal.
+  //
+  // Before the two halves read one rule the write path sampled nothing at all here, and the push
+  // fell back to the value HomeKit's own request had left standing. The tile then showed a test
+  // running that no device had confirmed, which is requested state presented as reported state
+  // (RES-04, D-07, D-037, WR-02).
+  test('WR-02 returns the Switch to the value the device reported when a press is refused during shadow silence', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers } = recordingTimers();
+    const { commands, sends } = recordingCommands();
+    // The clearing push alone, told apart by the delay it was armed at. Running the request's own
+    // 30-second deadline as well would expire the request, and the row's republish would then set
+    // `On` from its own projection -- which is the very value this case is checking the write path
+    // arrived at independently. The case would pass whatever the write path answered.
+    const clearingPushes: (() => void)[] = [];
+    const recording: Timers = {
+      ...timers,
+      setTimeout: (handler, delayMs) => {
+        if (delayMs === 0) {
+          clearingPushes.push(handler);
+        }
+
+        return timers.setTimeout(handler, delayMs);
+      },
+    };
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    const afterTheAcceptedPress = onCharacteristicOf(accessory, SELF_TEST_ROW).value;
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+    runEvery(clearingPushes);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        clearingPushes: clearingPushes.length,
+        afterTheAcceptedPress,
+        afterTheRefusedPress: onCharacteristicOf(accessory, SELF_TEST_ROW).value,
+        statusCode: onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode,
+        sends,
+      },
+      { clearingPushes: 1, afterTheAcceptedPress: true, afterTheRefusedPress: false, statusCode: 0, sends: [`${DEVICE_ID} self-test true`] },
+    );
+  });
+
+  // The other direction of the same rule, and the one that keeps it narrow. Here the control's scope
+  // is untrusted because a field of its own failed validation, which says the value is doubtful
+  // rather than that the plugin is seeing less. Both halves must still treat it as absent: the row
+  // publishes no `On` and the write path is refused for the missing state, because publishing a
+  // doubtful value would overwrite the last family-valid one and acting on it would operate a real
+  // pump on a guess. The capability's own reported field still decodes here, so nothing but the rule
+  // is holding it back (RES-04, D-02, D-07, D-014, WR-02).
+  test('WR-02 keeps a doubtful value absent from both the control row and the write path', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_timestamp: 'not-a-number' }, { commands, log });
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert. A payload carrying an out-of-domain field also degrades, and that line is not what this
+    // case is about, so the refusal lines alone are compared.
+    assert.deepStrictEqual(
+      {
+        untrusted: basementGuardianAccessory.untrusted,
+        publishedOn: serviceOf(accessory, SELF_TEST_ROW).characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.On.UUID)?.pushed,
+        sends,
+        refusals: warnings.filter((warning) => warning.startsWith('Refused ')),
+      },
+      {
+        untrusted: [{ scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined }],
+        publishedOn: false,
+        sends: [],
+        refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
+      },
+    );
+  });
+
   // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that
   // assumed it could would send the first press of a run into a route that has never answered
   // (RES-04, D-07).

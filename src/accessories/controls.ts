@@ -88,7 +88,18 @@ export interface ControlBinderOptions {
    * a user diagnosing a refused press the wrong thing half the time.
    *
    * The accessory answers this from the account-wide monitoring trust it also
-   * publishes its rows from, so one stored value drives both (RES-04, D-07).
+   * publishes its rows from, and it answers `reported` below through the same
+   * rule that decides whether the control's row may publish that value. So the
+   * fact a row publishes from and the fact a write is refused on cannot
+   * disagree: they are one stored value read through one rule.
+   *
+   * That was written here as an invariant before it was one. The row was widened
+   * to keep publishing what a working transport delivered and the write path was
+   * not, so a press was refused for a missing state while the tile beside it
+   * showed that state. The case holding this up is "returns the Switch to the
+   * value the device reported when a press is refused during shadow silence",
+   * which reads the write path's own answer where a controller can see it
+   * (RES-04, D-07, WR-02).
    */
   commandTransportReady: () => boolean;
   /**

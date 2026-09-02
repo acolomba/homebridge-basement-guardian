@@ -41,6 +41,7 @@ import {
   decodedGroup,
   ensureService,
   isRowFullyTrusted,
+  isRowPublishable,
   numberOf,
   publishedService,
   publishValue,
@@ -533,12 +534,24 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return isNotificationServiceKind(kind) && ignoredFaults.includes(kind);
   }
 
-  // What the device itself last said about one control, read structurally so
-  // this module stays ignorant of any one family's type (D-003), and withheld
-  // while the scope owning it is untrustworthy: a value the accessory cannot
-  // vouch for is absent rather than defaulted (D-014).
-  function reportedControlValue(control: ControlDefinition): boolean | undefined {
-    if (untrusted.some((scope) => scope.scope === control.capability)) {
+  // What the device itself last said about one control, read structurally so this
+  // module stays ignorant of any one family's type (D-003), and withheld through
+  // the same rule that decides whether the control's own row may publish it.
+  //
+  // The two withdrawals differ, and only one of them hides a value. A scope
+  // withdrawn because the plugin is seeing less still carries exactly what a
+  // working transport delivered, so hiding it would replace a fresh reading with
+  // nothing while the tile beside it goes on showing that same reading. A scope
+  // withdrawn because the value is doubtful hides it, because publishing it would
+  // overwrite the last family-valid value with a bad one and acting on it would
+  // operate a real pump on a guess.
+  //
+  // That is the row's own distinction, read from the row's own rule rather than
+  // restated here. A second copy is how the two came to disagree: the row was
+  // widened and this was not, so a press was refused for a state the plugin had
+  // and the tile was showing (D-014, D-02, RES-04, D-07, WR-02).
+  function reportedControlValue(row: ServiceRow, control: ControlDefinition): boolean | undefined {
+    if (!isRowPublishable(row, untrusted)) {
       return undefined;
     }
 
@@ -678,7 +691,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       return;
     }
 
-    controls.bind(service, control.capability, () => reportedControlValue(control));
+    controls.bind(service, control.capability, () => reportedControlValue(row, control));
   }
 
   // One pass over the catalogue in its declared order, so the published order
@@ -837,8 +850,12 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // device never confirms is never resolved by anything the plugin decided
   // (CTRL-03, D-037).
   function reconcileControls(): void {
-    for (const control of CONTROLS.values()) {
-      controls.reconcile(control.capability, reportedControlValue(control));
+    for (const row of catalogue) {
+      const control = CONTROLS.get(row.kind);
+
+      if (control !== undefined) {
+        controls.reconcile(control.capability, reportedControlValue(row, control));
+      }
     }
   }
 
