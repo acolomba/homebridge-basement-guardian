@@ -1,21 +1,20 @@
 /**
- * @fileoverview The two passes that mark a whole accessory the plugin cannot
- * vouch for, without constructing a `BasementGuardianAccessory`.
+ * @fileoverview The three passes over an accessory the plugin cannot vouch for,
+ * none of which constructs a `BasementGuardianAccessory`.
  *
- * Both run where no fresh data exists and none may be coming: one when
- * Homebridge hands a cached accessory back, the other when the vendor has
- * refused the account credentials and the runtime has stopped for good. Neither
+ * All three run where no fresh data exists and none may be coming: two when
+ * Homebridge hands a cached accessory back, the third when the vendor has
+ * refused the account credentials and the runtime has stopped for good. None
  * builds a `BasementGuardianAccessory`, because that constructor throws when the
  * accessory context names no device -- the exact shape a cache written by an
  * older release carries -- and because a run whose first grant was refused never
  * reaches discovery and has none to build on.
  *
- * They differ in what they leave behind, and the difference is the whole of
- * `D-10`. The restart pass withdraws trust and leaves the tile readable, because
- * a restart recovers by itself once a poll succeeds. The credential pass makes
- * the tile unreadable, because a refused credential never recovers by itself and
- * an automatic retry extends the vendor's thirty-day block rather than merely
- * failing.
+ * They differ in what they leave behind. The two restart passes withdraw trust
+ * and refuse a press while leaving the tile readable, because a restart recovers
+ * by itself once a poll succeeds. The credential pass makes the tile unreadable,
+ * because a refused credential never recovers by itself and an automatic retry
+ * extends the vendor's thirty-day block rather than merely failing (D-10).
  *
  * HAP serializes each characteristic's value into the Homebridge accessory
  * cache and serves it from the moment the bridge publishes. This plugin
@@ -26,27 +25,36 @@
  * it. That is the false normal this project exists to prevent, and a restart
  * that never reaches the cloud leaves it standing indefinitely.
  *
- * The pass therefore runs where Homebridge hands each cached accessory back
+ * The same window leaves the control Switches carrying `On` and carrying no
+ * write handler, and HAP answers a write with no handler by storing the value
+ * and reporting success. So the toggle flips, an automation built on it fires,
+ * and nothing was sent. Nothing being sent is correct; reporting success for it
+ * is the false normal on the control surface, which is why the second restart
+ * pass exists (RES-04, D-07).
+ *
+ * The passes therefore run where Homebridge hands each cached accessory back
  * rather than on the first update: `configureAccessory` is the only code that
  * runs while a restored accessory exists and no fresh data does, and every
  * publishing path is downstream of an inventory that may never arrive (D-06).
  *
- * It constructs no `BasementGuardianAccessory` and reads nothing from the
+ * They construct no `BasementGuardianAccessory` and read nothing from the
  * accessory context. That constructor throws when the context carries no
  * device, which is exactly what a cache written before that context existed
  * carries, so constructing here would fail on the upgrade path this behaviour
  * protects.
  *
- * The pass is exported rather than written inside the platform method because
- * the Cucumber harness stands in for `configureAccessory` and calls this same
- * function. A copy inside the platform would leave the harness asserting
- * against its own copy of the behaviour (D-12).
+ * The passes are exported rather than written inside the platform method
+ * because the Cucumber harness stands in for `configureAccessory` and calls
+ * these same functions. A copy inside the platform would leave the harness
+ * asserting against its own copy of the behaviour (D-12).
  */
 
+import { bindRestoredControlRefusal } from './controls.js';
 import { publishPersistentFailure, publishValue } from './serviceCatalogue.js';
 
 import type { CharacteristicClass } from './customCharacteristics.js';
-import type { API, PlatformAccessory, Service } from 'homebridge';
+import type { Timers } from '../runtime/timers.js';
+import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
 // The one walk all three passes make: every restored service carrying the
 // characteristic that decides the pass applies to it, acted on and counted.
@@ -98,6 +106,29 @@ function overServicesCarrying(accessory: PlatformAccessory, guard: Characteristi
 export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): number {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
     publishValue(service, hap.Characteristic.StatusActive, false);
+  });
+}
+
+/**
+ * Refuses a press on every restored control, and answers how many controls it
+ * armed.
+ *
+ * The guard is the control write surface itself, so the pass reaches exactly
+ * the services a controller can act on and leaves every sensor alone. A sensor
+ * that gained a handler would gain a characteristic it never published, which
+ * changes a published identity a user's automations may already attach to.
+ *
+ * The count is the assertable evidence that the pass did work, for the same
+ * reason the marking pass answers one: a walk over an empty service list and a
+ * walk that armed every control report the same silent success otherwise.
+ *
+ * The refusal itself lives in the control module, beside every other local
+ * refusal, its status table and its clearing push, so a restored control and a
+ * live one cannot answer one condition two ways (D-07, D-08).
+ */
+export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): number {
+  return overServicesCarrying(accessory, hap.Characteristic.On, (service) => {
+    bindRestoredControlRefusal({ hap, log, timers, service, accessoryName: accessory.displayName });
   });
 }
 

@@ -31,6 +31,17 @@
  * Once `On` carries a handler, `setCharacteristic` on it routes through the
  * write path and becomes a command this plugin issued to itself. Every writer
  * here and every caller uses `publishValue`, which updates rather than sets.
+ *
+ * The binder is not the only write handler this module owns. A restart the
+ * vendor cloud never answers restores the control Switches from the Homebridge
+ * cache long before any accessory exists to route a press, and HAP answers a
+ * write with no handler by storing the value and reporting success -- so the
+ * toggle flips in Apple Home, an automation built on it fires, and nothing
+ * happened. `bindRestoredControlRefusal` closes that window with a refusal
+ * carrying the same status and the same cause the transport rule gives a live
+ * accessory, and the binder's own handler replaces it on the first publish
+ * because a set handler is a single slot in HAP rather than a listener list
+ * (RES-04, D-07, D-08).
  */
 
 import { PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE } from './alarmMute.js';
@@ -121,6 +132,33 @@ export interface ControlBinder {
    * and a second confirming report both harmless (CTRL-03, D-037).
    */
   reconcile(capability: DeviceCapability, reported: boolean | undefined): void;
+}
+
+/** Everything the refusal a restored control answers needs, by injection. */
+export interface RestoredControlRefusalOptions {
+  hap: API['hap'];
+  log: Logging;
+  /**
+   * Deferred execution, for the clearing push and nothing else.
+   *
+   * The same port the binder takes, for the same reason: the push has to land
+   * after HAP's own catch has stored the refusal status, which is the next
+   * macrotask and no earlier (SAFE-07, D-18).
+   */
+  timers: Timers;
+  /** The restored Switch the refusal is attached to. */
+  service: Service;
+  /**
+   * The accessory the service came back on.
+   *
+   * The display name rather than a `deviceId`, because a restored accessory is
+   * all the identity there is here: the restart passes read nothing from the
+   * accessory context, and a cache an older release wrote names no device in it
+   * at all. Without some name a multi-pump account cannot tell which system
+   * refused a control, which is the same reason the binder's own line carries
+   * the device identifier.
+   */
+  accessoryName: string;
 }
 
 /**
@@ -235,9 +273,16 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 // unit case pins that with both conditions set, because an unrelated edit that
 // reordered this table would otherwise change the user-facing cause silently
 // (D-07).
+// The cause the missing-transport rule names, declared once because two
+// refusals now answer it. A restart the cloud has not answered is the same
+// condition under a different name -- the plugin has no route to send on -- and
+// one condition carrying two wordings is exactly the blur the per-cause table
+// exists to prevent (D-08).
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+
 const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
-  { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: 'the plugin has no way to reach the vendor right now' },
+  { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: NO_COMMAND_TRANSPORT_CAUSE },
   { applies: hasNoFreshState, status: notAllowedInCurrentState, cause: 'the plugin has no fresh state for it' },
   { applies: isConfirmedOffline, status: notAllowedInCurrentState, cause: 'the device is confirmed offline' },
   { applies: isAlreadyActive, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'it already reads active' },
@@ -279,6 +324,60 @@ function clearRefusal(hap: API['hap'], service: Service, republish: () => void, 
   republish();
 
   publishValue(service, hap.Characteristic.On, reported ?? heldOn(hap, service));
+}
+
+// A restored service belongs to no accessory yet, so there are no control rows
+// to re-assert and nothing to republish from. The push alone is what the
+// refusal needs, and it is the half of `clearRefusal` that does the work.
+function nothingToRepublish(): void {
+  // no accessory exists to publish rows from
+}
+
+/**
+ * Refuses every press on one restored control until an accessory exists to
+ * route it.
+ *
+ * A restart the vendor cloud never answers is the window `RES-04` names, and it
+ * is unbounded: this plugin publishes nothing until the first REST inventory
+ * succeeds, and the cached Switches are served by HAP from the moment the
+ * bridge publishes. With no handler on `On`, HAP stores the written value and
+ * answers success, so a press reports that it worked, an automation watching
+ * the Switch fires, and nothing was sent. Nothing reaching the vendor is
+ * correct and stays correct here; what changes is that the owner is told.
+ *
+ * The status and the cause are the transport rule's own, because the condition
+ * is the transport rule's own: the plugin has no proven way to reach the
+ * vendor. Reusing both keeps one condition answering one status with one
+ * wording (D-07, D-08).
+ *
+ * The clearing push is not optional. HAP stores a thrown status on the
+ * characteristic and answers it to every later read, which Apple Home draws as
+ * "No Response" for the whole accessory -- the presentation this project
+ * reserves for a refused credential, which never clears itself and which an
+ * automatic retry makes worse. A restart with the cloud down clears itself the
+ * moment a poll succeeds, so it must not borrow that presentation. The push
+ * carries the value the characteristic is already serving, because there is no
+ * reported value to restore and HAP returns a stored status to `0` whatever
+ * value it is given (D-04, D-10).
+ *
+ * A write handler and nothing else. `RES-04` asks that reads answer from
+ * memory, and the one path from HomeKit to the vendor is a write, so no read
+ * handler is registered here or anywhere in this tier (D-09).
+ */
+export function bindRestoredControlRefusal(options: RestoredControlRefusalOptions): void {
+  const { hap, log, timers, service, accessoryName } = options;
+
+  // `onSet` rather than `on('set', ...)`, matching the binder: HAP warns when a
+  // characteristic carries both and ignores the event listener. It is also what
+  // makes this refusal replaceable rather than permanent -- `setHandler` is one
+  // slot, so the binder's own handler takes it over on the first publish and a
+  // recovered plugin operates its controls normally.
+  service.getCharacteristic(hap.Characteristic.On).onSet(() => {
+    timers.setTimeout(() => {
+      clearRefusal(hap, service, nothingToRepublish, undefined);
+    }, 0);
+    log.warn(`Refused ${service.displayName} on ${accessoryName}: ${NO_COMMAND_TRANSPORT_CAUSE}.`);
+  });
 }
 
 /**

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { createFakeHap } from '../../features/support/fakeHap.js';
-import { createControlBinder } from '../../src/accessories/controls.js';
+import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 
 import type { FakeHapCharacteristic, FakeHapService } from '../../features/support/fakeHap.js';
 import type { ControlBinder, ControlBinderOptions } from '../../src/accessories/controls.js';
@@ -793,5 +793,125 @@ for (const capability of ['self-test', 'alarm-mute'] as const) {
 
     // assert
     assert.deepStrictEqual({ beforeTheWrite, sends }, { beforeTheWrite: [], sends: [`${DEVICE_ID} ${capability} true`] });
+  });
+}
+
+// The accessory a restored control came back on, which is all the identity the refusal has to work
+// with: the restart passes read nothing from the accessory context, and a cache an older release
+// wrote names no device in it at all.
+const RESTORED_ACCESSORY_NAME = 'Sump Guardian';
+
+interface RestoredOverrides {
+  log?: Logging;
+  timers?: Timers;
+}
+
+// A restored control carrying the refusal, which is the shape every case below starts from. No
+// command port reaches it, and that is deliberate: the refusal takes none, so a press cannot reach
+// the vendor by any route rather than by a rule that has to hold.
+function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapService {
+  const service = switchService();
+
+  bindRestoredControlRefusal({
+    hap: HAP_NAMESPACE,
+    log: overrides.log ?? silentLog(),
+    timers: overrides.timers ?? recordingTimers().timers,
+    service: service as unknown as Service,
+    accessoryName: RESTORED_ACCESSORY_NAME,
+  });
+
+  return service;
+}
+
+// What a controller read of the control answers: the value, or the status a refusal left standing.
+// The read is the whole difference between a tile that is merely marked and one Apple Home greys
+// out, so it is driven rather than inferred from the stored status.
+function readOfSwitch(service: FakeHapService): { value: unknown; threw: unknown } {
+  try {
+    return { value: onCharacteristic(service).handleGetRequest(), threw: undefined };
+  } catch (error: unknown) {
+    return { value: undefined, threw: error };
+  }
+}
+
+test('refuses a press on a restored control and leaves the toggle where the cache left it', async () => {
+  // arrange
+  const service = refusingRestoredSwitch();
+  service.updateCharacteristic(HAP.Characteristic.On, false);
+
+  // act & assert
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  assert.deepStrictEqual(
+    { value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
+    { value: false, statusCode: NOT_ALLOWED_IN_CURRENT_STATE },
+  );
+});
+
+// The same cause the transport rule gives a live accessory, because it is the same condition: after
+// a restart the cloud has not answered, so the plugin has no route to send on. One condition with
+// two wordings is what the per-cause table exists to prevent (D-07, D-08).
+test('names the service, the accessory and the cause in the one line a restored refusal logs', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const service = refusingRestoredSwitch({ log: warningLog(warnings) });
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual(warnings, [`Refused System Self-Test on ${RESTORED_ACCESSORY_NAME}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+});
+
+// Without the clearing push the refused characteristic answers its status to every later read, which
+// Apple Home draws as "No Response" for the whole accessory -- the presentation this project
+// reserves for a refused credential, which never clears itself. A restart with the cloud down clears
+// itself the moment a poll succeeds (D-04, D-10).
+test('returns the refused control to a readable state once the clearing push has run', async () => {
+  // arrange
+  const { timers, deferrals } = recordingTimers();
+  const service = refusingRestoredSwitch({ timers });
+  service.updateCharacteristic(HAP.Characteristic.On, false);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const afterTheRefusal = readOfSwitch(service);
+  clearingPushesIn(deferrals)[0]?.run();
+
+  // assert
+  assert.deepStrictEqual(
+    { delays: deferrals.map((deferral) => deferral.delayMs), afterTheRefusal, afterTheClearingPush: readOfSwitch(service) },
+    {
+      delays: [0],
+      afterTheRefusal: { value: undefined, threw: NOT_ALLOWED_IN_CURRENT_STATE },
+      afterTheClearingPush: { value: false, threw: undefined },
+    },
+  );
+});
+
+test('leaves a restored control answering a read before any press reaches it', () => {
+  // arrange
+  const service = refusingRestoredSwitch();
+  service.updateCharacteristic(HAP.Characteristic.On, true);
+
+  // act & assert
+  assert.deepStrictEqual(readOfSwitch(service), { value: true, threw: undefined });
+});
+
+// The push carries the value the characteristic is already serving, because a restored control has
+// no reported value behind it to restore. Both held values are driven, so a push that hard-coded
+// either one fails here.
+for (const held of [true, false]) {
+  test(`returns a restored control holding ${String(held)} to that same value when the clearing push runs`, async () => {
+    // arrange
+    const { timers, deferrals } = recordingTimers();
+    const service = refusingRestoredSwitch({ timers });
+    service.updateCharacteristic(HAP.Characteristic.On, held);
+
+    // act
+    await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+    clearingPushesIn(deferrals)[0]?.run();
+
+    // assert
+    assert.deepStrictEqual(readOfSwitch(service), { value: held, threw: undefined });
   });
 }

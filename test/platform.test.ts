@@ -175,6 +175,29 @@ const HAP_NAMESPACE = HAP as unknown as API['hap'];
 // The accessory identifier the plugin derives for this device, taken from the same derivation the
 // plugin uses rather than restated as a literal.
 const ACCESSORY_UUID = HAP.uuid.generate(DEVICE_ID);
+
+// The status a restored control refuses a press with, written independently of the stand-in so a
+// drifted number fails here (D-08).
+const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
+
+// What a controller's press answered: the status a refusal threw, or `undefined` for a write HAP
+// accepted and stored. The two differ only in that answer.
+async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
+  const on = service.getCharacteristic(HAP.Characteristic.On);
+
+  if (on === undefined) {
+    throw new Error('the restored control carries no On characteristic');
+  }
+
+  try {
+    await on.handleSetRequest(true);
+
+    return undefined;
+  } catch (error: unknown) {
+    return error;
+  }
+}
+
 const SECOND_ACCESSORY_UUID = HAP.uuid.generate(SECOND_DEVICE_ID);
 
 function geminiDevice(): ApiDevice {
@@ -1023,7 +1046,9 @@ describe('configureAccessory', () => {
     const restoredAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'restored accessory' });
     when(() => restoredAccessory.UUID).thenReturn('accessory-uuid-1');
     when(() => restoredAccessory.displayName).thenReturn('Sump Pump');
-    when(() => restoredAccessory.services).thenReturn([]);
+    when(() => restoredAccessory.services)
+      .thenReturn([])
+      .times(2);
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 
@@ -1050,7 +1075,7 @@ describe('configureAccessory', () => {
       .times(2);
     when(() => restoredAccessory.services)
       .thenReturn([])
-      .times(2);
+      .times(4);
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(2);
@@ -1089,13 +1114,35 @@ describe('configureAccessory', () => {
     );
   });
 
+  // The window the restart passes exist for. HAP answers a write with no handler by storing the
+  // value and reporting success, so before this pass a press on a restored control flipped the
+  // toggle, reported that it worked, and sent nothing (RES-04, D-07).
+  test('refuses a press on every restored control, so a press before the first poll is not silently accepted (RES-04, D-07)', async () => {
+    // arrange
+    const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+    const control = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
+    control.updateCharacteristic(HAP.Characteristic.On, false);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+
+    // act
+    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+
+    // assert
+    assert.deepStrictEqual(
+      { press: await pressOutcomeOf(control), on: control.getCharacteristic(HAP.Characteristic.On)?.value },
+      { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+    );
+  });
+
   test('D-03 removes nothing from HomeKit on cache-restore alone', () => {
     // arrange
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const staleAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'stale accessory' });
     when(() => staleAccessory.UUID).thenReturn('accessory-uuid-gone');
     when(() => staleAccessory.displayName).thenReturn('Retired Pump');
-    when(() => staleAccessory.services).thenReturn([]);
+    when(() => staleAccessory.services)
+      .thenReturn([])
+      .times(2);
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 

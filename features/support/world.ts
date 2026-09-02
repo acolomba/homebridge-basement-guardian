@@ -20,7 +20,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { After, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
-import { markRestoredServicesStale } from '../../src/accessories/staleMarking.js';
+import { markRestoredServicesStale, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
@@ -576,9 +576,12 @@ export class BasementGuardianWorld extends World {
   // the launch event, and the platform puts each one in the map discovery then finds it in. On a
   // first start the cache is empty and this is the empty map it was before.
   //
-  // The marking pass is deliberately not stood in for. It is the same exported function the
-  // platform method calls, because a copy here would be a copy this harness then asserted against,
-  // and the restart behaviour is exactly the one no scenario could otherwise see (D-12).
+  // Neither restart pass is stood in for. Both are the same exported functions the platform method
+  // calls, because a copy here would be a copy this harness then asserted against, and the restart
+  // behaviour is exactly the one no scenario could otherwise see (D-12).
+  //
+  // The refusal takes the harness timers rather than the process ones, so the clearing push it arms
+  // is a deferral a scenario runs by moving its own clock.
   //
   // The accessory stand-in answers the members the plugin reads and no structural type expresses
   // that, which is the same seam the widened `api` member documents.
@@ -589,6 +592,7 @@ export class BasementGuardianWorld extends World {
       const restored = accessory as unknown as BasementGuardianPlatformAccessory;
 
       markRestoredServicesStale(restored, homebridge.api.hap);
+      refuseRestoredControls(restored, homebridge.api.hap, this.logger(), this.timers);
       accessories.set(accessory.UUID, restored);
     }
 

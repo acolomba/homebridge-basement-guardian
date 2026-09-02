@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { connect } from 'mqtt';
 
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
-import { markRestoredServicesStale, markServicesUnreadable } from './accessories/staleMarking.js';
+import { markRestoredServicesStale, markServicesUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -560,18 +560,30 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
   /**
    * Records an accessory that Homebridge restored from its cache, after
-   * withdrawing trust from every service that already reports it.
+   * withdrawing trust from every service that already reports it and refusing
+   * a press on every control it carries.
    *
    * This is the only code that runs while a restored accessory exists and no
    * fresh data does. HAP serves the cached values from the moment the bridge
    * publishes, and nothing here republishes until a REST inventory succeeds,
-   * which never happens while the vendor cloud is unreachable. Marking here
-   * rather than on the first update is what closes that window (RES-04, D-06).
+   * which never happens while the vendor cloud is unreachable. Marking and
+   * refusing here rather than on the first update is what closes that window:
+   * without the marking a tile reads as vouched for, and without the refusal a
+   * press reports success for a command that never left (RES-04, D-06, D-07).
+   *
+   * One log line covers both passes. They report on the same accessory at the
+   * same moment, and a second line would read as a second event.
    */
   configureAccessory(accessory: PlatformAccessory): void {
-    const marked = markRestoredServicesStale(accessory, this.api.hap);
+    const { hap } = this.api;
+    const marked = markRestoredServicesStale(accessory, hap);
+    const refusing = refuseRestoredControls(accessory, hap, this.log, systemTimers);
 
-    this.log.info('Loading accessory from cache:', accessory.displayName, `(${String(marked)} services no longer vouched for)`);
+    this.log.info(
+      'Loading accessory from cache:',
+      accessory.displayName,
+      `(${String(marked)} services no longer vouched for, ${String(refusing)} controls refusing presses)`,
+    );
     this.accessories.set(accessory.UUID, accessory);
   }
 }
