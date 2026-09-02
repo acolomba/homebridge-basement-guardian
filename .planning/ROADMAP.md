@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 5/5 plans executed
+**Plans**: 10 plans — 5 executed, 5 planned to close the gaps `05-VERIFICATION.md` found
 
 Plans:
 **Wave 1**
@@ -255,6 +255,28 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 05-05-PLAN.md — No threshold became a setting, the new states are documented, and the requirements table agrees with itself
+
+**Gap closure** *(planned 2026-09-02 after verification returned `gaps_found` at 1/4 success criteria)*
+
+**Wave 1**
+
+- [ ] 05-06-PLAN.md — A monitoring outage marks a scope instead of discarding what the working transport still delivers, and the broader cause wins the reason
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-07-PLAN.md — A credential refused after a healthy start reaches the terminal branch, and a shutdown tells the tier the transport is gone
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 05-08-PLAN.md — The message that proves the live path is carrying again is what restores the trust, proven with the poll parked
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 05-09-PLAN.md — A press on a restored control after a failed restart is refused by name instead of silently accepted
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 05-10-PLAN.md — The documentation, the requirement row and the phase's own truths are brought back into agreement with the code
 
 ### Phase 6: Validated Release Candidate
 

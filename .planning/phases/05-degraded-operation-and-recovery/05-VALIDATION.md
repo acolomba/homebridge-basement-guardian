@@ -98,6 +98,35 @@ qualifier from the paired mutation.**
 | TBD | TBD | — | RES-04 | — | Credential rejection is the **only** cause that does this | unit | `node --test dist-test/test/platform.test.js` | `test/platform.test.ts` (extend) | ⬜ pending |
 | TBD | TBD | — | CONF-05 | — | The degradation thresholds are not configurable | unit | `node --test dist-test/test/config.test.js` | `test/config.test.ts` (assert the resolved config's key set is unchanged) | ⬜ pending |
 
+### Gap-closure round rows (plans 05-06 to 05-10)
+
+Added 2026-09-02 after `05-VERIFICATION.md` returned `gaps_found`. Every row below states the
+behaviour as **what a basement owner must observe**, not as what the implementation does. That is the
+correction this round encodes: the first round applied every named mutation and CR-01 shipped anyway,
+because the mutations tested whether the tests could see the implemented behaviour change, not
+whether the implemented behaviour was right.
+
+| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
+| T2 | 05-06 | 1 | RES-03 | T-05-19 | A flooded pit polled on a healthy transport while the live path is silent reaches `Leak Detected = 1` in HomeKit, with `Status Active` false | e2e | `npm run test:cucumber -- --name "flooded pit reaches Apple Home"` | `features/degradedOperation.feature` | ⬜ pending |
+| T2 | 05-06 | 1 | RES-03 | T-05-21 | A field that failed family validation still publishes nothing at all | unit | `npm run test:coverage:direct -- dist-test/src/accessories/serviceCatalogue.js dist-test/test/accessories/serviceCatalogue.test.js` | `test/accessories/serviceCatalogue.test.ts` | ⬜ pending |
+| T3 | 05-06 | 1 | RES-03 | T-05-20 | Under a total transport blackout `Pump Controller Link Lost` keeps its verdict and reports `Status Active` false | e2e | `npm run test:cucumber -- --name "blind plugin vouches for no controller-link verdict"` | `features/degradedOperation.feature` | ⬜ pending |
+| T3 | 05-06 | 1 | RES-04 | T-05-22 | A press during a monitoring outage is still refused, so the write gate did not widen with the publishing predicate | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | `test/accessories/basementGuardian.test.ts` | ⬜ pending |
+| T1 | 05-06 | 1 | RES-04 | T-05-23 | A step claiming a service answers a read fails when the characteristic is absent | e2e | `npm run test:cucumber -- --name "A transport outage leaves every service readable"` | `features/support/steps/homekit.ts` | ⬜ pending |
+| T1 | 05-07 | 2 | RES-04 | T-05-24 | A credential refused after a healthy start pushes the terminal trust and logs the authentication stop, not the generic discovery line | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T1 | 05-07 | 2 | RES-04 | T-05-25 | An hour after a mid-run refusal, no inventory call, no credential call and no shadow attempt has been made | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T3 | 05-07 | 2 | RES-04 | T-05-24 | An owner who changes their vendor password while Homebridge runs finds the accessory unreadable with its readings kept | e2e | `npm run test:cucumber -- --name "after a healthy start"` | `features/degradedOperation.feature` | ⬜ pending |
+| T2 | 05-07 | 2 | RES-04 | T-05-26 | `stop()` pushes one trust whose command transport is unready, and marks no scope | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T1 | 05-08 | 3 | RES-03 | T-05-29 | A message arriving after a silence restores the trust with no clock movement and no poll | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T1 | 05-08 | 3 | RES-03 | T-05-30 | A healthy live connection produces no push per heartbeat | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T2 | 05-08 | 3 | RES-03 | T-05-32 | An identical heartbeat clears the silence while the plugin's device polling is parked at the vendor | e2e | `npm run test:cucumber -- --name "before the next poll"` | `features/degradedOperation.feature` | ⬜ pending |
+| T1 | 05-09 | 4 | RES-04 | T-05-34 | A press on a restored control after a failed restart is refused with the transport status and a named cause | unit | `npm run test:coverage:direct -- dist-test/src/accessories/controls.js dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ⬜ pending |
+| T1 | 05-09 | 4 | RES-04 | T-05-36 | A refused press leaves the control readable once the clearing push has run | unit | `npm run test:coverage:direct -- dist-test/src/accessories/controls.js dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ⬜ pending |
+| T1 | 05-09 | 4 | RES-04 | T-05-35 | The accessory's own binder replaces the refusing handler, so a recovered plugin operates its controls | unit | `npm run test:coverage:direct -- dist-test/src/accessories/staleMarking.js dist-test/test/accessories/staleMarking.test.js` | `test/accessories/staleMarking.test.ts` | ⬜ pending |
+| T2 | 05-09 | 4 | RES-04 | T-05-34 | A press on a restored control is refused, sends nothing, and leaves the control readable | e2e | `npm run test:cucumber -- --name "restored control is refused"` | `features/degradedOperation.feature` | ⬜ pending |
+| T1 | 05-09 | 4 | RES-04 | T-05-38 | The three restart-time passes share one guarded walk and the health gate reports no duplication | unit (gate) | `npm run fallow` | `.fallowrc.json` | ⬜ pending |
+| T2 | 05-10 | 5 | RES-03, RES-04 | T-05-39 | Every documentation claim about degraded operation is traceable to a passing assertion | manual | `npm run check` | `README.md`, `CHANGELOG.md` | ⬜ pending |
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test
@@ -127,6 +156,35 @@ fails, revert, confirm green.
 | Credential rejection throws on read | Push `false` instead of a `HapStatusError` |
 | Only credential rejection throws | Make the shadow-silence path push a `HapStatusError` too |
 | Thresholds not configurable | Add a knob |
+
+### Gap-closure round mutations (plans 05-06 to 05-10)
+
+Each mutation below is one a **correct** implementation survives and the shipped one fails. That is
+the difference from the first round's table, where several mutations only proved a test could see the
+implemented behaviour move.
+
+| Behaviour | Mutation that must fail it |
+|---|---|
+| A flooded poll during shadow silence reaches the tile | Point the row projection back at the un-narrowed trust predicate, so a monitoring cause withholds again |
+| A validation failure still withholds | Add `invalid` to the exempted-reason set |
+| A blackout leaves the controller-link row untrusted | Move the monitoring layer back below the controller-link layer in `distrustReasonsOf` |
+| A press is still refused during a monitoring outage | Route `reportedControlValue` through the publishing predicate |
+| A read assertion cannot pass on an absence | Assert a read for a characteristic the service does not carry, and watch the step fail by name |
+| A mid-run credential refusal reaches the terminal branch | Remove the terminal guard from `runPoll`'s catch |
+| A refusal on a credential rotation reaches the terminal branch | Remove the terminal guard from `refreshCredentials`'s catch |
+| Nothing wakes after a halt | Leave the poll loop's condition without the halted flag |
+| The scenario meets a real re-grant rather than the restart path | Remove the step that shortens the token lifetime, and watch the scenario fail for want of a refusal |
+| `stop()` tells the tier the transport is unready | Delete the push from `stop()` |
+| A shutdown marks no scope | Push both degradation members true from `stop()` |
+| A returning message restores trust with no poll | Delete the report from the arrival callback |
+| The arrival reports once per recovery | Report from the arrival unconditionally, with no latch guard |
+| An identical heartbeat clears the silence | Drive the report from a snapshot subscription instead of the arrival callback |
+| The recovery scenario cannot pass on a poll tick | Delete the arrival report and confirm the new scenario fails while the pre-existing identical-heartbeat scenario stays green |
+| A restored control refuses a press | Remove the pass's call from `configureAccessory` |
+| A refused press leaves the control readable | Drop the clearing push from the restored-control refusal |
+| Only control services gain a handler | Bind the refusal to every restored service rather than to those carrying the write surface |
+| The refusal answers the transport status | Change the refusal's status to the busy status |
+| The harness drives the real pass | Remove the pass's call from the harness stand-in for `configureAccessory` |
 
 ---
 
