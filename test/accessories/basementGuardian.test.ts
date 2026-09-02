@@ -7,6 +7,7 @@ import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
+import { markServicesUnreadable } from '../../src/accessories/staleMarking.js';
 import { geminiFamily } from '../../src/device/gemini.js';
 import { systemTimers } from '../../src/runtime/timers.js';
 
@@ -111,6 +112,7 @@ const ALARM_MUTE_ROW = 'Alarm Mute';
 
 // The statuses a refused write answers, written out here rather than read off the namespace (D-04).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
+const SERVICE_COMMUNICATION_FAILURE = -70402;
 const RESOURCE_BUSY = -70403;
 
 // Every published service that reads the `fault` scope, whether or not it is filed under it.
@@ -236,6 +238,10 @@ const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSi
 const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
 const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
 const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false };
+// What the runtime reports once the vendor has refused the account credentials. The command
+// transport is unready because the runtime has stopped for good, which is the shape `haltMonitoring`
+// answers and the only shape this member ever arrives in (D-10, D-13).
+const CREDENTIALS_REFUSED: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
 
 // The cause a refusal names when the runtime has no proven way to reach the vendor. Written out
 // here rather than read off the binder, so the accessory case fails if the two halves of the
@@ -366,6 +372,15 @@ function recordingStore(): { store: AccessoryStore; persisted: () => number } {
     },
     persisted: () => persists,
   };
+}
+
+// Every macrotask a case has collected, run in the order the plugin armed them. A handler whose
+// request was already resolved returns on its own, so the whole list is safe to run and a case
+// states "whatever the plugin deferred" rather than picking an index it worked out by hand.
+function runEvery(deferred: readonly (() => void)[]): void {
+  for (const run of deferred) {
+    run();
+  }
 }
 
 // A deliberately deferred variant of the same transition, private to this module and never a
@@ -628,6 +643,63 @@ function publishedValues(accessory: FakeAccessory): ReadonlyMap<string, unknown>
 // HomeKit shows for each.
 function movedSince(before: ReadonlyMap<string, unknown>, accessory: FakeAccessory): readonly string[] {
   return [...publishedValues(accessory)].filter(([name, value]) => before.get(name) !== value).map(([name]) => name.split(' / ').at(-1) ?? name);
+}
+
+// What a controller reading one service's trust report meets, which is what an owner meets: the
+// value, or the status HAP stored on the characteristic and throws ahead of the value. It is read
+// through the get path rather than off a flag, because the refusal is the whole thing the owner is
+// looking at (D-10).
+function statusActiveReadOf(accessory: FakeAccessory, displayName: string): unknown {
+  try {
+    return serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.StatusActive)?.handleGetRequest();
+  } catch (thrown: unknown) {
+    return `refused ${String(thrown)}`;
+  }
+}
+
+// The same read over both controls and one sensor beside them. A control write that reached past
+// the controls would show here, and a claim about "both controls" made from one of them would not
+// be a claim about the pair (CR-02).
+function trustReportReadsOf(accessory: FakeAccessory): Record<string, unknown> {
+  return {
+    selfTest: statusActiveReadOf(accessory, SELF_TEST_ROW),
+    alarmMute: statusActiveReadOf(accessory, ALARM_MUTE_ROW),
+    flood: statusActiveReadOf(accessory, 'Sump Pit Flood'),
+  };
+}
+
+// A published accessory whose deferred work is held rather than run, so a case fires the macrotask
+// a refused write recorded at the moment it chooses. Every control request ends by arming one.
+function haltableAccessory(commands: CommandPort): {
+  accessory: FakeAccessory;
+  basementGuardianAccessory: BasementGuardianAccessory;
+  deferred: (() => void)[];
+} {
+  const accessory = accessoryStandIn();
+  const deferred: (() => void)[] = [];
+  const timers: Timers = {
+    ...recordingTimers().timers,
+    setTimeout: (handler) => {
+      deferred.push(handler);
+
+      return deferred.length - 1;
+    },
+  };
+  const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false, alarm_audio_muted: false }, { timers, commands });
+  basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+  return { accessory, basementGuardianAccessory, deferred };
+}
+
+// The platform's own two acts on a refused credential, in the order the platform makes them: every
+// accessory is told what the runtime now knows, and only then is every trust report made
+// unreadable. The order is load-bearing rather than incidental -- an ordinary push clears a stored
+// status, so a status pushed first would be undone by the boolean that followed it. The marking runs
+// through the pass the plugin exports rather than through a copy of it, so a case cannot drift from
+// what an owner is actually shown (D-10).
+function refuseTheCredentials(accessory: FakeAccessory, basementGuardianAccessory: BasementGuardianAccessory): void {
+  basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+  markServicesUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 }
 
 // The `On` characteristic of a published Switch, which is where a controller write enters.
@@ -2264,6 +2336,79 @@ describe('createBasementGuardianAccessory', () => {
       },
       { statusCode: 0, on: false, statusActive: true },
     );
+  });
+
+  // A refused credential is the one failure this plugin presents as No Response, because it never
+  // clears itself and only the owner can act on it. Every way a control request can end arms a push
+  // that returns a refused characteristic to a normal read, and one press therefore erased that
+  // message from both controls at once and left them claiming the plugin vouched for what they
+  // showed. The three cases below drive the three doors -- the press the plugin refuses by itself,
+  // the request that outlives its window, and the refusal the vendor answers -- because they reach
+  // the guard through different callers and a guard proved on one is not proved on the others. Each
+  // reads what a controller reads (CR-02, D-10).
+  const STILL_REFUSED = { selfTest: 'refused -70402', alarmMute: 'refused -70402', flood: 'refused -70402' };
+
+  test('CR-02 leaves both controls refusing reads when the press it refused itself runs its clearing push', async () => {
+    // arrange
+    const { commands, sends } = recordingCommands();
+    const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
+    refuseTheCredentials(accessory, basementGuardianAccessory);
+
+    // act
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+    runEvery(deferred);
+
+    // assert
+    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [] });
+  });
+
+  test('CR-02 leaves both controls refusing reads when a request that outlived its window runs its clearing push', async () => {
+    // arrange
+    const { commands, sends } = recordingCommands();
+    const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    refuseTheCredentials(accessory, basementGuardianAccessory);
+    runEvery(deferred);
+
+    // assert
+    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [`${DEVICE_ID} self-test true`] });
+  });
+
+  test('CR-02 leaves both controls refusing reads when the vendor refusal that answered a press runs its clearing push', async () => {
+    // arrange
+    const sends: string[] = [];
+    const commands: CommandPort = {
+      send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
+        sends.push(`${deviceId} ${capability} ${String(requested)}`);
+
+        return Promise.resolve({ accepted: false, failure: 'vendor-error' });
+      },
+    };
+    const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
+
+    // act
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, SERVICE_COMMUNICATION_FAILURE);
+
+        return true;
+      },
+    );
+    refuseTheCredentials(accessory, basementGuardianAccessory);
+    runEvery(deferred);
+
+    // assert
+    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [`${DEVICE_ID} self-test true`] });
   });
 
   test('D-03 publishes the alarm mute switch on the first update even though alarm_audio_muted never decoded', () => {

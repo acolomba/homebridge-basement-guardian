@@ -616,7 +616,29 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     deviceId,
     offlineConfirmed,
     commandTransportReady,
+    // A refused credential ends every observation this runtime will ever make, so a refused write
+    // has no changed fact to re-assert -- and re-asserting one would push an ordinary value over
+    // the single characteristic carrying the one presentation the owner has to act on, which
+    // returns it to a readable, fully vouched-for state that nothing afterwards ever corrects.
+    // Answering nothing here is what `bindRestoredControlRefusal` already does from the other side:
+    // it hands the binder a callback that republishes nothing, for the same reason, and it is the
+    // one refusal path that never erased the marking. The `On` push the binder makes after this
+    // callback still runs and still should, because `On` carries no trust report: the press's own
+    // refusal clears while the halt stands (D-10, D-13).
+    //
+    // The guard belongs on this callback rather than inside the binder's clearing push, because a
+    // request that outlives its window calls the callback directly and never reaches that push.
+    // Closing the callback closes the locally refused press, the expired request and the vendor's
+    // own refusal together, and any later path through the binder by construction.
+    //
+    // `republishPublishedRows`, `publishRows` and `publishRow` are deliberately left unguarded. The
+    // halt's own `markMonitoring` must still push its trust report, because that push is what puts
+    // the truthful `false` underneath the status, and the platform re-marks straight after it.
     republish: () => {
+      if (monitoring.credentialsRejected) {
+        return;
+      }
+
       republishControlRows(controls.pending);
     },
   });

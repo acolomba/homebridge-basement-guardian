@@ -548,6 +548,59 @@ Feature: Degraded monitoring
     Then the "System Self-Test" service still answers no read for "Status Active"
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
+  Scenario: A press after a refused credential leaves both controls still refusing reads
+    The scenario above watches messages arrive. This one watches the owner. A greyed-out tile is
+    alarming, and the first thing anybody does with an alarming switch is press it. The plugin has
+    stopped for good and only the owner can restart it, which is the whole reason this one failure
+    is allowed to grey the accessory out at all. Pressing a switch must not be what hides the
+    message telling them what to do.
+
+    The press itself is refused, correctly, because the plugin has no way to reach the vendor. What
+    the press also does is arm a push that clears the refusal it just stored, and that push
+    republishes the control rows, and a republished value returns a refused characteristic to a
+    normal read. One press therefore returned both control switches to a fully vouched-for read on
+    a plugin that will never observe anything again, and left them there, because nothing pushes
+    afterwards.
+
+    The clock advance is a step of its own rather than scenery. The plugin arms the clearing push
+    for the next macrotask, so a scenario that presses and reads without advancing reads the moment
+    before the damage and passes against the defect.
+
+    Both switches are pressed, so the claim rests on the pair rather than on one of them, and the
+    flood sensor is read after each press to show that a press on a control does not reach past the
+    control either. The readings stay where they were: the refusal marks the accessory, it does not
+    empty it.
+
+    Given a short poll interval
+    Given the tenant issues tokens that expire in 3660 seconds
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    Given the tenant refuses the account credentials
+    When the scenario clock moves forward by 120 seconds
+    Then the "System Self-Test" service answers no read for "Status Active"
+    When a controller presses the "System Self-Test" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command
+    When the scenario clock moves forward by 1 seconds
+    Then the "System Self-Test" service still answers no read for "Status Active"
+    Then the "Alarm Mute" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+    When a controller presses the "Alarm Mute" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command
+    When the scenario clock moves forward by 1 seconds
+    Then the "Alarm Mute" service still answers no read for "Status Active"
+    Then the "System Self-Test" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
   Scenario: A transport outage leaves every service readable
     Every other failure the plugin can have clears itself once the transport returns, so the tile
     stays readable and says only that the plugin cannot currently vouch for what it shows. Greying
