@@ -289,6 +289,19 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
+  // Whether a loop that has just waited may run again. Both ends are asked
+  // because the halt can be raised by this loop's own body and by another loop
+  // while this one is waiting, and only the second read sees the latter.
+  //
+  // This is not tidiness. The auth client throws before any request leaves once
+  // it holds a terminal reason, so a waking loop sends nothing and does not
+  // extend the vendor's thirty-day block -- but a runtime that will never
+  // attempt anything again must not look like one that is still trying
+  // (D-13, D-10).
+  async function waitWhileRunning(delayMs: number): Promise<boolean> {
+    return !halted && (await waitFor(delayMs)) && !halted;
+  }
+
   // The final check re-fetches the inventory once more, immediately before a
   // removal commits, closing the race where a device reappears between the
   // second confirming poll and the removal decision (D-029). Its own failure
@@ -394,10 +407,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // What the runtime pushes: the two facts the projection tracks, plus the two
   // it cannot answer because it sees neither the lifecycle nor authentication.
   //
-  // `credentialsRejected` is `halted` and nothing else. `halted` is set in
-  // exactly one place -- the terminal branch in `launchFailure` -- so reading it
-  // here rather than raising a second flag beside it is what keeps the fact
-  // HomeKit presents and the fact the runtime acts on from ever drifting apart
+  // `credentialsRejected` is `halted` and nothing else. `halted` is assigned in
+  // exactly one function -- `haltOnTerminalAuthFailure`, which the launch, the
+  // poll loop and the rotation loop all route through -- so reading it here
+  // rather than raising a second flag beside it is what keeps the fact HomeKit
+  // presents and the fact the runtime acts on from ever drifting apart
   // (D-13, D-10).
   function monitoringTrustNow(): MonitoringTrust {
     return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow(), credentialsRejected: halted };
@@ -419,6 +433,42 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
 
     options.onMonitoringHealth(trust);
+  }
+
+  /**
+   * Answers whether this error was the one failure the project treats as final,
+   * and performs the whole terminal act when it was.
+   *
+   * A refused credential does not only arrive at launch. A password changed at
+   * the vendor, or a block applied to the account, arrives at whichever loop
+   * asks next, so the act lives here and each caller reads as one guard clause
+   * rather than as a copy of it.
+   *
+   * Nothing polls, refreshes, or connects after this, so the runtime says
+   * monitoring has stopped rather than leaving a working degraded path
+   * standing, and records the stop so the recovery discipline learns of it. The
+   * trust is pushed rather than reported, because the live-reporting line
+   * describes an observation this act never made.
+   *
+   * Meeting it a second time performs nothing further and still answers `true`.
+   * Two loops can be in flight against a tenant that has already said no, and
+   * the owner must not be told twice nor the accessory tier pushed twice
+   * (D-13, D-10, D-07).
+   */
+  function haltOnTerminalAuthFailure(error: unknown): boolean {
+    if (!(error instanceof AuthRejectedError || error instanceof AuthHaltedError)) {
+      return false;
+    }
+
+    if (halted) {
+      return true;
+    }
+
+    halted = true;
+    options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
+    options.onMonitoringHealth(monitoringTrustNow());
+
+    return true;
   }
 
   // Whether the poll is succeeding is one of the facts the path is derived
@@ -550,7 +600,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function retryShadow(): Promise<void> {
     retryingShadow = true;
 
-    while (shadow === undefined && !stopped && (await waitFor(connectRetry.nextDelayMs()))) {
+    while (shadow === undefined && !stopped && (await waitWhileRunning(connectRetry.nextDelayMs()))) {
       await attemptShadow();
     }
 
@@ -592,8 +642,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       options.failures.recordSuccess(ROTATION);
 
       return rotationDelayMs(response.credentials.Expiration, options.clock.now(), options);
-    } catch {
-      if (!root.signal.aborted) {
+    } catch (error: unknown) {
+      // A terminal authentication answer is not a rotation failure. Recorded as
+      // one it would promise another attempt, for the one failure that must
+      // never be attempted again (D-13, D-03).
+      if (!root.signal.aborted && !haltOnTerminalAuthFailure(error)) {
         options.failures.recordFailure(ROTATION, ROTATION_FAILED);
       }
 
@@ -606,7 +659,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function runCredentials(): Promise<void> {
     let delayMs = await refreshCredentials();
 
-    while (await waitFor(delayMs)) {
+    while (await waitWhileRunning(delayMs)) {
       delayMs = await refreshCredentials();
     }
   }
@@ -627,6 +680,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         return;
       }
 
+      // A terminal authentication answer is not a poll failure. Reaching the
+      // generic device-discovery line below would name a cause that did not
+      // happen, and an owner acts on a diagnostic (D-13, D-03).
+      if (haltOnTerminalAuthFailure(error)) {
+        return;
+      }
+
       // A failed request changes no stored snapshot and marks nothing
       // disconnected: a monitoring-path failure and a device-reported
       // disconnection are separate conditions (D-014).
@@ -635,7 +695,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   }
 
   async function runPolls(): Promise<void> {
-    while (await waitFor(options.pollIntervalMs)) {
+    while (await waitWhileRunning(options.pollIntervalMs)) {
       await runPoll();
     }
   }
@@ -659,22 +719,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return undefined;
     }
 
-    // Nothing polls, refreshes, or connects after this, so the runtime says
-    // monitoring has stopped rather than leaving a working degraded path
-    // standing, and records the stop so the recovery discipline learns of the
-    // one failure the project treats as final (D-13).
-    if (error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
-      halted = true;
-      options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
-      // The one failure this project treats as final, so this is the only push
-      // the accessory tier will ever get from this run: no poll loop starts
-      // after it and nothing reports again. Without it the tier would go on
-      // answering a press from whatever the last report left, and a run that
-      // halted at its first grant left nothing at all. The trust is pushed
-      // rather than reported, because the live-reporting line describes an
-      // observation this run never made (D-13, D-07).
-      options.onMonitoringHealth(monitoringTrustNow());
-
+    // A run that halted at its first grant reaches discovery with nothing built,
+    // so the push the terminal act makes is the only one the accessory tier
+    // will ever get from it, and nothing is scheduled behind it (D-13).
+    if (haltOnTerminalAuthFailure(error)) {
       return undefined;
     }
 
