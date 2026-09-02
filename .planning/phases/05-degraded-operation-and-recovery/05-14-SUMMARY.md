@@ -470,3 +470,13 @@ Two things the next plan's author should know:
 ---
 *Phase: 05-degraded-operation-and-recovery*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- `src/runtime/monitoringHealth.ts`, `src/runtime/accountRuntime.ts`, `src/device/state.ts` — FOUND
+- `features/degradedOperation.feature` — FOUND
+- `test/runtime/monitoringHealth.test.ts`, `test/device/state.test.ts`, `test/runtime/accountRuntime.test.ts` — FOUND
+- `.planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md` — FOUND, `grep -c "05-14"` answers 22 against a measured baseline of 9 and a floor of 20
+- Commits `8ee1c7f`, `2d591bc`, `5a1e0b2`, `585c82b` — all four FOUND in `git log`, each confirmed by `git show --name-only --format="" HEAD` at the time it was made
+- `git status --porcelain -- features/support/` — empty
+- `npm run check` — exit 0 on `node` v26.7.0 and `/usr/bin/node` v22.22.2: 1358 unit tests, 99 scenarios, 1061 steps, 100/100/100 coverage
