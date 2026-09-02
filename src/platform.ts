@@ -20,6 +20,7 @@ import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
 import type { AccessoryContext } from './persistence/accessoryContext.js';
 import type { CommandPort } from './runtime/commandPort.js';
+import type { MonitoringTrust } from './runtime/monitoringHealth.js';
 import type { Timers } from './runtime/timers.js';
 import type { API, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig, UnknownContext } from 'homebridge';
 
@@ -349,6 +350,26 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
       // built here (D-024).
       context.log.error(`Skipping ${deviceId} on this inventory; every other device still updates.`, error);
     }
+  }
+}
+
+/**
+ * Applies the account-wide monitoring trust to every accessory this plugin run
+ * publishes.
+ *
+ * The fact is account-wide: one poll loop and one shadow connection per
+ * account, not one per device, so every accessory hears the same answer and
+ * none of them is left reading as current while the plugin cannot see it
+ * (D-02).
+ *
+ * Exported for the reason `registerDiscoveredDevices` is. The Cucumber harness
+ * stands in for the platform, so a fan-out living only inside the platform's
+ * own callback would be copied into the harness, and every scenario would then
+ * assert against the copy rather than against what a bridge runs (D-12).
+ */
+export function applyMonitoringHealth(context: DiscoveryContext, trust: MonitoringTrust): void {
+  for (const basementGuardianAccessory of context.basementGuardianAccessories.values()) {
+    basementGuardianAccessory.markMonitoring(trust);
   }
 }
 

@@ -30,3 +30,25 @@ Feature: Degraded monitoring
     When the broker accepts connections
     Then the monitoring path is "shadow-and-poll"
     Then the log announces the recovery once
+
+  Scenario: Shadow silence withdraws trust while polling continues
+    A shadow that stops speaking costs more than a shadow that never opened. Polls keep arriving, so
+    every tile still reads normal, while a pump run lasting seconds begins and ends between two of
+    them and is never seen at all. The plugin therefore stops vouching for what it can no longer
+    watch, and keeps vouching for the one verdict polling still sources.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    When the device publishes these heartbeat fields:
+      | water_level | 2 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 2 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the "Sump Pit Flood" sensor is not activated
+    Then the "Basement Guardian Offline" service reports "Status Active" as "true"
+    Then the "Basement Guardian Offline" sensor is not activated

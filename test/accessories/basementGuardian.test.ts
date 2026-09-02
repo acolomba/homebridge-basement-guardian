@@ -21,6 +21,7 @@ import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js
 import type { DeviceSnapshot } from '../../src/device/state.js';
 import type { AccessoryStore } from '../../src/runtime/accessoryStore.js';
 import type { CommandPort } from '../../src/runtime/commandPort.js';
+import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { Timers } from '../../src/runtime/timers.js';
 import type { API, Logging, PlatformAccessory } from 'homebridge';
 
@@ -164,16 +165,31 @@ void ({
   services: [{ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', serviceUuid: LEAK_SENSOR_UUID, name: 'Sump Pit Flood' }],
   untrusted: [],
   update: () => undefined,
+  markMonitoring: () => undefined,
 } satisfies BasementGuardianAccessory);
 
 // @ts-expect-error the accessory is seeded by the immutable vendor identifier
-void ({ services: [], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
+void ({ services: [], untrusted: [], update: () => undefined, markMonitoring: () => undefined } satisfies BasementGuardianAccessory);
 // @ts-expect-error state reaches HomeKit through the update entry point alone
-void ({ deviceId: DEVICE_ID, services: [], untrusted: [] } satisfies BasementGuardianAccessory);
-// @ts-expect-error a published service is a keyed descriptor, not a bare name
-void ({ deviceId: DEVICE_ID, services: ['sump-pit-flood'], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
-// @ts-expect-error a degraded scope is a keyed descriptor, not a bare name
-void ({ deviceId: DEVICE_ID, services: [], untrusted: ['water'], update: () => undefined } satisfies BasementGuardianAccessory);
+void ({ deviceId: DEVICE_ID, services: [], untrusted: [], markMonitoring: () => undefined } satisfies BasementGuardianAccessory);
+void ({
+  deviceId: DEVICE_ID,
+  // @ts-expect-error a published service is a keyed descriptor, not a bare name
+  services: ['sump-pit-flood'],
+  untrusted: [],
+  update: () => undefined,
+  markMonitoring: () => undefined,
+} satisfies BasementGuardianAccessory);
+void ({
+  deviceId: DEVICE_ID,
+  services: [],
+  // @ts-expect-error a degraded scope is a keyed descriptor, not a bare name
+  untrusted: ['water'],
+  update: () => undefined,
+  markMonitoring: () => undefined,
+} satisfies BasementGuardianAccessory);
+// @ts-expect-error the account-wide monitoring trust is how a lost path reaches the published rows
+void ({ deviceId: DEVICE_ID, services: [], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
 
 // A full, legal Gemini telemetry payload. The trust-scope cases below run the real adapter rather
 // than a stand-in, because the claim they check is about the whole chain -- a wire field, the scope
@@ -201,6 +217,16 @@ const GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
 // Every `TrustScope` member, written out here rather than imported, so the accessory's own list and
 // the union cannot drift apart without a case saying so.
 const EVERY_TRUST_SCOPE: readonly TrustScope[] = ['alarm-mute', 'battery', 'connectivity', 'fault', 'power', 'pump', 'self-test', 'water'];
+
+// Every scope in the stable order `untrusted` exposes them, written out here so
+// a case naming the whole set does not read it back off the production list.
+const EVERY_SCOPE_IN_ORDER: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
+
+// The two transport facts, as the account runtime reports them.
+const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSilent: false };
+const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true };
+const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false };
+const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true };
 
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
@@ -555,6 +581,35 @@ function valueOf(accessory: FakeAccessory, displayName: string, characteristic: 
 
 function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
   return valueOf(accessory, displayName, HAP.Characteristic.StatusActive);
+}
+
+// The scopes the accessory currently cannot vouch for, each with the reason it
+// gives, so a case states the whole answer rather than one property of it.
+function distrustOf(basementGuardianAccessory: BasementGuardianAccessory): readonly string[] {
+  return basementGuardianAccessory.untrusted.map((scope) => `${scope.scope} ${scope.reason}`);
+}
+
+// Every characteristic the accessory has published, keyed by the service and
+// the characteristic HomeKit shows, so a case compares the whole published
+// surface across a transition instead of one value it chose in advance.
+function publishedValues(accessory: FakeAccessory): ReadonlyMap<string, unknown> {
+  const values = new Map<string, unknown>();
+
+  for (const row of CATALOGUE) {
+    const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+
+    for (const characteristic of service?.characteristics ?? []) {
+      values.set(`${row.displayName} / ${characteristic.displayName}`, characteristic.value);
+    }
+  }
+
+  return values;
+}
+
+// Which published characteristics moved across a transition, by the name
+// HomeKit shows for each.
+function movedSince(before: ReadonlyMap<string, unknown>, accessory: FakeAccessory): readonly string[] {
+  return [...publishedValues(accessory)].filter(([name, value]) => before.get(name) !== value).map(([name]) => name.split(' / ').at(-1) ?? name);
 }
 
 // The `On` characteristic of a published Switch, which is where a controller write enters.
@@ -2310,6 +2365,171 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(sends, []);
+  });
+
+  test('withdraws every scope but connectivity when only the shadow has gone quiet', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+
+    // act
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // assert
+    assert.deepStrictEqual(
+      distrustOf(basementGuardianAccessory),
+      DEGRADED_SCOPES.map((scope) => `${scope} unreachable`),
+    );
+  });
+
+  test('withdraws connectivity alone when only the polling path is degraded', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+
+    // act
+    basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+    // assert
+    assert.deepStrictEqual(distrustOf(basementGuardianAccessory), ['connectivity unreachable']);
+  });
+
+  test('withdraws every scope when both transports are lost', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_LOST);
+
+    // assert
+    assert.deepStrictEqual(
+      distrustOf(basementGuardianAccessory),
+      EVERY_SCOPE_IN_ORDER.map((scope) => `${scope} unreachable`),
+    );
+  });
+
+  test('restores every scope once both transports report themselves working again', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_LOST);
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // assert
+    assert.deepStrictEqual(distrustOf(basementGuardianAccessory), []);
+  });
+
+  test('leaves a scope untrusted for its own failed field saying so while a lost path claims the rest', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const violations = [{ field: 'water_level', reason: 'missing' as const, scope: 'water' as const }];
+    const family = fakeFamily({ validate: () => ({ valid: false, violations }), decode: () => decodedState(true) });
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family }) });
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY }), 'poll');
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_LOST);
+
+    // assert
+    assert.deepStrictEqual(
+      distrustOf(basementGuardianAccessory),
+      EVERY_SCOPE_IN_ORDER.map((scope) => (scope === 'water' ? 'water invalid' : `${scope} unreachable`)),
+    );
+  });
+
+  test('deactivates the flood sensor while leaving the offline adapter vouched for when the shadow goes quiet', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+
+    // act
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        flood: statusActiveOf(accessory, 'Sump Pit Flood'),
+        offline: statusActiveOf(accessory, 'Basement Guardian Offline'),
+        offlineState: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState),
+      },
+      { flood: false, offline: true, offlineState: CONTACT_DETECTED },
+    );
+  });
+
+  test('retains every published value across a lost monitoring path and moves the trust flag alone', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    const before = publishedValues(accessory);
+
+    // act
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // assert
+    assert.deepStrictEqual(new Set(movedSince(before, accessory)), new Set(['Status Active']));
+  });
+
+  test('republishes nothing when the monitoring trust it is handed is the one it already holds', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    const service = serviceOf(accessory, 'Sump Pit Flood');
+    service.updateCharacteristic(HAP.Characteristic.StatusActive, USER_RENAME);
+    const before = publishedValues(accessory);
+
+    // act
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // assert
+    assert.deepStrictEqual(movedSince(before, accessory), []);
+  });
+
+  test('explains no degradation when the payload never stopped validating', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = geminiAccessory(accessory, {}, { log });
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: ONE_POLL_LATER_MS }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, []);
+  });
+
+  test('freezes the moment trustworthy controller data last arrived for as long as the monitoring path is lost', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
+
+    // assert
+    assert.strictEqual(valueOf(accessory, CONTROLLER_LINK_ROW, ControllerDataLastTrustedAt), RECORD_RECEIVED_AT_ISO);
+  });
+
+  test('keeps a lost monitoring path withdrawn across the polls that arrive during it', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: ONE_POLL_LATER_MS }), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { flood: statusActiveOf(accessory, 'Sump Pit Flood'), distrust: distrustOf(basementGuardianAccessory) },
+      { flood: false, distrust: DEGRADED_SCOPES.map((scope) => `${scope} unreachable`) },
+    );
   });
 
   for (const module of ACCESSORY_MODULES) {

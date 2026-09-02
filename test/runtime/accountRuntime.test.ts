@@ -20,11 +20,12 @@ import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
 import type { BgConfig } from '../../src/config.js';
-import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceStateStore, ReportedPatch } from '../../src/device/state.js';
 import type { SecretRole } from '../../src/logging.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { Clock } from '../../src/runtime/clock.js';
+import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { LogLevel, Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
 
@@ -33,6 +34,15 @@ const OTHER_DEVICE_ID = 'account-1_serial-2';
 const START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
 const ONE_HOUR_MS = 3_600_000;
 const POLL_INTERVAL_MS = 900_000;
+
+// A poll interval far below the shadow-silence window, so a case about the REST
+// failure run drives several polls without the silence window opening under it.
+const FAST_POLL_INTERVAL_MS = 1_000;
+
+// One device heartbeat, and the run of silence two of them make. Written as the
+// measured figures rather than imported, so a projection that halved the window
+// does not agree with an expectation built the same wrong way.
+const HEARTBEAT_MS = 898_000;
 const THROTTLE_RETRY_MS = 1_800_000;
 
 // The one actionable line a degraded monitoring path produces, restated here so
@@ -267,6 +277,8 @@ interface Harness {
   removed: string[];
   /** One entry per command the runtime sent, in send order. */
   commandRequests: CommandRequest[];
+  /** One entry per monitoring-trust report the runtime pushed, in push order. */
+  monitoringHealth: MonitoringTrust[];
   advance: (ms: number) => Promise<void>;
 }
 
@@ -300,6 +312,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const trustworthyInventories: string[][] = [];
   const removed: string[] = [];
   const commandRequests: CommandRequest[] = [];
+  const monitoringHealth: MonitoringTrust[] = [];
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
@@ -374,6 +387,9 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     onDeviceRemoved: (deviceId: string): void => {
       removed.push(deviceId);
     },
+    onMonitoringHealth: (trust: MonitoringTrust): void => {
+      monitoringHealth.push(trust);
+    },
     clock,
     log,
   });
@@ -394,12 +410,31 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     trustworthyInventories,
     removed,
     commandRequests,
+    monitoringHealth,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
       await settle();
     },
   };
+}
+
+// The shadow options the runtime handed its first connection, which is where
+// every arriving message enters the runtime.
+function shadowOptionsOf(shadows: readonly ShadowRecorder[]): ShadowRuntimeOptions {
+  const shadow = shadows.at(0);
+
+  if (shadow === undefined) {
+    throw new Error('the runtime opened no shadow connection');
+  }
+
+  return shadow.options;
+}
+
+// One heartbeat as the shadow client routes it. Its content is beside the point:
+// arrival alone is what proves the live path is still carrying messages.
+function heartbeatPatch(): ReportedPatch {
+  return { data: { water_level: 1 }, state: undefined, version: undefined };
 }
 
 function countOf(logged: readonly string[], level: string): number {
@@ -1338,6 +1373,77 @@ describe('the degraded monitoring path', () => {
     );
   });
 
+  test('reports the polling path degraded on the second consecutive failure and trusted again on the next success', async (t) => {
+    // arrange
+    const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const { runtime, monitoringHealth, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([geminiDevice()])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      monitoringHealth.map((trust) => trust.restDegraded),
+      [false, false, true, false],
+    );
+  });
+
+  test('reports nothing for a poll a shutdown aborted', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await runtime.stop();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false }]);
+  });
+
+  test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+
+    // act
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      monitoringHealth.map((trust) => trust.shadowSilent),
+      [false, false, true],
+    );
+  });
+
+  test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    await advance(HEARTBEAT_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      monitoringHealth.map((trust) => trust.shadowSilent),
+      [false, false, false],
+    );
+  });
+
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
     // arrange
     const { runtime, calls, advance } = harness(t, {
@@ -1504,6 +1610,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     registerSecret: () => undefined,
     onTrustworthyInventory: () => undefined,
     onDeviceRemoved: () => undefined,
+    onMonitoringHealth: () => undefined,
     clock,
     log,
   });
@@ -1762,6 +1869,82 @@ describe('createAccountRuntimeFromConfig', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: credentialRequestCount(requests) }, { beforeDue: 1, afterDue: 2 });
+  });
+
+  test('uses a no-op monitoring-health listener when the caller supplies none', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    stubCloud(t);
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      registry: createFamilyRegistry(),
+      storagePath,
+      clock: { now: () => START_TIME },
+      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      connect: () => {
+        throw new Error('no socket expected');
+      },
+      createSalt: () => 'salt-1',
+    });
+
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    await runtime.start();
+    await settle();
+
+    // act & assert
+    await assert.doesNotReject(async () => {
+      t.mock.timers.tick(POLL_INTERVAL_MS);
+      await settle();
+    });
+  });
+
+  test('reports the monitoring trust to the listener the caller supplies', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    stubCloud(t);
+    const reported: MonitoringTrust[] = [];
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
+
+    t.after(async () => {
+      await rm(storagePath, { recursive: true, force: true });
+    });
+
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      registry: createFamilyRegistry(),
+      storagePath,
+      clock: { now: () => START_TIME },
+      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      connect: () => {
+        throw new Error('no socket expected');
+      },
+      createSalt: () => 'salt-1',
+      onMonitoringHealth: (trust: MonitoringTrust): void => {
+        reported.push(trust);
+      },
+    });
+
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false }]);
   });
 
   test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {

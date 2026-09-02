@@ -58,6 +58,7 @@ import type { FamilyRegistry } from '../device/registry.js';
 import type { DeviceSnapshot } from '../device/state.js';
 import type { AccessoryStore } from '../runtime/accessoryStore.js';
 import type { CommandPort } from '../runtime/commandPort.js';
+import type { MonitoringTrust } from '../runtime/monitoringHealth.js';
 import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
@@ -99,6 +100,18 @@ export interface BasementGuardianAccessory {
    * cannot interleave and a suppression cannot be observed half-applied.
    */
   update(snapshot: DeviceSnapshot, source: SnapshotSource): void;
+  /**
+   * Applies what the plugin can currently say about its own ability to observe
+   * this account.
+   *
+   * A lost monitoring path is a fact about the plugin rather than about the
+   * device, so it withdraws trust and publishes no value of its own: every
+   * characteristic keeps the last reading this accessory vouched for and only
+   * the vouching stops. It never activates an adapter that asserts a device
+   * condition, because the plugin seeing less is not the device saying
+   * anything (D-01, D-02, D-014).
+   */
+  markMonitoring(trust: MonitoringTrust): void;
 }
 
 /** Everything the accessory factory needs, by injection. */
@@ -193,6 +206,12 @@ const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKin
 // which is still answering (D-11, RES-02).
 const NON_CONNECTIVITY_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
 
+// The three sets a monitoring failure can withdraw, beside the empty one a
+// healthy pair of transports withdraws.
+const EVERY_SCOPE: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES);
+const CONNECTIVITY_SCOPE: ReadonlySet<TrustScope> = new Set<TrustScope>(['connectivity']);
+const NO_SCOPES: ReadonlySet<TrustScope> = new Set<TrustScope>();
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -268,13 +287,37 @@ function isControllerLinkLost(decoded: unknown): boolean {
   return isRecord(fault) && fault.controllerLinkPresent === false;
 }
 
-// A failed field and a lost controller link are different failures, so they
-// carry different reasons and neither overwrites the other: a scope already
-// untrusted because its own field violated keeps saying so, and the lost link
-// adds the scopes that had nothing wrong with them. `connectivity` is left out
+// Which scopes an account-wide monitoring failure withdraws, which is not the
+// same set for the two transports.
+//
+// Shadow silence spares `connectivity`: a REST poll still sources that claim,
+// and withdrawing it would deactivate the one adapter still being fed. A
+// degraded poll withdraws `connectivity` as well, because then nothing sources
+// it and a frozen confirmation run would go on reading as current, which is the
+// false normal the narrowing exists to close. Both down withdraws everything
+// (D-02, D-04).
+function monitoringDegradedScopes(trust: MonitoringTrust): ReadonlySet<TrustScope> {
+  if (trust.shadowSilent) {
+    return trust.restDegraded ? EVERY_SCOPE : NON_CONNECTIVITY_SCOPES;
+  }
+
+  return trust.restDegraded ? CONNECTIVITY_SCOPE : NO_SCOPES;
+}
+
+// A failed field, a lost controller link, and a lost monitoring path are three
+// different failures, so they carry different reasons and none overwrites
+// another: a scope already untrusted because its own field violated keeps
+// saying so, and each broader cause adds only the scopes that had nothing wrong
+// with them. `connectivity` is left out of the controller-link layer
 // deliberately -- the vendor cloud answering is exactly what makes the rest
-// doubtful (D-11, RES-02).
-function distrustReasonsOf(violated: ReadonlySet<TrustScope>, controllerLinkLost: boolean): ReadonlyMap<TrustScope, DistrustReason> {
+// doubtful. The monitoring layer decides its own set, because which scopes a
+// transport outage costs depends on which transport went (D-02, D-11, RES-02,
+// RES-03).
+function distrustReasonsOf(
+  violated: ReadonlySet<TrustScope>,
+  controllerLinkLost: boolean,
+  monitoringDegraded: ReadonlySet<TrustScope>,
+): ReadonlyMap<TrustScope, DistrustReason> {
   const reasons = reasonsOf(violated, 'invalid');
 
   if (controllerLinkLost) {
@@ -282,6 +325,12 @@ function distrustReasonsOf(violated: ReadonlySet<TrustScope>, controllerLinkLost
       if (!reasons.has(scope)) {
         reasons.set(scope, 'controller-link-lost');
       }
+    }
+  }
+
+  for (const scope of monitoringDegraded) {
+    if (!reasons.has(scope)) {
+      reasons.set(scope, 'unreachable');
     }
   }
 
@@ -414,6 +463,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   let untrusted: readonly UntrustedScope[] = [];
   let offlineCount = 0;
   let published: readonly ServiceDescriptor[] = [];
+  // What the plugin can currently say about its own ability to observe this
+  // account. It starts fully trusted, because nothing has failed yet.
+  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false };
   // The last decoded state, kept so the write path can read what the device
   // itself reports without waiting for another update: a control refused
   // between polls has to answer from the same facts the rows publish from.
@@ -700,6 +752,10 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       return untrusted;
     },
 
+    markMonitoring(trust: MonitoringTrust): void {
+      monitoring = trust;
+    },
+
     update(snapshot: DeviceSnapshot, source: SnapshotSource): void {
       const outcome = registry.lookup(snapshot.identity.deviceTypeId);
 
@@ -722,7 +778,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
           offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
         }
 
-        untrusted = untrustedScopesOf(reasonsOf(NON_CONNECTIVITY_SCOPES, 'invalid'), lastTrustedAt);
+        untrusted = untrustedScopesOf(distrustReasonsOf(NON_CONNECTIVITY_SCOPES, false, monitoringDegradedScopes(monitoring)), lastTrustedAt);
         republishPublishedRows(projectionInputOf(undefined, controls.pending));
         reportDegradation();
 
@@ -736,7 +792,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       const validation = outcome.family.validate(snapshot);
       const decoded = outcome.family.decode(snapshot);
       const linkLost = isControllerLinkLost(decoded);
-      const reasons = distrustReasonsOf(violatedScopesOf(validation), linkLost);
+      const reasons = distrustReasonsOf(violatedScopesOf(validation), linkLost, monitoringDegradedScopes(monitoring));
       const metadata = decodedMetadataOf(decoded);
 
       recordTrustedScopes(reasons, snapshot.receivedAt);

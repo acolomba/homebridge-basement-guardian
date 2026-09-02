@@ -22,7 +22,7 @@ import { connect, connectAsync } from 'mqtt';
 
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
-import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
+import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
 
@@ -46,6 +46,7 @@ import type { BasementGuardianPlatformAccessory, DiscoveryContext } from '../../
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
 import type { CommandPort } from '../../src/runtime/commandPort.js';
+import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { IWorldOptions } from '@cucumber/cucumber';
 import type { API, LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
@@ -628,6 +629,12 @@ export class BasementGuardianWorld extends World {
         // re-discovery needs watchDevices() to subscribe it again rather than skip it as already
         // watched (WR-03).
         this.watchedDeviceIds.delete(deviceId);
+      },
+      // The same exported fan-out the platform calls, over the same
+      // DiscoveryContext the two callbacks above build, so a scenario proves
+      // the marking path a bridge runs rather than a harness copy of it (D-12).
+      onMonitoringHealth: (trust: MonitoringTrust): void => {
+        applyMonitoringHealth(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry, runtime.commands), trust);
       },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.

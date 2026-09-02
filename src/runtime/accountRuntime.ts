@@ -14,6 +14,7 @@ import { createRetryPolicy, MAX_BACKOFF_MS } from './retryPolicy.js';
 import type { Clock } from './clock.js';
 import type { CommandFailure, CommandOutcome, CommandPort } from './commandPort.js';
 import type { FailureLog } from './failureLog.js';
+import type { MonitoringTrust } from './monitoringHealth.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
 import type { MqttConnect } from '../cloud/mqttTransport.js';
@@ -122,6 +123,18 @@ export interface AccountRuntimeOptions {
    * immediately before this call (D-029).
    */
   onDeviceRemoved: (deviceId: string) => void;
+  /**
+   * Reports what the plugin can currently say about its own ability to observe
+   * this account, on every poll outcome.
+   *
+   * This is the trust decision; `monitoringPath` stays the diagnostic. The path
+   * names which sources are feeding state and collapses a failing poll with a
+   * lost shadow into one value, while these two facts are what the HomeKit tier
+   * needs kept apart: a shadow that has gone quiet while polls still succeed is
+   * the expensive case, because a pump run lasts seconds and begins and ends
+   * between two polls, and it reads as the healthier value on the path (D-04).
+   */
+  onMonitoringHealth: (trust: MonitoringTrust) => void;
   clock: Clock;
   log: Logging;
 }
@@ -728,6 +741,8 @@ export interface AccountRuntimeDeps {
   onTrustworthyInventory?: TrustworthyInventoryListener;
   /** Reports a deviceId confirmed absent by DEV-05's removal protocol. A no-op when absent. */
   onDeviceRemoved?: (deviceId: string) => void;
+  /** Reports the account-wide monitoring trust on every poll outcome. A no-op when absent. */
+  onMonitoringHealth?: (trust: MonitoringTrust) => void;
 }
 
 /**
@@ -780,6 +795,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     registerSecret,
     onTrustworthyInventory: deps.onTrustworthyInventory ?? (() => undefined),
     onDeviceRemoved: deps.onDeviceRemoved ?? (() => undefined),
+    onMonitoringHealth: deps.onMonitoringHealth ?? (() => undefined),
     clock: deps.clock,
     log: deps.log,
   });

@@ -12,7 +12,7 @@ import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
-import { BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
+import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
@@ -26,6 +26,7 @@ import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
 import type { DeviceStateStore, ReportedPatch } from '../src/device/state.js';
 import type { BasementGuardianAccessoryContext, BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
 import type { CommandPort } from '../src/runtime/commandPort.js';
+import type { MonitoringTrust } from '../src/runtime/monitoringHealth.js';
 import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
 import type { TestContext } from 'node:test';
 
@@ -187,6 +188,45 @@ function geminiDevice(): ApiDevice {
   };
 }
 
+// A full, legal Gemini telemetry payload, so a case that needs the real adapter
+// to publish its rows states no field of its own.
+const VALID_GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
+  water_level: 1,
+  primary_pump_running: false,
+  primary_pump_fault: false,
+  backup_pump_running: false,
+  backup_pump_fault: false,
+  backup_pump_fuse_blown: false,
+  ac_power: true,
+  battery_charging: false,
+  battery_voltage_low: false,
+  battery_health: 8,
+  hours_of_protection: 8,
+  water_sensor_fault: false,
+  serial_communications: true,
+  alarm_audio_muted: false,
+  test_running: false,
+  offline: false,
+};
+
+// The same device as the vendor's list route sends it: the records sit under a
+// plural key and the serial number under `attributes`.
+function geminiWireDeviceList(): { devices: Record<string, unknown>[] } {
+  return {
+    devices: [
+      {
+        accountId: 'account-1',
+        deviceId: DEVICE_ID,
+        deviceTypeId: DEVICE_TYPE_ID,
+        name: 'Sump System',
+        data: VALID_GEMINI_TELEMETRY,
+        attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: 0 },
+      },
+    ],
+  };
+}
+
 function unknownRegistry(): FamilyRegistry {
   return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }), shouldLog: () => true };
 }
@@ -343,6 +383,21 @@ function discoveryContext(options: ContextOptions): DiscoveryContext {
   };
 }
 
+// A BasementGuardianAccessory that records the account-wide trust it was
+// handed. The fan-out's whole content is that every accessory hears the same
+// answer, so recording which one heard what is the observation.
+function recordingBasementGuardianAccessory(deviceId: string, marks: string[]): BasementGuardianAccessory {
+  return {
+    deviceId,
+    services: [],
+    untrusted: [],
+    update: () => undefined,
+    markMonitoring: (trust: MonitoringTrust): void => {
+      marks.push(`${deviceId} rest ${String(trust.restDegraded)} shadow ${String(trust.shadowSilent)}`);
+    },
+  };
+}
+
 // The accessory the platform built for this device, so a case can watch the calls the store's own
 // change notification makes on it rather than infer them.
 function builtAccessory(basementGuardianAccessories: Map<string, BasementGuardianAccessory>): BasementGuardianAccessory {
@@ -377,6 +432,14 @@ function publishedServiceNames(accessory: FakeAccessory): readonly string[] {
   return createServiceCatalogue(HAP_NAMESPACE)
     .filter((row) => accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype) !== undefined)
     .map((row) => row.displayName);
+}
+
+// What a named row currently reports for the trust flag every service carries.
+function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
+  const row = createServiceCatalogue(HAP_NAMESPACE).find((candidate) => candidate.displayName === displayName);
+  const service = row === undefined ? undefined : accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+
+  return service?.characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.StatusActive.UUID)?.value;
 }
 
 function contactStateOf(accessory: FakeAccessory, subtype: string): unknown {
@@ -666,6 +729,88 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
+  test('withdraws the offline verdict from every published accessory once polling has failed twice', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let deviceListCalls = 0;
+    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        deviceListCalls += 1;
+
+        return deviceListCalls === 1
+          ? Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }))
+          : Promise.resolve(new Response('{}', { status: 503 }));
+      }
+
+      return Promise.resolve(new Response('{}', { status: 503 }));
+    });
+    const registeredAccessories: FakeAccessory[] = [];
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    // Twice while registering the accessory: the UUID derivation, then the
+    // accessory factory declaring this plugin's own HomeKit types.
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((accessories: PlatformAccessory[]) => {
+          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      api.updatePlatformAccessories(It.matches((accessories: PlatformAccessory[]) => accessories.length === 1));
+    }).thenReturn(undefined);
+    new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
+    const [launch, shutdown] = listeners;
+    launch?.();
+    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
+    const accessory = registeredAccessories[0];
+
+    if (accessory === undefined) {
+      throw new Error('the platform registered no accessory');
+    }
+
+    const beforeAnyFailure = statusActiveOf(accessory, 'Basement Guardian Offline');
+
+    // act
+    t.mock.timers.tick(300_000);
+    await settle();
+    t.mock.timers.tick(300_000);
+    await settle();
+    await until(() => statusActiveOf(accessory, 'Basement Guardian Offline') === false, 'the platform to withdraw the offline verdict');
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        beforeAnyFailure,
+        offline: statusActiveOf(accessory, 'Basement Guardian Offline'),
+        flood: statusActiveOf(accessory, 'Sump Pit Flood'),
+        offlineState: contactStateOf(accessory, 'basement-guardian-offline'),
+      },
+      { beforeAnyFailure: true, offline: false, flood: true, offlineState: CONTACT_DETECTED },
+    );
+    verify(user);
+    verify(api);
+  });
+
   test('unregisters a confirmed-absent accessory once two trustworthy polls and a final check agree it is gone', async (t) => {
     // arrange
     t.mock.timers.enable({ apis: ['setTimeout'] });
@@ -865,6 +1010,43 @@ describe('configureAccessory', () => {
     // assert
     verify(api);
     verify(staleAccessory);
+  });
+});
+
+describe('applyMonitoringHealth', () => {
+  test('hands the same account-wide trust to every accessory this run publishes', () => {
+    // arrange
+    const marks: string[] = [];
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>([
+      [ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)],
+      [SECOND_ACCESSORY_UUID, recordingBasementGuardianAccessory(SECOND_DEVICE_ID, marks)],
+    ]);
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+      registry: unknownRegistry(),
+      basementGuardianAccessories,
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true });
+
+    // assert
+    assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow true`]);
+  });
+
+  test('reaches nothing when this run has published no accessory yet', () => {
+    // arrange
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+      registry: unknownRegistry(),
+    });
+
+    // act & assert
+    assert.doesNotThrow(() => {
+      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true });
+    });
   });
 });
 

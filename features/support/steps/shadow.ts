@@ -33,6 +33,10 @@ const STEP_TIMEOUT_MS = 15_000;
 // plugin started at.
 const CLOCK_STEP_MS = 60_000;
 
+// A scenario states a longer span in seconds, because that is the unit the measured heartbeat
+// interval is quoted in.
+const MILLISECONDS_PER_SECOND = 1000;
+
 // A document that changes nothing leaves no trace a step can wait on, so a step asserting that it
 // changed nothing gives the delivery and the merge it would have made time to land first.
 const DELIVERY_SETTLE_MS = 200;
@@ -176,6 +180,12 @@ function advanceTheScenarioClock(this: BasementGuardianWorld): void {
 }
 
 When('the scenario clock moves forward', advanceTheScenarioClock);
+
+function advanceTheScenarioClockBySeconds(this: BasementGuardianWorld, seconds: number): void {
+  this.advanceClock(seconds * MILLISECONDS_PER_SECOND);
+}
+
+When('the scenario clock moves forward by {int} seconds', advanceTheScenarioClockBySeconds);
 
 // SAFE-07 forbids any plugin-added delay, so a scenario asserting a transition after zero elapsed
 // scenario time is one of the layers proving the transition was not deferred (D-18).
