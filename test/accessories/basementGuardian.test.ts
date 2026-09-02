@@ -2702,19 +2702,23 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  // The other direction of the same rule, and the one that keeps it narrow. Here the control's scope
-  // is untrusted because a field of its own failed validation, which says the value is doubtful
-  // rather than that the plugin is seeing less. Both halves must still treat it as absent: the row
-  // publishes no `On` and the write path is refused for the missing state, because publishing a
-  // doubtful value would overwrite the last family-valid one and acting on it would operate a real
-  // pump on a guess. The capability's own reported field still decodes here, so nothing but the rule
-  // is holding it back (RES-04, D-02, D-07, D-014, WR-02).
+  // The other direction of the same rule, and the one that keeps it narrow. A lost pump controller
+  // link says the value is doubtful rather than that the plugin is seeing less, so both halves must
+  // still treat it as absent: the row publishes no `On` and the write path is refused for the
+  // missing state. Publishing a doubtful value would overwrite the last family-valid one, and acting
+  // on it would operate a real pump on a guess.
+  //
+  // The lost link is deliberately the reason here, not a field that failed validation. The family
+  // drops a violated scope's whole group before the accessory ever sees it, so a case built on an
+  // invalid field would find the value absent whatever this rule answered, and would agree with a
+  // rule that withheld nothing. The link fact is a valid boolean, so every group still decodes and
+  // the rule is the only thing holding the value back (RES-04, D-02, D-07, D-11, D-014, WR-02).
   test('WR-02 keeps a doubtful value absent from both the control row and the write path', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
     const { commands, sends } = recordingCommands();
-    const basementGuardianAccessory = geminiAccessory(accessory, { test_timestamp: 'not-a-number' }, { commands, log });
+    const basementGuardianAccessory = geminiAccessory(accessory, { serial_communications: false }, { commands, log });
 
     // act
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
@@ -2727,17 +2731,17 @@ describe('createBasementGuardianAccessory', () => {
       },
     );
 
-    // assert. A payload carrying an out-of-domain field also degrades, and that line is not what this
-    // case is about, so the refusal lines alone are compared.
+    // assert. A lost link is also reported once on its own line, and that line is not what this case
+    // is about, so the refusal lines alone are compared.
     assert.deepStrictEqual(
       {
-        untrusted: basementGuardianAccessory.untrusted,
+        selfTestReason: basementGuardianAccessory.untrusted.find((scope) => scope.scope === 'self-test')?.reason,
         publishedOn: serviceOf(accessory, SELF_TEST_ROW).characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.On.UUID)?.pushed,
         sends,
         refusals: warnings.filter((warning) => warning.startsWith('Refused ')),
       },
       {
-        untrusted: [{ scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined }],
+        selfTestReason: 'controller-link-lost',
         publishedOn: false,
         sends: [],
         refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
