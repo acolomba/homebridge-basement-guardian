@@ -571,6 +571,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return monitoring.commandTransportReady;
   }
 
+  // Whether the live path can still carry the device's own answer to a command.
+  // The accessory is the right place to answer it because it already holds the
+  // account-wide trust its rows publish from, so the fact the write path reads
+  // and the fact the tile shows come from one stored value rather than two that
+  // can drift (RES-04, D-07, WR-02).
+  function liveConfirmationObservable(): boolean {
+    return !monitoring.shadowSilent;
+  }
+
   // Everything a row reads, assembled once from the accessory's own state so
   // the resolved and unresolved paths cannot drift apart in what they hand a
   // row.
@@ -630,6 +639,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     deviceId,
     offlineConfirmed,
     commandTransportReady,
+    liveConfirmationObservable,
     // A refused credential ends every observation this runtime will ever make, so a refused write
     // has no changed fact to re-assert -- and re-asserting one would push an ordinary value over
     // the single characteristic carrying the one presentation the owner has to act on, which

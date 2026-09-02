@@ -423,6 +423,7 @@ describe('refuseRestoredControls', () => {
       deviceId: DEVICE_ID,
       offlineConfirmed: () => false,
       commandTransportReady: () => true,
+      liveConfirmationObservable: () => true,
       republish: () => undefined,
     });
 

@@ -297,3 +297,15 @@ function assertUnconfirmedWarning(this: BasementGuardianWorld, capability: strin
 }
 
 Then('the log warns once that the device never confirmed the {string} request', assertUnconfirmedWarning);
+
+// The whole line, like the unconfirmed-request assertion above and for the same reason: the cause is
+// the whole content of a per-cause refusal table, so an assertion matching a fragment would pass on a
+// line naming a different condition. The `deviceId` is asserted present for the reason recorded there.
+function assertRefusalWarning(this: BasementGuardianWorld, capability: string, cause: string): void {
+  const deviceId = this.devices.at(0)?.deviceId;
+  const warnings = this.logged.filter((line) => line.startsWith('warn Refused '));
+
+  assert.deepStrictEqual(warnings, [`warn Refused ${capability} on ${String(deviceId)}: ${cause}.`]);
+}
+
+Then('the log warns once that the {string} press was refused because {string}', assertRefusalWarning);

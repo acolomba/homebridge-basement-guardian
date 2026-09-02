@@ -133,6 +133,7 @@ interface BinderOverrides {
   log?: Logging;
   offlineConfirmed?: () => boolean;
   commandTransportReady?: () => boolean;
+  liveConfirmationObservable?: () => boolean;
 }
 
 function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
@@ -144,6 +145,7 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
     deviceId: DEVICE_ID,
     offlineConfirmed: overrides.offlineConfirmed ?? ((): boolean => false),
     commandTransportReady: overrides.commandTransportReady ?? ((): boolean => true),
+    liveConfirmationObservable: overrides.liveConfirmationObservable ?? ((): boolean => true),
     republish: overrides.republish ?? ((): void => undefined),
   };
 }
@@ -399,7 +401,7 @@ test('names the capability, the device and the cause in the one line a refusal l
   assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
 });
 
-// The six ways one write can end, in the order the binder evaluates them: four the plugin answers
+// The eight ways one write can end, in the order the binder evaluates them: six the plugin answers
 // by itself and two the vendor answers. Every case below is read off this one table, so a cause
 // that stops being refused, or that starts answering a different status, fails by name.
 interface RefusalCase {
@@ -408,6 +410,7 @@ interface RefusalCase {
   reported: boolean | undefined;
   offlineConfirmed: boolean;
   transportReady: boolean;
+  confirmationObservable: boolean;
   outcome: CommandOutcome;
   status: number;
 }
@@ -419,6 +422,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     reported: false,
     offlineConfirmed: false,
     transportReady: true,
+    confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
   },
@@ -428,6 +432,17 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     reported: false,
     offlineConfirmed: false,
     transportReady: false,
+    confirmationObservable: true,
+    outcome: ACCEPTED,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+  },
+  {
+    cause: 'a live path that cannot carry the device answer',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: false,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
   },
@@ -437,6 +452,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     reported: undefined,
     offlineConfirmed: false,
     transportReady: true,
+    confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
   },
@@ -446,6 +462,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     reported: false,
     offlineConfirmed: true,
     transportReady: true,
+    confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
   },
@@ -455,6 +472,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     reported: true,
     offlineConfirmed: false,
     transportReady: true,
+    confirmationObservable: true,
     outcome: ACCEPTED,
     status: RESOURCE_BUSY,
   },
@@ -467,6 +485,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     reported: false,
     offlineConfirmed: false,
     transportReady: true,
+    confirmationObservable: true,
     outcome: { accepted: false, failure: 'vendor-error' },
     status: SERVICE_COMMUNICATION_FAILURE,
   },
@@ -476,6 +495,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     reported: false,
     offlineConfirmed: false,
     transportReady: true,
+    confirmationObservable: true,
     outcome: { accepted: false, failure: 'timed-out' },
     status: OPERATION_TIMED_OUT,
   },
@@ -490,7 +510,13 @@ async function refuse(
   const { commands, sends } = recordingCommands(refusalCase.outcome);
   const { timers, deferrals } = recordingTimers();
   const { binder, service } = boundSwitch(
-    { commands, timers, offlineConfirmed: () => refusalCase.offlineConfirmed, commandTransportReady: () => refusalCase.transportReady },
+    {
+      commands,
+      timers,
+      offlineConfirmed: () => refusalCase.offlineConfirmed,
+      commandTransportReady: () => refusalCase.transportReady,
+      liveConfirmationObservable: () => refusalCase.confirmationObservable,
+    },
     () => refusalCase.reported,
   );
   let thrown: unknown = undefined;
@@ -504,7 +530,7 @@ async function refuse(
   return { thrown, sends, deferrals, binder, service };
 }
 
-test('answers each of the seven refusal causes with the status that describes it', async () => {
+test('answers each of the eight refusal causes with the status that describes it', async () => {
   // act
   const answered = [];
 
@@ -513,7 +539,7 @@ test('answers each of the seven refusal causes with the status that describes it
   }
 
   // assert
-  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70412, -70403, -70402, -70408]);
+  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70412, -70412, -70403, -70402, -70408]);
 });
 
 for (const refusalCase of LOCAL_REFUSALS) {
@@ -571,7 +597,13 @@ test('names the capability and the device in every refusal line and quotes no to
   for (const refusalCase of REFUSALS) {
     const { commands } = recordingCommands(refusalCase.outcome);
     const { service } = boundSwitch(
-      { commands, log, offlineConfirmed: () => refusalCase.offlineConfirmed, commandTransportReady: () => refusalCase.transportReady },
+      {
+        commands,
+        log,
+        offlineConfirmed: () => refusalCase.offlineConfirmed,
+        commandTransportReady: () => refusalCase.transportReady,
+        liveConfirmationObservable: () => refusalCase.confirmationObservable,
+      },
       () => refusalCase.reported,
     );
 
@@ -596,6 +628,7 @@ test('names the capability and the device in every refusal line and quotes no to
 // two blocked it (D-07, D-08).
 const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
 
 test('names the missing state when the capability has not decoded and there is a way to send', async () => {
   // arrange
@@ -638,6 +671,59 @@ test('names the missing transport alone when the plugin has neither fresh state 
 
   // assert
   assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+});
+
+// The third fact of the gate, on its own. The route is proven and the capability's reported value is
+// right there, so neither of the other two rules can be what refused this press: what the plugin
+// lacks is the channel the device answers on (D-07, D-08, WR-02).
+test('names the quiet live connection when the route and the reported value are both there', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => false);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`], sends: [] });
+});
+
+// The quiet live path and no route at all, which is the pair the new rule's placement decides. A
+// plugin with no route to send on cannot be helped by a channel to hear back on, so the more
+// fundamental truth keeps its place at the top of the table and this case is what stops an edit
+// moving the new rule above it from changing the answer silently (D-07, D-08).
+test('names the missing transport alone when the plugin has neither a route to send on nor a live path to hear back on', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch(
+    { commands, log: warningLog(warnings), commandTransportReady: () => false, liveConfirmationObservable: () => false },
+    () => false,
+  );
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+});
+
+// The other side of the placement. Here the state genuinely has not decoded and the live path is
+// also quiet, and the quiet path is named because it is the condition an owner can act on: a
+// reported field that never decoded is a symptom of the same silence more often than a fault of its
+// own. This case is what stops an edit moving the new rule below the state rule (D-07, D-08, WR-02).
+test('names the quiet live connection alone when the reported field has also not decoded', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => undefined);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`], sends: [] });
 });
 
 test('answers the transport refusal status to every read until the clearing push lands', async () => {

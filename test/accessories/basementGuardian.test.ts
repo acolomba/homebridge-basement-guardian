@@ -256,6 +256,12 @@ const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor ri
 // own reported state. Written out here for the same reason as the one above.
 const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 
+// The cause a refusal names when the route and the reported value are both there but the live path
+// has gone quiet, so no confirmation can come back inside the window. Written out for the same
+// reason as the two above, and this one especially: it is the cause the accessory named wrongly
+// until the rule behind it existed (D-07, D-08, WR-02).
+const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
+
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
 // running (D-02, D-014).
@@ -2576,11 +2582,12 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  // The write gate reads the withdrawn scopes directly rather than through the row projection, and
-  // it must stay that way. A monitoring outage now leaves values flowing to the tile, but the plugin
-  // still cannot vouch for what the device currently reports, so a press it accepted would be sent
-  // on the strength of a reading nobody is confirming (RES-04, D-07).
-  test('RES-04 refuses a press while a monitoring outage leaves the control unvouched for, and sends nothing', async () => {
+  // A press during shadow silence is refused, and the cause it names is the one that is true. The
+  // poll is still delivering, so the plugin has the reported value and the tile is showing it; what
+  // it has lost is the channel a confirmation comes back on, and the wait closes long before the
+  // next poll could carry one. Naming a missing state here -- which is what this case asserted
+  // before the cause existed -- sent an owner to inspect equipment that is fine (RES-04, D-07, WR-02).
+  test('RES-04 names the quiet live connection for a press during shadow silence, and sends nothing', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
@@ -2599,7 +2606,38 @@ describe('createBasementGuardianAccessory', () => {
     );
 
     // assert
-    assert.deepStrictEqual({ sends, warnings }, { sends: [], warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] });
+    assert.deepStrictEqual({ sends, warnings }, { sends: [], warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`] });
+  });
+
+  // The state rule is still reachable and still names its own cause. Both transports are working
+  // here and the live path can carry an answer, so nothing above this rule fires; what is wrong is
+  // the capability's own reported field, which did not decode. Without this case the rule inserted
+  // above it could swallow every refusal in this module and the suite would not say so
+  // (RES-04, D-07, D-08).
+  test('RES-04 names the missing state for a press whose reported field never decoded, and sends nothing', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: 'not-a-boolean' }, { commands, log });
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert. A payload carrying an out-of-domain field also degrades, and that line is not what
+    // this case is about, so the refusal lines alone are compared.
+    assert.deepStrictEqual(
+      { sends, refusals: warnings.filter((warning) => warning.startsWith('Refused ')) },
+      { sends: [], refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
+    );
   });
 
   // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that

@@ -170,9 +170,15 @@ Feature: Operating the official controls from HomeKit
     Then the "Alarm Mute" switch answers a read
     Then the "Alarm Mute" service reports "On" as "true"
 
-  # The state half of the command gate. It fires from the account-wide trust withdrawal rather than
-  # from a rule of its own: once the control's own scope is untrusted the row withholds the reported
-  # value, and the existing no-fresh-state rule refuses the press (D-02, D-07).
+  # A press refused after the live path goes quiet, asserted at the status. This comment used to say
+  # the row withholds the reported value once the control's own scope is untrusted, and that the
+  # no-fresh-state rule then refuses the press. Neither half was true of the code: the row goes on
+  # publishing what the working poll delivered, and the rule that refuses this press names the quiet
+  # live connection. The scenario stayed green through all of it because it asserts the status and
+  # never the cause, and one status answers every local refusal -- which is exactly how a premise can
+  # be wrong for a whole phase without a test saying so. The scenario below asserts the cause; this
+  # one is kept for the status, and the two together are what tell a reworded rule from a reordered
+  # table (D-07, D-08, WR-02).
   Scenario: A press with no valid state is refused locally
     Given a short poll interval
     When the plugin starts
@@ -182,6 +188,22 @@ Feature: Operating the official controls from HomeKit
     When a controller presses the "System Self-Test" switch
     Then the write reports that the control is not allowed now
     Then the vendor receives no command
+
+  # The live-confirmation half, and the one an owner is most likely to meet. Polling is healthy here,
+  # so the pit reading on the tile is real and arrived seconds ago; what the plugin lost is the fast
+  # channel the device answers a command on. Telling the owner the plugin has no state for the pump
+  # would send them to look at equipment that is fine, which this plugin treats as worse than saying
+  # nothing, so the refusal names the connection that actually went quiet (RES-04, D-07, D-08, WR-02).
+  Scenario: A press while the live connection is quiet names the quiet connection
+    Given a short poll interval
+    When the plugin starts
+    Then the plugin publishes the "System Self-Test" service
+    When the scenario clock moves forward by 1796 seconds
+    Then the "System Self-Test" service reports "Status Active" as "false"
+    When a controller presses the "System Self-Test" switch
+    Then the write reports that the control is not allowed now
+    Then the vendor receives no command
+    Then the log warns once that the "self-test" press was refused because "the live connection is quiet, so the plugin cannot see the device confirm the command"
 
   # The transport half, which fails on its own schedule. A command travels on the polling transport,
   # so a poll that has just failed means the plugin has no proven way to send and refuses the press

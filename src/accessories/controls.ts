@@ -87,11 +87,26 @@ export interface ControlBinderOptions {
    * while the live path has gone quiet, so a single readiness answer would tell
    * a user diagnosing a refused press the wrong thing half the time.
    *
-   * The accessory answers this from the same account-wide monitoring trust its
-   * rows publish from, so the fact a row publishes from and the fact a write is
-   * refused on cannot disagree (RES-04, D-07).
+   * The accessory answers this from the account-wide monitoring trust it also
+   * publishes its rows from, so one stored value drives both (RES-04, D-07).
    */
   commandTransportReady: () => boolean;
+  /**
+   * Whether the live path can currently carry the device's own confirmation.
+   *
+   * A third fact rather than a shade of the other two, because all three fail
+   * independently. The plugin can hold a route to send on and a freshly reported
+   * value to act from and still be unable to see the answer: a confirmation
+   * travels on the live path, and the window a request waits in is shorter than
+   * a poll interval, so while that path is quiet the earliest confirmation is a
+   * poll the configuration may put an hour away.
+   *
+   * A press accepted then would reach a real sump pump and expire with a warning
+   * naming a device failure that did not happen, and the duplicate rule below
+   * would meanwhile be judging a reading up to a poll interval old, so a second
+   * press could start a test while one was already running (RES-04, D-07, D-08).
+   */
+  liveConfirmationObservable: () => boolean;
   /**
    * Republishes the control rows, and only those.
    *
@@ -188,6 +203,7 @@ interface ControlRequest {
   reported: boolean | undefined;
   offlineConfirmed: boolean;
   transportReady: boolean;
+  confirmationObservable: boolean;
 }
 
 // One refusal the plugin answers on its own: what decides it, the status that
@@ -225,6 +241,17 @@ function isNotAnOnRequest(request: ControlRequest): boolean {
 // own cause (RES-04, D-07, D-08).
 function hasNoCommandTransport(request: ControlRequest): boolean {
   return !request.transportReady;
+}
+
+// The live path carrying the device's own confirmation has gone quiet, while the
+// plugin still has a route to send on and a value the poll delivered. Nothing
+// the plugin holds is missing here; what is missing is the channel an answer
+// comes back on, and the wait for one closes long before the next poll could
+// carry it. Sending anyway would operate a real sump pump and then warn that the
+// device never confirmed it, for a condition on this side of the connection
+// (RES-04, D-07, D-08, WR-02).
+function cannotSeeAConfirmation(request: ControlRequest): boolean {
+  return !request.confirmationObservable;
 }
 
 // The capability's own reported field has not decoded. Without a decoded value
@@ -265,14 +292,22 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 // The rules in the order they are evaluated, cheapest and most local first. The
 // first that applies answers the write; the rest are never consulted.
 //
-// The order of the two middle rules is a decision, not an accident. Both can
-// hold at once, and then this order decides which cause the user is told.
-// Naming the missing state to someone who has no way to send anything is the
-// less actionable of the two truths -- there is nothing to do about a stale
+// The order of the three middle rules is a decision, not an accident. Any two of
+// them can hold at once, and then this order decides which cause the user is
+// told. Naming the missing state to someone who has no way to send anything is
+// the less actionable of the two truths -- there is nothing to do about a stale
 // reading while the route is down -- so the missing transport is named first. A
 // unit case pins that with both conditions set, because an unrelated edit that
-// reordered this table would otherwise change the user-facing cause silently
-// (D-07).
+// reordered this table would otherwise change the user-facing cause silently.
+//
+// The quiet live path sits between them for the same reason read the other way.
+// A plugin with no route at all is the more fundamental truth and keeps its
+// place at the top. But a quiet live path is named ahead of a missing state
+// because during that silence the state is not missing: the poll delivered it
+// and the tile is showing it, so naming the state would send an owner to inspect
+// equipment that is fine while the condition that actually blocked the press
+// went unnamed. It is refused all the same -- the plugin still could not tell a
+// running test from an idle one afterwards (D-07, D-08, WR-02).
 // The cause the missing-transport rule names, declared once because two
 // refusals now answer it. A restart the cloud has not answered is the same
 // condition under a different name -- the plugin has no route to send on -- and
@@ -280,9 +315,16 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 // exists to prevent (D-08).
 const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 
+// The cause the quiet-live-path rule names, declared beside the one above so the table below reads
+// as a table rather than as one wrapped line among short ones. It names the connection and what the
+// plugin cannot do because of it, and nothing else: no threshold, no interval, and no internal term
+// an owner would have to look up (D-08).
+const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
+
 const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
   { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: NO_COMMAND_TRANSPORT_CAUSE },
+  { applies: cannotSeeAConfirmation, status: notAllowedInCurrentState, cause: QUIET_LIVE_CONNECTION_CAUSE },
   { applies: hasNoFreshState, status: notAllowedInCurrentState, cause: 'the plugin has no fresh state for it' },
   { applies: isConfirmedOffline, status: notAllowedInCurrentState, cause: 'the device is confirmed offline' },
   { applies: isAlreadyActive, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'it already reads active' },
@@ -389,7 +431,7 @@ export function bindRestoredControlRefusal(options: RestoredControlRefusalOption
  * one, and it is called with a service the catalogue has already published.
  */
 export function createControlBinder(options: ControlBinderOptions): ControlBinder {
-  const { hap, log, timers, commands, deviceId, offlineConfirmed, commandTransportReady, republish } = options;
+  const { hap, log, timers, commands, deviceId, offlineConfirmed, commandTransportReady, liveConfirmationObservable, republish } = options;
 
   // What was asked for, per capability, from the moment a write is accepted for
   // sending until the device confirms it or the window closes. The value is kept
@@ -482,7 +524,14 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
 
   async function answerWrite(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, value: CharacteristicValue): Promise<void> {
     const accepted = acceptedValueOf(capability);
-    const refusal = localRefusalFor({ value, accepted, reported: reported(), offlineConfirmed: offlineConfirmed(), transportReady: commandTransportReady() });
+    const refusal = localRefusalFor({
+      value,
+      accepted,
+      reported: reported(),
+      offlineConfirmed: offlineConfirmed(),
+      transportReady: commandTransportReady(),
+      confirmationObservable: liveConfirmationObservable(),
+    });
 
     if (refusal !== undefined) {
       refuseLocally(service, capability, reported, refusal);
