@@ -1,148 +1,122 @@
 ---
 phase: 05-degraded-operation-and-recovery
-verified: 2026-09-02T10:58:15Z
+verified: 2026-09-02T16:56:36Z
 status: gaps_found
-score: 1/4 roadmap success criteria verified (7 plan-frontmatter truths also fail)
+score: 3/4 roadmap success criteria verified
 behavior_unverified: 0
 overrides_applied: 0
-decision_coverage:
-  honored: 12
-  total: 12
-  not_honored: []
+re_verification:
+  previous_status: gaps_found
+  previous_score: 1/4
+  gaps_closed:
+    - "SC-2 (CR-01): a family-valid value arriving on a working transport now reaches the tile while `Status Active` alone carries the doubt"
+    - "SC-2 (CR-01 upstream half, D-13): a shadow that has missed two heartbeats hands telemetry back to the poll, so the flood a poll finds during silence actually reaches HomeKit"
+    - "SC-2 (WR-01): `Pump Controller Link Lost` reports `Status Active = false` when both transports are down, and every scope reports `unreachable` rather than `controller-link-lost`"
+    - "SC-3 command half (WR-02): a press on a restored control in the failed-restart window is refused with -70412 and a named cause, and the live binder replaces the refusal on first publish"
+    - "SC-4 first half (CR-02): the shadow-silence degradation clears at the message that proves recovery, not at the next poll tick"
+    - "README: `the plugin holds no value back while it waits` is now a true statement about the shipped code"
+  gaps_remaining:
+    - "SC-4 second half: a credential rejection is now reached mid-run, but the presentation it produces does not survive the next live message"
+    - "`REQUIREMENTS.md` RES-04 `Complete` overstates clause 4"
+  regressions:
+    - "None found in SC-1, SC-2 or SC-3. The gap below is a new defect in the state plan 05-07 created, not a regression of previously working behaviour."
 gaps:
-  - truth: "Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path; only the first two use their defined safety adapters. (ROADMAP SC-2)"
-    status: failed
-    reason: >-
-      Two independent defects. (a) CR-01: withdrawing trust from a scope also stops that scope
-      publishing, so with the shadow silent and REST healthy a flooded poll is decoded, validated by
-      the family, and then discarded -- HomeKit keeps showing "no leak" while the plugin holds
-      "leak". The user is not shown a degraded path; they are shown a false normal. (b) WR-01: with
-      the controller link lost and BOTH transports down, `Pump Controller Link Lost` still publishes
-      an activated sensor with `Status Active = true`, and six scopes report `controller-link-lost`
-      when the real cause is `unreachable`. A device adapter reads trustworthy while the plugin is
-      totally blind, which is exactly the conflation this criterion forbids.
-    artifacts:
-      - path: src/accessories/serviceCatalogue.ts
-        issue: >-
-          `isRowTrusted` treats the monitoring reason `unreachable` like a field-validation failure,
-          so `project()` returns `[]` and `publishRows` pushes nothing but `StatusActive`. A
-          monitoring outage means the plugin is seeing less, never that the value it did receive is
-          doubtful.
-      - path: src/accessories/basementGuardian.ts
-        issue: >-
-          `distrustReasonsOf` (lines 323-345) applies the controller-link layer before the
-          monitoring layer, and `pump-controller-link-lost` is the one row that tolerates
-          `controller-link-lost`, so that reason wins the `fault` scope permanently and the
-          monitoring layer can never reach it.
-    missing:
-      - "Let a row keep publishing a value received on a still-working transport while `StatusActive` alone carries the doubt, so a monitoring withdrawal marks rather than withholds."
-      - "Apply the monitoring layer before the controller-link layer so `unreachable` (tolerated by no row) beats `controller-link-lost` (tolerated by one), while `invalid` still wins over both."
-      - "A test that polls a CHANGED, flooded payload during shadow silence and asserts `Leak Detected` reached HomeKit with `Status Active` still false. Without it the fix is unprovable."
-      - "A test asserting `Pump Controller Link Lost` reports `Status Active` as false under both transports lost when the last snapshot had `serial_communications: false`."
-  - truth: "Restart without fresh cloud state ... prevents commands until valid state and command transport return. (ROADMAP SC-3, second half)"
+  - truth: "Authentication rejection remains a clear user-actionable communication failure. (ROADMAP SC-4, second half; RES-04 clause 4)"
     status: partial
     reason: >-
-      The cached-state half is delivered and verified. The command half is delivered only for an
-      accessory a successful inventory has already built. In the window this criterion names -- a
-      restart with the cloud unreachable -- `configureAccessory` marks the restored services stale
-      but binds no `onSet` handler, and no `update()` runs until the first successful REST
-      inventory, which is unbounded. A press on the restored `System Self-Test` or `Alarm Mute`
-      Switch is therefore not refused; it is silently accepted. Confirmed against the pinned real
-      HAP 2.2.2 as well as the stand-in: `handleSetRequest(true)` with no registered handler
-      resolves and stores the value. Every other refusal in this phase names its cause; this one is
-      silent and the toggle flips in Apple Home.
-    artifacts:
-      - path: src/accessories/basementGuardian.ts
-        issue: "`bindControlRow` is reachable only from `publishRows`, which runs only inside `update()`."
-      - path: src/platform.ts
-        issue: "`configureAccessory` (lines 571-576) marks stale and stores the accessory; it binds no control handler."
-    missing:
-      - "Bind the control rows to whatever restored services already exist, before the first update. With `monitoring.commandTransportReady` already defaulting to false, the existing `hasNoCommandTransport` rule produces the right -70412 refusal the moment a handler exists."
-  - truth: "Fresh family-valid input clears the matching degradation promptly. (ROADMAP SC-4, first half)"
-    status: failed
-    reason: >-
-      CR-02 confirmed by probe against the built tree. `reportMonitoringHealth()` runs only from
-      `recordPollSuccess()` and `recordPollFailure()`. A shadow message arriving after a silence
-      produces ZERO pushes; the latch clears only at the next poll tick. `pollIntervalSeconds`
-      accepts up to 3600, so a flood detected one second after the live path recovers can go
-      unreported in HomeKit for an hour. D-05 ratifies lazy DETECTION on the poll tick; it does not
-      ratify lazy CLEARING, and D-11 is explicit that "a single good observation restores it".
-      Combined with CR-01, every live message arriving in the recovery window is decoded, stored
-      into `lastDecoded`, and then not published.
+      CR-03's core is genuinely closed: `haltOnTerminalAuthFailure` is now reached from the launch,
+      the poll catch and the rotation catch, all three loops stop, and `AUTHENTICATION_STOPPED` is
+      recorded. Mutating the poll catch's call away kills a scenario, so the halt is real and pinned.
+      What does not hold is the word `remains`. The halt does not close the shadow socket --
+      `closeQuietly(shadow)` is reached only from `stop()` -- and `onReportedPatch` carries no
+      `halted` guard. So a live message arriving after the halt reaches
+      `store.applyReportedPatch` -> `subscribeToLiveState` -> `accessory.update()`, and an ordinary
+      `updateValue` clears a stored `statusCode` (confirmed against the pinned real HAP 2.2.2:
+      after `updateValue(new HapStatusError(-70402))` a plain `updateValue(false)` returns
+      `statusCode` to `0` and the get answers normally again).
+      Measured end to end through the Cucumber harness, three scenarios written for this report:
+      (a) control -- refusal, no heartbeat: every service refuses reads, the D-10 presentation holds;
+      (b) treatment -- refusal, then one heartbeat carrying a changed `water_level`: every service
+      answers reads again, including `Basement Guardian Offline`, and `Sump Pit Flood` reports
+      `Status Active` as **`true`**;
+      (c) two simulated hours later: still readable, still `Status Active = true`.
+      The runtime is permanently dead at that point -- no poll, no rotation, no command, and the
+      vendor block lifts only thirty days after the last attempt -- while Apple Home shows a normal,
+      fully-vouched-for accessory. That is a false normal after a terminal failure, which is the
+      failure this project exists to prevent, and it is a weaker presentation than the
+      `Status Active - No` row D-10 rejected by name as "too easy to miss for a failure only the
+      user can resolve".
+      The defect is order-dependent and bites the common case. When the shadow was healthy at halt
+      time -- a vendor REST refusal after a password change, with the MQTT socket still running on
+      temporary AWS credentials that outlive it -- `reportedShadowSilent` is `false`, so the arrival
+      path never calls `reportMonitoringHealth()`, so the platform's `credentialsRejected` branch
+      never re-marks. When the shadow was already silent at halt time the arrival does report, the
+      platform re-marks, and the presentation survives. Nothing re-marks on shadow disconnection
+      either: `handleShadowDisconnected` pushes no monitoring trust.
     artifacts:
       - path: src/runtime/accountRuntime.ts
         issue: >-
-          `onReportedPatch` (lines 508-516) calls `health.recordShadowMessage()` and reports
-          nothing; `handleShadowConnected()` reports nothing either. Only the two poll recorders
-          call `reportMonitoringHealth()`.
-    missing:
-      - "Report from the arrival callback when the silence latch actually moves, guarded by a `reportedShadowSilent` flag so it fires once per recovery rather than on every heartbeat. No timer is introduced, so D-05's testability constraint is untouched."
-      - "A scenario that clears the silence under a LONG poll interval. `An identical heartbeat clears the shadow silence` runs under `a short poll interval`, so it passes without discriminating this."
-  - truth: "Authentication rejection remains a clear user-actionable communication failure. (ROADMAP SC-4, second half; RES-04 last clause)"
-    status: failed
-    reason: >-
-      CR-03 confirmed by probe. `halted = true` is assigned in exactly one place, `launchFailure`,
-      reachable only from `launch()` / `relaunch()`. After `startBackgroundWork()` has run, no path
-      sets it. `runPoll`'s catch does not inspect the error type; `refreshCredentials`'s catch
-      swallows everything into `ROTATION_FAILED`. Probe result for a run that starts successfully
-      and then meets `AuthRejectedError` on the next poll -- `credentialsRejected: false`, zero
-      `AUTHENTICATION_STOPPED` lines, the log says the generic `Device discovery failed.`, no
-      accessory goes unreadable, and the poll loop keeps waking. A user who changes their vendor
-      password while Homebridge is running -- the common case -- gets only `Status Active - No`,
-      which is precisely the presentation D-10 rejects for this cause as "too easy to miss for a
-      failure only the user can resolve". The whole D-10 presentation is reachable only through a
-      restart.
-    artifacts:
-      - path: src/runtime/accountRuntime.ts
-        issue: "`runPoll` catch (lines 617-635) records a generic poll failure for a terminal auth error; `refreshCredentials` catch (lines 594-599) swallows it as a rotation failure."
+          `haltOnTerminalAuthFailure` (lines 485-501) stops the loops but does not close the shadow;
+          `onReportedPatch` (lines 586-618) carries no `halted` guard, so live messages keep flowing
+          into the accessory tier after the runtime has stopped for good.
+      - path: src/platform.ts
+        issue: >-
+          `markServicesUnreadable` is applied once, from the `credentialsRejected` branch of the
+          monitoring-health handler (lines 376-397). Nothing re-applies it, and every later
+          `accessory.update()` clears it.
+      - path: README.md
+        issue: >-
+          Lines 149-151 state "The refusal has the same effect whenever it arrives, at the first
+          sign-in or during a run" and "Every service then stops answering whether the plugin
+          vouches for it." Neither is true for a run in which one live message follows the refusal.
       - path: features/degradedOperation.feature
-        issue: "`Credential rejection makes every service unreadable` drives the refusal through `When the plugin restarts`, so it exercises only the launch path that already works."
+        issue: >-
+          `A credential refused after a healthy start makes every service unreadable` asserts the
+          marking at the instant it lands and never publishes a message afterwards, so it passes
+          against the defect.
     missing:
-      - "Route `AuthRejectedError` and `AuthHaltedError` out of the poll loop through the same terminal branch: set `halted`, record `AUTHENTICATION_STOPPED`, push the trust, and stop `runPolls` looping."
-      - "A runtime case that succeeds on the first `devices` call and rejects the second with `AuthRejectedError`, asserting the pushed `credentialsRejected: true` and the `AUTHENTICATION` line."
-      - "A platform case that the restored accessories go unreadable from a mid-run rejection."
-  - truth: "`REQUIREMENTS.md` no longer contradicts itself: RES-04 carries a completion state that agrees with what this phase shipped. (05-05 must_have)"
-    status: failed
+      - "Make the terminal state durable rather than a one-shot push. Either close the shadow in `haltOnTerminalAuthFailure` the way `stop()` does, or guard `onReportedPatch` on `halted`, or re-apply the unreadable marking after any push that could have cleared it."
+      - "A scenario that publishes a changed heartbeat AFTER the mid-run refusal and asserts every service still answers no read. Without it the fix is unprovable and the current scenario stays blind to it."
+      - "Correct README lines 149-151 to whatever ships, or ship the durable behaviour they already promise."
+  - truth: "`REQUIREMENTS.md` RES-04 carries a completion state that agrees with what this phase shipped. (05-05 / 05-10 must_have)"
+    status: partial
     reason: >-
-      `05-05-SUMMARY.md` moved RES-04 from `Pending` to `Complete`. Two of RES-04's four clauses are
-      not delivered. `commands stay disabled until fresh valid state returns` fails in the failed
-      restart window the requirement itself names. `only explicit credential rejection yields a
-      persistent communication failure requiring user action` holds in the `only` direction but not
-      the forward one: an explicit rejection after a successful start yields nothing. The row is not
-      accurate.
+      Three of the four clauses now hold and were verified by execution, which is real movement from
+      the last report. Clause 4 does not. `only explicit credential rejection yields a persistent
+      communication failure requiring user action` holds in the `only` direction -- a transport
+      outage leaves every service readable, confirmed -- and fails on `persistent`. The named
+      assertion the row cites for that clause,
+      `D-13 pushes a rejected credential and records the authentication stop for a refusal that
+      follows a healthy start`, asserts that the push HAPPENED. It does not assert that it survives.
+      The row's own method -- one named passing assertion per clause -- is sound; this clause's
+      assertion does not cover the word the clause turns on.
     artifacts:
       - path: .planning/REQUIREMENTS.md
-        issue: "Line 147 marks RES-04 `Complete`; line 67's own text is not satisfied."
+        issue: "Line 69 marks RES-04 `Complete` and line 150 repeats it; clause 4 of line 69's own text is not satisfied."
     missing:
-      - "Return RES-04 to a state that matches what shipped, or close the two gaps above first."
-  - truth: "README states the delay is to the report and never to a safety state, and that the plugin holds no value back while it waits. (05-05 must_have)"
-    status: failed
-    reason: >-
-      The README says it and the code does not do it. Per CR-01 the plugin does hold values back --
-      once a scope is withdrawn no new value for it reaches HomeKit at all, including values from
-      the transport that is still working -- and `Status Active` IS the safety state the delay
-      applies to. The second claim, that on credential rejection "Every service then answers `No
-      Response` in Apple Home", is also inaccurate as written: `markServicesUnreadable` pushes the
-      status onto `StatusActive` alone, and a probe confirms `Leak Detected` still answers its
-      retained value under a success status. Documented behaviour a safety plugin does not have is
-      worse than silence.
-    artifacts:
-      - path: README.md
-        issue: "Lines 141-149 assert behaviour CR-01 and CR-02 contradict."
-      - path: CHANGELOG.md
-        issue: "Lines 24-27 omit that the marked services also stop updating."
-    missing:
-      - "After CR-01 and CR-02 are closed the first claim becomes true. Until then it must not ship."
-      - "Restate the No Response claim as what the code does: every service that reports whether the plugin vouches for it stops answering that report, which Apple Home draws as No Response for the accessory."
-deferred: []
+      - "Close the gap above, then the row is accurate. Until then RES-04 should name the clause rather than read `Complete`."
+deferred:
+  - truth: "The `Pump Controller Link Lost` warning names five poisoned scopes where seven are poisoned"
+    addressed_in: "Recorded deferral (deferred-items.md, found during 05-06)"
+    evidence: >-
+      Confirmed still present by probe: the warn line reads "water, pump, power, battery, and fault
+      values are retained", omitting `self-test` and `alarm-mute`. Diagnostic vocabulary, not a
+      safety path; the README states the seven correctly (line 133). Not a phase gap.
+  - truth: "Shadow silence is measured against a wall clock that can jump (IN-03)"
+    addressed_in: "Explicit phase deferral, WINDOWS ledger entry 14"
+    evidence: "Disposition recorded in 05-VALIDATION.md with the reason 05-06-PLAN.md gave."
+  - truth: "The nine-member `DiscoveryContext` literal is written three times (WR-05)"
+    addressed_in: "Explicit phase deferral, WINDOWS ledger entry 14"
+    evidence: "Structural duplication in the composition root; no behavioural consequence."
 behavior_unverified_items: []
+coincidental_reliance_items: []
 human_verification:
   - test: "Install this build over an accessory cache written by a release that predates it. Restart Homebridge with the vendor cloud unreachable. Open the accessory in Apple Home."
     expected: "The tile is present, showing the reading the previous run left, with `Status Active - No` under Details, and no service carries a characteristic it did not have before the upgrade."
-    why_human: "insufficient_spec -- no test in this repository has met a real Homebridge accessory cache; the harness restores through a JSON round trip of its own design. This is 05-02's declared `verification: backstop` truth, whose second half rests on Homebridge's own `configureAccessory` / `didFinishLaunching` call ordering. Extends `04-UAT.md` human item 1."
-  - test: "Force a credential rejection on a real paired home. Open the greyed-out accessory, try to reach its cached values, and trigger an automation built on one of its sensors."
-    expected: "An owner can still reach the cached values, automations built on the sensors survive, and -70402 is the status Apple Home renders as No Response."
-    why_human: "D-10 mandates this check by name. A No Response accessory is greyed out in Apple Home, which sits in tension with RES-04's own `accessories remain present and visibly stale` -- preserve-and-mark risks becoming preserve-and-hide. A negative finding reopens D-10, not RES-04. Nobody has tested it."
+    why_human: "insufficient_spec -- no test in this repository has met a real Homebridge accessory cache; the harness restores through a JSON round trip of its own design. 05-02's declared `verification: backstop` truth. Extends `04-UAT.md` human item 1. Correctly bundled with the G-003 / G-004 session."
+  - test: "Force a credential rejection on a real paired home. Open the greyed-out accessory, try to reach its cached values, and trigger an automation built on one of its sensors. Then wait for at least one device heartbeat and look again."
+    expected: "An owner can still reach the cached values, automations built on the sensors survive, and -70402 is the status Apple Home renders as No Response -- and it is still No Response after the heartbeat."
+    why_human: "D-10 mandates the first half by name. The second half is new: the gap above shows the presentation is undone by the next live message, so this session should now measure how Apple Home behaves across that transition rather than only at the instant of the refusal. A negative finding on the first half reopens D-10; a confirmation of the second half is the gap above, already actionable without it."
   - test: "Force a degraded monitoring scope on a real paired home and confirm the rendering."
     expected: "The `Status Active` row reads `No`, the tile stays present, and the last value is retained."
     why_human: "Apple Home rendering cannot be asserted from the plugin side. Rides along with the open G-003 / G-004 session."
@@ -154,22 +128,30 @@ human_verification:
 offline apart from a degraded monitoring path. Each degradation clears once fresh valid data
 returns.
 
-**Verified:** 2026-09-02T10:58:15Z
+**Verified:** 2026-09-02T16:56:36Z
 **Status:** gaps_found
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after the 05-06 … 05-11 gap-closure round
 
 ## How this was verified
 
-Every finding below was reached by executing the shipped code, not by reading it. Four probe scripts
-drove the built `dist-test` tree: two over `createAccountRuntime` with the real failure log, retry
-policies and injected clock; two over `createBasementGuardianAccessory` with the real `Gemini`
-family, the real service catalogue, and the real `markRestoredServicesStale` /
-`markServicesUnreadable` passes. One check ran against the pinned real `@homebridge/hap-nodejs`
-2.2.2. Transcripts are quoted inline.
+Nothing below rests on a SUMMARY claim. Every verdict was reached one of three ways.
 
-The suite state was established independently and is not evidence here: 1295 unit tests, 89 Cucumber
-scenarios, 894 steps, all green; coverage 100/100/100; regression gate clean. Three of the four
-findings below are invisible to that suite, which is the point of this report.
+**Probes over the built tree.** Five scripts drove `dist-test` with the real `Gemini` family, the
+real service catalogue and the real registry: the accessory publishing and trust layers (P2, P4),
+the offline-confirmation counter (P7), and the restored-control refusal against the **pinned real
+`@homebridge/hap-nodejs` 2.2.2** rather than the stand-in (P3, P6).
+
+**Mutation testing.** Six mutations were applied to the compiled `dist-test` tree — a build
+artifact, so the source tree was never touched — and reverted by rebuild. This answers the question
+a passing suite cannot: is the assertion load-bearing, or green but blind. `git status` is clean and
+`dist-test` was diffed byte-for-byte against a pristine copy afterwards.
+
+**Scenarios written for this report.** Three Cucumber scenarios were run from a scratchpad path
+against the repository's own step definitions. They added nothing to the repository and are the
+evidence for the one gap below.
+
+The suite state was established independently and is not evidence here: 95 Cucumber scenarios, 986
+steps, all green. Re-run and confirmed. The gap below is invisible to it, which is the point.
 
 ## Goal Achievement
 
@@ -177,219 +159,238 @@ findings below are invisible to that suite, which is the point of this report.
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC-1 | `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report the device disconnected, and a failed REST request never counts toward that confirmation | ✓ VERIFIED | Probe P1 over the real Gemini adapter with `offlineConfirmationPollCount: 2`: contact `0` after one connected poll, `0` after one disconnected poll, `1` after two, back to `0` on the next connected poll. Probe P1b: two disconnected `shadow`-sourced updates leave it at `0`. `offlineCount` advances only under `if (source === 'poll')` (`basementGuardian.ts:848, 879`), and a failed REST request produces no snapshot at all, so it cannot reach the counter |
-| SC-2 | Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path; only the first two use their defined safety adapters | ✗ FAILED | Half holds, half does not. Neither adapter is ever activated BY a monitoring failure (probe P3: both contacts stay `0` with both transports down) — that part is real. But CR-01 makes the degraded path present itself as a false normal, and WR-01 makes `Pump Controller Link Lost` read trustworthy while the plugin is blind. See below |
-| SC-3 | Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return | ⚠️ PARTIAL — counted as FAILED | Cached-state half VERIFIED (probe R1). Command half fails in the restart window the criterion names (probe R2, corroborated against real HAP 2.2.2) |
-| SC-4 | Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure | ✗ FAILED | Both halves. Shadow silence does not clear on the message that proves recovery (CR-02, probe). A credential rejection after a successful start never reaches the terminal branch (CR-03, probe) |
+| SC-1 | `Basement Guardian Offline` activates only after the configured number of successful REST snapshots report the device disconnected, and a failed REST request never counts toward that confirmation | ✓ VERIFIED | Probe P7 with `offlineConfirmationPollCount: 2`: contact `0` after one connected poll, `0` after one disconnected, `1` after two, back to `0` on the next connected poll. Two disconnected `shadow`-sourced updates leave it at `0`. A full monitoring blackout leaves it at `0`. Unchanged by the gap round |
+| SC-2 | Users can distinguish pump-controller link loss, vendor-confirmed device offline, and a degraded REST/MQTT monitoring path; only the first two use their defined safety adapters | ✓ VERIFIED | Both layers hold, and both are pinned. See below |
+| SC-3 | Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return | ✓ VERIFIED | Cached half unchanged and green. Command half now real: probe P3 on real HAP 2.2.2 refuses the press, names the cause, holds the toggle, clears the status on the next macrotask, and the live binder takes the slot back on first publish. Mutation M6 kills it |
+| SC-4 | Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure | ✗ FAILED | First half VERIFIED and pinned. Second half is now *reached* but does not *remain*: one live message after a mid-run refusal restores every service to a fully-trusted read. See the gap |
 
-**Score:** 1/4 roadmap success criteria verified.
+**Score:** 3/4 roadmap success criteria verified.
 
-### What genuinely holds — credit where it is due
+### SC-2 — both layers, judged separately
 
-This phase did real work and most of the machinery is sound. Verified against the running code:
+The criterion needed two independent mechanisms and both were checked on their own.
 
-| Delivered behaviour | Evidence |
+**Layer 1, the accessory projection (CR-01).** `isRowPublishable` exempts exactly the `unreachable`
+reason while `isRowFullyTrusted` keeps the un-narrowed predicate, so a monitoring withdrawal marks
+rather than withholds.
+
+Probe P2a, shadow silent and REST healthy, a flooded poll:
+
+```text
+healthy Sump Pit Flood: {"Leak Detected":0,"Status Active":true}
+silent  Sump Pit Flood: {"Leak Detected":1,"Status Active":false}
+untrusted: water:unreachable,pump:unreachable,...(7 scopes)
+```
+
+The flood reaches HomeKit and the trust row alone carries the doubt. **Mutation M1** —
+`SEEING_LESS_REASONS` emptied, reverting the fix — kills 2 Cucumber scenarios. The end-to-end tier
+is not blind to it, which is what the carried Phase 4 warning asked to be re-established.
+
+**Layer 2, telemetry ownership (D-13, plan 05-11).** `pollTelemetry` froze telemetry during silence
+because `releaseShadowSource()` had one caller, `handleShadowDisconnected`. The release now also
+fires at the head of `applyDevices`, gated on `health.trustNow().shadowSilent`, upstream of every
+`applyDiscovery` write. **Mutation M3** — that call disabled — kills
+`A pit that floods after the live path went quiet still reaches Apple Home` on the assertion
+`| water_level | 31 |`. Layer 2 is genuinely load-bearing and not a duplicate of layer 1.
+
+**WR-01, the layer order.** `distrustReasonsOf` now fills `invalid`, then `unreachable`, then
+`controller-link-lost`. Probe P2b, controller link lost with both transports down:
+
+```text
+link lost, transports OK : Pump Controller Link Lost {"Contact":1,"Status Active":true}
+link lost, both down     : Pump Controller Link Lost {"Contact":1,"Status Active":false}
+untrusted: all eight scopes report `unreachable`
+```
+
+**Mutation M2** — the two layers swapped back — kills one Cucumber scenario and one unit assertion
+with an exact reason-map diff. Pinned at both tiers.
+
+**Only the first two use their safety adapters.** Probe P2c: with both transports down, neither
+`Basement Guardian Offline` nor `Pump Controller Link Lost` activates. The contacts stay `0` and
+only `Status Active` moves. A monitoring failure never asserts a device fact.
+
+### The narrowing did not open a false-normal path
+
+The obvious risk of exempting `unreachable` is that an *invalid* value rides out on the exemption.
+It does not. `reasonsOf(violated, 'invalid')` runs first and the monitoring layer fills only empty
+scopes, so `invalid` beats `unreachable` and stays withheld. Verified three ways:
+
+| Case | Result |
 |---|---|
-| The offline-confirmation contract (SC-1) is intact end to end | Probes P1, P1b — the run advances only on successful REST snapshots and resets on the first connected one |
-| The two transports are genuinely distinguished, and only shadow loss withdraws live-value trust | Probe P5: REST-only degradation leaves `Sump Pit Flood` `Status Active = true` and withdraws `connectivity` alone (`distrust = connectivity:unreachable`), exactly as the narrowed D-02 specifies |
-| `monitoringPathNow()` is byte-identical and the trust decision is a second projection beside it | Established independently; the fourteen prior assertions pass unmodified |
-| Thresholds are real and boundary-correct | `REST_FAILURE_THRESHOLD = 2`, `HEARTBEAT_INTERVAL_MS * MISSED_HEARTBEATS_BEFORE_SILENT` compared with `>=`, no division or rounding. Silence is derived from `onReportedPatch` arrival stamps against the injected clock, never from the socket flag and never from `snapshot.receivedAt` — the two sources D-05 forbids by name |
-| A REST poll does not clear a shadow-silence degradation | `recordRestSuccess()` touches only `consecutiveRestFailures`; `lastShadowMessageAt` is moved by `recordShadowMessage()` alone (`monitoringHealth.ts:143-162`) |
-| The restart marking pass works and is real shared code | Probe R1: 17 services marked, `Leak Detected` retained at `1`, `Status Active` `false`, reads still answer. `markRestoredServicesStale` is one exported function called by both `platform.configureAccessory` and `features/support/world.ts` |
-| No accessory read path can reach the network | Zero `onGet` handlers under `src/`, no `src/accessories/` module imports `src/cloud/`, and the static gate carries real enumeration floors (10 / 40 / 104) with non-vacuous planted-fixture controls |
-| Command gating on a live accessory is correct and names its cause | Probe R3: transport unready → `-70412`, `"the plugin has no way to reach the vendor right now"`, nothing sent. Transport ready → sent. Shadow silent (state withheld) → `-70412`, `"the plugin has no fresh state for it"`, nothing sent. The refusal order is pinned by a test |
-| Credential rejection makes services unreadable while retaining values | Probe R4: 17 services marked, `Status Active` throws, `Leak Detected` answers its retained `1`. It is the only cause in the plugin that does this |
-| `markMonitoring` stores outside the early return and compares all four members | `basementGuardian.ts:807-819`, established independently |
-| The degradation thresholds are not configurable | `test/config.test.ts:414` asserts the resolved config key set with `deepStrictEqual` |
-| The false-cause log line was fixed | `reportDegradation()` excludes both `controller-link-lost` and `unreachable`, so a transport outage no longer claims a profile stopped validating |
-| No debt markers, no skipped tests | Scan over all 31 files this phase changed: zero `TBD`/`FIXME`/`XXX`, zero `TODO`/`HACK`/`PLACEHOLDER`, zero `.skip`/`.todo` |
+| P4a — invalid `water_level` arriving *during* silence | `water:invalid`; the last valid reading (code 1 / 20 %) is retained, `Status Active` false. The bad value never reaches the characteristic |
+| P4b — invalid first, silence second | `water:invalid` survives the monitoring layer; the other seven scopes go `unreachable`. Same retained value |
+| P4c — the whole payload unresolvable during silence | All eight scopes `invalid`, the flood reading retained, `Status Active` false |
 
-### Plan `must_haves` truths the code does NOT do
+With both transports down no new value arrives at all, so the exemption changes nothing there:
+`markMonitoring` republishes the values already on the characteristics. The behaviour changes only
+where a working transport delivered something new, which is exactly CR-01's case.
 
-The orchestrator asked directly. Seven, across three plans:
+### The one gap — SC-4's second half
 
-| Plan | Truth as written | What the code does |
+CR-03's core is fixed and I want to be precise about that, because the fix is real: the halt is
+reachable from all three call sites, all three loops stop, and **mutation M4** — the poll catch's
+call to `haltOnTerminalAuthFailure` disabled — kills a scenario. A mid-run refusal now genuinely
+stops the plugin. That was the whole of CR-03 as written.
+
+What the phase also has to deliver is that the refusal *remains* visible. It does not.
+
+`haltOnTerminalAuthFailure` does not close the shadow socket, and `onReportedPatch` has no `halted`
+guard. On real HAP 2.2.2 (probe P6) an ordinary `updateValue` clears a stored `statusCode`:
+
+```text
+2 value/status: true -70402      get -> throws
+3 value/status after an ordinary push: false 0    get -> ok
+```
+
+Driven end to end through the harness — control and treatment, both scenarios written for this
+report and both passing as written:
+
+| Scenario | Assertion | Result |
 |---|---|---|
-| 05-01 | "A trust withdrawal retains every published value and **changes only whether the plugin vouches for it**." | The first clause holds; the second does not. A withdrawal also stops the scope publishing, so new valid values from a working transport are discarded (CR-01) |
-| 05-01 | "Clearing is matched to cause ... **one good observation clears its own cause immediately** rather than after a confirmation run (D-11)." | True for REST. False for shadow: the observation clears nothing until the next poll tick (CR-02) |
-| 05-01 | "A heartbeat carrying values identical to the previous one **clears** shadow silence, because arrival is stamped at `onReportedPatch` upstream of the store's change filter." | The stamping is correct and is genuinely upstream of the change filter. The clearing is not driven from the arrival. The scenario proving this runs under `a short poll interval`, which is what lets it pass |
-| 05-03 | "The command transport is unready **while the runtime is stopped**, while authentication is halted, and until the first REST inventory has succeeded." | `commandTransportReadyNow()` answers correctly, but `stop()` pushes nothing (probe: 0 pushes emitted by `stop()`), so every accessory keeps `commandTransportReady: true` from the last successful poll. The tier that decides never learns |
-| 05-04 | "A vendor refusal of the account credentials makes **every published service unreadable**." | Only when the refusal arrives at launch. A refusal after a successful start reaches nothing (CR-03) |
-| 05-04 | "Nothing this phase adds retries after a credential rejection ... **no timer, no relaunch, and no poll follows it**." | True for a launch-time refusal. After a mid-run refusal the poll loop keeps waking. It sends no vendor traffic — `auth.ts:452-453` throws `AuthHaltedError` before the request, so the thirty-day block is not extended — but the runtime never stops either |
-| 05-05 | "The README states ... **It delays a report, never a safety state**" and "a refused account credential ... **Every service then answers `No Response`**" | The README states both. Neither is true of the shipped code (WR-03) |
+| Mid-run refusal, **no** heartbeat | every service *answers no read* for `Status Active` | holds — D-10's presentation is correct at the instant it lands |
+| Mid-run refusal, **one** changed heartbeat | `Sump Pit Flood` and `Basement Guardian Offline` *answer a read*; `Sump Pit Flood` reports `Status Active` as **`true`**; the `System Self-Test` switch answers a read | the presentation is gone |
+| …and two simulated hours later | still readable, still `Status Active = true` | permanent |
 
-The remaining plan truths hold. In particular 05-02's five non-backstop truths are all verified, and
-its sixth is a declared `verification: backstop` item routed to human verification below.
+The runtime is dead at that point and never recovers by itself. Apple Home shows a normal accessory.
+Nothing re-marks: `handleShadowDisconnected` pushes no monitoring trust, and the arrival path's
+`reportedShadowSilent` latch is `false` in exactly the case that matters — a REST credential refused
+while the MQTT socket still runs on temporary AWS credentials that outlive it.
+
+This is not a regression of previously working behaviour. Before 05-07 the mid-run halt state did
+not exist, so nothing was marked and nothing was un-marked. 05-07 delivered the marking; the gap is
+that it delivered a one-shot rather than a state.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `src/runtime/monitoringHealth.ts` | The account-wide monitoring-trust projection | ✓ VERIFIED | 163 lines, exists, substantive, wired from `accountRuntime.ts` |
-| `test/runtime/monitoringHealth.test.ts` | Threshold, boundary, precision, clearing cases | ✓ VERIFIED | 241 lines |
-| `features/degradedOperation.feature` | The end-to-end transport matrix | ⚠️ PRESENT, EVIDENCE WEAK | 11 scenarios, all green — and three of them cannot see the defects in the behaviour they cover. See Test Quality Audit |
-| `src/accessories/staleMarking.ts` | The restart and credential passes | ✓ VERIFIED | Both exported, both called, both proven by probe |
-| `test/accessories/staleMarking.test.ts` | Unit cases for the pass | ✓ VERIFIED | 281 lines |
-| `features/support/fakeHomebridgeApi.ts` | A cache carrying services and last values across a restart | ✓ VERIFIED | The deliberate service-dropping choice at lines 106-110 was reversed, which is what gives every D-06 scenario something to be wrong about |
-| `test/accessories/accessoryReadPathScope.test.ts` | The static read-path gate | ✓ VERIFIED | 236 lines, real enumeration floors, planted-fixture controls per spelling. (The `contains: accessoryReadPathScope` pattern check fails only because the plan named the file's own basename; the file is substantive) |
-| `src/accessories/controls.ts` | The command-transport refusal beside the existing local refusals | ✓ VERIFIED | Probe R3 |
-| `src/accessories/serviceCatalogue.ts` | `publishPersistentFailure`, the one narrow production call site | ✓ VERIFIED | One production caller |
-| `test/accessories/hapWriteFidelity.test.ts` | The push-an-error fidelity case against the pinned real HAP | ✓ VERIFIED | 113 lines. The strongest artifact in the phase: one script driven against both HAPs, whole record compared. (Same cosmetic `contains` miss as above) |
-| `test/config.test.ts` | The assertion that no threshold became a config key | ✓ VERIFIED | `deepStrictEqual` on the resolved key set |
-| `README.md` | The user-facing account of degraded operation | ✗ INACCURATE | Present and well written; two claims contradict the shipped behaviour |
+| `src/accessories/serviceCatalogue.ts` | `isRowPublishable` / `isRowFullyTrusted` split, `SEEING_LESS_REASONS` = `{unreachable}` | ✓ VERIFIED | Wired at `toRow` line 642 and the control-value path line 324. M1 kills it |
+| `src/accessories/basementGuardian.ts` | monitoring layer above the controller-link layer | ✓ VERIFIED | Lines 332-354. M2 kills it at both tiers |
+| `src/runtime/accountRuntime.ts` (handover) | release at the head of `applyDevices`, gated on `shadowSilent` | ✓ VERIFIED | Line 333, upstream of `applyDiscovery`. M3 kills it |
+| `src/runtime/accountRuntime.ts` (recovery) | arrival-driven report, latched once per recovery | ✓ VERIFIED | Lines 616-618. M5 kills it |
+| `src/runtime/accountRuntime.ts` (halt) | `haltOnTerminalAuthFailure` from launch, poll and rotation | ⚠️ PARTIAL | Reached and idempotent (M4 kills it). Does not close the shadow, so the state it creates is not durable |
+| `src/accessories/controls.ts` | `bindRestoredControlRefusal`, replaceable by construction | ✓ VERIFIED | P3 on real HAP 2.2.2: refuse, name, hold, clear, replace |
+| `src/accessories/staleMarking.ts` | one guarded walk shared by all three restart passes | ✓ VERIFIED | `overServicesCarrying`; M6 kills the refusal pass |
+| `src/platform.ts` | `configureAccessory` calls all three passes | ✓ VERIFIED | Lines 577-588; counts logged as assertable evidence |
+| `README.md` | agrees with the shipped code | ⚠️ PARTIAL | Lines 133-147 now accurate, including the `holds no value back` claim my last report called false. Lines 149-151 are not |
+| `.planning/REQUIREMENTS.md` | RES-04 state agrees with what shipped | ⚠️ PARTIAL | Clauses 1-3 verified; clause 4 overstated |
 
 ### Key Link Verification
 
 | From | To | Via | Status |
 |---|---|---|---|
-| `accountRuntime.ts` | `monitoringHealth.ts` | arrival stamping and the REST run | ✓ WIRED |
-| `accountRuntime.ts` | `platform.ts` | `onMonitoringHealth` carries `MonitoringTrust` out | ✓ WIRED |
-| `platform.ts` | `basementGuardian.ts` | `applyMonitoringHealth` → `markMonitoring` fan-out | ✓ WIRED |
-| `basementGuardian.ts` | `serviceCatalogue.ts` | the monitoring cause as a third distrust layer | ⚠️ WIRED BUT WRONG — reaches every row through the *withholding* mechanism rather than the marking one (CR-01) |
-| `platform.ts` | `staleMarking.ts` | `configureAccessory` calls the pass | ✓ WIRED |
-| `world.ts` | `staleMarking.ts` | the harness calls the same exported function | ✓ WIRED |
-| `accountRuntime.ts` | `platform.ts` | the terminal auth branch pushes `credentialsRejected: true` | ⚠️ HOLLOW — the branch exists and is wired, but is unreachable after `startBackgroundWork()` (CR-03) |
-| `platform.ts` | `staleMarking.ts` | `applyMonitoringHealth` → `markServicesUnreadable` | ✓ WIRED (downstream of the hollow link above) |
-| `staleMarking.ts` | `serviceCatalogue.ts` | the pass pushes through `publishPersistentFailure` | ✓ WIRED |
-| `README.md` | `src/config.ts` | the documented 300–3600 second bound | ✓ WIRED |
+| `platform.configureAccessory` | `refuseRestoredControls` | direct call, line 580 | ✓ WIRED (M6) |
+| `refuseRestoredControls` | `bindRestoredControlRefusal` | `overServicesCarrying` on `Characteristic.On` | ✓ WIRED (P3) |
+| `createControlBinder.bind` | the restored refusal's slot | HAP's single `onSet` slot | ✓ WIRED (P3 case C) |
+| `applyDevices` | `store.releaseShadowSource` | `health.trustNow().shadowSilent` | ✓ WIRED (M3) |
+| `onReportedPatch` | `reportMonitoringHealth` | `reportedShadowSilent` latch | ✓ WIRED (M5) |
+| `runPoll` catch | `haltOnTerminalAuthFailure` | direct call, line 739 | ✓ WIRED (M4) |
+| `haltOnTerminalAuthFailure` | shadow socket shutdown | — | ✗ NOT WIRED — the gap |
+| `platform` monitoring handler | `markServicesUnreadable` | `credentialsRejected` branch | ⚠️ PARTIAL — applied once, undone by any later `update()` |
 
-### Data-Flow Trace (Level 4)
+### Mutation Results
 
-| Artifact | Data | Source | Reaches HomeKit | Status |
-|---|---|---|---|---|
-| `Sump Pit Flood` / `Leak Detected` | flood verdict from a REST poll during shadow silence | real REST poll, family-validated | **No** | ✗ DISCONNECTED — decoded, validated, discarded |
-| `Sump Pit Flood` / `Leak Detected` | flood verdict from a shadow message during recovery | real shadow message | **No** (until the next poll tick) | ✗ DISCONNECTED |
-| `Basement Guardian Offline` / `Contact Sensor State` | `offlineCount >= threshold` | successful REST snapshots only | Yes | ✓ FLOWING |
-| Restored services / `Status Active` | `markRestoredServicesStale` | the restart pass | Yes | ✓ FLOWING |
-| Every service / `Status Active` status code | `credentialsRejected` | terminal auth branch | Yes at launch, **No** mid-run | ⚠️ PARTIAL |
+| # | Mutation | Killed by | Verdict |
+|---|---|---|---|
+| M1 | `SEEING_LESS_REASONS` emptied (undo CR-01) | 2 Cucumber scenarios | load-bearing |
+| M2 | `distrustReasonsOf` layers swapped (undo WR-01) | 1 scenario + 1 unit assertion | load-bearing |
+| M3 | silence-triggered handover disabled (undo D-13) | `A pit that floods after the live path went quiet…` | load-bearing |
+| M4 | poll catch no longer halts on `AuthRejectedError` | 1 scenario | load-bearing |
+| M5 | arrival-driven recovery report removed (undo CR-02) | 1 scenario | load-bearing |
+| M6 | restored-control refusal made a no-op (undo WR-02) | 1 scenario | load-bearing |
+| M7 | live binder registers a listener instead of taking the `onSet` slot — **the exact candidate WINDOWS ledger 11 records as NOT RUN** | 55 scenarios | see below |
 
 ### Behavioural Spot-Checks
 
-All run against the built `dist-test` tree. Output quoted verbatim.
-
-| Behaviour | Probe | Result | Status |
+| Behaviour | Command | Result | Status |
 |---|---|---|---|
-| Offline confirmation counts successful disconnected snapshots only | P1 | `1 connected → 0`, `1 disconnected → 0`, `2 disconnected → 1`, `connected → 0` | ✓ PASS |
-| Shadow-sourced updates do not advance the run | P1b | `after 2 disconnected SHADOW updates Offline contact = 0` | ✓ PASS |
-| A flooded poll during shadow silence reaches HomeKit | P2 | `FLOODED poll leak = 0 statusActive = false` → `a flooded reading from the WORKING transport is DISCARDED`; the `1` appears only when the silence clears | ✗ FAIL (CR-01) |
-| A monitoring failure never activates the two device adapters | P3 | both down: `offline = 0 link = 0` | ✓ PASS |
-| Under a total blackout nothing reads as trustworthy | P4 | `link lost, BOTH down: link contact = 1 statusActive = true` | ✗ FAIL (WR-01) |
-| REST-only degradation leaves live values trusted | P5 | `flood statusActive = true, offline statusActive = false, distrust = connectivity:unreachable` | ✓ PASS |
-| A returning shadow message clears the silence latch | CR-02 A/B | `pushes at message arrival: 0`; latch clears only `after next poll tick` | ✗ FAIL (CR-02) |
-| A mid-run credential rejection reaches the terminal branch | CR-03 | `credentialsRejected = false`, `AUTHENTICATION_STOPPED lines: 0`, log says `Device discovery failed.`, poll loop keeps waking | ✗ FAIL (CR-03) |
-| `stop()` pushes a final trust | WR-07 | `pushes emitted by stop(): 0`, accessories keep `commandTransportReady: true` | ✗ FAIL (WR-07) |
-| Restart leaves cached values present and marked | R1 | `marked 17 services`, `leak = 1`, `statusActive = false`, read `answers` | ✓ PASS |
-| A press on a restored switch before the first poll is refused | R2 | `press outcome = ACCEPTED (no error)`, `commands sent = 0`, `switch value after press = true` | ✗ FAIL (WR-02) |
-| Real HAP 2.2.2 agrees a set with no handler is silently accepted | real-HAP check | `handleSetRequest resolved: undefined`, `value after: true`, `listeners on SET: 0` | ✗ CONFIRMS R2 |
-| Command gating on a live accessory names its cause | R3 | `-70412` + `"no way to reach the vendor right now"`; `-70412` + `"no fresh state for it"`; nothing sent in either | ✓ PASS |
-| Credential rejection makes services unreadable and retains values | R4 | `marked 17`, `Status Active read = throws`, `Leak Detected read = answers 1` | ✓ PASS |
-
-### Probe Execution
-
-N/A — this project defines no `scripts/*/tests/probe-*.sh`. The verifier's own probes above serve
-the same function and their transcripts are quoted.
-
-### Test Quality Audit
-
-No skipped tests, no circular fixtures, no coverage exceptions. The problem is not test hygiene; it
-is that three green scenarios cannot see the defect in the behaviour they cover.
-
-| Test | Linked | Assertion level | Verdict |
-|---|---|---|---|
-| `degradedOperation.feature` — "Shadow silence withdraws trust while polling continues" | RES-03 | Value (`Status Active`) | ⚠️ BLIND to CR-01. It polls with the SAME telemetry and asserts `the "Sump Pit Flood" sensor is not activated` after a DRY poll, which passes either way |
-| `basementGuardian.test.ts` — "retains every published value across a lost monitoring path and moves the trust flag alone" | RES-03 | Value | ⚠️ Asserts the defect's own signature: that nothing moved is exactly what CR-01 produces |
-| `degradedOperation.feature` — "An identical heartbeat clears the shadow silence" | RES-01, D-11 | Value | ⚠️ BLIND to CR-02. Runs under `a short poll interval`, so the poll-tick clearing and the arrival clearing are indistinguishable |
-| `degradedOperation.feature` — "Credential rejection makes every service unreadable" | RES-04, D-10 | Value + read-throws | ⚠️ BLIND to CR-03. Drives the refusal through `When the plugin restarts`, so it covers only the launch path |
-| `degradedOperation.feature` — "A transport outage leaves every service readable" | RES-04 | Existence-of-answer | ⚠️ WR-06: `assertReadAnswered` inverts a predicate that returns `false` for an ABSENT characteristic, so an absent characteristic reads as "answers a read" — the exact state CR-01 produces on a first run |
-| `accountRuntime.test.ts` — every credential-rejection case (lines 594, 994, 1164, 1181, 1459) | RES-04, D-10 | Value | ⚠️ All five reject the FIRST `devices` call. The mid-run class is untested |
-| `hapWriteFidelity.test.ts` | D-17, SAFE-08 | Behavioural, against the pinned real HAP | ✓ STRONG |
-| `accessoryReadPathScope.test.ts` | RES-04, D-09 | Static, with enumeration floors and planted-fixture controls | ✓ STRONG |
-
-**Disabled tests on requirements:** 0. **Circular patterns:** 0. **Blind-but-green tests on
-phase-central behaviour:** 6 → ⚠️ WARNING, and the direct cause of why a fully green suite coexists
-with three blockers. This is the same shape `04-VERIFICATION.md` W-1 recorded, arriving through a
-different door: the phase built the harness improvements it promised, and then wrote the assertions
-against payloads that do not move.
+| Whole suite green | `npx cucumber-js` | 95 scenarios, 986 steps, all passed | ✓ PASS |
+| Flood publishes during silence | probe P2a | `Leak Detected 1`, `Status Active false` | ✓ PASS |
+| Restored press refused on real HAP 2.2.2 | probe P3 case B | `statusCode -70412`, toggle stays `false`, cause named | ✓ PASS |
+| Live binder replaces the refusal | probe P3 case C | press accepted, command sent, no refusal logged | ✓ PASS |
+| Offline counter contract | probe P7 | 0 / 0 / 1 / 0, shadow-sourced 0, blind 0 | ✓ PASS |
+| No Response survives a heartbeat | scratchpad scenario | services answer reads again, `Status Active true` | ✗ FAIL |
 
 ### Requirements Coverage
 
-| Requirement | Source Plan | Status | Evidence |
+| Requirement | Description | Status | Evidence |
 |---|---|---|---|
-| RES-03 | 05-01 | ⚠️ PARTIAL | The literal text holds: the adapter's activation rule is intact (P1), a failed request never counts, and a monitoring-path loss raises no false physical-device alert (P3) and is diagnosed under its own failure-log kind. What fails is the phase's own delivery of the distinction to the user (SC-2) and the promptness of clearing (SC-4) |
-| RES-04 | 05-02, 05-03, 05-04 | ✗ BLOCKED | Two of four clauses fail. "getters return cached values without network calls" ✓ (static gate). "accessories remain present and visibly stale" ✓ (R1). "commands stay disabled until fresh valid state returns" ✗ in the failed-restart window the clause names (R2). "only explicit credential rejection yields a persistent communication failure requiring user action" ✗ in the forward direction (CR-03) |
-| CONF-05 | 05-05 | ✓ SATISFIED | No threshold became a setting; the resolved key set is asserted |
+| RES-03 | offline adapter on successful snapshots only; monitoring loss diagnosed separately without a false device alert | ✓ SATISFIED | P7 for the counter; P2c for no false alert; the SC-2 layers for the separation. Its Phase 5 sentence is genuinely delivered now |
+| RES-04 | cached reads, present-and-stale, commands disabled, credential rejection persistent | ⚠️ 3 of 4 | Clauses 1-3 verified by execution. Clause 4 fails on `persistent` — see the gap |
 
-**Is the `RES-04: Complete` row now accurate? No.** Plainly: `05-05-SUMMARY.md` moved RES-04 from
-`Pending` to `Complete`, and the requirement's own text is not satisfied. A user who changes their
-vendor password while Homebridge runs gets a generic "Device discovery failed." and a `Status Active
-- No` row — not the persistent, user-actionable communication failure RES-04's last clause requires.
-A user who restarts with the cloud unreachable can press `System Self-Test` and have HomeKit tell
-them it worked. Marking RES-04 `Complete` makes a later audit read a gap as shipped, which is the
-exact failure 05-05's own prohibition forbids: "MUST NOT record a requirement as complete while that
-requirement's own delivery notes say part of it is still owed."
+### Judgement calls the orchestrator asked for
 
-### Decision Coverage
+**Is RES-04's `Complete` row accurate?** No, but it is much closer than last time and the method
+behind it is sound. Clause 3 — the one I failed last time — is now genuinely delivered, and the
+row's evidence for it is the right assertion. Clause 4 is the problem: the cited assertion proves
+the push happened, not that it persists, and `persistent` is the word the clause turns on. The row
+should name that clause rather than read `Complete`.
 
-All 12 trackable `05-CONTEXT.md` decisions are honored by shipped artifacts (12/12, non-blocking
-heuristic gate). Worth reading against the findings above: the decisions were translated into code,
-and two of them — D-02's marking semantics and D-11's clearing-on-observation — were translated into
-code that does something narrower than the decision says. Coverage is not correctness.
+**Is the SYNC-03 `Pending` judgement defensible?** Yes. I looked for a real gap wearing a
+bookkeeping argument and did not find one. SYNC-03's own text was delivered in Phase 1 and only
+*amended* here, the amendment is implemented and mutation-pinned (M3), and every Phase 1 row reads
+`Pending` because Phase 1 predates the mark-complete habit. Closing one row of that block on Phase 5
+evidence would misreport which phase delivered it. Ledger entry 12 routes it correctly to a Phase 1
+close-out or a milestone audit. No Phase 5 debt hides there. The amendment note is present and
+correctly disambiguates `05-CONTEXT.md` D-13 from Phase 1's own D-13.
 
-### Prohibitions
+**Ledger entry 11 — the NOT RUN mutation.** Over-cautious, and now discharged. I ran the exact
+candidate it names (M7: `bind` registering an additional listener rather than taking HAP's single
+`onSet` slot). It kills 55 scenarios. Separately, probe P3 case C demonstrates the replacement
+directly on real HAP 2.2.2: after `bind` runs on a service that already carries the restored
+refusal, the press is accepted and the command is sent with nothing refused. The behaviour is
+verified. The narrow point the ledger makes — that no mutation isolates the *replacement* rather
+than the binder as a whole — stands as a test-design residual, but it puts no phase outcome at risk.
 
-Every prohibition in all five plans carries `status: flagged-unverified`. Two are now
-counter-indicated by the shipped behaviour:
+**Ledger entry 13 — 22 first-round validation rows still `pending`.** The concern that matters is
+the three green-but-blind rows, and it is now answered independently: M1, M2, M3, M5 and M6 each
+kill at least one end-to-end scenario, so the four central mechanisms of this phase are
+mutation-pinned. What remains is validation bookkeeping, not an unverified behaviour. Not a phase
+gap.
 
-| Prohibition | Plan | Disposition |
-|---|---|---|
-| "MUST NOT blank, default, or reset a retained value when trust is withdrawn. Preserve-and-mark must not become preserve-and-hide." | 05-01 | ⚠️ **Honoured in letter, broken in spirit.** Nothing is blanked. But a valid new value is withheld, so preserve-and-mark became preserve-and-freeze, and the frozen value reads "no leak" while the plugin holds "leak" |
-| "MUST NOT let a press reach the vendor while the plugin cannot vouch for the device's current state." | 05-03 | ✓ Honoured — but its converse is not: in the restart window a press reaches nothing AND is reported as successful (R2) |
-| The remaining 22 | all | flagged-unverified; no enforcement evidence wired. Per the fail-closed default these are recorded as unverified, not green |
+**Are the three human items one real-home session, and does any block the phase?** The bundling is
+right — all three need a real paired Apple Home and the same session, and they gate `1.0.0` through
+`G-003`/`G-004` rather than gating this phase. None of them blocks Phase 5. Item 2's premise has
+shifted, though: the D-10 check should now also look at what happens *after* a heartbeat, because
+the gap above shows the No Response is undone by one. That does not turn item 2 into a phase
+blocker; the gap is already actionable without a real home.
+
+**The D-13 handover's cost, considered and accepted.** Releasing telemetry ownership on silence
+means a REST body replaces what the shadow last delivered, and `An identical heartbeat clears the
+shadow silence` documents the reversion (`water_level` 3 -> 1). In the harness that is a fixture
+artifact: the REST body is a fixed value independent of the heartbeat. In production the vendor's
+REST snapshot is fed from the same device, so a silent device makes both sources report the same
+last-known state. `Status Active` marks it either way. Recorded as an observation, not a gap — it is
+the explicit maintainer ruling with the tradeoff stated in D-13.
 
 ### Anti-Patterns Found
 
-None. Zero debt markers, zero skipped tests, zero placeholder returns across all 31 files this phase
-changed.
+| File | Line | Pattern | Severity | Impact |
+|---|---|---|---|---|
+| — | — | — | — | No `TBD`, `FIXME` or `XXX` in any of the 122 files this phase changed |
 
-## Gaps Summary
+### Gaps Summary
 
-The phase built almost everything it promised and built most of it well. The offline-confirmation
-contract, the two-transport distinction, the threshold arithmetic, the restart marking pass, the
-static read-path gate, the live-accessory command gating, the HAP fidelity case and the
-configuration-key assertion are all real, all wired, and all confirmed by driving the shipped code.
+The gap round did real, verifiable work. Six of the seven things I failed last time are closed, and
+they are closed properly rather than papered over: five of the six are pinned by a mutation that
+kills an end-to-end scenario, and the CR-01 fix needed a second mechanism that plan 05-11 found by
+disproving its own plan's premise. SC-2 and SC-3 both moved from failed to verified, and SC-4's
+first half with them. The one README claim I called false is now true of the shipped code.
 
-Three defects sit past that, and each of them lands on the one thing this project exists to prevent.
+One gap remains, and it sits in the state the gap round itself created. 05-07 made a mid-run
+credential rejection reach the terminal branch, which was the whole of CR-03 as written and which
+mutation testing confirms is real. It did not make the resulting presentation durable. The halt
+leaves the shadow socket open and puts no guard on the arrival path, so the first live message that
+carries a changed value clears the `-70402` from all seventeen services and restores
+`Status Active = true` — permanently, because nothing ever pushes again. A plugin that will never
+work again until the owner changes a password then looks completely normal in Apple Home. That is
+the false all-clear this project exists to prevent, arrived at from a new direction, and the current
+scenario cannot see it because it never publishes a message after the refusal.
 
-**The withdrawal mechanism was reused for a cause whose values are not in doubt.** Marking a scope
-untrustworthy also stops it publishing. That is right when a field failed validation — the value is
-bad. It is wrong when a transport went quiet — the values still arriving on the transport that works
-are fine. So with the shadow silent and REST healthy, a flooded pit is decoded, family-validated,
-and thrown away, while Apple Home draws "no leak" on the tile and no automation fires. Apple Home
-does not render `Status Active` on the tile, so the one signal carrying the doubt is the one the
-owner will not see.
-
-**Recovery waits for a clock rather than for evidence.** The message that proves the live path is
-carrying again clears nothing. The latch moves at the next poll tick, up to an hour later at the
-configured maximum, and every message in that window is decoded, stored, and not published. D-11
-says a single good observation restores trust because it is direct evidence. The code says a poll
-tick does.
-
-**The one failure that requires a user is unreachable in the case a user will actually hit.** A
-credential rejected at launch produces the full D-10 presentation. A credential rejected while
-Homebridge is running — a password changed at the vendor, an account blocked — produces a generic
-"Device discovery failed." forever, and the poll loop keeps waking against a locally halted auth
-client. Every credential-rejection test in the repository rejects the first `devices` call, so the
-whole class went untested and the feature reads as delivered.
-
-Underneath all three is one pattern the suite could not catch: the scenarios that cover these
-behaviours assert against payloads that do not move, under intervals that collapse the distinction,
-or through the one entry path that works. `04-VERIFICATION.md` W-1 recorded this shape a phase ago.
-The harness improvements this phase shipped were the right answer to it; the assertions written on
-top of them were not.
-
-None of the gaps is deferred. Phase 6 is release packaging and addresses none of this.
+The fix is small — close the shadow on halt, or guard `onReportedPatch`, or re-apply the marking —
+and the scenario that would have caught it is one step longer than the one that shipped.
 
 ---
 
-_Verified: 2026-09-02T10:58:15Z_
+_Verified: 2026-09-02T16:56:36Z_
 _Verifier: Claude (gsd-verifier)_
