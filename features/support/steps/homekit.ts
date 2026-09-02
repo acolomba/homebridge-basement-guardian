@@ -17,7 +17,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Then } from '@cucumber/cucumber';
 
 import { createServiceCatalogue } from '../../../src/accessories/serviceCatalogue.js';
-import { currentAccessory, pushedValue, serviceOf } from '../publishedServices.js';
+import { currentAccessory, pushedValue, serviceOf, serviceOnNamed } from '../publishedServices.js';
 
 import type { FakeHapService, FakeServiceClass } from '../fakeHap.js';
 import type { FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
@@ -126,6 +126,32 @@ async function assertCharacteristicValue(this: BasementGuardianWorld, serviceNam
 }
 
 Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
+
+// The same assertion about one named system among several. The account-wide read above answers
+// through the newest accessory, which is right while an account carries one device and cannot state
+// a fact about one pump among two -- so no scenario could tell a per-device rule from an
+// account-wide one, and every per-device rule in this feature went unobserved end to end. The
+// accessory name is the vendor name the account carries, which is what a scenario already seeds and
+// what an owner reads on the tile.
+async function assertCharacteristicValueOn(
+  this: BasementGuardianWorld,
+  serviceName: string,
+  accessoryName: string,
+  characteristicName: string,
+  text: string,
+): Promise<void> {
+  const homebridge = await this.homebridge();
+  const failure = `the ${serviceName} service on ${accessoryName} never reported ${characteristicName} as ${text}`;
+
+  await untilPublished(
+    this,
+    () => characteristicValue(serviceOnNamed(homebridge, accessoryName, serviceName), characteristicName),
+    publishedValue(text),
+    failure,
+  );
+}
+
+Then('the {string} service on {string} reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValueOn);
 
 /** What a controller read of one characteristic met. */
 type ReadOutcome = 'answered' | 'refused' | 'absent';

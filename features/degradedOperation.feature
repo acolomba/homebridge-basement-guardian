@@ -22,6 +22,22 @@ Feature: Degraded monitoring
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
 
+  Scenario: Two pumps on one account publish two accessories that read apart
+    An owner with a Basement Guardian in each basement gets a tile for each one, and each tile is
+    about its own basement. A level from the front basement appearing under the back one would be
+    worse than no level at all, because it sends the owner down the wrong stairs. Each pump here
+    carries its own water level, and every assertion names the pump it is about.
+
+    Given these devices:
+      | deviceId                 | name            | waterLevel |
+      | placeholder-front-gemini | Front Sump Pump | 1          |
+      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+    When the plugin starts
+    Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Status Active" as "true"
+    Then the "Sump Pit Flood" service on "Back Sump Pump" reports "Status Active" as "true"
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "20"
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
+
   Scenario: The combined path returns when the connection recovers
     Given the broker refuses connections
     When the plugin starts
