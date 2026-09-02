@@ -274,6 +274,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   let started = false;
   let stopped = false;
   let retryingShadow = false;
+  // The silence state this runtime last actually reported, which is what lets an
+  // arriving message report a recovery once rather than once per heartbeat. It
+  // records what was pushed rather than what is true now, because the question
+  // it answers is whether the tier is still holding a silence that has ended
+  // (D-05, D-11).
+  let reportedShadowSilent = false;
 
   // Every wait ends on the root signal. A rejection here means a shutdown
   // cancelled the wait, which is reported as a false rather than raised: an
@@ -419,6 +425,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
   function reportMonitoringHealth(): void {
     const trust = monitoringTrustNow();
+    // Assigned from the value about to be pushed, so the latch and the fact the
+    // accessory tier holds cannot drift apart.
+    reportedShadowSilent = trust.shadowSilent;
 
     // The condition is reported and pushed from the one value, so the cause the
     // log names and the condition HomeKit marks cannot disagree. The rate
@@ -561,8 +570,32 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // is the arrival signal: a heartbeat carrying values identical to the
           // last one notifies no subscriber and still proves the live path is
           // carrying messages (D-05, D-11).
+          //
+          // The three steps are in this order deliberately. Stamping first is
+          // what makes the recomputed trust see this arrival. Applying the patch
+          // before the report is what puts the new value on the tile before the
+          // marker says the plugin vouches for it again, so there is no instant
+          // in which the accessory claims to vouch for a value it has not yet
+          // published.
+          //
+          // Reporting here is what makes the recovery arrive with the evidence
+          // rather than at the next poll tick, which the configuration lets run
+          // an hour long. The latch is what keeps it to one report per recovery:
+          // a working live path delivers a heartbeat every fifteen minutes, and
+          // a report on each one would push a trust fan-out across every
+          // accessory for no new information.
+          //
+          // No timer and no loop is introduced. The arrival is an event the
+          // shadow client already delivers, so detection stays as lazy as it was
+          // and the whole projection stays drivable from the injected clock and
+          // the injected timers -- which is the constraint the lazy evaluation
+          // was chosen for (D-05, D-11).
           health.recordShadowMessage();
           options.store.applyReportedPatch(deviceId, patch);
+
+          if (reportedShadowSilent) {
+            reportMonitoringHealth();
+          }
         },
         onConnected: handleShadowConnected,
         onDisconnected: handleShadowDisconnected,
