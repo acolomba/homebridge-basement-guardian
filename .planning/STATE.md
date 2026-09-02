@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-13-PLAN.md
-last_updated: "2026-09-02T20:43:53.510Z"
+stopped_at: Completed 05-14-PLAN.md
+last_updated: "2026-09-02T21:22:38.041Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 82fcb6cf21bfe3adabcf36a266a718b54c7aa199
+state_head: 5a1e0b21c6582531e5ac43db621e728c2330b405
 progress:
   total_phases: 6
   completed_phases: 2
@@ -115,6 +115,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P10 | 46min | 2 tasks | 6 files |
 | Phase 05 P12 | ~50 minutes | 3 tasks | 9 files |
 | Phase 05 P13 | 26 min | 2 tasks | 6 files |
+| Phase 05 P14 | 50 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: accessoryNamed stays module-local: fallow dead-code fails on an export with no consumer outside its module
 - [Phase 05]: The polled half of a two-pump scenario is asserted before any heartbeat, because a live document takes ownership and a poll body is then discarded
 - [Phase 05]: Each two-pump assertion pair states the moved side before the not-moved side, so the delivery has landed before the second read
+- [Phase 05]: Shadow silence is measured per device from that device's own last message, seeded at discovery admission rather than at runtime construction — One account-wide arrival stamp is re-armed by whichever pump spoke last, so a permanently quiet controller on a two-pump account never trips shadowSilent, is never released, and has every poll body discarded
+- [Phase 05]: releaseShadowSource takes the deviceId it releases; a disconnection releases the fleet as an explicit loop — An account-wide release strips ownership from healthy devices and has every poll of a neighbour's silence overwrite the fresher readings their own live path just delivered (WR-05)
+- [Phase 05]: Shadow-silence marking stays account-wide: any silent device makes every accessory stop vouching — No requirement asks for per-device marking, over-marking cannot produce a false normal, and a per-device MonitoringTrust would be a second design change riding on a blocker fix
 
 ### Pending Todos
 
@@ -448,8 +452,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T20:43:42.782Z
-Stopped at: Completed 05-13-PLAN.md
+Last session: 2026-09-02T21:22:23.534Z
+Stopped at: Completed 05-14-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
