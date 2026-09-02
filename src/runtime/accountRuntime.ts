@@ -369,9 +369,32 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // interval late -- an hour at the configuration maximum. A poll a shutdown
   // aborted returns before both recorders, so it advances nothing and reports
   // nothing.
-  // TODO: derive this from the runtime's own lifecycle flags.
+  // Whether the plugin currently has a proven way to reach the vendor, derived
+  // from the same three flags the monitoring path is derived from and storing
+  // nothing of its own.
+  //
+  // A stopped runtime has aborted every request, and a halted one will never
+  // attempt another, so neither can send. Below both sits the poll: it is what
+  // a command travels on, so a runtime whose last poll did not succeed has no
+  // proven route -- which is also why this is false before the first inventory
+  // has landed, when nothing has yet reached the vendor at all.
+  //
+  // One failed poll is enough here while two are needed to withdraw trust,
+  // because the two thresholds answer different questions. Withdrawing trust
+  // says a displayed value may be stale, and a blip must not flap a tile.
+  // Refusing a press says the plugin has no way to reach the vendor right now,
+  // and sending into a route that has just failed buys a round trip that ends
+  // as a vendor error -- which is exactly the blur between a vendor refusal and
+  // a local one that the per-cause status table exists to prevent (RES-04,
+  // D-07).
+  function commandTransportReadyNow(): boolean {
+    return !stopped && !halted && polling;
+  }
+
+  // What the runtime pushes: the two facts the projection tracks, plus the one
+  // it cannot answer because it sees neither the lifecycle nor authentication.
   function monitoringTrustNow(): MonitoringTrust {
-    return { ...health.trustNow(), commandTransportReady: true };
+    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow() };
   }
 
   function reportMonitoringHealth(): void {
@@ -637,6 +660,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     if (error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
       halted = true;
       options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
+      // The one failure this project treats as final, so this is the only push
+      // the accessory tier will ever get from this run: no poll loop starts
+      // after it and nothing reports again. Without it the tier would go on
+      // answering a press from whatever the last report left, and a run that
+      // halted at its first grant left nothing at all. The trust is pushed
+      // rather than reported, because the live-reporting line describes an
+      // observation this run never made (D-13, D-07).
+      options.onMonitoringHealth(monitoringTrustNow());
 
       return undefined;
     }

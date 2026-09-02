@@ -471,8 +471,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   let offlineCount = 0;
   let published: readonly ServiceDescriptor[] = [];
   // What the plugin can currently say about its own ability to observe this
-  // account. It starts fully trusted, because nothing has failed yet.
-  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true };
+  // account. Both transports start trusted, because nothing has failed yet.
+  //
+  // The command transport starts unready, which is the opposite default and
+  // deliberately so: the other two say a value may be stale, and nothing has
+  // gone stale before the first report, while this one says a press can leave
+  // the plugin. Nothing has told this accessory the runtime can reach the vendor
+  // yet, so a press in that window is refused locally rather than sent into a
+  // route that has never answered (RES-04, D-07).
+  let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false };
   // What the last update's own payload said about trust. It is held because an
   // account-wide monitoring change recomputes the whole reason map without a
   // fresh snapshot, and the two device-level causes must keep their precedence
@@ -789,13 +796,23 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     },
 
     markMonitoring(trust: MonitoringTrust): void {
-      const unchanged = trust.restDegraded === monitoring.restDegraded && trust.shadowSilent === monitoring.shadowSilent;
+      // The comparison covers every member, not only the two that decide which
+      // scopes are withdrawn. A single failed REST poll moves neither
+      // degradation field -- the REST threshold is two -- while the runtime has
+      // already flipped the command transport, so a comparison over those two
+      // alone would report "unchanged" for exactly the transport failure a press
+      // must be refused on (RES-04, D-07).
+      const unchanged =
+        trust.restDegraded === monitoring.restDegraded &&
+        trust.shadowSilent === monitoring.shadowSilent &&
+        trust.commandTransportReady === monitoring.commandTransportReady;
 
       // The store sits outside the early return below deliberately. The runtime
       // reports on every poll tick, so republishing per tick would be noise
-      // rather than information -- but a fact this projection grows later may be
-      // read somewhere other than the row projection, and a store skipped by an
-      // unchanged-looking report would leave a stale answer behind it.
+      // rather than information -- but the write path reads the stored value
+      // directly rather than through the row projection, and a store skipped by
+      // an unchanged-looking report would leave it answering a fact the runtime
+      // has already superseded.
       monitoring = trust;
 
       if (unchanged) {

@@ -140,8 +140,8 @@ interface PendingRequest {
   handle: unknown;
 }
 
-// Everything a local rule reads about one write. Both device facts are sampled
-// once, before the first rule runs, so no two rules can disagree about the same
+// Everything a local rule reads about one write. Every fact is sampled once,
+// before the first rule runs, so no two rules can disagree about the same
 // press.
 interface ControlRequest {
   value: CharacteristicValue;
@@ -149,6 +149,7 @@ interface ControlRequest {
   accepted: boolean;
   reported: boolean | undefined;
   offlineConfirmed: boolean;
+  transportReady: boolean;
 }
 
 // One refusal the plugin answers on its own: what decides it, the status that
@@ -174,6 +175,18 @@ function acceptedValueOf(capability: DeviceCapability): boolean {
 // one (D-018, D-019, CTRL-03).
 function isNotAnOnRequest(request: ControlRequest): boolean {
   return request.value !== request.accepted;
+}
+
+// The plugin has no proven way to reach the vendor at all: the runtime is
+// stopped, authentication has halted for good, or the last poll did not
+// succeed. Sending anyway buys a round trip into a route that has just failed
+// and lands as a vendor error, which would tell the user the vendor refused the
+// command when nothing ever reached it. This is a fact about the plugin, not
+// about the device, and it fails independently of the one below -- a fresh live
+// report can arrive while authentication has not completed -- so it carries its
+// own cause (RES-04, D-07, D-08).
+function hasNoCommandTransport(request: ControlRequest): boolean {
+  return !request.transportReady;
 }
 
 // The capability's own reported field has not decoded. Without a decoded value
@@ -213,8 +226,18 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 
 // The rules in the order they are evaluated, cheapest and most local first. The
 // first that applies answers the write; the rest are never consulted.
+//
+// The order of the two middle rules is a decision, not an accident. Both can
+// hold at once, and then this order decides which cause the user is told.
+// Naming the missing state to someone who has no way to send anything is the
+// less actionable of the two truths -- there is nothing to do about a stale
+// reading while the route is down -- so the missing transport is named first. A
+// unit case pins that with both conditions set, because an unrelated edit that
+// reordered this table would otherwise change the user-facing cause silently
+// (D-07).
 const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
+  { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: 'the plugin has no way to reach the vendor right now' },
   { applies: hasNoFreshState, status: notAllowedInCurrentState, cause: 'the plugin has no fresh state for it' },
   { applies: isConfirmedOffline, status: notAllowedInCurrentState, cause: 'the device is confirmed offline' },
   { applies: isAlreadyActive, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'it already reads active' },
@@ -265,7 +288,7 @@ function clearRefusal(hap: API['hap'], service: Service, republish: () => void, 
  * one, and it is called with a service the catalogue has already published.
  */
 export function createControlBinder(options: ControlBinderOptions): ControlBinder {
-  const { hap, log, timers, commands, deviceId, offlineConfirmed, republish } = options;
+  const { hap, log, timers, commands, deviceId, offlineConfirmed, commandTransportReady, republish } = options;
 
   // What was asked for, per capability, from the moment a write is accepted for
   // sending until the device confirms it or the window closes. The value is kept
@@ -358,7 +381,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
 
   async function answerWrite(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, value: CharacteristicValue): Promise<void> {
     const accepted = acceptedValueOf(capability);
-    const refusal = localRefusalFor({ value, accepted, reported: reported(), offlineConfirmed: offlineConfirmed() });
+    const refusal = localRefusalFor({ value, accepted, reported: reported(), offlineConfirmed: offlineConfirmed(), transportReady: commandTransportReady() });
 
     if (refusal !== undefined) {
       refuseLocally(service, capability, reported, refusal);
