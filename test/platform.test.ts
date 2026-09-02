@@ -996,6 +996,28 @@ describe('configureAccessory', () => {
     verify(api);
   });
 
+  test('withdraws trust from every restored service that reports it, and still records the accessory (RES-04, D-06)', () => {
+    // arrange
+    const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+    const flood = restoredAccessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
+    flood.updateCharacteristic(HAP.Characteristic.LeakDetected, HAP.Characteristic.LeakDetected.LEAK_DETECTED);
+    flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+
+    // act
+    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+        recorded: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
+      },
+      { statusActive: false, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED, recorded: true },
+    );
+  });
+
   test('D-03 removes nothing from HomeKit on cache-restore alone', () => {
     // arrange
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });

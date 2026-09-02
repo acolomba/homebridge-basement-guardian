@@ -128,3 +128,34 @@ Feature: Degraded monitoring
     When the device publishes these heartbeat fields:
       | water_level | 3 |
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
+
+  Scenario: A restarted plugin marks restored values stale before any poll
+    Homebridge serves the values it cached from the moment the bridge publishes, and this plugin
+    publishes nothing until a poll succeeds, which never happens while the cloud is unreachable. The
+    restored tile therefore says at once that the plugin cannot vouch for what it shows.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    Given the service fails every request with status 503
+    When the plugin restarts
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
+  Scenario: A restart retains the values it marks stale
+    Marking withdraws trust and nothing else. Every reading the previous run left is still on the
+    tile, so an owner sees the last level the device reported rather than a blank or a fresh zero.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Level" service reports "Water Level" as "20"
+    Given the service fails every request with status 503
+    When the plugin restarts
+    Then the "Sump Pit Level" service reports "Status Active" as "false"
+    Then the "Sump Pit Level" service reports "Water Level" as "20"
