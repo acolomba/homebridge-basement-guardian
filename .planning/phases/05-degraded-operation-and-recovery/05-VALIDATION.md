@@ -98,7 +98,7 @@ qualifier from the paired mutation.**
 | TBD | TBD | — | RES-04 | — | Credential rejection is the **only** cause that does this | unit | `node --test dist-test/test/platform.test.js` | `test/platform.test.ts` (extend) | ⬜ pending |
 | TBD | TBD | — | CONF-05 | — | The degradation thresholds are not configurable | unit | `node --test dist-test/test/config.test.js` | `test/config.test.ts` (assert the resolved config's key set is unchanged) | ⬜ pending |
 
-### Gap-closure round rows (plans 05-06 to 05-10)
+### Gap-closure round rows (plans 05-06 to 05-11)
 
 Added 2026-09-02 after `05-VERIFICATION.md` returned `gaps_found`. Every row below states the
 behaviour as **what a basement owner must observe**, not as what the implementation does. That is the
@@ -128,7 +128,15 @@ whether the implemented behaviour was right.
 | T1 | 05-09 | 4 | RES-04 | T-05-35 | The accessory's own binder replaces the refusing handler, so a recovered plugin operates its controls | unit | `npm run test:coverage:direct -- dist-test/src/accessories/staleMarking.js dist-test/test/accessories/staleMarking.test.js` | `test/accessories/staleMarking.test.ts` | ⬜ pending |
 | T2 | 05-09 | 4 | RES-04 | T-05-34 | A press on a restored control is refused, sends nothing, and leaves the control readable | e2e | `npm run test:cucumber -- --name "restored control is refused"` | `features/degradedOperation.feature` | ⬜ pending |
 | T1 | 05-09 | 4 | RES-04 | T-05-38 | The three restart-time passes share one guarded walk and the health gate reports no duplication | unit (gate) | `npm run fallow` | `.fallowrc.json` | ⬜ pending |
-| T2 | 05-10 | 5 | RES-03, RES-04 | T-05-39 | Every documentation claim about degraded operation is traceable to a passing assertion | manual | `npm run check` | `README.md`, `CHANGELOG.md` | ⬜ pending |
+| T1 | 05-11 | 5 | RES-03 | T-05-43 | A device whose live path spoke and then went quiet still reports a later flood: a healthy REST poll carrying the family's flood code reaches `Leak Detected = 1` in HomeKit with `Status Active` false | e2e | `npm run test:cucumber -- --name "went quiet"` | `features/degradedOperation.feature` | ⬜ pending |
+| T1 | 05-11 | 5 | RES-03 | T-05-44 | The flood reaches the store on the first poll that observes the silence, not the one after it — one poll late is up to an hour late at the configured maximum | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T1 | 05-11 | 5 | RES-03 | T-05-48 | Three existing scenarios that publish a heartbeat and then cross the threshold keep the premise their prose states, rather than passing on a telemetry record the handover emptied | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
+| T2 | 05-11 | 5 | SYNC-02 | T-05-45 | A pump run the live path reported is not erased by a poll arriving while the shadow is still inside the two-heartbeat window | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T2 | 05-11 | 5 | SYNC-02 | T-05-45 | A poll that recovers from a REST-only degradation does not take telemetry from a live shadow, so its older body does not erase what the live path delivered | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T2 | 05-11 | 5 | SYNC-03 | T-05-47 | Once the live path speaks again, a pump run it reports is not erased by the next poll's older body — ownership returns through the patch path that already exists | unit | `npm run test:coverage:direct -- dist-test/src/runtime/accountRuntime.js dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
+| T2 | 05-11 | 5 | SYNC-03 | T-05-45 | Repeating the handover on every poll of a long silence moves no telemetry key, restamps no receipt time, and notifies no listener | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | `test/device/state.test.ts` | ⬜ pending |
+| T3 | 05-11 | 5 | SYNC-03 | T-05-46 | `01-CONTEXT.md` D-15 and `REQUIREMENTS.md` SYNC-03 record, in their own text, that shadow ownership ends on silence as well as on disconnection, each dated and each naming `05-CONTEXT.md` D-13 | other | `grep -c "Amended 2026-09-02" .planning/phases/01-secure-cloud-foundation/01-CONTEXT.md .planning/REQUIREMENTS.md` | `.planning/phases/01-secure-cloud-foundation/01-CONTEXT.md`, `.planning/REQUIREMENTS.md` | ⬜ pending |
+| T2 | 05-10 | 6 | RES-03, RES-04 | T-05-39 | Every documentation claim about degraded operation is traceable to a passing assertion | manual | `npm run check` | `README.md`, `CHANGELOG.md` | ⬜ pending |
 
 ### Named mutations
 
@@ -160,7 +168,7 @@ fails, revert, confirm green.
 | Only credential rejection throws | Make the shadow-silence path push a `HapStatusError` too |
 | Thresholds not configurable | Add a knob |
 
-### Gap-closure round mutations (plans 05-06 to 05-10)
+### Gap-closure round mutations (plans 05-06 to 05-11)
 
 Each mutation below is one a **correct** implementation survives and the shipped one fails. That is
 the difference from the first round's table, where several mutations only proved a test could see the
@@ -192,6 +200,14 @@ implemented behaviour move.
 | Only control services gain a handler | Bind the refusal to every restored service rather than to those carrying the write surface |
 | The refusal answers the transport status | Change the refusal's status to the busy status |
 | The harness drives the real pass | Remove the pass's call from the harness stand-in for `configureAccessory` |
+| A flooded poll during shadow silence reaches the tile at all | Delete the `releaseShadowSource()` call from the head of `applyDevices` |
+| It reaches the tile on the poll that notices, not the next one | Move the release out of `applyDevices` into `reportMonitoringHealth`. The unit case must fail; the Cucumber scenario stays green, because a 50 ms poll interval hides a one-poll delay inside a 5000 ms step deadline, and that is the point of the row |
+| Only silence hands ownership over | Drop the predicate and release on every poll — the existing `SYNC-02` case must fail |
+| A degradation is not silence | Read `restDegraded \|\| shadowSilent` at the release site — the REST-recovery case must fail, since the shadow is alive there and still owns telemetry |
+| A slow shadow keeps ownership | Lower `MISSED_HEARTBEATS_BEFORE_SILENT` to 1 |
+| The arrival path restores ownership | Make `nextShadowVersion` return `undefined` whenever `previous.shadowVersion` is undefined |
+| The handover is idempotent | Make `releaseShadowSource` also clear `receivedAt` |
+| The repaired scenarios assert their own premise | Remove the added `Given these reported device fields:` line from the identical-heartbeat scenario and confirm its heartbeat is no longer identical from the store's point of view |
 
 ---
 
@@ -296,6 +312,26 @@ derived by hand.
 
 **The lesson worth keeping is the argument order.** A reversed call turns this gate's failure into a
 silent pass, and nothing in its output says which call it answered. Pass the phase directory first.
+
+**The same gate under-counts `05-CONTEXT.md` D-13, and credits it to the wrong decision. Found
+2026-09-02 while planning 05-11; not repaired here.** Two facts, both measured:
+
+1. **D-13 is invisible to the parser because of where it sits.** It was appended at the end of the
+   `<decisions>` block, *below* the `### Claude's Discretion` heading. Called correctly — phase
+   directory first — the gate reports `total: 12` against a file that carries thirteen
+   `- **D-NN — Title:**` headers. Copying the phase directory to a scratch tree and moving the D-13
+   block above that heading, changing nothing else, makes the same call report `total: 13,
+   covered: 13`. Position is the whole cause.
+2. **Its coverage credit is not its own.** Removing `05-11-PLAN.md` from the scratch tree still leaves
+   the count fully covered, because plans 05-04 and 05-07 cite `D-13` meaning Phase 1's Auth0
+   thirty-day brute-force block (`01-CONTEXT.md:43`), which is a different decision with the same
+   name. The gate matches the string.
+
+So a green result from this gate says nothing about whether `05-CONTEXT.md` D-13 is planned. It is
+planned — `05-11-PLAN.md` implements it and cites it throughout — but that is established by reading
+the plan, not by the gate. Moving the D-13 block is an edit to the binding ruling document and was
+left to the maintainer rather than taken by the planner. Anywhere either D-13 is cited outside its own
+file, write `05-CONTEXT.md` D-13 or `01-CONTEXT.md` D-13; a bare `D-13` is ambiguous in this project.
 
 **Plan 05-01 is over the smart-zone context budget and is not split.** 115000 calibrated against
 100000, 13 files, confidence `low` on `sample_count: 0`. The declined split is argued in the plan

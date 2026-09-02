@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 6/10 plans executed — 5 executed, 5 planned to close the gaps `05-VERIFICATION.md` found
+**Plans**: 6/11 plans executed — 5 executed, 6 planned to close the gaps `05-VERIFICATION.md` found and the ruling `05-CONTEXT.md` D-13 records
 
 Plans:
 **Wave 1**
@@ -275,6 +275,10 @@ Plans:
 - [ ] 05-09-PLAN.md — A press on a restored control after a failed restart is refused by name instead of silently accepted
 
 **Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 05-11-PLAN.md — Two missed heartbeats hand telemetry back to the poll, so a pit that floods after the live path went quiet still reaches Apple Home
+
+**Wave 6** *(blocked on Wave 5 completion)*
 
 - [ ] 05-10-PLAN.md — The documentation, the requirement row and the phase's own truths are brought back into agreement with the code
 
