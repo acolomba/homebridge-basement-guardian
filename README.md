@@ -130,23 +130,25 @@ Most Homebridge plugins substitute a safe default here, such as a not-detected s
 
 An inactive service keeps showing its last trusted value. Apple Home shows the inactive state as a `Status Active` row in the accessory details, not on the tile. Controllers such as Eve show it directly.
 
-The network module can lose its link to the pump controller while the vendor cloud still answers normally. The system then still reads as online, but every value that comes through the controller is no longer trustworthy. The plugin marks the water, pump, power, battery, and fault services inactive, activates `Pump Controller Link Lost`, and publishes the time trustworthy controller data last arrived.
+The network module can lose its link to the pump controller while the vendor cloud still answers normally. The system then still reads as online, but every value that comes through the controller is no longer trustworthy. The plugin marks the water, pump, power, battery, and fault services inactive. It marks both control switches inactive too. It activates `Pump Controller Link Lost` and publishes the time trustworthy controller data last arrived.
 
 The plugin can also lose its own view of a system while the system itself is fine. It watches in two ways. It polls the vendor cloud for a snapshot. It also holds an open connection that carries live changes as they happen. When one of these stops working, the plugin marks the services it can no longer vouch for and keeps their last values.
 
 This is not the same as `Basement Guardian Offline` or `Pump Controller Link Lost`. Those two report something the system says about itself: the vendor confirmed the system is offline, or the network module lost its link to the pump controller. A lost monitoring path reports something about the plugin. The equipment can work perfectly while the plugin no longer sees it.
 
-The live connection is the one that matters most. The vendor cloud can still answer polls while that connection goes quiet. Every tile then reads normally, but a pump run lasts 7 to 15 seconds and can start and finish between two polls. The plugin never sees that run. When the live connection goes quiet, the plugin marks the water, pump, power, battery, and fault services inactive. `Basement Guardian Offline` stays trusted, because polling still supplies that one answer.
+The live connection is the one that matters most. The vendor cloud can still answer polls while that connection goes quiet. Every tile then reads normally, but a pump run lasts 7 to 15 seconds and can start and finish between two polls. The plugin never sees that run. When the live connection goes quiet, the plugin marks the water, pump, power, battery, and fault services inactive, and both control switches with them. `Basement Guardian Offline` stays trusted, because polling still supplies that one answer.
 
 If polling fails while the live connection still delivers, the plugin marks `Basement Guardian Offline` inactive and nothing else. Polls are the only source of that verdict, and the live values keep arriving.
 
 The plugin looks for a silent connection each time it polls. A report is never faster than your poll interval. The system sends a message about every 898 seconds, so a short quiet gap is normal. `pollInterval` accepts 300 to 3600 seconds, and the default is 900. At 3600 seconds a lost live connection can go unreported for up to an hour. A lower poll interval shortens that delay.
 
-The delay is to the report and never to a safety state. The plugin holds no value back while it waits, and it turns nothing normal. A late report is the only cost.
+The delay is to the report, never to a reading. The plugin holds no value back while it waits, and it turns nothing normal. It still sends the readings from each successful poll to HomeKit. If a poll finds a flooded pit while the live connection is quiet, `Sump Pit Flood` reports it. The marking is what the delay costs. Until that poll, the affected services still say the plugin vouches for them.
 
 A restart shows the same rule from a cold start. Homebridge keeps its own copy of each accessory, so your rooms, automations, and scenes come back at once. The plugin marks every restored service inactive before its first poll, and it changes nothing else. Each accessory is in place. It shows the reading the last run left on it, and it is marked. If the cloud is unreachable, the accessories stay that way until a poll succeeds.
 
-One failure is different from every other one here. If the vendor refuses your account email or password, the plugin stops and never tries again on its own. A vendor block of this kind lifts only 30 days after the last attempt, so each retry postpones it. Every service then answers `No Response` in Apple Home, not the inactive state the other failures use. It keeps the value it last published, and the log names what happened. You must correct the email and the password in the Homebridge settings and then restart the plugin.
+One failure is different from every other one here. If the vendor refuses your account email or password, the plugin stops and never tries again on its own. A vendor block of this kind lifts only 30 days after the last attempt, so each retry postpones it. The refusal has the same effect whenever it arrives, at the first sign-in or during a run.
+
+Every service then stops answering whether the plugin vouches for it. Apple Home shows the whole accessory as `No Response`, not the inactive state the other failures use. Each service keeps the value it last published, and a controller that reads one of those values directly still gets it. The log names what happened. You must correct the email and the password in the Homebridge settings and then restart the plugin.
 
 ## Removing a notification sensor
 
