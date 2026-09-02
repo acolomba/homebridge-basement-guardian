@@ -242,6 +242,10 @@ const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent
 // command gate ever start naming each other's cause (D-07, D-08).
 const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 
+// The cause a refusal names when the route is proven but the plugin cannot vouch for the capability's
+// own reported state. Written out here for the same reason as the one above.
+const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
+
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
 // running (D-02, D-014).
@@ -2423,6 +2427,32 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // The write gate reads the withdrawn scopes directly rather than through the row projection, and
+  // it must stay that way. A monitoring outage now leaves values flowing to the tile, but the plugin
+  // still cannot vouch for what the device currently reports, so a press it accepted would be sent
+  // on the strength of a reading nobody is confirming (RES-04, D-07).
+  test('RES-04 refuses a press while a monitoring outage leaves the control unvouched for, and sends nothing', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, log });
+
+    // act
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert
+    assert.deepStrictEqual({ sends, warnings }, { sends: [], warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] });
+  });
+
   // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that
   // assumed it could would send the first press of a run into a route that has never answered
   // (RES-04, D-07).
@@ -2519,6 +2549,47 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // Nothing on the accessory may read trustworthy while the plugin can see nothing at all, and the
+  // controller-link row is the only one that could: it is the one row tolerating a cause, so the
+  // broader cause has to reach its scope first. The verdict it holds stays on the tile, because
+  // withdrawing trust blanks nothing (WR-01, D-02).
+  test('vouches for no controller-link verdict while both transports are down, and keeps the verdict', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, { serial_communications: false });
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_LOST);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        contact: valueOf(accessory, CONTROLLER_LINK_ROW, HAP.Characteristic.ContactSensorState),
+        active: statusActiveOf(accessory, CONTROLLER_LINK_ROW),
+        distrust: distrustOf(basementGuardianAccessory),
+      },
+      { contact: CONTACT_NOT_DETECTED, active: false, distrust: EVERY_SCOPE_IN_ORDER.map((scope) => `${scope} unreachable`) },
+    );
+  });
+
+  test('names the lost controller link as the cause on every scope it poisons while both transports work', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, { serial_communications: false });
+
+    // act
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // assert
+    assert.deepStrictEqual(
+      { active: statusActiveOf(accessory, CONTROLLER_LINK_ROW), distrust: distrustOf(basementGuardianAccessory) },
+      {
+        active: true,
+        distrust: EVERY_SCOPE_IN_ORDER.filter((scope) => scope !== 'connectivity').map((scope) => `${scope} controller-link-lost`),
+      },
+    );
+  });
+
   test('deactivates the flood sensor while leaving the offline adapter vouched for when the shadow goes quiet', () => {
     // arrange
     const accessory = accessoryStandIn();
@@ -2538,17 +2609,29 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  test('retains every published value across a lost monitoring path and moves the trust flag alone', () => {
+  // A withdrawal marks and retains; it does not discard. The check is what an owner reads off the
+  // tile after a poll that arrived during the outage, because a case asserting only that nothing
+  // moved passes just as well against an implementation that decoded the poll and threw it away
+  // (CR-01, D-014).
+  test('publishes a flood a poll delivers during a lost monitoring path, and marks it rather than dropping it', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, {});
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
     const before = publishedValues(accessory);
 
     // act
-    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, water_level: FLOODING_LEVEL_CODE }, receivedAt: ONE_POLL_LATER_MS }), 'poll');
 
     // assert
-    assert.deepStrictEqual(new Set(movedSince(before, accessory)), new Set(['Status Active']));
+    assert.deepStrictEqual(
+      {
+        flood: valueOf(accessory, 'Sump Pit Flood', HAP.Characteristic.LeakDetected),
+        floodActive: statusActiveOf(accessory, 'Sump Pit Flood'),
+        moved: new Set(movedSince(before, accessory)),
+      },
+      { flood: LEAK_DETECTED, floodActive: false, moved: new Set(['Leak Detected', 'Water Level', 'Raw Water Level Code']) },
+    );
   });
 
   test('republishes nothing when the monitoring trust it is handed is the one it already holds', () => {
@@ -2595,19 +2678,26 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(valueOf(accessory, CONTROLLER_LINK_ROW, ControllerDataLastTrustedAt), RECORD_RECEIVED_AT_ISO);
   });
 
-  test('keeps a lost monitoring path withdrawn across the polls that arrive during it', () => {
+  // The poll moves a value, so "withdrawn across the polls" is checked against a reading that had
+  // somewhere to go. A poll repeating the telemetry the accessory already held would leave the whole
+  // published surface where it was whether or not the poll reached it at all.
+  test('keeps a lost monitoring path withdrawn across a poll that moves a value during it', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, {});
     basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
 
     // act
-    basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: ONE_POLL_LATER_MS }), 'poll');
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, ac_power: false }, receivedAt: ONE_POLL_LATER_MS }), 'poll');
 
     // assert
     assert.deepStrictEqual(
-      { flood: statusActiveOf(accessory, 'Sump Pit Flood'), distrust: distrustOf(basementGuardianAccessory) },
-      { flood: false, distrust: DEGRADED_SCOPES.map((scope) => `${scope} unreachable`) },
+      {
+        mains: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
+        mainsActive: statusActiveOf(accessory, 'Mains Power Lost'),
+        distrust: distrustOf(basementGuardianAccessory),
+      },
+      { mains: CONTACT_NOT_DETECTED, mainsActive: false, distrust: DEGRADED_SCOPES.map((scope) => `${scope} unreachable`) },
     );
   });
 

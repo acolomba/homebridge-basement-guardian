@@ -115,6 +115,27 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" sensor is not activated
     Then the "Basement Guardian Offline" sensor is not activated
 
+  Scenario: A blind plugin vouches for no controller-link verdict
+    The controller link is the one verdict a row keeps publishing while its own scope is untrusted,
+    because the network module reports that link state directly. A plugin that has lost both
+    transports is not reporting anything directly, so that row stops calling its verdict current
+    too. It keeps the verdict: the tile still shows the lost link the last trustworthy observation
+    found, marked.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    When the vendor changes these device fields:
+      | serial_communications | false |
+    Then the "Pump Controller Link Lost" sensor is activated
+    Then the "Pump Controller Link Lost" service reports "Status Active" as "true"
+    Given the service fails every request with status 503
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Pump Controller Link Lost" service reports "Status Active" as "false"
+    Then the "Pump Controller Link Lost" sensor is activated
+
   Scenario: A successful poll does not clear the shadow silence
     Shadow silence is the case where the poll keeps working while live signals go unobserved, so a
     poll that succeeds restores trust the plugin has not earned. Recovery is matched to cause.
