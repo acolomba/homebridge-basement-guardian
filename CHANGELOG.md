@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The plugin refuses to start on a setting outside its documented range instead of substituting a value.
 - The plugin refuses to start when `ignoredFaults` names a sensor it does not publish, and the log lists every valid name.
 - When the plugin cannot vouch for part of what a system reports, it marks the affected services inactive and keeps their last trusted value. It never substitutes a normal reading.
+- The plugin now marks its services inactive when the vendor cloud stops sending live changes, even while polling still succeeds.
+- After a restart the plugin marks every restored service inactive until a poll succeeds, so a cached reading never shows as current.
+- The plugin now refuses a press of either switch while it has no way to reach the vendor cloud, and the log says so.
+- When the vendor refuses your account email or password, every service answers `No Response` until you correct them and restart Homebridge.
 
 ### Removed
 
