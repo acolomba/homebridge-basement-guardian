@@ -238,6 +238,10 @@ const EVERY_TRANSPORT_WORKING: MonitoringTrust = { restDegraded: false, shadowSi
 const SHADOW_SILENT: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
 const REST_DEGRADED: MonitoringTrust = { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
 const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false };
+// The one trust that differs from the refusal below in the credential member alone, which is the
+// pair the republish comparison has to tell apart (WR-04).
+const COMMAND_TRANSPORT_UNREADY: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
+
 // What the runtime reports once the vendor has refused the account credentials. The command
 // transport is unready because the runtime has stopped for good, which is the shape `haltMonitoring`
 // answers and the only shape this member ever arrives in (D-10, D-13).
@@ -2776,6 +2780,93 @@ describe('createBasementGuardianAccessory', () => {
         moved: new Set(movedSince(before, accessory)),
       },
       { flood: LEAK_DETECTED, floodActive: false, moved: new Set(['Leak Detected', 'Water Level', 'Raw Water Level Code']) },
+    );
+  });
+
+  // Widening the withdrawal to every scope looks like it should silence the one adapter still being
+  // fed, which is the trap D-02's narrowing was written to avoid. It does not, because the reason a
+  // monitoring withdrawal fills in says the plugin is seeing less rather than that the value is
+  // doubtful, and a row untrusted for that reason still publishes what a transport delivered. This
+  // case is the assertion behind that sentence. The row is first pushed the opposite verdict, so a
+  // withdrawal that withheld would leave the wrong reading standing and be caught here rather than
+  // agreeing with the right one by accident (WR-03, D-02, D-014).
+  test('WR-03 keeps the offline adapter publishing its verdict under a refused credential and stops vouching for it', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    serviceOf(accessory, 'Basement Guardian Offline').updateCharacteristic(HAP.Characteristic.ContactSensorState, CONTACT_NOT_DETECTED);
+
+    // act
+    basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        offlineState: valueOf(accessory, 'Basement Guardian Offline', HAP.Characteristic.ContactSensorState),
+        offlineActive: statusActiveOf(accessory, 'Basement Guardian Offline'),
+      },
+      { offlineState: CONTACT_DETECTED, offlineActive: false },
+    );
+  });
+
+  // A refused credential ends every observation this runtime will ever make, so nothing it holds is
+  // current whatever the two transports last reported. The reason is checked alongside the scopes,
+  // because which reason fills them decides whether the withdrawal marks or empties (WR-03, D-10).
+  test('WR-03 withdraws every scope under a refused credential, saying the plugin is seeing less rather than that a value is wrong', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+
+    // act
+    basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+
+    // assert
+    assert.deepStrictEqual(
+      distrustOf(basementGuardianAccessory),
+      EVERY_SCOPE_IN_ORDER.map((scope) => `${scope} unreachable`),
+    );
+  });
+
+  // Preserve-and-mark under the wider withdrawal. The flood is published first so the reading the
+  // case protects is one an owner would act on, and the whole published surface is compared rather
+  // than the one value chosen in advance, so a withdrawal that emptied any other tile fails here
+  // too (WR-03, D-014).
+  test('WR-03 leaves every reading a row published where it was when the credential refusal lands', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, { water_level: FLOODING_LEVEL_CODE });
+    const before = publishedValues(accessory);
+
+    // act
+    basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+
+    // assert
+    assert.deepStrictEqual(
+      { moved: new Set(movedSince(before, accessory)), flood: valueOf(accessory, 'Sump Pit Flood', HAP.Characteristic.LeakDetected) },
+      { moved: new Set(['Status Active']), flood: LEAK_DETECTED },
+    );
+  });
+
+  // The credential member of the republish comparison, reached as a change of its own. The runtime
+  // flips the command transport at the same halt, so the two members move together and the pair
+  // below is the one arrangement in which the credential member is the only difference: a poll that
+  // has already failed, and then the refusal. Replacing that member with a constant left the whole
+  // suite green before the withdrawal above existed, so what an owner is protected from here is a
+  // halt the accessory reads as nothing new and declines to report (WR-04, RES-04, D-10).
+  test('WR-04 republishes for a trust push differing from the stored one only in the credential member', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const basementGuardianAccessory = geminiAccessory(accessory, {});
+    basementGuardianAccessory.markMonitoring(COMMAND_TRANSPORT_UNREADY);
+    const before = { flood: statusActiveOf(accessory, 'Sump Pit Flood'), offline: statusActiveOf(accessory, 'Basement Guardian Offline') };
+
+    // act
+    basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+
+    // assert
+    assert.deepStrictEqual(
+      { before, after: { flood: statusActiveOf(accessory, 'Sump Pit Flood'), offline: statusActiveOf(accessory, 'Basement Guardian Offline') } },
+      { before: { flood: true, offline: true }, after: { flood: false, offline: false } },
     );
   });
 

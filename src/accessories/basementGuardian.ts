@@ -297,6 +297,16 @@ function isControllerLinkLost(decoded: unknown): boolean {
 // Which scopes an account-wide monitoring failure withdraws, which is not the
 // same set for the two transports.
 //
+// A refused credential is read first and answers everything. It ends every
+// observation this runtime will ever make, so nothing the accessory holds is
+// current whatever the transports last reported -- and the two branches below
+// describe conditions that recover on their own, while this one recovers only
+// when the owner corrects the account and restarts. The reason filled in for
+// any of the three says the plugin is seeing less rather than that a value is
+// doubtful, so this withdrawal marks without withholding and the connectivity
+// adapter keeps publishing its verdict: widening the set here does not silence
+// the one thing D-02's narrowing exists to protect (D-10, D-13, WR-03).
+//
 // Shadow silence spares `connectivity`: a REST poll still sources that claim,
 // and withdrawing it would deactivate the one adapter still being fed. A
 // degraded poll withdraws `connectivity` as well, because then nothing sources
@@ -304,6 +314,10 @@ function isControllerLinkLost(decoded: unknown): boolean {
 // false normal the narrowing exists to close. Both down withdraws everything
 // (D-02, D-04).
 function monitoringDegradedScopes(trust: MonitoringTrust): ReadonlySet<TrustScope> {
+  if (trust.credentialsRejected) {
+    return EVERY_SCOPE;
+  }
+
   if (trust.shadowSilent) {
     return trust.restDegraded ? EVERY_SCOPE : NON_CONNECTIVITY_SCOPES;
   }
@@ -830,14 +844,26 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     },
 
     markMonitoring(trust: MonitoringTrust): void {
-      // The comparison covers every member of `MonitoringTrust`, not only the two
-      // that decide which scopes are withdrawn, and it grows with the type. A
-      // single failed REST poll moves neither degradation field -- the REST
-      // threshold is two -- while the runtime has already flipped the command
-      // transport, so a comparison over those two alone would report "unchanged"
-      // for exactly the transport failure a press must be refused on. Any member
-      // left out of this list is a fact the runtime has pushed and this accessory
-      // silently ignored (RES-04, D-07, D-10).
+      // The comparison covers every member of `MonitoringTrust`, and each member
+      // is named here with what makes it load-bearing, rather than the list as a
+      // whole being asserted to be. The two degradation fields decide which
+      // scopes are withdrawn, so a case reading the withdrawn scopes fails when
+      // either is dropped. The command transport is proven by "refuses the next
+      // press after a push differing from the stored trust only in the command
+      // transport": a single failed REST poll moves neither degradation field --
+      // the REST threshold is two -- while the runtime has already flipped that
+      // member, so a comparison without it would report "unchanged" for exactly
+      // the transport failure a press must be refused on.
+      //
+      // The credential member is proven by "republishes for a trust push
+      // differing from the stored one only in the credential member". It was not
+      // provable until that member began withdrawing scopes of its own:
+      // replacing it with a constant left the whole suite green, because the
+      // halt flips the command transport in the same act and the two moved
+      // together in every reachable path. A member added to the type and left
+      // out of this list still reaches the write path, which reads the stored
+      // value directly, so it is silent here rather than harmless
+      // (RES-04, D-07, D-10, WR-04).
       const unchanged =
         trust.restDegraded === monitoring.restDegraded &&
         trust.shadowSilent === monitoring.shadowSilent &&
