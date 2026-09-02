@@ -757,7 +757,6 @@ describe('BasementGuardianPlatform', () => {
       return Promise.resolve(new Response('{}', { status: 503 }));
     });
     const registeredAccessories: FakeAccessory[] = [];
-    const persistedAccessories: FakeAccessory[] = [];
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
@@ -781,18 +780,10 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
-    // The record the accessory seeds from its first snapshot mutates the accessory's context, and a
-    // context mutation Homebridge is not told about is invisible on disk, so the store asks for it
-    // to be stored exactly once (CTRL-01, D-008).
-    when(() => {
-      api.updatePlatformAccessories(
-        It.matches((accessories: PlatformAccessory[]) => {
-          persistedAccessories.push(...(accessories as unknown as FakeAccessory[]));
-
-          return true;
-        }),
-      );
-    }).thenReturn(undefined);
+    // No `updatePlatformAccessories` expectation: the record the accessory seeds from its first
+    // snapshot mutates only the context, because the accessory is not registered yet, and the
+    // registration's own cache save is what carries the seeded record to disk. The strict mock
+    // fails this case by name if the seed asks Homebridge to update anyway (CTRL-01, D-008).
     new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
     const [launch, shutdown] = listeners;
 
@@ -804,12 +795,8 @@ describe('BasementGuardianPlatform', () => {
 
     // assert
     assert.deepStrictEqual(
-      {
-        count: registeredAccessories.length,
-        device: registeredAccessories[0]?.context.device,
-        persisted: persistedAccessories.map((accessory) => accessory.UUID),
-      },
-      { count: 1, device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }, persisted: [ACCESSORY_UUID] },
+      { count: registeredAccessories.length, device: registeredAccessories[0]?.context.device },
+      { count: 1, device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } },
     );
     verify(user);
     verify(api);
@@ -858,9 +845,6 @@ describe('BasementGuardianPlatform', () => {
           return true;
         }),
       );
-    }).thenReturn(undefined);
-    when(() => {
-      api.updatePlatformAccessories(It.matches((accessories: PlatformAccessory[]) => accessories.length === 1));
     }).thenReturn(undefined);
     new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
     const [launch, shutdown] = listeners;
@@ -963,10 +947,6 @@ describe('BasementGuardianPlatform', () => {
           return true;
         }),
       );
-    }).thenReturn(undefined);
-    // The record seeded from the one snapshot this device is ever seen in asks once to be stored.
-    when(() => {
-      api.updatePlatformAccessories(It.matches((accessories: PlatformAccessory[]) => accessories.length === 1));
     }).thenReturn(undefined);
     const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
     const [launch, shutdown] = listeners;
@@ -1429,6 +1409,29 @@ describe('registerDiscoveredDevices', () => {
     );
   });
 
+  // The first poll on a new device runs before registration for throw-safety, and it always seeds
+  // the pump records, which fires the persist port. An update call for a never-registered accessory
+  // poisons Homebridge's cached-accessory list and voids the registration that follows, so the port
+  // must stay silent until the platform has recorded the accessory as its own (DEV-01, CTRL-01).
+  test('registers a newly discovered device without asking Homebridge to update a never-registered accessory', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const updateCalls: FakeAccessory[][] = [];
+    const api = fakeDiscoveryApi(registerCalls, updateCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: powerRegistry() }), [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { registered: registerCalls.map((call) => call.accessories.map((accessory) => accessory.UUID)), updated: updateCalls },
+      { registered: [[ACCESSORY_UUID]], updated: [] },
+    );
+  });
+
   test('persists a vendor rename it already applied when the update that follows it throws', () => {
     // arrange
     const updateCalls: FakeAccessory[][] = [];
@@ -1710,6 +1713,10 @@ describe('registerDiscoveredDevices', () => {
   // process-wide store exists. The pump that runs here is deliberately the second device's: a store
   // that closed over one accessory for the whole process would name the first one, and a case that
   // ran the first device's pump would pass against exactly that defect (CTRL-01, D-008).
+  //
+  // The first-poll seeds mutate only the context: neither accessory is registered while its seed
+  // runs, so the persist port makes no call, and registration's own cache save is what carries the
+  // seeded records to disk. Only the activation counted after registration asks Homebridge to store.
   test('asks Homebridge to store the accessory whose snapshot counted an activation, and no other', () => {
     // arrange
     const updateCalls: FakeAccessory[][] = [];
@@ -1732,7 +1739,7 @@ describe('registerDiscoveredDevices', () => {
         seeds: afterTheSeeds,
         sinceTheSeeds: updateCalls.slice(afterTheSeeds).map((call) => call.map((persisted) => persisted.UUID)),
       },
-      { seeds: 2, sinceTheSeeds: [[SECOND_ACCESSORY_UUID]] },
+      { seeds: 0, sinceTheSeeds: [[SECOND_ACCESSORY_UUID]] },
     );
   });
 
