@@ -470,7 +470,7 @@ describe('applyReportedPatch', () => {
 });
 
 describe('releaseShadowSource', () => {
-  test('clears the watermark on every stored device and leaves the rest of each snapshot alone', () => {
+  test('clears the watermark on each device it is given and leaves the rest of each snapshot alone', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
     store.applyDiscovery(geminiDevice());
@@ -573,6 +573,53 @@ describe('releaseShadowSource', () => {
 
     // assert
     assert.strictEqual(Object.isFrozen(store.snapshot(DEVICE_ID)), true);
+  });
+
+  // Silence belongs to one controller, so the handover it triggers must too. A
+  // release that stripped every device would have the next poll's older body
+  // overwrite the readings a healthy pump's own live path had just delivered,
+  // on every poll of a silence next door that can last hours (SYNC-03).
+  test('leaves the pump beside it owning its own telemetry', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 4 }, state: undefined, version: 90 });
+    store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
+
+    // act
+    store.releaseShadowSource(DEVICE_ID);
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        released: store.snapshot(DEVICE_ID)?.data.water_level,
+        kept: store.snapshot(SECOND_DEVICE_ID)?.data.water_level,
+        keptVersion: store.snapshot(SECOND_DEVICE_ID)?.shadowVersion,
+      },
+      { released: 1, kept: 5, keptVersion: 91 },
+    );
+  });
+
+  // The runtime releases the devices its silence projection names, which are
+  // not always devices this store has a snapshot for: a device can go silent
+  // and be removed between the two.
+  test('changes nothing when it names a device the store never held', () => {
+    // arrange
+    const store = versionedStore();
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+
+    // act
+    store.releaseShadowSource(SECOND_DEVICE_ID);
+
+    // assert
+    assert.deepStrictEqual(
+      { held: store.snapshot(DEVICE_ID)?.shadowVersion, absent: store.snapshot(SECOND_DEVICE_ID), notifications },
+      { held: 5, absent: undefined, notifications: [] },
+    );
   });
 });
 

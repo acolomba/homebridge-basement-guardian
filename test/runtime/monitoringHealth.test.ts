@@ -8,8 +8,11 @@ import type { MonitoringHealth } from '../../src/runtime/monitoringHealth.js';
 
 const START_TIME = 1_700_000_000_000;
 
-// The one system on the account every single-device case is about.
+// The systems a case is about. Most cases are about one, which is the ordinary
+// account, and the two-device cases below are what make silence a fact about a
+// controller rather than about the account it sits on.
 const DEVICE_ID = 'placeholder-device';
+const OTHER_DEVICE_ID = 'placeholder-other-device';
 
 // The two boundary moments, written as the millisecond figures a reader can
 // check against the measured heartbeat rather than recomputed from the
@@ -36,11 +39,24 @@ function movableClock(): MovableClock {
   };
 }
 
-// A projection whose shadow arrival was stamped at the scenario's start, which
-// is the state every elapsed-time case measures from.
+// A projection carrying one admitted device whose shadow arrival was stamped at
+// the scenario's start, which is the state every elapsed-time case measures
+// from. Admission comes first because that is the order the runtime uses: a
+// poll finds the device, and its messages arrive afterwards.
 function healthWithAMessageAtStart(clock: Clock): MonitoringHealth {
   const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
   health.recordShadowMessage(DEVICE_ID);
+
+  return health;
+}
+
+// A projection carrying two admitted systems and no message from either, which
+// is the state a two-pump account is in the moment discovery finds it.
+function healthWithTwoAdmittedDevices(clock: Clock): MonitoringHealth {
+  const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
+  health.admitDevice(OTHER_DEVICE_ID);
 
   return health;
 }
@@ -204,18 +220,77 @@ test('answers both facts together, so one degradation never reports the other', 
   assert.deepStrictEqual(health.trustNow(), { restDegraded: true, shadowSilent: true });
 });
 
-test('vouches for a shadow it has only just been built over', () => {
+test('vouches for a shadow over a device it has only just admitted', () => {
   // arrange
   const { clock } = movableClock();
+  const health = createMonitoringHealth({ clock });
 
   // act
-  const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
 
   // assert
   assert.deepStrictEqual(health.trustNow(), { restDegraded: false, shadowSilent: false });
 });
 
-test('goes silent two heartbeats after construction when no message ever arrives', () => {
+// The false normal guarded here is a broker the plugin can never reach reading
+// as permanently trusted. Admission is the clock it is guarded by: a device
+// discovery found and nothing ever heard from goes silent two heartbeats later,
+// so a shadow that never connects never vouches for anything for long.
+test('goes silent two heartbeats after admission when no message ever arrives', () => {
+  // arrange
+  const { clock, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
+
+  // act
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // assert
+  assert.strictEqual(health.trustNow().shadowSilent, true);
+});
+
+// One pump's heartbeat is no evidence about the pump beside it. An account
+// stamp re-armed by whichever system spoke last leaves a controller that has
+// stopped speaking fully vouched for, and every poll of that basement discarded
+// (D-05, D-13).
+test('names only the pump that stopped speaking when the pump beside it is still heartbeating', () => {
+  // arrange
+  const { clock, moveTo } = movableClock();
+  const health = healthWithTwoAdmittedDevices(clock);
+  health.recordShadowMessage(DEVICE_ID);
+  moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
+  health.recordShadowMessage(OTHER_DEVICE_ID);
+
+  // act
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // assert
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+});
+
+// The marking every accessory hears is one answer, so any system the plugin has
+// stopped watching costs the account its claim to be watching. Which one it was
+// is the failure log's line, not this verdict (D-02, D-03).
+test('stops vouching for the account while one pump is quiet and vouches again once it speaks', () => {
+  // arrange
+  const { clock, moveTo } = movableClock();
+  const health = healthWithTwoAdmittedDevices(clock);
+  moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
+  health.recordShadowMessage(OTHER_DEVICE_ID);
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+  const whileOneIsQuiet = health.trustNow().shadowSilent;
+
+  // act
+  health.recordShadowMessage(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual({ whileOneIsQuiet, afterItSpeaks: health.trustNow().shadowSilent }, { whileOneIsQuiet: true, afterItSpeaks: false });
+});
+
+// Nothing is watched before discovery admits it, so a projection told about no
+// device reports no silence however long it is left. Silence is the absence of
+// messages from a system the plugin knows it should be hearing from.
+test('reports no silence for a system it has never been told about', () => {
   // arrange
   const { clock, moveTo } = movableClock();
   const health = createMonitoringHealth({ clock });
@@ -224,7 +299,45 @@ test('goes silent two heartbeats after construction when no message ever arrives
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, true);
+  assert.deepStrictEqual({ silent: health.silentDevices(), account: health.trustNow().shadowSilent }, { silent: [], account: false });
+});
+
+// An account whose systems come and go over months would otherwise accumulate a
+// stamp per system for the life of the process, and go on withdrawing trust for
+// a pump that was sold with the house.
+test('stops reporting a system the account no longer carries', () => {
+  // arrange
+  const { clock, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+  const whileItIsCarried = health.silentDevices();
+
+  // act
+  health.forgetDevice(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual(
+    { whileItIsCarried, afterRemoval: health.silentDevices(), account: health.trustNow().shadowSilent },
+    { whileItIsCarried: [DEVICE_ID], afterRemoval: [], account: false },
+  );
+});
+
+// Every poll admits every device it found, so a re-stamp here would restart the
+// window of a pump that has been quiet for hours on every poll and the silence
+// would never be reached -- the same false normal on a slower clock.
+test('leaves a quiet pump quiet when a later poll admits it again', () => {
+  // arrange
+  const { clock, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock });
+  health.admitDevice(DEVICE_ID);
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // act
+  health.admitDevice(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
 // Whether a command can currently be sent depends on whether the runtime is stopped and whether

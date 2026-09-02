@@ -131,6 +131,16 @@ function otherGeminiDevice(): ApiDevice {
   return { ...geminiDevice(), deviceId: OTHER_DEVICE_ID };
 }
 
+// Both physical devices reporting the same level, which is what lets a
+// two-device case state a pump's level as either the one its own live path
+// delivered or the one the vendor's body carries, and never both.
+function bothDevicesAt(level: number): ApiDevice[] {
+  return [
+    { ...geminiDevice(), data: { ...geminiDevice().data, water_level: level } },
+    { ...otherGeminiDevice(), data: { ...otherGeminiDevice().data, water_level: level } },
+  ];
+}
+
 // The same device as the vendor sends it: the list route wraps its records under
 // a plural key and the serial number sits under `attributes`, not at the top
 // level.
@@ -1073,6 +1083,66 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 4 });
+  });
+
+  // The handover is a fact about one controller. A pump whose live path is
+  // working keeps the level its own heartbeat delivered instead of having every
+  // poll of the silence next door write the vendor's older body over it, which
+  // is what an owner with two basements would otherwise lose (WR-05, SYNC-03).
+  //
+  // The two advances are what put the two pumps on different clocks:
+  // `POLL_INTERVAL_MS` is 900 000 against a 1 796 000 silence window, so the
+  // heartbeat sent after the first advance leaves the second pump one missed
+  // heartbeat old while the first is two.
+  test('D-13 hands only the quiet pump back to the poll and leaves its neighbour owning its telemetry', async (t) => {
+    // arrange
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+    shadows[0]?.options.onReportedPatch(OTHER_DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 6 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    shadows[0]?.options.onReportedPatch(OTHER_DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 7 });
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        quiet: store.snapshot(DEVICE_ID)?.data.water_level,
+        quietVersion: store.snapshot(DEVICE_ID)?.shadowVersion,
+        healthy: store.snapshot(OTHER_DEVICE_ID)?.data.water_level,
+        healthyVersion: store.snapshot(OTHER_DEVICE_ID)?.shadowVersion,
+      },
+      { quiet: 7, quietVersion: undefined, healthy: 3, healthyVersion: 7 },
+    );
+  });
+
+  // A connection that ended took every device's live path with it, so this
+  // handover really is fleet-wide -- unlike the silence one above, which names
+  // the controller that stopped speaking (D-15, SYNC-03).
+  test('D-15 hands every pump back to the poll when the connection that carried them all ends', async (t) => {
+    // arrange
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+    shadows[0]?.options.onReportedPatch(OTHER_DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 6 });
+
+    // act
+    shadows[0]?.options.onDisconnected('transport-closed');
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { first: store.snapshot(DEVICE_ID)?.data.water_level, second: store.snapshot(OTHER_DEVICE_ID)?.data.water_level },
+      { first: 7, second: 7 },
+    );
   });
 
   test('SYNC-03 lets a shadow document that arrives after a poll win on the keys it carries', async (t) => {
