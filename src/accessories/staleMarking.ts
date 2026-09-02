@@ -45,7 +45,35 @@
 
 import { publishPersistentFailure, publishValue } from './serviceCatalogue.js';
 
-import type { API, PlatformAccessory } from 'homebridge';
+import type { CharacteristicClass } from './customCharacteristics.js';
+import type { API, PlatformAccessory, Service } from 'homebridge';
+
+// The one walk all three passes make: every restored service carrying the
+// characteristic that decides the pass applies to it, acted on and counted.
+//
+// It is extracted rather than written out three times because the three differ
+// only in that guard and that act, and a guard tightened in one copy and not
+// the others would silently change which services a pass reaches. The health
+// gate fails a build on a third near-identical block as well, so keeping the
+// copies was not an option either.
+//
+// The guard stays `testCharacteristic` for every pass. A service that never
+// carried the characteristic does not gain one, because adding a characteristic
+// on upgrade changes a published identity a user's automations may already
+// attach to, and a cache an older release wrote is exactly the input these
+// passes exist to handle.
+function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): number {
+  let reached = 0;
+
+  for (const service of accessory.services) {
+    if (service.testCharacteristic(guard)) {
+      act(service);
+      reached += 1;
+    }
+  }
+
+  return reached;
+}
 
 /**
  * Withdraws trust from every restored service that already reports it, and
@@ -68,16 +96,9 @@ import type { API, PlatformAccessory } from 'homebridge';
  * verb precisely so that cannot happen by accident.
  */
 export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): number {
-  let marked = 0;
-
-  for (const service of accessory.services) {
-    if (service.testCharacteristic(hap.Characteristic.StatusActive)) {
-      publishValue(service, hap.Characteristic.StatusActive, false);
-      marked += 1;
-    }
-  }
-
-  return marked;
+  return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
+    publishValue(service, hap.Characteristic.StatusActive, false);
+  });
 }
 
 /**
@@ -103,14 +124,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
  * work rather than walk an empty list.
  */
 export function markServicesUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
-  let marked = 0;
-
-  for (const service of accessory.services) {
-    if (service.testCharacteristic(hap.Characteristic.StatusActive)) {
-      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
-      marked += 1;
-    }
-  }
-
-  return marked;
+  return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
+    publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
+  });
 }
