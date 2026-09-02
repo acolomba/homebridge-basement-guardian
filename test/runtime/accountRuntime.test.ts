@@ -60,6 +60,10 @@ const ROTATION_FAILED_LINE = 'The temporary shadow credentials could not be refr
 // script, restated here for the same reason.
 const DISCOVERY_FAILED_LINE = 'Device discovery failed on GET /devices with HTTP 503.';
 
+// The line a poll failure carrying no status records. A terminal authentication answer must never
+// reach it: it names a cause that did not happen, and an owner acts on a diagnostic (D-03).
+const DISCOVERY_FAILED_UNEXPLAINED_LINE = 'Device discovery failed.';
+
 // The line a live connection that has stopped delivering records, restated here
 // for the same reason.
 const LIVE_REPORTING_SILENT_LINE =
@@ -204,6 +208,13 @@ function answering<T>(answers: readonly ((signal: AbortSignal) => Promise<T>)[])
 
     return answer === undefined ? Promise.reject(new Error('no answer was scripted')) : answer(signal);
   };
+}
+
+// The vendor refusing the account credentials, as every authenticated route
+// answers it once the tenant has said no. Written once because the cases below
+// drive the same refusal through three different loops.
+function refusingTheAccount(): Promise<never> {
+  return Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'));
 }
 
 // Mimics the vendor request's abort behavior: it settles only when its signal
@@ -1468,6 +1479,121 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(
       { monitoringHealth, calls },
       { monitoringHealth: [{ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }], calls: ['devices'] },
+    );
+  });
+
+  // The refusal an owner actually meets. A password changed at the vendor, or a block the vendor
+  // applies to the account, arrives long after the launch that succeeded. Until this branch existed
+  // it reached only the generic poll failure: no service went unreadable, and the log named device
+  // discovery, which is not what happened (CR-03, D-10, D-03).
+  //
+  // Every credential case above answers the refusal on the first inventory call, which is the launch
+  // path. This one answers a healthy inventory first, so it examines the path a restart never takes.
+  test('D-13 pushes a rejected credential and records the authentication stop for a refusal that follows a healthy start', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        pushed: monitoringHealth.at(-1),
+        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)),
+        discoveryFailures: logged.filter((line) => line.endsWith(DISCOVERY_FAILED_UNEXPLAINED_LINE)),
+      },
+      {
+        pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true },
+        stops: [`warn ${STOPPED_LINE}`],
+        discoveryFailures: [],
+      },
+    );
+  });
+
+  // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
+  // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
+  test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
+      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        pushed: monitoringHealth.at(-1),
+        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)),
+        rotationFailures: logged.filter((line) => line.endsWith(ROTATION_FAILED_LINE)),
+      },
+      {
+        pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true },
+        stops: [`warn ${STOPPED_LINE}`],
+        rotationFailures: [],
+      },
+    );
+  });
+
+  // The second half of the same claim, and the half a retry would make expensive: the vendor lifts a
+  // brute-force block only thirty days after the last attempt. All three loops are running here --
+  // the poll, the rotation, and the retry chain a refusing broker started -- so the empty hour after
+  // the refusal is about every one of them (D-13, D-10).
+  test('D-13 leaves the poll, the rotation and the shadow retry chain nothing to do once a mid-run refusal has halted it', async (t) => {
+    // arrange
+    const { runtime, calls, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      shadow: [false],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    const atTheRefusal = [...calls];
+    await advance(ONE_HOUR_MS);
+
+    // assert
+    assert.deepStrictEqual(calls, atTheRefusal);
+  });
+
+  // Two loops can be in flight against a tenant that has already said no. The rotation wakes ten
+  // milliseconds before the poll here, so both meet the refusal, and the owner must not be told twice
+  // nor the accessory tier pushed twice (D-10).
+  test('D-13 pushes the terminal trust once when the poll and the rotation meet the refusal together', async (t) => {
+    // arrange
+    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
+      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+      pollIntervalMs: SHORT_CREDENTIAL_LIFETIME_MS,
+    });
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        terminalPushes: monitoringHealth.filter((trust) => trust.credentialsRejected).length,
+        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)).length,
+      },
+      { terminalPushes: 1, stops: 1 },
     );
   });
 

@@ -1164,6 +1164,37 @@ describe('applyMonitoringHealth', () => {
     ]);
   });
 
+  // A refusal that arrives after a successful start reaches the accessories this run built, not only
+  // the ones a halted launch found in the cache. Both kinds are in the platform's own accessory map,
+  // which is what the unreadable pass walks, and the built one is here as well -- so the pass that
+  // reaches a restored accessory is proven to reach a discovered one in the same call (CR-03, D-10).
+  test('makes an accessory a successful inventory built unreadable in the same pass as a restored one', () => {
+    // arrange
+    const marks: string[] = [];
+    const restored = restoredAccessories();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(
+      { marks, reads: trustReadsOf(restored.floods) },
+      {
+        marks: [`${DEVICE_ID} rest false shadow false`],
+        reads: [
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        ],
+      },
+    );
+  });
+
   // The ordering inside the fan-out is load-bearing and this is what pins it: an ordinary push clears
   // a stored status, so an error pushed before `markMonitoring` republished its rows would be
   // silently undone by the boolean that followed it.
