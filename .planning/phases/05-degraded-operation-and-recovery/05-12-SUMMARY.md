@@ -273,3 +273,11 @@ installed.
 ## Known Stubs
 
 None.
+
+## Self-Check: PASSED
+
+All eight files named above exist on disk. All four commits (`918126f`, `6434015`, `da9ce31`,
+`55bc443`) are in the branch history. The four `contains` claims from the plan's artifact list are
+present in their files: `void closeQuietly(shadow);` in `accountRuntime.ts`, `hasFinished` at its
+declaration and both `attemptShadow` guard sites, `stays refused when the next heartbeat lands` in
+`degradedOperation.feature`, and `still answers no read` in `homekit.ts`.
