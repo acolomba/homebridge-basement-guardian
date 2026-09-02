@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 19
+open_count: 20
 waived_count: 1
 fixed_count: 2
-total_count: 22
-last_updated: 2026-09-02T21:52:45.278Z
+total_count: 23
+last_updated: 2026-09-02T22:32:05.472Z
 ---
 
 # Broken Windows Ledger
@@ -37,6 +37,7 @@ last_updated: 2026-09-02T21:52:45.278Z
 | 20 | 05 | deviation | test/runtime/monitoringHealth.test.ts |  | Plan 05-14 task 1 had to touch two test files it did not list: npm run test:cucumber runs build:test over the whole test tsconfig, so the releaseShadowSource and recordShadowMessage call sites had to compile before the tracer task could be verified at all. Only the call sites moved in that commit; the substantive restatement landed in task 2. | open |  | 2026-09-02T21:16:51.116Z |  |
 | 21 | 05 | deviation | features/degradedOperation.feature |  | Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case. | open |  | 2026-09-02T21:16:51.402Z |  |
 | 22 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-15-PLAN.md |  | Plan 05-15 stated that refusing to advance a held watermark on a metadata-only document would leave a later telemetry document at the same version judged stale, discarding a real reading. Measured: refusing the advance leaves the watermark BELOW the shadow's own version, so a superseded document is accepted over a newer reading. The shipped case pins the measured consequence. | open |  | 2026-09-02T21:52:45.278Z |  |
+| 23 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-16 task 1 listed only the feature file and the accessory source, but its own coverage verify demands 100 percent branch coverage of basementGuardian.js and the new seam guard adds a branch no scenario can reach. Three unit cases were added in task 1, one per refusal path, which is also what proves all three leaking callers closed | open |  | 2026-09-02T22:32:05.472Z |  |
 
 ````json
 [
@@ -302,6 +303,18 @@ last_updated: 2026-09-02T21:52:45.278Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T21:52:45.278Z",
+    "resolved_at": null
+  },
+  {
+    "id": 23,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "test/accessories/basementGuardian.test.ts",
+    "line": null,
+    "description": "Plan 05-16 task 1 listed only the feature file and the accessory source, but its own coverage verify demands 100 percent branch coverage of basementGuardian.js and the new seam guard adds a branch no scenario can reach. Three unit cases were added in task 1, one per refusal path, which is also what proves all three leaking callers closed",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T22:32:05.472Z",
     "resolved_at": null
   }
 ]
