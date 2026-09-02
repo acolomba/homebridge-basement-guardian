@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 16/19 plans executed — 12 executed, and 7 planned 2026-09-02 to close the 4 blockers and 8 warnings the whole-phase code review found. Three of the four blockers are interactions between plans that each verified cleanly alone, which is why twelve rounds of per-plan verification missed them.
+**Plans**: 17/19 plans executed — 12 executed, and 7 planned 2026-09-02 to close the 4 blockers and 8 warnings the whole-phase code review found. Three of the four blockers are interactions between plans that each verified cleanly alone, which is why twelve rounds of per-plan verification missed them.
 
 Plans:
 **Wave 1**
@@ -306,7 +306,7 @@ Plans:
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 05-17-PLAN.md — The fact a control row publishes from and the fact a write is refused on are one fact, and a device's own confirmation resolves the request
+- [x] 05-17-PLAN.md — The fact a control row publishes from and the fact a write is refused on are one fact, and a device's own confirmation resolves the request
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
@@ -342,5 +342,5 @@ Plans:
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
 | 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 16/19 | In Progress|  |
+| 5. Degraded Operation and Recovery | 17/19 | In Progress|  |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |
