@@ -270,6 +270,18 @@ distinguishable.
 - The `FailureLog` `kind` strings, subject to that module's existing convention: a capitalized noun
   phrase reading as the subject of the recovery sentence.
 
+- **D-13 — Two missed heartbeats release the shadow's ownership of telemetry, decided 2026-09-02 by the maintainer:** `pollTelemetry` (`src/device/state.ts:173-175`) keeps the previous snapshot's telemetry whenever `shadowVersion` is set, and the watermark is released in exactly one place, `handleShadowDisconnected` (`src/runtime/accountRuntime.ts:468`). Shadow **silence is not a disconnection** — that distinction is the whole point of `D-05`, since socket state flaps daily by design — so once a versioned shadow message has arrived, no REST poll refreshes telemetry for as long as the silence lasts.
+
+  Proven against the built store on 2026-09-02: a dry poll reads `water_level: 0`; a versioned heartbeat sets `shadowVersion: 5`; a healthy REST poll reporting `water_level: 31` **still reads 0**; and the same poll after `releaseShadowSource()` reads 31. Every real Gemini sends versioned heartbeats, so this is the ordinary case rather than an edge one.
+
+  **This is why `CR-01`'s fix in plan 05-06 does not, on its own, deliver the outcome `CR-01` names.** The accessory layer now publishes what a working transport delivers; during silence nothing is delivered to it. A flooded pit still cannot reach HomeKit.
+
+  **Ruling: a shadow that has missed two heartbeats has stopped owning telemetry, and REST polling takes it back** — the same handover `handleShadowDisconnected` already performs, triggered by the silence predicate rather than by socket state. Ownership returns to the shadow when a message arrives, exactly as a reconnect's complete-shadow request restores it today.
+
+  **This amends `D-15` and `SYNC-03`, and the amendment is narrow.** `D-15` already says that when the shadow is not working "REST polling is the state source"; it reasons about a shadow connection that never came up and does not contemplate a connected-but-silent shadow. `SYNC-03` already calls successful REST snapshots the reconciliation backstop. The implementation applied "the shadow owns telemetry" to a state neither decision describes — the same shape as `D-014`'s over-application that `05-06` fixed one layer down. Both decisions are amended to read that shadow ownership ends on silence as well as on disconnection.
+
+  Found during 05-06 execution and correctly deferred there under deviation rule 4, because changing which source owns telemetry is an architectural ruling rather than a bug fix. Implemented in plan 05-11.
+
 </decisions>
 
 <canonical_refs>
