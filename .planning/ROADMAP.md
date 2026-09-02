@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 4/5 plans executed
+**Plans**: 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -254,7 +254,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 05-05-PLAN.md — No threshold became a setting, the new states are documented, and the requirements table agrees with itself
+- [x] 05-05-PLAN.md — No threshold became a setting, the new states are documented, and the requirements table agrees with itself
 
 ### Phase 6: Validated Release Candidate
 
@@ -282,5 +282,5 @@ Plans:
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
 | 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 4/5 | In Progress|  |
+| 5. Degraded Operation and Recovery | 5/5 | In Progress|  |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |

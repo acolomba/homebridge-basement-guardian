@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
-status: executing
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-09-02T03:15:27.192Z"
+status: verifying
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-09-02T03:36:02.846Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: c34f005d729a5fb5927f63f32eff39bf00639c89
+state_head: 16adbe036e559f8726f2049546c3c1591df53068
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 42
-  completed_plans: 41
+  completed_plans: 42
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-01 — Phase 05 execution started
 
 Phase 05 has `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md` and five
@@ -96,6 +96,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P02 | 14min | 2 tasks | 9 files |
 | Phase 05 P03 | 23min | 2 tasks | 12 files |
 | Phase 05 P04 | 28min | 2 tasks | 15 files |
+| Phase 05 P05 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -245,6 +246,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Phase 5 plan 04: the HAP stand-in modelled the inverse of the real updateValue on the push-an-error path; corrected and pinned by four fidelity cases watched to fail against it.
 - [Phase 05]: Phase 5 plan 04: the Phase 3 gate forbidding HapStatusError under src/accessories/ was narrowed to a counted, located exception rather than relaxed; serviceCatalogue.ts may name it exactly once, inside publishPersistentFailure.
 - [Phase 05]: Phase 5 plan 04: the credential scenario needed a foreign cached token, or the restart reuses the cached one and never meets the refusal it claims to assert.
+- [Phase 05]: The config key-set mutation split 61 pass to 1 fail: every fixture-derived expectation widened silently, so the inline literal is the whole of the evidence
+- [Phase 05]: RES-01 and RES-03 were left Complete unchanged; their contradiction was resolved by this phase shipping the owed halves, not by an edit. Only RES-04 moved to Complete
+- [Phase 05]: The shadow-silence threshold is deliberately not published in the README; the reader needs the state, not the constant
 
 ### Pending Todos
 
@@ -400,8 +404,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T03:15:24.355Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-09-02T03:36:02.246Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour

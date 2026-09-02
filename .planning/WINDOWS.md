@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 3
 waived_count: 1
 fixed_count: 0
-total_count: 2
-last_updated: 2026-09-02T02:30:06.953Z
+total_count: 4
+last_updated: 2026-09-02T03:35:44.625Z
 ---
 
 # Broken Windows Ledger
@@ -17,6 +17,8 @@ last_updated: 2026-09-02T02:30:06.953Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 05 | unrun-verify | test/platform.test.ts |  | Deleting the configureAccessory marking call leaves all 85 Cucumber scenarios green; only the platform unit case gates that call site | waived | Not an open defect: the mutation is caught by test/platform.test.ts, which fails on it. Recorded so a later author who moves that gate knows the Cucumber tier cannot replace it, because features/support/world.ts stands in for configureAccessory. | 2026-09-02T01:46:49.765Z | 2026-09-02T01:47:10.458Z |
 | 2 | 05 | unrun-verify | src/runtime/accountRuntime.ts |  | commandTransportReadyNow()'s !halted term is redundant given polling and no test fails when it is removed; kept as deliberate defence, recorded in 05-03-SUMMARY mutation 4 | open |  | 2026-09-02T02:30:06.953Z |  |
+| 3 | 05 | deviation | README.md |  | The 30-day vendor-block figure is sourced from src/cloud/auth.ts:35, outside the two files plan 05-05's acceptance criterion names | open |  | 2026-09-02T03:35:44.273Z |  |
+| 4 | 05 | todo | README.md | 220 | Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/ | open |  | 2026-09-02T03:35:44.625Z |  |
 
 ````json
 [
@@ -42,6 +44,30 @@ last_updated: 2026-09-02T02:30:06.953Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T02:30:06.953Z",
+    "resolved_at": null
+  },
+  {
+    "id": 3,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "README.md",
+    "line": null,
+    "description": "The 30-day vendor-block figure is sourced from src/cloud/auth.ts:35, outside the two files plan 05-05's acceptance criterion names",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T03:35:44.273Z",
+    "resolved_at": null
+  },
+  {
+    "id": 4,
+    "kind": "todo",
+    "phase": "05",
+    "file": "README.md",
+    "line": 220,
+    "description": "Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T03:35:44.625Z",
     "resolved_at": null
   }
 ]
