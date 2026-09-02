@@ -122,41 +122,64 @@ async function assertCharacteristicValue(this: BasementGuardianWorld, serviceNam
 
 Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
 
-// Whether a controller read of this characteristic answers the value or the status the plugin stored
-// on it. A characteristic made unreadable throws that status ahead of the value, which is what Apple
-// Home draws as No Response, and reading the stored value alone cannot tell the two apart. An absent
-// characteristic answers neither, so it reads as answering rather than as refusing and a step
-// asserting a refusal fails by name rather than passing on an absence.
-function readThrows(service: FakeHapService | undefined, displayName: string): boolean {
+/** What a controller read of one characteristic met. */
+type ReadOutcome = 'answered' | 'refused' | 'absent';
+
+// How a step names each outcome when it reports the one it met. An absent characteristic and a
+// refusing one are different diagnoses -- a service that never published the value, against one
+// answering No Response -- and a message merging them sends the reader the wrong way.
+const READ_OUTCOMES: Readonly<Record<ReadOutcome, string>> = {
+  answered: 'answered a read',
+  refused: 'refused a read',
+  absent: 'carried no such characteristic',
+};
+
+// Which of the three a controller read of this characteristic meets. A characteristic made
+// unreadable throws the status the plugin stored on it ahead of the value, which is what Apple Home
+// draws as No Response, and reading the stored value alone cannot tell that apart from a value the
+// service answered. A characteristic the service does not carry answers neither, and that is its own
+// outcome rather than a shade of either: a step asserting an answer and a step asserting a refusal
+// both fail on an absence, because a service that never published the characteristic is a scenario
+// examining nothing (WR-06).
+function readOutcome(service: FakeHapService | undefined, displayName: string): ReadOutcome {
   const characteristic = service?.characteristics.find((candidate) => candidate.displayName === displayName);
 
   if (characteristic === undefined) {
-    return false;
+    return 'absent';
   }
 
   try {
     characteristic.handleGetRequest();
   } catch {
-    return true;
+    return 'refused';
   }
 
-  return false;
+  return 'answered';
 }
 
-async function assertNoReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  const homebridge = await this.homebridge();
-  const failure = `the ${serviceName} service went on answering a read for ${characteristicName}`;
+// The wait's own message can only name the outcome the step wanted, because it is built before the
+// first read. The deadline failure is restated here with the outcome the last read met, and carries
+// the wait's error as its cause so nothing about the timing is lost.
+async function untilReadOutcome(world: BasementGuardianWorld, serviceName: string, characteristicName: string, expected: ReadOutcome): Promise<void> {
+  const homebridge = await world.homebridge();
+  const read = (): ReadOutcome => readOutcome(serviceOf(homebridge, serviceName), characteristicName);
+  const failure = `the ${serviceName} service never ${READ_OUTCOMES[expected]} for ${characteristicName}`;
 
-  await this.untilTrue(() => readThrows(serviceOf(homebridge, serviceName), characteristicName), PUBLISH_DEADLINE_MS, failure);
+  try {
+    await world.untilTrue(() => read() === expected, PUBLISH_DEADLINE_MS, failure);
+  } catch (thrown) {
+    throw new Error(`${failure}: it ${READ_OUTCOMES[read()]}`, { cause: thrown });
+  }
+}
+
+function assertNoReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  return untilReadOutcome(this, serviceName, characteristicName, 'refused');
 }
 
 Then('the {string} service answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadAnswered);
 
-async function assertReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  const homebridge = await this.homebridge();
-  const failure = `the ${serviceName} service stopped answering a read for ${characteristicName}`;
-
-  await this.untilTrue(() => !readThrows(serviceOf(homebridge, serviceName), characteristicName), PUBLISH_DEADLINE_MS, failure);
+function assertReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+  return untilReadOutcome(this, serviceName, characteristicName, 'answered');
 }
 
 Then('the {string} service answers a read for {string}', { timeout: STEP_TIMEOUT_MS }, assertReadAnswered);
