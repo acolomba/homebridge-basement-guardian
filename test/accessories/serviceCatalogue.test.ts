@@ -13,6 +13,7 @@ import {
   decodedGroup,
   ensureService,
   isRowFullyTrusted,
+  isRowPublishable,
   isRowTrusted,
   numberOf,
   publishedService,
@@ -1587,6 +1588,185 @@ describe('isRowTrusted', () => {
   test('trusts a row while a different scope is untrusted', () => {
     // act & assert
     assert.strictEqual(isRowTrusted({ scope: 'connectivity', toleratedDistrust: [] }, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
+  });
+});
+
+describe('isRowPublishable', () => {
+  // The reading an owner acts on, delivered by the transport that is still working while the other
+  // one went quiet. Withholding it leaves Apple Home drawing "no leak" over a plugin holding "leak",
+  // with nothing on the tile to say otherwise, and no automation fires (CR-01, D-014, D-02).
+  test('publishes a flooded pit whose scope the plugin can no longer watch, and stops vouching for it', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({
+      decoded: decodedState({ water: { levelCode: 31, levelPercent: 100, flooded: true } }),
+      untrustedScopes: [{ scope: 'water', reason: 'unreachable', lastTrustedAt: 7 }],
+    });
+
+    // act
+    const tile = { leak: valueOf(row.project(input), hap.Characteristic.LeakDetected), active: isRowFullyTrusted(row, input.untrustedScopes) };
+
+    // assert
+    assert.deepStrictEqual(tile, { leak: LEAK_DETECTED, active: false });
+  });
+
+  // The two predicates answer different questions, and this is where they part. Publishing asks
+  // whether pushing what arrived would overwrite a good value with a doubtful one; vouching asks
+  // whether the plugin can still call the value current. Only a monitoring outage answers no to the
+  // second and yes to the first, so `stale`, which nothing assigns, publishes nothing either.
+  for (const reason of ['invalid', 'controller-link-lost', 'unreachable', 'stale'] as const) {
+    test(`publishes a scope untrusted for ${reason} only while the value itself is not in doubt, and vouches for it either way`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-flood');
+      const untrustedScopes = [{ scope: 'water' as const, reason, lastTrustedAt: 7 }];
+
+      // act & assert
+      assert.deepStrictEqual(
+        { publishable: isRowPublishable(row, untrustedScopes), active: isRowFullyTrusted(row, untrustedScopes) },
+        { publishable: reason === 'unreachable', active: false },
+      );
+    });
+  }
+
+  test('publishes nothing for a scope whose own field failed family validation', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({
+      decoded: decodedState({ water: { levelCode: 31, levelPercent: 100, flooded: true } }),
+      untrustedScopes: [{ scope: 'water', reason: 'invalid', lastTrustedAt: 7 }],
+    });
+
+    // act & assert
+    assert.deepStrictEqual(row.project(input), []);
+  });
+
+  test('publishes nothing for a scope a lost controller link poisoned', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-mains-power');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
+
+    // act & assert
+    assert.deepStrictEqual(row.project(input), []);
+  });
+
+  test('publishes through a lost controller link for the one row that tolerates it', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ControllerLinkPresent } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'pump-controller-link-lost');
+    const input = projectionInput({
+      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }],
+    });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(
+      { contact: valueOf(projected, hap.Characteristic.ContactSensorState), link: valueOf(projected, ControllerLinkPresent) },
+      { contact: CONTACT_NOT_DETECTED, link: false },
+    );
+  });
+
+  test('publishes nothing while the value is in doubt, whatever else the same scope also lost', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({
+      untrustedScopes: [
+        { scope: 'water', reason: 'invalid', lastTrustedAt: 7 },
+        { scope: 'water', reason: 'unreachable', lastTrustedAt: 7 },
+      ],
+    });
+
+    // act & assert
+    assert.deepStrictEqual(row.project(input), []);
+  });
+
+  // A row reading a second scope group answers the same question once per group, so an outage on the
+  // second group keeps its values flowing while a validation failure on it still withholds them.
+  for (const { reason, waterSensorFault, statusFault } of [
+    { reason: 'unreachable' as const, waterSensorFault: false, statusFault: NO_FAULT },
+    { reason: 'invalid' as const, waterSensorFault: undefined, statusFault: undefined },
+  ]) {
+    test(`publishes the second scope group a row reads while that scope is untrusted for ${reason}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+      const row = rowOf(hap, 'sump-pit-level');
+      const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason, lastTrustedAt: 7 }] });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(
+        {
+          level: valueOf(projected, hap.Characteristic.WaterLevel),
+          fault: valueOf(projected, WaterSensorFaultReported),
+          status: valueOf(projected, hap.Characteristic.StatusFault),
+          active: isRowFullyTrusted(row, input.untrustedScopes),
+        },
+        { level: 20, fault: waterSensorFault, status: statusFault, active: false },
+      );
+    });
+  }
+
+  test('publishes and vouches for a row nothing untrusts', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput();
+
+    // act
+    const tile = { leak: valueOf(row.project(input), hap.Characteristic.LeakDetected), active: isRowFullyTrusted(row, input.untrustedScopes) };
+
+    // assert
+    assert.deepStrictEqual(tile, { leak: LEAK_NOT_DETECTED, active: true });
+  });
+
+  // A blackout marks; it raises no alarm. Both safety adapters derive their activation from a value
+  // the last trustworthy observation produced rather than from the trust state, so an outage that
+  // said nothing about the controller link and nothing about the device leaves both quiet (D-016,
+  // RES-03).
+  for (const { displayName, kind } of [
+    { displayName: 'Pump Controller Link Lost', kind: 'pump-controller-link-lost' as const },
+    { displayName: 'Basement Guardian Offline', kind: 'basement-guardian-offline' as const },
+  ]) {
+    test(`activates no ${displayName} contact for a monitoring outage the last snapshot said nothing about`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, kind);
+      const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+
+      // act
+      const tile = { contact: valueOf(row.project(input), hap.Characteristic.ContactSensorState), active: isRowFullyTrusted(row, input.untrustedScopes) };
+
+      // assert
+      assert.deepStrictEqual(tile, { contact: CONTACT_DETECTED, active: false });
+    });
+  }
+
+  // The tile is on the accessory while the outage is in force rather than a poll later. A row that
+  // projected nothing would earn no service until trust returned, and at the longest configurable
+  // poll interval that is an hour of an absent sensor after the transport is back (WR-08).
+  test('earns its service from the poll that arrives during the outage', () => {
+    // arrange
+    const hap = hapNamespace();
+    const accessory = accessoryStandIn();
+    const row = rowOf(hap, 'sump-pit-flood');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'water', reason: 'unreachable', lastTrustedAt: 7 }] });
+
+    // act
+    const service = ensureService(accessory, row, row.project(input));
+
+    // assert
+    assert.strictEqual(service?.displayName, 'Sump Pit Flood');
   });
 });
 

@@ -53,6 +53,31 @@ Feature: Degraded monitoring
     Then the "Basement Guardian Offline" service reports "Status Active" as "true"
     Then the "Basement Guardian Offline" sensor is not activated
 
+  Scenario: A flooded pit reaches Apple Home while the live path is silent
+    The poll is still answering, and what it carries is a reading the family validated. The plugin
+    cannot vouch for the scope any more, so it says so on the one row that carries the doubt and it
+    publishes the reading rather than dropping it. A tile reading "no leak" over a plugin holding
+    "leak" is the failure this whole plugin exists to prevent, and Apple Home draws no trust row on
+    the tile to hint at it. 31 is the water level the Gemini family calls a flooding pit.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the "Sump Pit Flood" sensor is not activated
+    When the vendor changes these device fields:
+      | water_level | 31 |
+    Then the "Sump Pit Flood" sensor is activated
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+
   Scenario: Polling failure alone leaves the live values trustworthy
     Live pushes still arrive while the poll fails, so the readings a user watches are current and
     only the verdict the poll alone sources goes unfed. The plugin withdraws that one verdict and

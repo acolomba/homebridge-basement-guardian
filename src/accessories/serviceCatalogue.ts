@@ -215,6 +215,11 @@ export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedS
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
 }
 
+/** Answers whether a row may publish what arrived, which is not yet a different question. */
+export function isRowPublishable(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
+  return isRowTrusted(row, untrustedScopes);
+}
+
 /**
  * Answers whether a row can vouch for every scope it reads, not only the one it
  * is filed under.
