@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 7
 waived_count: 1
-fixed_count: 0
-total_count: 8
-last_updated: 2026-09-02T14:31:08.555Z
+fixed_count: 2
+total_count: 10
+last_updated: 2026-09-02T15:54:13.289Z
 ---
 
 # Broken Windows Ledger
@@ -19,10 +19,12 @@ last_updated: 2026-09-02T14:31:08.555Z
 | 2 | 05 | unrun-verify | src/runtime/accountRuntime.ts |  | commandTransportReadyNow()'s !halted term is redundant given polling and no test fails when it is removed; kept as deliberate defence, recorded in 05-03-SUMMARY mutation 4 | open |  | 2026-09-02T02:30:06.953Z |  |
 | 3 | 05 | deviation | README.md |  | The 30-day vendor-block figure is sourced from src/cloud/auth.ts:35, outside the two files plan 05-05's acceptance criterion names | open |  | 2026-09-02T03:35:44.273Z |  |
 | 4 | 05 | todo | README.md | 220 | Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/ | open |  | 2026-09-02T03:35:44.625Z |  |
-| 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | open |  | 2026-09-02T12:34:29.654Z |  |
+| 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | fixed |  | 2026-09-02T12:34:29.654Z | 2026-09-02T15:53:59.681Z |
 | 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | open |  | 2026-09-02T12:34:29.998Z |  |
 | 7 | 05 | unrun-verify | test/platform.test.ts |  | makes an accessory a successful inventory built unreadable in the same pass as a restored one: passes without the fix and fails no mutation; keep D1-D4 as the coverage of CR-03 | open |  | 2026-09-02T13:47:07.171Z |  |
-| 8 | 05 | deviation | features/degradedOperation.feature |  | A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check | open |  | 2026-09-02T14:31:08.555Z |  |
+| 8 | 05 | deviation | features/degradedOperation.feature |  | A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check | fixed |  | 2026-09-02T14:31:08.555Z | 2026-09-02T15:53:59.999Z |
+| 9 | 05 | deviation | features/degradedOperation.feature |  | Scenario 'Shadow silence withdraws trust while polling continues' now rests its 'sensor is not activated' assertion on the polled water_level 1 rather than the retained heartbeat 3; still honest, but the heartbeat step no longer carries that assertion | open |  | 2026-09-02T15:54:12.932Z |  |
+| 10 | 05 | deviation | features/support/steps/harness.ts |  | Plan 05-11 prescribed repairing scenarios with 'Given these reported device fields:'; that step wipes the full valid telemetry these scenarios need and the matching-value repair also destroys the heartbeat barrier the snapshot step provides. Repair used the second heartbeat instead | open |  | 2026-09-02T15:54:13.289Z |  |
 
 ````json
 [
@@ -81,10 +83,10 @@ last_updated: 2026-09-02T14:31:08.555Z
     "file": "src/device/state.ts",
     "line": 173,
     "description": "A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T12:34:29.654Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-02T15:53:59.681Z"
   },
   {
     "id": 6,
@@ -117,9 +119,33 @@ last_updated: 2026-09-02T14:31:08.555Z
     "file": "features/degradedOperation.feature",
     "line": null,
     "description": "A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T14:31:08.555Z",
+    "resolved_at": "2026-09-02T15:53:59.999Z"
+  },
+  {
+    "id": 9,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "features/degradedOperation.feature",
+    "line": null,
+    "description": "Scenario 'Shadow silence withdraws trust while polling continues' now rests its 'sensor is not activated' assertion on the polled water_level 1 rather than the retained heartbeat 3; still honest, but the heartbeat step no longer carries that assertion",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T15:54:12.932Z",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "features/support/steps/harness.ts",
+    "line": null,
+    "description": "Plan 05-11 prescribed repairing scenarios with 'Given these reported device fields:'; that step wipes the full valid telemetry these scenarios need and the matching-value repair also destroys the heartbeat barrier the snapshot step provides. Repair used the second heartbeat instead",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-02T15:54:13.289Z",
     "resolved_at": null
   }
 ]
