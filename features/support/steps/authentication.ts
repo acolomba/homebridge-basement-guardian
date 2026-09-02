@@ -90,6 +90,18 @@ async function throttledAccount(this: BasementGuardianWorld): Promise<void> {
 
 Given('the tenant throttles the account', throttledAccount);
 
+// The lifetime is stated by the scenario rather than derived here, because the derivation belongs
+// where a reader meets it: the client renews a token that expires inside its one-hour renewal
+// margin, so a lifetime a little over 3600 seconds leaves the token current at issue and stale
+// after a small clock advance. That is what makes a running plugin ask the tenant again.
+async function shortLivedTokens(this: BasementGuardianWorld, seconds: number): Promise<void> {
+  const tenant = await this.auth0();
+
+  tenant.expireTokenIn(seconds);
+}
+
+Given('the tenant issues tokens that expire in {int} seconds', shortLivedTokens);
+
 async function cachedTokenOfAnotherAccount(this: BasementGuardianWorld): Promise<void> {
   await writeFile(await tokenCachePath(this), JSON.stringify(FOREIGN_CACHE), 'utf8');
 }

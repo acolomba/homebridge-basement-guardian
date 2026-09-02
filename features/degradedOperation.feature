@@ -228,6 +228,30 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" service answers no read for "Status Active"
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
+  Scenario: A credential refused after a healthy start makes every service unreadable
+    The scenario above drives the refusal through a restart, so it covers the launch path alone. The
+    case an owner actually meets is a password changed at the vendor while Homebridge is running,
+    and nothing covered it: the refusal arrived at a poll, was reported as a device-discovery
+    failure, and no service ever stopped answering.
+
+    The tenant issues a token that lapses just past the client's one-hour renewal margin, so moving
+    the clock a little makes the next poll ask for a new one and meet the refusal. The advance stays
+    far below two missed heartbeats, so what the tiles say here is about the refused credential
+    alone.
+
+    Given a short poll interval
+    Given the tenant issues tokens that expire in 3660 seconds
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    Given the tenant refuses the account credentials
+    When the scenario clock moves forward by 120 seconds
+    Then the "Sump Pit Flood" service answers no read for "Status Active"
+    Then the log names how to correct the account
+    Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
+
   Scenario: A transport outage leaves every service readable
     Every other failure the plugin can have clears itself once the transport returns, so the tile
     stays readable and says only that the plugin cannot currently vouch for what it shows. Greying

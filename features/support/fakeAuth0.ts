@@ -36,6 +36,15 @@ export interface FakeAuth0 {
   /** Sets the identity token and lifetime the tenant answers with from now on. */
   issueToken(idToken: string, expiresInSeconds: number): void;
 
+  /**
+   * Shortens the lifetime the tenant states, leaving the token value it issues unchanged.
+   *
+   * The client renews a token that expires inside its renewal margin, so a lifetime a little over
+   * that margin is what lets a scenario force a re-grant from a running plugin rather than
+   * restarting it.
+   */
+  expireTokenIn(seconds: number): void;
+
   /** Arms the next token response to carry this status and this error code. */
   failWith(status: number, error: string): void;
 
@@ -126,6 +135,9 @@ export async function createFakeAuth0(): Promise<FakeAuth0> {
     requests: state.requests,
     issueToken(idToken: string, expiresInSeconds: number): void {
       state.issued = { idToken, expiresInSeconds };
+    },
+    expireTokenIn(seconds: number): void {
+      state.issued = { ...state.issued, expiresInSeconds: seconds };
     },
     failWith(status: number, error: string): void {
       state.armedFailure = { status, error };
