@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-09-02T01:05:47.982Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-09-02T01:46:43.369Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: d7cf0c30f070f7d81d884b7746473e42c70408d1
+state_head: 3362c62cee8c52e2d8a811d55bf87bfc3841a651
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 42
-  completed_plans: 38
+  completed_plans: 39
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-09-01 — Phase 05 execution started
 
@@ -93,6 +93,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 03 P07 | 45 min | 2 tasks | 5 files |
 | Phase 03 P08 | 38 min | 2 tasks | 4 files |
 | Phase 05 P01 | 47min | 3 tasks | 13 files |
+| Phase 05 P02 | 14min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: 05-01: a REST-only degradation withdraws connectivity and only connectivity (D-02 over D-04)
 - [Phase 05]: 05-01: the trust decision is a second projection; monitoringPathNow() stays byte-identical
 - [Phase 05]: 05-01: shadow silence is measured from arrival at onReportedPatch, seeded at construction, never from the socket flag or receivedAt
+- [Phase 05]: The Cucumber harness carries the pushed flag through the accessory cache rather than forcing it true on restore, so a value nothing wrote still reads as unwritten after a restart
+- [Phase 05]: The restart marking pass is one exported function; deleting the platform call site leaves every scenario green, so test/platform.test.ts is the only gate on that half
+- [Phase 05]: RES-04 stays Pending: plans 05-03, 05-04 and 05-05 each still owe part of it, and requirement rows reconcile at phase close-out
 
 ### Pending Todos
 
@@ -388,8 +392,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T01:05:36.823Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-09-02T01:46:42.834Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
