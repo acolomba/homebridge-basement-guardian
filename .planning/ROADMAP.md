@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 13/19 plans executed — 12 executed, and 7 planned 2026-09-02 to close the 4 blockers and 8 warnings the whole-phase code review found. Three of the four blockers are interactions between plans that each verified cleanly alone, which is why twelve rounds of per-plan verification missed them.
+**Plans**: 15/19 plans executed — 12 executed, and 7 planned 2026-09-02 to close the 4 blockers and 8 warnings the whole-phase code review found. Three of the four blockers are interactions between plans that each verified cleanly alone, which is why twelve rounds of per-plan verification missed them.
 
 Plans:
 **Wave 1**
@@ -294,11 +294,11 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 05-14-PLAN.md — Shadow silence is a fact about one device, so a pump whose controller goes quiet is released, marked, and refreshed by the poll while its neighbour keeps reporting
+- [x] 05-14-PLAN.md — Shadow silence is a fact about one device, so a pump whose controller goes quiet is released, marked, and refreshed by the poll while its neighbour keeps reporting
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 05-15-PLAN.md — A report carrying only device metadata orders without owning, so it cannot take the readings away from polling and lock the poll out
+- [x] 05-15-PLAN.md — A report carrying only device metadata orders without owning, so it cannot take the readings away from polling and lock the poll out
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
@@ -342,5 +342,5 @@ Plans:
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
 | 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 13/19 | In Progress|  |
+| 5. Degraded Operation and Recovery | 15/19 | In Progress|  |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |

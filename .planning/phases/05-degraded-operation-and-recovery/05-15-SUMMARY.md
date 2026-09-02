@@ -321,3 +321,7 @@ None - no external service configuration required.
 ---
 *Phase: 05-degraded-operation-and-recovery*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+All seven files named above exist on disk, and all three commits -- `885c60c`, `c2bcaae`, `1990881` -- are in `git log`.
