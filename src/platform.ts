@@ -486,6 +486,22 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
           runtime.store,
         );
       },
+      onMonitoringHealth: (trust: MonitoringTrust): void => {
+        applyMonitoringHealth(
+          {
+            api: this.api,
+            accessories: this.accessories,
+            basementGuardianAccessories: this.basementGuardianAccessories,
+            registry: this.registry,
+            log: this.log,
+            ignoredFaults: validated.config.ignoredFaults,
+            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
+            timers: systemTimers,
+            commands: runtime.commands,
+          },
+          trust,
+        );
+      },
       onDeviceRemoved: (deviceId: string): void => {
         removeDiscoveredDevice(
           {

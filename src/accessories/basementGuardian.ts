@@ -206,6 +206,13 @@ const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKin
 // which is still answering (D-11, RES-02).
 const NON_CONNECTIVITY_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
 
+// What one accessory's own payload last said about trust, kept apart from what
+// the account-wide monitoring trust says.
+interface DeviceDistrust {
+  violated: ReadonlySet<TrustScope>;
+  controllerLinkLost: boolean;
+}
+
 // The three sets a monitoring failure can withdraw, beside the empty one a
 // healthy pair of transports withdraws.
 const EVERY_SCOPE: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES);
@@ -466,6 +473,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // What the plugin can currently say about its own ability to observe this
   // account. It starts fully trusted, because nothing has failed yet.
   let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false };
+  // What the last update's own payload said about trust. It is held because an
+  // account-wide monitoring change recomputes the whole reason map without a
+  // fresh snapshot, and the two device-level causes must keep their precedence
+  // over the account-wide one when it does.
+  let deviceDistrust: DeviceDistrust = { violated: new Set<TrustScope>(), controllerLinkLost: false };
   // The last decoded state, kept so the write path can read what the device
   // itself reports without waiting for another update: a control refused
   // between polls has to answer from the same facts the rows publish from.
@@ -504,6 +516,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     const reported = isRecord(group) ? group[control.field] : undefined;
 
     return typeof reported === 'boolean' ? reported : undefined;
+  }
+
+  // Every reason currently in force: what the last update's payload said, plus
+  // whatever the account-wide monitoring trust withdraws on top of it. Both
+  // sources are read here rather than at each assignment site, so a poll that
+  // lands during a degradation cannot silently restore trust and a degradation
+  // that lands between polls does not wait for one.
+  function reasonsNow(): ReadonlyMap<TrustScope, DistrustReason> {
+    return distrustReasonsOf(deviceDistrust.violated, deviceDistrust.controllerLinkLost, monitoringDegradedScopes(monitoring));
   }
 
   // Whether the confirmation run has been reached. One expression, read by both
@@ -676,11 +697,18 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
 
   // The transition into a degraded state logs once; recovery clears the flag,
   // so a sustained degradation says nothing further while a later relapse still
-  // reports itself (D-05). A lost controller link is deliberately not a
-  // degradation: nothing stopped validating, it has its own report below, and
-  // naming a validation failure here would state a cause that did not happen.
+  // reports itself (D-05).
+  //
+  // Two causes are deliberately not degradations here, because neither stopped
+  // anything validating and this line names a validation failure. A lost
+  // controller link has its own report below. A lost monitoring path is
+  // reported by the account runtime's own rate-limited failure log, which is
+  // where an account-wide transport condition belongs; naming a profile or a
+  // payload for it would state a cause that did not happen, and a diagnostic
+  // naming the wrong cause is worse than none because an owner acts on it
+  // (D-03).
   function reportDegradation(): void {
-    if (!untrusted.some((scope) => scope.reason !== 'controller-link-lost')) {
+    if (!untrusted.some((scope) => scope.reason !== 'controller-link-lost' && scope.reason !== 'unreachable')) {
       degraded = false;
 
       return;
@@ -753,7 +781,21 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     },
 
     markMonitoring(trust: MonitoringTrust): void {
+      const unchanged = trust.restDegraded === monitoring.restDegraded && trust.shadowSilent === monitoring.shadowSilent;
+
+      // The store sits outside the early return below deliberately. The runtime
+      // reports on every poll tick, so republishing per tick would be noise
+      // rather than information -- but a fact this projection grows later may be
+      // read somewhere other than the row projection, and a store skipped by an
+      // unchanged-looking report would leave a stale answer behind it.
       monitoring = trust;
+
+      if (unchanged) {
+        return;
+      }
+
+      untrusted = untrustedScopesOf(reasonsNow(), lastTrustedAt);
+      republishPublishedRows(projectionInputOf(lastDecoded, controls.pending));
     },
 
     update(snapshot: DeviceSnapshot, source: SnapshotSource): void {
@@ -778,7 +820,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
           offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
         }
 
-        untrusted = untrustedScopesOf(distrustReasonsOf(NON_CONNECTIVITY_SCOPES, false, monitoringDegradedScopes(monitoring)), lastTrustedAt);
+        deviceDistrust = { violated: NON_CONNECTIVITY_SCOPES, controllerLinkLost: false };
+        untrusted = untrustedScopesOf(reasonsNow(), lastTrustedAt);
         republishPublishedRows(projectionInputOf(undefined, controls.pending));
         reportDegradation();
 
@@ -792,7 +835,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       const validation = outcome.family.validate(snapshot);
       const decoded = outcome.family.decode(snapshot);
       const linkLost = isControllerLinkLost(decoded);
-      const reasons = distrustReasonsOf(violatedScopesOf(validation), linkLost, monitoringDegradedScopes(monitoring));
+      deviceDistrust = { violated: violatedScopesOf(validation), controllerLinkLost: linkLost };
+
+      const reasons = reasonsNow();
       const metadata = decodedMetadataOf(decoded);
 
       recordTrustedScopes(reasons, snapshot.receivedAt);

@@ -9,6 +9,7 @@ import { createShadowClient } from '../cloud/shadow.js';
 import { createDeviceStateStore } from '../device/state.js';
 
 import { createFailureLog, FAILURE_REMINDER_MS } from './failureLog.js';
+import { createMonitoringHealth } from './monitoringHealth.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from './retryPolicy.js';
 
 import type { Clock } from './clock.js';
@@ -258,6 +259,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
   const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
+  const health = createMonitoringHealth({ clock: options.clock });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
   // The three facts the monitoring path is derived from. Holding them, rather
@@ -355,16 +357,39 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return shadowConnected ? 'shadow-and-poll' : 'poll-only';
   }
 
+  // The trust is computed once and reported from that one value, so what the
+  // plugin says about its own sight and what HomeKit marks cannot disagree.
+  //
+  // It runs on every poll outcome rather than from the poll loop alone, because
+  // `launch()` records its own first inventory outcome without going through
+  // that loop, and a report wired only into the loop would arrive a whole poll
+  // interval late -- an hour at the configuration maximum. A poll a shutdown
+  // aborted returns before both recorders, so it advances nothing and reports
+  // nothing.
+  function reportMonitoringHealth(): void {
+    options.onMonitoringHealth(health.trustNow());
+  }
+
   // Whether the poll is succeeding is one of the facts the path is derived
   // from, so the fact and the report move together and cannot disagree.
+  //
+  // `polling` keeps its single-failure meaning, because the monitoring path is
+  // derived from it and answers a different question: which sources are feeding
+  // state. The run of consecutive failures the trust projection counts is a
+  // separate fact for a separate projection, so one blip cannot withdraw trust
+  // while the path still reports it honestly (D-04, D-05).
   function recordPollSuccess(): void {
     polling = true;
     options.failures.recordSuccess(POLLING);
+    health.recordRestSuccess();
+    reportMonitoringHealth();
   }
 
   function recordPollFailure(error: unknown): void {
     polling = false;
     options.failures.recordFailure(POLLING, describeFailure(error));
+    health.recordRestFailure();
+    reportMonitoringHealth();
   }
 
   function handleShadowConnected(): void {
@@ -430,6 +455,12 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         credentials: cache,
         retry: shadowRetry,
         onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
+          // This callback fires for every routed message, upstream of the
+          // store's change filter, which is why it and not a snapshot listener
+          // is the arrival signal: a heartbeat carrying values identical to the
+          // last one notifies no subscriber and still proves the live path is
+          // carrying messages (D-05, D-11).
+          health.recordShadowMessage();
           options.store.applyReportedPatch(deviceId, patch);
         },
         onConnected: handleShadowConnected,
