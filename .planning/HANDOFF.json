@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-09-02T19:11:20.086Z",
+  "phase": "05",
+  "phase_name": "Degraded Operation and Recovery",
+  "phase_dir": ".planning/phases/05-degraded-operation-and-recovery",
+  "plan": 13,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "branch": "features/phase-05-degraded-operation-and-recovery",
+  "head": "b67d030",
+  "completed_tasks": [
+    {"id": 1, "name": "Plans 05-01..05-05 — original phase (tracer, restart marking, command gating, credential rejection, close-out)", "status": "done", "commit": "c75fa27"},
+    {"id": 2, "name": "Code review round 1 (first five plans) — 3 blockers, 8 warnings", "status": "done", "commit": "b67d030"},
+    {"id": 3, "name": "Verification round 1 — gaps_found, 1/4 success criteria", "status": "done", "commit": "757e492"},
+    {"id": 4, "name": "Plans 05-06..05-10 — gap closure for CR-01/02/03, WR-01/02/03/04/06/07, IN-01/02", "status": "done", "commit": "d17fb1a"},
+    {"id": 5, "name": "Plan 05-11 — release the shadow telemetry watermark on silence (D-13)", "status": "done", "commit": "8edeb5d"},
+    {"id": 6, "name": "Plan 05-12 — make the credential refusal durable", "status": "done", "commit": "76e6832"},
+    {"id": 7, "name": "Verification round 2 — gaps_found, 3/4 success criteria", "status": "done", "commit": "757e492"},
+    {"id": 8, "name": "Code review round 2 (whole phase, 12 plans, deep) — 4 blockers, 8 warnings", "status": "done", "commit": "b67d030"},
+    {"id": 9, "name": "Final gap round planning (05-13+)", "status": "in_progress", "progress": "gsd-planner dispatched against 05-REVIEW-2.md; result not yet returned at pause time"}
+  ],
+  "remaining_tasks": [
+    {"id": 10, "name": "Execute the final gap plans (05-13 upward) closing CR-01..CR-04, WR-01, WR-04", "status": "not_started"},
+    {"id": 11, "name": "Re-verify the phase — target 4/4 success criteria", "status": "not_started"},
+    {"id": 12, "name": "Resolve the 13 open WINDOWS.md ledger entries (several waive cleanly; 12 and 13 want a decision)", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "CR-01: shadow silence is tracked account-wide (monitoringHealth.ts:141 holds one lastShadowMessageAt) while telemetry ownership is per device, and onReportedPatch discards the deviceId it is handed (accountRuntime.ts:613,639). On a two-pump account one pump's heartbeat re-stamps the account clock, so a permanently quiet pump never trips shadowSilent, is never released, and has every poll body discarded. Reproduced over 10 simulated hours: poll reported 31 on all 40 polls, store still read 3, Status Active stayed true.", "type": "technical", "workaround": "none — needs per-device silence tracking"},
+    {"description": "CR-02: a control press after a credential refusal permanently un-marks both controls. refuseLocally -> armClearingPush -> clearRefusal -> republish() -> publishRow ends in publishValue(service, StatusActive, ...), and a value push clears a stored status. Permanent, because a halted runtime never pushes again. expire() and refuseOutcome() leak identically.", "type": "technical", "workaround": "the restored-accessory path does not leak because it passes nothingToRepublish — that is the shape of the fix"},
+    {"description": "CR-03: a metadata-only shadow document steals telemetry ownership. carriesObservation answers `data || state`, but ownership governs `data` alone, so a state-only update/accepted delta establishes the watermark having delivered no telemetry.", "type": "technical", "workaround": "none"},
+    {"description": "CR-04: README.md:145 and CHANGELOG.md:24 promise readings the code discards for ~30 minutes before release; test/runtime/accountRuntime.test.ts:987 pins the opposite behaviour deliberately.", "type": "technical", "workaround": "docs-only correction"},
+    {"description": "The Cucumber suite has NO multi-device coverage — every scenario uses a single deviceId. That is the sole reason CR-01 survived twelve rounds of per-plan verification.", "type": "technical", "workaround": "add multi-device scenarios as a deliverable in their own right"}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "One real-home session covering three items: the No Response accessory presentation, a -70412 write on a bridged secondary Switch (checked AFTER a heartbeat, not only at the instant of refusal), and a marked-but-still-published tile", "context": "Rides with the open G-003/G-004 session that already gates 1.0.0. None blocks the phase.", "blocking": false},
+    {"action": "Decide ledger entries 12 (SYNC-03 left Pending) and 13 (22 first-round validation rows left pending)", "context": "Both are deliberate, argued positions rather than oversights", "blocking": false},
+    {"action": "Decide whether Phase 5 keeps absorbing the remaining blockers or banks at 3/4 and opens a dedicated phase for the multi-device semantics", "context": "The phase has run 12 plans, 2 review rounds and 4 maintainer rulings. The orchestrator proceeded with the fix round on the established pattern; the user can redirect.", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Phase 5 executes on a new branch features/phase-05-degraded-operation-and-recovery cut from current HEAD, not origin/main", "rationale": "origin/main is 405 commits behind and contains no Phase 3 or Phase 4 source; the configured branching strategy would have built Phase 5 on nothing", "phase": "05"},
+    {"decision": "A REST-only degradation withdraws the connectivity scope and only that scope (D-02 over D-04)", "rationale": "D-02 is the later text, written specifically to fix a connectivity defect; a frozen offlineCount reading as trustworthy while REST is down is the false normal the project exists to prevent", "phase": "05"},
+    {"decision": "Two missed heartbeats release the shadow's ownership of telemetry (new D-13, amending D-15 and SYNC-03)", "rationale": "pollTelemetry froze telemetry during silence because releaseShadowSource had one caller, handleShadowDisconnected, and silence is not a disconnection. Proven: a flooded poll read 0 during silence and 31 after release.", "phase": "05"},
+    {"decision": "No ADR amendment or checkpoint was needed for D-014 when fixing CR-01", "rationale": "D-014 mandates no withholding; withholding is how retain is achieved when the arriving value is bad, and it retains nothing when a working transport delivered a family-valid value. 05-CONTEXT D-02 says so in its own words and its narrowing note already named toRow returning [] as a defect.", "phase": "05"},
+    {"decision": "WR-02 / SC-3's restored-switch press window was closed rather than honouring 05-04's PA-08 deferral", "rationale": "RES-04's clause opens 'After a failed restart', which is that window; reading it to govern only routable commands would make requirement scope depend on implementation completeness", "phase": "05"},
+    {"decision": "Fix the credential-persistence gap and then re-review the whole phase, rather than fixing narrowly", "rationale": "Maintainer ruling. Only the first five plans had ever been code-reviewed, and the gap round changed trust semantics, telemetry ownership, the auth halt path and the restore path.", "phase": "05"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Wait for the running gsd-planner to return the 05-13+ gap plans, then run gsd-plan-checker over them before executing. If the planner result was lost with the session, re-dispatch it against .planning/phases/05-degraded-operation-and-recovery/05-REVIEW-2.md.",
+  "context_notes": "Phase 5 has run 12 plans across 78 commits, two full review rounds and two verification rounds, moving 1/4 -> 3/4 success criteria. Suite grew 1207->1349 unit tests and 78->96 scenarios at 100/100/100 coverage throughout. The phase's defining lesson, seen eleven times: a check passes because the thing it rests on already sits at the value the defect produces. It appeared in fixtures, harnesses, tooling, plans, and finally between plans — three of the four outstanding blockers are interactions that per-plan verification structurally cannot see. Executors repeatedly disproved premises their own plans asserted, which is the behaviour to keep encouraging."
+}
