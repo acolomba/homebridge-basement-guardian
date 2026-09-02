@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
 Plan: 11 of 11
 Status: Phase complete — ready for verification
-Last activity: 2026-09-02 — Phase 05 closed out by plan 05-10
+Last activity: 2026-09-02 — Completed quick task 260902-jou: fix accessory registration voided by pre-registration persist
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
 `05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
@@ -423,6 +423,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260902-jou | Fix accessory registration being voided by pre-registration persist | 2026-09-02 | 67a3ee5 |  | [260902-jou-fix-accessory-registration-voided-by-pre](./quick/260902-jou-fix-accessory-registration-voided-by-pre/) |
 | 260831-knc | Name every published service with ConfiguredName so Apple Home shows it | 2026-08-31 | 39560ac |  | [260831-knc-name-every-published-service-with-config](./quick/260831-knc-name-every-published-service-with-config/) |
 | 260831-dlv | Render ignoredFaults as labelled checkboxes in the settings form | 2026-08-31 | cdb183d |  | [260831-dlv-render-ignoredfaults-as-labelled-checkbo](./quick/260831-dlv-render-ignoredfaults-as-labelled-checkbo/) |
 | 260831-c7f | Render ignoredFaults options as human-readable names in the plugin settings GUI | 2026-08-31 | 645208b |  | [260831-c7f-render-ignoredfaults-options-as-human-re](./quick/260831-c7f-render-ignoredfaults-options-as-human-re/) |
