@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-10-PLAN.md
-last_updated: "2026-09-02T16:28:35.472Z"
+stopped_at: Completed 05-12-PLAN.md
+last_updated: "2026-09-02T18:00:47.895Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 2c5611db701bc8332eedaf0a748944adee544e48
+state_head: 41c12c0b2a33815c3e6ccde1e3a167bb04eaf09f
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 48
-  completed_plans: 48
+  total_plans: 49
+  completed_plans: 49
   percent: 33
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
 Plan: 11 of 11
-Status: Phase complete — ready for re-verification
+Status: Phase complete — ready for verification
 Last activity: 2026-09-02 — Phase 05 closed out by plan 05-10
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
@@ -113,6 +113,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P09 | 39min | 2 tasks | 8 files |
 | Phase 05 P11 | 43min | 3 tasks | 7 files |
 | Phase 05 P10 | 46min | 2 tasks | 6 files |
+| Phase 05 P12 | ~50 minutes | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -283,6 +284,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it
 - [Phase 05]: The seven plan truths 05-VERIFICATION.md found false are recorded once in 05-10-SUMMARY.md rather than corrected in the plans that got them wrong, because those plans are the evidence that the gap-closure round happened
 - [Phase 05]: The first-round Per-Task Verification Map was left untouched: three of its rows are the ones the verifier found green but blind, so marking them shipped would assert the opposite of what was measured
+- [Phase 05]: A refused credential closes the live connection at the halt, rather than guarding the arrival callback or re-applying the marking; that removes the cause instead of the symptom
+- [Phase 05]: The connect path reads one predicate, hasFinished(), that answers for both a shutdown and a halt, so the halt is a state rather than an act performed once
+- [Phase 05]: RES-04 clause 4 re-cited to the persistence scenario after npm run check came back green; the CHANGELOG credential entry needed no change
 
 ### Pending Todos
 
@@ -439,8 +443,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T16:28:22.512Z
-Stopped at: Completed 05-10-PLAN.md
+Last session: 2026-09-02T18:00:47.387Z
+Stopped at: Completed 05-12-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
