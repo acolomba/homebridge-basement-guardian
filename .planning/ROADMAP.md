@@ -233,7 +233,7 @@ Plans:
   3. Restart without fresh cloud state leaves cached accessories and values available but visibly stale and prevents commands until valid state and command transport return.
   4. Fresh family-valid input clears the matching degradation promptly, while authentication rejection remains a clear user-actionable communication failure.
 
-**Plans**: 2/5 plans executed
+**Plans**: 3/5 plans executed
 
 Plans:
 **Wave 1**
@@ -246,7 +246,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Presses are refused for the right reason with the cause named, and the accessory read path is gated
+- [x] 05-03-PLAN.md — Presses are refused for the right reason with the cause named, and the accessory read path is gated
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -282,5 +282,5 @@ Plans:
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
 | 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
 | 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 2/5 | In Progress|  |
+| 5. Degraded Operation and Recovery | 3/5 | In Progress|  |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |

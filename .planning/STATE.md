@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-09-02T01:46:43.369Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-09-02T02:30:00.823Z"
 last_activity: 2026-09-01
 last_activity_desc: Phase 05 execution started
-state_head: 3362c62cee8c52e2d8a811d55bf87bfc3841a651
+state_head: 5416360dc4528e9780452b93e84dc54106a29bd1
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-09-01 — Phase 05 execution started
 
@@ -94,6 +94,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 03 P08 | 38 min | 2 tasks | 4 files |
 | Phase 05 P01 | 47min | 3 tasks | 13 files |
 | Phase 05 P02 | 14min | 2 tasks | 9 files |
+| Phase 05 P03 | 23min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -237,6 +238,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: The Cucumber harness carries the pushed flag through the accessory cache rather than forcing it true on restore, so a value nothing wrote still reads as unwritten after a restart
 - [Phase 05]: The restart marking pass is one exported function; deleting the platform call site leaves every scenario green, so test/platform.test.ts is the only gate on that half
 - [Phase 05]: RES-04 stays Pending: plans 05-03, 05-04 and 05-05 each still owe part of it, and requirement rows reconcile at phase close-out
+- [Phase 05]: 05-03: the transport refusal is evaluated before the no-fresh-state one, so a user with no route is told that rather than told a reading is stale (PA-05, D-07)
+- [Phase 05]: 05-03: markMonitoring stores unconditionally AND compares every MonitoringTrust member; a two-field comparison swallows the runtime's first healthy push and refuses every press for the life of the process
+- [Phase 05]: 05-03: the accessory's stored trust starts with commandTransportReady false while both degradation fields start false, because a safety fact defaults to the refusing value
 
 ### Pending Todos
 
@@ -392,8 +396,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T01:46:42.834Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-09-02T02:30:00.257Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
