@@ -10,6 +10,7 @@ import { createAuthClient } from '../../src/cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
+import { PROVISIONAL_FLOOD_WATER_LEVEL_CODE } from '../../src/device/waterLevel.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
@@ -948,6 +949,35 @@ describe('the poll backstop', () => {
       { data: store.snapshot(DEVICE_ID)?.data, metadata: store.snapshot(DEVICE_ID)?.metadata, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
       { data: { water_level: 2, primary_pump_running: false, ac_power: true }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
     );
+  });
+
+  // The poll is the reconciliation backstop, and a shadow that has stopped
+  // speaking is no longer feeding the store, so the poll takes telemetry back
+  // and the flood it found reaches the tile (D-13, RES-03).
+  //
+  // The two advances are the assertion. `POLL_INTERVAL_MS` is 900 000 and the
+  // silence window is 1 796 000, so the first advance is one missed heartbeat
+  // and the second crosses into silence: the second poll is the *first* one that
+  // observes it. Asserting there is what makes this case fail if the handover
+  // arrives a poll later than it must, which `pollIntervalSeconds` lets be an
+  // hour. The Cucumber tier cannot see that delay: it runs a 50 ms poll interval
+  // against a 5000 ms step deadline, so a one-poll delay hides inside it.
+  test('D-13 reports the flood a poll found on a device whose live path went quiet', async (t) => {
+    // arrange
+    const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+    const { runtime, shadows, store, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+    });
+    await runtime.start();
+    await settle();
+    shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
   });
 
   test('D-15 lets the poll write telemetry again once the shadow connection is gone', async (t) => {

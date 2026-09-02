@@ -78,6 +78,34 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" sensor is activated
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
 
+  Scenario: A pit that floods after the live path went quiet still reaches Apple Home
+    The scenario above is built on a device whose live path never delivered, which was the only
+    shape it could take: while a shadow that had spoken owned telemetry, no poll refreshed it and
+    the flood never arrived at all. Every real system heartbeats, so a live path that spoke and then
+    stopped is the ordinary case rather than an unusual one. Two missed heartbeats end the shadow's
+    ownership, the poll takes telemetry back, and the reading the poll found reaches the tile with
+    the trust row still carrying the doubt. 31 is the water level the Gemini family calls a flooding
+    pit; 3 and 7 are ordinary rungs of the same ladder, and the heartbeat carries the rung the
+    vendor's own body does not, so the step below cannot pass until the live path has really spoken.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          | waterLevel |
+      | placeholder-gemini | Sump Guardian | 3          |
+    When the plugin starts
+    When the device publishes these heartbeat fields:
+      | water_level | 7 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 7 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    When the vendor changes these device fields:
+      | water_level | 31 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 31 |
+    Then the "Sump Pit Flood" sensor is activated
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+
   Scenario: Polling failure alone leaves the live values trustworthy
     Live pushes still arrive while the poll fails, so the readings a user watches are current and
     only the verdict the poll alone sources goes unfed. The plugin withdraws that one verdict and
@@ -158,7 +186,13 @@ Feature: Degraded monitoring
     The canonical store notifies nobody when no telemetry value moved, which is what keeps a
     repeated heartbeat quiet. A recovery driven from a snapshot listener would therefore never fire,
     and a scenario publishing a changed field would pass against that defect. This one republishes
-    the value the device already reported.
+    the value the store already holds.
+
+    Two missed heartbeats hand telemetry back to the poll, so by the time the second heartbeat is
+    published the store holds the vendor's level, not the first heartbeat's. Republishing the first
+    heartbeat's level here would be a change, a snapshot listener would fire on it, and the scenario
+    would pass against the very defect it exists to catch. The step below therefore reads the level
+    the poll wrote and republishes that one.
 
     Given a short poll interval
     Given these devices:
@@ -171,8 +205,10 @@ Feature: Degraded monitoring
       | water_level | 3 |
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the canonical snapshot carries these fields:
+      | water_level | 1 |
     When the device publishes these heartbeat fields:
-      | water_level | 3 |
+      | water_level | 1 |
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
 
   Scenario: A returning heartbeat clears the shadow silence before the next poll
@@ -183,6 +219,10 @@ Feature: Degraded monitoring
     owner whose live connection returns sees the tile stop saying the plugin cannot vouch for it at
     the message that proves the connection, rather than at a poll the configuration lets run an hour
     late.
+
+    The returning heartbeat republishes the level the poll wrote during the silence, for the reason
+    the scenario above gives: the shadow stopped owning telemetry two heartbeats in, so a heartbeat
+    carrying the earlier level would be a change rather than a repeat.
 
     The closing step is here because the hold is not indefinite. The client puts a ten-second
     real-clock deadline on every request, and an abort reaches the poll loop's failure branch, which
@@ -201,12 +241,14 @@ Feature: Degraded monitoring
       | water_level | 3 |
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    Then the canonical snapshot carries these fields:
+      | water_level | 1 |
     Given the vendor never answers the device list
     Then the plugin stops asking for the device list
     When the device publishes these heartbeat fields:
-      | water_level | 3 |
+      | water_level | 1 |
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
-    Then the "Sump Pit Level" service reports "Water Level" as "40"
+    Then the "Sump Pit Level" service reports "Water Level" as "20"
     Then the plugin records no poll outcome
 
   Scenario: A restarted plugin marks restored values stale before any poll
