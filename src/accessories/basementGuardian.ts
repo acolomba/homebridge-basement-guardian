@@ -201,7 +201,7 @@ const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKin
 // No adapter resolving at all degrades them together, because `connectivity` is
 // governed by the separately-validated wire envelope rather than by family
 // validation, so a profile failure never touches it (D-014, DEV-08). A lost
-// pump-controller link poisons the same five, because every one of them is
+// pump-controller link poisons the same seven, because every one of them is
 // derived from the controller while `connectivity` reports the vendor cloud,
 // which is still answering (D-11, RES-02).
 const NON_CONNECTIVITY_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
@@ -311,15 +311,24 @@ function monitoringDegradedScopes(trust: MonitoringTrust): ReadonlySet<TrustScop
   return trust.restDegraded ? CONNECTIVITY_SCOPE : NO_SCOPES;
 }
 
-// A failed field, a lost controller link, and a lost monitoring path are three
+// A failed field, a lost monitoring path, and a lost controller link are three
 // different failures, so they carry different reasons and none overwrites
-// another: a scope already untrusted because its own field violated keeps
-// saying so, and each broader cause adds only the scopes that had nothing wrong
-// with them. `connectivity` is left out of the controller-link layer
-// deliberately -- the vendor cloud answering is exactly what makes the rest
-// doubtful. The monitoring layer decides its own set, because which scopes a
-// transport outage costs depends on which transport went (D-02, D-11, RES-02,
-// RES-03).
+// another: each layer fills only the scopes the layers above it left empty, and
+// a scope already untrusted because its own field violated keeps saying so.
+//
+// The order of the last two is a decision rather than an accident. No row
+// tolerates the monitoring cause and one row tolerates the controller-link
+// cause, so filling the monitoring scopes first is what stops that one row
+// reading trustworthy while the plugin can see nothing at all. It is also what
+// makes a blackout report the cause that happened: `TRUST_SCOPES` has eight
+// members and a blackout withdraws all eight, where the controller-link layer
+// would otherwise claim the seven of `NON_CONNECTIVITY_SCOPES` under a cause the
+// transports rather than the link produced.
+//
+// `connectivity` is left out of the controller-link layer deliberately -- the
+// vendor cloud answering is exactly what makes the rest doubtful. The monitoring
+// layer decides its own set, because which scopes a transport outage costs
+// depends on which transport went (D-02, D-11, RES-02, RES-03, WR-01).
 function distrustReasonsOf(
   violated: ReadonlySet<TrustScope>,
   controllerLinkLost: boolean,
@@ -327,17 +336,17 @@ function distrustReasonsOf(
 ): ReadonlyMap<TrustScope, DistrustReason> {
   const reasons = reasonsOf(violated, 'invalid');
 
+  for (const scope of monitoringDegraded) {
+    if (!reasons.has(scope)) {
+      reasons.set(scope, 'unreachable');
+    }
+  }
+
   if (controllerLinkLost) {
     for (const scope of NON_CONNECTIVITY_SCOPES) {
       if (!reasons.has(scope)) {
         reasons.set(scope, 'controller-link-lost');
       }
-    }
-  }
-
-  for (const scope of monitoringDegraded) {
-    if (!reasons.has(scope)) {
-      reasons.set(scope, 'unreachable');
     }
   }
 
@@ -678,12 +687,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // active" forever, which is the false all-clear the whole plugin exists to
   // prevent (D-05, D-014, DEV-08).
   //
-  // The connectivity row is the one this leaves alone, because nothing about it
-  // stopped being knowable. It reads the accessory's own count of consecutive
-  // disconnected polls rather than anything an adapter decoded, so it keeps
-  // publishing its current verdict and stays active -- which is what `untrusted`
-  // has always reported for that scope, and what the wire envelope still
-  // supports (D-014, RES-03).
+  // Two callers reach this, and the connectivity row lands differently under
+  // each. For the unresolved-family caller it is the row this leaves alone,
+  // because nothing about it stopped being knowable: it reads the accessory's
+  // own count of consecutive disconnected polls rather than anything an adapter
+  // decoded, so it keeps publishing its current verdict and stays active, which
+  // is what the wire envelope still supports. For the monitoring caller a
+  // degraded poll is exactly what stops sourcing that count, so `connectivity`
+  // is withdrawn with reason `unreachable` and the row goes inactive while
+  // keeping the verdict it had (D-014, RES-03, WR-04).
   //
   // Suppression is applied here on the same terms the publishing path applies
   // it. An administrator's `ignoredFaults` list is a standing instruction, not
@@ -812,10 +824,12 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
 
       // The store sits outside the early return below deliberately. The runtime
       // reports on every poll tick, so republishing per tick would be noise
-      // rather than information -- but the write path reads the stored value
-      // directly rather than through the row projection, and a store skipped by
-      // an unchanged-looking report would leave it answering a fact the runtime
-      // has already superseded.
+      // rather than information, while the assignment itself costs nothing: the
+      // comparison above covers every member of `MonitoringTrust`, so an
+      // unchanged report stores what is already there. What the placement buys
+      // is the next member -- one added to the type and forgotten in the
+      // comparison still reaches the write path, which reads the stored value
+      // directly rather than through the row projection (IN-02, RES-04, D-07).
       monitoring = trust;
 
       if (unchanged) {
