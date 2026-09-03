@@ -92,7 +92,7 @@ pass the first and fail the second, which is why the fourth string exists.
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | TBD | 05-01 | 0 | RES-03 | — | Two consecutive REST failures mark the path degraded; one does not | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 — `test/runtime/monitoringHealth.test.ts` | ✅ shipped — 05-01 mutation 1 failed 2 of 20 cases in `monitoringHealth.test.ts`, the module this row's own command runs |
-| TBD | 05-01 | 0 | RES-03 | — | Shadow silence is measured from message arrival, never from `shadowConnected` | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 2 failed 13 unit cases in `monitoringHealth.test.ts` and 24 scenarios |
+| TBD | 05-01 | 0 | RES-03 | — | Shadow silence is measured from message arrival, never from `shadowConnected` | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⚠️ green, blind at this tier — 05-01 mutation 2 discriminated, failing 13 unit cases and 24 scenarios, but not through this row's command. **Corrected 2026-09-03 during verification of quick task 260903-ho5**, which read the cell against its source: `05-01-SUMMARY.md:241` names no module for mutation 2, unlike every other 05-01 entry that failed a unit case, and the three cases it does name live in `test/runtime/accountRuntime.test.ts`. The mutation is unreachable from this row's tier — `isShadowSilent` is private to `monitoringHealth.ts:146`, `shadowConnected` is a local of `accountRuntime.ts:272`, and `monitoringHealth.test.ts` imports only `monitoringHealth.js` and `clock.js`. The earlier cell asserted the one clause the shipped string exists to carry — that the mutation failed at this row's own tier — and the artifact does not carry it. The mutation was not re-run |
 | TBD | 05-01 | 0 | RES-03 | — | One missed heartbeat is not silence; two is | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 3 failed 5 of 20 cases in `monitoringHealth.test.ts` |
 | TBD | 05-01 | 0 | RES-03 | — | A REST poll does not clear a shadow-silence degradation (D-11) | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 4 failed 1 of 20 cases in `monitoringHealth.test.ts`, on `leaves the shadow silent when a poll succeeds` |
 | TBD | 05-01 | — | RES-03 | — | A monitoring-path failure never activates `Basement Guardian Offline` | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` (extend) | ✅ shipped — 05-01 mutation 5 failed six offline-adapter cases in `basementGuardian.test.ts` and two Cucumber scenarios, both on `the "Basement Guardian Offline" sensor is not activated`, which is this row's own tier and own assertion. Probe P3 in commit `4631d46` measured the same behaviour by execution. The blind assertion the audit names in the shared scenario is about `Sump Pit Flood`; see the note below |
@@ -759,9 +759,13 @@ authorised to reconcile the cells. Nothing in the appended subsection was remove
 covered by that finding.
 
 **The corrected count.** Ledger entry 32 says twenty-two rows in this table read pending. The
-measured count is twenty-four. The file also holds two prose mentions of the pending marker that are
-not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the
-correction is recorded here and the entry is marked fixed. The 24 split by plan: 05-13 three rows,
+measured count is twenty-four. **The cause of the undercount is not established, and an earlier
+version of this paragraph guessed at one wrongly.** It attributed the difference to prose mentions of
+the pending marker elsewhere in the file. That cannot be the cause: a prose mention adds to a count,
+so it could only make twenty-four read as more than twenty-four, never as twenty-two. The count of
+such mentions has also grown since, because this task's own notes write the marker in prose. Entry 32
+undercounted by two and no evidence here says why. The ledger has no edit verb, so the correction is
+recorded here and the entry is marked fixed. The 24 split by plan: 05-13 three rows,
 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two.
 
 **The two rows that are not shipped.** Both belong to plan 05-14.

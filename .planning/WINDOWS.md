@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 11
+open_count: 13
 waived_count: 17
 fixed_count: 10
-total_count: 38
-last_updated: 2026-09-03T17:28:08.692Z
+total_count: 40
+last_updated: 2026-09-03T17:44:54.281Z
 ---
 
 # Broken Windows Ledger
@@ -53,6 +53,8 @@ last_updated: 2026-09-03T17:28:08.692Z
 | 36 | 05 | deviation | .planning/STATE.md |  | Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: "SYNC-03 stays pending with its reason recorded." Line 291, Accumulated Context: "[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries "A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix. | open |  | 2026-09-03T17:17:18.027Z |  |
 | 37 | 05 | unrun-verify | .planning/WINDOWS.md |  | WINDOWS ledger entry 2 reads fixed with no reason recorded, and its description still says "no test fails when it is removed" about dropping !halted from commandTransportReadyNow(). Quick task 260903-ho5 measured that this is stale: 05-VERIFICATION.md M12 re-ran the same mutation on 2026-09-03 and it fails 2 unit cases and 1 scenario, because WR-03 scope withdrawal and 05-16 cases made the term load-bearing. The ledger has no edit verb, so the correction is recorded here and in the First-round reconciliation note of 05-VALIDATION.md. First-round row 17 keeps a "green, mutation failed nothing" status because the row is a claim about its own named test and its own named mutation, and the tests that now pin the term were written by later rounds. | open |  | 2026-09-03T17:24:02.836Z |  |
 | 38 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | Entry 32 states twenty-two rows in the second gap-closure round table read pending. Quick task 260903-ho5 measured twenty-four. The file also holds two prose mentions of the pending marker that are not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the correction is recorded here and in the Second-round reconciliation note of 05-VALIDATION.md. The 24 split by plan: 05-13 three rows, 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two. | open |  | 2026-09-03T17:28:08.692Z |  |
+| 39 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 95 | First-round row 2 was reconciled to a status its citation did not carry, and the verification of quick task 260903-ho5 caught it. The cell read shipped, whose load-bearing clause is that the named mutation failed at the row's own tier; the row's command is node --test on monitoringHealth.test.js, but 05-01 mutation 2 names three cases that all live in test/runtime/accountRuntime.test.ts, and 05-01-SUMMARY.md:241 names no module at all, unlike every other 05-01 entry that failed a unit case. The mutation is structurally unreachable from that tier: isShadowSilent is private to monitoringHealth.ts:146, shadowConnected is a local of accountRuntime.ts:272, and monitoringHealth.test.ts imports only monitoringHealth.js and clock.js. Corrected to green, blind at this tier. The mutation was not re-run, so the correction rests on reachability rather than on a fresh measurement. This is ledger entry 33's shape reproduced inside the task written to repair it, at one cell of forty-six. | open |  | 2026-09-03T17:44:53.966Z |  |
+| 40 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 762 | Ledger entry 38 and the second-round note both explained entry 32's twenty-two against the measured twenty-four by pointing at prose mentions of the pending marker. That explanation is impossible in the stated direction: a prose mention adds to a count, so it can only make twenty-four read as more, never as twenty-two. The note is corrected to say the cause is not established. Entry 38's description keeps the wrong reason because the ledger has no edit verb; read it with this entry. | open |  | 2026-09-03T17:44:54.281Z |  |
 
 ````json
 [
@@ -510,6 +512,30 @@ last_updated: 2026-09-03T17:28:08.692Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-03T17:28:08.692Z",
+    "resolved_at": null
+  },
+  {
+    "id": 39,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
+    "line": 95,
+    "description": "First-round row 2 was reconciled to a status its citation did not carry, and the verification of quick task 260903-ho5 caught it. The cell read shipped, whose load-bearing clause is that the named mutation failed at the row's own tier; the row's command is node --test on monitoringHealth.test.js, but 05-01 mutation 2 names three cases that all live in test/runtime/accountRuntime.test.ts, and 05-01-SUMMARY.md:241 names no module at all, unlike every other 05-01 entry that failed a unit case. The mutation is structurally unreachable from that tier: isShadowSilent is private to monitoringHealth.ts:146, shadowConnected is a local of accountRuntime.ts:272, and monitoringHealth.test.ts imports only monitoringHealth.js and clock.js. Corrected to green, blind at this tier. The mutation was not re-run, so the correction rests on reachability rather than on a fresh measurement. This is ledger entry 33's shape reproduced inside the task written to repair it, at one cell of forty-six.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T17:44:53.966Z",
+    "resolved_at": null
+  },
+  {
+    "id": 40,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
+    "line": 762,
+    "description": "Ledger entry 38 and the second-round note both explained entry 32's twenty-two against the measured twenty-four by pointing at prose mentions of the pending marker. That explanation is impossible in the stated direction: a prose mention adds to a count, so it can only make twenty-four read as more, never as twenty-two. The note is corrected to say the cause is not established. Entry 38's description keeps the wrong reason because the ledger has no edit verb; read it with this entry.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T17:44:54.281Z",
     "resolved_at": null
   }
 ]

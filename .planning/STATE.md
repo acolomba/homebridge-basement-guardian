@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
 Plan: 11 of 11
 Status: Phase complete — ready for verification
-Last activity: 2026-09-02 — Completed quick task 260902-jou: fix accessory registration voided by pre-registration persist
+Last activity: 2026-09-03 — Completed quick task 260903-ho5: reconcile the requirement rows and validation status cells against measured evidence
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
 `05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
@@ -47,7 +47,8 @@ matches the constraint that executors run on the main working tree rather than i
 The gap-closure round closed all three critical review findings, the two partial roadmap success
 criteria, and all seven plan truths the verifier recorded as not done. The ledger of the seven is in
 `05-10-SUMMARY.md`. RES-04 is complete on clause-by-clause evidence; RES-01 and RES-03 stand;
-SYNC-03 stays pending with its reason recorded.
+SYNC-03 is Complete as of 2026-09-03. It stayed pending until then for a records reason, not an
+evidence one; quick task 260903-ho5 closed it with the other eleven Phase 1 rows.
 
 **Plan 05-01 opens with a `checkpoint:decision` task and is therefore `autonomous: false`.** It asks
 which of two locked decisions governs a REST-only degradation: `D-02` (narrowed) has it withdraw the
@@ -288,7 +289,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: The Cucumber tier cannot detect a one-poll delay, so the timing property is asserted in the unit suite and the gap is recorded rather than papered over
 - [Phase 05]: 05-11's prescribed scenario repair was wrong twice over; the working repair fixes the second heartbeat so it is identical from the store's point of view again
 - [Phase 05]: RES-04 moved to complete on one named passing assertion per clause, not on schedule; the assertion is recorded in the row itself
-- [Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it
+- [Phase 05]: SYNC-03 stayed pending because its row sat in a Phase 1 block where no requirement was marked complete; closing one row of that block on Phase 5 evidence would have misreported which phase delivered it. **Superseded 2026-09-03.** Quick task 260903-ho5 closed the whole block on Phase 1's own per-row evidence, so the reason no longer holds and SYNC-03 reads Complete
 - [Phase 05]: The seven plan truths 05-VERIFICATION.md found false are recorded once in 05-10-SUMMARY.md rather than corrected in the plans that got them wrong, because those plans are the evidence that the gap-closure round happened
 - [Phase 05]: The first-round Per-Task Verification Map was left untouched: three of its rows are the ones the verifier found green but blind, so marking them shipped would assert the opposite of what was measured
 - [Phase 05]: A refused credential closes the live connection at the halt, rather than guarding the arrival callback or re-applying the marking; that removes the cause instead of the symptom
@@ -383,7 +384,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   build an automation on `Sump Pit Flood`, force a degraded scope, confirm it still fires. Only a
   positive finding there reopens `D-05`.
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
-- A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision
+- ~~A shadow that goes silent never releases the telemetry watermark~~ — **RESOLVED 2026-09-02, corrected here 2026-09-03.** Plan 05-11 released the watermark on two missed heartbeats, plan 05-14 made the release per device, and `05-CONTEXT.md` D-13 ratifies it as a narrow amendment to D-15 and SYNC-03. Ledger entry 5 reads `fixed`. This line asked for a decision that had already been made, shipped and requirement-amended; it stood for a day because nothing owned it
 
 ## Deferred Verification
 
@@ -443,6 +444,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260903-ho5 | Reconcile the Phase 1 requirement rows and the Phase 5 validation status cells against measured evidence | 2026-09-03 | 858ce2c | Verified — 5/6, one cell corrected | [260903-ho5-reconcile-the-phase-1-requirement-rows-a](./quick/260903-ho5-reconcile-the-phase-1-requirement-rows-a/) |
 | 260902-jou | Fix accessory registration being voided by pre-registration persist | 2026-09-02 | 67a3ee5 |  | [260902-jou-fix-accessory-registration-voided-by-pre](./quick/260902-jou-fix-accessory-registration-voided-by-pre/) |
 | 260831-knc | Name every published service with ConfiguredName so Apple Home shows it | 2026-08-31 | 39560ac |  | [260831-knc-name-every-published-service-with-config](./quick/260831-knc-name-every-published-service-with-config/) |
 | 260831-dlv | Render ignoredFaults as labelled checkboxes in the settings form | 2026-08-31 | cdb183d |  | [260831-dlv-render-ignoredfaults-as-labelled-checkbo](./quick/260831-dlv-render-ignoredfaults-as-labelled-checkbo/) |
