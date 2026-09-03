@@ -235,7 +235,7 @@ The water level percentages and the flood threshold are provisional. The plugin 
 ## Project structure
 
 - [`src/platform.ts`](./src/platform.ts) handles discovery and accessory registration.
-- [`src/platformAccessory.ts`](./src/platformAccessory.ts) handles accessory services and characteristics.
+- [`src/accessories/basementGuardian.ts`](./src/accessories/basementGuardian.ts) handles accessory services and characteristics.
 - [`config.schema.json`](./config.schema.json) defines the Homebridge UI configuration.
 
 This project is based on the official [Homebridge plugin template](https://github.com/homebridge/homebridge-plugin-template) and should be developed alongside the [Homebridge developer documentation](https://developers.homebridge.io/).
