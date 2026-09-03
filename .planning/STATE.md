@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05 (Degraded Operation and Recovery) — EXECUTING
 Plan: 11 of 11
 Status: Phase complete — ready for verification
-Last activity: 2026-09-03 — Completed quick task 260903-ho5: reconcile the requirement rows and validation status cells against measured evidence
+Last activity: 2026-09-03 — Completed quick task 260903-q06: correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
 `05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
@@ -146,11 +146,17 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   reading as trustworthy indefinitely. Forward jumps only mark early, which is harmless. The `Clock`
   port is already injected everywhere, so production swaps its implementation and the cost is in the
   tests that drive time. Closes IN-03, the open half of ledger entry 14.
-- **[Post-Phase 05, decided 2026-09-03]: Telemetry-ownership expiry is settled by measurement, not
-  argument.** A pump that keeps sending metadata but stops sending readings never looks silent, so
-  the poll never takes the readings back — verification probe P9a held a flooded pit reading dry and
-  fully trusted for four simulated hours. Whether a real Gemini can do that is being measured against
-  the live account before the entry is either fixed or closed. Ledger entry 34.
+- **[Post-Phase 05, decided 2026-09-03]: The CR-03 guard stays; its stated reason was false.**
+  Measured against the live account: 90 minutes, seven messages, all seven carried a telemetry
+  section, and the metadata section never travelled alone. So the vendor shape the guard was
+  documented as protecting against was not observed. The guard is live regardless — `toReportedPatch`
+  yields `data: undefined` for a `null`, string, or array section as well as an absent one, and
+  `isShadowDocument` validates two levels only, so corruption reaches it intact. The reason was
+  corrected in five places and the scenario now feeds a malformed section rather than an absent one.
+  **The danger closed is a reader measuring the vendor, finding nothing, and deleting a live safety
+  boundary on correct reasoning from a false premise.** Behaviour unchanged: zero non-comment lines
+  differ in either production file. Arming the silence timer on telemetry rather than on any message
+  was considered and not chosen; ledger entry 41 records it as available. Quick task 260903-q06.
 - [Phase 1]: One singular account; bundled Auth0 client ID; typed REST/shadow state; secrets stay in Homebridge-owned storage.
 - [Phase 2]: Gemini only in v1; family validation fails closed; `deviceId` preserves physical identity.
 - [Phase 2, decided 2026-08-29]: The vendor `deviceId` is treated as non-sensitive and may enter
@@ -466,6 +472,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260903-q06 | Correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive | 2026-09-03 | 05e6cb0 | Complete — guard byte-identical, 5 sites corrected | [260903-q06-correct-the-telemetry-ownership-guard-s-](./quick/260903-q06-correct-the-telemetry-ownership-guard-s-/) |
 | 260903-ho5 | Reconcile the Phase 1 requirement rows and the Phase 5 validation status cells against measured evidence | 2026-09-03 | 858ce2c | Verified — 5/6, one cell corrected | [260903-ho5-reconcile-the-phase-1-requirement-rows-a](./quick/260903-ho5-reconcile-the-phase-1-requirement-rows-a/) |
 | 260902-jou | Fix accessory registration being voided by pre-registration persist | 2026-09-02 | 67a3ee5 |  | [260902-jou-fix-accessory-registration-voided-by-pre](./quick/260902-jou-fix-accessory-registration-voided-by-pre/) |
 | 260831-knc | Name every published service with ConfiguredName so Apple Home shows it | 2026-08-31 | 39560ac |  | [260831-knc-name-every-published-service-with-config](./quick/260831-knc-name-every-published-service-with-config/) |
