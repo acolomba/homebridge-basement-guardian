@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 23
+open_count: 27
 waived_count: 1
 fixed_count: 2
-total_count: 26
-last_updated: 2026-09-02T23:29:30.939Z
+total_count: 30
+last_updated: 2026-09-03T00:17:58.601Z
 ---
 
 # Broken Windows Ledger
@@ -41,6 +41,10 @@ last_updated: 2026-09-02T23:29:30.939Z
 | 24 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-17's first draft of the withholding case used a field that failed family validation. gemini.ts:370 drops a violated scope's whole group before the accessory sees it, so the value was already absent for a second reason and mutation F left the case green. Rebuilt on a lost controller link, a valid boolean the decode keeps. Any later case asserting that a trust rule hides a control value must not use an invalid field. | open |  | 2026-09-02T23:29:21.047Z |  |
 | 25 | 05 | deviation | src/accessories/serviceCatalogue.ts |  | Plan 05-17 listed serviceCatalogue.ts in files_modified and its artifacts, expecting a possible new exported predicate over a scope and the untrusted list. None was needed: isRowPublishable already takes a RowTrust and ServiceRow extends it, so both callers pass the catalogue row itself and no toleratedDistrust list is copied. The file is unchanged and SEEING_LESS_REASONS still has one production location. | open |  | 2026-09-02T23:29:30.541Z |  |
 | 26 | 05 | unrun-verify | features/officialControls.feature |  | Plan 05-17 mutation B (move the quiet-live-connection rule above the transport rule) fails no Cucumber scenario: no shipped scenario sets a quiet live path and an unready transport together. It is pinned at the unit tier alone, by the case added for it at test/accessories/controls.test.ts:696. Without that case the mutation would have failed nothing. | open |  | 2026-09-02T23:29:30.939Z |  |
+| 27 | 05 | deviation | src/platform.ts |  | The DiscoveryContext half of ledger entry 14 (WR-05 in 05-REVIEW.md, WR-07 in 05-REVIEW-2.md) is closed: the platform now builds its runtime context in one local function the three callbacks call, and a static gate in test/platform.test.ts counts DiscoveryContext-shaped object literals and fails on a second one. Entry 14 stays open for its other half, IN-03 (shadow silence measured against a jumpable wall clock), which this plan did not touch | open |  | 2026-09-03T00:16:31.176Z |  |
+| 28 | 05 | deviation | src/platform.ts |  | Plan 05-18 task 2 prescribed a parameterless local function returning the DiscoveryContext and reading runtime.commands from its closure. @typescript-eslint/no-use-before-define rejects that: the helper must be declared before the createAccountRuntimeFromConfig call whose callbacks use it, which puts its reference to runtime above the declarator. The command port is a parameter instead, which is also the harness shape (world.ts discoveryContext takes commands). One literal either way, and mutation F still fails on three layers | open |  | 2026-09-03T00:17:57.979Z |  |
+| 29 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-18 task 3 listed four files for the rename and the tree held a fifth caller: test/accessories/basementGuardian.test.ts imports the marking pass. The rename carried through it with no other edit | open |  | 2026-09-03T00:17:58.292Z |  |
+| 30 | 05 | deviation | README.md |  | 05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it | open |  | 2026-09-03T00:17:58.601Z |  |
 
 ````json
 [
@@ -354,6 +358,54 @@ last_updated: 2026-09-02T23:29:30.939Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-02T23:29:30.939Z",
+    "resolved_at": null
+  },
+  {
+    "id": 27,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/platform.ts",
+    "line": null,
+    "description": "The DiscoveryContext half of ledger entry 14 (WR-05 in 05-REVIEW.md, WR-07 in 05-REVIEW-2.md) is closed: the platform now builds its runtime context in one local function the three callbacks call, and a static gate in test/platform.test.ts counts DiscoveryContext-shaped object literals and fails on a second one. Entry 14 stays open for its other half, IN-03 (shadow silence measured against a jumpable wall clock), which this plan did not touch",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:16:31.176Z",
+    "resolved_at": null
+  },
+  {
+    "id": 28,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "src/platform.ts",
+    "line": null,
+    "description": "Plan 05-18 task 2 prescribed a parameterless local function returning the DiscoveryContext and reading runtime.commands from its closure. @typescript-eslint/no-use-before-define rejects that: the helper must be declared before the createAccountRuntimeFromConfig call whose callbacks use it, which puts its reference to runtime above the declarator. The command port is a parameter instead, which is also the harness shape (world.ts discoveryContext takes commands). One literal either way, and mutation F still fails on three layers",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:17:57.979Z",
+    "resolved_at": null
+  },
+  {
+    "id": 29,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "test/accessories/basementGuardian.test.ts",
+    "line": null,
+    "description": "Plan 05-18 task 3 listed four files for the rename and the tree held a fifth caller: test/accessories/basementGuardian.test.ts imports the marking pass. The rename carried through it with no other edit",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:17:58.292Z",
+    "resolved_at": null
+  },
+  {
+    "id": 30,
+    "kind": "deviation",
+    "phase": "05",
+    "file": "README.md",
+    "line": null,
+    "description": "05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:17:58.601Z",
     "resolved_at": null
   }
 ]
