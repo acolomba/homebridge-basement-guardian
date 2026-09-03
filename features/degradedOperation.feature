@@ -153,15 +153,21 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" sensor is activated
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
 
-  Scenario: A report carrying only device metadata leaves the readings with the poll
+  Scenario: A report whose telemetry section cannot be read leaves the readings with the poll
     The pit is filling, the poll is working, and the poll is reporting it. The only thing standing
     between that reading and the tile is a bookkeeping mark, set by a message that carried no reading
-    at all: the controller reported its wifi signal and its firmware revision, and nothing else.
+    at all: the controller reported its wifi signal and its firmware revision, and its telemetry
+    section arrived in a shape the plugin cannot read.
 
-    That document is ordinary rather than exotic. The plugin subscribes to the delta a device just
-    reported, so a controller updating only its own metadata publishes exactly this shape. A store
-    that reads it as a telemetry delivery hands the readings to a transport that delivered none, and
-    the same message keeps the silence rule quiet, so nothing hands them back.
+    That document is ordinary rather than exotic. A 90-minute window on one system on 2026-09-03
+    caught seven messages. All seven carried both sections: telemetry in one, device metadata in the
+    other. A heartbeat that loses its telemetry section to truncation or corruption is therefore
+    exactly this document. The plugin's shadow validation checks two levels only, the whole payload
+    and the state wrapper inside it, and says nothing about the sections below that. A telemetry
+    section that is null, a string or an array parses, passes validation, and arrives with the
+    telemetry half empty. A store that reads it as a telemetry delivery hands the readings to a
+    transport that delivered none, and the same message keeps the silence rule quiet, so nothing
+    hands them back.
 
     The metadata is read back off the canonical snapshot before the vendor's change, so a failure
     says the document never arrived rather than saying the poll never won. The tile vouching for the
@@ -185,7 +191,7 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
-    When the device reports these device metadata fields:
+    When the device reports these device metadata fields and a telemetry section that cannot be read:
       | wifi_signal_dbm      | -54   |
       | mcu_firmware_version | 1.4.2 |
     Then the canonical snapshot carries these device metadata fields:

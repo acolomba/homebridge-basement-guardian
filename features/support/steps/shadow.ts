@@ -169,21 +169,22 @@ async function acceptedConnections(this: BasementGuardianWorld): Promise<void> {
 When('the broker accepts connections', acceptedConnections);
 
 // The vendor carries telemetry under `reported.data` and device metadata under `reported.state`, so
-// a report's fields go into one of those two sections rather than directly under `reported`. Which
-// section a table lands in is the only difference between the publishing steps below, and it is not
-// a harness detail: the plugin subscribes to the delta a device just reported, so a controller that
-// updated only its firmware or its signal strength publishes a document carrying no telemetry at
-// all, and a store reading that as a telemetry delivery stops accepting readings from the one
-// transport still working (CR-03, SYNC-02).
-async function publishReported(world: BasementGuardianWorld, deviceId: string, section: 'data' | 'state', table: DataTable): Promise<void> {
+// a report's fields go into one of those two sections rather than directly under `reported`. Each
+// step below composes the whole reported record, which is how one of them sends a telemetry section
+// that is not an object. Nothing upstream refuses such a section: the plugin's shadow validation
+// reads two levels, the payload and its `state` wrapper, and says nothing about the sections under
+// `reported`. So a truncated or corrupt heartbeat parses, passes validation, and reaches the store
+// with its telemetry half empty, and a store reading that as a telemetry delivery stops accepting
+// readings from the one transport still working (CR-03, SYNC-02).
+async function publishReported(world: BasementGuardianWorld, deviceId: string, reported: Record<string, unknown>): Promise<void> {
   const broker = await world.broker();
   await awaitSubscription(world);
 
-  broker.publishReported(deviceId, { [section]: fieldsOf(table) }, world.nextShadowVersion());
+  broker.publishReported(deviceId, reported, world.nextShadowVersion());
 }
 
 function publishReportedFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  return publishReported(this, theDeviceId(this), 'data', table);
+  return publishReported(this, theDeviceId(this), { data: fieldsOf(table) });
 }
 
 When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
@@ -197,19 +198,25 @@ When('the device reports these fields:', { timeout: STEP_TIMEOUT_MS }, publishRe
 // publishes for position zero of the device table, which is right while an account carries one
 // system and cannot say which of several spoke.
 function publishNamedReportedFields(this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
-  return publishReported(this, deviceIdNamed(this, deviceName), 'data', table);
+  return publishReported(this, deviceIdNamed(this, deviceName), { data: fieldsOf(table) });
 }
 
 When('the {string} device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishNamedReportedFields);
 
-// A report about the device that delivers no reading: wifi signal, firmware revision, uptime. The
-// account-wide form is enough, because the scenario that needs it runs one system; a named variant
-// would be a step no scenario calls.
+// A report about the device that delivers no reading. The table lands in the metadata section, and
+// the telemetry section travels beside it as `null`. That is the corruption shape rather than an
+// omission: the reading is present on the wire and cannot be read. The account-wide form is enough,
+// because the scenario that needs it runs one system; a named variant would be a step no scenario
+// calls.
 function publishReportedMetadataFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  return publishReported(this, theDeviceId(this), 'state', table);
+  return publishReported(this, theDeviceId(this), { data: null, state: fieldsOf(table) });
 }
 
-When('the device reports these device metadata fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedMetadataFields);
+When(
+  'the device reports these device metadata fields and a telemetry section that cannot be read:',
+  { timeout: STEP_TIMEOUT_MS },
+  publishReportedMetadataFields,
+);
 
 async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
@@ -290,9 +297,9 @@ function assertSnapshotFields(this: BasementGuardianWorld, table: DataTable): Pr
 Then('the canonical snapshot carries these fields:', { timeout: STEP_TIMEOUT_MS }, assertSnapshotFields);
 
 // The metadata twin of the assertion above. Nothing in the suite could read `snapshot.metadata`
-// before this step, so a scenario publishing a document that carries only device metadata had no way
-// to say the document arrived, and would have read the same green against a harness that published
-// nothing at all.
+// before this step, so a scenario publishing a document whose only readable section is device
+// metadata had no way to say the document arrived, and would have read the same green against a
+// harness that published nothing at all.
 function assertSnapshotMetadataFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   return assertSnapshotRecord(this, 'metadata', 'device metadata fields', table);
 }
