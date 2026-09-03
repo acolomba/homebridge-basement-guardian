@@ -442,6 +442,27 @@ D2 must leave the count still and B must leave the recording case green.
 | The marking pass reaches the trust report and no other service | Mutation G. Drop the `testCharacteristic` guard from the shared walk so it reaches every service. Fails `counts every service that reports whether the plugin vouches for it, and leaves one that never did alone`, reporting `marked: 4` against `2` and `carriesTrust: true` against `false` on the control that carried no trust report -- a characteristic added to a service that never published one. **11 of the module's 18 cases fail**, because the guard is shared by all three passes; the count is 4 rather than 3 because the walk then reaches `AccessoryInformation` as well |
 | The zero-count line is conditional | Mutation H. Log the line whatever the count. Fails `says nothing extra when the refusal marked the services it reached`, which reads the line through the file's own recording log while the flood services carry the communication-failure status. It also fails `says nothing for a refusal that arrived before this run had any accessory to mark`, which is the empty-account case the condition deliberately stays quiet for |
 
+### Plan 05-19 rows
+
+`grep -c "05-19"` answered **5** immediately before appending, on lines 128, 132, 580, 620 and 621.
+**Only three of those five are about this plan** -- the round's section heading and its two seeded
+table rows. Lines 128 and 132 belong to plan 05-06 and match only because their Threat Ref column
+reads `T-05-19`. The plan's derived floor of **9** therefore stands as written: 5 measured, plus the
+single `### Plan 05-19 rows` heading, plus one line for each of the three documentation rows below.
+There is no `### Plan 05-19 mutations` subsection, and that is deliberate: prose has no mutation of
+its own, so each row names the code assertion its sentence depends on instead. A row dressed up as a
+mutation row would be the exact claim this round exists to stop.
+
+**The plan's own line numbers for the five hits did not survive measurement.** It named 321, 361 and
+362 for the heading and the two rows; the file has grown since and they are at 580, 620 and 621. The
+count is unchanged, so the floor is unchanged.
+
+| Task | Plan | Wave | Requirement | Finding | Sentence an owner must be able to trust | The code assertion the sentence depends on | Test type | Automated command | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 | 05-19 | 14 | RES-03 | CR-04 | While the live connection still owns the readings, a poll does not replace them, and the tile shows the last reading that connection sent. Two missed heartbeats end the ownership; from then on each successful poll updates the tile, and a poll that finds a flooded pit reports it with the trust row alone carrying the doubt | *Documentation trace, not a test.* `test/runtime/accountRuntime.test.ts` -- `D-13 keeps a pump run the live path reported when a poll arrives inside the two-heartbeat window` for the half before the handover, and `features/degradedOperation.feature` -- `A pit that floods after the live path went quiet still reaches Apple Home` for the half after it. The per-system clause depends on `features/degradedOperation.feature` -- `A poll finds a flood on the pump that went quiet while its neighbour keeps reporting` and on `test/runtime/accountRuntime.test.ts` -- `D-13 hands only the quiet pump back to the poll and leaves its neighbour owning its telemetry`. The account-wide marking clause depends on `test/runtime/monitoringHealth.test.ts` -- `stops vouching for the account while one pump is quiet and vouches again once it speaks` | doc | `npm run check` | ✅ shipped |
+| T1 | 05-19 | 14 | RES-04 | WR-08 | Under a refused credential, every service **that reports whether the plugin vouches for it** stops answering -- not every service | *Documentation trace, not a test.* `test/accessories/staleMarking.test.ts` -- `counts every service that reports whether the plugin vouches for it, and leaves one that never did alone`, which plan 05-18 pinned with mutation G: dropping the `testCharacteristic` guard from the shared walk fails it with `marked: 4` against `2`, and fails 11 of the module's 18 cases. The next sentence in the same paragraph depends on `retains every other reading on a service it marks, so the tile keeps its last values` | doc | `npm run check` | ✅ shipped |
+| T1 | 05-19 | 14 | RES-03 | CR-04 | The unreleased changelog entry says the plugin hands the readings back to polling at the moment it marks its services inactive, rather than that successful polls keep their readings current | *Documentation trace, not a test.* One scenario carries both halves at once: `features/degradedOperation.feature` -- `A pit that floods after the live path went quiet still reaches Apple Home` reads `Status Active` as `false` after the clock crosses two heartbeats and then reads the poll's `water_level 31` off the canonical snapshot | doc | `npm run check` | ✅ shipped |
+
 ### Named mutations
 
 Each row's mutation is the proof its test is not vacuous. Apply the mutation, confirm the named test
@@ -574,6 +595,16 @@ the withholding controls. Phase 5's answer is structural, not aspirational:
    in exactly that gap. A suite that cannot express the plural of a thing cannot observe a rule about
    which one of them a message was for. The answer is the same shape as the four above: the harness
    gains the capability first, alone, proved on behaviour that is already correct.
+6. **Per-plan mutation testing cannot see a defect that lives between two plans that are each
+   correct.** Recorded 2026-09-03 by plan 05-19. Twelve rounds of per-plan verification passed over
+   `CR-03` and `CR-01`'s upstream half without either surfacing, because every mutation a plan runs
+   is applied inside that plan's own subject and read against that plan's own assertions. Plan 05-06
+   made the accessory layer publish what a working transport delivers; plan 05-11 made a silent
+   shadow hand telemetry back. Each was right, each was measured, and the seam between them -- a
+   document that observed the device without delivering a reading -- belonged to neither. Only a
+   whole-phase review found it. So a phase whose rows are all green is not a phase whose behaviour
+   is all right, and the answer is not more mutations per plan: it is a reading pass over the seams
+   the plans do not share, which is what `05-REVIEW-2.md` was and what this round closed.
 
 ---
 
@@ -619,6 +650,61 @@ tell a case that can fail from one that cannot.
 | 05-18 | 13 | RES-04 | WR-08 | The marking pass still reaches exactly the services carrying a trust report, and adds a characteristic to none | Widen the walk to every service | unit | `npm run test:coverage:direct -- dist-test/src/accessories/staleMarking.js dist-test/test/accessories/staleMarking.test.js` | ⬜ pending |
 | 05-19 | 14 | RES-03 | CR-04 | An owner reading the README learns that a poll does not replace a reading the live path still owns, and learns when it starts to | *Documentation trace, not a test.* The sentence depends on `test/runtime/accountRuntime.test.ts` — the case that pins the poll losing inside the two-heartbeat window — and on the flood scenario for the half after the handover. A row that claimed a mutation of its own would be the defect this round exists to stop | doc | `npm run check` | ⬜ pending |
 | 05-19 | 14 | RES-04 | WR-08 | The README says the trust report on every service that carries one stops answering, which is what the pass does | *Documentation trace, not a test.* Depends on the staleMarking guard case above | doc | `npm run check` | ⬜ pending |
+
+### Second gap-closure round reconciliation (plan 05-19, 2026-09-03)
+
+The table above says the closing plan reconciles its rows against the summaries. Plan 05-19's own
+prohibitions say it must not edit an existing `05-VALIDATION.md` table, and new material is
+appended. **Both cannot be honoured by editing the Status column, so the disposition of every row in
+that table lives here instead and its cells are left as the plans wrote them.** The tension is a plan
+self-inconsistency and is reported rather than smoothed over: a reader who wants the round's status
+reads this subsection, which the table's own governing paragraph points at.
+
+**Every row of the second gap-closure round is evidenced by its plan's summary**, and every one of
+those summaries carries a `## Self-Check: PASSED` block naming the commits by content. The per-plan
+`### Plan 05-NN rows` subsections above already read `✅ shipped` and were written by the executor
+who measured them; nothing in them was found to disagree with its summary.
+
+What did not behave as its plan predicted, named plan by plan, because a tidy table is worth less
+than the record of a prediction that failed:
+
+| Plan | Prediction | What was measured |
+|---|---|---|
+| 05-13 | The five named mutations would each fail something | Held. All five failed. The plan's own `serviceOf` acceptance criterion contradicted its `<action>`, and the action was followed; mutation C had to be made compilable with a no-op that consumes an unread parameter |
+| 05-14 | Mutation B (release every stored device whenever any is silent) **might pass**, so WR-05's discriminating evidence was reserved for the unit tier | It fails, at the end-to-end tier, because the healthy pump's live level and its polled level were deliberately made different |
+| 05-14 | Mutation C (revert the admit call) would fail the new scenario | **It failed nothing there.** `recordShadowMessage` stamps whatever device a message named, admitted or not, and the quiet pump speaks once before falling silent, so the admit call is redundant for any pump that has ever spoken. Five shipped scenarios and one unit case pin it instead |
+| 05-15 | Refusing to advance a held watermark on a metadata-only document would leave a later telemetry document judged stale | **Backwards.** Refusing the advance leaves the watermark below the shadow's own version, so a document the shadow has already superseded is accepted over a newer reading. The shipped case pins the measured consequence |
+| 05-15 | Mutations A to D would carry the change | A broke no unit case at task 1, C broke no scenario, and neither is a gap: task 2 closed A's, and C's subject reaches only `receivedAt`. Mutation E was run although the plan never named it, because A to D leave the arrival half of D-11 unmeasured |
+| 05-16 | Mutation C might fail nothing at task 1 and would be closed by task 2 | Held exactly. Nothing at task 1, three cases after task 2. Mutation B behaved as predicted, which the equivalent mutation in plan 05-12 did not |
+| 05-17 | The row and the write path would disagree observably through the refusal | **They cannot.** After task 1 every seeing-less withdrawal of a control scope is refused before the state rule is consulted, so the disagreement is visible only at the clearing push, and the case reads it there |
+| 05-17 | Mutation B would be caught end to end | **No Cucumber scenario fails it.** No shipped scenario sets a quiet live path and an unready transport together. Its one unit case was written by that plan for that mutation; without it, mutation B would have failed nothing at all. Ledger entry 26 |
+| 05-17 | Mutation F would fail the withholding case | **It failed nothing on the case's first draft.** `gemini.ts:370` drops a violated scope's whole group, so a case built on an invalid field agrees with a rule that withheld nothing. Rebuilt on a lost controller link and committed separately as its own finding |
+| 05-18 | Mutation G would report `marked: 3` | `marked: 4`. The widened walk also reaches `AccessoryInformation`, which every constructed `PlatformAccessory` carries. The row was corrected to the measured number before it was committed |
+| 05-18 | Every mutation would fail something | Held, with two pinned by a passing result rather than a failing one -- B and D2 -- and both recorded as the measurements they are |
+
+**One correction that belongs to an earlier round and is recorded rather than made.** The
+gap-closure mutations table above pins "Every documentation claim is traceable to a passing
+assertion" on watching the README sentence *"The plugin holds no value back while it waits"* stand on
+nothing. `05-REVIEW-2.md` CR-04 later showed that sentence was false of the shipped code for the
+whole window its own paragraph is about, and plan 05-19 deleted it. `05-VERIFICATION.md` also lists
+*"README: `the plugin holds no value back while it waits` is now a true statement about the shipped
+code"* among its `gaps_closed`. Both records now name a sentence the README no longer carries.
+Neither is edited here: the mutations table belongs to plan 05-10's round, and the verification report
+belongs to a verifier. This is the phase's signature defect once more -- a check that passed because
+the claim it rested on was never read against the code -- and it is the reason plan 05-19 traced every
+kept sentence to a named assertion instead.
+
+**Wave 0 evidence, recorded without checking its boxes.** Plan 05-19's action authorises the
+`Validation Sign-Off` block and not the Wave 0 list, so the six boxes are left as they are and their
+evidence is written here: `test/runtime/monitoringHealth.test.ts` and
+`test/accessories/accessoryReadPathScope.test.ts` both exist and both carry the cases their rows
+name; `features/support/fakeHomebridgeApi.ts` `restoreCachedAccessories()` sideloads deserialized
+services onto each restored accessory, which is the documented reversal the item demanded;
+`features/support/world.ts` imports and calls the exported `markRestoredServicesStale` and
+`refuseRestoredControls` from `src/accessories/staleMarking.js`, so the harness drives the shipped
+pass rather than a copy; the named-service `Status Active` read exists in both its account-wide and
+its named-accessory form, the second added by plan 05-13; and the clock step exists as
+`When the scenario clock moves forward by N seconds`.
 
 ---
 
@@ -755,11 +841,35 @@ than the device, which is the same framing and is accepted with it (T-05-14-05).
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s for per-task unit sampling; the full-suite commands are named above and bounded at ~90s
-- [ ] `nyquist_compliant: true` set in frontmatter
+Filled in 2026-09-03 by plan 05-19 against what was actually run. Every checked box carries its
+measurement; the unchecked one carries its reason.
 
-**Approval:** pending
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies -- measured over the phase's
+      nineteen plans: **47 `<task>` elements, 46 carrying at least one `<automated>` block.** The one
+      without is a `checkpoint` task, which the criterion exempts.
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify -- follows from the line
+      above. No non-checkpoint task in the phase lacks one, so no run of three exists.
+- [x] Wave 0 covers all MISSING references -- all six items exist on the tree and are exercised by
+      shipped cases. The evidence is written out under
+      `Second gap-closure round reconciliation` rather than by checking the Wave 0 boxes, which this
+      plan's action does not authorise it to write.
+- [x] No watch-mode flags -- `package.json`'s five test scripts (`test`, `test:unit`,
+      `test:cucumber`, `test:coverage:all`, `test:coverage:direct`) carry no `--watch`.
+- [x] Feedback latency < 30s for per-task unit sampling; the full-suite commands are named above and
+      bounded at ~90s -- measured on `node` v26.7.0: `npm run test:unit` **13.9 s** wall including
+      the TypeScript build, and `npm test`, the named full-suite pair, **54.5 s**. `npm run check`
+      takes **105.1 s**, but that gate adds typecheck, lint, `fallow` and `format:check` and is
+      wider than the one this line names.
+- [ ] `nyquist_compliant: true` set in frontmatter -- **unchecked, and not this plan's to set.** The
+      frontmatter still reads `status: draft`, `nyquist_compliant: false` and
+      `wave_0_complete: false`. Those three fields are written by `validate-phase` §6, and plan
+      05-19 leaves a verifier's fields alone for the same reason it leaves `05-VERIFICATION.md`
+      alone.
+
+**Approval:** pending, and stated as what it is. Approval is a human act and nobody has taken it. Two
+things stand between this phase and one a reader could rely on. `05-VERIFICATION.md` reads
+`status: gaps_found` with two `gaps_remaining` entries, written on 2026-09-02 before plans 05-12 to
+05-19 landed and not re-run since, and one of its `gaps_closed` entries names a README sentence that
+has since been deleted as untrue. And all three `Manual-Only Verifications` rows ride on the open
+`G-003` / `G-004` real-home session, which has not happened. A re-verification and that session are
+what would move this line.

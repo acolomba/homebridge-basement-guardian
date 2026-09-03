@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 27
+open_count: 29
 waived_count: 1
-fixed_count: 2
-total_count: 30
-last_updated: 2026-09-03T00:17:58.601Z
+fixed_count: 3
+total_count: 33
+last_updated: 2026-09-03T00:49:02.153Z
 ---
 
 # Broken Windows Ledger
@@ -44,7 +44,10 @@ last_updated: 2026-09-03T00:17:58.601Z
 | 27 | 05 | deviation | src/platform.ts |  | The DiscoveryContext half of ledger entry 14 (WR-05 in 05-REVIEW.md, WR-07 in 05-REVIEW-2.md) is closed: the platform now builds its runtime context in one local function the three callbacks call, and a static gate in test/platform.test.ts counts DiscoveryContext-shaped object literals and fails on a second one. Entry 14 stays open for its other half, IN-03 (shadow silence measured against a jumpable wall clock), which this plan did not touch | open |  | 2026-09-03T00:16:31.176Z |  |
 | 28 | 05 | deviation | src/platform.ts |  | Plan 05-18 task 2 prescribed a parameterless local function returning the DiscoveryContext and reading runtime.commands from its closure. @typescript-eslint/no-use-before-define rejects that: the helper must be declared before the createAccountRuntimeFromConfig call whose callbacks use it, which puts its reference to runtime above the declarator. The command port is a parameter instead, which is also the harness shape (world.ts discoveryContext takes commands). One literal either way, and mutation F still fails on three layers | open |  | 2026-09-03T00:17:57.979Z |  |
 | 29 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-18 task 3 listed four files for the rename and the tree held a fifth caller: test/accessories/basementGuardian.test.ts imports the marking pass. The rename carried through it with no other edit | open |  | 2026-09-03T00:17:58.292Z |  |
-| 30 | 05 | deviation | README.md |  | 05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it | open |  | 2026-09-03T00:17:58.601Z |  |
+| 30 | 05 | deviation | README.md |  | 05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it | fixed |  | 2026-09-03T00:17:58.601Z | 2026-09-03T00:48:48.289Z |
+| 31 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-19-PLAN.md |  | Two premises of plan 05-19 did not survive measurement. Its ledger verify runs 'gsd-tools.cjs windows list', which is not a subcommand; the verbs are status, append, waive and fixed. And its task 1 verify fails when 'npm run format:check' names README.md or CHANGELOG.md, which it can never do: the script runs prettier over '**/*.{js,json,mjs,ts}' only. Markdown formatting is gated by the mdformat and markdownlint-cli2 pre-commit hooks, and both passed on the two files. | open |  | 2026-09-03T00:49:01.522Z |  |
+| 32 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The second gap-closure round table says the closing plan reconciles its rows against the summaries, while plan 05-19's prohibitions forbid editing an existing 05-VALIDATION.md table. Both cannot hold. The Status cells were left as the plans wrote them and every row's disposition was appended instead, under 'Second gap-closure round reconciliation'. Twenty-two rows in that table still read pending and are not. | open |  | 2026-09-03T00:49:01.812Z |  |
+| 33 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VERIFICATION.md |  | 05-VERIFICATION.md lists 'README: the plugin holds no value back while it waits is now a true statement about the shipped code' among its gaps_closed, and 05-VALIDATION.md's gap-closure mutations table pins its documentation row on the same sentence. 05-REVIEW-2.md CR-04 showed the sentence false for the whole window its paragraph is about, and plan 05-19 deleted it. Neither record was edited: the report belongs to a verifier and the table to plan 05-10's round. A re-verification should settle both. | open |  | 2026-09-03T00:49:02.153Z |  |
 
 ````json
 [
@@ -403,9 +406,45 @@ last_updated: 2026-09-03T00:17:58.601Z
     "file": "README.md",
     "line": null,
     "description": "05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-03T00:17:58.601Z",
+    "resolved_at": "2026-09-03T00:48:48.289Z"
+  },
+  {
+    "id": 31,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-19-PLAN.md",
+    "line": null,
+    "description": "Two premises of plan 05-19 did not survive measurement. Its ledger verify runs 'gsd-tools.cjs windows list', which is not a subcommand; the verbs are status, append, waive and fixed. And its task 1 verify fails when 'npm run format:check' names README.md or CHANGELOG.md, which it can never do: the script runs prettier over '**/*.{js,json,mjs,ts}' only. Markdown formatting is gated by the mdformat and markdownlint-cli2 pre-commit hooks, and both passed on the two files.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:49:01.522Z",
+    "resolved_at": null
+  },
+  {
+    "id": 32,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
+    "line": null,
+    "description": "The second gap-closure round table says the closing plan reconciles its rows against the summaries, while plan 05-19's prohibitions forbid editing an existing 05-VALIDATION.md table. Both cannot hold. The Status cells were left as the plans wrote them and every row's disposition was appended instead, under 'Second gap-closure round reconciliation'. Twenty-two rows in that table still read pending and are not.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:49:01.812Z",
+    "resolved_at": null
+  },
+  {
+    "id": 33,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VERIFICATION.md",
+    "line": null,
+    "description": "05-VERIFICATION.md lists 'README: the plugin holds no value back while it waits is now a true statement about the shipped code' among its gaps_closed, and 05-VALIDATION.md's gap-closure mutations table pins its documentation row on the same sentence. 05-REVIEW-2.md CR-04 showed the sentence false for the whole window its paragraph is about, and plan 05-19 deleted it. Neither record was edited: the report belongs to a verifier and the table to plan 05-10's round. A re-verification should settle both.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T00:49:02.153Z",
     "resolved_at": null
   }
 ]
