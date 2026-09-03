@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The plugin refuses to start on a setting outside its documented range instead of substituting a value.
 - The plugin refuses to start when `ignoredFaults` names a sensor it does not publish, and the log lists every valid name.
 - When the plugin cannot vouch for part of what a system reports, it marks the affected services inactive and keeps their last trusted value. It never substitutes a normal reading.
-- The plugin now marks its services inactive when the vendor cloud stops sending live changes, and it hands the readings back to polling at the same moment.
+- The plugin now marks its services inactive when the vendor cloud stops sending live changes. It hands the readings back to polling at the same moment.
 - When live changes return, the plugin marks its services active again at once rather than at its next poll.
 - After a restart the plugin marks every restored service inactive until a poll succeeds, so a cached reading never shows as current.
 - While the plugin cannot reach the vendor cloud, including after a restart, it now refuses a press of either switch and logs the cause.
