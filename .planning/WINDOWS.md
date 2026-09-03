@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 11
 waived_count: 17
-fixed_count: 7
-total_count: 35
-last_updated: 2026-09-03T12:31:38.115Z
+fixed_count: 8
+total_count: 36
+last_updated: 2026-09-03T17:17:18.027Z
 ---
 
 # Broken Windows Ledger
@@ -26,7 +26,7 @@ last_updated: 2026-09-03T12:31:38.115Z
 | 9 | 05 | deviation | features/degradedOperation.feature |  | Scenario 'Shadow silence withdraws trust while polling continues' now rests its 'sensor is not activated' assertion on the polled water_level 1 rather than the retained heartbeat 3; still honest, but the heartbeat step no longer carries that assertion | waived | Recorded and still honest: the assertion moved from the retained heartbeat to the polled level, and the scenario asserts the same fact. | 2026-09-02T15:54:12.932Z | 2026-09-03T12:31:15.449Z |
 | 10 | 05 | deviation | features/support/steps/harness.ts |  | Plan 05-11 prescribed repairing scenarios with 'Given these reported device fields:'; that step wipes the full valid telemetry these scenarios need and the matching-value repair also destroys the heartbeat barrier the snapshot step provides. Repair used the second heartbeat instead | waived | Executor chose a sounder repair than the plan prescribed; the prescribed step would have wiped the telemetry the scenarios need. | 2026-09-02T15:54:13.289Z | 2026-09-03T12:31:15.798Z |
 | 11 | 05 | unrun-verify | test/accessories/staleMarking.test.ts |  | lets the accessory own binder replace the refusal: no mutation in 05-09's five reaches it, so the assertion carries no discriminating mutation; the candidate (bind as an additional listener rather than into HAP's single onSet slot) is named in 05-VALIDATION.md and was not run | open |  | 2026-09-02T16:15:52.222Z |  |
-| 12 | 05 | deviation | .planning/REQUIREMENTS.md |  | Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit | open |  | 2026-09-02T16:16:03.522Z |  |
+| 12 | 05 | deviation | .planning/REQUIREMENTS.md |  | Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit | fixed |  | 2026-09-02T16:16:03.522Z | 2026-09-03T17:17:17.681Z |
 | 13 | 05 | unrun-verify | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The 22 first-round Per-Task Verification Map rows still read pending. Plan 05-10 reconciled the gap-closure rows against their summaries and had no equivalent basis for the first round; three of those rows are the ones 05-VERIFICATION.md found green but blind | open |  | 2026-09-02T16:16:03.873Z |  |
 | 14 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md |  | WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md | open |  | 2026-09-02T16:16:04.212Z |  |
 | 15 | 05 | deviation | features/degradedOperation.feature |  | Mutation B did not produce the outcome 05-12-PLAN.md predicted: the plan's own prescribed 'Then the broker holds no live connection' step sits before the settling steps and kills the scenario independently of the settle, so dropping the settle and reverting the fix still fails. Suppressing that one step isolates the half the mutation is about, and the scenario then passes against the defect. The finding stands; the plan's predicted mechanism did not | waived | Measured deviation from a plan prediction, explained in place. The behaviour is pinned; only the plan's predicted mutation outcome was wrong. | 2026-09-02T17:55:13.303Z | 2026-09-03T12:31:16.138Z |
@@ -50,6 +50,7 @@ last_updated: 2026-09-03T12:31:38.115Z
 | 33 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VERIFICATION.md |  | 05-VERIFICATION.md lists 'README: the plugin holds no value back while it waits is now a true statement about the shipped code' among its gaps_closed, and 05-VALIDATION.md's gap-closure mutations table pins its documentation row on the same sentence. 05-REVIEW-2.md CR-04 showed the sentence false for the whole window its paragraph is about, and plan 05-19 deleted it. Neither record was edited: the report belongs to a verifier and the table to plan 05-10's round. A re-verification should settle both. | fixed |  | 2026-09-03T00:49:02.153Z | 2026-09-03T12:30:28.207Z |
 | 34 | 05 | todo | src/device/state.ts |  | Telemetry ownership has no expiry of its own. CR-03 guarded establishing the watermark, as the review prescribed, not retaining it. Measured by the third verification (probe P9a): one telemetry heartbeat, then 17 metadata-only reports over four hours with the poll reporting 31 throughout, left the store frozen at 3, shadowSilent false, and every scope vouched for. This follows D-13 as written and plan 05-15's stated decision, and may be unreachable in practice if REST reads the same shadow. Wants a maintainer ruling on whether ownership should lapse on telemetry age rather than on message silence. | open |  | 2026-09-03T12:31:37.763Z |  |
 | 35 | 05 | unrun-verify | src/device/state.ts |  | The carriesObservation narrowing is pinned at the unit tier alone. CR-03's fix reads patch.data in nextShadowVersion while carriesObservation still answers data or state, and the half that keeps a metadata-only report counting as the device speaking is proven by test/device/state.test.ts and by one scenario assertion. The third verification listed this among three protections living at one tier only, and unlike the other two it had no ledger entry. Recorded so a later reader does not mistake single-tier cover for absent cover. | open |  | 2026-09-03T12:31:38.115Z |  |
+| 36 | 05 | deviation | .planning/STATE.md |  | Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: "SYNC-03 stays pending with its reason recorded." Line 291, Accumulated Context: "[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries "A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix. | open |  | 2026-09-03T17:17:18.027Z |  |
 
 ````json
 [
@@ -192,10 +193,10 @@ last_updated: 2026-09-03T12:31:38.115Z
     "file": ".planning/REQUIREMENTS.md",
     "line": null,
     "description": "Every Phase 1 requirement row still reads Pending (CONF-01..05, AUTH-01/02, SYNC-01..05), including SYNC-03 which plan 05-11 amended in place. Phase 1 predates the mark-complete habit; plan 05-10 left the block alone rather than close one row of it on Phase 5 evidence. Wants a Phase 1 close-out or a milestone audit",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T16:16:03.522Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-03T17:17:17.681Z"
   },
   {
     "id": 13,
@@ -471,6 +472,18 @@ last_updated: 2026-09-03T12:31:38.115Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-03T12:31:38.115Z",
+    "resolved_at": null
+  },
+  {
+    "id": 36,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/STATE.md",
+    "line": null,
+    "description": "Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: \"SYNC-03 stays pending with its reason recorded.\" Line 291, Accumulated Context: \"[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it\". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries \"A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision\" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T17:17:18.027Z",
     "resolved_at": null
   }
 ]

@@ -7,27 +7,27 @@
 
 ### Platform and Configuration
 
-- [ ] **CONF-01**: Administrator can install Basement Guardian as a Homebridge dynamic-platform package implemented as TypeScript ESM for the supported runtime ranges and run it on either the main bridge or a Homebridge-managed child bridge.
-- [ ] **CONF-02**: Administrator can configure one singular vendor account in the Homebridge Plugin Settings GUI with strict validation, a masked password field, and clear plaintext-storage disclosure.
-- [ ] **CONF-03**: When required credentials are absent, the plugin logs a clear configuration error and starts no network, timer, or accessory work.
-- [ ] **CONF-04**: Administrator can omit `clientId` to use the bundled public Auth0 client ID or set the optional override without exposing any other vendor protocol constants.
-- [ ] **CONF-05**: Administrator can set the REST poll interval from 300 through 3600 seconds, with approximately 900 seconds by default, and an integer `offlineConfirmationPollCount` from 1 through 8, with 2 by default. The `D-015` worst-case offline confirmation of 105 to 120 minutes assumes the default interval; a 3600-second interval with a count of 8 extends confirmation to approximately eight hours.
+- [x] **CONF-01**: Administrator can install Basement Guardian as a Homebridge dynamic-platform package implemented as TypeScript ESM for the supported runtime ranges and run it on either the main bridge or a Homebridge-managed child bridge.
+- [x] **CONF-02**: Administrator can configure one singular vendor account in the Homebridge Plugin Settings GUI with strict validation, a masked password field, and clear plaintext-storage disclosure.
+- [x] **CONF-03**: When required credentials are absent, the plugin logs a clear configuration error and starts no network, timer, or accessory work.
+- [x] **CONF-04**: Administrator can omit `clientId` to use the bundled public Auth0 client ID or set the optional override without exposing any other vendor protocol constants.
+- [x] **CONF-05**: Administrator can set the REST poll interval from 300 through 3600 seconds, with approximately 900 seconds by default, and an integer `offlineConfirmationPollCount` from 1 through 8, with 2 by default. The `D-015` worst-case offline confirmation of 105 to 120 minutes assumes the default interval; a 3600-second interval with a count of 8 extends confirmation to approximately eight hours.
 - [x] **CONF-06**: Administrator can use a unique, enumerated `ignoredFaults` list to remove only selected Apple Home notification adapters while all truthful source state remains available. The list enumerates seven slugs rather than eight because `Primary Pump Running` is an activity adapter, not a notification adapter, and it is deliberately not removable.
 
 ### Authentication and Secret Handling
 
-- [ ] **AUTH-01**: The configured account authenticates unattended through the vendor Auth0 password-realm flow, reuses a valid cached ID token, and reauthenticates before or after expiry as required.
-- [ ] **AUTH-02**: The ID token is stored only under the Homebridge storage path, in a cached file that uses owner-only permissions where the operating system supports them, and passwords, tokens, temporary AWS credentials, authorization headers, and authentication bodies never enter logs or accessory context.
+- [x] **AUTH-01**: The configured account authenticates unattended through the vendor Auth0 password-realm flow, reuses a valid cached ID token, and reauthenticates before or after expiry as required.
+- [x] **AUTH-02**: The ID token is stored only under the Homebridge storage path, in a cached file that uses owner-only permissions where the operating system supports them, and passwords, tokens, temporary AWS credentials, authorization headers, and authentication bodies never enter logs or accessory context.
 
 ### Cloud Synchronization
 
-- [ ] **SYNC-01**: The account runtime uses typed vendor REST operations for device inventory/snapshots, Gemini commands, and temporary AWS IoT credentials, without using excluded account-management routes.
-- [ ] **SYNC-02**: The runtime maintains one canonical snapshot per device by merging REST state and partial shadow `reported` patches while ignoring `desired` values and preserving omitted fields.
-- [ ] **SYNC-03**: The runtime requests a complete shadow after startup and reconnect and polls successful REST snapshots as a reconciliation backstop without treating MQTT subscription persistence as event replay.
+- [x] **SYNC-01**: The account runtime uses typed vendor REST operations for device inventory/snapshots, Gemini commands, and temporary AWS IoT credentials, without using excluded account-management routes.
+- [x] **SYNC-02**: The runtime maintains one canonical snapshot per device by merging REST state and partial shadow `reported` patches while ignoring `desired` values and preserving omitted fields.
+- [x] **SYNC-03**: The runtime requests a complete shadow after startup and reconnect and polls successful REST snapshots as a reconciliation backstop without treating MQTT subscription persistence as event replay.
 
   **Amended 2026-09-02.** The reconciliation backstop also carries telemetry while the live path is silent, not only while it is disconnected. A shadow that has missed two heartbeats no longer owns telemetry, so the poll takes it back and its readings reach HomeKit. The shadow owns telemetry again on its next message that carries an observation. The trust flags did not change: a REST poll still does not clear a shadow-silence degradation, so the readings arrive marked untrustworthy. Ruling: `05-CONTEXT.md` D-13.
-- [ ] **SYNC-04**: Temporary AWS credentials rotate in place about ten minutes before expiry, failed refreshes remain scheduled, and reconnect retries are capped and protected from duplicate loops.
-- [ ] **SYNC-05**: Homebridge shutdown, partial startup failure, timers, subscriptions, retry waits, commands, and the shadow socket share an idempotent abortable lifecycle with no unhandled rejection.
+- [x] **SYNC-04**: Temporary AWS credentials rotate in place about ten minutes before expiry, failed refreshes remain scheduled, and reconnect retries are capped and protected from duplicate loops.
+- [x] **SYNC-05**: Homebridge shutdown, partial startup failure, timers, subscriptions, retry waits, commands, and the shadow socket share an idempotent abortable lifecycle with no unhandled rejection.
 
 ### Device Families and Accessory Lifecycle
 
@@ -112,19 +112,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONF-01 | Phase 1 | Pending |
-| CONF-02 | Phase 1 | Pending |
-| CONF-03 | Phase 1 | Pending |
-| CONF-04 | Phase 1 | Pending |
-| CONF-05 | Phase 1 | Pending |
+| CONF-01 | Phase 1 | Complete |
+| CONF-02 | Phase 1 | Complete |
+| CONF-03 | Phase 1 | Complete |
+| CONF-04 | Phase 1 | Complete |
+| CONF-05 | Phase 1 | Complete |
 | CONF-06 | Phase 3 | Complete |
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| SYNC-01 | Phase 1 | Pending |
-| SYNC-02 | Phase 1 | Pending |
-| SYNC-03 | Phase 1 | Pending |
-| SYNC-04 | Phase 1 | Pending |
-| SYNC-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| SYNC-01 | Phase 1 | Complete |
+| SYNC-02 | Phase 1 | Complete |
+| SYNC-03 | Phase 1, Phase 5 | Complete |
+| SYNC-04 | Phase 1 | Complete |
+| SYNC-05 | Phase 1 | Complete |
 | DEV-01 | Phase 2 | Complete |
 | DEV-02 | Phase 2 | Complete |
 | DEV-03 | Phase 2 | Complete |
@@ -160,6 +160,36 @@
 | REL-08 | Phase 6 | Pending |
 | REL-09 | Phase 6 | Pending |
 
+**Reconciled 2026-09-03 (quick task 260903-ho5).** The twelve Phase 1 identifiers now read complete
+in the checkbox list above and in this table. The evidence is the per-row `### Requirements Coverage`
+table of `.planning/phases/01-secure-cloud-foundation/01-VERIFICATION.md`, which gives each of the
+twelve its own verdict. The phase-level score of 22/22 was not used as evidence for any row. Three of
+the twelve carry a qualification. This file records them so it does not read as cleaner than the
+measurement:
+
+- AUTH-02 is satisfied and qualified. `01-SECURITY.md` finding 2 measured that the cached token file
+  holds the account email inside the `id_token` payload, because the grant requests the
+  `openid profile email` scope. The file is owner-only and already holds a live bearer token, so the
+  impact is low. The comment in `src/cloud/auth.ts` that says the file never holds the email is
+  inaccurate.
+- SYNC-02 is satisfied on a real vendor document, with the residual `01-VERIFICATION.md` records as
+  W10-R. A real `get/accepted` document parsed and merged. The partial merge itself is deduced from
+  the confirmed document shape and a proved pure spread. No probe observed it.
+- SYNC-04 is satisfied with rotation and reconnect exercised against fakes. The presigner alone met a
+  real AWS IoT broker, which accepted the URL it produced.
+
+SYNC-03 also names Phase 5. Its own `Amended 2026-09-02` paragraph adds a clause Phase 5 delivered,
+and `05-VALIDATION.md` carries four SYNC-03 rows under plan 05-11. RES-01 and RES-03 already use this
+two-phase form.
+
+REL-04 keeps its open status. `01-VERIFICATION.md` marks it early coverage from plan 01-19 and states
+that this file maps it to Phase 6. The other eight REL identifiers stay open because Phase 6 has not
+started.
+
+This reconciliation closes WINDOWS ledger entry 12. That entry left SYNC-03 alone because no
+requirement in the Phase 1 block was marked complete. The whole block is now closed, so that reason
+no longer holds.
+
 **Coverage:**
 
 - v1 requirements: 47 total
@@ -168,4 +198,4 @@
 
 ---
 *Requirements defined: 2026-08-27*
-*Last updated: 2026-08-28 after planning refinement and the cross-phase test strategy decision*
+*Last updated: 2026-09-03 after quick task 260903-ho5 reconciled the twelve Phase 1 rows against 01-VERIFICATION.md*
