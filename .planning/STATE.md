@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: verifying
-stopped_at: Completed 05-17-PLAN.md
-last_updated: "2026-09-02T23:34:33.254Z"
+stopped_at: Completed 05-18-PLAN.md
+last_updated: "2026-09-03T00:23:08.626Z"
 last_activity: 2026-09-02
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 3b26610cff48346e1000dea7f3ed30320e8bcf6b
+state_head: 4aa44a00552101a06a39bf613fd12ac5e6c763cd
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 56
-  completed_plans: 54
+  completed_plans: 55
   percent: 33
 ---
 
@@ -119,6 +119,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P15 | 38min | 2 tasks | 7 files |
 | Phase 05 P16 | 32 min | 3 tasks | 5 files |
 | Phase 05 P17 | 29 min | 3 tasks | 9 files |
+| Phase 05 P18 | 74 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -302,6 +303,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: The suite gained its first step that reads snapshot.metadata, so a scenario publishing a shadow document proves the document arrived instead of assuming it
 - [Phase 05]: Guarded the republish callback the control binder holds, not clearRefusal: the request-expiry path calls the callback directly, so guarding the function above would close two of three refusal paths while reading as three
 - [Phase 05]: Refused the review's option of teaching publishRow to push the persistent failure; it would add a second production call site of the act 03-CONTEXT D-05 forbids. The count is still one
+- [Phase 05]: The command port reaches the platform's runtime context as a parameter rather than through a closure, because no-use-before-define rejects a helper declared above the seam that reads it, and the parameter makes the do-not-hoist prohibition a compiler error
+- [Phase 05]: A static gate over source text marks on the shape of a literal -- every member in key position, in declaration order, with no intervening brace -- rather than on one field name, and ships a planted property read as the control that a name-count gate would fail
+- [Phase 05]: An ordering case is paired with a companion that reads one fixture under both orders and asserts the readings differ, so a vacuous fixture is caught by the suite rather than by an executor's report of a manual mutation
 
 ### Pending Todos
 
@@ -459,8 +463,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-02T23:34:32.555Z
-Stopped at: Completed 05-17-PLAN.md
+Last session: 2026-09-03T00:22:56.093Z
+Stopped at: Completed 05-18-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
