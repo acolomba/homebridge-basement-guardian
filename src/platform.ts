@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { connect } from 'mqtt';
 
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
-import { markRestoredServicesStale, markServicesUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
+import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -401,8 +401,34 @@ export function applyMonitoringHealth(context: DiscoveryContext, trust: Monitori
   // refused never reaches discovery, so that map is empty, while the accessories
   // an owner is actually looking at are the ones Homebridge restored into this
   // one.
+  let marked = 0;
+
   for (const accessory of context.accessories.values()) {
-    markServicesUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    marked += markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  }
+
+  // Zero is worth a line and a non-zero total is not. A pass that marked
+  // something is already visible: the tiles it marked stop answering, which is
+  // the whole presentation. A pass that marked nothing is visible nowhere -- the
+  // vendor has refused the account for good, and every tile still answers with
+  // the last reading the previous run published. That happens when the restored
+  // cache carries no trust report on any service, which is what a cache an older
+  // release wrote looks like, so it is an upgrade the owner cannot see and this
+  // line is the only place it is named (WR-08, D-10).
+  //
+  // An account with no accessories at all is a zero too, and it says nothing:
+  // a launch the vendor refused before the first inventory has nothing to mark
+  // and nothing is wrong with that. The condition worth naming is a cache that
+  // holds accessories and no trust report on any of them, so the size is asked
+  // as well as the count.
+  //
+  // The line quotes no configured value, no account identifier, no URL and no
+  // response body (AUTH-02).
+  if (context.accessories.size > 0 && marked === 0) {
+    context.log.error(
+      'The vendor refused the account credentials. No accessory shows this, because no cached service reports whether the plugin vouches for it. ' +
+        'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings).',
+    );
   }
 }
 

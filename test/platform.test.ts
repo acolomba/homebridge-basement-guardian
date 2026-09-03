@@ -13,7 +13,7 @@ import { createFakeHap } from '../features/support/fakeHap.js';
 import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.js';
 import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
-import { markServicesUnreadable } from '../src/accessories/staleMarking.js';
+import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
@@ -460,6 +460,28 @@ function restoredAccessories(): RestoredAccessories {
 
   return { accessories, floods };
 }
+
+// A cache an older release wrote: services carrying the readings that run published, and no trust
+// report on any of them. This is the one restored shape a credential refusal marks nothing on, so it
+// is the one shape an operator has to be told about -- every tile keeps answering and HomeKit shows
+// no fault at all.
+function restoredAccessoryCarryingNoTrustReport(): { accessories: Map<string, BasementGuardianPlatformAccessory>; control: FakeHapService } {
+  const accessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+  const control = accessory.addService(HAP.Service.Switch, 'Alarm Mute', 'alarm-mute');
+
+  control.updateCharacteristic(HAP.Characteristic.On, true);
+
+  return {
+    accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+    control,
+  };
+}
+
+// The line the platform logs when a refusal reached nothing, written out here rather than imported,
+// so a reworded line fails this file as well as the source.
+const NOTHING_MARKED =
+  'The vendor refused the account credentials. No accessory shows this, because no cached service reports whether the plugin vouches for it. ' +
+  'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
 
 /** One restored accessory with the live instance that publishes onto its services. */
 interface RepublishingAccessory {
@@ -1361,7 +1383,7 @@ describe('applyMonitoringHealth', () => {
     const refusal = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
     const markUnreadable = (accessories: Map<string, BasementGuardianPlatformAccessory>): void => {
       for (const accessory of accessories.values()) {
-        markServicesUnreadable(accessory, HAP_NAMESPACE, HAP_NAMESPACE.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+        markTrustReportsUnreadable(accessory, HAP_NAMESPACE, HAP_NAMESPACE.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
       }
     };
 
@@ -1383,6 +1405,74 @@ describe('applyMonitoringHealth', () => {
       { pluginOrder: statusesOf(inPluginOrder.floods), inverted: statusesOf(inverted.floods) },
       { pluginOrder: [COMMUNICATION_FAILURE], inverted: [READ_SUCCEEDS] },
     );
+  });
+
+  // The marking pass reaches every service that carries a trust report and no others, so a cache
+  // written before that row was published is refused credentials with nothing marked in HomeKit and,
+  // without this line, nothing anywhere else either (WR-08, D-10).
+  test('tells an operator when a credential refusal reached no service at all', () => {
+    // arrange
+    const messages: string[] = [];
+    const restored = restoredAccessoryCarryingNoTrustReport();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        messages,
+        carriesTrust: restored.control.testCharacteristic(HAP.Characteristic.StatusActive),
+        on: readOf(restored.control, HAP.Characteristic.On),
+      },
+      { messages: [NOTHING_MARKED], carriesTrust: false, on: { value: true, threw: undefined } },
+    );
+  });
+
+  // One line per refusal per accessory would be noise: a marked tile stops answering, which is the
+  // presentation itself. The line names the case that has no presentation, and nothing else.
+  test('says nothing extra when the refusal marked the services it reached', () => {
+    // arrange
+    const messages: string[] = [];
+    const restored = restoredAccessories();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual({ messages, statuses: statusesOf(restored.floods) }, { messages: [], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] });
+  });
+
+  // An empty accessory map is a zero too, and it says nothing is wrong: a launch the vendor refused
+  // before the first inventory has nothing to mark. The condition worth a line is a cache holding
+  // accessories and no trust report on any of them, so the count alone is not the test.
+  test('says nothing for a refusal that arrived before this run had any accessory to mark', () => {
+    // arrange
+    const messages: string[] = [];
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+    });
+
+    // act
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+
+    // assert
+    assert.deepStrictEqual(messages, []);
   });
 
   // Credential rejection is the only cause in this plugin that makes a characteristic unreadable.

@@ -7,7 +7,7 @@ import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
-import { markServicesUnreadable } from '../../src/accessories/staleMarking.js';
+import { markTrustReportsUnreadable } from '../../src/accessories/staleMarking.js';
 import { geminiFamily } from '../../src/device/gemini.js';
 import { systemTimers } from '../../src/runtime/timers.js';
 
@@ -715,7 +715,7 @@ function haltableAccessory(commands: CommandPort): {
 // what an owner is actually shown (D-10).
 function refuseTheCredentials(accessory: FakeAccessory, basementGuardianAccessory: BasementGuardianAccessory): void {
   basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
-  markServicesUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 }
 
 // The `On` characteristic of a published Switch, which is where a controller write enters.

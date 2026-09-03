@@ -133,8 +133,13 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
 }
 
 /**
- * Makes every service on one accessory unreadable under a named status, and
- * answers how many it marked.
+ * Makes the trust report on every service that carries one unreadable under a
+ * named status, and answers how many it marked.
+ *
+ * It reaches the trust report and nothing else. Every other characteristic on
+ * a marked service still answers, and a service that carries no trust report is
+ * not touched at all. The name says so, because "unreadable service" would
+ * describe a pass that greys out the whole tile and this one does not.
  *
  * A refused credential is account-wide: one account, one authentication, one
  * poll loop. Marking a single service would imply the others are fine, so every
@@ -153,8 +158,15 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * over a cache an older release wrote adds no characteristic to a service that
  * never carried one, and the count is the assertable evidence that the pass did
  * work rather than walk an empty list.
+ *
+ * That count is the only thing that can tell an operator the pass reached
+ * nothing. A cache holding no trust report anywhere -- one an older release
+ * wrote, before the row was published -- is the single case in which a refused
+ * credential produces no signal at all: nothing is marked in HomeKit, every tile
+ * keeps answering, and the caller is the only place the silence can be named
+ * (WR-08).
  */
-export function markServicesUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
+export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
   });

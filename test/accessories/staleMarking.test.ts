@@ -4,7 +4,7 @@ import { describe, test } from 'node:test';
 import { createFakeHap } from '../../features/support/fakeHap.js';
 import { HarnessPlatformAccessory } from '../../features/support/fakeHomebridgeApi.js';
 import { createControlBinder } from '../../src/accessories/controls.js';
-import { markRestoredServicesStale, markServicesUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
+import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 
 import type { FakeCharacteristicClass, FakeHapService } from '../../features/support/fakeHap.js';
 import type { DeviceCapability } from '../../src/device/family.js';
@@ -112,7 +112,7 @@ function markStale(accessory: HarnessPlatformAccessory): number {
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markServicesUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, COMMUNICATION_FAILURE);
+  return markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, COMMUNICATION_FAILURE);
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
@@ -244,7 +244,7 @@ describe('markRestoredServicesStale', () => {
   });
 });
 
-describe('markServicesUnreadable', () => {
+describe('markTrustReportsUnreadable', () => {
   test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', () => {
     // arrange
     const accessory = restoredAccessory();
