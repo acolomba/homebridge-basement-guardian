@@ -722,9 +722,9 @@ tell a case that can fail from one that cannot.
 | 05-14 | 9 | RES-03 | CR-01 | The quiet pump's tile stops saying the plugin vouches for it | Revert the admit call, so no device is ever stamped and no device is ever silent | e2e | `npm run test:cucumber -- --name "A poll finds a flood on the pump that went quiet"` | ⚠️ green, mutation failed nothing — 05-14 mutation C, reverting the admit call, left this scenario passing unchanged. The reason is structural: the quiet pump heartbeats once before falling silent, and `recordShadowMessage` stamps whatever device a message came from, admitted or not. What pins the behaviour instead is five shipped scenarios — `A flooded pit reaches Apple Home while the live path is silent`, `Both monitoring paths lost withdraws every scope`, `A blind plugin vouches for no controller-link verdict`, `A transport outage leaves every service readable`, `A press with no valid state is refused locally` — and the unit case `goes silent two heartbeats after admission when no message ever arrives` at `test/runtime/monitoringHealth.test.ts:239`. WINDOWS ledger 21 |
 | 05-14 | 9 | RES-03 | WR-05 | The healthy pump keeps the live readings it is still receiving through its neighbour's silence | Release every stored device whenever any one is silent | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | ⚠️ green, blind at this tier — 05-14 mutation B killed the scenario at `features/degradedOperation.feature:211`, the healthy pump reading 60 where 80 was expected. No unit case is recorded as failing it, so the end-to-end tier carries this mutation and this row's own unit command does not run it. The row's requirement is pinned at the unit tier by mutation F instead, at `test/device/state.test.ts:582` and `:609`. The `### Plan 05-14 rows` subsection records the same split as its honest limit |
 | 05-14 | 9 | RES-03 | CR-01 | A pump added to the account later is judged from when the plugin first knew about it, not from when the plugin started | Re-stamp a device the arrival map already holds on every admission | unit | `npm run test:coverage:direct -- dist-test/src/runtime/monitoringHealth.js dist-test/test/runtime/monitoringHealth.test.js` | ✅ shipped — 05-14 mutation E failed `leaves a quiet pump quiet when a later poll admits it again` at `test/runtime/monitoringHealth.test.ts:329` and eleven cases in all, the row's own tier |
-| 05-15 | 10 | RES-03 | CR-03 | A report carrying only firmware or signal strength does not stop the poll refreshing the pit reading | Restore the ownership guard to the wider observation test | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | ✅ shipped — 05-15 mutation A killed the scenario at `features/degradedOperation.feature:197`, this row's own tier. It failed no unit case at task 1 and two after task 2, which the `### Plan 05-15 mutations` subsection records |
-| 05-15 | 10 | RES-03 | CR-03 | That same report still counts as the device speaking, so it does not make a live pump read as silent | Narrow the observation test to the telemetry section as well | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | ✅ shipped — 05-15 mutation C failed `advances the receipt time and establishes no watermark for a patch that reports only device metadata` at `test/device/state.test.ts:423`, this row's own tier. No scenario fails it, which is correct rather than a gap: the arrival stamp the silence rule reads is `recordShadowMessage`, which never consulted this predicate |
-| 05-15 | 10 | RES-03 | CR-03 | The metadata-only report the scenario claims to send actually reached the store and was merged, so the scenario cannot pass against a harness that published nothing. **Added 2026-09-02 during plan revision:** no step in the suite read `snapshot.metadata` -- `grep -rn metadata features/support/steps/*.ts` returned one comment -- so the plan's own criterion about asserting both halves was unmeetable, and 05-15 now lands the reading step | Make the metadata publish step send an empty metadata section; the scenario must fail on the metadata assertion rather than on the flood | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | ✅ shipped — 05-15 mutation D killed the scenario at `features/degradedOperation.feature:191`, on the metadata assertion four steps before the flood, which is what proves the metadata half is load-bearing |
+| 05-15 | 10 | RES-03 | CR-03 | A report that delivers no readable telemetry -- its telemetry section absent, or present in a shape that cannot be read -- does not stop the poll refreshing the pit reading | Restore the ownership guard to the wider observation test | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | ✅ shipped — 05-15 mutation A killed the scenario at `features/degradedOperation.feature:197`, this row's own tier. It failed no unit case at task 1 and two after task 2, which the `### Plan 05-15 mutations` subsection records |
+| 05-15 | 10 | RES-03 | CR-03 | A report that delivers no readable telemetry still counts as the device speaking, so it does not make a live pump read as silent | Narrow the observation test to the telemetry section as well | unit | `npm run test:coverage:direct -- dist-test/src/device/state.js dist-test/test/device/state.test.js` | ✅ shipped — 05-15 mutation C failed `advances the receipt time and establishes no watermark for a patch that reports only device metadata` at `test/device/state.test.ts:423`, this row's own tier. No scenario fails it, which is correct rather than a gap: the arrival stamp the silence rule reads is `recordShadowMessage`, which never consulted this predicate |
+| 05-15 | 10 | RES-03 | CR-03 | The device metadata the scenario claims to send actually reached the store and was merged, so the scenario cannot pass against a harness that published nothing. **Added 2026-09-02 during plan revision:** no step in the suite read `snapshot.metadata` -- `grep -rn metadata features/support/steps/*.ts` returned one comment -- so the plan's own criterion about asserting both halves was unmeetable, and 05-15 now lands the reading step. **Corrected 2026-09-03 by quick task 260903-q06:** the document now carries device metadata beside a telemetry section that cannot be read, so the Status cell's mutation D outcome was re-measured against the replaced step -- D killed the scenario at `features/degradedOperation.feature:197`, on the metadata assertion, three steps before the flood assertion at `:203`, which is the same place it died before the step changed. No assertion at this tier can tell a telemetry section that cannot be read from an absent one: the two reach the ownership guard identically by construction, and that indistinguishability is the design rather than a gap. Mutation Q1 discriminates them, at the unit tier and in this scenario; mutation Q2, which restored the absent section, is the measured null result at this tier | Make the metadata publish step send an empty metadata section; the scenario must fail on the metadata assertion rather than on the flood | e2e | `npm run test:cucumber -- --name "leaves the readings with the poll"` | ✅ shipped — 05-15 mutation D killed the scenario at `features/degradedOperation.feature:191`, on the metadata assertion four steps before the flood, which is what proves the metadata half is load-bearing |
 | 05-16 | 11 | RES-04 | CR-02 | Pressing a switch on a greyed-out accessory does not make the accessory look normal again | Remove the credential guard from the accessory's republish callback | e2e | `npm run test:cucumber -- --name "leaves both controls still refusing reads"` | ✅ shipped — 05-16 mutation A killed the scenario at `features/degradedOperation.feature:551` on `it answered a read`, this row's own tier, and all three unit cases with it |
 | 05-16 | 11 | RES-04 | WR-03 | The trust report under the refusal reads false, so the plugin is not claiming to vouch for what it shows | Remove the credential branch from the monitoring scope map | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ✅ shipped — 05-16 mutation D failed all four task 2 cases at `test/accessories/basementGuardian.test.ts:2793`, `:2815`, `:2834` and `:2856`, this row's own module |
 | 05-16 | 11 | RES-04 | WR-03 | `Basement Guardian Offline` still shows its verdict under the wider withdrawal, marked rather than blank | Fill the credential branch's scopes with a withholding reason instead of the seeing-less one | unit | `npm run test:coverage:direct -- dist-test/src/accessories/basementGuardian.js dist-test/test/accessories/basementGuardian.test.js` | ✅ shipped — 05-16 mutation F failed `WR-03 keeps the offline adapter publishing its verdict` at `test/accessories/basementGuardian.test.ts:2793` on the withheld value with the verdict still correct, plus the withdrawal case at `:2815`, this row's own module |
@@ -855,6 +855,84 @@ services onto each restored accessory, which is the documented reversal the item
 pass rather than a copy; the named-service `Status Active` read exists in both its account-wide and
 its named-accessory form, the second added by plan 05-13; and the clock step exists as
 `When the scenario clock moves forward by N seconds`.
+
+### CR-03 justification correction (quick task 260903-q06, 2026-09-03)
+
+Appended after measuring the baseline. `grep -c '260903-q06'` over this file answered 0 before this
+task began, and 1 at the moment this subsection was written, the one mention being the row cell
+corrected above. The plan predicted 0 at this point; it measured the count before the row edits
+rather than after them, and the difference is recorded here rather than smoothed over. This
+subsection adds no line beginning with a pipe, so it cannot inflate the row counts its gate reads.
+
+**What the probe measured.** A probe watched one Gemini account with one device for 90 minutes on
+2026-09-03, in steady state. It recorded seven messages, one `get/accepted` and six
+`update/accepted`, and all seven carried a telemetry section. The metadata section never travelled
+alone. Five consecutive heartbeat gaps averaged 898.4 seconds, which re-confirms the 898.3-second
+figure already recorded. **What it did not measure:** six heartbeats is a small sample, the account
+held one device, and no pump cycle, fault, power event, reconnect or firmware update occurred, so
+event-driven vendor reports are unmeasured. `.planning/intel/context.md` carries the full record and
+its limits.
+
+**The guard did not change; its stated reason did.** `nextShadowVersion` still reads `patch.data`,
+and the diff over `src/device/state.ts` and `src/cloud/shadow.ts` is comment-only. The corrected
+reason: the input the guard refuses is a telemetry section that is absent **or not an object**, and
+nothing upstream can refuse the second, because `isShadowDocument` checks two levels only -- the
+payload is an object and its `state` is an object -- and says nothing about the sections under
+`reported`. The old reason, a vendor report carrying only device metadata, is the framing that made
+the guard look deletable to a reader who measures the vendor and finds no such report.
+
+**The scenario was renamed.** `A report carrying only device metadata leaves the readings with the
+poll` became `A report whose telemetry section cannot be read leaves the readings with the poll`. The
+filter substring `leaves the readings with the poll` is preserved, so the commands cited by all five
+rows that use it -- lines 370, 371, 372 and the two 05-15 rows in the table above -- still resolve to
+one scenario. `05-15-SUMMARY.md` keeps the old name and was not edited: a summary records what
+shipped on the day it shipped.
+
+**Three cells in `### Plan 05-15 rows` carry the same framing and were deliberately left alone.**
+That subsection is the earlier round's own record, and this repository corrects such records by
+appending rather than by editing -- see WINDOWS ledger entries 37, 38 and 40. The correction each
+would take, so that none is left uncorrected and unannotated:
+
+- `T-05-15-01`, line 370, is the twin of the first 05-15 row above. It identifies the report by two
+  vendor metadata field names. The same correction applies: a report that delivers no readable
+  telemetry.
+- `T-05-15-02`, line 371, is the twin of the third 05-15 row above, about delivery rather than
+  ownership. The same correction applies, and the same new limit: mutation D was re-measured against
+  a step that task 1 replaced, and the outcome recorded once above holds for both.
+- `T-05-15-03`, line 372, is the twin of the second 05-15 row above. Like it, the row is **defensible
+  as written**: it claims the device spoke, not that the document owned the readings, and that claim
+  does not depend on which input produced it. It needs only a self-contained antecedent, not a
+  correction.
+
+The subsection's introductory prose quotes its own red run and names the two fields the document
+carried that day. That is an accurate record of what that run did, so it is left unannotated.
+
+**New unit cases.** Three cases were added to `test/cloud/shadow.test.ts`, in the `message routing`
+block, over a reported telemetry section that is `null`, an array, and a string. Each asserts the
+telemetry half comes out absent while the metadata half survives. The tier is `toReportedPatch`,
+which is where the shape is decided; no case was added at the store tier, because `ReportedPatch.data`
+is typed `Record<string, unknown> | undefined` and a malformed section is not expressible there
+without a cast that lies. The unit suite moved from 1385 to 1388; coverage of `src/cloud/shadow.js`
+stays 100 / 100 / 100 at 60 cases.
+
+**Mutations, with measured outcomes.**
+
+- **Q1** -- replace the `isRecord` guard in `toReportedPatch` with a bare cast. Failed all three new
+  cases (`tests 1388`, `pass 1385`, `fail 3`) **and** the scenario, at the flood assertion
+  `features/degradedOperation.feature:203`. The second half is the evidence that the scenario's
+  malformed section reaches the guard as a malformed section rather than as an absent one.
+- **Q2** -- publish the metadata section alone, with no telemetry section, which is the input this
+  task replaced. **Green: 1 scenario passed, 18 steps.** Recorded as a null result, not as a failure
+  to fix. An absent and a malformed telemetry section reach the guard identically by construction,
+  which is the property that makes the input swap safe and the reason no end-to-end assertion can
+  separate them. Q1 is what separates them.
+- **Q3** -- restore the ownership guard to the wider observation test. Killed the scenario at the
+  flood assertion `features/degradedOperation.feature:203`, which shows the input swap did not weaken
+  the scenario's original discriminating power.
+- **D**, re-measured -- make the metadata publishing step send an empty metadata section beside the
+  telemetry section that cannot be read. Killed the scenario at
+  `features/degradedOperation.feature:197`, on the metadata assertion, three steps before the flood.
+  Same place as plan 05-15 recorded, against the replaced step.
 
 ---
 
