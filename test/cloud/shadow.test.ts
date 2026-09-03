@@ -458,6 +458,31 @@ describe('message routing', () => {
     assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: undefined, state: { mcu_target_version: '1.2' }, version: 5 } }]);
   });
 
+  // These three shapes reach `toReportedPatch` intact because `isShadowDocument` checks two levels
+  // only: the payload is an object and its `state` is an object. Nothing above refuses a telemetry
+  // section that is not an object, so the refusal in `toReportedPatch` is the whole of it.
+  for (const { shape, telemetry } of [
+    { shape: 'is null', telemetry: null },
+    { shape: 'is an array', telemetry: [{ water_level: 2 }] },
+    { shape: 'is a string', telemetry: '{"water_level":2' },
+  ]) {
+    test(`leaves the telemetry half absent, and the metadata half intact, when the reported telemetry section ${shape} and cannot be read`, async () => {
+      // arrange
+      const { client, transports, patches } = harness();
+      await client.start([DEVICE_A]);
+      await connected(transports[0]);
+
+      // act
+      transports[0]?.message(
+        `$aws/things/${DEVICE_A}/shadow/update/accepted`,
+        body({ state: { reported: { data: telemetry, state: { wifi_signal_dbm: -54 } } }, version: 11 }),
+      );
+
+      // assert
+      assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: undefined, state: { wifi_signal_dbm: -54 }, version: 11 } }]);
+    });
+  }
+
   test('takes a get-accepted full shadow down the same path as a partial update', async () => {
     // arrange
     const { client, transports, patches } = harness();

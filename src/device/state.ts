@@ -50,7 +50,10 @@ export interface DeviceSnapshot {
  * so neither has a member to land in (SYNC-02).
  */
 export interface ReportedPatch {
-  /** Reported telemetry. Absent when the message carries none. */
+  /**
+   * Reported telemetry. Absent when the message carried none, and equally
+   * absent when what it carried is not an object.
+   */
   data: Readonly<Record<string, unknown>> | undefined;
   /** Reported device metadata. Absent when the message carries none. */
   state: Readonly<Record<string, unknown>> | undefined;
@@ -242,12 +245,21 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // wrote (SYNC-02, D-014).
 //
 // The section ownership governs is the telemetry one, which is why this reads
-// `patch.data` rather than the wider observation test above. A document
-// reporting only device metadata -- a firmware revision, a signal strength --
-// has observed the device without delivering a reading, so it may order but may
-// not own. Reading the wider test here lets such a document take the readings
-// from the poll while the same message keeps the silence rule quiet, leaving
-// nothing to hand them back (CR-03).
+// `patch.data` rather than the wider observation test above. That member is
+// absent for two inputs, not one: a document that carried no telemetry section,
+// and a document that carried one which is not an object. `toReportedPatch`
+// keeps the section only when `isRecord` accepts it.
+//
+// Nothing upstream refuses the second input. Validation above checks only
+// two levels -- the payload is an object and its `state` is an object -- and
+// says nothing about `reported` or the sections under it, so a truncated or
+// corrupt telemetry section parses, validates, and arrives here with the
+// telemetry half empty.
+//
+// Either way the document delivered no reading, so it may order but may not
+// own. Reading the wider test here lets such a document take the readings from
+// the poll while the same message keeps the silence rule quiet, leaving nothing
+// to hand them back (CR-03).
 function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch): number | undefined {
   if (patch.data === undefined && previous.shadowVersion === undefined) {
     return undefined;

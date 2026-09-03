@@ -182,6 +182,12 @@ function readShadowDocument(payload: Buffer): ShadowDocument | undefined {
 // The reported shadow carries telemetry under `reported.data` and device
 // metadata under `reported.state`. A requested section is excluded
 // structurally: the patch has no member able to hold it (SYNC-02).
+//
+// A section that is not an object is refused here rather than passed on, and
+// this is the only place that refuses it: validation above reaches two levels,
+// the payload and its `state`, and says nothing about the sections under
+// `reported`. Handing a corrupt section on as telemetry would let a message
+// which delivered no reading take the readings from the poll (CR-03).
 function toReportedPatch(document: ShadowDocument): ReportedPatch {
   const reported = document.state.reported;
   const sections = isRecord(reported) ? reported : {};
