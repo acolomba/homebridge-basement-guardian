@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 11
 waived_count: 17
-fixed_count: 9
-total_count: 37
-last_updated: 2026-09-03T17:24:02.836Z
+fixed_count: 10
+total_count: 38
+last_updated: 2026-09-03T17:28:08.692Z
 ---
 
 # Broken Windows Ledger
@@ -46,12 +46,13 @@ last_updated: 2026-09-03T17:24:02.836Z
 | 29 | 05 | deviation | test/accessories/basementGuardian.test.ts |  | Plan 05-18 task 3 listed four files for the rename and the tree held a fifth caller: test/accessories/basementGuardian.test.ts imports the marking pass. The rename carried through it with no other edit | waived | A fifth caller was found and carried through the rename with no other edit. | 2026-09-03T00:17:58.292Z | 2026-09-03T12:31:19.507Z |
 | 30 | 05 | deviation | README.md |  | 05-REVIEW-2.md WR-08 names README:151 alongside the pass name and docblock. Plan 05-18 does not list README.md in files_modified and its task 3 asks only for the source rename, the docblock and the report, so README:151 still reads 'Every service then stops answering whether the plugin vouches for it'. 05-REVIEW-2.md CR-04 already prescribes the README rewrite; this half stays with it | fixed |  | 2026-09-03T00:17:58.601Z | 2026-09-03T00:48:48.289Z |
 | 31 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-19-PLAN.md |  | Two premises of plan 05-19 did not survive measurement. Its ledger verify runs 'gsd-tools.cjs windows list', which is not a subcommand; the verbs are status, append, waive and fixed. And its task 1 verify fails when 'npm run format:check' names README.md or CHANGELOG.md, which it can never do: the script runs prettier over '**/*.{js,json,mjs,ts}' only. Markdown formatting is gated by the mdformat and markdownlint-cli2 pre-commit hooks, and both passed on the two files. | waived | Both false premises are corrected in the record; neither affected shipped behaviour. | 2026-09-03T00:49:01.522Z | 2026-09-03T12:31:19.847Z |
-| 32 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The second gap-closure round table says the closing plan reconciles its rows against the summaries, while plan 05-19's prohibitions forbid editing an existing 05-VALIDATION.md table. Both cannot hold. The Status cells were left as the plans wrote them and every row's disposition was appended instead, under 'Second gap-closure round reconciliation'. Twenty-two rows in that table still read pending and are not. | open |  | 2026-09-03T00:49:01.812Z |  |
+| 32 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | The second gap-closure round table says the closing plan reconciles its rows against the summaries, while plan 05-19's prohibitions forbid editing an existing 05-VALIDATION.md table. Both cannot hold. The Status cells were left as the plans wrote them and every row's disposition was appended instead, under 'Second gap-closure round reconciliation'. Twenty-two rows in that table still read pending and are not. | fixed |  | 2026-09-03T00:49:01.812Z | 2026-09-03T17:28:08.307Z |
 | 33 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VERIFICATION.md |  | 05-VERIFICATION.md lists 'README: the plugin holds no value back while it waits is now a true statement about the shipped code' among its gaps_closed, and 05-VALIDATION.md's gap-closure mutations table pins its documentation row on the same sentence. 05-REVIEW-2.md CR-04 showed the sentence false for the whole window its paragraph is about, and plan 05-19 deleted it. Neither record was edited: the report belongs to a verifier and the table to plan 05-10's round. A re-verification should settle both. | fixed |  | 2026-09-03T00:49:02.153Z | 2026-09-03T12:30:28.207Z |
 | 34 | 05 | todo | src/device/state.ts |  | Telemetry ownership has no expiry of its own. CR-03 guarded establishing the watermark, as the review prescribed, not retaining it. Measured by the third verification (probe P9a): one telemetry heartbeat, then 17 metadata-only reports over four hours with the poll reporting 31 throughout, left the store frozen at 3, shadowSilent false, and every scope vouched for. This follows D-13 as written and plan 05-15's stated decision, and may be unreachable in practice if REST reads the same shadow. Wants a maintainer ruling on whether ownership should lapse on telemetry age rather than on message silence. | open |  | 2026-09-03T12:31:37.763Z |  |
 | 35 | 05 | unrun-verify | src/device/state.ts |  | The carriesObservation narrowing is pinned at the unit tier alone. CR-03's fix reads patch.data in nextShadowVersion while carriesObservation still answers data or state, and the half that keeps a metadata-only report counting as the device speaking is proven by test/device/state.test.ts and by one scenario assertion. The third verification listed this among three protections living at one tier only, and unlike the other two it had no ledger entry. Recorded so a later reader does not mistake single-tier cover for absent cover. | open |  | 2026-09-03T12:31:38.115Z |  |
 | 36 | 05 | deviation | .planning/STATE.md |  | Closing the Phase 1 requirement block (quick task 260903-ho5) makes two SYNC-03 sentences in STATE.md stale. Line 50, Current Position: "SYNC-03 stays pending with its reason recorded." Line 291, Accumulated Context: "[Phase 05]: SYNC-03 stays pending because its row sits in a Phase 1 block where no requirement is marked complete; closing one row of that block on Phase 5 evidence would misreport which phase delivered it". Both are now false: all twelve Phase 1 identifiers read Complete and SYNC-03 reads Phase 1, Phase 5. Prohibition 6 of plan 260903-ho5 forbade editing STATE.md here because a second session may share the working tree. Incidental finding, outside that task scope: line 386 in Blockers still carries "A shadow that goes silent never releases the telemetry watermark (src/device/state.ts pollTelemetry), so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and needs a decision" as an open concern, while ledger entry 5 records the same defect fixed on 2026-09-02 and SYNC-03 own amendment ratifies the fix. | open |  | 2026-09-03T17:17:18.027Z |  |
 | 37 | 05 | unrun-verify | .planning/WINDOWS.md |  | WINDOWS ledger entry 2 reads fixed with no reason recorded, and its description still says "no test fails when it is removed" about dropping !halted from commandTransportReadyNow(). Quick task 260903-ho5 measured that this is stale: 05-VERIFICATION.md M12 re-ran the same mutation on 2026-09-03 and it fails 2 unit cases and 1 scenario, because WR-03 scope withdrawal and 05-16 cases made the term load-bearing. The ledger has no edit verb, so the correction is recorded here and in the First-round reconciliation note of 05-VALIDATION.md. First-round row 17 keeps a "green, mutation failed nothing" status because the row is a claim about its own named test and its own named mutation, and the tests that now pin the term were written by later rounds. | open |  | 2026-09-03T17:24:02.836Z |  |
+| 38 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | Entry 32 states twenty-two rows in the second gap-closure round table read pending. Quick task 260903-ho5 measured twenty-four. The file also holds two prose mentions of the pending marker that are not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the correction is recorded here and in the Second-round reconciliation note of 05-VALIDATION.md. The 24 split by plan: 05-13 three rows, 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two. | open |  | 2026-09-03T17:28:08.692Z |  |
 
 ````json
 [
@@ -434,10 +435,10 @@ last_updated: 2026-09-03T17:24:02.836Z
     "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
     "line": null,
     "description": "The second gap-closure round table says the closing plan reconciles its rows against the summaries, while plan 05-19's prohibitions forbid editing an existing 05-VALIDATION.md table. Both cannot hold. The Status cells were left as the plans wrote them and every row's disposition was appended instead, under 'Second gap-closure round reconciliation'. Twenty-two rows in that table still read pending and are not.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-03T00:49:01.812Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-03T17:28:08.307Z"
   },
   {
     "id": 33,
@@ -497,6 +498,18 @@ last_updated: 2026-09-03T17:24:02.836Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-03T17:24:02.836Z",
+    "resolved_at": null
+  },
+  {
+    "id": 38,
+    "kind": "deviation",
+    "phase": "05",
+    "file": ".planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md",
+    "line": null,
+    "description": "Entry 32 states twenty-two rows in the second gap-closure round table read pending. Quick task 260903-ho5 measured twenty-four. The file also holds two prose mentions of the pending marker that are not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the correction is recorded here and in the Second-round reconciliation note of 05-VALIDATION.md. The 24 split by plan: 05-13 three rows, 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-03T17:28:08.692Z",
     "resolved_at": null
   }
 ]
