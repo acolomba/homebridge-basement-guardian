@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 
 import { It, mock, verify, when } from 'strong-mock';
 
@@ -2048,6 +2050,136 @@ describe('removeDiscoveredDevice', () => {
     assert.deepStrictEqual(
       { accessoryCount: accessories.size, unregisterCalls, storedSnapshot: store.snapshot(DEVICE_ID) },
       { accessoryCount: 0, unregisterCalls: [], storedSnapshot: expectedSnapshot },
+    );
+  });
+});
+
+// The static gate on the platform's runtime context.
+//
+// `DiscoveryContext` was assembled inline in each of the three runtime callbacks, over the same nine
+// fields written out three times. That is the drift `05-CONTEXT.md` D-12 exists to prevent: a field
+// added to two of the three gives the monitoring path a different plugin from the discovery path,
+// and no runtime layer can see it. Both spellings type-check, both lint, and every behavioural case
+// passes, because each literal satisfies `DiscoveryContext` on its own. Reading the source text is
+// the only layer that can name it. The Cucumber harness already builds its own context once
+// (`features/support/world.ts`), so the platform was the outlier.
+//
+// The marker is the *shape* of the literal, not the name of a field in it. A count over
+// `basementGuardianAccessories` would answer ten lines in this file, of which only the literals are
+// literals -- it moves when an unrelated edit adds a property read, and it does not move when a
+// re-inlined literal spells one field differently. The detector below matches the nine members in
+// key position, in declaration order, with no brace between them, so a property read such as
+// `context.basementGuardianAccessories.get(uuid)` cannot match it and a re-inlined literal must
+// supply all nine members to satisfy the type and therefore does.
+const DISCOVERY_CONTEXT_MEMBERS: readonly string[] = [
+  'api',
+  'accessories',
+  'basementGuardianAccessories',
+  'registry',
+  'log',
+  'ignoredFaults',
+  'offlineConfirmationPollCount',
+  'timers',
+  'commands',
+];
+
+/** The one source file the gate reads, as a repository-relative path so a failure names something openable. */
+const PLATFORM_SOURCE = 'src/platform.ts';
+
+// The compiled case runs from `dist-test/test`, which puts the repository root two levels up. The
+// floor below is what turns a wrong count of levels or a moved file into a named failure rather than
+// an empty read reporting the same green as a full one.
+const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+// `src/platform.ts` is a little over twenty-eight thousand bytes. A read answering less than this
+// read something other than the platform.
+const PLATFORM_SOURCE_FLOOR = 20000;
+
+// Two, not one: the `DiscoveryContext` interface body matches the detector as well, because its nine
+// members are declared in the same order and in the same key position. So the expected count is the
+// number of object literals plus one for the declaration they satisfy. Measured by running the
+// detector over the unchanged file, which answered four -- the interface plus the three literals the
+// three callbacks each built.
+const EXPECTED_DISCOVERY_CONTEXT_SHAPES = 2;
+
+// A comment line can hold a brace and would break the member chain below, and this file's own gate
+// commentary names every one of the nine members. Whole-line comments are dropped before the
+// detector runs, so the gate reads code.
+function withoutCommentLines(source: string): string {
+  return source
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*|\/\*)/u.test(line))
+    .join('\n');
+}
+
+function discoveryContextShapesIn(source: string): number {
+  const detector = new RegExp(DISCOVERY_CONTEXT_MEMBERS.map((member) => `\\b${member}:`).join('[^{}]*'), 'gu');
+
+  return (withoutCommentLines(source).match(detector) ?? []).length;
+}
+
+// A second literal, as a callback that re-inlined one would spell it. It is planted into a copy of
+// the file text held here rather than into the file, so the control cannot make the gate report
+// itself.
+const PLANTED_SECOND_LITERAL = `
+      onSomethingElse: (): void => {
+        somethingElse({
+          api: this.api,
+          accessories: this.accessories,
+          basementGuardianAccessories: this.basementGuardianAccessories,
+          registry: this.registry,
+          log: this.log,
+          ignoredFaults: validated.config.ignoredFaults,
+          offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
+          timers: systemTimers,
+          commands: runtime.commands,
+        });
+      },
+`;
+
+// The control that separates this gate from a count over a field name: one more property read of a
+// context member, spelled the way the platform's own reads are. A name count moves on this; a shape
+// count must not.
+const PLANTED_PROPERTY_READ = `
+function readsOneMore(context: DiscoveryContext): unknown {
+  return context.basementGuardianAccessories.get(context.registry.toString());
+}
+`;
+
+describe('the platform builds its runtime context once', () => {
+  test('holds exactly one DiscoveryContext-shaped literal beside the declaration it satisfies (WR-07, D-12)', () => {
+    // arrange
+    const source = readFileSync(join(REPOSITORY_ROOT, PLATFORM_SOURCE), 'utf8');
+
+    // act
+    const shapes = discoveryContextShapesIn(source);
+
+    // assert
+    assert.ok(
+      source.length >= PLATFORM_SOURCE_FLOOR,
+      `the gate read ${String(source.length)} bytes of ${PLATFORM_SOURCE}, fewer than the ${String(PLATFORM_SOURCE_FLOOR)} it holds`,
+    );
+    assert.strictEqual(
+      shapes,
+      EXPECTED_DISCOVERY_CONTEXT_SHAPES,
+      `${PLATFORM_SOURCE} holds ${String(shapes)} DiscoveryContext-shaped literals where ` +
+        `${String(EXPECTED_DISCOVERY_CONTEXT_SHAPES)} are expected: the interface declaration and one literal. ` +
+        'Build the context once and call it from each of the three callbacks.',
+    );
+  });
+
+  test('reports a planted second literal and stays still for a planted property read (WR-07)', () => {
+    // arrange
+    const source = readFileSync(join(REPOSITORY_ROOT, PLATFORM_SOURCE), 'utf8');
+    const found = discoveryContextShapesIn(source);
+
+    // act & assert
+    assert.deepStrictEqual(
+      {
+        withASecondLiteral: discoveryContextShapesIn(source + PLANTED_SECOND_LITERAL),
+        withOneMorePropertyRead: discoveryContextShapesIn(source + PLANTED_PROPERTY_READ),
+      },
+      { withASecondLiteral: found + 1, withOneMorePropertyRead: found },
     );
   });
 });

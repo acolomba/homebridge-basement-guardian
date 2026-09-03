@@ -490,6 +490,29 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
     this.log.registerSecret(validated.config.password);
 
+    // The one place the runtime context is assembled. All three callbacks below call it, so a member
+    // added to `DiscoveryContext` reaches every one of them by construction rather than by three
+    // edits -- and two of three would still type-check while giving the monitoring path a different
+    // plugin from the discovery path (D-12, WR-07). The Cucumber harness assembles its own context
+    // through one helper for the same reason, so the two sides of the seam have one shape between
+    // them.
+    //
+    // It stays a function and must not become a constant. The command port does not exist until the
+    // seam below returns, which is why it arrives as a parameter rather than being read here: a
+    // constant hoisted above the seam would capture an undefined port and every press would reach
+    // nothing.
+    const discoveryContext = (commandPort: CommandPort): DiscoveryContext => ({
+      api: this.api,
+      accessories: this.accessories,
+      basementGuardianAccessories: this.basementGuardianAccessories,
+      registry: this.registry,
+      log: this.log,
+      ignoredFaults: validated.config.ignoredFaults,
+      offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
+      timers: systemTimers,
+      commands: commandPort,
+    });
+
     // Every collaborator is built through the one seam. The token cache is
     // written under the Homebridge storage directory, so that path comes from
     // Homebridge itself rather than from any configured value (AUTH-02).
@@ -503,54 +526,13 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       connect,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
-        registerDiscoveredDevices(
-          {
-            api: this.api,
-            accessories: this.accessories,
-            basementGuardianAccessories: this.basementGuardianAccessories,
-            registry: this.registry,
-            log: this.log,
-            ignoredFaults: validated.config.ignoredFaults,
-            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
-            timers: systemTimers,
-            commands: runtime.commands,
-          },
-          deviceIds,
-          runtime.store,
-        );
+        registerDiscoveredDevices(discoveryContext(runtime.commands), deviceIds, runtime.store);
       },
       onMonitoringHealth: (trust: MonitoringTrust): void => {
-        applyMonitoringHealth(
-          {
-            api: this.api,
-            accessories: this.accessories,
-            basementGuardianAccessories: this.basementGuardianAccessories,
-            registry: this.registry,
-            log: this.log,
-            ignoredFaults: validated.config.ignoredFaults,
-            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
-            timers: systemTimers,
-            commands: runtime.commands,
-          },
-          trust,
-        );
+        applyMonitoringHealth(discoveryContext(runtime.commands), trust);
       },
       onDeviceRemoved: (deviceId: string): void => {
-        removeDiscoveredDevice(
-          {
-            api: this.api,
-            accessories: this.accessories,
-            basementGuardianAccessories: this.basementGuardianAccessories,
-            registry: this.registry,
-            log: this.log,
-            ignoredFaults: validated.config.ignoredFaults,
-            offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
-            timers: systemTimers,
-            commands: runtime.commands,
-          },
-          deviceId,
-          runtime.store,
-        );
+        removeDiscoveredDevice(discoveryContext(runtime.commands), deviceId, runtime.store);
       },
     });
 
