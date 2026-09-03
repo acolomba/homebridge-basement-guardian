@@ -73,30 +73,115 @@ so `Basement Guardian Offline` — whose row is `scope: 'connectivity'` — repo
 checkpoint answers `d-04`, revert both rows to "every service stays active" and drop the scope
 qualifier from the paired mutation.**
 
+**Status vocabulary.** Added 2026-09-03 by quick task 260903-ho5. Every cell in the Status column of
+this table and of the second gap-closure round table carries one of these four strings:
+
+- `✅ shipped` — the named test exists, is green, and the row's named mutation was applied and failed
+  a test at the tier the row's own Automated Command runs. Nothing else is recorded against it.
+- `⚠️ green, mutation failed nothing` — the named test is green and the named mutation left every
+  tier green. The cell names what pins the behaviour instead, or says that nothing does.
+- `⚠️ green, blind at this tier` — the named test is green and the named mutation fails only at a
+  tier the row's own Automated Command does not run. The cell names the tier that carries it.
+- `⚠️ shipped, blind to CR-0N` — the named mutation did fail at the row's own tier, and the Test
+  Quality Audit in commit `4631d46` separately marks the test that carries the row blind to blocker
+  CR-0N, which then shipped. The cell names the tier and the blocker.
+
+A mutation and an audit ask two different questions. A mutation asks whether the test can see the
+implementation move. The audit asks whether the test can see the implementation be wrong. A row can
+pass the first and fail the second, which is why the fourth string exists.
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | 0 | RES-03 | — | Two consecutive REST failures mark the path degraded; one does not | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 — `test/runtime/monitoringHealth.test.ts` | ⬜ pending |
-| TBD | TBD | 0 | RES-03 | — | Shadow silence is measured from message arrival, never from `shadowConnected` | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | RES-03 | — | One missed heartbeat is not silence; two is | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | RES-03 | — | A REST poll does not clear a shadow-silence degradation (D-11) | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | — | RES-03 | — | A monitoring-path failure never activates `Basement Guardian Offline` | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-03 | — | REST down + shadow alive leaves every live-value service `Status Active = true`, while `Basement Guardian Offline` alone withdraws (D-02) | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
-| TBD | TBD | — | RES-03 | — | Shadow silent + REST alive sets `Status Active = false` on `Sump Pit Flood` while its `Leak Detected` value is retained | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
-| TBD | TBD | — | RES-01 (not contradicted) | — | An **identical** heartbeat clears shadow silence | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | A restored accessory reads `Status Active = false` before any poll lands | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` — **requires the Wave 0 harness change** | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | The restored accessory's last values are retained, not blanked | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⬜ pending |
-| TBD | TBD | 0 | RES-04 | — | No module under `src/accessories/` registers a read handler | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 — `test/accessories/accessoryReadPathScope.test.ts` | ⬜ pending |
-| TBD | TBD | 0 | RES-04 | — | No module under `src/accessories/` imports the cloud client | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | RES-04 | — | The gate is non-vacuous: it enumerated a floor of files | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | A press with no valid state is refused `-70412` naming the state | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | A press with no command transport is refused `-70412` naming the transport | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | With both true, the log names the agreed one | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | The command transport is unready for good once the runtime has halted, so nothing can send after a credential rejection | unit | `node --test dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | The terminal authentication branch pushes `commandTransportReady` false with `credentialsRejected` true, and nothing reaches the cloud after it | unit | `node --test dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | A `markMonitoring` push differing only in `commandTransportReady` changes the answer the binder's predicate gives | unit | `node --test dist-test/test/accessories/basementGuardian.test.js` | `test/accessories/basementGuardian.test.ts` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | Credential rejection makes a read throw and retains the value | unit | `node --test dist-test/test/accessories/serviceCatalogue.test.js dist-test/test/accessories/staleMarking.test.js` | `test/accessories/serviceCatalogue.test.ts`, `test/accessories/staleMarking.test.ts` (extend) | ⬜ pending |
-| TBD | TBD | — | RES-04 | — | Credential rejection is the **only** cause that does this | unit | `node --test dist-test/test/platform.test.js` | `test/platform.test.ts` (extend) | ⬜ pending |
-| TBD | TBD | — | CONF-05 | — | The degradation thresholds are not configurable | unit | `node --test dist-test/test/config.test.js` | `test/config.test.ts` (assert the resolved config's key set is unchanged) | ⬜ pending |
+| TBD | 05-01 | 0 | RES-03 | — | Two consecutive REST failures mark the path degraded; one does not | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 — `test/runtime/monitoringHealth.test.ts` | ✅ shipped — 05-01 mutation 1 failed 2 of 20 cases in `monitoringHealth.test.ts`, the module this row's own command runs |
+| TBD | 05-01 | 0 | RES-03 | — | Shadow silence is measured from message arrival, never from `shadowConnected` | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 2 failed 13 unit cases in `monitoringHealth.test.ts` and 24 scenarios |
+| TBD | 05-01 | 0 | RES-03 | — | One missed heartbeat is not silence; two is | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 3 failed 5 of 20 cases in `monitoringHealth.test.ts` |
+| TBD | 05-01 | 0 | RES-03 | — | A REST poll does not clear a shadow-silence degradation (D-11) | unit | `node --test dist-test/test/runtime/monitoringHealth.test.js` | ❌ W0 | ✅ shipped — 05-01 mutation 4 failed 1 of 20 cases in `monitoringHealth.test.ts`, on `leaves the shadow silent when a poll succeeds` |
+| TBD | 05-01 | — | RES-03 | — | A monitoring-path failure never activates `Basement Guardian Offline` | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` (extend) | ✅ shipped — 05-01 mutation 5 failed six offline-adapter cases in `basementGuardian.test.ts` and two Cucumber scenarios, both on `the "Basement Guardian Offline" sensor is not activated`, which is this row's own tier and own assertion. Probe P3 in commit `4631d46` measured the same behaviour by execution. The blind assertion the audit names in the shared scenario is about `Sump Pit Flood`; see the note below |
+| TBD | 05-01 | — | RES-03 | — | REST down + shadow alive leaves every live-value service `Status Active = true`, while `Basement Guardian Offline` alone withdraws (D-02) | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ✅ shipped — 05-01 mutation 6 failed `basementGuardian.test.ts` and the Cucumber scenario `Polling failure alone leaves the live values trustworthy`, this row's own tier |
+| TBD | 05-01 | — | RES-03 | — | Shadow silent + REST alive sets `Status Active = false` on `Sump Pit Flood` while its `Leak Detected` value is retained | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⚠️ shipped, blind to CR-01 — 05-01 mutation 7 failed 4 of the 5 new Cucumber scenarios, this row's own tier. Commit `4631d46`'s audit marks the carrying scenario `Shadow silence withdraws trust while polling continues` blind to CR-01: it polls with unchanged telemetry and asserts `the "Sump Pit Flood" sensor is not activated` after a dry poll, which is this row's retained-value clause and passes whichever way the code behaves |
+| TBD | 05-01 | — | RES-01 (not contradicted) | — | An **identical** heartbeat clears shadow silence | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ⚠️ shipped, blind to CR-02 — 05-01 mutation 8 failed exactly one thing in the suite, the Cucumber scenario `An identical heartbeat clears the shadow silence`, 1 of 83: this row's own tier and own scenario. Commit `4631d46`'s audit marks that scenario blind to CR-02, because it runs under a short poll interval, so a clearing driven by a poll tick and one driven by the arrival read the same |
+| TBD | 05-02 | — | RES-04 | — | A restored accessory reads `Status Active = false` before any poll lands | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` — **requires the Wave 0 harness change** | ⚠️ green, blind at this tier — 05-02 mutation 1b, the row's literal wording, deleted the `configureAccessory` call site and left Cucumber green at 4 of 4 restart scenarios; `test/platform.test.ts` failed alone. Form 1a, deleting the marking from the pass, did fail both restart scenarios, so only the call-site half is blind here. WINDOWS ledger 1 records it, and `05-VERIFICATION.md` M11 re-measured it at 5 unit and 0 scenarios |
+| TBD | 05-02 | — | RES-04 | — | The restored accessory's last values are retained, not blanked | e2e | `npm run test:cucumber` | `features/degradedOperation.feature` | ✅ shipped — 05-02 mutation 2 failed the Cucumber scenario `A restart retains the values it marks stale` on `Water Level`, this row's own tier, plus `staleMarking.test.ts` and `platform.test.ts` |
+| TBD | 05-03 | 0 | RES-04 | — | No module under `src/accessories/` registers a read handler | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 — `test/accessories/accessoryReadPathScope.test.ts` | ✅ shipped — 05-03 mutation 7 failed `accessoryReadPathScope.test.ts`, the module this row's own command runs, naming `src/accessories/basementGuardian.ts` |
+| TBD | 05-03 | 0 | RES-04 | — | No module under `src/accessories/` imports the cloud client | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 | ✅ shipped — 05-03 mutation 8 failed `accessoryReadPathScope.test.ts`, the module this row's own command runs, on `no module in the accessories tier can reach the vendor` |
+| TBD | 05-03 | 0 | RES-04 | — | The gate is non-vacuous: it enumerated a floor of files | unit (static) | `node --test dist-test/test/accessories/accessoryReadPathScope.test.js` | ❌ W0 | ✅ shipped — 05-03 mutation 9 failed both real gate cases in `accessoryReadPathScope.test.ts`, reporting that the gate had enumerated 0 modules where the repository holds 10 |
+| TBD | 05-03 | — | RES-04 | — | A press with no valid state is refused `-70412` naming the state | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` (extend) | ✅ shipped — 05-03 mutation 1 failed 5 unit cases including `controls.test.ts`, the module this row's own command runs, plus the Cucumber press scenario |
+| TBD | 05-03 | — | RES-04 | — | A press with no command transport is refused `-70412` naming the transport | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ✅ shipped — 05-03 mutation 2 failed 9 unit cases across `controls.test.ts` and `basementGuardian.test.ts`, plus the Cucumber transport scenario on the write reading -70402 |
+| TBD | 05-03 | — | RES-04 | — | With both true, the log names the agreed one | unit | `node --test dist-test/test/accessories/controls.test.js` | `test/accessories/controls.test.ts` | ✅ shipped — 05-03 mutation 3 failed exactly one case in `controls.test.ts`, `names the missing transport alone when the plugin has neither fresh state nor a way to send`, out of 179 |
+| TBD | 05-03 | — | RES-04 | — | The command transport is unready for good once the runtime has halted, so nothing can send after a credential rejection | unit | `node --test dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` (extend) | ⚠️ green, mutation failed nothing — 05-03 mutation 4 failed nothing: 1269 unit tests and 87 scenarios all passed (`05-03-SUMMARY.md:260`, WINDOWS ledger 2). What pins the behaviour is later work, not this row's own test. `05-VERIFICATION.md` M12 re-ran the same mutation on 2026-09-03 and it now fails 2 unit cases and 1 scenario, because WR-03's scope withdrawal and 05-16's cases made the term load-bearing. Ledger 2 reads fixed and its wording is stale |
+| TBD | 05-03 | — | RES-04 | — | The terminal authentication branch pushes `commandTransportReady` false with `credentialsRejected` true, and nothing reaches the cloud after it | unit | `node --test dist-test/test/runtime/accountRuntime.test.js` | `test/runtime/accountRuntime.test.ts` | ✅ shipped — 05-03 mutation 5 failed 1 of 1269 in `accountRuntime.test.ts`, the module this row's own command runs |
+| TBD | 05-03 | — | RES-04 | — | A `markMonitoring` push differing only in `commandTransportReady` changes the answer the binder's predicate gives | unit | `node --test dist-test/test/accessories/basementGuardian.test.js` | `test/accessories/basementGuardian.test.ts` (extend) | ✅ shipped — 05-03 mutation 6 failed 4 cases in `basementGuardian.test.ts`, the module this row's own command runs, plus 10 Cucumber scenarios |
+| TBD | 05-04 | — | RES-04 | — | Credential rejection makes a read throw and retains the value | unit | `node --test dist-test/test/accessories/serviceCatalogue.test.js dist-test/test/accessories/staleMarking.test.js` | `test/accessories/serviceCatalogue.test.ts`, `test/accessories/staleMarking.test.ts` (extend) | ✅ shipped — 05-04 mutation 1 failed cases in `serviceCatalogue.test.ts` and `staleMarking.test.ts` by name, which are this row's own two modules, plus the Cucumber credential scenario |
+| TBD | 05-04 | — | RES-04 | — | Credential rejection is the **only** cause that does this | unit | `node --test dist-test/test/platform.test.js` | `test/platform.test.ts` (extend) | ✅ shipped — 05-04 mutation 2 failed 2 cases in `platform.test.ts`, the module this row's own command runs, and left the credential scenario green as its control |
+| TBD | 05-05 | — | CONF-05 | — | The degradation thresholds are not configurable | unit | `node --test dist-test/test/config.test.js` | `test/config.test.ts` (assert the resolved config's key set is unchanged) | ✅ shipped — 05-05 applied the named knob mutation as a real setting and failed 1 of 62 in `config.test.ts`, the module this row's own command runs. The other 61 widened in silence, which is the result the hand-written key list exists to catch |
+
+### First-round reconciliation (quick task 260903-ho5, 2026-09-03)
+
+The 22 rows above read `⬜ pending` until this date. They now carry a measured status each.
+
+**The route.** Plan 05-10 reconciled the gap-closure rows by looking each row up in its plan's
+summary. The first-round rows carry `TBD` in their Task ID column, so that route had nothing to look
+up. A second route works and this task used it: each row has an entry in the `### Named mutations`
+table below, in the same order, and each of those mutations has a measured outcome in a first-round
+summary. Four summaries record theirs in a `## Mutation Testing` table; `05-05` records its single
+mutation in prose, under `## The mutation, and what it proved`. The basis existed by a different
+route than the one 05-10 tried. A later reader does not need to repeat the search.
+
+**The counts.** 18 rows read `✅ shipped`. 2 read a `⚠️ green` status. 2 read `⚠️ shipped, blind to
+CR-0N`. The Plan column now names a summary for all 22 rows, so no row was left uncovered.
+
+**The four rows that are not plain shipped.**
+
+- Row 7, `Shadow silent + REST alive sets Status Active false on Sump Pit Flood`. Its mutation
+  discriminated at its own tier: `05-01` mutation 7 failed 4 of the 5 new Cucumber scenarios. The
+  audit in commit `4631d46` still marks its carrying scenario blind to CR-01.
+- Row 8, `An identical heartbeat clears shadow silence`. `05-01` mutation 8 failed 1 scenario of 83,
+  its own. The audit marks that scenario blind to CR-02.
+- Row 9, `A restored accessory reads Status Active false before any poll`. The row's literal
+  mutation, `05-02` form 1b, left Cucumber green at 4 of 4 restart scenarios. WINDOWS ledger 1.
+- Row 17, `The command transport is unready for good once the runtime has halted`. `05-03` mutation 4
+  failed nothing at all. WINDOWS ledger 2.
+
+**Two findings this reconciliation measured, which the plan that ordered it did not predict.**
+
+1. Row 5 is plain `✅ shipped`, not blind. The task was told to expect rows 5 and 7 to share the
+   blind finding. Reading the scenario decides against it. `Shadow silence withdraws trust while
+   polling continues` ends in four assertions. The audit names exactly one of them as the blind one,
+   `the "Sump Pit Flood" sensor is not activated` after a dry poll, and that assertion is row 7's
+   retained-value clause. Row 5's own assertion in the same scenario is `the "Basement Guardian
+   Offline" sensor is not activated`, which the audit does not name, and CR-01 does not touch the
+   Offline adapter's activation rule. Probe P3 in the same report measured row 5's behaviour by
+   execution and found it real. Marking row 5 blind would state the opposite of a measurement in the
+   report that supplies the blind finding.
+2. Row 17's null result no longer reproduces. `05-03` measured its mutation failing nothing, and
+   ledger 2 records that. The third verification re-ran the same mutation as M12 on 2026-09-03 and
+   it fails 2 unit cases and 1 scenario, because WR-03's scope withdrawal and 05-16's cases made the
+   term load-bearing. The row keeps its `⚠️ green` status, because the row is about its own named
+   test and its own named mutation, and the tests that now pin the term were written by later
+   rounds. The cell says where it is pinned today. Ledger 2 reads `fixed` with no reason recorded,
+   so its wording still asserts a fact that no longer holds; a new ledger entry records that.
+
+**The mapping disagreement, reported rather than resolved.** WINDOWS ledger 13 and plan 05-10's
+paragraph both say three of these rows are the ones the first verifier found green but blind. Commit
+`4631d46` counts six blind-but-green tests on phase-central behaviour, of which three carry the
+literal `BLIND to CR-01/02/03` label. Those three are scenarios, not rows, and they do not map onto
+three rows. `Shadow silence withdraws trust while polling continues` lands on row 7. `An identical
+heartbeat clears the shadow silence` lands on row 8. `Credential rejection makes every service
+unreadable` lands on no row at all: it is an end-to-end scenario, and both credential rows in this
+table state unit-level behaviour as their Secure Behavior. The criterion is subject matter. The
+scenario is executed by the bare `npm run test:cucumber` that rows 5 through 10 carry, because that
+command runs the whole suite with no name filter; no row states the behaviour it covers. So the step
+from three blind scenarios to three blind rows is an inference, and no artifact states it. This task
+does not pick one source over the other.
+
+**A missing row.** The first round never wrote an end-to-end row for the credential refusal. That is
+why the audit's third blind finding has nowhere to be recorded. It is a hole in the map, not a status
+on a row.
+
+**What the third verification adds without changing a row.** It re-measured SC-1 through SC-4 by
+execution and reports 4 of 4 with all four blockers closed. A behaviour whose first-round row is
+blind may be pinned today by an assertion a later round added. Row 17's cell says where it is pinned
+now. No row's status was upgraded on that basis, because each row is a claim about its own named test
+and its own named mutation.
 
 ### Gap-closure round rows (plans 05-06 to 05-11)
 
@@ -118,10 +203,13 @@ credential-rotation refusal that 05-07 shipped and the mutations table already n
 carried. Three mutations were corrected where the executor found the named form inexpressible or
 unreachable, and three were added for rows that had none. **Nothing in the first-round table above
 was touched**, including the two `REST down + shadow alive` rows, and no table was duplicated. The
-first-round rows still read `⬜ pending`: this plan verified the gap-closure round against its
-summaries and has no equivalent basis for the first round, and three of those rows are the ones
-`05-VERIFICATION.md` found green but blind, so marking them shipped would assert the opposite of
-what the verifier measured.
+first-round rows still read `⬜ pending` when this plan ran: it verified the gap-closure round against
+its summaries and had no equivalent basis for the first round, and three of those rows were taken to
+be the ones `05-VERIFICATION.md` found green but blind, so marking them shipped would have asserted
+the opposite of what the verifier measured. **Superseded 2026-09-03.** Quick task 260903-ho5
+reconciled those 22 rows through the `### Named mutations` table instead, which the first-round
+summaries do measure. See `### First-round reconciliation` above, which also reports that the step
+from three blind scenarios to three blind rows is an inference no artifact states.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
