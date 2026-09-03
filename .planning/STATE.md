@@ -129,6 +129,28 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 
 All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Current planning anchors:
 
+- **[Post-Phase 05, decided 2026-09-03]: Marking breadth follows the cause, not the transport.** A
+  cause that describes one pump marks that pump; a cause that describes the account marks every pump.
+  Shadow silence becomes per-pump, joining a lost controller link, which is already per-pump. The two
+  are the same physical situation — this pump's data has stopped being refreshed while the vendor
+  cloud is fine — detected two ways, and they withdraw an identical set of scopes; only the struct
+  each was born in made one of them account-wide. A refused credential and a failing REST poll stay
+  account-wide, because those causes genuinely do affect every pump. Closes ledger entry 19 and
+  removes the flatten at `monitoringHealth.ts:212`, `shadowSilent: silentDevices().length > 0`, which
+  is where 05-14's per-device work was collapsed back to one boolean.
+- **[Post-Phase 05, decided 2026-09-03]: The controller-link log must name every service it marks.**
+  It marks 16 and tells the operator about 11, silently omitting the Self-Test and Alarm Mute
+  switches. Fixed as its own small change rather than folded into the marking work. Ledger entry 6.
+- **[Post-Phase 05, decided 2026-09-03]: The silence timer moves to a forward-only counter.** It runs
+  on the wall clock today, so a backwards jump larger than the ~30-minute window leaves a dead pump
+  reading as trustworthy indefinitely. Forward jumps only mark early, which is harmless. The `Clock`
+  port is already injected everywhere, so production swaps its implementation and the cost is in the
+  tests that drive time. Closes IN-03, the open half of ledger entry 14.
+- **[Post-Phase 05, decided 2026-09-03]: Telemetry-ownership expiry is settled by measurement, not
+  argument.** A pump that keeps sending metadata but stops sending readings never looks silent, so
+  the poll never takes the readings back — verification probe P9a held a flooded pit reading dry and
+  fully trusted for four simulated hours. Whether a real Gemini can do that is being measured against
+  the live account before the entry is either fixed or closed. Ledger entry 34.
 - [Phase 1]: One singular account; bundled Auth0 client ID; typed REST/shadow state; secrets stay in Homebridge-owned storage.
 - [Phase 2]: Gemini only in v1; family validation fails closed; `deviceId` preserves physical identity.
 - [Phase 2, decided 2026-08-29]: The vendor `deviceId` is treated as non-sensitive and may enter
