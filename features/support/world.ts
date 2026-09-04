@@ -241,6 +241,24 @@ export class BasementGuardianWorld extends World {
     this.timers.runDue();
   }
 
+  /**
+   * Moves the wall clock alone, forward or back, and runs whatever that made due.
+   *
+   * This is the step a system-clock correction reaches for, and it is separate from `advanceClock`
+   * because a correction is not the same event as time passing. A backwards move makes nothing newly
+   * due -- the harness's controllable timers hold absolute deadlines read from this clock -- and the
+   * call stays because every clock mover in this file holds one contract: move, then run what that
+   * made due.
+   *
+   * The plugin's own poll loop waits on real timers rather than on the injected port, so a scenario
+   * still observes a poll landing after a jump. That is what lets a scenario read an answer the
+   * plugin computed after the clock moved rather than the one it was already holding.
+   */
+  jumpWallClock(milliseconds: number): void {
+    this.scenarioTime += milliseconds;
+    this.timers.runDue();
+  }
+
   /** Registers a teardown step. The world runs registered steps in reverse order. */
   own(cleanup: () => Promise<void>): void {
     this.cleanups.push(cleanup);

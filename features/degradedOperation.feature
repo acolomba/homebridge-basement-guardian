@@ -672,3 +672,36 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service answers a read for "Status Active"
     Then the "Sump Pit Flood" service answers a read for "Leak Detected"
+
+  Scenario: A backwards system clock does not restore trust in a pump that stopped speaking
+    A system clock moves backwards for ordinary reasons: an operator corrects it, NTP steps it after
+    a bad reading, or a board wakes from a dead battery and starts the year again. A plugin that
+    measured silence against that clock would then compute a negative elapsed time for a controller
+    that has said nothing for half an hour, and go back to vouching for a basement it stopped
+    watching. Silence is measured against a forward-only base, so the correction moves nothing the
+    verdict rests on.
+
+    The vendor change and the snapshot read below the jump are a barrier rather than decoration. The
+    tile already reads false when the jump lands, so a read taken straight afterwards would pass
+    whether or not the plugin re-evaluated anything. The snapshot cannot carry the new water level
+    until a poll completes after the jump, and a completed poll is what pushes the monitoring trust
+    again, so the read beneath it is a read of an answer computed after the clock moved.
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
+    When the plugin starts
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
+    When the device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 3 |
+    When the scenario clock moves forward by 1796 seconds
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
+    When the system clock jumps back 3600 seconds
+    When the vendor changes these device fields:
+      | water_level | 7 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 7 |
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"

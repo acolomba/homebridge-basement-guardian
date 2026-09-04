@@ -246,6 +246,14 @@ function advanceTheScenarioClockBySeconds(this: BasementGuardianWorld, seconds: 
 
 When('the scenario clock moves forward by {int} seconds', advanceTheScenarioClockBySeconds);
 
+// A wall-clock correction, which is a different event from time passing: it moves the wall base and
+// leaves the forward-only base where it was.
+function jumpTheSystemClockBackBySeconds(this: BasementGuardianWorld, seconds: number): void {
+  this.jumpWallClock(-seconds * MILLISECONDS_PER_SECOND);
+}
+
+When('the system clock jumps back {int} seconds', jumpTheSystemClockBackBySeconds);
+
 // SAFE-07 forbids any plugin-added delay, so a scenario asserting a transition after zero elapsed
 // scenario time is one of the layers proving the transition was not deferred (D-18).
 function theScenarioClockDoesNotMove(this: BasementGuardianWorld): void {
