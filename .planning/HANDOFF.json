@@ -1,135 +1,47 @@
 {
   "version": "1.0",
-  "timestamp": "2026-09-04T00:16:51.007Z",
-  "phase": "05",
-  "phase_name": "Degraded Operation and Recovery",
-  "phase_dir": ".planning/phases/05-degraded-operation-and-recovery",
-  "plan": 19,
-  "task": 19,
-  "total_tasks": 19,
+  "timestamp": "2026-09-04T05:05:13.563Z",
+  "phase": "05.1",
+  "phase_name": "Per-Pump Trust and Monotonic Silence",
+  "phase_dir": ".planning/phases/05.1-per-pump-trust-and-monotonic-silence",
+  "plan": 3,
+  "task": 3,
+  "total_tasks": 7,
   "status": "paused",
-  "branch": "features/phase-05-degraded-operation-and-recovery",
-  "head": "4eb2018",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Plans 05-01..05-12 — the original phase and its first gap round",
-      "status": "done",
-      "commit": "76e6832"
-    },
-    {
-      "id": 2,
-      "name": "Plans 05-13..05-19 checked, revised twice, and executed across waves 8-14",
-      "status": "done",
-      "commit": "10e2a60"
-    },
-    {
-      "id": 3,
-      "name": "Phase 05 verified PASSED at 4/4 success criteria, third verification, by executing the shipped code",
-      "status": "done",
-      "commit": "b82ea4e"
-    },
-    {
-      "id": 4,
-      "name": "Ledger swept 29 open -> 11: 4 closed on evidence, 16 recordings waived, 2 appended",
-      "status": "done",
-      "commit": "9324047"
-    },
-    {
-      "id": 5,
-      "name": "Quick 260903-ho5 — reconciled Phase 1 requirement rows and 46 Phase 5 status cells; verification caught one overstated cell",
-      "status": "done",
-      "commit": "9fafc95"
-    },
-    {
-      "id": 6,
-      "name": "Four design questions ruled on and recorded in STATE.md decisions",
-      "status": "done",
-      "commit": "f22b709"
-    },
-    {
-      "id": 7,
-      "name": "Live 90-minute probe settling ledger entry 34 by measurement",
-      "status": "done",
-      "commit": "32414d4"
-    },
-    {
-      "id": 8,
-      "name": "Quick 260903-q06 — corrected the CR-03 guard's stated reason in 5 sites; guard behaviour byte-identical",
-      "status": "done",
-      "commit": "4eb2018"
-    }
+    {"id": 1, "name": "05.1-01 Harness correctness before the evidence (entries 17, 18)", "status": "done", "commit": "11c39da"},
+    {"id": 2, "name": "05.1-02 Tracer: per-pump trust resolution end to end (entry 19)", "status": "done", "commit": "9553084"},
+    {"id": 3, "name": "05.1-03 Pin the per-device latch and log; removal drop", "status": "done", "commit": "ca8da65"}
   ],
   "remaining_tasks": [
-    {
-      "id": 9,
-      "name": "Entry 19 — make shadow silence per-pump, so one quiet pump stops marking its healthy neighbour. Removes the flatten at monitoringHealth.ts:212",
-      "status": "not_started"
-    },
-    {
-      "id": 10,
-      "name": "Entry 6 — rewrite the controller-link log to name all 16 services it marks, not 11. Small and standalone",
-      "status": "not_started"
-    },
-    {
-      "id": 11,
-      "name": "Entry 14 / IN-03 — move the silence timer from the wall clock to a forward-only counter",
-      "status": "not_started"
-    },
-    {
-      "id": 12,
-      "name": "Scope 9-11 as one phase — they share monitoringHealth.ts, basementGuardian.ts, platform.ts, clock.ts and all need the two-pump harness for evidence",
-      "status": "not_started"
-    },
-    {
-      "id": 13,
-      "name": "Ship Phase 5 — /gsd-ship blocks while ledger open_count > 0, currently 13",
-      "status": "not_started"
-    }
+    {"id": 4, "name": "05.1-04 MonotonicClock port, the max clamp, two time bases in the harness (entry 14/IN-03)", "status": "not_started"},
+    {"id": 5, "name": "05.1-05 Persisted arrival anchor under storagePath", "status": "not_started"},
+    {"id": 6, "name": "05.1-06 Controller-link diagnostic derived from published (entry 6)", "status": "not_started"},
+    {"id": 7, "name": "05.1-07 Both-runtime gate, live single-device check, records (autonomous: false)", "status": "not_started"}
   ],
   "blockers": [
-    {
-      "description": "13 open WINDOWS.md ledger entries block /gsd-ship. None blocks phase completion. Entries 6, 14, 19 are the decided-but-unbuilt design items; 35 and 41 are single-tier-coverage records; the rest are recordings.",
-      "type": "technical",
-      "workaround": "waive or build; the three design items are already ruled on"
-    }
+    {"description": "Ledger stands at 15 open of 43. Plan 05.1-07 owns dispositioning this phase's entries; the remaining sweep was routed to Phase 6 by maintainer ruling.", "type": "technical", "workaround": "None needed — 05.1-07 carries it."},
+    {"description": "Wave 1 left two unpinned behaviours: reverting awaitSubscription to the cumulative count fails nothing, and removing the per-connection subscription reset fails nothing. Both are reasoned, not pinned.", "type": "technical", "workaround": "Recorded as null results in 05.1-01-SUMMARY.md and flagged forward to 05.1-04 and 05.1-07."},
+    {"description": "A stray message from a removed device re-arms lastShadowMessageAt through health.recordShadowMessage. Inert (nothing reads it) but nothing releases it — a third growth surface beyond T-05.1-04's two.", "type": "technical", "workaround": "Logged to .planning/WINDOWS.md by plan 05.1-03. Out of that plan's scope."}
   ],
   "async_jobs": [],
   "human_actions_pending": [
-    {
-      "action": "One real-paired-home session covering G-001 through G-004, Phase 3's flood-automation check, Phase 4's six items, and three Phase 5 observations (No Response presentation, a -70412 write on a bridged secondary Switch checked after a heartbeat, a marked-but-still-published tile)",
-      "context": "All block the 1.0.0 release only, never phase completion",
-      "blocking": false
-    }
+    {"action": "Live single-device regression check against the real Gemini in the dev Homebridge container", "context": "Plan 05.1-07 is autonomous: false. D-09 requires proving the change did not alter single-device behaviour on the one real device. The container holds exactly one Gemini.", "blocking": true},
+    {"action": "Phase 3 human verification — 1 of 3 checks open", "context": "Deferred before this run; resume with /gsd-verify-work 3. Not part of phase 05.1.", "blocking": false},
+    {"action": "Phase 4 human verification — 6 items, 17/17 must-haves verified", "context": "Deferred before this run; resume with /gsd-verify-work 4. Not part of phase 05.1.", "blocking": false}
   ],
   "decisions": [
-    {
-      "decision": "Marking breadth follows the cause, not the transport",
-      "rationale": "shadowSilent and controllerLinkLost are the same physical situation — this pump's data stopped refreshing while the cloud is fine — and withdraw an identical 7 scopes. Only the struct each was born in made one account-wide. credentialsRejected and restDegraded stay account-wide because those causes genuinely affect every pump.",
-      "phase": "05"
-    },
-    {
-      "decision": "The controller-link log must name every service it marks",
-      "rationale": "It marks 16 and tells the operator about 11, silently omitting the Self-Test and Alarm Mute switches. Fixed as its own change, not folded into the marking work.",
-      "phase": "05"
-    },
-    {
-      "decision": "The silence timer moves to a forward-only counter",
-      "rationale": "Date.now() means a backwards clock jump larger than the ~30-minute window leaves a dead pump reading as trustworthy indefinitely. Forward jumps only mark early, which is harmless. The Clock port is already injected everywhere.",
-      "phase": "05"
-    },
-    {
-      "decision": "The CR-03 guard stays; its stated reason was false and is corrected",
-      "rationale": "A 90-minute live probe saw 7 messages, all carrying telemetry, metadata never alone — so the documented vendor shape was not observed. The guard is live anyway: toReportedPatch yields data:undefined for null, string or array sections, and isShadowDocument validates two levels only. The danger closed is a reader measuring the vendor, finding nothing, and deleting a live safety boundary on correct reasoning from a false premise.",
-      "phase": "05"
-    },
-    {
-      "decision": "Arming the silence timer on telemetry rather than on any message was considered and NOT chosen",
-      "rationale": "Recorded as available in ledger entry 41. Do not implement it without a fresh ruling.",
-      "phase": "05"
-    }
+    {"decision": "Insert Phase 5.1 rather than folding entries 19/6/14 into Phase 6 or running them as quick tasks", "rationale": "They share four modules and all need the two-pump Cucumber harness; entry 19 touches every trust literal in the unit suite, which is too large for a quick task.", "phase": "05.1"},
+    {"decision": "applyMonitoringHealth takes (context, account, byDevice) rather than a single map", "rationale": "A single map is empty on a launch the vendor refused before the first inventory, leaving the credential branch with nowhere to read credentialsRejected from. Measured by research; test/platform.test.ts:1259 exists to hold that case.", "phase": "05.1"},
+    {"decision": "A separate MonotonicClock port, not a widened Clock and not a clamped systemClock.now()", "rationale": "Clock.now() stays honest wall-clock for receipt times and persisted values; clamping now() would silently change its meaning for every consumer.", "phase": "05.1"},
+    {"decision": "The arrival anchor lives in its own store under storagePath, not in accessory.context", "rationale": "health.admitDevice runs at accountRuntime.ts:343-349 before onTrustworthyInventory builds the accessories, and the runtime already receives storagePath while importing nothing from the persistence tier. Reversible rather than one-way as originally rated.", "phase": "05.1"},
+    {"decision": "The clamp is continuous max(monotonic elapsed, wall elapsed), not restart-only", "rationale": "process.hrtime.bigint() does not advance across system suspend, falsified in both directions with a Linux time namespace. Restart-only leaves the suspend case open for the life of the process.", "phase": "05.1"},
+    {"decision": "Both the recovery latch and the LIVE_REPORTING failure log go per device", "rationale": "Maintainer ruling against the research recommendation. FailureLog already keys warnedAt by kind string, so per-device kinds rate-limit independently for free — the cost research quoted was measured wrong.", "phase": "05.1"},
+    {"decision": "FailureLog.forget(kind) at removal rather than recordSuccess", "rationale": "recordSuccess would log a false recovery line for a system that left the account. Chosen by the 05.1-03 executor and recorded in source.", "phase": "05.1"},
+    {"decision": "Ledger entry 41 ruled not adopted, with its evidence limits recorded", "rationale": "Adopting would guard a shape nobody observed in 90 minutes of live probing — how entry 34's original false reason was born.", "phase": "05.1"},
+    {"decision": "Execute on features/phase-05-degraded-operation-and-recovery, not a new phase-05.1 branch", "rationale": "Maintainer ruling. origin/main is 552 commits behind and five of the six files this phase edits do not exist there; worktree.base-check independently returned shouldDegrade: true.", "phase": "05.1"}
   ],
   "uncommitted_files": [],
-  "next_action": "Decide between two ready paths: scope entries 19, 6 and 14 as one phase (they share four modules and the two-pump harness), or ship Phase 5 first and take them afterwards. Phase 5 is verified 4/4 and needs no further work. If shipping first, the 13 open ledger entries must be dispositioned because /gsd-ship blocks on them.",
-  "context_notes": "Phase 5 is DONE — 19 plans, verified passed at 4/4 by executing the shipped code across nine probe files and twelve mutations. Do not re-run waves 8-14; the previous checkpoint said they were unexecuted and that is now superseded. This session's through-line was the phase's own defining defect appearing at four successive layers: in shipped code, in the tests meant to pin it, in the validation records, and finally in a plan whose purpose was correcting a validation record — whose suite gates were piped into tail so a red suite would have reported success. Every layer was caught by checking rather than by reasoning. The most valuable single behaviour observed, ten times over, was an agent measuring a premise its own plan asserted and reporting it false."
+  "next_action": "Dispatch a gsd-executor for plan 05.1-04 (wave 4/7). Force the dispatch-isolation sentinel to none FIRST and verify by READING .gsd/dispatch-isolation-sentinel.json, never by re-querying.",
+  "context_notes": "Three of seven waves done, each verified by content. The phase's central defect is fixed and independently confirmed: the account-wide flatten is gone and a quiet pump no longer silences its neighbours. Suites green at 1396/1396/fail 0 unit, 103 scenarios, 1140 steps, coverage 100/100/100 — the orchestrator re-ran the full suite itself at the wave-2 boundary rather than trusting the report. The through-line of this session is that measurement keeps overturning stated premises: four in the original context, two in pattern mapping, one from the planner caught by the checker, one of the orchestrator's own caught by the planner, three from wave 2, and three from wave 3. Six null results so far, every one volunteered rather than extracted. Two silent non-commits were caught by verifying content instead of command output."
 }
