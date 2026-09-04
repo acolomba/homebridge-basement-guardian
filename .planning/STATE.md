@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
-status: verifying
-stopped_at: Completed 05.1-03-PLAN.md
-last_updated: "2026-09-04T05:03:32.550Z"
-last_activity: 2026-09-03
-last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 98eedd94b76e4d61ade8b9eab49db6d7eed8eebe
+status: executing
+stopped_at: Completed 05.1-04-PLAN.md
+last_updated: "2026-09-04T10:02:26.859Z"
+last_activity: 2026-09-04
+last_activity_desc: Phase 05.1 execution started
+state_head: 804237c101603f5f8adc856af58be4c41c94e834
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 63
-  completed_plans: 59
+  completed_plans: 60
   percent: 43
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-29)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 05 — Degraded Operation and Recovery
+**Current focus:** Phase 05.1 — Per-Pump Trust and Monotonic Silence
 
 ## Current Position
 
-Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — READY TO EXECUTE
-Plan: 11 of 11
-Status: Phase complete — ready for verification
-Last activity: 2026-09-03 — Completed quick task 260903-q06: correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive
+Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-09-04 — Phase 05.1 execution started
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
 `05-NN-PLAN.md` files, not five: the first five, and six more planned after `05-VERIFICATION.md`
@@ -125,6 +125,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 05.1 P01 | 25 min | 2 tasks | 4 files |
 | Phase 05.1 P02 | 55 min | 2 tasks | 8 files |
 | Phase 05.1 P03 | 50 min | 2 tasks | 4 files |
+| Phase 05.1 P04 | 55 min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -346,6 +347,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05.1]: The removal drops the live-reporting kind through a new silent FailureLog.forget, not through recordSuccess, which would announce a recovery for a system that left the account.
 - [Phase 05.1]: No latch entry is dropped at the removal: reportMonitoringHealth rebuilds the latch wholesale from the pushed map after the removal in the same poll, so a drop there is code no mutation can fail.
 - [Phase 05.1]: The runtime test harness removes the device from the store on the removal signal, mirroring the platform handler; without it V15 fails nothing.
+- [Phase 05.1]: Silence is the larger of a forward-only elapsed time and a wall elapsed time (D-07); the two arrival stamps live in one record rather than two maps, because the omitted-anchor branch is unreachable in this plan and would fail the 100% branch gate.
+- [Phase 05.1]: MonotonicClock is a sibling port to Clock, constructed only in src/platform.ts (D-06). The suspend limit is cited from man 2 clock_gettime and not observed; no Node 24 result is claimed.
 
 ### Pending Todos
 
@@ -506,8 +509,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-04T05:03:05.103Z
-Stopped at: Completed 05.1-03-PLAN.md
+Last session: 2026-09-04T10:02:16.411Z
+Stopped at: Completed 05.1-04-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
