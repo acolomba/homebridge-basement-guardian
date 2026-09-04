@@ -169,19 +169,6 @@ function isRestDegraded(consecutiveFailures: number): boolean {
   return consecutiveFailures >= REST_FAILURE_THRESHOLD;
 }
 
-// When one device's live path was last heard from, read on both time bases at
-// the same instant.
-//
-// Two readings rather than one, because neither base answers alone: the
-// forward-only one cannot be moved by a wall-clock correction and does not
-// advance across a system suspend, and the wall one is the reverse of both.
-// They are held in one record rather than in two maps so the pair is written,
-// read and pruned together and cannot come apart.
-interface ShadowArrival {
-  monotonic: number;
-  wall: number;
-}
-
 // How long a device has been quiet: the larger of the two elapsed times.
 //
 // The direction is the whole point. The larger can only ever report silence
@@ -196,11 +183,32 @@ interface ShadowArrival {
 // health: a backwards step makes the wall term small or negative and the
 // forward-only term wins. The wall term covers a system suspend, which the
 // forward-only source does not advance across, so a host that slept wakes with
-// that counter short and the wall term wins instead. A forward wall step
-// inflates the wall term and marks early, which is the direction this
-// measurement is allowed to be wrong in (D-07, IN-03).
-function silenceElapsedMs(arrival: ShadowArrival, monotonicNow: number, wallNow: number): number {
-  return Math.max(monotonicNow - arrival.monotonic, wallNow - arrival.wall);
+// that counter short and the wall term wins instead; and it covers a restart,
+// which resets the forward-only base to nothing while the anchor stays where
+// the last arrival left it. A forward wall step inflates the wall term and marks
+// early, which is the direction this measurement is allowed to be wrong in
+// (D-07, IN-03).
+//
+// The wall term is omitted when the store holds no anchor, and the answer is
+// then the forward-only term alone. That is the narrow reading of D-08, and it
+// is taken deliberately over the literal one. D-08 says an install carrying no
+// anchor "falls through to D-02 -- silent until told otherwise", and D-02 is the
+// rule that an accessory with no entry in the pushed map reads silent. Read
+// narrowly, D-02 governs that platform-map lookup rather than this measurement,
+// so a device this module has admitted but never heard from is judged from its
+// admission and reads trustworthy until two heartbeats of forward-only time
+// pass, exactly as it did before any anchor existed. Read literally as a rule
+// about the measurement, a fresh admission would be silent at once -- which
+// contradicts this module's own rule that admission is the right zero, and would
+// leave every device on every install untrusted for fifteen minutes after an
+// upgrade, for no observation anyone made. The two readings agree on the case
+// D-08 is actually about: an accessory restored from cache before discovery
+// completes has no map entry and does not vouch, and it gets that answer from
+// the platform lookup rather than from here.
+function silenceElapsedMs(arrivedAt: number, anchor: number | undefined, monotonicNow: number, wallNow: number): number {
+  const forwardOnlyElapsedMs = monotonicNow - arrivedAt;
+
+  return anchor === undefined ? forwardOnlyElapsedMs : Math.max(forwardOnlyElapsedMs, wallNow - anchor);
 }
 
 // Silence is measured from when a message last arrived, and from nothing else.
@@ -235,27 +243,23 @@ function isShadowSilent(lastMessageAt: number, now: number): boolean {
  */
 export function createMonitoringHealth(options: MonitoringHealthOptions): MonitoringHealth {
   let consecutiveRestFailures = 0;
-  // One arrival per admitted device, because the question "has this controller
-  // stopped speaking" has one answer per controller. A single account stamp is
-  // re-armed by whichever pump spoke last, which vouches for the ones that did
-  // not (D-05, D-13).
-  const lastShadowArrival = new Map<string, ShadowArrival>();
-
-  // Both bases are read at the same instant, so the pair describes one arrival
-  // rather than two.
-  function arrivalNow(): ShadowArrival {
-    return { monotonic: options.monotonic.now(), wall: options.clock.now() };
-  }
+  // One arrival per admitted device, on the forward-only base, because the
+  // question "has this controller stopped speaking" has one answer per
+  // controller. A single account stamp is re-armed by whichever pump spoke last,
+  // which vouches for the ones that did not (D-05, D-13). The wall reading of
+  // the same arrival lives in the injected store, because that is the term that
+  // has to survive a restart and this module writes no file.
+  const lastShadowArrival = new Map<string, number>();
 
   function silentDevices(): readonly string[] {
     const monotonicNow = options.monotonic.now();
     const wallNow = options.clock.now();
 
     return [...lastShadowArrival]
-      .filter(([, arrival]) => {
+      .filter(([deviceId, arrivedAt]) => {
         // The instant the longer of the two silences began, carried onto the
         // base the threshold is measured on, so the comparison is made one way.
-        const silentSince = monotonicNow - silenceElapsedMs(arrival, monotonicNow, wallNow);
+        const silentSince = monotonicNow - silenceElapsedMs(arrivedAt, options.anchors.get(deviceId), monotonicNow, wallNow);
 
         return isShadowSilent(silentSince, monotonicNow);
       })
@@ -272,15 +276,30 @@ export function createMonitoringHealth(options: MonitoringHealthOptions): Monito
     },
 
     recordShadowMessage(deviceId: string): void {
-      lastShadowArrival.set(deviceId, arrivalNow());
+      lastShadowArrival.set(deviceId, options.monotonic.now());
+      // Recorded unconditionally, because a message really did arrive: this is
+      // the one event that is evidence of a live path, and it moves both terms.
+      options.anchors.record(deviceId, options.clock.now());
     },
 
     admitDevice(deviceId: string): void {
       if (!lastShadowArrival.has(deviceId)) {
-        lastShadowArrival.set(deviceId, arrivalNow());
+        lastShadowArrival.set(deviceId, options.monotonic.now());
+      }
+
+      // Only when the store holds none, and this is the single line that makes a
+      // restart work. Admission is the right zero for a device the plugin has
+      // never heard from, and only for that device: overwriting an anchor the
+      // store restored with the current instant is exactly how a restart comes
+      // to vouch for a pump that has been quiet for hours (D-07, D-08).
+      if (options.anchors.get(deviceId) === undefined) {
+        options.anchors.record(deviceId, options.clock.now());
       }
     },
 
+    // The anchor is not dropped here. It is persisted state, and the runtime
+    // drops it at the one site that has decided a device is really gone, beside
+    // the stamp this line drops and the removed device's reporting kind.
     forgetDevice(deviceId: string): void {
       lastShadowArrival.delete(deviceId);
     },

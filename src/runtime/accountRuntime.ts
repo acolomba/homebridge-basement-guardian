@@ -433,7 +433,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // every poll that omitted it would re-admit it on the next one and
           // reset the silence window of a pump that is genuinely quiet, forever.
           //
-          // Its arrival stamp goes, and its live-reporting kind goes with it.
+          // Its arrival stamp goes, its persisted arrival anchor goes with it,
+          // and so does its live-reporting kind. The anchor is written back to
+          // disk, so a store that only ever grew would carry an entry for every
+          // system the account has ever held; dropping it here is what keeps the
+          // stored set no larger than the account.
           // The failure log rate-limits per kind, and the kind of a system that
           // has left the account can never recover, so leaving it would hold an
           // entry for the life of the process and rate-limit whatever identifier
@@ -447,6 +451,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // removal runs before the poll records its outcome, so the entry is
           // already gone by the end of this same poll.
           health.forgetDevice(deviceId);
+          options.anchors.forget(deviceId);
           options.failures.forget(liveReportingKind(deviceId));
           options.onDeviceRemoved(deviceId);
         }
@@ -586,6 +591,14 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         options.failures.recordSuccess(liveReportingKind(deviceId));
       }
     }
+
+    // Fired and not awaited, for the reason the terminal-act write is: the
+    // report must not wait on a disk write, and a failed one must not stop it.
+    // The reporting tick is a coarse cadence for an anchor -- a poll interval
+    // may be an hour -- and that is sound in the one direction that matters: the
+    // clamp takes the larger elapsed term, so an anchor left behind by a missed
+    // write can only make the plugin report silence sooner, never later.
+    void options.anchors.persist();
 
     options.onMonitoringHealth(account, byDevice);
   }
@@ -1034,6 +1047,13 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       started = true;
+
+      // Awaited before the launch, and the order is the behaviour. The admission
+      // loop inside `launch` consults the store for every device it finds, so a
+      // restore that ran after it would arrive to find every device already
+      // anchored at this instant -- and a bridge restarted after a pump had been
+      // quiet for hours would vouch for it (D-07).
+      await options.anchors.restore();
 
       const retryInMs = await launch();
 

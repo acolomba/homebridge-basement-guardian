@@ -265,6 +265,16 @@ function refusingTheAccount(): Promise<never> {
 // aborts, which is how a shutdown reaches a request that is already in flight.
 function hangingUntilAborted(signal: AbortSignal): Promise<never> {
   return new Promise<never>((_resolve, reject) => {
+    // A request handed a signal that has already been aborted rejects at once
+    // rather than waiting for an abort event that has been and gone. That is
+    // what a real request does, and a stand-in that waited instead would hang
+    // whenever a shutdown landed before the request was made.
+    if (signal.aborted) {
+      reject(new Error('the request was aborted'));
+
+      return;
+    }
+
     signal.addEventListener('abort', () => {
       reject(new Error('the request was aborted'));
     });

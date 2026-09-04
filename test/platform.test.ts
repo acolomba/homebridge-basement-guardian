@@ -17,6 +17,7 @@ import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
 import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
+import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
@@ -814,12 +815,19 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await until(async () => (await readdir(storagePath)).includes(TOKEN_CACHE_FILENAME), 'the token cache file to be written');
+    // Both files the plugin keeps under the storage directory: the token cache,
+    // and the arrival anchors the silence measurement needs across a restart.
+    const stored = [ARRIVAL_ANCHOR_FILENAME, TOKEN_CACHE_FILENAME].sort();
+    await until(async () => {
+      const entries = await readdir(storagePath);
+
+      return stored.every((name) => entries.includes(name));
+    }, 'the stored files to be written');
     shutdown?.();
     await settle();
 
     // assert
-    assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+    assert.deepStrictEqual((await readdir(storagePath)).sort(), stored);
     verify(user);
     verify(api);
   });
