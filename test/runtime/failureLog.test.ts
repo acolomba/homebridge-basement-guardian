@@ -232,3 +232,51 @@ describe('recordSuccess', () => {
     assert.deepStrictEqual(recorded, [`warn ${ROTATION_REASON}`, `warn ${POLLING_REASON}`, `info ${ROTATION} recovered.`, `debug ${POLLING_REASON}`]);
   });
 });
+
+describe('forget', () => {
+  test('says nothing for a kind that was failing, unlike a recovery', () => {
+    // arrange
+    const recorded: string[] = [];
+    const failures = failureLogWith(recorded, movableClock().clock);
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+
+    // act
+    failures.forget(ROTATION);
+
+    // assert
+    assert.deepStrictEqual(recorded, [`warn ${ROTATION_REASON}`]);
+  });
+
+  test('leaves a forgotten kind able to warn again rather than continuing at debug', () => {
+    // arrange
+    const recorded: string[] = [];
+    const { clock, advance } = movableClock();
+    const failures = failureLogWith(recorded, clock);
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    advance(THIRTY_SECONDS_MS);
+    failures.forget(ROTATION);
+    advance(THIRTY_SECONDS_MS);
+
+    // act
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+
+    // assert
+    assert.deepStrictEqual(recorded, [`warn ${ROTATION_REASON}`, `warn ${ROTATION_REASON}`]);
+  });
+
+  test('says nothing and clears nothing else for a kind that was never failing', () => {
+    // arrange
+    const recorded: string[] = [];
+    const { clock, advance } = movableClock();
+    const failures = failureLogWith(recorded, clock);
+    failures.recordFailure(POLLING, POLLING_REASON);
+
+    // act
+    failures.forget(ROTATION);
+    advance(THIRTY_SECONDS_MS);
+    failures.recordFailure(POLLING, POLLING_REASON);
+
+    // assert
+    assert.deepStrictEqual(recorded, [`warn ${POLLING_REASON}`, `debug ${POLLING_REASON}`]);
+  });
+});

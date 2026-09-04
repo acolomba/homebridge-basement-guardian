@@ -23,6 +23,17 @@ export interface FailureLogOptions {
 export interface FailureLog {
   recordFailure(kind: string, reason: string): void;
   recordSuccess(kind: string): void;
+  /**
+   * Drops a kind and says nothing.
+   *
+   * For an activity that has stopped existing rather than started working. A
+   * device the account confirmed removed can never report again, so its kind
+   * would sit in the rate limiter for the life of the process and hold back the
+   * first warning about whatever identifier came back next. `recordSuccess` is
+   * the wrong verb for that: it would tell an owner that a system which had just
+   * left the account had recovered (D-14).
+   */
+  forget(kind: string): void;
 }
 
 /**
@@ -65,6 +76,10 @@ export function createFailureLog(options: FailureLogOptions): FailureLog {
       if (warnedAt.delete(kind)) {
         options.log.info(`${kind} recovered.`);
       }
+    },
+
+    forget(kind: string): void {
+      warnedAt.delete(kind);
     },
   };
 }

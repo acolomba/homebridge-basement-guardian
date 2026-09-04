@@ -408,12 +408,27 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // Confirmed and about to be removed: stop tracking it so it can
           // never re-trigger this final check again once it is gone.
           reconciliation.forget(deviceId);
-          // The stamps are pruned here and nowhere else. A device missing from
-          // one inventory is not a removed device -- that is what these two
-          // confirming polls decide -- and dropping its stamp on every poll
-          // that omitted it would re-admit it on the next one and reset the
-          // silence window of a pump that is genuinely quiet, forever.
+          // Everything keyed by this device is pruned here and nowhere else. A
+          // device missing from one inventory is not a removed device -- that is
+          // what these two confirming polls decide -- and dropping its state on
+          // every poll that omitted it would re-admit it on the next one and
+          // reset the silence window of a pump that is genuinely quiet, forever.
+          //
+          // Its arrival stamp goes, and its live-reporting kind goes with it.
+          // The failure log rate-limits per kind, and the kind of a system that
+          // has left the account can never recover, so leaving it would hold an
+          // entry for the life of the process and rate-limit whatever identifier
+          // came back next. It is forgotten rather than recorded successful:
+          // this system's reporting did not come back, the system went away, and
+          // `recordSuccess` would announce a recovery that never happened
+          // (D-14).
+          //
+          // The recovery latch needs nothing here. `reportMonitoringHealth`
+          // rebuilds it wholesale from the map it is about to push, and the
+          // removal runs before the poll records its outcome, so the entry is
+          // already gone by the end of this same poll.
           health.forgetDevice(deviceId);
+          options.failures.forget(liveReportingKind(deviceId));
           options.onDeviceRemoved(deviceId);
         }
       }
