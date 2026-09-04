@@ -329,7 +329,7 @@ Plans:
   3. Shadow silence is measured by a forward-only counter, so a wall-clock jump in either direction cannot shorten or lengthen the silence window.
   4. Ledger entry 41 carries a recorded ruling on whether the silence timer arms on telemetry or on any message, naming the evidence the ruling rests on and what that evidence does not cover.
 
-**Plans**: 4/7 plans executed
+**Plans**: 5/7 plans executed
 
 Plans:
 **Wave 1**
@@ -350,7 +350,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 05.1-05-PLAN.md — The persisted arrival anchor under the Homebridge storage path
+- [x] 05.1-05-PLAN.md — The persisted arrival anchor under the Homebridge storage path
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
