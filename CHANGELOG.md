@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - After a restart the plugin marks every restored service inactive until a poll succeeds, so a cached reading never shows as current.
 - While the plugin cannot reach the vendor cloud, including after a restart, it now refuses a press of either switch and logs the cause.
 - When the vendor refuses your account email or password, at the first sign-in or during a run, Apple Home shows the accessory as `No Response`. Correct the account and restart Homebridge to clear it.
+- When the live connection to one system goes quiet, the plugin now stops vouching for that system alone. Every other system on the account keeps vouching for its own services.
+- The warning for a lost pump controller link now names each service whose values stopped refreshing, instead of a few category words.
 
 ### Removed
 

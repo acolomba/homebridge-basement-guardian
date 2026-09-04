@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
-waived_count: 17
-fixed_count: 11
+open_count: 10
+waived_count: 18
+fixed_count: 15
 total_count: 43
-last_updated: 2026-09-04T05:02:44.791Z
+last_updated: 2026-09-04T18:37:18.642Z
 ---
 
 # Broken Windows Ledger
@@ -20,7 +20,7 @@ last_updated: 2026-09-04T05:02:44.791Z
 | 3 | 05 | deviation | README.md |  | The 30-day vendor-block figure is sourced from src/cloud/auth.ts:35, outside the two files plan 05-05's acceptance criterion names | waived | Sourcing note. The 30-day figure is correct and cited; only the file it came from sat outside the plan's named pair. | 2026-09-02T03:35:44.273Z | 2026-09-03T12:31:14.775Z |
 | 4 | 05 | todo | README.md | 220 | Pre-existing: ## Project structure links src/platformAccessory.ts, which does not exist; the accessory lives under src/accessories/ | fixed |  | 2026-09-02T03:35:44.625Z | 2026-09-03T12:30:28.566Z |
 | 5 | 05 | deviation | src/device/state.ts | 173 | A shadow that goes silent never releases the telemetry watermark, so no REST poll refreshes telemetry for a device whose live path spoke and then stopped; releasing it on silence changes D-15/SYNC-03 and wants a decision | fixed |  | 2026-09-02T12:34:29.654Z | 2026-09-02T15:53:59.681Z |
-| 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | open |  | 2026-09-02T12:34:29.998Z |  |
+| 6 | 05 | deviation | src/accessories/basementGuardian.ts |  | reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned | fixed |  | 2026-09-02T12:34:29.998Z | 2026-09-04T18:37:09.208Z |
 | 7 | 05 | unrun-verify | test/platform.test.ts |  | makes an accessory a successful inventory built unreadable in the same pass as a restored one: passes without the fix and fails no mutation; keep D1-D4 as the coverage of CR-03 | waived | Superseded. The plan's own D1-D4 mutations are the agreed coverage of CR-03, and CR-03 is closed and re-pinned by the third verification. | 2026-09-02T13:47:07.171Z | 2026-09-03T12:31:15.108Z |
 | 8 | 05 | deviation | features/degradedOperation.feature |  | A returning heartbeat clears the shadow silence before the next poll asserts Water Level 40 across the parked window, which holds because pollTelemetry freezes telemetry during silence; plan 05-11 changes that handover and the assertion wants one re-check | fixed |  | 2026-09-02T14:31:08.555Z | 2026-09-02T15:53:59.999Z |
 | 9 | 05 | deviation | features/degradedOperation.feature |  | Scenario 'Shadow silence withdraws trust while polling continues' now rests its 'sensor is not activated' assertion on the polled water_level 1 rather than the retained heartbeat 3; still honest, but the heartbeat step no longer carries that assertion | waived | Recorded and still honest: the assertion moved from the retained heartbeat to the polled level, and the scenario asserts the same fact. | 2026-09-02T15:54:12.932Z | 2026-09-03T12:31:15.449Z |
@@ -31,9 +31,9 @@ last_updated: 2026-09-04T05:02:44.791Z
 | 14 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-REVIEW.md |  | WR-05 (the nine-member DiscoveryContext literal written three times in src/platform.ts) and IN-03 (shadow silence measured against a jumpable wall clock) close phase 05 deferred, with the reasons 05-06-PLAN.md recorded. Dispositions carried into 05-VALIDATION.md | open |  | 2026-09-02T16:16:04.212Z |  |
 | 15 | 05 | deviation | features/degradedOperation.feature |  | Mutation B did not produce the outcome 05-12-PLAN.md predicted: the plan's own prescribed 'Then the broker holds no live connection' step sits before the settling steps and kills the scenario independently of the settle, so dropping the settle and reverting the fix still fails. Suppressing that one step isolates the half the mutation is about, and the scenario then passes against the defect. The finding stands; the plan's predicted mechanism did not | waived | Measured deviation from a plan prediction, explained in place. The behaviour is pinned; only the plan's predicted mutation outcome was wrong. | 2026-09-02T17:55:13.303Z | 2026-09-03T12:31:16.138Z |
 | 16 | 05 | deviation | src/runtime/accountRuntime.ts |  | closeQuietly was relocated above haltOnTerminalAuthFailure, which 05-12-PLAN.md did not anticipate: @typescript-eslint/no-use-before-define rejects the new call site otherwise. Body unchanged. Relatedly, the entry-guard case could not use Promise.withResolvers (needs lib es2024, outside this plan's files) and captures the resolver by hand instead | waived | Lint forced the relocation; body unchanged. No behaviour change. | 2026-09-02T17:55:13.637Z | 2026-09-03T12:31:16.487Z |
-| 17 | 05 | todo | features/support/steps/harness.ts |  | harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed | open |  | 2026-09-02T20:38:24.798Z |  |
-| 18 | 05 | todo | features/support/steps/shadow.ts |  | awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is | open |  | 2026-09-02T20:38:25.145Z |  |
-| 19 | 05 | todo | src/accessories/basementGuardian.ts |  | Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth. | open |  | 2026-09-02T21:16:50.761Z |  |
+| 17 | 05 | todo | features/support/steps/harness.ts |  | harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed | fixed |  | 2026-09-02T20:38:24.798Z | 2026-09-04T18:37:09.558Z |
+| 18 | 05 | todo | features/support/steps/shadow.ts |  | awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is | fixed |  | 2026-09-02T20:38:25.145Z | 2026-09-04T18:37:09.930Z |
+| 19 | 05 | todo | src/accessories/basementGuardian.ts |  | Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth. | fixed |  | 2026-09-02T21:16:50.761Z | 2026-09-04T18:37:10.276Z |
 | 20 | 05 | deviation | test/runtime/monitoringHealth.test.ts |  | Plan 05-14 task 1 had to touch two test files it did not list: npm run test:cucumber runs build:test over the whole test tsconfig, so the releaseShadowSource and recordShadowMessage call sites had to compile before the tracer task could be verified at all. Only the call sites moved in that commit; the substantive restatement landed in task 2. | waived | Compilation necessity: the whole test tsconfig builds before Cucumber runs, so the call sites had to move for the tracer to be verifiable at all. | 2026-09-02T21:16:51.116Z | 2026-09-03T12:31:16.840Z |
 | 21 | 05 | deviation | features/degradedOperation.feature |  | Plan 05-14 mutation C (revert the admit call) failed nothing in the new scenario. The scenario's quiet pump heartbeats once before falling silent and recordShadowMessage stamps any device a message names, admitted or not, so the admit call is redundant for a pump that has ever spoken. It is pinned instead by five shipped scenarios and by the admission-seeding unit case. | waived | Honest null result, pinned elsewhere. recordShadowMessage stamps any device a message names, so the admit call is redundant for a pump that has ever spoken. | 2026-09-02T21:16:51.402Z | 2026-09-03T12:31:17.187Z |
 | 22 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-15-PLAN.md |  | Plan 05-15 stated that refusing to advance a held watermark on a metadata-only document would leave a later telemetry document at the same version judged stale, discarding a real reading. Measured: refusing the advance leaves the watermark BELOW the shadow's own version, so a superseded document is accepted over a newer reading. The shipped case pins the measured consequence. | waived | Plan premise measured backwards and corrected; the shipped case pins the measured consequence. | 2026-09-02T21:52:45.278Z | 2026-09-03T12:31:17.532Z |
@@ -55,7 +55,7 @@ last_updated: 2026-09-04T05:02:44.791Z
 | 38 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md |  | Entry 32 states twenty-two rows in the second gap-closure round table read pending. Quick task 260903-ho5 measured twenty-four. The file also holds two prose mentions of the pending marker that are not cells, which is the likeliest source of the difference. The ledger has no edit verb, so the correction is recorded here and in the Second-round reconciliation note of 05-VALIDATION.md. The 24 split by plan: 05-13 three rows, 05-14 four, 05-15 three, 05-16 four, 05-17 three, 05-18 five, 05-19 two. | open |  | 2026-09-03T17:28:08.692Z |  |
 | 39 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 95 | First-round row 2 was reconciled to a status its citation did not carry, and the verification of quick task 260903-ho5 caught it. The cell read shipped, whose load-bearing clause is that the named mutation failed at the row's own tier; the row's command is node --test on monitoringHealth.test.js, but 05-01 mutation 2 names three cases that all live in test/runtime/accountRuntime.test.ts, and 05-01-SUMMARY.md:241 names no module at all, unlike every other 05-01 entry that failed a unit case. The mutation is structurally unreachable from that tier: isShadowSilent is private to monitoringHealth.ts:146, shadowConnected is a local of accountRuntime.ts:272, and monitoringHealth.test.ts imports only monitoringHealth.js and clock.js. Corrected to green, blind at this tier. The mutation was not re-run, so the correction rests on reachability rather than on a fresh measurement. This is ledger entry 33's shape reproduced inside the task written to repair it, at one cell of forty-six. | open |  | 2026-09-03T17:44:53.966Z |  |
 | 40 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 762 | Ledger entry 38 and the second-round note both explained entry 32's twenty-two against the measured twenty-four by pointing at prose mentions of the pending marker. That explanation is impossible in the stated direction: a prose mention adds to a count, so it can only make twenty-four read as more, never as twenty-two. The note is corrected to say the cause is not established. Entry 38's description keeps the wrong reason because the ledger has no edit verb; read it with this entry. | open |  | 2026-09-03T17:44:54.281Z |  |
-| 41 | 05 | todo | src/device/state.ts |  | Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done. | open |  | 2026-09-03T23:43:47.048Z |  |
+| 41 | 05 | todo | src/device/state.ts |  | Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done. | waived | D-13 ruling: the silence timer keeps arming on any message, not on telemetry alone. The evidence is a 90-minute probe of one device in steady state -- seven messages, six heartbeats, and no pump cycle, fault, power event, reconnect or firmware update -- so event-driven vendor reports are unmeasured. Adopting the change would guard a shape nobody has observed, which is how entry 34's original false reason was born. | 2026-09-03T23:43:47.048Z | 2026-09-04T18:37:18.642Z |
 | 42 | 05.1 | deviation | test/runtime/accountRuntime.test.ts |  | The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition). | open |  | 2026-09-04T04:25:17.091Z |  |
 | 43 | 05.1 | deviation | src/runtime/accountRuntime.ts | 762 | A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it | open |  | 2026-09-04T05:02:44.791Z |  |
 
@@ -128,10 +128,10 @@ last_updated: 2026-09-04T05:02:44.791Z
     "file": "src/accessories/basementGuardian.ts",
     "line": null,
     "description": "reportControllerLink names five poisoned scopes where NON_CONNECTIVITY_SCOPES holds seven; self-test and alarm-mute are withdrawn by the same layer and go unmentioned",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T12:34:29.998Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-04T18:37:09.208Z"
   },
   {
     "id": 7,
@@ -260,10 +260,10 @@ last_updated: 2026-09-04T05:02:44.791Z
     "file": "features/support/steps/harness.ts",
     "line": null,
     "description": "harness.ts keeps a private single-device currentAccessory reading registerPlatformAccessoryCalls[0].accessories[0], and a topicNamed built on a module-constant DEVICE_ID; neither was needed by the two-device work and neither was removed",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T20:38:24.798Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-04T18:37:09.558Z"
   },
   {
     "id": 18,
@@ -272,10 +272,10 @@ last_updated: 2026-09-04T05:02:44.791Z
     "file": "features/support/steps/shadow.ts",
     "line": null,
     "description": "awaitSubscription waits on a cumulative published-topic count, so on a two-device account it answers once the client subscribed to either device; the two-pump scenarios wait for a value rather than for a subscription, so it was left as it is",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T20:38:25.145Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-04T18:37:09.930Z"
   },
   {
     "id": 19,
@@ -284,10 +284,10 @@ last_updated: 2026-09-04T05:02:44.791Z
     "file": "src/accessories/basementGuardian.ts",
     "line": null,
     "description": "Shadow-silence marking is account-wide on a multi-device account: any silent pump makes every accessory stop vouching, so a two-pump owner is told the plugin cannot vouch for both systems when it can vouch for one. Deliberate in plan 05-14; the argument and its cost are recorded in 05-VALIDATION.md under Planning hazards. A diagnostics phase wanting per-device marking needs a per-device MonitoringTrust through onMonitoringHealth and applyMonitoringHealth.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-02T21:16:50.761Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-04T18:37:10.276Z"
   },
   {
     "id": 20,
@@ -548,10 +548,10 @@ last_updated: 2026-09-04T05:02:44.791Z
     "file": "src/device/state.ts",
     "line": null,
     "description": "Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done.",
-    "status": "open",
-    "reason": "",
+    "status": "waived",
+    "reason": "D-13 ruling: the silence timer keeps arming on any message, not on telemetry alone. The evidence is a 90-minute probe of one device in steady state -- seven messages, six heartbeats, and no pump cycle, fault, power event, reconnect or firmware update -- so event-driven vendor reports are unmeasured. Adopting the change would guard a shape nobody has observed, which is how entry 34's original false reason was born.",
     "recorded_at": "2026-09-03T23:43:47.048Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-04T18:37:18.642Z"
   },
   {
     "id": 42,

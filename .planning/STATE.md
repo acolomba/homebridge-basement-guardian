@@ -149,14 +149,24 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   account-wide, because those causes genuinely do affect every pump. Closes ledger entry 19 and
   removes the flatten at `monitoringHealth.ts:212`, `shadowSilent: silentDevices().length > 0`, which
   is where 05-14's per-device work was collapsed back to one boolean.
+  **Built 2026-09-04 by plan 05.1-02**, per device end to end, with plan 05.1-03 making the recovery
+  latch and the `LIVE_REPORTING` failure log per device beside it.
 - **[Post-Phase 05, decided 2026-09-03]: The controller-link log must name every service it marks.**
   It marks 16 and tells the operator about 11, silently omitting the Self-Test and Alarm Mute
   switches. Fixed as its own small change rather than folded into the marking work. Ledger entry 6.
+  **Built 2026-09-04 by plan 05.1-06**, derived from the descriptors the accessory published rather
+  than written out. **The count in this entry is wrong and is corrected below.**
 - **[Post-Phase 05, decided 2026-09-03]: The silence timer moves to a forward-only counter.** It runs
   on the wall clock today, so a backwards jump larger than the ~30-minute window leaves a dead pump
   reading as trustworthy indefinitely. Forward jumps only mark early, which is harmless. The `Clock`
   port is already injected everywhere, so production swaps its implementation and the cost is in the
   tests that drive time. Closes IN-03, the open half of ledger entry 14.
+  **Built 2026-09-04 by plan 05.1-04** as a `MonotonicClock` port beside `Clock` rather than a swapped
+  implementation — one interface carrying two incompatible bases would leave no call site able to tell
+  which it got — with plan 05.1-05 persisting the wall anchor the clamp reads. **Ledger entry 14 stays
+  open**: it carries two dispositions, and only IN-03 is closed. The other, WR-05, is the nine-member
+  context literal written three times in the platform, which this phase does not touch. The ledger has
+  no verb for closing half an entry.
 - **[Post-Phase 05, decided 2026-09-03]: The CR-03 guard stays; its stated reason was false.**
   Measured against the live account: 90 minutes, seven messages, all seven carried a telemetry
   section, and the metadata section never travelled alone. So the vendor shape the guard was
@@ -168,6 +178,57 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
   boundary on correct reasoning from a false premise.** Behaviour unchanged: zero non-comment lines
   differ in either production file. Arming the silence timer on telemetry rather than on any message
   was considered and not chosen; ledger entry 41 records it as available. Quick task 260903-q06.
+
+- **[Phase 05.1, closed 2026-09-04]: Five premises this phase inherited did not survive measurement.**
+  Each is sourced from the plan summary that measured it, not from the plan that predicted it.
+
+  1. **The controller-link log named five scope words, not eleven services.** The figure 11, carried by
+     this file and by the Phase 5 handoff, is not derivable from any source in the repository. Measured
+     against the shipped catalogue: **17 rows, 16 non-connectivity, 15 that actually stop vouching,
+     across 7 scopes.** `Pump Controller Link Lost` is the sixteenth and tolerates its own cause.
+     (`05.1-06-SUMMARY.md`)
+  2. **Ledger entry 18's stated mechanism was false.** The subscription is one awaited call covering
+     every device, so a wait cannot return on one device's subscription. The real defect was a
+     cumulative, never-reset topic count that returned instantly on any reconnect.
+     (`05.1-01-SUMMARY.md`)
+  3. **Ledger entry 17's helpers were not dead leftovers.** They had ten live callers. The real defect
+     was a second accessory-resolution rule shadowing the shared, documented one, and the topic
+     helper's single-device coupling is narrower than the entry implies: the four scenarios reaching it
+     seed no devices at all. (`05.1-01-SUMMARY.md`)
+  4. **A single map-valued callback would have deleted the credential branch's only input.** It would
+     have been empty on a launch the vendor refused. The shipped shape carries the account-wide facts
+     on their own channel. (`05.1-02-SUMMARY.md`)
+  5. **The assumption-delta detector reported no singular-to-plural transition in this phase. That was
+     a detector miss, not an absence.** The phase is exactly one account-wide boolean becoming a
+     per-device map. The identity question the detector exists to force was asked and answered in
+     D-01, D-01a, D-02 and D-14. Recorded so the next reader does not trust the detector's silence.
+
+  Three more were falsified inside the phase and are recorded in their summaries: V13's discriminating
+  property is not the accessory count but that one expectation must differ from the missing-entry
+  default (`05.1-02-SUMMARY.md`); the removal latch needs no drop because `reportMonitoringHealth`
+  rebuilds it wholesale (`05.1-03-SUMMARY.md`); and the controller-link warning's empty-list branch is
+  unreachable, because both control Switches always publish and always withdraw (`05.1-06-SUMMARY.md`).
+
+- **[Phase 05.1, closed 2026-09-04]: What this phase's evidence does not cover.** Stated here rather
+  than softened, because the phase's own failure mode is a record that reads cleaner than the
+  measurement.
+
+  - **No real multi-device evidence exists, and none can be obtained.** The vendor account holds
+    exactly one Gemini. Every two-pump claim in this phase rests on the Cucumber harness and on the
+    named mutations in `05.1-VALIDATION.md`. A healthy live container is not evidence for the per-pump
+    work.
+  - **Node 24 is not installed here and no Node 24 suite result is claimed.** The phase closed green
+    on `node v26.8.1` and on `v22.22.2`; CI is what covers 24. **Narrower than first written:** the
+    live check ran the shipped plugin under Node v24.20.0 inside the `homebridge/homebridge` image,
+    which is a runtime smoke result on one device and not the suite.
+  - **The monotonic source's behaviour across a system suspend is cited, not observed.** It comes from
+    `man 2 clock_gettime`. This host has no accumulated suspend time, so no falsification attempt was
+    possible. What is pinned automatically is the arithmetic that answers a suspend, not the suspend.
+  - **The live check exercised no degradation.** The session saw no pump cycle, fault, power event,
+    controller-link drop or reconnect, so the controller-link warning this phase rewrote was never
+    emitted on real hardware and is recorded as not observed. What the session did establish live is
+    the restart path: the persisted arrival anchor was byte-identical across a deliberate restart,
+    which is plan 05.1-05's rule that admission never overwrites a restored anchor.
 - [Phase 1]: One singular account; bundled Auth0 client ID; typed REST/shadow state; secrets stay in Homebridge-owned storage.
 - [Phase 2]: Gemini only in v1; family validation fails closed; `deviceId` preserves physical identity.
 - [Phase 2, decided 2026-08-29]: The vendor `deviceId` is treated as non-sensitive and may enter
