@@ -20,14 +20,20 @@
  * that it touches nothing outside itself.
  */
 
-import { access, readFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { isRecord } from '../cloud/types.js';
 
 import type { Logging } from 'homebridge';
 
+// How much randomness the temporary name carries, on top of the process id, to
+// keep two writers off one path.
+const TEMPORARY_SUFFIX_BYTES = 8;
+
 const ANCHORS_UNUSABLE = 'The stored arrival anchors could not be read; silence is measured from this run alone.';
+const ANCHORS_NOT_WRITTEN = 'The arrival anchors could not be written; a restart will measure silence from this run alone.';
 
 /** The anchor file's name inside the Homebridge storage directory. */
 export const ARRIVAL_ANCHOR_FILENAME = '.basement-guardian-arrivals.json';
@@ -119,6 +125,38 @@ async function readAnchorFile(options: ArrivalAnchorsOptions): Promise<Record<st
   return undefined;
 }
 
+// The temporary name carries the process id and a fresh random suffix, so
+// neither two Homebridge processes nor two writers inside one process can pick
+// the same path. The process id alone rules out only the first of those, and a
+// recycled one does not even do that.
+function temporaryPath(target: string): string {
+  return `${target}.${String(process.pid)}.${randomBytes(TEMPORARY_SUFFIX_BYTES).toString('hex')}.tmp`;
+}
+
+// A fresh file is written and renamed over the target, so an interrupted write
+// cannot truncate the anchors into a set that only half exists. The create is
+// exclusive, so an occupied temporary name is a failure rather than a rewrite of
+// a file another writer holds, and a rename that fails takes the fresh file with
+// it rather than stranding it in the storage directory.
+//
+// One thing is deliberately not copied from the token cache this write is
+// modelled on: its owner-only mode. That mode exists because a bearer token must
+// not be readable by every local user (AUTH-02). This file holds vendor
+// `deviceId`s and millisecond timestamps, and the `deviceId` is the value this
+// project has ruled non-sensitive, so the constant's justification does not
+// reach here and it is not carried over for the look of the thing.
+async function storeAnchors(temporary: string, target: string, contents: string): Promise<void> {
+  await writeFile(temporary, contents, { flag: 'wx' });
+
+  try {
+    await rename(temporary, target);
+  } catch (error: unknown) {
+    await rm(temporary, { force: true });
+
+    throw error;
+  }
+}
+
 /**
  * Creates the arrival-anchor store.
  *
@@ -155,8 +193,17 @@ export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnc
       }
     },
 
-    persist(): Promise<void> {
-      return Promise.resolve();
+    async persist(): Promise<void> {
+      const target = anchorPath(options);
+
+      try {
+        await storeAnchors(temporaryPath(target), target, JSON.stringify(Object.fromEntries(anchors)));
+      } catch {
+        // A stale anchor is the safe direction -- the clamp can only ever report
+        // silence sooner, never later -- so a write that did not land costs
+        // nothing an owner is harmed by, and it must not stop the runtime.
+        options.log.debug(ANCHORS_NOT_WRITTEN);
+      }
     },
   };
 }
