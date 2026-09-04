@@ -788,7 +788,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           // stamp is re-armed by whichever pump spoke last, so on a multi-pump
           // account one heartbeat vouches for a neighbour that has stopped
           // speaking, and that controller's silence is never noticed at all.
-          health.recordShadowMessage(deviceId);
+          //
+          // Guarded on store membership because the shadow client stays
+          // subscribed to a removed device's topics until the connection is
+          // rebuilt, so a stray message can still arrive after removal. Left
+          // unguarded, it would resurrect the in-memory arrival stamp and the
+          // persisted anchor the removal branch already dropped for a system
+          // that has left the account (D-14).
+          if (options.store.deviceIds().includes(deviceId)) {
+            health.recordShadowMessage(deviceId);
+          }
+
           options.store.applyReportedPatch(deviceId, patch);
 
           if (reportedSilentDevices.has(deviceId)) {
