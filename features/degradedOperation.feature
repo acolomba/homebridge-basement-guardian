@@ -262,6 +262,54 @@ Feature: Degraded monitoring
     Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Status Active" as "false"
     Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"
 
+  Scenario: A silent pump stops vouching for itself while its neighbour keeps vouching
+    The same two basements, and the question the scenario above leaves standing. That one proves the
+    quiet controller's telemetry is released to the poll. This one asks what each tile says about
+    whether the plugin can vouch for it. A pump that is heartbeating every fifteen minutes is a pump
+    the plugin is watching, and telling its owner otherwise because a controller in another basement
+    went quiet spends the one signal that matters on a basement nothing is wrong with.
+
+    Trust is withdrawn from the pump the plugin stopped hearing and from no other. The front
+    basement's controller says nothing after its first heartbeat, so its own window runs out and its
+    services stop vouching. The back basement's controller goes on speaking, so its services go on
+    vouching in the same run and on the same push.
+
+    The staggered technique is the one the scenario above uses and it is load-bearing here for the
+    same reason: two heartbeat-length hops with a message from the back basement between them leave
+    the newest message on the account under a single heartbeat old throughout, while the front
+    basement's own last message ages past two. A single jump would age the whole account at once and
+    both pumps would stop vouching together, which reads as a pass and measures nothing.
+
+    The front pump is asserted first because it is the side that moves. That assertion waits for the
+    withdrawal to land, so the assertion after it reads afterwards rather than before.
+
+    This account's second pump exists only in this harness. The vendor account behind this plugin
+    holds exactly one Gemini, so every two-pump claim here rests on the harness and on the mutation
+    recorded against it, and on no observation of real hardware (D-10).
+
+    Given a short poll interval
+    Given these devices:
+      | deviceId                 | name            | waterLevel |
+      | placeholder-front-gemini | Front Sump Pump | 1          |
+      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+    When the plugin starts
+    When the "Front Sump Pump" device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "40"
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 3 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "40"
+    When the scenario clock moves forward by 898 seconds
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 1 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "20"
+    When the scenario clock moves forward by 898 seconds
+    When the "Back Sump Pump" device publishes these heartbeat fields:
+      | water_level | 15 |
+    Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "80"
+    Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Status Active" as "false"
+    Then the "Sump Pit Flood" service on "Back Sump Pump" reports "Status Active" as "true"
+
   Scenario: Polling failure alone leaves the live values trustworthy
     Live pushes still arrive while the poll fails, so the readings a user watches are current and
     only the verdict the poll alone sources goes unfed. The plugin withdraws that one verdict and
