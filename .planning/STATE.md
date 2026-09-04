@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
 status: executing
-stopped_at: Completed 05.1-05-PLAN.md
-last_updated: "2026-09-04T17:54:14.620Z"
+stopped_at: Completed 05.1-06-PLAN.md
+last_updated: "2026-09-04T18:20:11.263Z"
 last_activity: 2026-09-04
-last_activity_desc: Phase 05.1 wave 5 complete — the arrival anchor now survives a restart
-state_head: 410ff46a613dd9b8011a5eb8c403ea9fc4d827d6
+last_activity_desc: Phase 05.1 wave 6 complete — the controller-link warning names what it withdraws
+state_head: 50b2cd636f8d55fb468e459f1b6e6b827f8ec2d7
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 63
-  completed_plans: 61
+  completed_plans: 62
   percent: 43
 ---
 
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 ## Current Position
 
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — EXECUTING
-Plan: 5 of 7
-Status: Waves 1-5 complete; wave 6 (05.1-06) ready to execute
-Last activity: 2026-09-04 — Wave 5 complete: the persisted arrival anchor, four mutations recorded
+Plan: 6 of 7
+Status: Waves 1-6 complete; wave 7 (05.1-07) is the last and is `autonomous: false`
+Last activity: 2026-09-04 — Wave 6 complete: the derived controller-link diagnostic, four mutations recorded
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -132,6 +132,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 05.1 P03 | 50 min | 2 tasks | 4 files |
 | Phase 05.1 P04 | 55 min | 2 tasks | 10 files |
 | Phase 05.1 P05 | 22 min + gate | 2 tasks | 8 files |
+| Phase 05.1 P06 | 70 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
