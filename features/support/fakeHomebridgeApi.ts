@@ -309,7 +309,13 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
       }
     },
     async cleanup(): Promise<void> {
-      await rm(storagePath, { recursive: true, force: true });
+      // Retried, because teardown races a write the plugin is entitled to make. The runtime fires
+      // its arrival-anchor write and does not await it, so the file can land in this directory
+      // between `rm`'s listing of it and its `rmdir`, and the removal fails with `ENOTEMPTY`. That
+      // is a harness problem rather than a plugin one -- nothing deletes the Homebridge storage
+      // directory under a running plugin -- so the scenario waits the write out instead of the
+      // runtime waiting on a disk.
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
     },
   };
 }
