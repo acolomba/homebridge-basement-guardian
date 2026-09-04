@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
-status: executing
-stopped_at: Phase 05.1 context gathered
-last_updated: "2026-09-04T02:28:31.219Z"
+status: verifying
+stopped_at: Completed 05.1-01-PLAN.md
+last_updated: "2026-09-04T03:42:24.374Z"
 last_activity: 2026-09-03
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 1516c5d71f10118dcc82b59daae5926b9dbfa1c1
+state_head: 1a1966a056b846e32a474a1b0d36a5426df0f997
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 63
-  completed_plans: 56
+  completed_plans: 57
   percent: 43
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — READY TO EXECUTE
 Plan: 11 of 11
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-03 — Completed quick task 260903-q06: correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive
 
 **The plan counter above read `5 of 5` until 2026-09-02 and was wrong.** Phase 05 carries eleven
@@ -69,7 +69,7 @@ three UAT items passed against real hardware.
 Phase 02 is COMPLETE as of 2026-08-29. Verification is `passed` at 25/27, with both
 backstop-tagged UAT items accepted on structural evidence and no defects found.
 
-Progress: [███░░░░░░░] 2 of 6 phases verified ([███░░░░░░░] 33%) — 48/48 plans complete; Phases 3, 4 and 5 are implementation-complete with human verification deferred. The `37/42` figure this line carried until 2026-09-02 predated phase 05's six gap-closure plans; `state.update-progress` recomputed both counts from disk.
+Progress: [███░░░░░░░] 2 of 6 phases verified ([████░░░░░░] 43%) — 48/48 plans complete; Phases 3, 4 and 5 are implementation-complete with human verification deferred. The `37/42` figure this line carried until 2026-09-02 predated phase 05's six gap-closure plans; `state.update-progress` recomputed both counts from disk.
 
 ## Performance Metrics
 
@@ -122,6 +122,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([███░
 | Phase 05 P17 | 29 min | 3 tasks | 9 files |
 | Phase 05 P18 | 74 min | 3 tasks | 7 files |
 | Phase 05 P19 | 46 min | 2 tasks | 6 files |
+| Phase 05.1 P01 | 25 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -336,6 +337,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: The command port reaches the platform's runtime context as a parameter rather than through a closure, because no-use-before-define rejects a helper declared above the seam that reads it, and the parameter makes the do-not-hoist prohibition a compiler error
 - [Phase 05]: A static gate over source text marks on the shape of a literal -- every member in key position, in declaration order, with no intervening brace -- rather than on one field name, and ships a planted property read as the control that a name-count gate would fail
 - [Phase 05]: An ordering case is paired with a companion that reads one fixture under both orders and asserts the readings differ, so a vacuous fixture is caught by the suite rather than by an executor's report of a manual mutation
+- [Phase 05.1]: Ledger entries 17 and 18 both state their mechanism wrongly; 05.1-01 built the corrected diagnoses (entry 18: a cumulative, never-reset topic array that returns instantly on reconnect; entry 17: a shadowing duplicate with 10 live callers)
 
 ### Pending Todos
 
@@ -413,6 +415,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   positive finding there reopens `D-05`.
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
 - ~~A shadow that goes silent never releases the telemetry watermark~~ — **RESOLVED 2026-09-02, corrected here 2026-09-03.** Plan 05-11 released the watermark on two missed heartbeats, plan 05-14 made the release per device, and `05-CONTEXT.md` D-13 ratifies it as a narrow amendment to D-15 and SYNC-03. Ledger entry 5 reads `fixed`. This line asked for a decision that had already been made, shipped and requirement-amended; it stood for a day because nothing owned it
+- V11 is a null result: no shipped scenario reconnects and then publishes a heartbeat, so neither the cumulative-wait mutation nor the per-connection-reset mutation fails anything. The per-connection wait is pinned only by a state assertion. 05.1-04's reconnecting scenario may close this.
 
 ## Deferred Verification
 
@@ -495,9 +498,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-04T00:48:32.646Z
-Stopped at: Phase 05.1 context gathered
-Resume file: .planning/phases/05.1-per-pump-trust-and-monotonic-silence/05.1-CONTEXT.md
+Last session: 2026-09-04T03:42:10.890Z
+Stopped at: Completed 05.1-01-PLAN.md
+Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
 to rediscover: executor dispatch is blocked by an isolation guard, and the obvious fix is dangerous.

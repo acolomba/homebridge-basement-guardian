@@ -329,12 +329,12 @@ Plans:
   3. Shadow silence is measured by a forward-only counter, so a wall-clock jump in either direction cannot shorten or lengthen the silence window.
   4. Ledger entry 41 carries a recorded ruling on whether the silence timer arms on telemetry or on any message, naming the evidence the ruling rests on and what that evidence does not cover.
 
-**Plans**: 7 plans
+**Plans**: 1/7 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 05.1-01-PLAN.md — Harness correctness before the harness carries the evidence (ledger entries 17 and 18, corrected diagnoses)
+- [x] 05.1-01-PLAN.md — Harness correctness before the harness carries the evidence (ledger entries 17 and 18, corrected diagnoses)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
