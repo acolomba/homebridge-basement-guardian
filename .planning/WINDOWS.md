@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 13
+open_count: 14
 waived_count: 17
 fixed_count: 11
-total_count: 41
-last_updated: 2026-09-03T23:43:47.048Z
+total_count: 42
+last_updated: 2026-09-04T04:25:17.091Z
 ---
 
 # Broken Windows Ledger
@@ -56,6 +56,7 @@ last_updated: 2026-09-03T23:43:47.048Z
 | 39 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 95 | First-round row 2 was reconciled to a status its citation did not carry, and the verification of quick task 260903-ho5 caught it. The cell read shipped, whose load-bearing clause is that the named mutation failed at the row's own tier; the row's command is node --test on monitoringHealth.test.js, but 05-01 mutation 2 names three cases that all live in test/runtime/accountRuntime.test.ts, and 05-01-SUMMARY.md:241 names no module at all, unlike every other 05-01 entry that failed a unit case. The mutation is structurally unreachable from that tier: isShadowSilent is private to monitoringHealth.ts:146, shadowConnected is a local of accountRuntime.ts:272, and monitoringHealth.test.ts imports only monitoringHealth.js and clock.js. Corrected to green, blind at this tier. The mutation was not re-run, so the correction rests on reachability rather than on a fresh measurement. This is ledger entry 33's shape reproduced inside the task written to repair it, at one cell of forty-six. | open |  | 2026-09-03T17:44:53.966Z |  |
 | 40 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 762 | Ledger entry 38 and the second-round note both explained entry 32's twenty-two against the measured twenty-four by pointing at prose mentions of the pending marker. That explanation is impossible in the stated direction: a prose mention adds to a count, so it can only make twenty-four read as more, never as twenty-two. The note is corrected to say the cause is not established. Entry 38's description keeps the wrong reason because the ledger has no edit verb; read it with this entry. | open |  | 2026-09-03T17:44:54.281Z |  |
 | 41 | 05 | todo | src/device/state.ts |  | Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done. | open |  | 2026-09-03T23:43:47.048Z |  |
+| 42 | 05.1 | deviation | test/runtime/accountRuntime.test.ts |  | The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition). | open |  | 2026-09-04T04:25:17.091Z |  |
 
 ````json
 [
@@ -549,6 +550,18 @@ last_updated: 2026-09-03T23:43:47.048Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-03T23:43:47.048Z",
+    "resolved_at": null
+  },
+  {
+    "id": 42,
+    "kind": "deviation",
+    "phase": "05.1",
+    "file": "test/runtime/accountRuntime.test.ts",
+    "line": null,
+    "description": "The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition).",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-04T04:25:17.091Z",
     "resolved_at": null
   }
 ]

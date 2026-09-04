@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
 status: verifying
-stopped_at: Completed 05.1-01-PLAN.md
-last_updated: "2026-09-04T03:42:24.374Z"
+stopped_at: Completed 05.1-02-PLAN.md
+last_updated: "2026-09-04T04:25:07.998Z"
 last_activity: 2026-09-03
 last_activity_desc: Phase 05 gap-closure round complete; plan 05-10 closed the phase out
-state_head: 1a1966a056b846e32a474a1b0d36a5426df0f997
+state_head: 1f5b7a02a9cc006335ab7bec7b159911954c2c22
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 63
-  completed_plans: 57
+  completed_plans: 58
   percent: 43
 ---
 
@@ -123,6 +123,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 05 P18 | 74 min | 3 tasks | 7 files |
 | Phase 05 P19 | 46 min | 2 tasks | 6 files |
 | Phase 05.1 P01 | 25 min | 2 tasks | 4 files |
+| Phase 05.1 P02 | 55 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -338,6 +339,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: A static gate over source text marks on the shape of a literal -- every member in key position, in declaration order, with no intervening brace -- rather than on one field name, and ships a planted property read as the control that a name-count gate would fail
 - [Phase 05]: An ordering case is paired with a companion that reads one fixture under both orders and asserts the readings differ, so a vacuous fixture is caught by the suite rather than by an executor's report of a manual mutation
 - [Phase 05.1]: Ledger entries 17 and 18 both state their mechanism wrongly; 05.1-01 built the corrected diagnoses (entry 18: a cumulative, never-reset topic array that returns instantly on reconnect; entry 17: a shadowing duplicate with 10 live callers)
+- [Phase 05.1]: A fact travels at the granularity of its cause: the account struct carries account-wide facts, a deviceId-keyed map carries per-controller ones, and neither collapses into the other.
+- [Phase 05.1]: The account struct's monitoring silence member is the constant refusing value, so a system nobody answered for reads untrusted rather than normal; every real per-device answer overrides it.
+- [Phase 05.1]: The Live device reporting failure-log kind carries the deviceId, so FailureLog's existing per-kind rate limiting gives each pump its own warning cadence with no change to the limiter.
 
 ### Pending Todos
 
@@ -498,8 +502,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-04T03:42:10.890Z
-Stopped at: Completed 05.1-01-PLAN.md
+Last session: 2026-09-04T04:24:54.402Z
+Stopped at: Completed 05.1-02-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
