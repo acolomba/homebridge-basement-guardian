@@ -65,6 +65,15 @@ const HARNESS_MIN_ROTATION_DELAY_MS = 50;
 /** The moment every scenario's clock starts from. It moves only when a step moves it. */
 export const SCENARIO_START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
 
+/**
+ * Where every scenario's forward-only base starts.
+ *
+ * It has no relation to `SCENARIO_START_TIME`, and that is the point: the two bases are not
+ * comparable, so a step or a plugin path that handed one port the other's reading fails loudly
+ * rather than agreeing by coincidence.
+ */
+const SCENARIO_MONOTONIC_START_TIME = 4_000_000;
+
 /** The account a scenario signs in with. Neither value names a real account. */
 export const ACCOUNT_EMAIL = 'account@example.test';
 
@@ -164,6 +173,8 @@ export class BasementGuardianWorld extends World {
 
   private scenarioTime = SCENARIO_START_TIME;
 
+  private monotonicTime = SCENARIO_MONOTONIC_START_TIME;
+
   // The deferred work the plugin arms, held against this world's own clock rather than a process
   // timer, so `advanceClock` is the only thing that ever runs it.
   private readonly timers = createFakeTimers(this);
@@ -229,15 +240,26 @@ export class BasementGuardianWorld extends World {
     return this.scenarioTime;
   }
 
+  /** The scenario's forward-only elapsed time in milliseconds, on a base of its own. */
+  monotonicNow(): number {
+    return this.monotonicTime;
+  }
+
   /**
-   * Moves the scenario clock forward and runs whatever that made due.
+   * Moves both of the scenario's time bases forward and runs whatever that made due.
    *
-   * The plugin's deferred work is armed against this clock through the controllable timers the
+   * The plugin's deferred work is armed against the wall base through the controllable timers the
    * harness supplies, so advancing past a deadline is how a scenario observes the work behind it.
    * A scenario never sleeps and never races a process timer.
+   *
+   * It moves both bases because a scenario that advances time means time passed, and time passing
+   * moves both. A scenario that means a wall-clock correction, which is a different event, reaches
+   * for `jumpWallClock` instead. Moving only one base here would leave every silence scenario
+   * passing for a new wrong reason.
    */
   advanceClock(milliseconds: number): void {
     this.scenarioTime += milliseconds;
+    this.monotonicTime += milliseconds;
     this.timers.runDue();
   }
 
@@ -636,7 +658,10 @@ export class BasementGuardianWorld extends World {
       registry,
       storagePath: homebridge.storagePath,
       clock: this,
-      monotonic: this,
+      // The World cannot satisfy both ports with one `now()`, so the forward-only one arrives as a
+      // small object over `monotonicNow()`. Two ports, two bases, no call site that could confuse
+      // them.
+      monotonic: { now: () => this.monotonicNow() },
       log: this.logger(),
       connect,
       createSalt: () => HARNESS_SALT,
