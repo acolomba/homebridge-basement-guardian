@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
 Plan: 7 of 7
 Status: All seven waves executed and summarized; records closed by plan 05.1-07
-Last activity: 2026-09-04 — Phase 05.1 complete: gate green on node v26.8.1 and v22.22.2, live single-device check performed against the real Gemini
+Last activity: 2026-09-04 - Completed quick task 260904-mkz: Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -555,6 +555,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260904-mkz | Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp | 2026-09-04 | 4c9f74c |  | [260904-mkz-close-windows-md-ledger-entry-43-open-ph](./quick/260904-mkz-close-windows-md-ledger-entry-43-open-ph/) |
 | 260903-q06 | Correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive | 2026-09-03 | 05e6cb0 | Complete — guard byte-identical, 5 sites corrected | [260903-q06-correct-the-telemetry-ownership-guard-s-](./quick/260903-q06-correct-the-telemetry-ownership-guard-s-/) |
 | 260903-ho5 | Reconcile the Phase 1 requirement rows and the Phase 5 validation status cells against measured evidence | 2026-09-03 | 858ce2c | Verified — 5/6, one cell corrected | [260903-ho5-reconcile-the-phase-1-requirement-rows-a](./quick/260903-ho5-reconcile-the-phase-1-requirement-rows-a/) |
 | 260902-jou | Fix accessory registration being voided by pre-registration persist | 2026-09-02 | 67a3ee5 |  | [260902-jou-fix-accessory-registration-voided-by-pre](./quick/260902-jou-fix-accessory-registration-voided-by-pre/) |
