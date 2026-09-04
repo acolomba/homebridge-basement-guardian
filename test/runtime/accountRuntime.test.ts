@@ -2718,6 +2718,32 @@ describe('DEV-05 removal reconciliation', () => {
     // assert
     assert.deepStrictEqual({ removed, pushes: monitoringByDevice.length }, { removed: [DEVICE_ID], pushes: atRemoval });
   });
+
+  // A stray message can still arrive after removal for the structural reason the
+  // sibling case above states: the shadow client stays subscribed until the
+  // connection is rebuilt. It must not resurrect the arrival stamp the removal
+  // branch already dropped from both the in-memory map and the persisted anchor
+  // (D-14).
+  test('does not re-arm the arrival anchor when a stray message arrives after a pump is removed', async (t) => {
+    // arrange
+    const { runtime, shadows, anchors, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+    });
+    await runtime.start();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    const atRemoval = { removed: [...removed], hasAnchor: anchors.stored.has(DEVICE_ID) };
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      { atRemoval, afterStrayMessage: anchors.stored.has(DEVICE_ID) },
+      { atRemoval: { removed: [DEVICE_ID], hasAnchor: false }, afterStrayMessage: false },
+    );
+  });
 });
 
 // Wires the real authentication client, REST client, and store behind the
