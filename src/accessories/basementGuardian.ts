@@ -878,14 +878,16 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       return;
     }
 
-    const withdrawn = withdrawnServiceNames();
-
+    // The list is never empty where this runs, so there is no empty-list sentence
+    // and no branch guarding one. `System Self-Test` and `Alarm Mute` set
+    // `alwaysPublish`, neither is a removable notification kind, and both are
+    // filed under a non-connectivity scope that tolerates nothing -- so any
+    // accessory that reaches this line publishes at least those two and
+    // withdraws both. The one path that publishes nothing is the unresolved
+    // family above, which reports its own degradation and never calls this.
     log.warn(
-      withdrawn.length === 0
-        ? `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, and this accessory publishes ` +
-            'no service that reads the controller.'
-        : `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so the values on ` +
-            `${WITHDRAWN_SERVICE_NAMES.format(withdrawn)} are retained rather than refreshed until the link returns.`,
+      `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so the values on ` +
+        `${WITHDRAWN_SERVICE_NAMES.format(withdrawnServiceNames())} are retained rather than refreshed until the link returns.`,
     );
     controllerLinkLost = true;
   }
