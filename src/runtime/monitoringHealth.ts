@@ -159,6 +159,40 @@ function isRestDegraded(consecutiveFailures: number): boolean {
   return consecutiveFailures >= REST_FAILURE_THRESHOLD;
 }
 
+// When one device's live path was last heard from, read on both time bases at
+// the same instant.
+//
+// Two readings rather than one, because neither base answers alone: the
+// forward-only one cannot be moved by a wall-clock correction and does not
+// advance across a system suspend, and the wall one is the reverse of both.
+// They are held in one record rather than in two maps so the pair is written,
+// read and pruned together and cannot come apart.
+interface ShadowArrival {
+  monotonic: number;
+  wall: number;
+}
+
+// How long a device has been quiet: the larger of the two elapsed times.
+//
+// The direction is the whole point. The larger can only ever report silence
+// sooner, which is the safe direction for a plugin that must never say a normal
+// it cannot support; the smaller would be the exact inversion that hides a dead
+// pump, and it is the mutation this expression is pinned against.
+//
+// Each term covers a failure the other does not. The forward-only term covers a
+// wall clock stepped backwards -- by NTP, by hand, or by a board that woke with
+// no battery -- further than the whole window, which is the case that would
+// otherwise hand a pump that stopped speaking hours ago a fresh certificate of
+// health: a backwards step makes the wall term small or negative and the
+// forward-only term wins. The wall term covers a system suspend, which the
+// forward-only source does not advance across, so a host that slept wakes with
+// that counter short and the wall term wins instead. A forward wall step
+// inflates the wall term and marks early, which is the direction this
+// measurement is allowed to be wrong in (D-07, IN-03).
+function silenceElapsedMs(arrival: ShadowArrival, monotonicNow: number, wallNow: number): number {
+  return Math.max(monotonicNow - arrival.monotonic, wallNow - arrival.wall);
+}
+
 // Silence is measured from when a message last arrived, and from nothing else.
 //
 // The socket flag is not the source: the provider closes an established
@@ -191,16 +225,31 @@ function isShadowSilent(lastMessageAt: number, now: number): boolean {
  */
 export function createMonitoringHealth(options: MonitoringHealthOptions): MonitoringHealth {
   let consecutiveRestFailures = 0;
-  // One stamp per admitted device, because the question "has this controller
+  // One arrival per admitted device, because the question "has this controller
   // stopped speaking" has one answer per controller. A single account stamp is
   // re-armed by whichever pump spoke last, which vouches for the ones that did
   // not (D-05, D-13).
-  const lastShadowMessageAt = new Map<string, number>();
+  const lastShadowArrival = new Map<string, ShadowArrival>();
+
+  // Both bases are read at the same instant, so the pair describes one arrival
+  // rather than two.
+  function arrivalNow(): ShadowArrival {
+    return { monotonic: options.monotonic.now(), wall: options.clock.now() };
+  }
 
   function silentDevices(): readonly string[] {
-    const now = options.clock.now();
+    const monotonicNow = options.monotonic.now();
+    const wallNow = options.clock.now();
 
-    return [...lastShadowMessageAt].filter(([, lastMessageAt]) => isShadowSilent(lastMessageAt, now)).map(([deviceId]) => deviceId);
+    return [...lastShadowArrival]
+      .filter(([, arrival]) => {
+        // The instant the longer of the two silences began, carried onto the
+        // base the threshold is measured on, so the comparison is made one way.
+        const silentSince = monotonicNow - silenceElapsedMs(arrival, monotonicNow, wallNow);
+
+        return isShadowSilent(silentSince, monotonicNow);
+      })
+      .map(([deviceId]) => deviceId);
   }
 
   return {
@@ -213,17 +262,17 @@ export function createMonitoringHealth(options: MonitoringHealthOptions): Monito
     },
 
     recordShadowMessage(deviceId: string): void {
-      lastShadowMessageAt.set(deviceId, options.clock.now());
+      lastShadowArrival.set(deviceId, arrivalNow());
     },
 
     admitDevice(deviceId: string): void {
-      if (!lastShadowMessageAt.has(deviceId)) {
-        lastShadowMessageAt.set(deviceId, options.clock.now());
+      if (!lastShadowArrival.has(deviceId)) {
+        lastShadowArrival.set(deviceId, arrivalNow());
       }
     },
 
     forgetDevice(deviceId: string): void {
-      lastShadowMessageAt.delete(deviceId);
+      lastShadowArrival.delete(deviceId);
     },
 
     silentDevices,
