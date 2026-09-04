@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
-status: executing
-stopped_at: Completed 05.1-06-PLAN.md
-last_updated: "2026-09-04T18:20:11.263Z"
+status: complete
+stopped_at: Completed 05.1-07-PLAN.md
+last_updated: "2026-09-04T19:18:05.997Z"
 last_activity: 2026-09-04
-last_activity_desc: Phase 05.1 wave 6 complete — the controller-link warning names what it withdraws
-state_head: 50b2cd636f8d55fb468e459f1b6e6b827f8ec2d7
+last_activity_desc: Phase 05.1 complete — seven waves, both runtimes green, live check performed
+state_head: 6e9ae8d55a4ba273fca5615604e4d6d47b4c3ec9
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 63
-  completed_plans: 62
+  completed_plans: 63
   percent: 43
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 ## Current Position
 
-Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — EXECUTING
-Plan: 6 of 7
-Status: Waves 1-6 complete; wave 7 (05.1-07) is the last and is `autonomous: false`
-Last activity: 2026-09-04 — Wave 6 complete: the derived controller-link diagnostic, four mutations recorded
+Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
+Plan: 7 of 7
+Status: All seven waves executed and summarized; records closed by plan 05.1-07
+Last activity: 2026-09-04 — Phase 05.1 complete: gate green on node v26.8.1 and v22.22.2, live single-device check performed against the real Gemini
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -133,6 +133,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 05.1 P04 | 55 min | 2 tasks | 10 files |
 | Phase 05.1 P05 | 22 min + gate | 2 tasks | 8 files |
 | Phase 05.1 P06 | 70 min | 2 tasks | 2 files |
+| Phase 05.1 P07 | 55 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
