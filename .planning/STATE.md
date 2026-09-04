@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
 status: complete
-stopped_at: Completed 05.1-07-PLAN.md
-last_updated: "2026-09-04T21:15:41.496Z"
+stopped_at: Phase 6 context gathered
+last_updated: "2026-09-04T23:40:38.847Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 05.1 complete — seven waves, both runtimes green, live check performed
-state_head: 7da16d6e117911577880564f81b8e3e6450eb8ab
+state_head: 322c27ab911b803cff4ff157016805d6d55a1cef
 progress:
   total_phases: 7
   completed_phases: 3
@@ -582,9 +582,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-04T10:02:16.411Z
-Stopped at: Completed 05.1-04-PLAN.md
-Resume file: None
+Last session: 2026-09-04T23:40:37.905Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-validated-release-candidate/06-CONTEXT.md
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
 to rediscover: executor dispatch is blocked by an isolation guard, and the obvious fix is dangerous.
