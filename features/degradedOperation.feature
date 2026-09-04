@@ -76,6 +76,7 @@ Feature: Degraded monitoring
     Then the monitoring path is "poll-only"
     When the broker accepts connections
     Then the monitoring path is "shadow-and-poll"
+    Then the live connection is subscribed to every seeded device
     Then the log announces the recovery once
 
   Scenario: Shadow silence withdraws trust while polling continues

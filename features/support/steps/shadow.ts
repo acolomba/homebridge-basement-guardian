@@ -387,6 +387,30 @@ async function assertNoLiveConnection(this: BasementGuardianWorld): Promise<void
 
 Then('the broker holds no live connection', { timeout: STEP_TIMEOUT_MS }, assertNoLiveConnection);
 
+// The plugin subscribes to every route of every device in one awaited call, before it publishes any
+// complete-shadow request, so a subscription the connection now open holds is what says a message
+// for that device can arrive. A scenario that reconnected leaves a predecessor whose subscriptions
+// the broker still remembers; asserting on the live connection is what tells the two apart.
+async function assertLiveSubscriptions(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  // Every device of an empty list is subscribed vacuously, so an unseeded scenario would pass this
+  // without any connection at all. The seed is the premise of the assertion, not what it measures.
+  if (this.devices.length === 0) {
+    throw new Error('no step has seeded a device, so this assertion would hold without any subscription at all');
+  }
+
+  const expected = this.devices.map((device) => SHADOW_TOPICS.updateAccepted(device.deviceId));
+
+  await this.untilTrue(
+    () => expected.every((topic) => broker.currentSubscriptions().includes(topic)),
+    DEADLINE_MS,
+    `the live connection never subscribed to every one of ${expected.join(', ')}`,
+  );
+}
+
+Then('the live connection is subscribed to every seeded device', { timeout: STEP_TIMEOUT_MS }, assertLiveSubscriptions);
+
 async function assertHandshakeCarriesTheRotatedCredentials(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
   const handshake = broker.handshakes.at(-1) ?? '';

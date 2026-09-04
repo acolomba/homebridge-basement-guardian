@@ -37,6 +37,16 @@ export interface FakeShadowBroker {
   readonly publishedTopics: readonly string[];
 
   /**
+   * The topics the connection now open subscribed to.
+   *
+   * A subscription held by a connection that has already ended proves nothing about the one now
+   * open: the plugin reconnects by opening a fresh connection and subscribing again, so a wait that
+   * reads a cumulative record is answered by history rather than by the path a message would
+   * travel. This answers for the newest client only.
+   */
+  currentSubscriptions(): readonly string[];
+
+  /**
    * How many connections the broker is holding open right now.
    *
    * A leaked connection raises nothing, so a scenario asserting that a shutdown released
@@ -197,6 +207,9 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     handshakes,
     clientIds,
     publishedTopics,
+    currentSubscriptions(): readonly string[] {
+      return [];
+    },
     liveConnectionCount(): number {
       return server.clients.size;
     },
