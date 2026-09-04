@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 14
+open_count: 15
 waived_count: 17
 fixed_count: 11
-total_count: 42
-last_updated: 2026-09-04T04:25:17.091Z
+total_count: 43
+last_updated: 2026-09-04T05:02:44.791Z
 ---
 
 # Broken Windows Ledger
@@ -57,6 +57,7 @@ last_updated: 2026-09-04T04:25:17.091Z
 | 40 | 05 | deviation | .planning/phases/05-degraded-operation-and-recovery/05-VALIDATION.md | 762 | Ledger entry 38 and the second-round note both explained entry 32's twenty-two against the measured twenty-four by pointing at prose mentions of the pending marker. That explanation is impossible in the stated direction: a prose mention adds to a count, so it can only make twenty-four read as more, never as twenty-two. The note is corrected to say the cause is not established. Entry 38's description keeps the wrong reason because the ledger has no edit verb; read it with this entry. | open |  | 2026-09-03T17:44:54.281Z |  |
 | 41 | 05 | todo | src/device/state.ts |  | Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done. | open |  | 2026-09-03T23:43:47.048Z |  |
 | 42 | 05.1 | deviation | test/runtime/accountRuntime.test.ts |  | The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition). | open |  | 2026-09-04T04:25:17.091Z |  |
+| 43 | 05.1 | deviation | src/runtime/accountRuntime.ts | 762 | A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it | open |  | 2026-09-04T05:02:44.791Z |  |
 
 ````json
 [
@@ -562,6 +563,18 @@ last_updated: 2026-09-04T04:25:17.091Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-04T04:25:17.091Z",
+    "resolved_at": null
+  },
+  {
+    "id": 43,
+    "kind": "deviation",
+    "phase": "05.1",
+    "file": "src/runtime/accountRuntime.ts",
+    "line": 762,
+    "description": "A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-04T05:02:44.791Z",
     "resolved_at": null
   }
 ]
