@@ -1733,6 +1733,12 @@ describe('createBasementGuardianAccessory', () => {
     assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING]);
   });
 
+  // Two entries for two transitions, which is the log-once regression signal, and the two renderings
+  // differ on purpose. The first update loses the link before any sensor row has published, so the
+  // line names the two Switches alone; the recovery between them publishes every row, so the second
+  // entry names all fifteen. A message derived from what this accessory carries has to say different
+  // things about two accessories carrying different services, and asserting both texts pins the
+  // latch and the derivation at once.
   test('reports the controller link condition again after a recovery and a later re-entry', () => {
     // arrange
     const { log, warnings } = recordingLog();
@@ -1745,7 +1751,7 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
-    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING, CONTROLLER_LINK_WARNING]);
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING, CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE]);
   });
 
   // The message is derived from the descriptors this accessory just published, so it names what an

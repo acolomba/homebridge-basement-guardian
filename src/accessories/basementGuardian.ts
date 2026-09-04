@@ -207,6 +207,13 @@ const CONTROLS: ReadonlyMap<ServiceKind, ControlDefinition> = new Map<ServiceKin
 // which is still answering (D-11, RES-02).
 const NON_CONNECTIVITY_SCOPES: ReadonlySet<TrustScope> = new Set(TRUST_SCOPES.filter((scope) => scope !== 'connectivity'));
 
+// The withdrawn names are joined by `Intl.ListFormat`, pinned to en-US rather
+// than left to the host: the line is an English sentence built from ASCII
+// catalogue constants, so a host locale must not reorder or re-punctuate it. A
+// hand-written join would carry a branch per list length instead, and the
+// shipped catalogue publishes no list short enough to exercise them.
+const WITHDRAWN_SERVICE_NAMES = new Intl.ListFormat('en-US', { style: 'long', type: 'conjunction' });
+
 // What one accessory's own payload last said about trust, kept apart from what
 // the account-wide monitoring trust says.
 interface DeviceDistrust {
@@ -814,6 +821,47 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     degraded = true;
   }
 
+  // The published services a lost controller link stops vouching for, in the
+  // catalogue's declared publication order.
+  //
+  // Derived rather than written out, so the sentence cannot drift from the
+  // marking pass: a row added to the catalogue under a non-connectivity scope
+  // joins the list on the next update, and a hand-written sentence would go on
+  // describing the catalogue as it was (D-05).
+  //
+  // `published` is the source rather than the catalogue itself, because it is
+  // the only one that respects two facts about this accessory: a fault an
+  // administrator suppressed was removed rather than published, and a row that
+  // has never projected a value is not there at all. Naming either would send an
+  // owner looking for a tile that does not exist (D-05a).
+  //
+  // A descriptor is matched to its row on the kind together with the service
+  // type identifier. `toRow` sets the subtype to the kind verbatim, so a
+  // kind-and-subtype match collapses to the kind alone, and two rows share the
+  // kind `backup-battery` under different display names and different service
+  // classes. Matching on the display name would also be unique, and it is
+  // rejected for a reason worth keeping: it would couple the join to the very
+  // string being rendered, so renaming a service would silently unhook the join
+  // rather than fail.
+  //
+  // The filter is over the scope set rather than over the untrusted reasons.
+  // `distrustReasonsOf` fills monitoring scopes before controller-link scopes,
+  // so a scope already carrying a monitoring reason never receives this one, and
+  // a list built from the reasons would under-name exactly when an owner is
+  // reading it during a simultaneous monitoring degradation.
+  function withdrawnServiceNames(): readonly string[] {
+    const publishedRows = new Set(published.map((descriptor) => `${descriptor.kind}/${descriptor.serviceUuid}`));
+
+    return catalogue
+      .filter(
+        (row) =>
+          publishedRows.has(`${row.kind}/${row.serviceClass.UUID}`) &&
+          NON_CONNECTIVITY_SCOPES.has(row.scope) &&
+          !row.toleratedDistrust.includes('controller-link-lost'),
+      )
+      .map((row) => row.displayName);
+  }
+
   // The same log-once discipline for the other sustained condition. The message
   // names the `deviceId`, which is not sensitive, and quotes no credential,
   // token, or account identifier; it says the values are retained rather than
@@ -830,9 +878,14 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       return;
     }
 
+    const withdrawn = withdrawnServiceNames();
+
     log.warn(
-      `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so water, pump, power, ` +
-        'battery, and fault values are retained rather than refreshed until the link returns.',
+      withdrawn.length === 0
+        ? `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, and this accessory publishes ` +
+            'no service that reads the controller.'
+        : `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so the values on ` +
+            `${WITHDRAWN_SERVICE_NAMES.format(withdrawn)} are retained rather than refreshed until the link returns.`,
     );
     controllerLinkLost = true;
   }
