@@ -1216,7 +1216,18 @@ describe('configureAccessory', () => {
 });
 
 describe('applyMonitoringHealth', () => {
-  test('hands the same account-wide trust to every accessory this run publishes', () => {
+  // What a launch the vendor refused before its first inventory pushes: no device was ever
+  // discovered, so no system has an answer and the credential branch is the whole of what the pass
+  // does. Every accessory therefore takes the missing-entry rule, which is the conservative reading
+  // and the one that costs nothing here (RES-04, D-01, D-02).
+  const NO_DEVICE_ANSWERED = new Map<string, MonitoringTrust>();
+
+  // Two systems, one account, and each accessory hears the answer for its own controller. The map is
+  // keyed by deviceId while the accessory map is keyed by the UUID that deviceId seeds, so this also
+  // holds the join: keying the pushed map by the generated UUID makes both accessories miss, both
+  // take the missing-entry rule, and the two recorded values stop differing. One accessory could not
+  // catch that (D-01, D-01a).
+  test('hands each accessory the answer for its own system', () => {
     // arrange
     const marks: string[] = [];
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>([
@@ -1229,12 +1240,20 @@ describe('applyMonitoringHealth', () => {
       registry: unknownRegistry(),
       basementGuardianAccessories,
     });
+    const account = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false } satisfies MonitoringTrust;
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false });
+    applyMonitoringHealth(
+      context,
+      account,
+      new Map<string, MonitoringTrust>([
+        [DEVICE_ID, { ...account, shadowSilent: true }],
+        [SECOND_DEVICE_ID, { ...account, shadowSilent: false }],
+      ]),
+    );
 
     // assert
-    assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow true`]);
+    assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow false`]);
   });
 
   test('reaches nothing when this run has published no accessory yet', () => {
@@ -1247,7 +1266,7 @@ describe('applyMonitoringHealth', () => {
 
     // act & assert
     assert.doesNotThrow(() => {
-      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false });
+      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, NO_DEVICE_ANSWERED);
     });
   });
 
@@ -1262,7 +1281,7 @@ describe('applyMonitoringHealth', () => {
     const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual(trustReadsOf(restored.floods), [
@@ -1286,8 +1305,15 @@ describe('applyMonitoringHealth', () => {
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
     });
 
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
+
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    // The map names this case's own device, rather than being left empty, because the refusal here
+    // followed a successful start: that run discovered the device and heard from it, so an empty map
+    // would say the plugin had stopped hearing a controller that was speaking, and the case would
+    // have to have its expectation edited to match. The subject is the credential branch reaching a
+    // built accessory and a restored one in the same pass, and it stays that.
+    applyMonitoringHealth(context, account, new Map<string, MonitoringTrust>([[DEVICE_ID, account]]));
 
     // assert
     assert.deepStrictEqual(
@@ -1323,7 +1349,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual(
@@ -1355,7 +1381,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual(trustReadsOf(live.floods), [
@@ -1422,7 +1448,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual(
@@ -1449,7 +1475,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual({ messages, statuses: statusesOf(restored.floods) }, { messages: [], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] });
@@ -1469,7 +1495,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual(messages, []);
@@ -1491,7 +1517,7 @@ describe('applyMonitoringHealth', () => {
       const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
 
       // act
-      applyMonitoringHealth(context, trust);
+      applyMonitoringHealth(context, trust, NO_DEVICE_ANSWERED);
 
       // assert
       assert.deepStrictEqual(trustReadsOf(restored.floods), [

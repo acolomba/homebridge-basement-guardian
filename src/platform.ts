@@ -364,25 +364,42 @@ export function registerDiscoveredDevices(context: DiscoveryContext, deviceIds: 
 }
 
 /**
- * Applies the account-wide monitoring trust to every accessory this plugin run
- * publishes.
+ * Applies the monitoring trust to every accessory this plugin run publishes:
+ * the account's own answer where the fact is account-wide, and this system's
+ * answer where it is not.
  *
- * The fact is account-wide: one poll loop and one shadow connection per
- * account, not one per device, so every accessory hears the same answer and
- * none of them is left reading as current while the plugin cannot see it
- * (D-02).
+ * Some of it is account-wide and some of it is not, and the difference is the
+ * cause rather than the transport. One poll loop and one credential serve every
+ * pump, so a degraded poll and a refused credential are facts about all of
+ * them. A live path that has gone quiet is a fact about one controller, and
+ * spending it on the pump next door tells an owner the plugin cannot vouch for
+ * a system that is reporting perfectly (D-01, D-04).
  *
  * Exported for the reason `registerDiscoveredDevices` is. The Cucumber harness
  * stands in for the platform, so a fan-out living only inside the platform's
  * own callback would be copied into the harness, and every scenario would then
  * assert against the copy rather than against what a bridge runs (D-12).
  */
-export function applyMonitoringHealth(context: DiscoveryContext, trust: MonitoringTrust): void {
+export function applyMonitoringHealth(context: DiscoveryContext, account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void {
   for (const basementGuardianAccessory of context.basementGuardianAccessories.values()) {
+    // The join is on the accessory's own `deviceId`. `byDevice` is keyed by
+    // `deviceId` while `basementGuardianAccessories` is keyed by the UUID that
+    // `deviceId` seeds, so a lookup on this map's own key would silently match
+    // nothing at all (D-01a).
+    //
+    // An accessory the push does not name does not vouch. A pump the account
+    // gained since the last push, or one Homebridge restored from cache before
+    // discovery completed, has no answer here, and an unknown never becomes a
+    // normal default in this plugin. Only the per-device question is defaulted:
+    // the other three members come through as the runtime reported them,
+    // because a literal invented at this line would assert three facts nobody
+    // supplied and `markMonitoring` compares all four (D-02).
+    const trust = byDevice.get(basementGuardianAccessory.deviceId) ?? { ...account, shadowSilent: true };
+
     basementGuardianAccessory.markMonitoring(trust);
   }
 
-  if (!trust.credentialsRejected) {
+  if (!account.credentialsRejected) {
     return;
   }
 
@@ -554,8 +571,8 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         registerDiscoveredDevices(discoveryContext(runtime.commands), deviceIds, runtime.store);
       },
-      onMonitoringHealth: (trust: MonitoringTrust): void => {
-        applyMonitoringHealth(discoveryContext(runtime.commands), trust);
+      onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
+        applyMonitoringHealth(discoveryContext(runtime.commands), account, byDevice);
       },
       onDeviceRemoved: (deviceId: string): void => {
         removeDiscoveredDevice(discoveryContext(runtime.commands), deviceId, runtime.store);

@@ -48,15 +48,36 @@ const POLLING = 'Device polling';
 const ROTATION = 'Credential rotation';
 const SHADOW = 'The shadow connection';
 const AUTHENTICATION = 'Authentication';
-const LIVE_REPORTING = 'Live device reporting';
 
 const ROTATION_FAILED = 'The temporary shadow credentials could not be refreshed; the plugin will try again.';
 const SHADOW_DEGRADED = 'The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
-const LIVE_REPORTING_SILENT =
-  'No device message has arrived on the live connection for two heartbeat intervals, so HomeKit is marking what it shows untrustworthy until one does.';
 const THROTTLED = 'Authentication is being throttled, so the plugin is waiting before it tries again.';
 const AUTHENTICATION_STOPPED =
   'Monitoring has stopped because the vendor refused the account credentials. Correct the account in Homebridge to start the plugin again.';
+
+// One system's live reporting, named as its own failing activity.
+//
+// The `deviceId` is part of the kind and not only part of the sentence, because
+// `FailureLog` rate-limits per kind string (`src/runtime/failureLog.ts:45`,
+// `:50-57`). One kind per device therefore gives each pump its own warning
+// cadence with no change to the limiter, and a pump that has been quiet all
+// afternoon can no longer hold back the first warning about the pump beside it.
+// The vendor `deviceId` is the Phase 2 ruling's non-sensitive value, permitted
+// in logs and in accessory context, and it names no route, header, credential
+// or account (D-14, D-027, AUTH-02).
+function liveReportingKind(deviceId: string): string {
+  return `Live device reporting for ${deviceId}`;
+}
+
+// The line one system's silent live path records. It names the controller,
+// because on a two-pump account the sentence without it does not say which
+// basement the plugin stopped watching.
+function liveReportingSilent(deviceId: string): string {
+  return (
+    `No device message has arrived on the live connection from ${deviceId} for two heartbeat intervals, ` +
+    'so HomeKit is marking what it shows untrustworthy until one does.'
+  );
+}
 
 /**
  * The half of the shadow client's options the runtime owns.
@@ -129,16 +150,23 @@ export interface AccountRuntimeOptions {
   onDeviceRemoved: (deviceId: string) => void;
   /**
    * Reports what the plugin can currently say about its own ability to observe
-   * this account, on every poll outcome.
+   * this account and each of its systems, on every poll outcome.
    *
    * This is the trust decision; `monitoringPath` stays the diagnostic. The path
    * names which sources are feeding state and collapses a failing poll with a
-   * lost shadow into one value, while these two facts are what the HomeKit tier
+   * lost shadow into one value, while these facts are what the HomeKit tier
    * needs kept apart: a shadow that has gone quiet while polls still succeed is
    * the expensive case, because a pump run lasts seconds and begins and ends
    * between two polls, and it reads as the healthier value on the path (D-04).
+   *
+   * Two values travel rather than one map, and the reason is the launch the
+   * vendor refused before the first inventory: that run discovers no device, so
+   * the map is empty, and `credentialsRejected` -- which is what makes the
+   * restored accessories unreadable -- would have nowhere left to be read from.
+   * The account struct carries the facts that are genuinely account-wide; the
+   * map carries the one that is not (D-01, RES-04).
    */
-  onMonitoringHealth: (trust: MonitoringTrust) => void;
+  onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>) => void;
   clock: Clock;
   log: Logging;
 }
@@ -274,12 +302,18 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   let started = false;
   let stopped = false;
   let retryingShadow = false;
-  // The silence state this runtime last actually reported, which is what lets an
-  // arriving message report a recovery once rather than once per heartbeat. It
-  // records what was pushed rather than what is true now, because the question
-  // it answers is whether the tier is still holding a silence that has ended
-  // (D-05, D-11).
-  let reportedShadowSilent = false;
+  // The systems this runtime last actually reported silent, which is what lets
+  // an arriving message report a recovery once rather than once per heartbeat.
+  // It records what was pushed rather than what is true now, because the
+  // question it answers is whether the tier is still holding a silence that has
+  // ended (D-05, D-11).
+  //
+  // It is a set rather than a boolean because the silence it latches is per
+  // device. A single flag over a multi-pump account answers the arrival of a
+  // message from the wrong controller: one noisy pump would keep re-reporting
+  // on a quiet neighbour's behalf, or a quiet neighbour would hold the flag up
+  // and swallow the noisy pump's own recovery (D-14).
+  let reportedSilentDevices: ReadonlySet<string> = new Set<string>();
 
   // Every wait ends on the root signal. A rejection here means a shutdown
   // cancelled the wait, which is reported as a false rather than raised: an
@@ -455,28 +489,71 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // presents and the fact the runtime acts on from ever drifting apart
   // (D-13, D-10).
   function monitoringTrustNow(): MonitoringTrust {
-    return { ...health.trustNow(), commandTransportReady: commandTransportReadyNow(), credentialsRejected: halted };
+    return {
+      ...health.trustNow(),
+      // There is no account-wide answer to a per-device question, so this base
+      // carries the value that declines to vouch and every real per-device
+      // answer overrides it below. It is deliberately not `false`: a struct that
+      // vouched by default would make a system nobody answered for read as
+      // watched, which is the false normal this plugin refuses. Reading this
+      // member off the account struct is therefore always wrong; the map is
+      // where the answer lives (D-02, D-04).
+      shadowSilent: true,
+      commandTransportReady: commandTransportReadyNow(),
+      credentialsRejected: halted,
+    };
+  }
+
+  // One trust struct per system the account currently holds, built from the
+  // account-wide facts plus this device's own silence.
+  //
+  // Neither input is new. `store.deviceIds()` is the inventory the runtime
+  // already keeps, and `health.silentDevices()` has answered per device since
+  // it began stamping arrivals per device, so nothing here tracks anything the
+  // runtime was not already tracking -- the flatten that collapsed the second
+  // list into one boolean is simply gone (D-01, D-03).
+  function monitoringTrustByDevice(account: MonitoringTrust): ReadonlyMap<string, MonitoringTrust> {
+    const silent = new Set(health.silentDevices());
+
+    return new Map(options.store.deviceIds().map((deviceId) => [deviceId, { ...account, shadowSilent: silent.has(deviceId) }]));
+  }
+
+  // The push on its own, for the two acts that change the trust without having
+  // observed anything: the terminal authentication answer and the shutdown.
+  // Neither writes a live-reporting outcome, because neither watched a live
+  // path, and neither moves the latch, because neither resolved a silence.
+  function pushMonitoringTrust(): void {
+    const account = monitoringTrustNow();
+
+    options.onMonitoringHealth(account, monitoringTrustByDevice(account));
   }
 
   function reportMonitoringHealth(): void {
-    const trust = monitoringTrustNow();
-    // Assigned from the value about to be pushed, so the latch and the fact the
+    const account = monitoringTrustNow();
+    const byDevice = monitoringTrustByDevice(account);
+    // Assigned from the map about to be pushed, so the latch and the facts the
     // accessory tier holds cannot drift apart.
-    reportedShadowSilent = trust.shadowSilent;
+    reportedSilentDevices = new Set([...byDevice].filter(([, trust]) => trust.shadowSilent).map(([deviceId]) => deviceId));
 
-    // The condition is reported and pushed from the one value, so the cause the
-    // log names and the condition HomeKit marks cannot disagree. The rate
-    // limiting is the failure log's own: a silence that lasts an afternoon
-    // says so once and then on the reminder cadence, and there is no second
-    // warn-once flag beside it. A failing poll is not reported here, because
-    // `Device polling` already owns that line (D-03).
-    if (trust.shadowSilent) {
-      options.failures.recordFailure(LIVE_REPORTING, LIVE_REPORTING_SILENT);
-    } else {
-      options.failures.recordSuccess(LIVE_REPORTING);
+    // Each condition is reported and pushed from the one value, so the cause the
+    // log names and the condition HomeKit marks cannot disagree. The walk is
+    // over the same map, one outcome per system, because the question "has this
+    // controller stopped speaking" has one answer per controller and a single
+    // account-wide branch would record a failure for a pump that is reporting.
+    //
+    // The rate limiting is the failure log's own, and it is per kind, so each
+    // system's silence says so once and then on the reminder cadence with no
+    // second warn-once flag beside it. A failing poll is not reported here,
+    // because `Device polling` already owns that line (D-03, D-14).
+    for (const [deviceId, trust] of byDevice) {
+      if (trust.shadowSilent) {
+        options.failures.recordFailure(liveReportingKind(deviceId), liveReportingSilent(deviceId));
+      } else {
+        options.failures.recordSuccess(liveReportingKind(deviceId));
+      }
     }
 
-    options.onMonitoringHealth(trust);
+    options.onMonitoringHealth(account, byDevice);
   }
 
   // Closing reports nothing. A connection that fails while it is being closed
@@ -530,7 +607,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
     halted = true;
     options.failures.recordFailure(AUTHENTICATION, AUTHENTICATION_STOPPED);
-    options.onMonitoringHealth(monitoringTrustNow());
+    pushMonitoringTrust();
     // Nothing is awaited: three callers read this function as a guard clause
     // answering a boolean, and the close needs no await to shut the arrival
     // path. `close()` sets the client's own closing flag before it ends the
@@ -667,7 +744,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           health.recordShadowMessage(deviceId);
           options.store.applyReportedPatch(deviceId, patch);
 
-          if (reportedShadowSilent) {
+          if (reportedSilentDevices.has(deviceId)) {
             reportMonitoringHealth();
           }
         },
@@ -964,7 +1041,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // restarts routinely, and a shutdown that withdrew value trust would mark
       // a whole home of tiles for a condition that is over the moment the
       // process ends (D-014, D-01).
-      options.onMonitoringHealth(monitoringTrustNow());
+      pushMonitoringTrust();
       root.abort();
       await closeQuietly(shadow);
     },
@@ -1009,8 +1086,8 @@ export interface AccountRuntimeDeps {
   onTrustworthyInventory?: TrustworthyInventoryListener;
   /** Reports a deviceId confirmed absent by DEV-05's removal protocol. A no-op when absent. */
   onDeviceRemoved?: (deviceId: string) => void;
-  /** Reports the account-wide monitoring trust on every poll outcome. A no-op when absent. */
-  onMonitoringHealth?: (trust: MonitoringTrust) => void;
+  /** Reports the account-wide trust and the per-system trust on every poll outcome. A no-op when absent. */
+  onMonitoringHealth?: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>) => void;
 }
 
 /**

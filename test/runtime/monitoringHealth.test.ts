@@ -133,7 +133,7 @@ for (const { elapsedMs, silent } of [
     moveTo(START_TIME + elapsedMs);
 
     // assert
-    assert.strictEqual(health.trustNow().shadowSilent, silent);
+    assert.strictEqual(health.silentDevices().includes(DEVICE_ID), silent);
   });
 }
 
@@ -148,7 +148,7 @@ test('measures the silence from the newest message, so a late arrival restarts t
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1 + TWO_MISSED_HEARTBEATS_MS - 1);
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, false);
+  assert.deepStrictEqual(health.silentDevices(), []);
 });
 
 test('goes silent a full window after a late arrival rather than a full window after the first', () => {
@@ -162,7 +162,7 @@ test('goes silent a full window after a late arrival rather than a full window a
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1 + TWO_MISSED_HEARTBEATS_MS);
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, true);
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
 test('leaves the shadow silent when a poll succeeds, because a poll observed no live message', () => {
@@ -175,7 +175,7 @@ test('leaves the shadow silent when a poll succeeds, because a poll observed no 
   health.recordRestSuccess();
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, true);
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
 test('leaves the polling path degraded when a shadow message arrives, because a message answered no request', () => {
@@ -203,7 +203,7 @@ test('leaves the silence window where it was when a poll fails, because a failed
   health.recordRestFailure();
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, false);
+  assert.deepStrictEqual(health.silentDevices(), []);
 });
 
 test('answers both facts together, so one degradation never reports the other', () => {
@@ -217,7 +217,7 @@ test('answers both facts together, so one degradation never reports the other', 
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
   // assert
-  assert.deepStrictEqual(health.trustNow(), { restDegraded: true, shadowSilent: true });
+  assert.deepStrictEqual({ ...health.trustNow(), silent: health.silentDevices() }, { restDegraded: true, silent: [DEVICE_ID] });
 });
 
 test('vouches for a shadow over a device it has only just admitted', () => {
@@ -229,7 +229,7 @@ test('vouches for a shadow over a device it has only just admitted', () => {
   health.admitDevice(DEVICE_ID);
 
   // assert
-  assert.deepStrictEqual(health.trustNow(), { restDegraded: false, shadowSilent: false });
+  assert.deepStrictEqual({ ...health.trustNow(), silent: health.silentDevices() }, { restDegraded: false, silent: [] });
 });
 
 // The false normal guarded here is a broker the plugin can never reach reading
@@ -246,7 +246,7 @@ test('goes silent two heartbeats after admission when no message ever arrives', 
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
   // assert
-  assert.strictEqual(health.trustNow().shadowSilent, true);
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
 // One pump's heartbeat is no evidence about the pump beside it. An account
@@ -268,23 +268,24 @@ test('names only the pump that stopped speaking when the pump beside it is still
   assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
-// The marking every accessory hears is one answer, so any system the plugin has
-// stopped watching costs the account its claim to be watching. Which one it was
-// is the failure log's line, not this verdict (D-02, D-03).
-test('stops vouching for the account while one pump is quiet and vouches again once it speaks', () => {
+// The recovery, read on the same account the case above reads the withdrawal
+// on. The quiet pump leaves the list the moment its own message arrives, and its
+// heartbeating neighbour was never on it, so no report about either pump was
+// ever spent on the other (D-03, D-04).
+test('stops naming the quiet pump the moment it speaks, while the pump beside it was never named', () => {
   // arrange
   const { clock, moveTo } = movableClock();
   const health = healthWithTwoAdmittedDevices(clock);
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
-  const whileOneIsQuiet = health.trustNow().shadowSilent;
+  const whileOneIsQuiet = health.silentDevices();
 
   // act
   health.recordShadowMessage(DEVICE_ID);
 
   // assert
-  assert.deepStrictEqual({ whileOneIsQuiet, afterItSpeaks: health.trustNow().shadowSilent }, { whileOneIsQuiet: true, afterItSpeaks: false });
+  assert.deepStrictEqual({ whileOneIsQuiet, afterItSpeaks: health.silentDevices() }, { whileOneIsQuiet: [DEVICE_ID], afterItSpeaks: [] });
 });
 
 // Nothing is watched before discovery admits it, so a projection told about no
@@ -299,7 +300,7 @@ test('reports no silence for a system it has never been told about', () => {
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
   // assert
-  assert.deepStrictEqual({ silent: health.silentDevices(), account: health.trustNow().shadowSilent }, { silent: [], account: false });
+  assert.deepStrictEqual(health.silentDevices(), []);
 });
 
 // An account whose systems come and go over months would otherwise accumulate a
@@ -317,10 +318,7 @@ test('stops reporting a system the account no longer carries', () => {
   health.forgetDevice(DEVICE_ID);
 
   // assert
-  assert.deepStrictEqual(
-    { whileItIsCarried, afterRemoval: health.silentDevices(), account: health.trustNow().shadowSilent },
-    { whileItIsCarried: [DEVICE_ID], afterRemoval: [], account: false },
-  );
+  assert.deepStrictEqual({ whileItIsCarried, afterRemoval: health.silentDevices() }, { whileItIsCarried: [DEVICE_ID], afterRemoval: [] });
 });
 
 // Every poll admits every device it found, so a re-stamp here would restart the
@@ -340,11 +338,14 @@ test('leaves a quiet pump quiet when a later poll admits it again', () => {
   assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
-// Whether a command can currently be sent depends on whether the runtime is stopped and whether
-// authentication has halted for good, and this module sees neither. Answering it here would mean
-// answering it by guess, so the projection stops at what its own two recorded facts support and the
-// runtime assembles the rest (RES-04, D-07).
-test('answers the two transport facts and nothing about the command transport', () => {
+// The verdict answers the account-wide fact and nothing else. Silence is per
+// controller and `silentDevices()` is where it is read, so a second member here
+// would be one pump's answer handed to every pump (D-03). Whether a command can
+// currently be sent depends on whether the runtime is stopped and whether
+// authentication has halted for good, and this module sees neither; answering it
+// here would mean answering it by guess, so the projection stops at what its own
+// recorded facts support and the runtime assembles the rest (RES-04, D-07).
+test('answers the one account-wide fact and nothing about silence or the command transport', () => {
   // arrange
   const { clock } = movableClock();
   const health = createMonitoringHealth({ clock });
@@ -353,5 +354,5 @@ test('answers the two transport facts and nothing about the command transport', 
   const trust = health.trustNow();
 
   // assert
-  assert.deepStrictEqual(Object.keys(trust).sort(), ['restDegraded', 'shadowSilent']);
+  assert.deepStrictEqual(Object.keys(trust), ['restDegraded']);
 });

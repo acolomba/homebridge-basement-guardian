@@ -65,13 +65,24 @@ const DISCOVERY_FAILED_LINE = 'Device discovery failed on GET /devices with HTTP
 // reach it: it names a cause that did not happen, and an owner acts on a diagnostic (D-03).
 const DISCOVERY_FAILED_UNEXPLAINED_LINE = 'Device discovery failed.';
 
-// The line a live connection that has stopped delivering records, restated here
-// for the same reason.
+// The line one system's live connection records when it has stopped delivering,
+// restated here for the same reason. It names the controller, because the
+// failing activity is that controller's live reporting and not the account's.
 const LIVE_REPORTING_SILENT_LINE =
-  'No device message has arrived on the live connection for two heartbeat intervals, so HomeKit is marking what it shows untrustworthy until one does.';
+  `No device message has arrived on the live connection from ${DEVICE_ID} for two heartbeat intervals, ` +
+  'so HomeKit is marking what it shows untrustworthy until one does.';
 
-// The line the same condition records when it clears.
-const LIVE_REPORTING_RECOVERED_LINE = 'Live device reporting recovered.';
+// The line the same condition records when it clears. The failure log builds it
+// from the kind, so the kind's device travels into it.
+const LIVE_REPORTING_RECOVERED_LINE = `Live device reporting for ${DEVICE_ID} recovered.`;
+
+// What the account struct's silence member always carries. There is no
+// account-wide answer to a per-device question, so the struct the runtime pushes
+// beside the map declines to vouch and every real per-device answer overrides
+// it. Naming it is what keeps a case below from reading as though it measured a
+// silence when it only read a constant; the cases that are about silence read
+// `monitoringByDevice` instead (D-02, D-04).
+const ACCOUNT_DECLINES_TO_VOUCH = true;
 
 // The line a terminal authentication answer records, restated here for the same
 // reason.
@@ -318,8 +329,10 @@ interface Harness {
   removed: string[];
   /** One entry per command the runtime sent, in send order. */
   commandRequests: CommandRequest[];
-  /** One entry per monitoring-trust report the runtime pushed, in push order. */
+  /** One entry per monitoring-trust report the runtime pushed, the account struct, in push order. */
   monitoringHealth: MonitoringTrust[];
+  /** The per-system map pushed alongside each entry above, same order, same length. */
+  monitoringByDevice: ReadonlyMap<string, MonitoringTrust>[];
   advance: (ms: number) => Promise<void>;
 }
 
@@ -354,6 +367,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const removed: string[] = [];
   const commandRequests: CommandRequest[] = [];
   const monitoringHealth: MonitoringTrust[] = [];
+  const monitoringByDevice: ReadonlyMap<string, MonitoringTrust>[] = [];
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
@@ -428,8 +442,9 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     onDeviceRemoved: (deviceId: string): void => {
       removed.push(deviceId);
     },
-    onMonitoringHealth: (trust: MonitoringTrust): void => {
-      monitoringHealth.push(trust);
+    onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
+      monitoringHealth.push(account);
+      monitoringByDevice.push(new Map(byDevice));
     },
     clock,
     log,
@@ -452,6 +467,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     removed,
     commandRequests,
     monitoringHealth,
+    monitoringByDevice,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
@@ -484,6 +500,15 @@ function countOf(logged: readonly string[], level: string): number {
 
 function countOfLine(logged: readonly string[], line: string): number {
   return logged.filter((candidate) => candidate === line).length;
+}
+
+// What each push said about the one system this harness's account holds.
+//
+// The silence answer lives in the per-system map and nowhere else: the account
+// struct beside it carries a constant, so a case that read it would report a
+// pass whatever the runtime did (D-02).
+function silenceOf(pushes: readonly ReadonlyMap<string, MonitoringTrust>[]): (boolean | undefined)[] {
+  return pushes.map((byDevice) => byDevice.get(DEVICE_ID)?.shadowSilent);
 }
 
 describe('start', () => {
@@ -1364,10 +1389,10 @@ describe('stop', () => {
     assert.deepStrictEqual(
       { beforeStop, afterStop: monitoringHealth },
       {
-        beforeStop: [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        beforeStop: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false }],
         afterStop: [
-          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
-          { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
         ],
       },
     );
@@ -1399,7 +1424,9 @@ describe('stop', () => {
     await runtime.stop();
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [{ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]);
+    assert.deepStrictEqual(monitoringHealth, [
+      { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
+    ]);
   });
 
   test('SYNC-05 arms no timer that outlives it', async (t) => {
@@ -1729,9 +1756,9 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(monitoringHealth, [
-      { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
-      { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
-      { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
     ]);
   });
 
@@ -1756,7 +1783,10 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(
       { monitoringHealth, calls },
-      { monitoringHealth: [{ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }], calls: ['devices'] },
+      {
+        monitoringHealth: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true }],
+        calls: ['devices'],
+      },
     );
   });
 
@@ -1787,7 +1817,7 @@ describe('the degraded monitoring path', () => {
         discoveryFailures: logged.filter((line) => line.endsWith(DISCOVERY_FAILED_UNEXPLAINED_LINE)),
       },
       {
-        pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true },
+        pushed: { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true },
         stops: [`warn ${STOPPED_LINE}`],
         discoveryFailures: [],
       },
@@ -1846,7 +1876,7 @@ describe('the degraded monitoring path', () => {
         rotationFailures: logged.filter((line) => line.endsWith(ROTATION_FAILED_LINE)),
       },
       {
-        pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true },
+        pushed: { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true },
         stops: [`warn ${STOPPED_LINE}`],
         rotationFailures: [],
       },
@@ -1982,10 +2012,10 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(
       { beforeShutdown, afterShutdown: monitoringHealth },
       {
-        beforeShutdown: [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        beforeShutdown: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false }],
         afterShutdown: [
-          { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
-          { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
         ],
       },
     );
@@ -1993,7 +2023,7 @@ describe('the degraded monitoring path', () => {
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
 
     // act
@@ -2001,10 +2031,7 @@ describe('the degraded monitoring path', () => {
     await advance(HEARTBEAT_MS);
 
     // assert
-    assert.deepStrictEqual(
-      monitoringHealth.map((trust) => trust.shadowSilent),
-      [false, false, true],
-    );
+    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true]);
   });
 
   test('reports the silent live connection once across three silent polls inside one reminder interval', async (t) => {
@@ -2041,7 +2068,11 @@ describe('the degraded monitoring path', () => {
     );
   });
 
-  test('names no route, no header, and no credential in the line a silent live connection records', async (t) => {
+  // The line names the controller and nothing else about the account. The vendor deviceId is the one
+  // identifier a Phase 2 ruling admits to logs, and on a two-pump account a sentence without it does
+  // not say which basement stopped being watched. Everything the redaction rules actually forbid --
+  // route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
+  test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
     // arrange
     const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
     await runtime.start();
@@ -2059,13 +2090,13 @@ describe('the degraded monitoring path', () => {
         secret: registrations.some((registration) => reported.includes(registration.split(' ')[1] ?? '')),
         device: reported.includes(DEVICE_ID),
       },
-      { reported: true, scheme: false, authorization: false, secret: false, device: false },
+      { reported: true, scheme: false, authorization: false, secret: false, device: true },
     );
   });
 
   test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
 
@@ -2074,10 +2105,7 @@ describe('the degraded monitoring path', () => {
     await advance(HEARTBEAT_MS);
 
     // assert
-    assert.deepStrictEqual(
-      monitoringHealth.map((trust) => trust.shadowSilent),
-      [false, false, false],
-    );
+    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, false]);
   });
 
   // The recovery an owner waits on. Both arrival cases above advance the clock after the message,
@@ -2087,7 +2115,7 @@ describe('the degraded monitoring path', () => {
   // the recorded call list says no request left the plugin in between (CR-02, D-11).
   test('RES-03 restores the trust on the message that proves the live path is carrying, with no clock movement and no poll', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, calls, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, calls, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -2098,7 +2126,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { pushes: monitoringHealth, calls },
+      { pushes: monitoringByDevice.map((byDevice) => byDevice.get(DEVICE_ID)), calls },
       {
         pushes: [
           { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
@@ -2177,7 +2205,7 @@ describe('the degraded monitoring path', () => {
   // subscriber at all, and it is still direct evidence that the live path is carrying (D-05, D-11).
   test('clears the silence on a heartbeat carrying the values the store already holds, which notifies no subscriber', async (t) => {
     // arrange
-    const { runtime, store, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, store, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -2191,7 +2219,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { notifications, pushed: monitoringHealth.at(-1) },
+      { notifications, pushed: monitoringByDevice.at(-1)?.get(DEVICE_ID) },
       {
         notifications: 0,
         pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
@@ -2204,7 +2232,7 @@ describe('the degraded monitoring path', () => {
   // in the middle here still reports the silence unresolved, and the message after it clears it.
   test('D-11 leaves the shadow silence for the successful poll and clears it for the message that follows', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -2214,10 +2242,7 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
 
     // assert
-    assert.deepStrictEqual(
-      monitoringHealth.map((trust) => trust.shadowSilent),
-      [false, false, true, true, false],
-    );
+    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true, true, false]);
   });
 
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
@@ -2709,8 +2734,8 @@ describe('createAccountRuntimeFromConfig', () => {
         throw new Error('no socket expected');
       },
       createSalt: () => 'salt-1',
-      onMonitoringHealth: (trust: MonitoringTrust): void => {
-        reported.push(trust);
+      onMonitoringHealth: (account: MonitoringTrust): void => {
+        reported.push(account);
       },
     });
 
@@ -2723,7 +2748,9 @@ describe('createAccountRuntimeFromConfig', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual(reported, [{ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]);
+    assert.deepStrictEqual(reported, [
+      { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
+    ]);
   });
 
   test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {

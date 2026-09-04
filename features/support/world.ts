@@ -645,8 +645,8 @@ export class BasementGuardianWorld extends World {
       // The same exported fan-out the platform calls, over the same
       // DiscoveryContext the two callbacks above build, so a scenario proves
       // the marking path a bridge runs rather than a harness copy of it (D-12).
-      onMonitoringHealth: (trust: MonitoringTrust): void => {
-        applyMonitoringHealth(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry, runtime.commands), trust);
+      onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
+        applyMonitoringHealth(this.discoveryContext(homebridge.api, accessories, basementGuardianAccessories, registry, runtime.commands), account, byDevice);
       },
       // A scenario that did not ask for the short interval leaves both members absent, so the seam
       // supplies the bundled pair rather than the harness overriding it with a production value.

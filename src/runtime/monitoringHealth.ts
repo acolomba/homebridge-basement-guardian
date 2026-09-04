@@ -47,15 +47,18 @@ export const HEARTBEAT_INTERVAL_MS = 898_000;
 export const MISSED_HEARTBEATS_BEFORE_SILENT = 2;
 
 /**
- * What the two transport facts this module tracks can support on their own.
+ * What this module can say about one account as a whole.
  *
- * This is the whole of what the projection answers, and deliberately less than
- * what the runtime pushes. Both members are derived from something this module
- * was told: a run of failed polls it counted, and a message arrival it stamped.
+ * There is one member, and that is the point: polling is an account-wide
+ * activity -- one loop, one credential, one endpoint -- so a run of failed
+ * polls is a fact about the account and every pump on it. Silence is not. It is
+ * a fact about one controller, this module has always tracked it per device,
+ * and `silentDevices()` is where that answer is read. Collapsing it into a
+ * second member here is what left a two-pump owner told the plugin could not
+ * vouch for a pump that was reporting perfectly (D-03, D-04).
  */
 export interface TransportTrust {
   restDegraded: boolean;
-  shadowSilent: boolean;
 }
 
 /**
@@ -69,6 +72,17 @@ export interface TransportTrust {
  * authentication lifecycle, and the answer it gave would be a guess (D-07).
  */
 export interface MonitoringTrust extends TransportTrust {
+  /**
+   * Whether the plugin has stopped hearing the live path of the one system this
+   * trust is about.
+   *
+   * It sits here rather than on `TransportTrust` because it is answered per
+   * device and this type is what the runtime resolves per device. This module
+   * answers `silentDevices()`; the runtime turns that list into one struct per
+   * system, and an accessory hears the answer for its own controller and for no
+   * other (D-01, D-03).
+   */
+  shadowSilent: boolean;
   commandTransportReady: boolean;
   /**
    * Whether the vendor has refused the account credentials.
@@ -93,7 +107,7 @@ export interface MonitoringHealthOptions {
   clock: Clock;
 }
 
-/** Tracks the two transport facts the account-wide trust decision is derived from. */
+/** Tracks the two transport facts the trust decision is derived from: one for the account, one per device. */
 export interface MonitoringHealth {
   /** Records one successful REST poll, which ends the failure run and nothing else. */
   recordRestSuccess(): void;
@@ -203,13 +217,14 @@ export function createMonitoringHealth(options: MonitoringHealthOptions): Monito
 
     silentDevices,
 
-    // Any device the plugin has stopped hearing costs the account its claim to
-    // be watching, because the marking every accessory hears is one answer.
-    // Which device it was is the failure log's line, not this one (D-02, D-03).
+    // Only the account-wide fact is answered here. Silence has one answer per
+    // controller and `silentDevices()` gives it; folding that list into a single
+    // boolean would spend one quiet pump's silence on every pump beside it,
+    // which is the false report this projection exists to avoid making
+    // (D-01, D-03, D-04).
     trustNow(): TransportTrust {
       return {
         restDegraded: isRestDegraded(consecutiveRestFailures),
-        shadowSilent: silentDevices().length > 0,
       };
     },
   };
