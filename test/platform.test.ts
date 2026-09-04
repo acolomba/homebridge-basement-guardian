@@ -410,9 +410,11 @@ function discoveryContext(options: ContextOptions): DiscoveryContext {
   };
 }
 
-// A BasementGuardianAccessory that records the account-wide trust it was
-// handed. The fan-out's whole content is that every accessory hears the same
-// answer, so recording which one heard what is the observation.
+// A BasementGuardianAccessory that records the trust it was handed, naming the
+// system it belongs to. The fan-out's whole content is which accessory heard
+// which answer, so the deviceId in the string is the observation and not
+// decoration: two accessories recording into one array is what makes a fan-out
+// that resolved the wrong system's answer visible.
 function recordingBasementGuardianAccessory(deviceId: string, marks: string[]): BasementGuardianAccessory {
   return {
     deviceId,
@@ -421,6 +423,24 @@ function recordingBasementGuardianAccessory(deviceId: string, marks: string[]): 
     update: () => undefined,
     markMonitoring: (trust: MonitoringTrust): void => {
       marks.push(`${deviceId} rest ${String(trust.restDegraded)} shadow ${String(trust.shadowSilent)}`);
+    },
+  };
+}
+
+// The same stand-in, recording the whole struct instead of two of its members.
+//
+// The missing-entry rule overrides one member of four and passes the other three
+// through untouched, so a case about that rule has to read all four; the string
+// above carries two and would call a fan-out correct that had invented the other
+// two (D-02).
+function trustRecordingBasementGuardianAccessory(deviceId: string, heard: Map<string, MonitoringTrust>): BasementGuardianAccessory {
+  return {
+    deviceId,
+    services: [],
+    untrusted: [],
+    update: () => undefined,
+    markMonitoring: (trust: MonitoringTrust): void => {
+      heard.set(deviceId, trust);
     },
   };
 }
@@ -1254,6 +1274,48 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow false`]);
+  });
+
+  // A system the push never named does not vouch. A pump the account gained since the last push, and
+  // an accessory Homebridge restored from cache before discovery completed, are both systems nobody
+  // has answered for, and an unknown never becomes a normal default in this plugin (D-02).
+  //
+  // What it resolves to is the account struct with that one member overridden, and not a literal
+  // written at the lookup. `MonitoringTrust` has four members and `markMonitoring` compares all four
+  // (`src/accessories/basementGuardian.ts:908-912`), so a fresh object built here would assert three
+  // facts nobody supplied -- a degraded poll reported as healthy, a refused credential reported as
+  // accepted. The three account-wide answers are real and travel through; only the per-device
+  // question the push left open is defaulted, which is why this case reads all four members and not
+  // just the one it is about.
+  test('makes an accessory the push never named decline to vouch, and hands it the account facts unchanged', () => {
+    // arrange
+    const heard = new Map<string, MonitoringTrust>();
+    const context = discoveryContext({
+      api: fakeDiscoveryApi([]),
+      accessories: new Map<string, BasementGuardianPlatformAccessory>(),
+      registry: unknownRegistry(),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(DEVICE_ID, heard)],
+        [SECOND_ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard)],
+      ]),
+    });
+    // The account vouches for the live path here, and that is what makes the override observable: a
+    // rule that resolved a missing entry to the account struct unchanged would hand the unnamed
+    // accessory this `false` and read as a pass. The other three members are each set away from their
+    // falsy default for the same reason.
+    const account = { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } satisfies MonitoringTrust;
+
+    // act
+    applyMonitoringHealth(context, account, new Map<string, MonitoringTrust>([[DEVICE_ID, account]]));
+
+    // assert
+    assert.deepStrictEqual(
+      { named: heard.get(DEVICE_ID), unnamed: heard.get(SECOND_DEVICE_ID) },
+      {
+        named: { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false },
+        unnamed: { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+      },
+    );
   });
 
   test('reaches nothing when this run has published no accessory yet', () => {
