@@ -13,11 +13,13 @@ name: What Apple Home draws for a Switch carrying `StatusActive = false` (D-03)
 expected: |
   Record what Apple Home draws for a Switch the plugin cannot vouch for, and whether it is
   distinguishable from an ordinary off switch.
-awaiting: user response
+awaiting: a paired-home session
 
 Items 1 and 5 passed on 2026-09-04 and carry their evidence below. Items 2, 3 and 4 need a real
-paired Apple Home and belong to one session with Phase 3's still-open flood-automation check. Item 6
-needs a command sent to real hardware and blocks `1.0.0` only.
+paired Apple Home and belong to one session with Phase 3's still-open flood-automation check; that
+session was attempted on 2026-09-04 and deferred before pairing -- see *Deferred session* below.
+Item 6 needs a command sent to real hardware, was declined by the maintainer on 2026-09-04, and
+blocks `1.0.0` only.
 
 ## Tests
 
@@ -163,3 +165,65 @@ Items 2, 3 and 4 belong to ONE real-paired-home session, together with Phase 3's
 flood-automation check (a flood automation must survive a degraded `water` scope) and the
 `G-003` / `G-004` gates. Item 1 needs an upgrade over an existing paired install. Item 5 is a
 desk task needing no hardware. Item 6 needs the pump itself.
+
+## Deferred session, 2026-09-04
+
+Items 2, 3 and 4, together with Phase 3's flood-automation check, were set up and then deferred
+**before pairing** because the dev container hit host networking problems. Nothing about Apple Home's
+behaviour was observed, and no item among them is answered. What follows is what the attempt
+established, so the next session starts from here rather than from scratch.
+
+### The forcing mechanism, built and verified, then removed
+
+The three degradation-dependent items need the plugin driven into a state the real vendor cloud will
+not produce on demand. A temporary harness did this by overriding reported telemetry fields at the
+one snapshot chokepoint, `freeze()` in `src/device/state.ts`, so the override lands on `data`
+**before** family validation and the plugin treats the value exactly as it would treat the same value
+from the vendor. It read a JSON file at `/homebridge/uat-force.json` (the container's storage
+directory) on every snapshot, so a scenario changes with a file write and a restart rather than a
+rebuild, and it logged `[UAT HARNESS] forcing reported fields: …` on every application so it could
+never run silently.
+
+**The harness was reverted and is not in the tree.** `dist/` was rebuilt without it and the running
+container verified to carry zero references. Rebuild it from this description when the session
+resumes; the field domains it needs are:
+
+| Scenario | Override | Effect, measured 2026-09-04 |
+|---|---|---|
+| Water scope untrusted | `{"water_level": 99}` | `Sump Pit Flood` and `Sump Pit Level` go `Status Active=0`; legal codes are `{0, 1, 3, 7, 15, 31}` |
+| Both controls untrusted | `{"test_running": "unknown", "alarm_audio_muted": "unknown"}` | `System Self-Test` and `Alarm Mute` go `Status Active=0`; both fields are required booleans |
+| A refusable press | `{"test_running": true}` | `System Self-Test` reads `On=1`, so pressing it **off** is refused |
+| Healthy | `{}` or no file | all 17 services vouched for |
+
+### Item 3 sends nothing to the hardware, which is why it is safe to run
+
+Pressing `System Self-Test` **off** is refused by `isNotAnOnRequest`, the first rule in
+`LOCAL_REFUSALS` at `src/accessories/controls.ts:336`. `refuseLocally` throws a `HapStatusError`
+before the request reaches the transport, so **no command reaches the vendor or the pump.** Verified
+by reading the path, not assumed. This matters because the maintainer declined item 6 (an Alarm Mute
+press) precisely to keep commands off the hardware, and item 3 does not carry that cost.
+
+### A finding about the flood-automation check's premise
+
+Phase 3's check reads: force a degraded `water` scope, then "confirm the automation still appears in
+the Home app and still fires when the leak state changes." **The second half is not reachable for
+this scope, by design.** `Sump Pit Flood` is filed under `water`, and a scope that cannot vouch for
+itself also stops publishing its values -- that is the preserve-and-mark rule (D-014). So while the
+sensor is inactive its leak value cannot change, and no automation can fire from a change that never
+happens.
+
+What a session can actually test is: (a) the automation survives the degradation, still listed and
+still enabled, which is the Apple-eligibility question the check exists for; and (b) it fires on the
+first real change after recovery, which a `{"water_level": 31}` override drives directly. The check's
+wording should be amended to say so rather than left to be rediscovered.
+
+### Incidental evidence gathered, worth keeping
+
+The forcing runs confirmed the narrowest-scope rule on the real device rather than in the harness.
+With `{"water_level": 99}` in place, `Sump Pit Flood` and `Sump Pit Level` both read
+`Status Active=0` **while retaining their last valid values** -- `Leak Detected=0`, `Water Level=20`,
+`Raw Water Level Code=1` -- and every other scope stayed active: the two controls, the four fault
+sensors, mains power, battery and `Basement Guardian Offline` all read `Status Active=1`. With the
+two control fields forced instead, exactly the two Switches went inactive and the water services
+returned to active. That is RES-01's preserve-and-mark and narrowest-scope behaviour observed live on
+real telemetry, on both a sensor scope and a control scope.
