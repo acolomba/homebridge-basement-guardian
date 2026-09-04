@@ -130,10 +130,27 @@ const FAULT_READING_SERVICES: readonly string[] = [
 ];
 
 // The whole controller-link report, written out here rather than matched on a fragment, so a case
-// asserts what an owner reads: the device it names, the condition, and what happens to the values.
+// asserts what an owner reads: the device it names, the services whose values stopped refreshing,
+// and what happens to those values.
+//
+// The cases using this one lose the link on their very first update, so no sensor row has ever
+// projected a value and none is published. The two control Switches publish whatever their scope
+// reports, and they are therefore the only published rows this cause withdraws. A line naming a
+// service the accessory does not carry would send an owner looking for a tile that is not there.
 const CONTROLLER_LINK_WARNING =
-  `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so water, pump, power, ` +
-  'battery, and fault values are retained rather than refreshed until the link returns.';
+  `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so the values on ` +
+  'System Self-Test and Alarm Mute are retained rather than refreshed until the link returns.';
+
+// The same report once a healthy update has published every row: the fifteen services a lost link
+// withdraws, in the catalogue's declared publication order. `Pump Controller Link Lost` is absent
+// because it tolerates this cause, and `Basement Guardian Offline` because it reads the vendor
+// cloud, which is still answering. Written out in full for the same reason as the constant above.
+const CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE =
+  `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so the values on ` +
+  'Sump Pit Flood, Sump Pit Level, Primary Pump, Primary Pump Running, Backup Pump, Backup Pump Activated, ' +
+  'Sump Mains Power, Mains Power Lost, Backup Battery, Backup Battery Facts, Primary Pump Fault, ' +
+  'Backup Pump Fault, Water Sensor Fault, System Self-Test, and Alarm Mute are retained rather than ' +
+  'refreshed until the link returns.';
 
 // A name a user typed, deliberately unlike anything the catalogue publishes, so a case that asserts
 // it survived cannot be satisfied by a seed.
@@ -1729,6 +1746,23 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING, CONTROLLER_LINK_WARNING]);
+  });
+
+  // The message is derived from the descriptors this accessory just published, so it names what an
+  // owner can actually open in Apple Home. This case is the one that pins the whole rendered line
+  // against a fully published accessory: fifteen names in the catalogue's publication order.
+  test('names every published service a lost controller link withdraws, in the catalogue publication order', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE]);
   });
 
   test('does not call a lost controller link a validation failure', () => {
