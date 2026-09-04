@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
 Plan: 7 of 7
 Status: All seven waves executed and summarized; records closed by plan 05.1-07
-Last activity: 2026-09-04 - Completed quick task 260904-o05: closed WINDOWS.md ledger entries 37-40, records drift already reconciled in 05-VALIDATION.md/05-VERIFICATION.md
+Last activity: 2026-09-04 - Completed quick task 260904-od5: repaired the stale ROADMAP.md progress table and checklist to match measured phase status
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -555,6 +555,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260904-od5 | Repair the stale ROADMAP.md progress table and checklist — Phase 3/4/5/5.1 flipped from stale/missing to their true measured status | 2026-09-04 | 13709c5 | Complete — checklist and table reconciled with STATE.md | [260904-od5-repair-the-stale-roadmap-md-progress-tab](./quick/260904-od5-repair-the-stale-roadmap-md-progress-tab/) |
 | 260904-o05 | Close WINDOWS.md ledger entries 37-40 — records drift between the ledger and 05-VALIDATION.md/05-VERIFICATION.md, all already reconciled in the live files | 2026-09-04 | 82f0eae | Fixed — 4/4 entries closed, no code or doc changes needed | [260904-o05-close-windows-md-ledger-entries-37-38-39](./quick/260904-o05-close-windows-md-ledger-entries-37-38-39/) |
 | 260904-mkz | Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp | 2026-09-04 | 4c9f74c |  | [260904-mkz-close-windows-md-ledger-entry-43-open-ph](./quick/260904-mkz-close-windows-md-ledger-entry-43-open-ph/) |
 | 260903-q06 | Correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive | 2026-09-03 | 05e6cb0 | Complete — guard byte-identical, 5 sites corrected | [260903-q06-correct-the-telemetry-ownership-guard-s-](./quick/260903-q06-correct-the-telemetry-ownership-guard-s-/) |
