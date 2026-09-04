@@ -527,13 +527,24 @@ interface LinkOverrides {
   mainsPresent?: boolean;
   flooded?: boolean;
   violations?: readonly FieldViolation[];
+  /**
+   * The decoded battery group, so a case can decode a group thin enough that only one of the two
+   * `backup-battery` rows projects a value and the other is never published.
+   */
+  battery?: Readonly<Record<string, unknown>>;
 }
 
 // A family whose fault group reports the controller link state. `serial_communications` is a
 // reported condition rather than a validation failure, so the whole payload keeps validating and
 // every scope group decodes while the link is down -- which is what makes the distrust the
 // accessory's own decision rather than a consequence of a failed field.
-function linkFamily({ linkPresent, mainsPresent = true, flooded = false, violations = [] }: LinkOverrides): DeviceFamily<unknown> {
+function linkFamily({
+  linkPresent,
+  mainsPresent = true,
+  flooded = false,
+  violations = [],
+  battery = { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+}: LinkOverrides): DeviceFamily<unknown> {
   return fakeFamily({
     validate: () => (violations.length === 0 ? { valid: true } : { valid: false, violations }),
     decode: () => ({
@@ -541,7 +552,7 @@ function linkFamily({ linkPresent, mainsPresent = true, flooded = false, violati
       water: flooded ? { levelCode: FLOODING_LEVEL_CODE, levelPercent: FLOODING_LEVEL_PERCENT, flooded } : { levelCode: 0, levelPercent: 0, flooded },
       pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
       power: { mainsPresent },
-      battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+      battery,
       fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: linkPresent },
       connectivity: { reportedOffline: false },
       'self-test': { running: false, testedAt: undefined },
@@ -1769,6 +1780,142 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE]);
+  });
+
+  // A fault an administrator suppressed is removed rather than published, so naming it would send an
+  // owner looking for a tile that is not there. The expected line is the pinned one minus that one
+  // name, which asserts the whole sentence and states what the suppression is expected to change.
+  test('leaves a suppressed fault out of the controller-link warning and names every other service', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const ignoredFaults: readonly NotificationServiceKind[] = ['water-sensor-fault'];
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry, ignoredFaults });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE.replace('Water Sensor Fault, ', '')]);
+  });
+
+  // The one row that tolerates this cause keeps vouching, so it must not appear among the services
+  // whose values stopped refreshing. Both halves are asserted from the same update, because the
+  // claim is that the row is absent from the sentence *while* it goes on reporting.
+  test('never names the row that tolerates a lost link, and leaves that row active in the same update', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      { names: warnings.map((warning) => warning.includes(CONTROLLER_LINK_ROW)), active: statusActiveOf(accessory, CONTROLLER_LINK_ROW) },
+      { names: [false], active: true },
+    );
+  });
+
+  // The two rows sharing the kind `backup-battery` carry different display names and different HAP
+  // service types, and both are withdrawn. This is the case that catches a join collapsing to the
+  // kind alone: with one key for two rows, one of these names goes missing or doubles. The needle for
+  // the first carries its trailing comma, because its name is a prefix of the second's.
+  test('names both services sharing the backup-battery kind, neither merged nor dropped', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        battery: warnings.map((warning) => warning.includes('Backup Battery,')),
+        facts: warnings.map((warning) => warning.includes('Backup Battery Facts')),
+      },
+      { battery: [true], facts: [true] },
+    );
+  });
+
+  // The case that makes the join key load-bearing. A battery group carrying only `voltageLow`
+  // projects a value for `Backup Battery Facts` and none for `Backup Battery`, so exactly one of the
+  // two rows sharing the kind is published. `toRow` sets the subtype to the kind verbatim, so a join
+  // on kind and subtype answers the same key for both rows and would name the service this accessory
+  // never published -- a tile an owner cannot open. The service type identifier is what tells them
+  // apart.
+  test('names only the published one of the two services sharing the backup-battery kind', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const thinBattery = { voltageLow: true };
+    const registry = registryOver([linkOutcome({ linkPresent: true, battery: thinBattery }), linkOutcome({ linkPresent: false, battery: thinBattery })]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        battery: warnings.map((warning) => warning.includes('Backup Battery,')),
+        facts: warnings.map((warning) => warning.includes('Backup Battery Facts')),
+      },
+      { battery: [false], facts: [true] },
+    );
+  });
+
+  // A log that reorders its names between transitions churns and cannot be pinned. The order comes
+  // from the catalogue rather than from the published descriptors or a set, and this is what says so.
+  test('renders the same names in the same order across two transitions', () => {
+    // arrange
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([
+      linkOutcome({ linkPresent: true }),
+      linkOutcome({ linkPresent: false }),
+      linkOutcome({ linkPresent: true }),
+      linkOutcome({ linkPresent: false }),
+    ]);
+    const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE, CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE]);
+  });
+
+  // Every name in the line is a catalogue display name, which is an ASCII constant declared in one
+  // place. A user who renames a tile in Apple Home renames the service, not the catalogue, and this
+  // is the backstop that keeps a user-supplied or vendor-supplied string out of a log line.
+  test('names the catalogue service rather than a name a user typed over it', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const registry = registryOver([linkOutcome({ linkPresent: true }), linkOutcome({ linkPresent: false })]);
+    const basementGuardianAccessory = accessoryWith(accessory, { log, registry });
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+    serviceOf(accessory, 'Water Sensor Fault').setCharacteristic(HAP.Characteristic.ConfiguredName, USER_RENAME);
+
+    // act
+    basementGuardianAccessory.update(buildSnapshot(), 'poll');
+
+    // assert
+    assert.deepStrictEqual(warnings, [CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE]);
+    assert.deepStrictEqual(
+      warnings.map((warning) => warning.includes(USER_RENAME)),
+      [false],
+    );
   });
 
   test('does not call a lost controller link a validation failure', () => {
