@@ -4,10 +4,10 @@ current_phase: 05.1
 current_phase_name: Per-Pump Trust and Monotonic Silence
 status: complete
 stopped_at: Completed 05.1-07-PLAN.md
-last_updated: "2026-09-04T19:18:05.997Z"
+last_updated: "2026-09-04T21:15:41.496Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 05.1 complete — seven waves, both runtimes green, live check performed
-state_head: 6e9ae8d55a4ba273fca5615604e4d6d47b4c3ec9
+state_head: 7da16d6e117911577880564f81b8e3e6450eb8ab
 progress:
   total_phases: 7
   completed_phases: 3
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
 Plan: 7 of 7
 Status: All seven waves executed and summarized; records closed by plan 05.1-07
-Last activity: 2026-09-04 - Completed quick task 260904-mkz: Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp
+Last activity: 2026-09-04 - Completed quick task 260904-nr6: confirmed and closed WINDOWS.md ledger entry 42 — the deviceId in the silent-live-connection log line is a permitted disclosure, not a leak
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -569,6 +569,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 | 260828-jaf | Record constructor dependency injection as a revisitable preference | 2026-08-28 | b0543e2 |  | [260828-jaf-record-constructor-dependency-injection-](./quick/260828-jaf-record-constructor-dependency-injection-/) |
 | 260828-jkw | Add agent reference documentation links | 2026-08-28 | 91c21a1 |  | [260828-jkw-add-agent-reference-documentation-links](./quick/260828-jkw-add-agent-reference-documentation-links/) |
 | 9 | Sort the ignoredFaults options alphabetically by their label | 2026-08-31 | c268b34 | — | — |
+| 260904-nr6 | Confirm and close WINDOWS.md ledger entry 42 — the silent-live-connection log line's deviceId disclosure | 2026-09-04 | 7da16d6 | — | [260904-nr6-confirm-and-close-windows-md-ledger-entr](./quick/260904-nr6-confirm-and-close-windows-md-ledger-entr/) |
 
 ## Deferred Items
 
