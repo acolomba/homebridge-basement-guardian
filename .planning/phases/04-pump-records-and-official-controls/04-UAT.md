@@ -3,18 +3,21 @@ status: testing
 phase: 04-pump-records-and-official-controls
 source: [04-VERIFICATION.md]
 started: 2026-09-01T20:15:00Z
-updated: 2026-09-01T20:15:00Z
+updated: 2026-09-04T19:30:00Z
 ---
 
 ## Current Test
 
-number: 1
-name: A cached-before-this-release accessory adopts the four record characteristics
+number: 2
+name: What Apple Home draws for a Switch carrying `StatusActive = false` (D-03)
 expected: |
-  Both restored PumpService instances adopt Observation Start, Activations Observed Since
-  Observation Start and Last Observed Activation At (and Last Activation Was Self-Test on the
-  backup pump), and each reads a real value rather than being absent or reading a format default.
+  Record what Apple Home draws for a Switch the plugin cannot vouch for, and whether it is
+  distinguishable from an ordinary off switch.
 awaiting: user response
+
+Items 1 and 5 passed on 2026-09-04 and carry their evidence below. Items 2, 3 and 4 need a real
+paired Apple Home and belong to one session with Phase 3's still-open flood-automation check. Item 6
+needs a command sent to real hardware and blocks `1.0.0` only.
 
 ## Tests
 
@@ -32,6 +35,42 @@ accessory's context through a JSON round trip but restores no services, so a rea
 Service carrying cached characteristics is a shape no test has produced. Whether HAP adds four
 characteristics to a service persisted without them is an upgrade path only a real bridge can
 answer. **This is the one open item that can change what an owner sees.**
+
+status: passed
+verified: 2026-09-04
+evidence: |
+  Run against the live dev container (homebridge/homebridge:latest, Homebridge v2.4.0, HAP v2.2.2,
+  Node v24.20.0) holding the one real Gemini.
+
+  **Method, stated because it simulates the upgrade rather than installing an older build.** The
+  container was stopped, and the four record characteristics were deleted from both PumpService
+  entries in `dev/homebridge/accessories/cachedAccessories` -- three from Primary Pump, four from
+  Backup Pump -- leaving each service persisted exactly as a pre-release cache holds it:
+  `[Name, Pump Running, Configured Name, Pump Fault, Status Fault, Status Active]`. The container was
+  then started on that cache. This presents HAP with the shape the question is about, a persisted
+  service lacking those characteristics; it does not reproduce any other difference a genuinely older
+  build might have carried.
+
+  **Result: all four adopted, each reading a real value.** After
+  `Loading accessory from cache: Gemini (17 services no longer vouched for, 2 controls refusing
+  presses)` and the first poll, the live HAP database read:
+
+  - Primary Pump -- `Observation Start="2026-09-02T18:05:59.917Z"`,
+    `Activations Observed Since Observation Start=15`,
+    `Last Observed Activation At="2026-09-02T18:38:14.183Z"`
+  - Backup Pump -- the same `Observation Start`, `Activations Observed Since Observation Start=0`,
+    `Last Observed Activation At=""`, `Last Activation Was Self-Test=1`
+
+  None is a format default: the counts and timestamps are the record this account actually
+  accumulated on 2026-09-02, restored from accessory context and republished onto characteristics
+  that did not exist on the service a moment earlier. `Last Observed Activation At=""` on the backup
+  pump is the record's own never-observed value beside its count of zero, not an unset characteristic.
+
+  Two corroborating details. The adopted characteristics sort **after** `Status Active` in the live
+  service, where the pre-strip cache carried them before it, which is the signature of a runtime
+  addition rather than a restore. And `cachedAccessories` was rewritten by the end of the run
+  carrying all seven characteristics and their values, so the upgrade persists rather than repeating
+  on every boot.
 
 ### 2. What Apple Home draws for a Switch carrying `StatusActive = false` (D-03)
 
@@ -81,6 +120,29 @@ why_human: CTRL-02 is satisfied entirely by documentation, and the `<human-check
 it was performed by the agent that wrote the prose. The negative claims CTRL-02 actually requires
 are present and correct; what needs a human is the accuracy of the positive Apple facts beside
 them.
+
+status: passed
+verified: 2026-09-04
+evidence: |
+  `README.md` section *Apple's Activity History* checked clause by clause against
+  <https://support.apple.com/en-gb/105011> as that page reads on 2026-09-04.
+
+  - "eligible accessories, including contact sensors" -- the page lists "garage doors, contact
+    sensors, smoke detectors, doors and windows". Correct, and the relevant one: this plugin
+    publishes eight contact sensors.
+  - "Apple documents up to 30 days" -- "View up to 30 days of activity", and "Activity is
+    permanently deleted after 30 days". Correct.
+  - "It needs a supported home hub and the current Home architecture" -- "You need an Apple TV or
+    HomePod with tvOS 17 or later in a home on the latest version of Apple Home". Correct as a
+    paraphrase; the README's wording is looser than Apple's but says nothing Apple's page does not.
+  - "The plugin cannot give it a retention setting" -- the page offers only "One Month" or "Off",
+    with no adjustable window, and nothing a plugin could set. Correct.
+  - "The plugin cannot put a missed event into it afterward" -- **Apple's page does not address
+    backfill in either direction.** No correction is needed, because the sentence is a claim about
+    what this plugin can do rather than about what Apple documents, and it is worded that way. Noted
+    so a later reader does not go looking for an Apple citation that does not exist.
+
+  No documentation defect found; the section stands as written.
 
 ### 6. G-001 — Alarm Mute against real hardware
 
