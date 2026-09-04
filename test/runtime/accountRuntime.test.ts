@@ -13,6 +13,7 @@ import { createDeviceStateStore } from '../../src/device/state.js';
 import { PROVISIONAL_FLOOD_WATER_LEVEL_CODE } from '../../src/device/waterLevel.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
+import { createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
@@ -25,6 +26,7 @@ import type { DeviceSnapshot, DeviceStateStore, ReportedPatch } from '../../src/
 import type { SecretRole } from '../../src/logging.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
+import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
@@ -333,6 +335,8 @@ interface Script {
    * supplies its own answer and gets the recording stand-in instead.
    */
   command: (deviceId: string, command: DeviceCommand, signal: AbortSignal) => Promise<CommandResult>;
+  /** The anchor store the runtime is given. A case about restarts supplies a pre-loaded one. */
+  anchors: RecordingAnchors;
 }
 
 interface Harness {
@@ -353,6 +357,8 @@ interface Harness {
   monitoringHealth: MonitoringTrust[];
   /** The per-system map pushed alongside each entry above, same order, same length. */
   monitoringByDevice: ReadonlyMap<string, MonitoringTrust>[];
+  /** The anchor store the runtime was given, so a case can read what it holds. */
+  anchors: RecordingAnchors;
   advance: (ms: number) => Promise<void>;
 }
 
@@ -370,6 +376,44 @@ async function settle(): Promise<void> {
   for (let turn = 0; turn < 8; turn += 1) {
     await nextEventLoopTurn();
   }
+}
+
+// The anchor store, in memory. `restored` is what an earlier run left on disk,
+// installed by `restore()` one event-loop turn late so a case can tell an
+// awaited restore from a fired-and-forgotten one. `persists` counts the writes,
+// because where they happen is the behaviour.
+interface RecordingAnchors extends ArrivalAnchors {
+  stored: Map<string, number>;
+  persists: () => number;
+}
+
+function recordingAnchors(restored: readonly (readonly [string, number])[] = []): RecordingAnchors {
+  const stored = new Map<string, number>();
+  let persists = 0;
+
+  return {
+    stored,
+    persists: (): number => persists,
+    get: (deviceId: string): number | undefined => stored.get(deviceId),
+    record: (deviceId: string, at: number): void => {
+      stored.set(deviceId, at);
+    },
+    forget: (deviceId: string): void => {
+      stored.delete(deviceId);
+    },
+    restore: async (): Promise<void> => {
+      await nextEventLoopTurn();
+
+      for (const [deviceId, anchor] of restored) {
+        stored.set(deviceId, anchor);
+      }
+    },
+    persist: (): Promise<void> => {
+      persists += 1;
+
+      return Promise.resolve();
+    },
+  };
 }
 
 // Builds the runtime over a scripted cloud and a socket-free shadow. The
@@ -397,6 +441,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME + (time - START_TIME) };
   const log = recordingLog(logged);
   const store = createDeviceStateStore({ clock, log: recordingLog([]) });
+  const anchors = script.anchors ?? recordingAnchors();
 
   const nextDevices = answering(script.devices ?? [() => Promise.resolve([geminiDevice()])]);
   const nextCredentials = answering(script.credentials ?? [() => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS))]);
@@ -478,6 +523,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     },
     clock,
     monotonic,
+    anchors,
     log,
   });
 
@@ -499,6 +545,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     commandRequests,
     monitoringHealth,
     monitoringByDevice,
+    anchors,
     advance: async (ms: number): Promise<void> => {
       time += ms;
       t.mock.timers.tick(ms);
@@ -724,6 +771,67 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(calls, []);
+  });
+
+  // The restart case, end to end. An earlier run left an anchor older than the
+  // whole silence window, so the pump was already quiet when the bridge went
+  // down and this run must not vouch for it. The forward-only base restarted at
+  // zero and says nothing; the restored anchor is what carries the fact across.
+  //
+  // It also pins the ordering. The store is restored one event-loop turn late,
+  // so a restore that was fired rather than awaited would land after the
+  // admission loop had already anchored the device at this instant, and the
+  // first report would call it trustworthy.
+  test('D-07 reports a pump silent on its first report when a stored anchor predates the whole window', async (t) => {
+    // arrange
+    const { runtime, monitoringByDevice } = harness(t, {
+      anchors: recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]),
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { reports: monitoringByDevice.length, silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent },
+      { reports: 1, silent: true },
+    );
+  });
+
+  // An install carrying no anchor invents nothing. The device is judged from its
+  // admission, exactly as it was before any anchor existed, and the run seeds an
+  // anchor for the next one (D-08).
+  test('D-08 vouches for a pump admitted on an install carrying no stored anchor, and anchors it from its admission', async (t) => {
+    // arrange
+    const { runtime, anchors, monitoringByDevice } = harness(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent, anchor: anchors.stored.get(DEVICE_ID) },
+      { silent: false, anchor: START_TIME },
+    );
+  });
+
+  // The anchors are written where the trust is reported, which is every poll
+  // outcome. The write is not awaited, so this asserts it happened rather than
+  // when it completed.
+  test('D-07 writes the anchors on the reporting tick', async (t) => {
+    // arrange
+    const { runtime, anchors, advance } = harness(t);
+    await runtime.start();
+    await settle();
+    const afterTheLaunch = anchors.persists();
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual({ afterTheLaunch, afterAPoll: anchors.persists() }, { afterTheLaunch: 1, afterAPoll: 2 });
   });
 });
 
@@ -2550,6 +2658,31 @@ describe('DEV-05 removal reconciliation', () => {
     );
   });
 
+  // The store lives for the life of the process and is written back to disk, so
+  // an account whose systems come and go over months would otherwise accumulate
+  // an anchor per system for good. It is dropped here, beside the arrival stamp
+  // and the reporting kind, because these two confirming polls are what decide a
+  // device is really gone (D-14).
+  test('drops the arrival anchor of a removed pump, so the stored set cannot outgrow the account', async (t) => {
+    // arrange
+    const { runtime, anchors, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+    });
+    await runtime.start();
+    await settle();
+    const whileItIsCarried = anchors.stored.has(DEVICE_ID);
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { whileItIsCarried, afterRemoval: anchors.stored.has(DEVICE_ID), removed },
+      { whileItIsCarried: true, afterRemoval: false, removed: [DEVICE_ID] },
+    );
+  });
+
   // The recovery latch does not need pruning here, and this is what says so. The shadow client stays
   // subscribed to a removed device's topics until the connection is rebuilt, so a queued message can
   // still arrive; it must push nothing, because there is no accessory left to push to.
@@ -2620,6 +2753,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     onMonitoringHealth: () => undefined,
     clock,
     monotonic,
+    anchors: createArrivalAnchors({ storagePath, log }),
     log,
   });
 

@@ -8,10 +8,12 @@ import { createMqttTransport } from '../cloud/mqttTransport.js';
 import { createShadowClient } from '../cloud/shadow.js';
 import { createDeviceStateStore } from '../device/state.js';
 
+import { createArrivalAnchors } from './arrivalAnchors.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from './failureLog.js';
 import { createMonitoringHealth } from './monitoringHealth.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from './retryPolicy.js';
 
+import type { ArrivalAnchors } from './arrivalAnchors.js';
 import type { Clock } from './clock.js';
 import type { CommandFailure, CommandOutcome, CommandPort } from './commandPort.js';
 import type { FailureLog } from './failureLog.js';
@@ -176,6 +178,15 @@ export interface AccountRuntimeOptions {
    * (D-06).
    */
   monotonic: MonotonicClock;
+  /**
+   * The wall-clock arrival anchors, restored before the launch and written back
+   * on the reporting tick.
+   *
+   * The runtime holds it because it is the one object that knows when a launch
+   * begins and when a poll has reported, and because the silence measurement it
+   * feeds owns no I/O of its own (D-07, D-08).
+   */
+  anchors: ArrivalAnchors;
   log: Logging;
 }
 
@@ -298,7 +309,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
   const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
-  const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic });
+  const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic, anchors: options.anchors });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
   // The three facts the monitoring path is derived from. Holding them, rather
@@ -1168,6 +1179,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     onMonitoringHealth: deps.onMonitoringHealth ?? (() => undefined),
     clock: deps.clock,
     monotonic: deps.monotonic,
+    anchors: createArrivalAnchors({ storagePath: deps.storagePath, log: deps.log }),
     log: deps.log,
   });
 }

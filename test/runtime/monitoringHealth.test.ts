@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import { createMonitoringHealth, HEARTBEAT_INTERVAL_MS, MISSED_HEARTBEATS_BEFORE_SILENT, REST_FAILURE_THRESHOLD } from '../../src/runtime/monitoringHealth.js';
 
+import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringHealth } from '../../src/runtime/monitoringHealth.js';
 import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
@@ -65,12 +66,51 @@ function movableClock(): MovableClock {
   };
 }
 
+// The anchor store, in memory, so a case can pre-load it as a restart would and
+// read back what admission and arrival did to it. `stored` is the same map the
+// store answers from, which is what lets a case assert an anchor was left where
+// it was rather than merely that silence came out right.
+interface RecordingAnchors extends ArrivalAnchors {
+  stored: Map<string, number>;
+}
+
+function recordingAnchors(initial: readonly (readonly [string, number])[] = []): RecordingAnchors {
+  const stored = new Map<string, number>(initial);
+
+  return {
+    stored,
+    get: (deviceId: string): number | undefined => stored.get(deviceId),
+    record: (deviceId: string, at: number): void => {
+      stored.set(deviceId, at);
+    },
+    forget: (deviceId: string): void => {
+      stored.delete(deviceId);
+    },
+    restore: (): Promise<void> => Promise.resolve(),
+    persist: (): Promise<void> => Promise.resolve(),
+  };
+}
+
+// An install whose store holds nothing and keeps nothing: the anchor file was
+// never written, or was rejected whole. Every lookup answers absent, which is
+// the state D-08 is about, and the measurement must rest on the forward-only
+// term alone rather than reading the absence as a recent arrival.
+function anchorsThatStoreNothing(): ArrivalAnchors {
+  return {
+    get: (): number | undefined => undefined,
+    record: (): void => undefined,
+    forget: (): void => undefined,
+    restore: (): Promise<void> => Promise.resolve(),
+    persist: (): Promise<void> => Promise.resolve(),
+  };
+}
+
 // A projection carrying one admitted device whose shadow arrival was stamped at
 // the scenario's start, which is the state every elapsed-time case measures
 // from. Admission comes first because that is the order the runtime uses: a
 // poll finds the device, and its messages arrive afterwards.
-function healthWithAMessageAtStart(clock: Clock, monotonic: MonotonicClock): MonitoringHealth {
-  const health = createMonitoringHealth({ clock, monotonic });
+function healthWithAMessageAtStart(clock: Clock, monotonic: MonotonicClock, anchors: ArrivalAnchors = recordingAnchors()): MonitoringHealth {
+  const health = createMonitoringHealth({ clock, monotonic, anchors });
   health.admitDevice(DEVICE_ID);
   health.recordShadowMessage(DEVICE_ID);
 
@@ -79,8 +119,8 @@ function healthWithAMessageAtStart(clock: Clock, monotonic: MonotonicClock): Mon
 
 // A projection carrying two admitted systems and no message from either, which
 // is the state a two-pump account is in the moment discovery finds it.
-function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock): MonitoringHealth {
-  const health = createMonitoringHealth({ clock, monotonic });
+function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock, anchors: ArrivalAnchors = recordingAnchors()): MonitoringHealth {
+  const health = createMonitoringHealth({ clock, monotonic, anchors });
   health.admitDevice(DEVICE_ID);
   health.admitDevice(OTHER_DEVICE_ID);
 
@@ -104,7 +144,7 @@ for (const { failures, degraded } of [
   test(`reports the polling path degraded as ${String(degraded)} after ${String(failures)} consecutive failed poll(s)`, () => {
     // arrange
     const { clock, monotonic } = movableClock();
-    const health = createMonitoringHealth({ clock, monotonic });
+    const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
 
     // act
     for (let failure = 0; failure < failures; failure += 1) {
@@ -119,7 +159,7 @@ for (const { failures, degraded } of [
 test('clears the polling degradation on the first successful poll after three failures', () => {
   // arrange
   const { clock, monotonic } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.recordRestFailure();
   health.recordRestFailure();
   health.recordRestFailure();
@@ -134,7 +174,7 @@ test('clears the polling degradation on the first successful poll after three fa
 test('starts a fresh run after a success, so one later failure does not degrade again', () => {
   // arrange
   const { clock, monotonic } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.recordRestFailure();
   health.recordRestFailure();
   health.recordRestSuccess();
@@ -247,7 +287,7 @@ test('leaves the shadow silent when a poll succeeds, because a poll observed no 
 test('leaves the polling path degraded when a shadow message arrives, because a message answered no request', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.recordRestFailure();
   health.recordRestFailure();
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
@@ -289,7 +329,7 @@ test('answers both facts together, so one degradation never reports the other', 
 test('vouches for a shadow over a device it has only just admitted', () => {
   // arrange
   const { clock, monotonic } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
 
   // act
   health.admitDevice(DEVICE_ID);
@@ -305,7 +345,7 @@ test('vouches for a shadow over a device it has only just admitted', () => {
 test('goes silent two heartbeats after admission when no message ever arrives', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.admitDevice(DEVICE_ID);
 
   // act
@@ -360,7 +400,7 @@ test('stops naming the quiet pump the moment it speaks, while the pump beside it
 test('reports no silence for a system it has never been told about', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
@@ -375,7 +415,7 @@ test('reports no silence for a system it has never been told about', () => {
 test('stops reporting a system the account no longer carries', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.admitDevice(DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
   const whileItIsCarried = health.silentDevices();
@@ -393,7 +433,7 @@ test('stops reporting a system the account no longer carries', () => {
 test('leaves a quiet pump quiet when a later poll admits it again', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
   health.admitDevice(DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
@@ -402,6 +442,84 @@ test('leaves a quiet pump quiet when a later poll admits it again', () => {
 
   // assert
   assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+});
+
+// The restart case, and the whole reason the anchor is persisted (D-07). The
+// forward-only base restarts with the process, so on its own it says this pump
+// was heard from an instant ago. The stored anchor is the second opinion that
+// remembers the pump has been quiet since before the restart, and the larger of
+// the two terms is what the verdict rests on.
+test('holds a pump silent across a restart, when the stored anchor is older than the whole window', () => {
+  // arrange
+  const { clock, monotonic } = movableClock();
+  const anchors = recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]);
+  const health = createMonitoringHealth({ clock, monotonic, anchors });
+
+  // act
+  health.admitDevice(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+});
+
+// An install carrying no anchor invents nothing: the absence is not read as
+// a recent arrival, and it is not read as silence either. The device is judged
+// from its admission, on the forward-only term alone, exactly as it was before
+// any anchor existed.
+test('rests on the forward-only term alone when the store holds no anchor, rather than reading the absence as a recent arrival', () => {
+  // arrange
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic, anchors: anchorsThatStoreNothing() });
+  health.admitDevice(DEVICE_ID);
+  const atAdmission = health.silentDevices();
+
+  // act
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // assert
+  assert.deepStrictEqual({ atAdmission, afterTwoHeartbeats: health.silentDevices() }, { atAdmission: [], afterTwoHeartbeats: [DEVICE_ID] });
+});
+
+// Admission is the right zero for a device the plugin has never heard from,
+// and only for that device. Overwriting a restored anchor with the current
+// instant is exactly how a restart comes to vouch for a pump that has been quiet
+// for hours, so admission leaves a stored anchor alone. A message is different:
+// something really did arrive, so it moves the anchor.
+test('leaves a stored anchor where it is when a device is admitted, and moves it when a message arrives', () => {
+  // arrange
+  const { clock, monotonic, moveTo } = movableClock();
+  const restored = START_TIME - TWO_MISSED_HEARTBEATS_MS;
+  const anchors = recordingAnchors([[DEVICE_ID, restored]]);
+  const health = createMonitoringHealth({ clock, monotonic, anchors });
+  moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
+  health.admitDevice(DEVICE_ID);
+  const afterAdmission = anchors.stored.get(DEVICE_ID);
+
+  // act
+  health.recordShadowMessage(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual(
+    { afterAdmission, afterAMessage: anchors.stored.get(DEVICE_ID) },
+    { afterAdmission: restored, afterAMessage: START_TIME + ONE_MISSED_HEARTBEAT_MS },
+  );
+});
+
+// The other half of the admission rule: a device the store has never held is
+// anchored at its admission, so the very first run of a fresh install carries a
+// wall term as well as a forward-only one.
+test('anchors a device the store has never held at its admission', () => {
+  // arrange
+  const { clock, monotonic, moveTo } = movableClock();
+  const anchors = recordingAnchors();
+  const health = createMonitoringHealth({ clock, monotonic, anchors });
+
+  // act
+  moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
+  health.admitDevice(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual([...anchors.stored], [[DEVICE_ID, START_TIME + ONE_MISSED_HEARTBEAT_MS]]);
 });
 
 // The verdict answers the account-wide fact and nothing else. Silence is per
@@ -414,7 +532,7 @@ test('leaves a quiet pump quiet when a later poll admits it again', () => {
 test('answers the one account-wide fact and nothing about silence or the command transport', () => {
   // arrange
   const { clock, monotonic } = movableClock();
-  const health = createMonitoringHealth({ clock, monotonic });
+  const health = createMonitoringHealth({ clock, monotonic, anchors: recordingAnchors() });
 
   // act
   const trust = health.trustNow();

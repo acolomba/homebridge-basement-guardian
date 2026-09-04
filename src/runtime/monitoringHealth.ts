@@ -17,6 +17,7 @@
  * number rather than by waiting (D-05).
  */
 
+import type { ArrivalAnchors } from './arrivalAnchors.js';
 import type { Clock } from './clock.js';
 import type { MonotonicClock } from './monotonicClock.js';
 
@@ -116,6 +117,15 @@ export interface MonitoringHealthOptions {
    * leave a dead pump reading as trustworthy (D-06, IN-03).
    */
   monotonic: MonotonicClock;
+  /**
+   * Where the wall readings of the arrivals live, so the wall term survives a
+   * restart the forward-only base cannot.
+   *
+   * It is injected rather than held here because the store is read from disk
+   * and written back to it, and this module owns no I/O. It reads and records
+   * anchors; the runtime decides when the store meets the disk (D-07, D-08).
+   */
+  anchors: ArrivalAnchors;
 }
 
 /** Tracks the two transport facts the trust decision is derived from: one for the account, one per device. */
