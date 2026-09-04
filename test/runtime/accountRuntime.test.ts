@@ -456,6 +456,12 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     },
     onDeviceRemoved: (deviceId: string): void => {
       removed.push(deviceId);
+      // What the platform's own handler does with this signal, at
+      // `src/platform.ts:480`. A harness that only records the call leaves the
+      // device in the store, so the runtime goes on reporting on a system the
+      // account no longer holds and the next poll sweeps up whatever the removal
+      // failed to drop -- which is a case passing over state nothing released.
+      store.remove(deviceId);
     },
     onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
       monitoringHealth.push(account);
@@ -2488,6 +2494,76 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+  });
+
+  // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so
+  // nothing would ever delete it: the map holds an entry for the life of the process and the stale
+  // entry follows the identifier back if the account re-adds it.
+  //
+  // The harm is observable at the re-add, which is why the case ends there rather than at the
+  // removal. With the entry retained, the first healthy poll after the identifier returns reaches
+  // the log's success path, which deletes the entry and announces a recovery -- for a system that
+  // has been in the account for one poll and has never failed in it.
+  test('drops the reporting kind of a removed pump, so the identifier coming back announces no recovery', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([geminiDevice()]),
+      ],
+      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+    });
+    await runtime.start();
+    // Two missed heartbeats, so the pump's live reporting is failing when it goes.
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    const atRemoval = { removed: [...removed], recoveries: recoveriesIn(logged) };
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        atRemoval,
+        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        recoveriesAfterTheIdentifierReturned: recoveriesIn(logged),
+      },
+      {
+        atRemoval: { removed: [DEVICE_ID], recoveries: [] },
+        warnings: 1,
+        recoveriesAfterTheIdentifierReturned: [],
+      },
+    );
+  });
+
+  // The recovery latch does not need pruning here, and this is what says so. The shadow client stays
+  // subscribed to a removed device's topics until the connection is rebuilt, so a queued message can
+  // still arrive; it must push nothing, because there is no accessory left to push to.
+  //
+  // The latch is already empty by then for a structural reason rather than a dropped entry:
+  // `reportMonitoringHealth` rebuilds it wholesale from the map it is about to push, and the removal
+  // runs before the poll records its outcome, so the entry is gone by the end of the same poll. A
+  // latch that accumulated instead of being rebuilt would fail this case.
+  test('reports nothing for a message from a pump the account has already removed', async (t) => {
+    // arrange
+    const { runtime, shadows, monitoringByDevice, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+    });
+    await runtime.start();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    const atRemoval = monitoringByDevice.length;
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual({ removed, pushes: monitoringByDevice.length }, { removed: [DEVICE_ID], pushes: atRemoval });
   });
 });
 
