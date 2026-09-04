@@ -332,12 +332,32 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 05.1-01-PLAN.md — Harness correctness before the harness carries the evidence (ledger entries 17 and 18, corrected diagnoses)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 05.1-02-PLAN.md — Tracer: one silent pump, one reporting pump, trust withdrawn from one only, end to end
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 05.1-03-PLAN.md — The per-device recovery latch and live-reporting log, pinned; a removed device leaves nothing behind
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 05.1-04-PLAN.md — A MonotonicClock port, the max clamp, and a second time base in the harness
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 05.1-05-PLAN.md — The persisted arrival anchor under the Homebridge storage path
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 05.1-06-PLAN.md — A controller-link diagnostic derived from what the accessory published
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 05.1-07-PLAN.md — The gate on both runtimes, the live single-device check, and the records
 
 Every plan is its own wave, executed in order. Same-wave parallelism is deliberately not used here:
