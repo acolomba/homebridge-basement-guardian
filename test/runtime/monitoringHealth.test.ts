@@ -5,8 +5,15 @@ import { createMonitoringHealth, HEARTBEAT_INTERVAL_MS, MISSED_HEARTBEATS_BEFORE
 
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringHealth } from '../../src/runtime/monitoringHealth.js';
+import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
 
 const START_TIME = 1_700_000_000_000;
+
+// Where the forward-only base starts. It is deliberately unlike START_TIME, and
+// small enough that it could not be mistaken for a wall-clock instant, so a case
+// that handed one port the other's reading fails loudly rather than agreeing by
+// coincidence.
+const MONOTONIC_START_TIME = 4_000_000;
 
 // The systems a case is about. Most cases are about one, which is the ordinary
 // account, and the two-device cases below are what make silence a fact about a
@@ -21,19 +28,38 @@ const OTHER_DEVICE_ID = 'placeholder-other-device';
 const ONE_MISSED_HEARTBEAT_MS = 898_000;
 const TWO_MISSED_HEARTBEATS_MS = 1_796_000;
 
-// One clock a case moves by assignment, so elapsed time is stated rather than
+// The wall-clock correction the backwards-jump case makes, written out for the
+// same reason: it is deliberately larger than the whole silence window, which is
+// the case IN-03 names, and a figure derived from the window would move with it.
+const ONE_HOUR_MS = 3_600_000;
+
+// Two clocks a case moves by assignment, so elapsed time is stated rather than
 // waited for.
+//
+// `moveTo` moves both bases by the same displacement, because a case that
+// advances time means time passed, and time passing moves both. Only a case
+// about a wall-clock correction reaches for `moveWallTo`, which moves the wall
+// base alone and leaves the forward-only one where it was. Keeping the pair
+// apart at the mover is what makes a backwards jump expressible at all.
 interface MovableClock {
   clock: Clock;
+  monotonic: MonotonicClock;
   moveTo: (at: number) => void;
+  moveWallTo: (at: number) => void;
 }
 
 function movableClock(): MovableClock {
   let now = START_TIME;
+  let monotonicNow = MONOTONIC_START_TIME;
 
   return {
     clock: { now: () => now },
+    monotonic: { now: () => monotonicNow },
     moveTo: (at: number): void => {
+      monotonicNow += at - now;
+      now = at;
+    },
+    moveWallTo: (at: number): void => {
       now = at;
     },
   };
@@ -43,8 +69,8 @@ function movableClock(): MovableClock {
 // the scenario's start, which is the state every elapsed-time case measures
 // from. Admission comes first because that is the order the runtime uses: a
 // poll finds the device, and its messages arrive afterwards.
-function healthWithAMessageAtStart(clock: Clock): MonitoringHealth {
-  const health = createMonitoringHealth({ clock });
+function healthWithAMessageAtStart(clock: Clock, monotonic: MonotonicClock): MonitoringHealth {
+  const health = createMonitoringHealth({ clock, monotonic });
   health.admitDevice(DEVICE_ID);
   health.recordShadowMessage(DEVICE_ID);
 
@@ -53,8 +79,8 @@ function healthWithAMessageAtStart(clock: Clock): MonitoringHealth {
 
 // A projection carrying two admitted systems and no message from either, which
 // is the state a two-pump account is in the moment discovery finds it.
-function healthWithTwoAdmittedDevices(clock: Clock): MonitoringHealth {
-  const health = createMonitoringHealth({ clock });
+function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock): MonitoringHealth {
+  const health = createMonitoringHealth({ clock, monotonic });
   health.admitDevice(DEVICE_ID);
   health.admitDevice(OTHER_DEVICE_ID);
 
@@ -77,7 +103,8 @@ for (const { failures, degraded } of [
 ]) {
   test(`reports the polling path degraded as ${String(degraded)} after ${String(failures)} consecutive failed poll(s)`, () => {
     // arrange
-    const health = createMonitoringHealth({ clock: movableClock().clock });
+    const { clock, monotonic } = movableClock();
+    const health = createMonitoringHealth({ clock, monotonic });
 
     // act
     for (let failure = 0; failure < failures; failure += 1) {
@@ -91,7 +118,8 @@ for (const { failures, degraded } of [
 
 test('clears the polling degradation on the first successful poll after three failures', () => {
   // arrange
-  const health = createMonitoringHealth({ clock: movableClock().clock });
+  const { clock, monotonic } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.recordRestFailure();
   health.recordRestFailure();
   health.recordRestFailure();
@@ -105,7 +133,8 @@ test('clears the polling degradation on the first successful poll after three fa
 
 test('starts a fresh run after a success, so one later failure does not degrade again', () => {
   // arrange
-  const health = createMonitoringHealth({ clock: movableClock().clock });
+  const { clock, monotonic } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.recordRestFailure();
   health.recordRestFailure();
   health.recordRestSuccess();
@@ -126,8 +155,8 @@ for (const { elapsedMs, silent } of [
 ]) {
   test(`reports the shadow silent as ${String(silent)} ${String(elapsedMs)} ms after the last message`, () => {
     // arrange
-    const { clock, moveTo } = movableClock();
-    const health = healthWithAMessageAtStart(clock);
+    const { clock, monotonic, moveTo } = movableClock();
+    const health = healthWithAMessageAtStart(clock, monotonic);
 
     // act
     moveTo(START_TIME + elapsedMs);
@@ -139,8 +168,8 @@ for (const { elapsedMs, silent } of [
 
 test('measures the silence from the newest message, so a late arrival restarts the window', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithAMessageAtStart(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
   health.recordShadowMessage(DEVICE_ID);
 
@@ -153,8 +182,8 @@ test('measures the silence from the newest message, so a late arrival restarts t
 
 test('goes silent a full window after a late arrival rather than a full window after the first', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithAMessageAtStart(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
   health.recordShadowMessage(DEVICE_ID);
 
@@ -165,10 +194,47 @@ test('goes silent a full window after a late arrival rather than a full window a
   assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
 });
 
+// A wall clock can be corrected by hand, stepped by NTP, or restored from a
+// dead battery at boot, and a correction larger than the window would otherwise
+// hand a pump that stopped speaking hours ago a fresh certificate of health.
+// The window is measured against the forward-only base, so the correction moves
+// nothing the verdict rests on (IN-03, D-06, D-07).
+test('holds a pump silent when the wall clock is set back further than the whole window', () => {
+  // arrange
+  const { clock, monotonic, moveTo, moveWallTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
+  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // act
+  moveWallTo(START_TIME - ONE_HOUR_MS);
+
+  // assert
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+});
+
+// The forward-only source does not advance across a system suspend, so a home
+// server that sleeps through the night wakes with that counter hours short and
+// a pump that said nothing all night reads as recently heard. The wall term is
+// the second opinion that covers it, and the larger of the two terms is what
+// counts -- the smaller would be the exact inversion that hides the dead pump.
+// The suspend behaviour itself is cited rather than observed; what this case
+// pins is the arithmetic that answers it (D-07).
+test('reports a pump silent on the wall term alone when the forward-only base has barely moved', () => {
+  // arrange
+  const { clock, monotonic, moveWallTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
+
+  // act
+  moveWallTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+
+  // assert
+  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+});
+
 test('leaves the shadow silent when a poll succeeds, because a poll observed no live message', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithAMessageAtStart(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
   // act
@@ -180,8 +246,8 @@ test('leaves the shadow silent when a poll succeeds, because a poll observed no 
 
 test('leaves the polling path degraded when a shadow message arrives, because a message answered no request', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.recordRestFailure();
   health.recordRestFailure();
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
@@ -195,8 +261,8 @@ test('leaves the polling path degraded when a shadow message arrives, because a 
 
 test('leaves the silence window where it was when a poll fails, because a failed request observed no message', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithAMessageAtStart(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
 
   // act
@@ -208,8 +274,8 @@ test('leaves the silence window where it was when a poll fails, because a failed
 
 test('answers both facts together, so one degradation never reports the other', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithAMessageAtStart(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithAMessageAtStart(clock, monotonic);
   health.recordRestFailure();
   health.recordRestFailure();
 
@@ -222,8 +288,8 @@ test('answers both facts together, so one degradation never reports the other', 
 
 test('vouches for a shadow over a device it has only just admitted', () => {
   // arrange
-  const { clock } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
 
   // act
   health.admitDevice(DEVICE_ID);
@@ -238,8 +304,8 @@ test('vouches for a shadow over a device it has only just admitted', () => {
 // so a shadow that never connects never vouches for anything for long.
 test('goes silent two heartbeats after admission when no message ever arrives', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.admitDevice(DEVICE_ID);
 
   // act
@@ -255,8 +321,8 @@ test('goes silent two heartbeats after admission when no message ever arrives', 
 // (D-05, D-13).
 test('names only the pump that stopped speaking when the pump beside it is still heartbeating', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithTwoAdmittedDevices(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithTwoAdmittedDevices(clock, monotonic);
   health.recordShadowMessage(DEVICE_ID);
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
@@ -274,8 +340,8 @@ test('names only the pump that stopped speaking when the pump beside it is still
 // ever spent on the other (D-03, D-04).
 test('stops naming the quiet pump the moment it speaks, while the pump beside it was never named', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = healthWithTwoAdmittedDevices(clock);
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = healthWithTwoAdmittedDevices(clock, monotonic);
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
@@ -293,8 +359,8 @@ test('stops naming the quiet pump the moment it speaks, while the pump beside it
 // messages from a system the plugin knows it should be hearing from.
 test('reports no silence for a system it has never been told about', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
@@ -308,8 +374,8 @@ test('reports no silence for a system it has never been told about', () => {
 // a pump that was sold with the house.
 test('stops reporting a system the account no longer carries', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.admitDevice(DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
   const whileItIsCarried = health.silentDevices();
@@ -326,8 +392,8 @@ test('stops reporting a system the account no longer carries', () => {
 // would never be reached -- the same false normal on a slower clock.
 test('leaves a quiet pump quiet when a later poll admits it again', () => {
   // arrange
-  const { clock, moveTo } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic, moveTo } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
   health.admitDevice(DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
 
@@ -347,8 +413,8 @@ test('leaves a quiet pump quiet when a later poll admits it again', () => {
 // recorded facts support and the runtime assembles the rest (RES-04, D-07).
 test('answers the one account-wide fact and nothing about silence or the command transport', () => {
   // arrange
-  const { clock } = movableClock();
-  const health = createMonitoringHealth({ clock });
+  const { clock, monotonic } = movableClock();
+  const health = createMonitoringHealth({ clock, monotonic });
 
   // act
   const trust = health.trustNow();

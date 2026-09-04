@@ -618,6 +618,7 @@ export class BasementGuardianWorld extends World {
       registry,
       storagePath: homebridge.storagePath,
       clock: this,
+      monotonic: this,
       log: this.logger(),
       connect,
       createSalt: () => HARNESS_SALT,

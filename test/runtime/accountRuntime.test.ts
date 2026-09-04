@@ -27,12 +27,17 @@ import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
+import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
 import type { LogLevel, Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
 
 const DEVICE_ID = 'account-1_serial-1';
 const OTHER_DEVICE_ID = 'account-1_serial-2';
 const START_TIME = Date.parse('2026-08-28T12:00:00.000Z');
+// The forward-only base, started somewhere deliberately unlike the wall clock
+// so a case that handed one port the other's reading fails loudly instead of
+// agreeing by coincidence.
+const MONOTONIC_START_TIME = 4_000_000;
 const ONE_HOUR_MS = 3_600_000;
 const POLL_INTERVAL_MS = 900_000;
 
@@ -386,6 +391,10 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   let time = START_TIME;
 
   const clock: Clock = { now: () => time };
+  // The two bases move together, as they do in production and in the Cucumber
+  // harness: a case that advances time means both, and only a case about a
+  // wall-clock correction moves one alone.
+  const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME + (time - START_TIME) };
   const log = recordingLog(logged);
   const store = createDeviceStateStore({ clock, log: recordingLog([]) });
 
@@ -468,6 +477,7 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
       monitoringByDevice.push(new Map(byDevice));
     },
     clock,
+    monotonic,
     log,
   });
 
@@ -2578,6 +2588,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
   });
 
   const clock: Clock = { now: () => START_TIME };
+  const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME };
   const log = recordingLog(logged);
   const auth = createAuthClient({
     constants: testConstants,
@@ -2608,6 +2619,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     onDeviceRemoved: () => undefined,
     onMonitoringHealth: () => undefined,
     clock,
+    monotonic,
     log,
   });
 
@@ -2781,6 +2793,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect,
       createSalt: () => 'salt-1',
@@ -2807,6 +2820,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log,
       connect: () => {
         throw new Error('no socket expected');
@@ -2840,6 +2854,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect: () => {
         throw new Error('no socket expected');
@@ -2883,6 +2898,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect: () => {
         throw new Error('no socket expected');
@@ -2921,6 +2937,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect: () => {
         throw new Error('no socket expected');
@@ -2976,6 +2993,7 @@ describe('createAccountRuntimeFromConfig', () => {
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect: () => {
         throw new Error('no socket expected');

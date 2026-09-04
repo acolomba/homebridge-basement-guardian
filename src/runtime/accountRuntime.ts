@@ -16,6 +16,7 @@ import type { Clock } from './clock.js';
 import type { CommandFailure, CommandOutcome, CommandPort } from './commandPort.js';
 import type { FailureLog } from './failureLog.js';
 import type { MonitoringTrust } from './monitoringHealth.js';
+import type { MonotonicClock } from './monotonicClock.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
 import type { MqttConnect } from '../cloud/mqttTransport.js';
@@ -168,6 +169,13 @@ export interface AccountRuntimeOptions {
    */
   onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>) => void;
   clock: Clock;
+  /**
+   * Forward-only elapsed time, threaded to the silence measurement exactly as
+   * `clock` is threaded to everything that wants wall time. It travels beside
+   * the wall clock rather than replacing it, because both terms are needed
+   * (D-06).
+   */
+  monotonic: MonotonicClock;
   log: Logging;
 }
 
@@ -290,7 +298,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
   const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
-  const health = createMonitoringHealth({ clock: options.clock });
+  const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
   // The three facts the monitoring path is derived from. Holding them, rather
@@ -1090,6 +1098,8 @@ export interface AccountRuntimeDeps {
   /** The Homebridge storage directory; the token cache lives there and nowhere else. */
   storagePath: string;
   clock: Clock;
+  /** Forward-only elapsed time for the silence measurement. Wall time for everything else. */
+  monotonic: MonotonicClock;
   log: RedactingLogger;
   connect: MqttConnect;
   createSalt: () => string;
@@ -1157,6 +1167,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     onDeviceRemoved: deps.onDeviceRemoved ?? (() => undefined),
     onMonitoringHealth: deps.onMonitoringHealth ?? (() => undefined),
     clock: deps.clock,
+    monotonic: deps.monotonic,
     log: deps.log,
   });
 }

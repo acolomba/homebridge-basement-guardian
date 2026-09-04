@@ -18,6 +18,7 @@
  */
 
 import type { Clock } from './clock.js';
+import type { MonotonicClock } from './monotonicClock.js';
 
 /**
  * How many consecutive failed REST polls mark the polling path degraded.
@@ -104,7 +105,17 @@ export interface MonitoringTrust extends TransportTrust {
 
 /** Everything the monitoring-trust projection needs, by injection. */
 export interface MonitoringHealthOptions {
+  /**
+   * Wall time. It is the second opinion in the silence measurement, the term
+   * that covers a suspend the forward-only source sleeps through.
+   */
   clock: Clock;
+  /**
+   * Forward-only elapsed time, and the primary term the silence window is
+   * measured against, so a wall-clock correction cannot shorten a window and
+   * leave a dead pump reading as trustworthy (D-06, IN-03).
+   */
+  monotonic: MonotonicClock;
 }
 
 /** Tracks the two transport facts the trust decision is derived from: one for the account, one per device. */

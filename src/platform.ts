@@ -11,6 +11,7 @@ import { createRedactingLogger } from './logging.js';
 import { PROTOCOL } from './protocol.js';
 import { createAccountRuntimeFromConfig } from './runtime/accountRuntime.js';
 import { systemClock } from './runtime/clock.js';
+import { systemMonotonicClock } from './runtime/monotonicClock.js';
 import { systemTimers } from './runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
@@ -565,6 +566,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       registry: this.registry,
       storagePath: this.api.user.storagePath(),
       clock: systemClock,
+      monotonic: systemMonotonicClock,
       log: this.log,
       connect,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
