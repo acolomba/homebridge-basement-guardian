@@ -13,10 +13,10 @@ import { Given, Then, When } from '@cucumber/cucumber';
 
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../../src/device/halo.js';
 import { shadowTopic } from '../fakeShadowBroker.js';
+import { currentAccessory } from '../publishedServices.js';
 import { SUBSCRIBER_CLIENT_ID } from '../world.js';
 
 import type { FakeAuth0TokenRequest } from '../fakeAuth0.js';
-import type { FakeAccessory, FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../fakeRestApi.js';
 import type { ShadowTopicLeaf } from '../fakeShadowBroker.js';
 import type { BasementGuardianWorld } from '../world.js';
@@ -124,22 +124,16 @@ function wireIdentity(wireDevice: unknown): Record<string, unknown> {
   };
 }
 
-// The scenarios that change device data after the plugin starts read state
-// back through the one accessory the harness ever registers, rather than a
-// deviceId lookup, because every discovery scenario in this feature seeds
-// exactly one physical device.
-function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
-  return homebridge.registerPlatformAccessoryCalls[0]?.accessories[0];
-}
-
-function topicNamed(name: string): string {
+// The device is a parameter rather than a closure over the module constant, so a caller states
+// which system its topic is about instead of inheriting one silently.
+function topicNamed(deviceId: string, name: string): string {
   const leaf = TOPIC_LEAVES.get(name);
 
   if (leaf === undefined) {
     throw new Error(`the harness knows no ${name} topic`);
   }
 
-  return shadowTopic(DEVICE_ID, leaf);
+  return shadowTopic(deviceId, leaf);
 }
 
 // `waterLevel` is an optional column, following the same model `deviceTypeId`
@@ -172,7 +166,7 @@ async function record(world: BasementGuardianWorld, url: string, init: RequestIn
 }
 
 async function receivedDocument(world: BasementGuardianWorld, topicName: string): Promise<unknown> {
-  const payload = await world.nextMessage(topicNamed(topicName), MESSAGE_DEADLINE_MS);
+  const payload = await world.nextMessage(topicNamed(DEVICE_ID, topicName), MESSAGE_DEADLINE_MS);
   const document: unknown = JSON.parse(payload);
 
   return document;
@@ -234,7 +228,7 @@ async function fakeShadowBroker(this: BasementGuardianWorld): Promise<void> {
 Given('the fake shadow broker', fakeShadowBroker);
 
 async function subscriberOnTopic(this: BasementGuardianWorld, topicName: string): Promise<void> {
-  await this.subscribe(topicNamed(topicName));
+  await this.subscribe(topicNamed(DEVICE_ID, topicName));
 }
 
 Given('a subscriber on the {word} topic', subscriberOnTopic);
