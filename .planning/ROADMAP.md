@@ -17,10 +17,10 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
 
 - [x] **Phase 1: Secure Cloud Foundation** - Administrator can safely configure one account and maintain a trustworthy synchronized cloud-state runtime.
 - [x] **Phase 2: Safe Gemini Discovery and Identity** - Every valid Gemini receives one stable accessory while unsupported or invalid profiles fail safely. (completed 2026-08-29)
-- [ ] **Phase 3: Safety Monitoring in HomeKit** - Users receive truthful, immediate water, pump, power, battery, fault, and connectivity state.
-- [ ] **Phase 4: Pump Records and Official Controls** - Users can inspect observed pump activity and use validated self-test and alarm-mute controls.
-- [ ] **Phase 5: Degraded Operation and Recovery** - Users keep cached safety state through restart and can separate confirmed device offline from a degraded monitoring path.
-- [ ] **Phase 5.1: Per-Pump Trust and Monotonic Silence** `INSERTED` - Per-pump trust withdrawal, a complete controller-link diagnostic, and a monotonic silence clock.
+- [x] **Phase 3: Safety Monitoring in HomeKit** - Users receive truthful, immediate water, pump, power, battery, fault, and connectivity state.
+- [x] **Phase 4: Pump Records and Official Controls** - Users can inspect observed pump activity and use validated self-test and alarm-mute controls.
+- [x] **Phase 5: Degraded Operation and Recovery** - Users keep cached safety state through restart and can separate confirmed device offline from a degraded monitoring path.
+- [x] **Phase 5.1: Per-Pump Trust and Monotonic Silence** `INSERTED` - Per-pump trust withdrawal, a complete controller-link diagnostic, and a monotonic silence clock.
 - [ ] **Phase 6: Validated Release Candidate** - Maintainer has a compatible, tested, private, licensed, and gate-cleared package ready for controlled release.
 
 ## Phase Details
@@ -390,7 +390,8 @@ producing false failures (`pass 1383 / fail 2` against a solo `1385 / fail 0`).
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
-| 3. Safety Monitoring in HomeKit | 8/8 | In Progress|  |
-| 4. Pump Records and Official Controls | 0/TBD | Not started | - |
-| 5. Degraded Operation and Recovery | 19/19 | In Progress|  |
+| 3. Safety Monitoring in HomeKit | 8/8 | Implementation complete (human verification pending) |  |
+| 4. Pump Records and Official Controls | 6/6 | Implementation complete (human verification pending) |  |
+| 5. Degraded Operation and Recovery | 19/19 | Implementation complete |  |
+| 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete | 2026-09-04 |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |
