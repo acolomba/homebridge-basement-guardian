@@ -20,6 +20,7 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
 - [ ] **Phase 3: Safety Monitoring in HomeKit** - Users receive truthful, immediate water, pump, power, battery, fault, and connectivity state.
 - [ ] **Phase 4: Pump Records and Official Controls** - Users can inspect observed pump activity and use validated self-test and alarm-mute controls.
 - [ ] **Phase 5: Degraded Operation and Recovery** - Users keep cached safety state through restart and can separate confirmed device offline from a degraded monitoring path.
+- [ ] **Phase 5.1: Per-Pump Trust and Monotonic Silence** `INSERTED` - Per-pump trust withdrawal, a complete controller-link diagnostic, and a monotonic silence clock.
 - [ ] **Phase 6: Validated Release Candidate** - Maintainer has a compatible, tested, private, licensed, and gate-cleared package ready for controlled release.
 
 ## Phase Details
@@ -315,6 +316,22 @@ Plans:
 **Wave 14** *(blocked on Wave 13 completion)*
 
 - [x] 05-19-PLAN.md — The README, the changelog and the requirement rows say what the code does, each sentence traced to a passing assertion
+
+### Phase 05.1: Per-Pump Trust and Monotonic Silence (INSERTED)
+
+**Goal**: A multi-pump owner keeps trust in every pump that is still reporting, reads a controller-link diagnostic that names every service it withdrew, and gets silence measured by a clock that cannot jump.
+**Depends on**: Phase 5
+**Requirements**: RES-01, RES-02 (refinement — both rows are already Complete; this phase narrows the scope they mark and completes the diagnostic they emit)
+**Success Criteria** (what must be TRUE):
+
+  1. On an account with more than one pump, a silent pump withdraws trust from that pump's accessory only; a pump that is still reporting keeps vouching for its own services.
+  2. The controller-link log names every service the marking pass withdraws, including Self-Test and Alarm Mute, and the name list cannot drift from the marked set without failing a test.
+  3. Shadow silence is measured by a forward-only counter, so a wall-clock jump in either direction cannot shorten or lengthen the silence window.
+  4. Ledger entry 41 carries a recorded ruling on whether the silence timer arms on telemetry or on any message, naming the evidence the ruling rests on and what that evidence does not cover.
+
+**Plans**: TBD (run /gsd-plan-phase 05.1 to break down)
+
+**Source**: Ledger entries 19, 6, and 14/IN-03 in `.planning/WINDOWS.md` — decided at the close of Phase 5 and recorded under **Decisions** in `.planning/STATE.md`, built by no phase. Scoped together because they share `monitoringHealth.ts`, `basementGuardian.ts`, `platform.ts` and `clock.ts`, and all three need the two-pump Cucumber harness that plan 05-13 landed.
 
 ### Phase 6: Validated Release Candidate
 
