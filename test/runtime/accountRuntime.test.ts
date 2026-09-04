@@ -68,13 +68,28 @@ const DISCOVERY_FAILED_UNEXPLAINED_LINE = 'Device discovery failed.';
 // The line one system's live connection records when it has stopped delivering,
 // restated here for the same reason. It names the controller, because the
 // failing activity is that controller's live reporting and not the account's.
-const LIVE_REPORTING_SILENT_LINE =
-  `No device message has arrived on the live connection from ${DEVICE_ID} for two heartbeat intervals, ` +
-  'so HomeKit is marking what it shows untrustworthy until one does.';
+//
+// Taken per device rather than as one constant, so a two-pump case can say which
+// pump the plugin stopped watching and assert the other pump's line is absent.
+function liveReportingSilentLine(deviceId: string): string {
+  return (
+    `No device message has arrived on the live connection from ${deviceId} for two heartbeat intervals, ` +
+    'so HomeKit is marking what it shows untrustworthy until one does.'
+  );
+}
 
 // The line the same condition records when it clears. The failure log builds it
 // from the kind, so the kind's device travels into it.
-const LIVE_REPORTING_RECOVERED_LINE = `Live device reporting for ${DEVICE_ID} recovered.`;
+function liveReportingRecoveredLine(deviceId: string): string {
+  return `Live device reporting for ${deviceId} recovered.`;
+}
+
+// Every recovery the failure log announced, whole lines and in order. A count
+// alone cannot tell "the right pump recovered" from "a pump recovered", which is
+// the whole question on a two-pump account (D-14).
+function recoveriesIn(logged: readonly string[]): string[] {
+  return logged.filter((line) => line.startsWith('info ') && line.endsWith(' recovered.'));
+}
 
 // What the account struct's silence member always carries. There is no
 // account-wide answer to a per-device question, so the struct the runtime pushes
@@ -2046,7 +2061,10 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), repeats: countOfLine(logged, `debug ${LIVE_REPORTING_SILENT_LINE}`) },
+      {
+        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        repeats: countOfLine(logged, `debug ${liveReportingSilentLine(DEVICE_ID)}`),
+      },
       { warnings: 1, repeats: 2 },
     );
   });
@@ -2063,7 +2081,10 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), recovered: countOfLine(logged, `info ${LIVE_REPORTING_RECOVERED_LINE}`) },
+      {
+        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        recovered: countOfLine(logged, `info ${liveReportingRecoveredLine(DEVICE_ID)}`),
+      },
       { warnings: 1, recovered: 1 },
     );
   });
@@ -2195,7 +2216,10 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { warnings: countOfLine(logged, `warn ${LIVE_REPORTING_SILENT_LINE}`), recovered: countOfLine(logged, `info ${LIVE_REPORTING_RECOVERED_LINE}`) },
+      {
+        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        recovered: countOfLine(logged, `info ${liveReportingRecoveredLine(DEVICE_ID)}`),
+      },
       { warnings: 1, recovered: 1 },
     );
   });
@@ -2243,6 +2267,98 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true, true, false]);
+  });
+
+  // D-14. What the recovery latch being a set rather than a flag buys, stated as the two ways a flag
+  // gets it wrong: the quiet pump's recovery is swallowed by its neighbour, or the neighbour's
+  // heartbeat announces a recovery on the quiet pump's behalf. Both are the account-wide collapse of
+  // a per-controller fact, arrived at through the arrival callback instead of through the projection.
+  //
+  // The neighbour's heartbeat must push nothing at all. That is the observation a single boolean
+  // latch cannot survive: with the latch collapsed to "is any device silent", the back pump's
+  // routine heartbeat drives a whole trust fan-out while the front pump is still quiet.
+  //
+  // Recorded limit (D-10): the vendor account has exactly one Gemini. The second pump here is
+  // fabricated by this fixture and by nothing else, and no observation of two real systems informs
+  // this case.
+  test('D-14 lets a quiet pump recover on its own message while its heartbeating neighbour neither reports nor is reported for', async (t) => {
+    // arrange
+    const { runtime, shadows, logged, monitoringByDevice, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
+      pollIntervalMs: HEARTBEAT_MS,
+    });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    // The back pump keeps speaking, so only the front pump reaches two missed heartbeats.
+    shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
+    await advance(HEARTBEAT_MS);
+    const atFrontPumpSilence = monitoringByDevice.length;
+
+    // act
+    shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
+    const afterNeighbourHeartbeat = monitoringByDevice.length;
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        frontPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        backPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(OTHER_DEVICE_ID)}`),
+        recoveries: recoveriesIn(logged),
+        afterNeighbourHeartbeat,
+        afterFrontPumpSpoke: monitoringByDevice.length,
+        finalSilence: [monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent, monitoringByDevice.at(-1)?.get(OTHER_DEVICE_ID)?.shadowSilent],
+      },
+      {
+        frontPumpWarnings: 1,
+        backPumpWarnings: 0,
+        recoveries: [`info ${liveReportingRecoveredLine(DEVICE_ID)}`],
+        afterNeighbourHeartbeat: atFrontPumpSilence,
+        afterFrontPumpSpoke: atFrontPumpSilence + 1,
+        finalSilence: [false, false],
+      },
+    );
+  });
+
+  // D-14. The other half: the failure log's rate limiting is per kind, so a per-device kind gives
+  // each pump its own cadence with no change to the limiter.
+  //
+  // The two silences here begin one heartbeat apart, inside one reminder interval, which is what
+  // makes the case discriminate. An account-wide kind would treat the back pump's first silence as a
+  // repeat of the front pump's and log it at debug. The front pump's own repeat in the same poll is
+  // asserted at debug for the same reason: it proves the reminder interval had not elapsed, so the
+  // back pump's warning cannot be explained away as a reminder.
+  //
+  // Both figures are asserted rather than assumed. If a heartbeat ever grows past the reminder
+  // cadence the two silences stop sharing an interval, and this case would go on passing while
+  // proving nothing -- so the numbers are read back here and a change to either one has to be seen.
+  //
+  // Recorded limit (D-10): the second pump is this fixture's, not the vendor account's.
+  test('D-14 gives each pump its own warning when two fall silent inside one reminder interval', async (t) => {
+    // arrange
+    const { runtime, shadows, logged, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
+      pollIntervalMs: HEARTBEAT_MS,
+    });
+    await runtime.start();
+    await advance(HEARTBEAT_MS);
+    shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
+
+    // act
+    await advance(HEARTBEAT_MS);
+    await advance(HEARTBEAT_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        frontPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
+        frontPumpRepeats: countOfLine(logged, `debug ${liveReportingSilentLine(DEVICE_ID)}`),
+        backPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(OTHER_DEVICE_ID)}`),
+        gapBetweenSilencesMs: HEARTBEAT_MS,
+        reminderIntervalMs: FAILURE_REMINDER_MS,
+      },
+      { frontPumpWarnings: 1, frontPumpRepeats: 1, backPumpWarnings: 1, gapBetweenSilencesMs: 898_000, reminderIntervalMs: 900_000 },
+    );
   });
 
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
