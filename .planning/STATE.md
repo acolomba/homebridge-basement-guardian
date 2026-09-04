@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
 Plan: 7 of 7
 Status: All seven waves executed and summarized; records closed by plan 05.1-07
-Last activity: 2026-09-04 - Completed quick task 260904-nr6: confirmed and closed WINDOWS.md ledger entry 42 — the deviceId in the silent-live-connection log line is a permitted disclosure, not a leak
+Last activity: 2026-09-04 - Completed quick task 260904-o05: closed WINDOWS.md ledger entries 37-40, records drift already reconciled in 05-VALIDATION.md/05-VERIFICATION.md
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -555,6 +555,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260904-o05 | Close WINDOWS.md ledger entries 37-40 — records drift between the ledger and 05-VALIDATION.md/05-VERIFICATION.md, all already reconciled in the live files | 2026-09-04 | 82f0eae | Fixed — 4/4 entries closed, no code or doc changes needed | [260904-o05-close-windows-md-ledger-entries-37-38-39](./quick/260904-o05-close-windows-md-ledger-entries-37-38-39/) |
 | 260904-mkz | Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp | 2026-09-04 | 4c9f74c |  | [260904-mkz-close-windows-md-ledger-entry-43-open-ph](./quick/260904-mkz-close-windows-md-ledger-entry-43-open-ph/) |
 | 260903-q06 | Correct the telemetry-ownership guard's stated reason and test it with the input that can actually arrive | 2026-09-03 | 05e6cb0 | Complete — guard byte-identical, 5 sites corrected | [260903-q06-correct-the-telemetry-ownership-guard-s-](./quick/260903-q06-correct-the-telemetry-ownership-guard-s-/) |
 | 260903-ho5 | Reconcile the Phase 1 requirement rows and the Phase 5 validation status cells against measured evidence | 2026-09-03 | 858ce2c | Verified — 5/6, one cell corrected | [260903-ho5-reconcile-the-phase-1-requirement-rows-a](./quick/260903-ho5-reconcile-the-phase-1-requirement-rows-a/) |
