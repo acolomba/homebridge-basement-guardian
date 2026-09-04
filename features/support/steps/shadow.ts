@@ -105,12 +105,17 @@ function deviceIdNamed(world: BasementGuardianWorld, deviceName: string): string
   return device.deviceId;
 }
 
-// The client publishes the complete-shadow request only after its subscription is established, so
-// the first published topic is what says a device message can now arrive.
-async function awaitSubscription(world: BasementGuardianWorld): Promise<void> {
+// The client subscribes to every route of every device in one awaited call before it publishes any
+// complete-shadow request, so a subscription the connection now open holds is what says a message
+// for that device can arrive. Reading a cumulative record instead answers from a connection that
+// may already have ended: the plugin reconnects by opening a fresh connection and subscribing
+// again, and a wait satisfied by the previous connection's history returns before the new one can
+// carry anything.
+async function awaitSubscription(world: BasementGuardianWorld, deviceId: string): Promise<void> {
   const broker = await world.broker();
+  const topic = SHADOW_TOPICS.updateAccepted(deviceId);
 
-  await world.untilTrue(() => broker.publishedTopics.length > 0, DEADLINE_MS, 'the plugin subscribed to no shadow topic');
+  await world.untilTrue(() => broker.currentSubscriptions().includes(topic), DEADLINE_MS, `the live connection subscribed to no ${topic}`);
 }
 
 async function setDevices(world: BasementGuardianWorld, devices: readonly ApiDevice[]): Promise<void> {
@@ -178,7 +183,7 @@ When('the broker accepts connections', acceptedConnections);
 // readings from the one transport still working (CR-03, SYNC-02).
 async function publishReported(world: BasementGuardianWorld, deviceId: string, reported: Record<string, unknown>): Promise<void> {
   const broker = await world.broker();
-  await awaitSubscription(world);
+  await awaitSubscription(world, deviceId);
 
   broker.publishReported(deviceId, reported, world.nextShadowVersion());
 }
@@ -220,9 +225,11 @@ When(
 
 async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
-  await awaitSubscription(this);
+  const deviceId = theDeviceId(this);
 
-  broker.publishGetAccepted(theDeviceId(this), REQUESTED_STATE, this.nextShadowVersion());
+  await awaitSubscription(this, deviceId);
+
+  broker.publishGetAccepted(deviceId, REQUESTED_STATE, this.nextShadowVersion());
 }
 
 When('the device publishes a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);

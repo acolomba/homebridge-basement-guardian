@@ -174,6 +174,7 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
   const handshakes: string[] = [];
   const clientIds: string[] = [];
   const publishedTopics: string[] = [];
+  const subscriptionsByClient = new Map<string, string[]>();
   let refusing = false;
 
   const server = new WebSocketServer({
@@ -185,6 +186,20 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
 
   broker.on('client', (client) => {
     clientIds.push(client.id);
+
+    // A reconnecting plugin presents the same client identifier again, so the record starts empty
+    // for each connection. Carrying the previous connection's subscriptions forward is exactly the
+    // history that would answer a wait about a connection that no longer exists.
+    subscriptionsByClient.set(client.id, []);
+  });
+
+  // Only what a client sent is recorded, on the same reasoning the publish listener below states:
+  // the broker's own subscribers are the scenario listening, not the plugin.
+  broker.on('subscribe', (subscriptions, client) => {
+    const recorded = subscriptionsByClient.get(client.id) ?? [];
+
+    recorded.push(...subscriptions.map((subscription) => subscription.topic));
+    subscriptionsByClient.set(client.id, recorded);
   });
 
   // A null client is the broker publishing to its own subscribers, which is the scenario speaking
@@ -208,7 +223,9 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     clientIds,
     publishedTopics,
     currentSubscriptions(): readonly string[] {
-      return [];
+      const newest = clientIds.at(-1);
+
+      return newest === undefined ? [] : (subscriptionsByClient.get(newest) ?? []);
     },
     liveConnectionCount(): number {
       return server.clients.size;
