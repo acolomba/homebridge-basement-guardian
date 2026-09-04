@@ -329,7 +329,20 @@ Plans:
   3. Shadow silence is measured by a forward-only counter, so a wall-clock jump in either direction cannot shorten or lengthen the silence window.
   4. Ledger entry 41 carries a recorded ruling on whether the silence timer arms on telemetry or on any message, naming the evidence the ruling rests on and what that evidence does not cover.
 
-**Plans**: TBD (run /gsd-plan-phase 05.1 to break down)
+**Plans**: 7 plans
+
+Plans:
+- [ ] 05.1-01-PLAN.md — Harness correctness before the harness carries the evidence (ledger entries 17 and 18, corrected diagnoses)
+- [ ] 05.1-02-PLAN.md — Tracer: one silent pump, one reporting pump, trust withdrawn from one only, end to end
+- [ ] 05.1-03-PLAN.md — The per-device recovery latch and live-reporting log, pinned; a removed device leaves nothing behind
+- [ ] 05.1-04-PLAN.md — A MonotonicClock port, the max clamp, and a second time base in the harness
+- [ ] 05.1-05-PLAN.md — The persisted arrival anchor under the Homebridge storage path
+- [ ] 05.1-06-PLAN.md — A controller-link diagnostic derived from what the accessory published
+- [ ] 05.1-07-PLAN.md — The gate on both runtimes, the live single-device check, and the records
+
+Every plan is its own wave, executed in order. Same-wave parallelism is deliberately not used here:
+every suite command rebuilds the shared `dist-test/` tree, and two overlapping runs were measured
+producing false failures (`pass 1383 / fail 2` against a solo `1385 / fail 0`).
 
 **Source**: Ledger entries 19, 6, and 14/IN-03 in `.planning/WINDOWS.md` — decided at the close of Phase 5 and recorded under **Decisions** in `.planning/STATE.md`, built by no phase. Scoped together because they share `monitoringHealth.ts`, `basementGuardian.ts`, `platform.ts` and `clock.ts`, and all three need the two-pump Cucumber harness that plan 05-13 landed.
 
