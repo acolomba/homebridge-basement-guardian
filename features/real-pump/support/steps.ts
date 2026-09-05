@@ -20,13 +20,14 @@ const POLL_INTERVAL_MS = 200;
  * Resolves once `read()` answers a defined value, or fails once the deadline passes.
  *
  * The harness watches a real, external system it does not control, so it polls rather than
- * waits on an event this suite has no hook for.
+ * waits on an event this suite has no hook for. `read()` may answer synchronously or through a
+ * promise; awaiting a plain value resolves it immediately, so one poller serves both shapes.
  */
-async function until<T>(read: () => T | undefined, timeoutMs: number, failure: string): Promise<T> {
+export async function until<T>(read: () => T | undefined | Promise<T | undefined>, timeoutMs: number, failure: string): Promise<T> {
   const deadline = Date.now() + timeoutMs;
 
   for (;;) {
-    const value = read();
+    const value = await read();
 
     if (value !== undefined) {
       return value;
