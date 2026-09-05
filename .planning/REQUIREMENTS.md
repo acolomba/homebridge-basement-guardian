@@ -75,7 +75,7 @@
 
 ### Release Quality, Privacy, and Distribution
 
-- [ ] **REL-01**: Package engines and CI validate Node.js `^22.10.0 || ^24.0.0` with Homebridge `^1.8.0 || ^2.0.0`, including minimum/latest Homebridge 1.x and current Homebridge 2.x combinations, without a runtime `homebridge-lib` or direct HAP-NodeJS import.
+- [x] **REL-01**: Package engines and CI validate Node.js `^22.10.0 || ^24.0.0` with Homebridge `^1.8.0 || ^2.0.0`, including minimum/latest Homebridge 1.x and current Homebridge 2.x combinations, without a runtime `homebridge-lib` or direct HAP-NodeJS import.
 - [ ] **REL-02**: Deterministic `node:test` unit tests and Cucumber fake-pump tests cover reducers, decoders, family adapters, events, health, reconciliation, commands, accessories, privacy, and runtime lifecycles. They use sanitized fixtures without live credentials, hardware, public network access, or stored secrets.
 - [ ] **REL-03**: Runtime traffic is limited to required vendor services; the plugin collects no analytics, crash reports, installation/usage data, tracking identifiers, or automatic diagnostics, and direct dependencies pass a telemetry review.
 - [ ] **REL-04**: Public, planning, fixture, log, and packed-package checks exclude secrets and account/local-network identifiers and use stable placeholders, while the bundled data file alone may contain required public vendor constants.
@@ -152,7 +152,7 @@
 | RES-02 | Phase 3 | Complete |
 | RES-03 | Phase 3, Phase 5 | Complete |
 | RES-04 | Phase 5 | Complete |
-| REL-01 | Phase 6 | Pending |
+| REL-01 | Phase 6 | Complete |
 | REL-02 | Phase 6 | Pending |
 | REL-03 | Phase 6 | Pending |
 | REL-04 | Phase 6 | Pending |
