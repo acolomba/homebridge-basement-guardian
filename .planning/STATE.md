@@ -609,24 +609,66 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T05:05:32.779Z
-Stopped at: Completed 06-10-PLAN.md
+Last session: 2026-09-05T06:35:00.000Z
+Stopped at: Phase 6 all 10 plans executed; code review done, 2 blockers fixed; paused before
+regression gate / verify_phase_goal / milestone lifecycle
 Resume file: None
 
-**Read the resume file before doing anything.** It carries one operational fact that costs an hour
-to rediscover: executor dispatch is blocked by an isolation guard, and the obvious fix is dangerous.
+**Read this before doing anything.** Phase 6 (Validated Release Candidate) has all 10 plans
+executed and committed on branch `features/phase-06-validated-release-candidate` (unpushed —
+no upstream configured). `06-REVIEW.md` found 2 Critical + 1 Warning; the 2 Criticals (LICENSE/
+NOTICE/README not updated after the platform.ts MIT reclassification) are fixed and committed
+(`83463e7`). The 1 Warning is NOT yet addressed: no test asserts the actual `userAgent` value
+reaching the MQTT transport option — a regression there would pass all existing tests including
+100% coverage, since it is a branch-free property assignment. See `06-REVIEW.md` finding 3 before
+deciding whether to fix it or accept it.
+
+**What's left to close out Phase 6, in order:**
+1. Decide on the Warning finding above (fix with `/gsd-code-review 6 --fix` or accept as-is).
+2. Regression gate: re-run `npm run check` (or `npm test`) against the combined tree — last run
+   (before the LICENSE/NOTICE/README fix) was green: 1444 unit + 104 Cucumber, 0 failures.
+3. `verify_phase_goal`: spawn a `gsd-verifier` agent against phase 06's goal, all *-PLAN.md/
+   *-SUMMARY.md, and REQUIREMENTS.md (all 9 REL-01..09 already show `[x]` complete in
+   REQUIREMENTS.md as of this session — verify this holds, don't just trust it).
+4. `update_roadmap`: `gsd_run query phase.complete "06"` once verification passes.
+5. Since Phase 6 is the last roadmap phase: run the milestone lifecycle — audit
+   (`/gsd-audit-milestone`) → complete (`/gsd-complete-milestone`) → cleanup (`/gsd-cleanup`).
+   Note: Phases 3 and 4 are still `verification_deferred_human` (see the Deferred Verification
+   table below) — the milestone audit may flag this; it needs the maintainer's real hardware/
+   paired-home session, not something a future agent session can close alone.
+
+**Operational hazard (still applies for any future dispatch in this repo):**
 `dispatch-isolation` reports the host *capability* (`harness-worktree`) while `worktree base-check`
 returns `shouldDegrade: true`, because a harness worktree would fork from `origin/HEAD` — which is
-`origin/main`, where Phase 3 does not exist. Force the sentinel to `none` before every dispatch, and
-verify by reading `.gsd/dispatch-isolation-sentinel.json` rather than re-querying, because a bare
-query re-persists the capability and silently undoes the force. The same underlying hazard applies
-to any other tooling that creates a branch from `origin/HEAD`/`origin/main` rather than local HEAD —
-confirmed again on 2026-09-04 when `phase.complete`'s own auto-branch step branched cleanly off local
-HEAD (safe), but the risk is structural to the repo, not specific to one code path.
+`origin/main`, 600+ commits behind this branch. **Before every `Agent(subagent_type="gsd-executor", ...)`
+dispatch**, run `gsd_run query dispatch-isolation --raw --phase "<N>" --force-isolation "none"` and
+verify by reading `.gsd/dispatch-isolation-sentinel.json` directly (not by re-querying — a bare
+`dispatch-isolation` query silently re-persists `harness-worktree` and undoes the force; confirmed
+repeatedly this session). The same hazard applies to any git-branch-creation tooling that defaults
+to `origin/HEAD`/`origin/main` as a fork base — `phase.complete`'s own auto-branch step is safe
+(bases off local HEAD), but a manual `git checkout -b <name> origin/main` would not be.
 
-Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior gates). Phase 6
-(Validated Release Candidate) is next: `06-CONTEXT.md` is already gathered — do not re-run discuss.
-Plan next with `/gsd-plan-phase 6`.
+**Executor reliability note (confirmed this session, twice):** the `update_requirements` step's
+shared-ID gate (a requirement declared by multiple plans should stay Pending until every declaring
+plan finishes) is NOT reliably self-enforced by the gsd-executor agent — one run (06-03) hand-marked
+both its requirements complete without checking `requirements.ready-ids` first, prematurely marking
+REL-03/REL-04 complete while 06-04 was still pending; this was caught and reverted. Every dispatch
+after that point was told explicitly to run `requirements.ready-ids` before marking anything, and
+did so correctly. Any future dispatch to this project's gsd-executor should keep including that
+explicit instruction rather than trusting the agent's own default behavior.
+
+**Known gaps recorded by this phase's own plans (not blockers, but worth carrying forward):**
+- 06-05: GitHub's native private-vulnerability-reporting toggle returned 404 on every `gh api`
+  attempt — likely gated behind GitHub Advanced Security for private repos on this account tier.
+  `SECURITY.md` is written regardless (best-effort policy, private-advisory pointer); the GitHub-side
+  toggle is a maintainer follow-up (make the repo public, or confirm GHAS availability). Recorded
+  in `06-05-SUMMARY.md` and `.planning/WINDOWS.md` as an open `unmet-truth` entry.
+- 06-08: a maintainer must eventually run `npx cucumber-js --profile real` by hand against the live
+  vendor account to confirm the real-pump scenarios behave as designed — recorded as a human-judgment
+  coverage item, never blocks phase completion, only the eventual `1.0.0` real-hardware validation
+  record (same category as G-001 through G-004).
+
+Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior gates).
 
 **Unpushed.** No upstream is configured for the current branch
 (`features/phase-05.1-per-pump-trust-and-monotonic-silence`); all work through Phase 05.1's
