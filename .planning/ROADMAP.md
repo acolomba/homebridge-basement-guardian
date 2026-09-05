@@ -393,5 +393,5 @@ producing false failures (`pass 1383 / fail 2` against a solo `1385 / fail 0`).
 | 3. Safety Monitoring in HomeKit | 8/8 | Implementation complete (human verification pending) |  |
 | 4. Pump Records and Official Controls | 6/6 | Implementation complete (human verification pending) |  |
 | 5. Degraded Operation and Recovery | 19/19 | Implementation complete |  |
-| 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete | 2026-09-04 |
+| 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete    | 2026-09-04 |
 | 6. Validated Release Candidate | 0/TBD | Not started | - |

@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Safety Monitoring in HomeKit",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "number": "4",
@@ -26,7 +26,12 @@
     {
       "number": "5",
       "name": "Degraded Operation and Recovery",
-      "status": "in_progress"
+      "status": "pending"
+    },
+    {
+      "number": "5.1",
+      "name": "Per-Pump Trust and Monotonic Silence",
+      "status": "complete"
     },
     {
       "number": "6",
@@ -36,8 +41,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 5 of 7 · 43% · executing"
+    "label": "Advance to the next step (plan phase 6)",
+    "reason": "Phase 6 of 7 — needs a plan"
   },
-  "updated_at": "2026-09-04T19:18:06.057Z"
+  "updated_at": "2026-09-05T00:11:41.326Z"
 }

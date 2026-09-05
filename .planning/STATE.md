@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 05.1
-current_phase_name: Per-Pump Trust and Monotonic Silence
-status: complete
-stopped_at: Phase 6 context gathered
-last_updated: "2026-09-04T23:40:38.847Z"
+current_phase: 06
+current_phase_name: Validated Release Candidate
+status: planning
+stopped_at: Phase 05.1 complete, ready to plan Phase 06
+last_updated: "2026-09-05T00:11:41.243Z"
 last_activity: 2026-09-04
-last_activity_desc: Phase 05.1 complete — seven waves, both runtimes green, live check performed
-state_head: 322c27ab911b803cff4ff157016805d6d55a1cef
+last_activity_desc: Phase 05.1 complete, transitioned to Phase 06
+state_head: 9d8d27279eb41047439e0157f5677f63239f705e
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 63
   completed_plans: 63
-  percent: 43
+  percent: 57
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-29)
 
 ## Current Position
 
-Phase: 05.1 (Per-Pump Trust and Monotonic Silence) — COMPLETE
-Plan: 7 of 7
-Status: All seven waves executed and summarized; records closed by plan 05.1-07
-Last activity: 2026-09-04 - Completed quick task 260904-od5: repaired the stale ROADMAP.md progress table and checklist to match measured phase status
+Phase: 06 — Validated Release Candidate
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-04 — Phase 05.1 complete, transitioned to Phase 06
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -80,7 +80,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 13
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -89,6 +89,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 02 | 6 | - | - |
+| 05.1 | 7 | - | - |
 
 **Recent Trend:**
 
@@ -583,7 +584,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 ## Session Continuity
 
 Last session: 2026-09-04T23:40:37.905Z
-Stopped at: Phase 6 context gathered
+Stopped at: Phase 05.1 complete, ready to plan Phase 06
 Resume file: .planning/phases/06-validated-release-candidate/06-CONTEXT.md
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
