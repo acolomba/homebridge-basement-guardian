@@ -9,7 +9,8 @@ import type { Logging } from 'homebridge';
 /** The ceiling a reconnect wait is capped at, in milliseconds. */
 export const MAX_BACKOFF_MS = 30_000;
 
-const FIRST_DELAY_BASE_MS = 1_000;
+// The delay before the first retry attempt, in milliseconds. Doubles on every attempt after.
+const FIRST_RETRY_DELAY_MS = 500;
 
 /** The shutdown signal, the backoff ceiling, and where a failure is noted. */
 export interface RetryPolicyOptions {
@@ -43,7 +44,7 @@ export function createRetryPolicy(options: RetryPolicyOptions): RetryPolicy {
   function nextDelayMs(): number {
     attempt += 1;
 
-    return Math.min(options.maxDelayMs, FIRST_DELAY_BASE_MS * 2 ** (attempt - 2));
+    return Math.min(options.maxDelayMs, FIRST_RETRY_DELAY_MS * 2 ** (attempt - 1));
   }
 
   // The work is the caller's, so its rejection is reported and swallowed here
