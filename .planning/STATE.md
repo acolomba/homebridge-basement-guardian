@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 Phase: 05 — Degraded Operation and Recovery
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-05 — Phase 04 complete, transitioned to Phase 05
+Last activity: 2026-09-05 — Completed quick task 260905-fiy: Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -615,6 +615,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260905-fiy | Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout | 2026-09-05 | 892a6c7 | Complete — fix verified via typecheck/build/dry-run, live real-pump re-run pending | [260905-fiy-fix-missing-per-step-timeout-on-the-real](./quick/260905-fiy-fix-missing-per-step-timeout-on-the-real/) |
 | 260904-od5 | Repair the stale ROADMAP.md progress table and checklist — Phase 3/4/5/5.1 flipped from stale/missing to their true measured status | 2026-09-04 | 13709c5 | Complete — checklist and table reconciled with STATE.md | [260904-od5-repair-the-stale-roadmap-md-progress-tab](./quick/260904-od5-repair-the-stale-roadmap-md-progress-tab/) |
 | 260904-o05 | Close WINDOWS.md ledger entries 37-40 — records drift between the ledger and 05-VALIDATION.md/05-VERIFICATION.md, all already reconciled in the live files | 2026-09-04 | 82f0eae | Fixed — 4/4 entries closed, no code or doc changes needed | [260904-o05-close-windows-md-ledger-entries-37-38-39](./quick/260904-o05-close-windows-md-ledger-entries-37-38-39/) |
 | 260904-mkz | Close WINDOWS.md ledger entry 43 — a stray shadow message for an already-removed pump was re-arming its dropped arrival stamp | 2026-09-04 | 4c9f74c |  | [260904-mkz-close-windows-md-ledger-entry-43-open-ph](./quick/260904-mkz-close-windows-md-ledger-entry-43-open-ph/) |
