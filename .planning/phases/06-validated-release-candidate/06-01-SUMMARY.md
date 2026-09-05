@@ -169,6 +169,12 @@ None — no external service configuration required. `secrets.NPM_TOKEN` referen
 - The six-cell CI matrix and the `package-audit.yml`/`publish.yml` workflows have not been exercised inside actual GitHub Actions runs yet — that only happens once this branch's changes reach CI (or a maintainer runs them via `workflow_dispatch`). Local checks (`check-yaml`, `npm run build && npm pack --dry-run --json`) prove the workflow files are syntactically valid and that the pack step they perform for real works locally, but do not prove the six matrix cells install and pass, or that the `package-audit.yml` job's `trufflehog` install/scan steps succeed inside the CI environment.
 - No blockers for the next plans in this phase (dependency allowlist, README disclosures, real-pump suite, hardware-gate checklists).
 
+## Self-Check: PASSED
+
+All created files exist on disk (`NOTICE`, `test/packaging/licenseHeaders.test.ts`,
+`.github/workflows/package-audit.yml`, `.github/workflows/publish.yml`, this SUMMARY). All four
+commits (`6d72928`, `614d5d5`, `2c36f30`, `ce854d3`) are present in `git log --oneline --all`.
+
 ---
 *Phase: 06-validated-release-candidate*
 *Completed: 2026-09-05*
