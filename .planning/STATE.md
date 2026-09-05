@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Validated Release Candidate
 status: executing
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-09-05T02:51:26.425Z"
+stopped_at: Completed 06-07-PLAN.md
+last_updated: "2026-09-05T03:25:25.361Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 06 execution started
-state_head: 5ce313cb5efba3a1a8e9495909c17d0131b5d5e2
+state_head: 7ed81048fe2d494cdfe7708e39f9cbb0a7e0cfc2
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 73
-  completed_plans: 68
+  completed_plans: 69
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 ## Current Position
 
 Phase: 06 (Validated Release Candidate) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 06 execution started
 
@@ -140,6 +140,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P04 | 28min | 2 tasks | 11 files |
 | Phase 06 P05 | 12min | 2 tasks | 4 files |
 | Phase 06 P06 | 12min | 2 tasks | 3 files |
+| Phase 06 P07 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -429,6 +430,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-05: REPOSITORY_ROOT in test/repositoryGovernance.test.ts uses two '..' segments, matching test/packageManifest.test.ts's precedent (the file sits at test/, not one level deeper under test/packaging/ like 06-01/06-03's three-segment files).
 - [Phase 06]: [Phase 06] 06-05: Private vulnerability reporting could not be enabled via gh api — repeated 404 on PUT/GET, likely gated behind GitHub Advanced Security for private repos on this account tier. SECURITY.md still documents the policy; maintainer must make the repo public or confirm GHAS before the toggle can be flipped (WINDOWS.md ledger entry recorded).
 - [Phase 06]: [Phase 06] 06-06: The plaintext-password disclosure is added to README.md for parity even though config.schema.json's GUI text already discloses it (RESEARCH.md Q1)
+- [Phase 06]: 06-07: Scoped cucumber.json's import globs per profile (default -> features/support/**, real -> features/real-pump/**), not just the tags exclusion, because setWorldConstructor silently overwrites on repeat calls and alphabetical import ordering would have made one profile's World silently win for both
+- [Phase 06]: 06-07: Added features/real-pump/support/steps.ts, absent from the plan's file lists, because cucumber-js --profile real --dry-run cannot resolve discovery.feature's steps without step definitions
 
 ### Pending Todos
 
@@ -593,8 +596,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T02:51:25.194Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-09-05T03:25:24.362Z
+Stopped at: Completed 06-07-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
