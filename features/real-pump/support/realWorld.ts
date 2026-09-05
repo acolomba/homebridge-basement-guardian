@@ -102,9 +102,8 @@ function terminalLogging(): Logging {
   });
 }
 
-// Not exported yet: nothing outside this file types against it until a step-definitions module
-// needs `this: RealPumpWorld`. `setWorldConstructor` below only needs the class value.
-class RealPumpWorld extends World {
+/** The scenario state for one real-pump run, observation-only. */
+export class RealPumpWorld extends World {
   private readonly discoveredDeviceIds: string[] = [];
 
   private readonly monitoringObservations: string[] = [];
