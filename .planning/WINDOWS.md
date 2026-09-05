@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 4
+open_count: 5
 waived_count: 19
 fixed_count: 20
-total_count: 43
-last_updated: 2026-09-04T21:29:03.611Z
+total_count: 44
+last_updated: 2026-09-05T02:43:40.441Z
 ---
 
 # Broken Windows Ledger
@@ -58,6 +58,7 @@ last_updated: 2026-09-04T21:29:03.611Z
 | 41 | 05 | todo | src/device/state.ts |  | Successor to entry 34, which asked for a maintainer ruling on whether telemetry ownership should lapse on telemetry age. The ruling: keep the guard, correct its stated reason, harden the test. Measured on 2026-09-03 by a 90-minute probe of one Gemini account with one device in steady state: seven messages, one get/accepted and six update/accepted, all seven carrying a telemetry section; six heartbeats each carrying both sections, six telemetry keys and wifi_signal_dbm as metadata, 584 bytes each; five consecutive heartbeat gaps averaging 898.4 s, re-confirming the recorded 898.3 s figure; and no document carrying device metadata without telemetry observed, so the metadata section never travelled alone. Not measured: one device only, steady state throughout, and no pump cycle, fault, power event, reconnect or firmware update, so event-driven vendor reports are unmeasured and six heartbeats is a small sample. The guard's behaviour did not change -- nextShadowVersion still reads patch.data and the production diff is comment-only -- while its stated reason did: the input it refuses is a telemetry section that is absent OR not an object, and isShadowDocument cannot refuse the second because it checks two levels only, the payload and its state. Arming the silence timer on telemetry rather than on any message remains an available option that nobody chose; it is recorded here as an option, deliberately not done. | waived | D-13 ruling: the silence timer keeps arming on any message, not on telemetry alone. The evidence is a 90-minute probe of one device in steady state -- seven messages, six heartbeats, and no pump cycle, fault, power event, reconnect or firmware update -- so event-driven vendor reports are unmeasured. Adopting the change would guard a shape nobody has observed, which is how entry 34's original false reason was born. | 2026-09-03T23:43:47.048Z | 2026-09-04T18:37:18.642Z |
 | 42 | 05.1 | deviation | test/runtime/accountRuntime.test.ts |  | The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition). | waived | Confirmed correct, not a leak. The redaction case in test/runtime/accountRuntime.test.ts named 'names the controller and no route, no header, and no credential in the line a silent live connection records' (around line 2230) asserts device: true while scheme, authorization and secret all stay false. The log call site, liveReportingSilent(deviceId) in src/runtime/accountRuntime.ts (lines 78-83, called from recordFailure at line 589), interpolates only the vendor deviceId into the sentence; no route, header or credential is added. This matches the Phase 2 ruling of 2026-08-29 (STATE.md Accumulated Context, PROJECT.md D-027): the vendor deviceId is treated as non-sensitive and may enter logs and accessory context, with D-027 keeping it out of public artifacts only. D-14 (05.1-CONTEXT.md) is the decision that made this per-device change and states the same permission. The threat model disposition T-05.1-03 in 05.1-02-PLAN.md and 05.1-03-PLAN.md rates the same fact low severity and mitigate, and 05.1-02-SUMMARY.md records the device:false to device:true assertion flip as the plan's own D-14 instruction reaching a shipped assertion, not an accidental leak. No production code change needed. | 2026-09-04T04:25:17.091Z | 2026-09-04T21:13:55.243Z |
 | 43 | 05.1 | deviation | src/runtime/accountRuntime.ts | 762 | A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it | fixed |  | 2026-09-04T05:02:44.791Z | 2026-09-04T21:01:33.546Z |
+| 44 | 06 | unmet-truth | SECURITY.md |  | Private vulnerability reporting could not be enabled via gh api (404 on PUT/GET) — likely gated behind GitHub Advanced Security for private repos on this account tier; requires maintainer action (make repo public or confirm GHAS) per 06-05-SUMMARY.md Known Gaps | open |  | 2026-09-05T02:43:40.441Z |  |
 
 ````json
 [
@@ -576,6 +577,18 @@ last_updated: 2026-09-04T21:29:03.611Z
     "reason": "",
     "recorded_at": "2026-09-04T05:02:44.791Z",
     "resolved_at": "2026-09-04T21:01:33.546Z"
+  },
+  {
+    "id": 44,
+    "kind": "unmet-truth",
+    "phase": "06",
+    "file": "SECURITY.md",
+    "line": null,
+    "description": "Private vulnerability reporting could not be enabled via gh api (404 on PUT/GET) — likely gated behind GitHub Advanced Security for private repos on this account tier; requires maintainer action (make repo public or confirm GHAS) per 06-05-SUMMARY.md Known Gaps",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-05T02:43:40.441Z",
+    "resolved_at": null
   }
 ]
 ````

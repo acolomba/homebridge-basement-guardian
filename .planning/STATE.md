@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Validated Release Candidate
 status: executing
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-09-05T02:31:32.326Z"
+stopped_at: Completed 06-05-PLAN.md
+last_updated: "2026-09-05T02:44:04.336Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 06 execution started
-state_head: 8a6423ac02a939e03efb63172f6b4e706f18456b
+state_head: 98d768a346988dd10814b41e71745ddc7e552181
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 73
-  completed_plans: 66
+  completed_plans: 67
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 ## Current Position
 
 Phase: 06 (Validated Release Candidate) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 06 execution started
 
@@ -138,6 +138,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P01 | 15min | 3 tasks | 8 files |
 | Phase 06 P03 | 25min | 3 tasks | 3 files |
 | Phase 06 P04 | 28min | 2 tasks | 11 files |
+| Phase 06 P05 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -424,6 +425,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05.1]: MonotonicClock is a sibling port to Clock, constructed only in src/platform.ts (D-06). The suspend limit is cited from man 2 clock_gettime and not observed; no Node 24 result is claimed.
 - [Phase 06]: [Phase 06] 06-03: REPOSITORY_ROOT in test/packaging/*.test.ts uses three '..' segments, not two, matching licenseHeaders.test.ts's precedent from 06-01 for the same one-level-deeper directory.
 - [Phase 06]: [Phase 06] 06-04: MqttTransportOptions is assembled in shadow.ts's openConnection(), not accountRuntime.ts as the plan stated; ShadowClientOptions gained its own userAgent field to carry PLUGIN_USER_AGENT through the correct site.
+- [Phase 06]: [Phase 06] 06-05: REPOSITORY_ROOT in test/repositoryGovernance.test.ts uses two '..' segments, matching test/packageManifest.test.ts's precedent (the file sits at test/, not one level deeper under test/packaging/ like 06-01/06-03's three-segment files).
+- [Phase 06]: [Phase 06] 06-05: Private vulnerability reporting could not be enabled via gh api — repeated 404 on PUT/GET, likely gated behind GitHub Advanced Security for private repos on this account tier. SECURITY.md still documents the policy; maintainer must make the repo public or confirm GHAS before the toggle can be flipped (WINDOWS.md ledger entry recorded).
 
 ### Pending Todos
 
@@ -588,8 +591,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T02:31:31.037Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-09-05T02:44:03.052Z
+Stopped at: Completed 06-05-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
