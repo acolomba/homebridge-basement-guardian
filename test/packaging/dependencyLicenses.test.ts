@@ -47,8 +47,8 @@ test('no production dependency carries a GPL-family license (REL-03)', () => {
   const violations = Object.entries(lockfile.packages)
     .filter(([path]) => path !== '')
     .filter(([, entry]) => !entry.dev)
-    .filter(([, entry]) => entry.license != null && GPL_FAMILY.test(entry.license))
-    .map(([path, entry]) => `${path} (${String(entry.license)})`);
+    .filter(([, entry]) => entry.license == null || GPL_FAMILY.test(entry.license))
+    .map(([path, entry]) => `${path} (${entry.license ?? 'no recorded license'})`);
 
   // assert
   assert.deepStrictEqual(violations, []);
