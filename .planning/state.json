@@ -36,13 +36,13 @@
     {
       "number": "6",
       "name": "Validated Release Candidate",
-      "status": "in_progress"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step (verify)",
-    "reason": "Phase 6 of 7 · 57% · ready to verify"
+    "command": "/gsd:progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-09-05T05:05:13.134Z"
+  "updated_at": "2026-09-05T14:02:17.206Z"
 }

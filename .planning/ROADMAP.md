@@ -21,7 +21,7 @@ Each phase adds unit tests and applicable fake-pump scenarios for its behavior. 
 - [x] **Phase 4: Pump Records and Official Controls** - Users can inspect observed pump activity and use validated self-test and alarm-mute controls.
 - [x] **Phase 5: Degraded Operation and Recovery** - Users keep cached safety state through restart and can separate confirmed device offline from a degraded monitoring path.
 - [x] **Phase 5.1: Per-Pump Trust and Monotonic Silence** `INSERTED` - Per-pump trust withdrawal, a complete controller-link diagnostic, and a monotonic silence clock.
-- [ ] **Phase 6: Validated Release Candidate** - Maintainer has a compatible, tested, private, licensed, and gate-cleared package ready for controlled release.
+- [x] **Phase 6: Validated Release Candidate** - Maintainer has a compatible, tested, private, licensed, and gate-cleared package ready for controlled release. (completed 2026-09-05)
 
 ## Phase Details
 
@@ -414,4 +414,4 @@ Plans:
 | 4. Pump Records and Official Controls | 6/6 | Implementation complete (human verification pending) |  |
 | 5. Degraded Operation and Recovery | 19/19 | Implementation complete |  |
 | 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete    | 2026-09-04 |
-| 6. Validated Release Candidate | 10/10 | In Progress|  |
+| 6. Validated Release Candidate | 10/10 | Complete    | 2026-09-05 |
