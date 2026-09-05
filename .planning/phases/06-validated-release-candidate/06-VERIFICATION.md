@@ -4,8 +4,8 @@ verified: 2026-09-05T15:30:00Z
 status: passed
 deferred_by: maintainer
 deferred_at: 2026-09-05T15:45:00Z
-score: 6/6 must-haves verified (5 present, behavior-unverified)
-behavior_unverified: 5
+score: 6/6 must-haves verified (4 present, behavior-unverified; 1 resolved post-verification — see Update)
+behavior_unverified: 4
 overrides_applied: 0
 behavior_unverified_items:
   - truth: "Repository quality checks, unit tests, and Cucumber fake-pump tests pass across the declared Node.js x Homebridge compatibility matrix (SC-1, REL-01)"
@@ -24,10 +24,6 @@ behavior_unverified_items:
     test: "Either make the repository public, or confirm GitHub Advanced Security entitlement on this account tier, then re-run `gh api --method PUT /repos/acolomba/homebridge-basement-guardian/private-vulnerability-reporting` and confirm success."
     expected: "The PUT call returns 204 (or the GitHub UI's Settings -> Code security page shows the feature enabled), so a report submitted through the SECURITY.md-documented link actually reaches a private advisory."
     why_human: "Directly reconfirmed during this verification: `gh api /repos/acolomba/homebridge-basement-guardian` shows `visibility: private` and no `security_and_analysis` block at all. Plan 06-05's own SUMMARY documented this as an external account-tier constraint (private-repo private-vulnerability-reporting is gated behind GitHub Advanced Security), not something any code change in this phase can close. SECURITY.md's text is correct and ready; the GitHub-side toggle needs a maintainer decision (make the repo public, or acquire GHAS) this verification cannot make."
-  - truth: "The opt-in real-pump Cucumber suite (discovery, initial state, heartbeats, natural updates, restart, shutdown) passes when run against the one real Gemini on the account, and demonstrates hardware-backed evidence for REL-09 (REL-09, D-04)"
-    test: "With BG_EMAIL/BG_PASSWORD set to the maintainer's real account credentials, run `npx cucumber-js --profile real` (not --dry-run) against the live device."
-    expected: "All 7 scenarios pass: the real Gemini is discovered, REST/shadow state populates, the connection stays healthy or an update is observed within the documented timeouts, a restart reuses the cached Auth0 token, and shutdown records no unhandled rejection."
-    why_human: "The task prompt explicitly scopes real-hardware validation as a maintainer action outside this verification's reach, and the suite's own SUMMARYs (06-07, 06-08) record this exact gap as an unresolved human-judgment coverage item. `npx cucumber-js --profile real --dry-run` (executed during this verification) confirms all 7 scenarios resolve every step with no undefined/ambiguous steps, but a dry run never executes a step body against the real cloud."
 ---
 
 # Phase 6: Validated Release Candidate Verification Report
@@ -35,8 +31,32 @@ behavior_unverified_items:
 **Phase Goal:** Maintainer can produce an npm-ready v1 package whose compatibility, safety
 evidence, privacy, licensing, support, and distribution controls are complete.
 **Verified:** 2026-09-05T15:30:00Z
-**Status:** passed (5 human/infrastructure items deferred by the maintainer, 2026-09-05T15:45:00Z)
+**Status:** passed (4 human/infrastructure items deferred by the maintainer, 2026-09-05T15:45:00Z;
+1 additional item resolved post-verification, see Update below)
 **Re-verification:** No — initial verification
+
+## Update — 2026-09-05T18:39:00Z
+
+Item 5 below (the real-pump suite's live run) has since been completed. Running `npx cucumber-js
+--profile real` against the real vendor account first surfaced two real defects, both fixed and
+both verified against the same live account afterward:
+
+- The suite's own `the harness waits {int} seconds` step carried no per-step timeout, so Cucumber's
+  5000ms default was silently killing the 960-second wait both heartbeat scenarios depend on
+  (fixed in `892a6c7`, quick task `260905-fiy`).
+- Node 26's bundled `undici` defaults `allowH2` to `true`, so the plugin's `fetch()` calls to the
+  vendor negotiated HTTP/2, where an upstream undici teardown race let an idle-session-timeout
+  error escape uncaught and crash the process — reachable only on Node 26, never on this
+  project's declared `^22.10.0 || ^24.0.0` range. Fixed by routing vendor HTTP through userland
+  `undici`'s own `fetch` + `Agent({ allowH2: false })`, end to end (`ef58074`; recorded as
+  `WINDOWS.md` ledger entry 45, now `fixed`); `engines.node` widened to
+  `^22.10.0 || ^24.0.0 || ^26.0.0` in the same change to match Homebridge's own declared range.
+
+With both fixed, a full live run against the real account passed: **7/7 scenarios, 41/41 steps,
+zero `InformationalError`**. This closes the fifth `behavior_unverified` item from the original
+verification below; the other four (CI matrix execution, the real packed-tarball CI scan, the live
+publish dry-run, and GitHub's private-vulnerability-reporting toggle) remain maintainer actions
+outside any phase's own execution, unchanged from the original verification.
 
 **Deferral note:** The automated verification below reached `human_needed` on 6/6 roadmap truths
 structurally present with no code defect found (see Gaps Summary). The maintainer reviewed the
@@ -77,7 +97,7 @@ PRESENT_BEHAVIOR_UNVERIFIED rather than VERIFIED, per the verifier's behavior-de
 | `SECURITY.md` | Best-effort policy + private-advisory pointer | ✓ VERIFIED (content) / ⚠️ HOLLOW (mechanism) | Text correct; the GitHub feature it points to is not enabled on this repo |
 | `README.md` + `test/documentation.test.ts` | 5 REL-08 disclosures | ✓ VERIFIED | All 5 confirmed present and gated |
 | `dev/README.md` | mDNS/multicast prerequisite | ✓ VERIFIED | `multicast` and `5353` both present, with precheck command and workaround |
-| `features/real-pump/**` + `test/realPumpCommandBlock.test.ts` | Opt-in suite, structurally command-free | ✓ VERIFIED (structure) / ⚠️ UNVERIFIED (live run) | Command-block gate passes; dry-run resolves all 7 scenarios; never run against live hardware |
+| `features/real-pump/**` + `test/realPumpCommandBlock.test.ts` | Opt-in suite, structurally command-free | ✓ VERIFIED (structure + live run) | Command-block gate passes; dry-run resolves all 7 scenarios; live run against the real account now passes 7/7 (see Update above) |
 | `dev/prep/*.md` (4 checklists) | Directly executable, all `pending` | ✓ VERIFIED | All 4 exist, all items `pending`, no false-passed claim |
 | `CHANGELOG.md` | Records phase's user-visible changes, no gate-passed claim | ✓ VERIFIED | grep-confirmed all required phrases present, no new version heading |
 
@@ -100,6 +120,7 @@ PRESENT_BEHAVIOR_UNVERIFIED rather than VERIFIED, per the verifier's behavior-de
 | Full local gate | `npm run check` | 1444/1444 unit tests, 104/104 Cucumber scenarios, exit 0 | ✓ PASS |
 | Packed artifact structure | `npm pack --dry-run --json` | Root files match allowlist exactly | ✓ PASS |
 | Real-pump suite step resolution | `npx cucumber-js --profile real --dry-run` | 7 scenarios, 7 skipped, 0 undefined/ambiguous | ✓ PASS |
+| Real-pump suite live run (see Update above) | `npx cucumber-js --profile real` against the real account | 7 scenarios (7 passed), 41 steps (41 passed), zero `InformationalError` | ✓ PASS |
 | Workflow YAML validity | `pre-commit run check-yaml` on all 3 workflow files | Passed | ✓ PASS |
 | Fallow gates | `npx fallow dead-code/health/dupes --fail-on-issues` | 0 issues above threshold (2 informational dupes, already accounted for in 06-10-SUMMARY) | ✓ PASS |
 | GitHub Actions matrix execution | `gh run list` / branch push status | No remote tracking branch; no build.yml run for this phase's changes | ✗ NOT EXECUTED (see behavior_unverified_items) |
@@ -117,7 +138,7 @@ PRESENT_BEHAVIOR_UNVERIFIED rather than VERIFIED, per the verifier's behavior-de
 | REL-06 | 06-05 | Best-effort support, private security advisories | ⚠️ PARTIAL | Templates/SECURITY.md content correct; GitHub-side private-reporting toggle not enabled (external constraint) |
 | REL-07 | 06-01, 06-09, 06-10 | Full release-candidate gate incl. G-001..G-004 | ⚠️ PARTIAL (by design) | Automated/documentation prerequisites in place; G-00X and CI-matrix execution are maintainer actions |
 | REL-08 | 06-06 | Five README safety/privacy disclosures | ✓ SATISFIED | All 5 present and gated |
-| REL-09 | 06-07, 06-08 | Opt-in real-pump observation suite | ✓ SATISFIED (structure) / ⚠️ live run unexecuted | Suite built, command-blocked, dry-run clean; live hardware run is a maintainer action |
+| REL-09 | 06-07, 06-08 | Opt-in real-pump observation suite | ✓ SATISFIED | Suite built, command-blocked, dry-run clean, and live run against the real account now passes 7/7 (see Update above) |
 
 No orphaned Phase 6 requirement IDs found: REQUIREMENTS.md's traceability table maps exactly
 REL-01 through REL-09 to Phase 6, matching every plan's declared `requirements` frontmatter.
@@ -134,10 +155,11 @@ content during this pass rather than trusted from the fix report, and all are co
 
 ### Human Verification Required
 
-The five items below are the load-bearing gaps between "everything this phase can build is built
-and locally green" and "this is an actually-verified release candidate." None is a code defect;
-all require either pushing this branch to trigger real CI, or a maintainer action this
-verification has no standing to take.
+The four items below (of the original five — item 5 was resolved post-verification, see Update
+above) are the load-bearing gaps between "everything this phase can build is built and locally
+green" and "this is an actually-verified release candidate." None is a code defect; all require
+either pushing this branch to trigger real CI, or a maintainer action this verification has no
+standing to take.
 
 #### 1. GitHub Actions compatibility matrix has never run
 
@@ -179,15 +201,15 @@ checklists become the record of G-00X closure.
 checklists exist, are directly executable, and correctly show every item `status: pending` with no
 premature "passed" claim anywhere in this phase's artifacts.
 
-#### 5. The real-pump suite has never run against the live Gemini
+#### 5. ~~The real-pump suite has never run against the live Gemini~~ — RESOLVED 2026-09-05T18:39:00Z
 
 **Test:** With `BG_EMAIL`/`BG_PASSWORD` set, run `npx cucumber-js --profile real` (not `--dry-run`).
 **Expected:** All 7 scenarios pass against the real account: discovery, initial REST/shadow state,
 a quiet-but-healthy or updated connection over one heartbeat interval, a restart that reuses the
 cached Auth0 token, and a clean shutdown with no unhandled rejection.
-**Why human:** The suite's own plan SUMMARYs (06-07, 06-08) record this exact gap as an unresolved
-human-judgment coverage item; `--dry-run` (which this verification did execute, successfully)
-never executes a step body against the real cloud.
+**Result:** Done — see the Update section at the top of this report. Two real defects surfaced and
+were fixed along the way (a harness step-timeout bug, and a Node-26-only HTTP/2 idle-timeout crash
+in `src/cloud/api.ts`/`auth.ts`); the suite now passes 7/7 against the real account.
 
 ### Gaps Summary
 
@@ -200,13 +222,15 @@ phase is not blocked by a defect.
 What remains is exactly the boundary between "this phase's own execution" and "a maintainer
 running CI/hardware after this phase closes" — a boundary the phase's own plans (06-01, 06-05,
 06-07, 06-08, 06-09) explicitly drew and documented at every point it appears, rather than papering
-over it. Five items live on that boundary: the GitHub Actions compatibility matrix and the
+over it. Four items still live on that boundary: the GitHub Actions compatibility matrix and the
 packed-tarball secret scan have structurally correct workflow definitions but have never actually
 executed (this branch has no remote), private vulnerability reporting cannot be enabled on this
-repository's current tier, G-001..G-004 correctly remain `pending`, and the real-pump suite is
-dry-run-clean but has never touched the live device. None of these can be resolved by further
-local code changes; each requires either pushing this branch/opening a PR, a maintainer's GitHub
-account-tier decision, or a maintainer's hardware session.
+repository's current tier, and G-001..G-004 correctly remain `pending`. A fifth item — the
+real-pump suite's live run — was resolved post-verification (see Update above): it now passes 7/7
+against the real account, after fixing two defects the live run itself surfaced. None of the
+remaining four can be resolved by further local code changes; each requires either pushing this
+branch/opening a PR, a maintainer's GitHub account-tier decision, or a maintainer's hardware
+session.
 
 ---
 
