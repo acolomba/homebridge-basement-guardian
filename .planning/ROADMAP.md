@@ -380,7 +380,27 @@ producing false failures (`pass 1383 / fail 2` against a solo `1385 / fail 0`).
   5. Prerelease metadata, safe-user warnings, release notes, best-effort issue templates, private security reporting, stable identities, and Homebridge Verified claim rules are ready and do not publish or claim approval prematurely.
   6. User-facing documentation discloses plaintext password storage, explains the child-bridge recommendation with its separate pairing and accessory re-creation consequences, marks prereleases experimental while telling users to keep the vendor alarm and notifications enabled, labels the 25/50/75/100 battery levels as estimates, and claims no Critical Alerts guarantee.
 
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Tracer: license boundary, CI compatibility matrix, and release-workflow scaffolding
+- [ ] 06-03-PLAN.md — Dependency allowlist, license, and telemetry-signature audits
+- [ ] 06-04-PLAN.md — Consistent outbound request identification (User-Agent) across cloud clients
+- [ ] 06-05-PLAN.md — Best-effort support policy, private security reporting, and issue-template alignment
+- [ ] 06-06-PLAN.md — User-facing safety/privacy documentation (README, dev/README)
+- [ ] 06-07-PLAN.md — Real-pump suite harness, tag-scoped Cucumber profile, and discovery/initial-state scenarios
+- [ ] 06-09-PLAN.md — Hardware-gate prep checklists and release-readiness checklist
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-02-PLAN.md — SPDX file headers across src/ (blocked on 06-01, 06-04)
+- [ ] 06-08-PLAN.md — Real-pump suite: heartbeats, natural updates, restart, and shutdown scenarios (blocked on 06-07)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 06-10-PLAN.md — Phase closeout: full-suite verification, CHANGELOG, and requirements reconciliation
 
 ## Progress
 
@@ -394,4 +414,4 @@ producing false failures (`pass 1383 / fail 2` against a solo `1385 / fail 0`).
 | 4. Pump Records and Official Controls | 6/6 | Implementation complete (human verification pending) |  |
 | 5. Degraded Operation and Recovery | 19/19 | Implementation complete |  |
 | 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete    | 2026-09-04 |
-| 6. Validated Release Candidate | 0/TBD | Not started | - |
+| 6. Validated Release Candidate | 0/10 | Not started | - |
