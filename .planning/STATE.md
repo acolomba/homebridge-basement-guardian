@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Validated Release Candidate
 status: executing
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-09-05T04:23:55.157Z"
+stopped_at: Completed 06-08-PLAN.md
+last_updated: "2026-09-05T04:55:19.254Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 06 execution started
-state_head: 291d748cbd096d21ea53544b27c2f41a96d94562
+state_head: a9c519686cd675fc612d1988116a5ecaae4ef619
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 73
-  completed_plans: 71
+  completed_plans: 72
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 ## Current Position
 
 Phase: 06 (Validated Release Candidate) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 06 execution started
 
@@ -143,6 +143,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P07 | 25min | 3 tasks | 5 files |
 | Phase 06 P09 | 20min | 3 tasks | 4 files |
 | Phase 06 P02 | 48min | 3 tasks | 42 files |
+| Phase 06 P08 | 30min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -438,6 +439,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-09: G-002's existing 1-to-3 water-level transition (observed 2026-08-31, mapped 20% to 40%) is recorded as prior evidence, not re-asked for; only codes 0, 7, 15, 31 and the flood threshold remain open items
 - [Phase 06]: [Phase 06] 06-09: G-003, G-004, and Phase 3's still-open flood-automation check are combined into one session recipe because all three need the same paired real Apple Home, reusing 04-UAT.md's recorded forcing-harness field domains rather than re-deriving them
 - [Phase 06]: [Phase 06] 06-02: src/platform.ts is classified MIT, not Apache-2.0 — an explicit maintainer decision through the checkpoint, reexamining D-035's default because the file is over 80% new code since the template import
+- [Phase 06]: [Phase 06] 06-08: Connection health for heartbeats.feature is read from the World's own warn/error log lines (the account runtime already funnels every real connection failure through a rate-limited log.warn, and deliberately does not warn on an ordinary daily reconnect), not from new socket instrumentation
+- [Phase 06]: [Phase 06] 06-08: Natural store updates are tracked with a dedicated store.subscribe()-based deviceChanges() log mirroring features/support/world.ts's pattern, because the existing monitoring-health observations() fires on every REST poll and cannot distinguish a value change from a scheduled poll
+- [Phase 06]: [Phase 06] 06-08: Token-cache reuse across a restart is proven by a SHA-256 content hash of the cache file rather than its mtime, and RealPumpWorld splits initialize()/createRuntime() so restart() rebuilds the account runtime over the same scratch directory instead of tearing it down
 
 ### Pending Todos
 
@@ -602,8 +606,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T04:23:54.305Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-09-05T04:55:18.328Z
+Stopped at: Completed 06-08-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
