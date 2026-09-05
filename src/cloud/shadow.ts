@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Nothing here logs a topic, a device identifier, a URL, or a payload. The
 // signed URL carries the credential scope, the session token, and the
 // signature, and the device identifier embeds the account identifier (AUTH-02).

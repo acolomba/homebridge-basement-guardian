@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // The vendor answers with untrusted, untyped JSON. Every response is typed
 // `unknown` and narrowed by a hand-written predicate: assertion syntax is banned
 // and a malformed payload must be rejected rather than admitted to the store

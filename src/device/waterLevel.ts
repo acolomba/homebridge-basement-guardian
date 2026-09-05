@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The one place the provisional water-level ladder and the flood
  * threshold live.

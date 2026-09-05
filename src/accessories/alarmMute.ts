@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The one place the provisional alarm-mute contract lives.
  *

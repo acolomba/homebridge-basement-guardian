@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The services one accessory publishes, and how each one is keyed.
  *

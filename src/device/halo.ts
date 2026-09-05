@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The HALO system's identity, and nothing else.
  *

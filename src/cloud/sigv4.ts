@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Nothing here logs, and the produced URL never reaches an error message: it
 // carries the credential scope, the session token, and the signature (AUTH-02).
 

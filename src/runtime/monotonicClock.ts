@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * Source of forward-only elapsed time.
  *

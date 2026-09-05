@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The one place a HomeKit write reaches the vendor.
  *

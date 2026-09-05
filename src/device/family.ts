@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The contract one device family implements to turn an opaque
  * snapshot into meaning.

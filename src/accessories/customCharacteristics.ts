@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The vendor-defined characteristics this plugin declares.
  *

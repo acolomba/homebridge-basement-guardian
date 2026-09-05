@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The Gemini dual-pump system: its identity, the fields it
  * reports, and the family adapter that validates and decodes them.

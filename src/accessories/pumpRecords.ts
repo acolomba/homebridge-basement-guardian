@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview CTRL-01: what this plugin watched each pump do, and nothing the device reported.
  *

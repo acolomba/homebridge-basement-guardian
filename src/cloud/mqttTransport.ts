@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // The client port below is declared by this consumer rather than imported from
 // the transport library, so the shadow client's own tests inject a plain object
 // and open no socket, while the transport-level scenarios drive the real

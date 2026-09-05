@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * A vendor REST call that did not produce usable data.
  *

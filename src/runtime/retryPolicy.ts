@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // The default import is deliberate: the named ESM export of a builtin is a
 // snapshot binding, which the test runner's timer mocks cannot replace, so the
 // wait would be untestable without awaiting a real timer.

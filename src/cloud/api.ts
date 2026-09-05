@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { PLUGIN_USER_AGENT } from '../settings.js';
 
 import { CloudRequestError } from './errors.js';

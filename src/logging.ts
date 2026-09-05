@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { LogLevel, Logging } from 'homebridge';
 
 /** Stands in for every value the wrapper substitutes. */

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview One row per published service, and the get-or-add, remove, and
  * push helpers an accessory drives them with.

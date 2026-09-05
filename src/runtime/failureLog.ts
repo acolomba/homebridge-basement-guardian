@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { Clock } from './clock.js';
 import type { Logging } from 'homebridge';
 

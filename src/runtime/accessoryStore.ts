@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * Sink for an accessory's own persisted state.
  *

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // The import attribute is mandatory under module: nodenext; resolveJsonModule
 // alone does not compile. tsc copies the data file into the build output, so it
 // ships with the package and needs no copy step.

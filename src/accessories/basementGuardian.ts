@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview One physical Basement Guardian system, published to HomeKit as
  * one accessory carrying several services.

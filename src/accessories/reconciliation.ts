@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview DEV-05: the two-consecutive-trustworthy-absence removal
  * state machine.

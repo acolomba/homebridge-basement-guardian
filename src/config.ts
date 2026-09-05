@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { isNotificationServiceKind, NOTIFICATION_SERVICE_KINDS } from './accessories/services.js';
 import { PROTOCOL } from './protocol.js';
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview What Homebridge stores alongside one restored accessory.
  *

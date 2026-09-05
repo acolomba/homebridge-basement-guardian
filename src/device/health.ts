@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview How the plugin is watching one device, and which parts of that
  * device's state it can still vouch for.

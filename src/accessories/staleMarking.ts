@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview The three passes over an accessory the plugin cannot vouch for,
  * none of which constructs a `BasementGuardianAccessory`.

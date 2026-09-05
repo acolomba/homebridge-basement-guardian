@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview Looks up which family adapter, if any, answers for one vendor
  * `deviceTypeId`.

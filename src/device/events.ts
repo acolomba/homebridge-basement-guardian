@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview Transient device occurrences, derived from consecutive canonical
  * snapshots.

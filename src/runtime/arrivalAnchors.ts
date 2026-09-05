@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @fileoverview When each system was last heard from, read on wall time and
  * kept across restarts.

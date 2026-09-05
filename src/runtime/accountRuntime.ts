@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import timers from 'node:timers/promises';
 
 import { createReconciliation } from '../accessories/reconciliation.js';

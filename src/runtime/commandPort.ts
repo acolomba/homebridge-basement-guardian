@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * The one thing a HomeKit control may ask the vendor to do.
  *

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { createHash, randomBytes } from 'node:crypto';
 import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
