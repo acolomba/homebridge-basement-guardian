@@ -252,4 +252,4 @@ This project is based on the official [Homebridge plugin template](https://githu
 
 ## License
 
-Licensed under the [Apache License 2.0](./LICENSE).
+Original work is licensed under the MIT License; two files carried forward from the Homebridge plugin template (`src/index.ts`, `src/settings.ts`) remain licensed under the Apache License 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE) for the complete boundary and license texts.

@@ -1,11 +1,13 @@
 This project began from the Homebridge plugin template
-(https://github.com/homebridge/homebridge-plugin-template) and carries three
+(https://github.com/homebridge/homebridge-plugin-template) and carries two
 modified template files under the template's original Apache License,
 Version 2.0, per that license's Section 4 requirement to mark changed files:
-src/index.ts, src/settings.ts, and src/platform.ts. Every other file in this
-repository is original work, licensed under the MIT License. The complete
-text of both licenses follows; see NOTICE for the attribution this boundary
-requires.
+src/index.ts and src/settings.ts. src/platform.ts began from the same
+template but has since replaced nearly all of that material with original
+implementation, and is reclassified as original work under the MIT License.
+Every other file in this repository is original work, licensed under the MIT
+License. The complete text of both licenses follows; see NOTICE for the
+attribution this boundary requires.
 
                                  Apache License
                            Version 2.0, January 2004
