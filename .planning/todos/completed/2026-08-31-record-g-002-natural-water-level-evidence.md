@@ -1,12 +1,26 @@
+completed: 2026-09-05
 ---
 created: 2026-08-31T14:32:13.700Z
 title: Record G-002 natural water-level evidence
 area: general
 severity: major
 files:
+
   - src/device/waterLevel.ts
   - .planning/STATE.md
+
 ---
+
+## Resolved
+
+Closed 2026-09-05 during the v1.0 milestone audit. Phase 6 plan 06-09 recorded this evidence in
+`STATE.md` ("G-002's existing 1-to-3 water-level transition (observed 2026-08-31, mapped 20% to
+40%) is recorded as prior evidence, not re-asked for") and in `dev/prep/g002-water-level-checklist.md`'s
+evidence table, which marks codes `1` and `3` "Validated" and names the remaining unvalidated
+codes (`0`, `7`, `15`, `31`) and the flood threshold. The checklist's own evidence section still
+records the date/instrument/control detail the first time it is run against real hardware, per
+its own text -- this todo's ask (do not lose the observation) is satisfied; G-002 itself stays
+open pending the remaining codes.
 
 ## Problem
 

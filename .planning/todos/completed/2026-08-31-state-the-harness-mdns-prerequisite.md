@@ -1,13 +1,24 @@
+completed: 2026-09-05
 ---
 created: 2026-08-31T14:32:13.700Z
 title: State the harness mDNS prerequisite
 area: docs
 severity: major
 files:
+
   - dev/README.md
   - dev/hb
   - dev/compose.yaml
+
 ---
+
+## Resolved
+
+Closed 2026-09-05 during the v1.0 milestone audit. Phase 6 plan 06-06 added a prerequisites
+section to `dev/README.md` naming host multicast as a hard requirement for pairing, an mDNS PTR
+precheck command, the required UDP 5353 port, and the reflector/relay workaround for a host
+without multicast reachability. `06-VERIFICATION.md`'s Required Artifacts table confirms this
+directly against the file.
 
 ## Problem
 

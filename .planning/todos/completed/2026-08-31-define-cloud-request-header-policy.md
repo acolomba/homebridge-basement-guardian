@@ -1,14 +1,27 @@
+completed: 2026-09-05
 ---
 created: 2026-08-31T10:17:18.801Z
 title: Define cloud request header policy
 area: api
 severity: minor
 files:
+
   - src/cloud/api.ts:112-117
   - src/cloud/auth.ts:350-358
   - src/settings.ts:1-9
   - package.json:2-12
+
 ---
+
+## Resolved
+
+Closed 2026-09-05 during the v1.0 milestone audit. Phase 6 plan 06-04 defined and applied
+`PLUGIN_USER_AGENT` (`src/settings.ts:26`, an honest `homebridge-basement-guardian` product
+identifier with no version/hostname/account data) across all outbound calls: vendor REST reads
+and commands (`src/cloud/api.ts`), the Auth0 grant (`src/cloud/auth.ts:357`), and the AWS IoT
+MQTT WebSocket handshake (`src/cloud/mqttTransport.ts`, via `wsOptions.headers`, confirmed not
+to interfere with the SigV4-signed query string). Covered by `test/cloud/api.test.ts`,
+`test/cloud/auth.test.ts`, and `test/cloud/mqttTransport.test.ts`.
 
 ## Problem
 

@@ -1,14 +1,25 @@
+completed: 2026-09-05
 ---
 created: 2026-08-31T01:55:18.023Z
 title: Document which services Apple Home renders
 area: docs
 severity: major
 files:
+
   - README.md:125
   - README.md:133
   - README.md:78-84
   - src/accessories/customServices.ts:72-75
+
 ---
+
+## Resolved
+
+Closed 2026-09-05 during the v1.0 milestone audit. Phase 6 plan 06-06 added a "The Home app
+draws no tile for these services" list (`README.md:104-110`) naming exactly the five
+vendor-defined services (`Sump Pit Level`, `Primary Pump`, `Backup Pump`, `Sump Mains Power`,
+`Backup Battery Facts`), plus the `Backup Battery` standard-service caveat and the Eve pointer,
+matching this todo's Solution section.
 
 ## Problem
 
