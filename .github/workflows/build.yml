@@ -29,6 +29,13 @@ jobs:
         # Homebridge 1.8 and 2.x both accept, so dropping 20 costs no
         # Homebridge 1.x coverage.
         node-version: [22.x, 24.x]
+        # D-02/D-033: the three pinned compatibility boundary points --
+        # minimum-supported 1.8.x, latest 1.x, and current 2.x. The 1.8.0
+        # cell prints a benign `npm warn EBADENGINE` during install, because
+        # Homebridge 1.8.0's own `engines.node` is `^18.15.0 || ^20.7.0` and
+        # this repository sets no `engine-strict`; the warning is expected
+        # and does not fail the job.
+        homebridge-version: ['1.8.0', '1.11.4', '2.4.0']
 
     steps:
       - uses: actions/checkout@v5
@@ -40,6 +47,10 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Pin matrix-selected Homebridge version
+        # --no-save keeps package-lock.json's own ^2.4.0 pin untouched by CI.
+        run: npm install --no-save homebridge@${{ matrix.homebridge-version }}
 
       - name: Lint the project
         run: npm run lint

@@ -3,10 +3,10 @@
   "displayName": "Basement Guardian",
   "type": "module",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "description": "A Homebridge plugin for monitoring and protecting basements.",
   "author": "Alessandro Colomba",
-  "license": "Apache-2.0",
+  "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/acolomba/homebridge-basement-guardian#readme",
   "repository": {
     "type": "git",
@@ -23,7 +23,8 @@
   "files": [
     "dist",
     "config.schema.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "NOTICE"
   ],
   "engines": {
     "node": "^22.10.0 || ^24.0.0",
