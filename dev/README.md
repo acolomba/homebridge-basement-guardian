@@ -46,3 +46,14 @@ It needs `BG_INSECURE=1` (the default), which also allows unauthenticated HAP re
 ## Networking
 
 The container uses host networking because HAP pairing needs mDNS and direct reachability from the phone. Only the bridge itself is exposed to the network; the UI stays on loopback.
+
+Pairing also needs the host itself to carry multicast. A host with no firewall path for mDNS and no bridged network fails pairing silently: it discovers zero responders even when the LAN has plenty (one host here, `floyd`, saw 0 responders where the LAN showed 25). Before you attempt to pair on a new host, check that it can see mDNS traffic at all:
+
+```bash
+avahi-browse -a -t     # Linux hosts running Avahi
+dns-sd -B _hap._tcp    # macOS hosts
+```
+
+If the command returns nothing within a few seconds, the host cannot receive mDNS, and pairing will fail no matter how the container is configured. mDNS needs UDP port 5353 open on the host, plus the HAP TCP port range Homebridge listens on.
+
+On a host without multicast, either run the container's network stack on a host that does have multicast reachability, or place an mDNS reflector/relay between the host and the rest of the network.
