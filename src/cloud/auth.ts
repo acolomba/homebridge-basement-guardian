@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { access, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { PLUGIN_USER_AGENT } from '../settings.js';
+
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from './errors.js';
 import { isRecord } from './types.js';
 
@@ -351,7 +353,7 @@ async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, sig
   try {
     return await fetch(`${options.constants.auth0Url}/oauth/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': PLUGIN_USER_AGENT },
       body: grantBody(options),
       signal: AbortSignal.any([signal, AbortSignal.timeout(options.requestTimeoutMs)]),
     });

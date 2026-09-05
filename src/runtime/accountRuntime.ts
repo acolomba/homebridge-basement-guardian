@@ -7,6 +7,7 @@ import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestErr
 import { createMqttTransport } from '../cloud/mqttTransport.js';
 import { createShadowClient } from '../cloud/shadow.js';
 import { createDeviceStateStore } from '../device/state.js';
+import { PLUGIN_USER_AGENT } from '../settings.js';
 
 import { createArrivalAnchors } from './arrivalAnchors.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from './failureLog.js';
@@ -1195,6 +1196,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
         region: deps.constants.awsRegion,
         createTransport: createMqttTransport,
         connect: deps.connect,
+        userAgent: PLUGIN_USER_AGENT,
         clock: deps.clock,
         log: deps.log,
       }),

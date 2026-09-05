@@ -192,6 +192,7 @@ function harness(failures: TransportFailures = {}): Harness {
     connect: () => {
       throw new Error('the fake transport never opens a socket');
     },
+    userAgent: 'harness-user-agent',
     onReportedPatch: (deviceId: string, patch: ReportedPatch): void => {
       patches.push({ deviceId, patch });
     },

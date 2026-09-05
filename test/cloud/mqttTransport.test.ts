@@ -83,6 +83,7 @@ function harness(failures: ClientFailures = {}): Harness {
     url: BROKER_URL,
     clientId: 'client-first',
     deadlineMs: DEADLINE_MS,
+    userAgent: 'harness-user-agent',
     signUrl: (live: MqttClientIdentity): string => {
       signed.push(live);
       live.options.clientId = 'client-signed';
@@ -124,6 +125,14 @@ test('disables the library reconnect timer and asks for a clean, resubscribing s
     },
     { clientId: 'client-first', protocolVersion: 4, reconnectPeriod: 0, clean: true, resubscribe: true },
   );
+});
+
+test('signs the WebSocket handshake with the caller-supplied identity header', () => {
+  // arrange & act
+  const { connectOptions } = harness();
+
+  // assert
+  assert.deepStrictEqual(connectOptions?.wsOptions, { headers: { 'User-Agent': 'harness-user-agent' } });
 });
 
 test('returns the signed url from the transform hook and ignores the url the hook receives', () => {

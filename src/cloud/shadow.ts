@@ -80,6 +80,8 @@ export interface ShadowClientOptions {
   retry: RetryPolicy;
   createTransport: (options: MqttTransportOptions) => MqttTransport;
   connect: MqttConnect;
+  /** How the plugin identifies itself on the WebSocket handshake (REL-03, REL-04). */
+  userAgent: string;
   onReportedPatch: (deviceId: string, patch: ReportedPatch) => void;
   onConnected: () => void;
   /** Receives a short classification, never a URL and never credential material. */
@@ -423,6 +425,7 @@ export function createShadowClient(options: ShadowClientOptions): ShadowClient {
         clientId: current.clientId,
         deadlineMs: OPERATION_DEADLINE_MS,
         signUrl: signHandshake,
+        userAgent: options.userAgent,
       }),
       established: false,
       live: false,

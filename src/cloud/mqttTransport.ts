@@ -61,6 +61,8 @@ export interface MqttConnectOptions {
   clean: true;
   resubscribe: true;
   transformWsUrl: (url: string, options: object, client: MqttClientIdentity) => string;
+  /** Extra headers for the WebSocket handshake; only the plugin's identity header is set (REL-03, REL-04). */
+  wsOptions?: { headers: Record<string, string> };
 }
 
 /** Opens one client connection. Injected, so no test defaults to a live socket. */
@@ -86,6 +88,8 @@ export interface MqttTransportOptions {
   deadlineMs: number;
   /** Returns the presigned URL for this handshake and refreshes the identifier. */
   signUrl: (client: MqttClientIdentity) => string;
+  /** How the plugin identifies itself on the WebSocket handshake (REL-03, REL-04). */
+  userAgent: string;
 }
 
 // One client operation, settled by the callback the client invokes or refused by
@@ -160,6 +164,7 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
     // builds from the endpoint instead. The hook cannot await, which is why the
     // signer reads a cache the rotation timer keeps fresh (SYNC-04).
     transformWsUrl: (_url: string, _connectOptions: object, live: MqttClientIdentity): string => options.signUrl(live),
+    wsOptions: { headers: { 'User-Agent': options.userAgent } },
   });
   let ending: Promise<void> | undefined;
   // Whether a graceful end can complete. The connect notification is where that
