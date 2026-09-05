@@ -43,7 +43,7 @@ jobs:
         # Pinned to the same revision .pre-commit-config.yaml already pins
         # for the trufflehog hook, so both scans run identical code.
         run: |
-          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin v3.92.4
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/v3.92.4/scripts/install.sh | sh -s -- -b /usr/local/bin v3.92.4
 
       - name: Scan the packed artifact for secrets
         # REL-04: this scans the real packed tarball's contents, not just
