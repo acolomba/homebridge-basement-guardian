@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Safety Monitoring in HomeKit",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "4",
@@ -40,9 +40,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (plan phase 4)",
+    "reason": "Phase 4 of 7 — needs a plan"
   },
-  "updated_at": "2026-09-05T14:02:17.206Z"
+  "updated_at": "2026-09-05T14:33:17.461Z"
 }

@@ -21,6 +21,7 @@ requirements:
   CTRL-04: satisfied
   CTRL-05: satisfied
 human_verification:
+
   - test: >-
       Install this build over an existing paired installation whose accessories were cached
       BEFORE this release, restart Homebridge, and open the accessory details for Primary Pump
@@ -89,6 +90,7 @@ human_verification:
       request. The phase ships the contract as a single named provisional constant and claims
       nothing about mute's behaviour, which is what CTRL-04 asked for.
 warnings:
+
   - id: W-1
     summary: >-
       No Cucumber scenario detects removal of the pending-window withholding. Mutating
@@ -108,6 +110,10 @@ warnings:
       intervals during a live run. Recorded by the executors, confirmed by reading
       classifiedAsTestActivity(): the label is only recomputed once test_running reads false
       and both device timestamps have been stable across two observations.
+audit_acknowledged:
+  milestone: 1.0
+  at: 2026-09-05
+  status: human_needed
 ---
 
 # Phase 4: Pump Records and Official Controls — Verification Report

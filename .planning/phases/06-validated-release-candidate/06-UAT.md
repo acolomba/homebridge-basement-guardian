@@ -4,6 +4,10 @@ phase: 06-validated-release-candidate
 source: [06-VERIFICATION.md]
 started: 2026-09-05T15:30:00Z
 updated: 2026-09-05T15:30:00Z
+audit_acknowledged:
+  milestone: 1.0
+  at: 2026-09-05
+  gap_snapshot: "testing::scenarios=5"
 ---
 
 ## Current Test

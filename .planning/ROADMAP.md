@@ -410,7 +410,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Secure Cloud Foundation | 17/17 | Complete | 2026-08-29 |
 | 2. Safe Gemini Discovery and Identity | 6/6 | Complete    | 2026-08-29 |
-| 3. Safety Monitoring in HomeKit | 8/8 | Implementation complete (human verification pending) |  |
+| 3. Safety Monitoring in HomeKit | 8/8 | Complete    | 2026-09-05 |
 | 4. Pump Records and Official Controls | 6/6 | Implementation complete (human verification pending) |  |
 | 5. Degraded Operation and Recovery | 19/19 | Implementation complete |  |
 | 5.1. Per-Pump Trust and Monotonic Silence | 7/7 | Complete    | 2026-09-04 |

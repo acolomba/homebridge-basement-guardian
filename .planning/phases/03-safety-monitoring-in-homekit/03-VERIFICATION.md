@@ -1,12 +1,15 @@
 ---
 phase: 03-safety-monitoring-in-homekit
 verified: 2026-08-30T00:00:00Z
-status: human_needed
+status: passed
+deferred_by: maintainer
+deferred_at: 2026-09-05T16:00:00Z
 score: 6/6 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 gaps: []
 deferred:
+
   - truth: "A lost monitoring path is separated from a confirmed-offline device without a false physical-device alert"
     addressed_in: "Phase 5"
     evidence: "REQUIREMENTS.md RES-03 Delivery split (03-CONTEXT.md D-09): Phase 3 delivers the confirmation counter and the adapter; Phase 5 delivers the remaining sentence."
@@ -19,6 +22,7 @@ deferred:
 behavior_unverified_items: []
 coincidental_reliance_items: []
 human_verification:
+
   - test: "In a real Apple home with a current home hub, create an automation triggered by the `Sump Pit Flood` Leak Sensor. Force the plugin into a degraded `water` scope by sending an out-of-domain `water_level`. Confirm the automation still appears in the Home app and still fires when the leak state changes."
     expected: "The automation survives and still fires while the owning service reports `StatusActive = false`."
     why_human: "Apple Home's automation-eligibility behaviour for an inactive service cannot be observed from the plugin side and no authoritative source settles it. Research refuted the specific claim that inactive sensors drop out of automations but could not prove the safe behaviour on current iOS. A failure here reopens `03-CONTEXT.md` D-05, which the whole degradation design rests on. Fold into the G-003 / G-004 real-home session."
@@ -34,6 +38,10 @@ human_verification:
     status: passed
     verified: 2026-08-31
     evidence: "A human drove the generated form in Homebridge 2.4.0 under `strictValidation: true`. Ticking one box wrote `[\"backup-pump-activated\"]` as a 1-element array and moved the Gemini service count 15 to 14, removing exactly the named sensor and no other; unticking it removed the key entirely and restored all 15 services with 8 of 8 contact sensors. Both directions were read back off the live HAP accessory database, not off the form. The form initially rendered raw slugs rather than service names, which is a defect this check found and which `260831-c7f`, `260831-dlv` and `c268b34` corrected: the options now render as seven alphabetised, human-named checkboxes with no `None` entry, and a checkbox list cannot express a duplicate."
+audit_acknowledged:
+  milestone: 1.0
+  at: 2026-09-05
+  status: human_needed
 ---
 
 # Phase 3: Safety Monitoring in HomeKit — Verification Report
@@ -41,8 +49,15 @@ human_verification:
 **Phase Goal:** Users can observe every supported basement-protection condition through semantically
 truthful services and immediate safety adapters.
 **Verified:** 2026-08-30
-**Status:** human_needed — no gaps; three controller-side checks remain that only a real Apple home can settle
+**Status:** passed (1 human item deferred by the maintainer, 2026-09-05T16:00:00Z; 2 of 3 already closed with real-hardware evidence)
 **Re-verification:** No — initial verification
+
+**Deferral note:** No gaps — all six ROADMAP success criteria were verified by executing the
+shipped code. Two of three human-verification items were already closed on 2026-08-31 against
+a real paired Apple Home (see items 2 and 3 below). The maintainer reviewed the one remaining
+item (flood automation surviving a degraded scope) and explicitly chose to defer it into the
+G-003/G-004 real-home session, which already blocks `1.0.0` under REL-07 — not this phase or
+the milestone. Tracked in STATE.md's Deferred Verification table.
 
 ## How this was verified
 

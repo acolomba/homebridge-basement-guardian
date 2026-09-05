@@ -4,6 +4,10 @@ phase: 04-pump-records-and-official-controls
 source: [04-VERIFICATION.md]
 started: 2026-09-01T20:15:00Z
 updated: 2026-09-04T19:30:00Z
+audit_acknowledged:
+  milestone: 1.0
+  at: 2026-09-05
+  gap_snapshot: "testing::scenarios=0"
 ---
 
 ## Current Test
