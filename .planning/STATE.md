@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Validated Release Candidate
-status: executing
-stopped_at: Completed 06-08-PLAN.md
-last_updated: "2026-09-05T04:55:19.254Z"
+status: verifying
+stopped_at: Completed 06-10-PLAN.md
+last_updated: "2026-09-05T05:05:34.041Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 06 execution started
-state_head: a9c519686cd675fc612d1988116a5ecaae4ef619
+state_head: e1509e03314d1e4e1349c0d4b6c79702a6a249d3
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 73
-  completed_plans: 72
+  completed_plans: 73
   percent: 57
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 
 Phase: 06 (Validated Release Candidate) — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-04 — Phase 06 execution started
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
@@ -144,6 +144,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P09 | 20min | 3 tasks | 4 files |
 | Phase 06 P02 | 48min | 3 tasks | 42 files |
 | Phase 06 P08 | 30min | 2 tasks | 6 files |
+| Phase 06 P10 | 7min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -442,6 +443,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-08: Connection health for heartbeats.feature is read from the World's own warn/error log lines (the account runtime already funnels every real connection failure through a rate-limited log.warn, and deliberately does not warn on an ordinary daily reconnect), not from new socket instrumentation
 - [Phase 06]: [Phase 06] 06-08: Natural store updates are tracked with a dedicated store.subscribe()-based deviceChanges() log mirroring features/support/world.ts's pattern, because the existing monitoring-health observations() fires on every REST poll and cannot distinguish a value change from a scheduled poll
 - [Phase 06]: [Phase 06] 06-08: Token-cache reuse across a restart is proven by a SHA-256 content hash of the cache file rather than its mtime, and RealPumpWorld splits initialize()/createRuntime() so restart() rebuilds the account runtime over the same scratch directory instead of tearing it down
+- [Phase 06]: [Phase 06] 06-10: npm run check passed clean on the combined tree with no fallow exemption needed; fallow dupes reported two clone groups (one in this phase's new realWorld.ts) but neither crossed the --fail-on-issues threshold, confirmed by running fallow dupes standalone.
+- [Phase 06]: [Phase 06] 06-10: CHANGELOG.md's [Unreleased] section records all of Phase 6's user-visible additions/changes (real-pump suite, SECURITY.md, CI Homebridge matrix, license boundary, README child-bridge/prerelease-alarm/Critical-Alerts disclosures) with no G-00X gate claimed and no new version heading, per D-01.
 
 ### Pending Todos
 
@@ -606,8 +609,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T04:55:18.328Z
-Stopped at: Completed 06-08-PLAN.md
+Last session: 2026-09-05T05:05:32.779Z
+Stopped at: Completed 06-10-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
