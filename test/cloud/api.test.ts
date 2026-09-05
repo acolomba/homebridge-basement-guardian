@@ -711,9 +711,9 @@ test('declares exactly four headers on a command request', async (t) => {
   ]);
 });
 
-// The read branch carries the bearer token and nothing else. Adding the command headers here would
-// change every read request's wire shape as a side effect of a decision about commands.
-test('declares only the bearer token on a read request', async (t) => {
+// Every REST request identifies itself the same way now, so the read branch's complete header set
+// is the bearer token plus the identity header and nothing else (REL-03, REL-04).
+test('declares the bearer token and the identity header on a read request', async (t) => {
   // arrange
   const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions());
@@ -722,7 +722,7 @@ test('declares only the bearer token on a read request', async (t) => {
   await cloudApi.devices(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(declaredHeaders, [{ authorization: 'Bearer id-token-1' }]);
+  assert.deepStrictEqual(declaredHeaders, [{ authorization: 'Bearer id-token-1', 'user-agent': 'homebridge-basement-guardian' }]);
 });
 
 // One product string exists in this codebase, so no second one can drift from it. A version, a
