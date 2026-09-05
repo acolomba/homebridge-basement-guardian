@@ -6,7 +6,7 @@
 
 A Homebridge dynamic platform plugin for monitoring and protecting basements.
 
-> This plugin is in development and is not released. Some of the values it publishes are estimates, and some are provisional until they are validated against real hardware. The sections that follow name each one.
+> This plugin is in development and is not released. Some of the values it publishes are estimates, and some are provisional until they are validated against real hardware. The sections that follow name each one. Keep your Basement Guardian vendor alarm and vendor notifications enabled while you run a prerelease build -- this plugin does not yet replace them.
 
 ## Requirements
 
@@ -55,6 +55,14 @@ Add the platform through the Homebridge UI, or add it directly to `config.json`:
 }
 ```
 
+Homebridge stores the account password in plain text in `config.json` and in backups. The plugin sends the password only to the vendor Auth0 tenant.
+
+## Running as a child bridge
+
+Homebridge can run this plugin as a child bridge, which isolates its crashes, startup delays, and restarts from every other plugin on your Homebridge instance. A child bridge is recommended but not required.
+
+A child bridge pairs with the Home app separately from your main bridge. Switching a plugin between main and child bridge mode, in either direction, can recreate its accessories in HomeKit. Recreating an accessory disrupts any room, scene, or automation you built around it, so expect to rebuild those if you change bridge mode after your first pairing.
+
 ## What the plugin publishes
 
 The plugin publishes one HomeKit accessory for each Basement Guardian system on your account. Every accessory carries these services:
@@ -72,6 +80,8 @@ The plugin publishes one HomeKit accessory for each Basement Guardian system on 
 The plugin updates these services each time it polls the vendor cloud. It also updates them when the cloud reports a change between two polls. A backup pump run can last as little as 7 seconds. If the message for a short run does not arrive, that run stays unseen until the next poll.
 
 The plugin publishes state to HomeKit. Whether your devices notify you, and how quickly, depends on your home and on Apple rather than on this plugin.
+
+This plugin makes no guarantee that Apple delivers a Critical Alert for the `Sump Pit Flood` Leak Sensor. Whether a Critical Alert reaches you depends on your home hub, your notification settings, and Apple's own Critical Alerts eligibility rules, not on this plugin.
 
 ## What the Home app draws a tile for
 
