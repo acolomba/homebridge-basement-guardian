@@ -528,9 +528,22 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 
 | Phase | State | Resume |
 |-------|-------|--------|
+| 2 | verification_deferred_human (2 backstop checks open, 25/27 must-haves verified) | /gsd-verify-work 2 |
 | 3 | verification_deferred_human (1 of 3 checks open) | /gsd-verify-work 3 |
 | 4 | verification_deferred_human (6 human items, 17/17 must-haves verified) | /gsd-verify-work 4 |
 | 6 | verification_deferred_human (5 human items, 6/6 roadmap truths structurally verified) | /gsd-verify-work 6 |
+
+Phase 2 has two backstop-tagged truths that were open since the phase's own verification and were
+never rowed here or routed to a later phase, a gap the v1.0 milestone audit found and corrected on
+2026-09-05: (1) confirm `src/accessories/reconciliation.ts`'s `Reconciliation.observe(deviceIds)`
+can never be driven by a per-device connectivity flag, with a held-out/property-based test rather
+than a read of the type signature; (2) confirm `registerDiscoveredDevices`'s per-device outcome is
+genuinely independent of a device's position in the same inventory batch, by reordering the mixed-
+inventory scenario's device list (or adding a property-based/randomized-order test). Both are
+tagged `verification: backstop` in their originating PLAN frontmatter — the current code is
+structurally sound on inspection, but no test exercises either claim directly. See `02-VERIFICATION.md`
+for full detail. Neither is known to block `1.0.0`; unlike the G-00X items, no ROADMAP/PROJECT.md
+constraint names them as a release gate.
 
 Phase 6 is implementation-complete. `06-VERIFICATION.md` found no code defect, no missing or stub
 artifact, and no unwired key link — three code-review rounds (`06-REVIEW.md`, `06-REVIEW.iter3.md`)
