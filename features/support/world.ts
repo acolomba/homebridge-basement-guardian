@@ -21,6 +21,7 @@ import { After, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
 import { markRestoredServicesStale, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
+import { httpFetch } from '../../src/cloud/httpDispatcher.js';
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createRedactingLogger } from '../../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
@@ -664,6 +665,7 @@ export class BasementGuardianWorld extends World {
       monotonic: { now: () => this.monotonicNow() },
       log: this.logger(),
       connect,
+      httpFetch,
       createSalt: () => HARNESS_SALT,
       // Drives the same registration logic `BasementGuardianPlatform` runs, so a scenario proves
       // the real discovery pipeline rather than a parallel copy of it.

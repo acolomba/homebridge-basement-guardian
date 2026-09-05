@@ -5,6 +5,7 @@ import { CloudRequestError } from './errors.js';
 import { isAwsCredentialsResponse, isCommandResult, isWireDeviceListResponse, isWireDeviceResponse, toApiDevice } from './types.js';
 
 import type { AuthClient } from './auth.js';
+import type { HttpFetch } from './httpDispatcher.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from './types.js';
 
 /**
@@ -44,6 +45,8 @@ export interface CloudApiOptions {
   baseUrl: string;
   auth: AuthClient;
   requestTimeoutMs: number;
+  /** Never Node's built-in global `fetch`; see httpDispatcher.ts for why. */
+  httpFetch: HttpFetch;
 }
 
 /** The vendor REST routes the plugin uses. */
@@ -98,6 +101,10 @@ async function readBody(response: Response, route: string): Promise<unknown> {
 // body itself.
 async function narrow<T>(call: VendorCall<T>, response: Response): Promise<T> {
   if (!response.ok) {
+    // An error response's body is never read, so it is cancelled instead: an unconsumed body
+    // otherwise leaves the underlying stream open until the connection's own teardown reaps it.
+    await response.body?.cancel();
+
     throw new CloudRequestError(`${call.route} failed with HTTP ${String(response.status)}.`, response.status, call.route);
   }
 
@@ -143,7 +150,7 @@ function requestInit(method: string, body: string | undefined, authorization: st
 async function send<T>(options: CloudApiOptions, call: VendorCall<T>, signal: AbortSignal): Promise<T> {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(call.deadlineMs)]);
   const idToken = await options.auth.idToken(deadline);
-  const response = await fetch(new URL(call.path, options.baseUrl), requestInit(call.method, call.body, `Bearer ${idToken}`, deadline));
+  const response = await options.httpFetch(new URL(call.path, options.baseUrl), requestInit(call.method, call.body, `Bearer ${idToken}`, deadline));
 
   return narrow(call, response);
 }

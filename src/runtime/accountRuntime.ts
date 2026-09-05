@@ -23,6 +23,7 @@ import type { MonitoringTrust } from './monitoringHealth.js';
 import type { MonotonicClock } from './monotonicClock.js';
 import type { RetryPolicy } from './retryPolicy.js';
 import type { CloudApi } from '../cloud/api.js';
+import type { HttpFetch } from '../cloud/httpDispatcher.js';
 import type { MqttConnect } from '../cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient, ShadowCredentials, ShadowDisconnectReason } from '../cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, DeviceCommand } from '../cloud/types.js';
@@ -1145,6 +1146,8 @@ export interface AccountRuntimeDeps {
   monotonic: MonotonicClock;
   log: RedactingLogger;
   connect: MqttConnect;
+  /** Never Node's built-in global `fetch`; see cloud/httpDispatcher.ts for why. */
+  httpFetch: HttpFetch;
   createSalt: () => string;
   /** How long before a credential expiry the rotation refreshes the cache. Bundled lead when absent. */
   rotationLeadMs?: number;
@@ -1180,6 +1183,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     password: deps.config.password,
     storagePath: deps.storagePath,
     requestTimeoutMs: REQUEST_TIMEOUT_MS,
+    httpFetch: deps.httpFetch,
     clock: deps.clock,
     createSalt: deps.createSalt,
     registerSecret,
@@ -1187,7 +1191,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
   });
 
   return createAccountRuntime({
-    api: createCloudApi({ baseUrl: deps.constants.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS }),
+    api: createCloudApi({ baseUrl: deps.constants.apiUrl, auth, requestTimeoutMs: REQUEST_TIMEOUT_MS, httpFetch: deps.httpFetch }),
     store: createDeviceStateStore({ clock: deps.clock, log: deps.log }),
     registry: deps.registry,
     createShadow: (shadowOptions: ShadowRuntimeOptions) =>

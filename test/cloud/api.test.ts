@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
 import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
+import { httpFetch } from '../../src/cloud/httpDispatcher.js';
+
+import { startAlpnServer } from './alpnServer.js';
 
 import type { CloudApi, CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
@@ -76,7 +80,13 @@ function awsCredentialsResponse(): AwsCredentialsResponse {
 }
 
 function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
-  return { baseUrl: 'https://api.example.test', auth, requestTimeoutMs: REQUEST_TIMEOUT_MS, ...overrides };
+  return {
+    baseUrl: 'https://api.example.test',
+    auth,
+    requestTimeoutMs: REQUEST_TIMEOUT_MS,
+    httpFetch: (input, init) => globalThis.fetch(input, init),
+    ...overrides,
+  };
 }
 
 interface RecordedRequest {
@@ -745,4 +755,29 @@ test('says nothing about the installation in the command user agent', async (t) 
     },
     { token: false, host: false, deviceId: false, accountId: false },
   );
+});
+
+// A real loopback connection over the production httpFetch port, not a mocked fetch: undici's
+// HTTP/2 idle-session teardown can leave an uncaught InformationalError, so which protocol actually
+// goes out on the wire is itself the behavior under test, not an implementation detail a mock could
+// paper over. The port is overridden here to the real production one rather than left at
+// apiOptions()'s test-default global fetch, because proving the PRODUCTION wiring never negotiates
+// HTTP/2 is the whole point of this case.
+test('never negotiates HTTP/2 with the vendor, even when the server offers it', async (t) => {
+  // arrange
+  const server = await startAlpnServer(JSON.stringify(deviceListBody([])));
+  t.after(() => server.close());
+  const originalCertificates = getCACertificates('default');
+  setDefaultCACertificates([...originalCertificates, server.certificate]);
+  t.after(() => {
+    setDefaultCACertificates(originalCertificates);
+  });
+  const cloudApi = createCloudApi(apiOptions({ baseUrl: server.url, httpFetch }));
+
+  // act
+  await cloudApi.devices(new AbortController().signal);
+  const negotiatedProtocol = await server.negotiatedProtocol();
+
+  // assert
+  assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });

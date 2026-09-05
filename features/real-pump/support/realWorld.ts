@@ -28,6 +28,7 @@ import { After, Before, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect } from 'mqtt';
 
 import { TOKEN_CACHE_FILENAME } from '../../../src/cloud/auth.js';
+import { httpFetch } from '../../../src/cloud/httpDispatcher.js';
 import { createFamilyRegistry } from '../../../src/device/registry.js';
 import { createRedactingLogger } from '../../../src/logging.js';
 import { PROTOCOL } from '../../../src/protocol.js';
@@ -321,6 +322,7 @@ export class RealPumpWorld extends World {
       monotonic: systemMonotonicClock,
       log: this.logger(),
       connect,
+      httpFetch,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         for (const deviceId of deviceIds) {

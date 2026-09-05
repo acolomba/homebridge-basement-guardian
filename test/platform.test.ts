@@ -779,7 +779,7 @@ describe('BasementGuardianPlatform', () => {
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
     const [launch, shutdown] = listeners;
 
     // act
@@ -810,7 +810,7 @@ describe('BasementGuardianPlatform', () => {
     const { user, storagePath } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
     const [launch, shutdown] = listeners;
 
     // act
@@ -892,7 +892,7 @@ describe('BasementGuardianPlatform', () => {
     // snapshot mutates only the context, because the accessory is not registered yet, and the
     // registration's own cache save is what carries the seeded record to disk. The strict mock
     // fails this case by name if the seed asks Homebridge to update anyway (CTRL-01, D-008).
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
     const [launch, shutdown] = listeners;
 
     // act
@@ -954,7 +954,9 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
-    new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
+    new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, {
+      httpFetch: (input, init) => globalThis.fetch(input, init),
+    });
     const [launch, shutdown] = listeners;
     launch?.();
     await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
@@ -1056,7 +1058,9 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
-    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, {
+      httpFetch: (input, init) => globalThis.fetch(input, init),
+    });
     const [launch, shutdown] = listeners;
 
     // act

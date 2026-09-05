@@ -25,10 +25,11 @@ jobs:
       fail-fast: false
       matrix:
         # D-032: Node 20 left Homebridge support in April 2026, and
-        # `engines.node` is `^22.10.0 || ^24.0.0`. Node 22 is also the version
-        # Homebridge 1.8 and 2.x both accept, so dropping 20 costs no
-        # Homebridge 1.x coverage.
-        node-version: [22.x, 24.x]
+        # `engines.node` is `^22.10.0 || ^24.0.0 || ^26.0.0`. Node 22 is also
+        # the version Homebridge 1.8 and 2.x both accept, so dropping 20
+        # costs no Homebridge 1.x coverage. Node 26 joined once Homebridge's
+        # own `engines.node` started accepting it.
+        node-version: [22.x, 24.x, 26.x]
         # D-02/D-033: the three pinned compatibility boundary points --
         # minimum-supported 1.8.x, latest 1.x, and current 2.x. The 1.8.0
         # cell prints a benign `npm warn EBADENGINE` during install, because

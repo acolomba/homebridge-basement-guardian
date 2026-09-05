@@ -31,7 +31,7 @@ test('declares the supported Node.js and Homebridge ranges (CONF-01)', () => {
   const manifest = packageManifest();
 
   // assert
-  assert.deepStrictEqual(manifest.engines, { node: '^22.10.0 || ^24.0.0', homebridge: '^1.8.0 || ^2.0.0' });
+  assert.deepStrictEqual(manifest.engines, { node: '^22.10.0 || ^24.0.0 || ^26.0.0', homebridge: '^1.8.0 || ^2.0.0' });
 });
 
 test('ships as an ES module whose entry point is the compiled plugin (CONF-01)', () => {

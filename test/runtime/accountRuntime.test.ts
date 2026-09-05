@@ -2766,12 +2766,13 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     password: 'account-password',
     storagePath,
     requestTimeoutMs: 1_000,
+    httpFetch: (input, init) => globalThis.fetch(input, init),
     clock,
     createSalt: () => 'salt-1',
     registerSecret: () => undefined,
     log,
   });
-  const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000 });
+  const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000, httpFetch: (input, init) => globalThis.fetch(input, init) });
   const store = createDeviceStateStore({ clock, log });
   const runtime = createAccountRuntime({
     api,
@@ -2966,6 +2967,7 @@ describe('createAccountRuntimeFromConfig', () => {
       monotonic: { now: () => MONOTONIC_START_TIME },
       log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
       connect,
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
     });
 
@@ -2995,6 +2997,7 @@ describe('createAccountRuntimeFromConfig', () => {
       connect: () => {
         throw new Error('no socket expected');
       },
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
     });
     await runtime.start();
@@ -3029,6 +3032,7 @@ describe('createAccountRuntimeFromConfig', () => {
       connect: () => {
         throw new Error('no socket expected');
       },
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
       rotationLeadMs: SHORT_ROTATION_LEAD_MS,
       minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
@@ -3073,6 +3077,7 @@ describe('createAccountRuntimeFromConfig', () => {
       connect: () => {
         throw new Error('no socket expected');
       },
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
     });
 
@@ -3112,6 +3117,7 @@ describe('createAccountRuntimeFromConfig', () => {
       connect: () => {
         throw new Error('no socket expected');
       },
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
       onMonitoringHealth: (account: MonitoringTrust): void => {
         reported.push(account);
@@ -3168,6 +3174,7 @@ describe('createAccountRuntimeFromConfig', () => {
       connect: () => {
         throw new Error('no socket expected');
       },
+      httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
     });
 

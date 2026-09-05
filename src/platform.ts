@@ -6,6 +6,7 @@ import { connect } from 'mqtt';
 
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
+import { httpFetch } from './cloud/httpDispatcher.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -18,6 +19,7 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
 import type { BasementGuardianAccessory } from './accessories/basementGuardian.js';
 import type { NotificationServiceKind } from './accessories/services.js';
+import type { HttpFetch } from './cloud/httpDispatcher.js';
 import type { FamilyOutcome, FamilyRegistry } from './device/registry.js';
 import type { DeviceSnapshot, DeviceStateStore } from './device/state.js';
 import type { RedactingLogger } from './logging.js';
@@ -483,6 +485,16 @@ export function removeDiscoveredDevice(context: DiscoveryContext, deviceId: stri
 }
 
 /**
+ * The one collaborator the composition root does not read from a fixed import, taken by injection
+ * so a test can observe what the platform actually sends over the wire (mirrors `timers` on
+ * `DiscoveryContext` above). Homebridge itself always constructs the platform with three arguments,
+ * so this defaults to the production transport and stays untouched outside a test.
+ */
+export interface PlatformDeps {
+  httpFetch: HttpFetch;
+}
+
+/**
  * Composition root of the dynamic platform.
  *
  * An invalid configuration is refused before any listener exists, so the plugin
@@ -512,6 +524,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     log: Logging,
     readonly config: PlatformConfig,
     readonly api: API,
+    deps: PlatformDeps = { httpFetch },
   ) {
     // Installed before anything else can log, so no secret reaches the
     // delegate unredacted. The refusal below quotes no configured value: it is
@@ -570,6 +583,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
       monotonic: systemMonotonicClock,
       log: this.log,
       connect,
+      httpFetch: deps.httpFetch,
       createSalt: () => randomBytes(SALT_BYTES).toString('hex'),
       onTrustworthyInventory: (deviceIds: readonly string[]): void => {
         registerDiscoveredDevices(discoveryContext(runtime.commands), deviceIds, runtime.store);

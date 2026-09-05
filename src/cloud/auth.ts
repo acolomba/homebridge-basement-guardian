@@ -9,6 +9,7 @@ import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestErr
 import { isRecord } from './types.js';
 
 import type { ProtocolConstants } from '../protocol.js';
+import type { HttpFetch } from './httpDispatcher.js';
 import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
@@ -71,6 +72,8 @@ export interface AuthClientOptions {
   /** The Homebridge storage directory; the token cache lives there and nowhere else. */
   storagePath: string;
   requestTimeoutMs: number;
+  /** Never Node's built-in global `fetch`; see httpDispatcher.ts for why. */
+  httpFetch: HttpFetch;
   clock: Clock;
   /** Supplies the salt the cached fingerprint is computed over. */
   createSalt: () => string;
@@ -352,7 +355,7 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
 
 async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
   try {
-    return await fetch(`${options.constants.auth0Url}/oauth/token`, {
+    return await options.httpFetch(`${options.constants.auth0Url}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'User-Agent': PLUGIN_USER_AGENT },
       body: grantBody(options),

@@ -4,11 +4,15 @@ import { access, chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
 import { mock, verify, when } from 'strong-mock';
 
 import { createAuthClient, TOKEN_CACHE_FILENAME } from '../../src/cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
+import { httpFetch } from '../../src/cloud/httpDispatcher.js';
+
+import { startAlpnServer } from './alpnServer.js';
 
 import type { AuthClientOptions } from '../../src/cloud/auth.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
@@ -116,6 +120,7 @@ function authOptions(storagePath: string, overrides: Partial<AuthClientOptions> 
     password: ACCOUNT_PASSWORD,
     storagePath,
     requestTimeoutMs: 1_000,
+    httpFetch: (input, init) => globalThis.fetch(input, init),
     clock: { now: () => START_TIME },
     createSalt: () => 'salt-1',
     registerSecret: () => undefined,
@@ -188,6 +193,30 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
       },
     ],
   );
+});
+
+// A real loopback connection over the production httpFetch port, not a mocked fetch: undici's
+// HTTP/2 idle-session teardown can leave an uncaught InformationalError, so which protocol actually
+// goes out on the wire is itself the behavior under test, not an implementation detail a mock could
+// paper over. Mirrors the equivalent case in test/cloud/api.test.ts for the grant request.
+test('never negotiates HTTP/2 with the vendor tenant, even when the server offers it', async (t) => {
+  // arrange
+  const server = await startAlpnServer(JSON.stringify({ id_token: 'id-token-1', expires_in: TOKEN_LIFETIME_SECONDS }));
+  t.after(() => server.close());
+  const originalCertificates = getCACertificates('default');
+  setDefaultCACertificates([...originalCertificates, server.certificate]);
+  t.after(() => {
+    setDefaultCACertificates(originalCertificates);
+  });
+  const storagePath = await createStoragePath(t);
+  const authClient = createAuthClient(authOptions(storagePath, { constants: { ...testConstants, auth0Url: server.url.replace(/\/$/, '') }, httpFetch }));
+
+  // act
+  await authClient.idToken(new AbortController().signal);
+  const negotiatedProtocol = await server.negotiatedProtocol();
+
+  // assert
+  assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });
 
 // The grant request is the plugin's first outbound call in its whole life, and it identifies itself
