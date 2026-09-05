@@ -79,7 +79,7 @@ test('every src/*.ts file is enumerated for the license-header gate (REL-05)', (
   );
 });
 
-test('the three template-derived files carry the Apache-2.0 SPDX header and the template note (REL-05, D-035)', () => {
+test('the two template-derived files carry the Apache-2.0 SPDX header and the template note (REL-05, D-035)', () => {
   // arrange
   const contents = APACHE_DERIVED_FILES.map((file) => readFileSync(join(REPOSITORY_ROOT, file), 'utf8'));
 
