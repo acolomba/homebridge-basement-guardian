@@ -82,7 +82,7 @@
 - [ ] **REL-05**: The packed package consistently preserves MIT licensing for original standalone work, Apache 2.0 licensing and notices for template-derived material, required file headers, full license texts, and aligned `SEE LICENSE IN LICENSE` metadata while both remain.
 - [x] **REL-06**: The repository provides best-effort current-release support through issue templates that request versions, reproduction steps, and redacted logs, directs vulnerabilities to private GitHub Security Advisories, promises no SLA, and meets current Homebridge Verified criteria without claiming approval.
 - [ ] **REL-07**: An npm-ready release candidate passes all automated and real-home checks including G-001, G-002, G-003, and G-004; prereleases use SemVer `0.x`, npm `next`, GitHub prerelease labels, safe-user warnings, and release notes, while `latest` and `1.0.0` remain blocked until the required gates pass. G-004 covers `Sump Pit Flood` Leak Sensor notification delivery, validated in a real eligible Apple home with a current home hub and the current Home architecture, and confirms that no documentation claims a Critical Alerts guarantee.
-- [ ] **REL-08**: User-facing documentation states that Homebridge stores the account password in plain text in `config.json` and in backups (`D-023`), recommends a child bridge while warning that a child bridge needs separate HomeKit pairing and that a bridge-mode change can recreate accessories and disrupt rooms, scenes, and automations (`D-036`), marks prerelease builds experimental and tells users to keep the vendor alarm and vendor notifications enabled (`D-026`), identifies the 25/50/75/100 battery percentages as documented estimates rather than measured charge (`D-012`), and makes no Critical Alerts guarantee for the flood Leak Sensor.
+- [x] **REL-08**: User-facing documentation states that Homebridge stores the account password in plain text in `config.json` and in backups (`D-023`), recommends a child bridge while warning that a child bridge needs separate HomeKit pairing and that a bridge-mode change can recreate accessories and disrupt rooms, scenes, and automations (`D-036`), marks prerelease builds experimental and tells users to keep the vendor alarm and vendor notifications enabled (`D-026`), identifies the 25/50/75/100 battery percentages as documented estimates rather than measured charge (`D-012`), and makes no Critical Alerts guarantee for the flood Leak Sensor.
 - [ ] **REL-09**: An opt-in Cucumber suite observes a real pump's discovery, initial state, heartbeats, natural updates, restart, and shutdown. The suite blocks all commands in code, uses local credentials, and never requires a natural status change.
 
 ## v2 Requirements
@@ -159,7 +159,7 @@
 | REL-05 | Phase 6 | Pending |
 | REL-06 | Phase 6 | Complete |
 | REL-07 | Phase 6 | Pending |
-| REL-08 | Phase 6 | Pending |
+| REL-08 | Phase 6 | Complete |
 | REL-09 | Phase 6 | Pending |
 
 **Reconciled 2026-09-03 (quick task 260903-ho5).** The twelve Phase 1 identifiers now read complete
