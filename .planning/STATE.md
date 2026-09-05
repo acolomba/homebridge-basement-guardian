@@ -2,12 +2,11 @@
 gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
-status: planning
+status: "Phase 06 shipped — PR #4"
 stopped_at: Phase 04 complete, ready to plan Phase 05
-last_updated: "2026-09-05T14:34:50.739Z"
+last_updated: "2026-09-05T20:26:58.589Z"
 last_activity: 2026-09-05
-last_activity_desc: Phase 04 complete, transitioned to Phase 05
-state_head: d9932880ca3a10401ddf079af637e8aacbbe10cc
+state_head: 43202c5dfc20aa66fb9cad852c35d02580603273
 progress:
   total_phases: 7
   completed_phases: 7
@@ -29,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 
 Phase: 05 — Degraded Operation and Recovery
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-05 — Completed quick task 260905-fiy: Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout
+Status: Phase 06 shipped — PR #4
+Last activity: 2026-09-05
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
