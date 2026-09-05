@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-29)
+See: .planning/PROJECT.md (updated 2026-09-04)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 05.1 — Per-Pump Trust and Monotonic Silence
+**Current focus:** Phase 06 — Validated Release Candidate
 
 ## Current Position
 
@@ -496,7 +496,7 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
   positive finding there reopens `D-05`.
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
 - ~~A shadow that goes silent never releases the telemetry watermark~~ — **RESOLVED 2026-09-02, corrected here 2026-09-03.** Plan 05-11 released the watermark on two missed heartbeats, plan 05-14 made the release per device, and `05-CONTEXT.md` D-13 ratifies it as a narrow amendment to D-15 and SYNC-03. Ledger entry 5 reads `fixed`. This line asked for a decision that had already been made, shipped and requirement-amended; it stood for a day because nothing owned it
-- V11 is a null result: no shipped scenario reconnects and then publishes a heartbeat, so neither the cumulative-wait mutation nor the per-connection-reset mutation fails anything. The per-connection wait is pinned only by a state assertion. 05.1-04's reconnecting scenario may close this.
+- V11 is a null result: no shipped scenario reconnects and then publishes a heartbeat, so neither the cumulative-wait mutation nor the per-connection-reset mutation fails anything. The per-connection wait is pinned only by a state assertion. 05.1-04's reconnecting scenario did not close this — `05.1-07-SUMMARY.md` carries V11 forward as still unpinned, alongside V9's literal wording, in the phase's final validation record.
 
 ## Deferred Verification
 
@@ -583,7 +583,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-04T23:40:37.905Z
+Last session: 2026-09-05T00:15:00.000Z
 Stopped at: Phase 05.1 complete, ready to plan Phase 06
 Resume file: .planning/phases/06-validated-release-candidate/06-CONTEXT.md
 
@@ -593,30 +593,15 @@ to rediscover: executor dispatch is blocked by an isolation guard, and the obvio
 returns `shouldDegrade: true`, because a harness worktree would fork from `origin/HEAD` — which is
 `origin/main`, where Phase 3 does not exist. Force the sentinel to `none` before every dispatch, and
 verify by reading `.gsd/dispatch-isolation-sentinel.json` rather than re-querying, because a bare
-query re-persists the capability and silently undoes the force.
+query re-persists the capability and silently undoes the force. The same underlying hazard applies
+to any other tooling that creates a branch from `origin/HEAD`/`origin/main` rather than local HEAD —
+confirmed again on 2026-09-04 when `phase.complete`'s own auto-branch step branched cleanly off local
+HEAD (safe), but the risk is structural to the repo, not specific to one code path.
 
-Phase 5 is planned. `05-CONTEXT.md` (12 decisions), `05-RESEARCH.md`, `05-PATTERNS.md`,
-`05-VALIDATION.md` and five `05-NN-PLAN.md` files are committed. Do not re-run discuss, research or
-plan.
+Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior gates). Phase 6
+(Validated Release Candidate) is next: `06-CONTEXT.md` is already gathered — do not re-run discuss.
+Plan next with `/gsd-plan-phase 6`.
 
-**Plan 05-01 starts with a `checkpoint:decision` and is `autonomous: false`.** Two locked decisions
-disagree about one scope: `D-02` (narrowed) has a REST-only degradation additionally withdraw
-`connectivity`, so `Basement Guardian Offline` reads `Status Active = false`; `D-04` says a REST-only
-degradation does not mark HomeKit. The plans implement `D-02` and an unattended run resolves that
-way. The checkpoint lists the six artifacts that change under `D-04`, and `05-VALIDATION.md` names
-the two rows that revert with them.
-
-**Two findings from planning that no earlier document carries.** `features/support/fakeHap.ts`
-stores an error as the characteristic's value and clears the status, while the pinned real
-`Characteristic.js` short-circuits on an `Error` and returns before touching `value` — the inverse.
-Nothing in the suite has ever pushed an error, so no assertion noticed. Fixing the stand-in is plan
-05-04's first task. Separately, on a halted restart a press on a restored switch silently appears to
-succeed, because no binder is ever attached; that gap predates this phase and is recorded, not
-closed.
-
-`D-12` remains the item a reader will under-weight: the Cucumber harness drops services on restart,
-which would make every `D-06` scenario pass vacuously. Plan 05-02 restores services, their last
-values and the `pushed` flag, and re-runs all 78 existing scenarios in the same task.
-
-**Pushed through `c63469a`.** Everything after it — the Phase 5 context, research, patterns,
-validation and plans — is unpushed until someone pushes it.
+**Unpushed.** No upstream is configured for the current branch
+(`features/phase-05.1-per-pump-trust-and-monotonic-silence`); all work through Phase 05.1's
+completion exists only locally until someone pushes it.

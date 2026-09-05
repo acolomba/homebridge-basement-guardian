@@ -186,4 +186,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-08-29 after Phase 2 — account configuration and safe Gemini discovery moved to Validated*
+*Last updated: 2026-09-04 after Phase 5.1 — per-pump trust withdrawal, controller-link diagnostic, and monotonic silence clock completed; RES-01/RES-02 refined and remain Complete*
