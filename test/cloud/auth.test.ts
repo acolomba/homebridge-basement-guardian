@@ -139,12 +139,16 @@ async function writeCacheText(storagePath: string, text: string): Promise<void> 
 }
 
 // Records every grant request and answers each one with a fresh Response.
-function stubFetch(t: TestContext, respond: (callIndex: number) => Response): { url: string; body: string }[] {
-  const grantRequests: { url: string; body: string }[] = [];
+function stubFetch(t: TestContext, respond: (callIndex: number) => Response): { url: string; body: string; headers: Record<string, string> }[] {
+  const grantRequests: { url: string; body: string; headers: Record<string, string> }[] = [];
 
   t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
     const callIndex = grantRequests.length;
-    grantRequests.push({ url: input.toString(), body: typeof init?.body === 'string' ? init.body : '' });
+    grantRequests.push({
+      url: input.toString(),
+      body: typeof init?.body === 'string' ? init.body : '',
+      headers: Object.fromEntries(new Headers(init?.headers).entries()),
+    });
 
     return Promise.resolve(respond(callIndex));
   });
@@ -183,6 +187,24 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
         scope: 'openid profile email',
       },
     ],
+  );
+});
+
+// The grant request is the plugin's first outbound call in its whole life, and it identifies itself
+// on it the same way every other outbound request does (REL-03, REL-04).
+test('identifies the plugin on the grant request, alongside its content type', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.deepStrictEqual(
+    grantRequests.map((request) => request.headers),
+    [{ 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian' }],
   );
 });
 
