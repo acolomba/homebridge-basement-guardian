@@ -1,8 +1,8 @@
 ---
 phase: 06-validated-release-candidate
-reviewed: 2026-09-05T05:17:11Z
+reviewed: 2026-09-05T14:05:00Z
 depth: standard
-files_reviewed: 55
+files_reviewed: 79
 files_reviewed_list:
   - CHANGELOG.md
   - cucumber.json
@@ -84,102 +84,86 @@ files_reviewed_list:
   - test/repositoryGovernance.test.ts
   - test/settings.test.ts
 findings:
-  critical: 2
+  critical: 0
   warning: 1
   info: 0
-  total: 3
+  total: 1
 status: issues_found
 ---
 
-# Phase 06: Code Review Report
+# Phase 6: Code Review Report
 
-**Reviewed:** 2026-09-05T05:17:11Z
+**Reviewed:** 2026-09-05T14:05:00Z
 **Depth:** standard
-**Files Reviewed:** 79 (per the required-reading list; 32 `src/*.ts` files carried only a one-line SPDX header diff and were read but not re-analyzed for pre-existing logic, per the workflow's scoping note)
+**Files Reviewed:** 79
 **Status:** issues_found
 
 ## Summary
 
-This phase's substantive new logic is the outbound identity-header threading across `src/cloud/api.ts`, `src/cloud/auth.ts`, `src/cloud/mqttTransport.ts`, and `src/cloud/shadow.ts` (REL-03/REL-04), the real-pump Cucumber harness and its structural command-block gate (`test/realPumpCommandBlock.test.ts`, `features/real-pump/**`), the packaging/license gates under `test/packaging/`, and the new `LICENSE`/`NOTICE`/CI-workflow artifacts (REL-05).
+This is a re-review of the same 79-file scope as the prior `06-REVIEW.md`/`06-REVIEW.iter3.md`
+passes. Since the last recorded review, three commits (`1a01df5`, `02faee4`, `a45d5cf`) fixed all
+three warnings that pass reported (`WR-01` license-header test title, `WR-02` the CI `npm audit`
+step that could never fail, `WR-03` the GPL-license gate that silently passed an unrecorded
+license). I verified each fix directly against the current file contents rather than trusting the
+prior fix report: `licenseHeaders.test.ts`'s test title now says "two" and matches the two-entry
+`APACHE_DERIVED_FILES` array; `build.yml`'s audit step is now a single `npm audit --omit=dev` with
+no `|| true` and no mid-job `audit fix`; and `dependencyLicenses.test.ts`'s filter now treats a
+missing or unrecognized `license` field as a violation rather than silently passing it.
 
-The identity-header threading itself is correctly wired end to end (`PLUGIN_USER_AGENT` → REST reads, REST commands, the Auth0 grant, and the MQTT WebSocket handshake) and is well covered by `test/cloud/api.test.ts`, `test/cloud/auth.test.ts`, and `test/cloud/mqttTransport.test.ts`. The real-pump harness correctly builds no accessory/command layer, and the structural gate proving that is sound.
+I then read every file in scope in full rather than only the files changed since the last review,
+including the cloud transport layer, the device state store and family adapters, the account
+runtime, the accessory/service-catalogue tier, the pump-observation record, the Cucumber real-pump
+harness, and every packaging/governance test. The codebase is unusually rigorous: nearly every
+function carries a comment stating the invariant it protects and the failure mode it was written
+against, decoded telemetry is validated field-by-field before any value reaches HomeKit, every
+disk write goes through a write-temp-then-rename sequence, and the safety rule (never guess, never
+substitute a normal value for a doubtful one) is applied consistently across the state store, the
+family adapters, and the service catalogue. I did not find a new bug, security issue, or logic
+defect in the source, tests, or Cucumber harness.
 
-However, this phase's own headline deliverable — the split MIT/Apache-2.0 licensing scheme (D-035, REL-05) — was left inconsistent between the legally operative `LICENSE`/`NOTICE` files and the actual per-file SPDX headers the test suite enforces, because a later maintainer decision (reclassifying `src/platform.ts` from Apache-2.0 to MIT, recorded in this phase's own `06-02-SUMMARY.md`) updated the source header and the test's allowlist but never the two documents a redistributor is expected to read first. `README.md`'s license section was also never reconciled with the split scheme. Both are documentation-only defects, but they are exactly the class of defect this phase existed to eliminate, and neither is caught by any existing gate. A secondary finding notes an untested wiring path for the new `userAgent` field on the shadow-connection seam.
-
-## Critical Issues
-
-### CR-01: NOTICE and LICENSE still claim `src/platform.ts` is Apache-2.0, contradicting its actual MIT header
-
-**File:** `NOTICE:7-11`, `LICENSE:1-8` (vs. `src/platform.ts:1` and `test/packaging/licenseHeaders.test.ts:44-50`)
-
-**Issue:** `NOTICE` states:
-
-```
-Three files carried forward from that template and modified for this project remain licensed under Apache-2.0:
-- src/index.ts
-- src/settings.ts
-- src/platform.ts
-```
-
-`LICENSE`'s header prose makes the identical claim ("carries three modified template files under the template's original Apache License ... src/index.ts, src/settings.ts, and src/platform.ts"). But `src/platform.ts`'s own first line reads `// SPDX-License-Identifier: MIT`, and `test/packaging/licenseHeaders.test.ts`'s `APACHE_DERIVED_FILES` constant (line 50) lists only `['src/index.ts', 'src/settings.ts']`, with a comment explicitly recording that `src/platform.ts` "was reexamined and classified MIT instead ... an explicit maintainer decision recorded in this plan's own SUMMARY."
-
-This project's own planning artifacts confirm the sequence: `06-01` wrote `LICENSE`/`NOTICE` naming all three files Apache-2.0 (the RESEARCH.md default), and `06-02` later reclassified `src/platform.ts` as MIT — updating the file's SPDX header and the test's allowlist — but never went back to update `LICENSE` or `NOTICE`. The result is a shipped package whose attribution notice and license text disagree with the license grant actually stated in the file itself. No existing test catches this: `licenseHeaders.test.ts` only regex-matches that `LICENSE`/`NOTICE` mention "Apache License" and "MIT License" generically (lines 26-42); it never cross-checks the specific files `LICENSE`/`NOTICE` name against the classification the per-file SPDX gate enforces.
-
-**Fix:** Update `NOTICE` and `LICENSE`'s prose to name only `src/index.ts` and `src/settings.ts` as the Apache-2.0-derived files, and add an assertion to `test/packaging/licenseHeaders.test.ts` that cross-checks `APACHE_DERIVED_FILES` against the file list embedded in `NOTICE`/`LICENSE`, so the two can never drift apart again:
-
-```ts
-test('NOTICE and LICENSE name exactly the SPDX-classified Apache-derived files (REL-05, D-035)', () => {
-  const notice = readFileSync(join(REPOSITORY_ROOT, 'NOTICE'), 'utf8');
-  for (const file of APACHE_DERIVED_FILES) {
-    assert.match(notice, new RegExp(file.replace('.', '\\.')));
-  }
-  assert.doesNotMatch(notice, /src\/platform\.ts/);
-});
-```
-
-### CR-02: README's License section omits the project's actual MIT/Apache-2.0 split
-
-**File:** `README.md:253-255`
-
-**Issue:** The README's closing section reads:
-
-```
-## License
-
-Licensed under the [Apache License 2.0](./LICENSE).
-```
-
-This phase established (D-035, REL-05) that the project is dual-licensed: two files remain Apache-2.0-derived template material, and every other file — the entire runtime, all `src/cloud/*`, all `src/device/*`, all `src/accessories/*`, and so on — is original MIT-licensed work (confirmed by `NOTICE`, by `LICENSE`'s own header prose, by `package.json`'s `"license": "SEE LICENSE IN LICENSE"`, and by the per-file SPDX headers `test/packaging/licenseHeaders.test.ts` enforces). Stating flatly that the project is "Licensed under the Apache License 2.0" tells a reader — and any automated license scanner that reads README prose rather than `LICENSE` — the opposite of what is actually true for over 95% of the codebase. `test/documentation.test.ts`, the module that gates README content for this phase, never checks this section.
-
-**Fix:** Replace the License section with a statement of the actual split, consistent with `NOTICE`:
-
-```markdown
-## License
-
-This project is dual-licensed. `src/index.ts` and `src/settings.ts` remain
-licensed under the [Apache License 2.0](./LICENSE), carried forward and
-modified from the Homebridge plugin template. Every other file is original
-work licensed under the [MIT License](./LICENSE). See [NOTICE](./NOTICE) for
-the complete attribution.
-```
+The one new finding is in CI infrastructure: `package-audit.yml`'s TruffleHog installation step
+pipes a script fetched from a mutable branch ref to `sh`, which is a supply-chain gap of exactly
+the kind this project is otherwise careful to avoid (the pre-commit hook pins TruffleHog by git
+tag; the workflow's own comment claims parity with that pin but does not achieve it).
 
 ## Warnings
 
-### WR-01: The shadow-client `userAgent` wiring has no test asserting the value that actually reaches the transport
+### WR-01: The packaging workflow pins TruffleHog's binary version but not the script that installs it
 
-**File:** `src/runtime/accountRuntime.ts:1200` (via `src/cloud/shadow.ts:426-430`)
+**File:** `.github/workflows/package-audit.yml:42-46`
+**Issue:** The "Install trufflehog" step fetches and executes an install script from TruffleHog's
+`main` branch -- a mutable ref that can change on every run -- and only pins the binary version as
+an argument to that script:
 
-**Issue:** `createAccountRuntimeFromConfig` passes `userAgent: PLUGIN_USER_AGENT` into `createShadowClient`, which forwards it into the `MqttTransportOptions` it builds for `createTransport` (`src/cloud/shadow.ts:426-430`). This is the production wiring this phase's REL-03/REL-04 work exists to guarantee, but no test observes the value at either seam:
+```yaml
+run: |
+  curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin v3.92.4
+```
 
-- `test/cloud/shadow.test.ts` supplies a fixed `userAgent: 'harness-user-agent'` (line 195) and records every `MqttTransportOptions` the fake `createTransport` receives (`transports[n]?.options`, used elsewhere in the file for `url`, `clientId`, `deadlineMs`, and `signUrl` assertions), but no case asserts `transports[0]?.options.userAgent`.
-- `test/runtime/accountRuntime.test.ts`'s `createAccountRuntimeFromConfig` suite (starting line 2942) never opens a real connection and never stubs `createShadowClient`/`createMqttTransport` to observe what `userAgent` value the composition seam actually supplies; every case there uses a `connect` function that throws before any option is inspectable.
-
-A regression that dropped, hardcoded, or mistyped the `userAgent` value anywhere along this chain (`accountRuntime.ts` → `shadow.ts` → `mqttTransport.ts`) would still pass every existing test and would still reach 100% line/function coverage, because the property assignment introduces no branch. This is exactly the "would a plausible wrong implementation still pass" gap the project's own unit-testing rules call out.
-
-**Fix:** Add an assertion in `test/cloud/shadow.test.ts` that `transports[0]?.options.userAgent` equals the `userAgent` the case's `ShadowClientOptions` supplied, and add a case in `test/runtime/accountRuntime.test.ts`'s `createAccountRuntimeFromConfig` suite that stubs `connect` to capture the `MqttConnectOptions.wsOptions` (or otherwise observes the composed `userAgent`) and asserts it equals `PLUGIN_USER_AGENT`.
+The comment directly above it says: "Pinned to the same revision `.pre-commit-config.yaml` already
+pins for the trufflehog hook, so both scans run identical code." That is not what happens.
+`.pre-commit-config.yaml` pins TruffleHog by `rev: v3.92.4` against `pre-commit`'s own repo-clone
+mechanism, which checks out that exact tagged commit and runs the code as it existed there. This
+workflow step instead always re-fetches whatever is currently on `main` of
+`trufflesecurity/trufflehog` and executes it immediately via `sh`, before that script goes on to
+install the pinned `v3.92.4` binary. If that install script is compromised, altered, or simply
+changed in a way that mishandles its arguments between one workflow run and the next, this step
+runs arbitrary code in CI with no version pin protecting it -- the `v3.92.4` argument only
+constrains which trufflehog binary the (unpinned) script chooses to download. This is the classic
+`curl | sh` supply-chain gap, and it sits in the one workflow whose whole job is scanning the
+publish-bound tarball for leaked secrets, which makes the workflow's own install step the least
+trustworthy line in it.
+**Fix:** Pin the install script to the same tag the binary is pinned to, matching the precision
+`.pre-commit-config.yaml` already has:
+```yaml
+run: |
+  curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/v3.92.4/scripts/install.sh | sh -s -- -b /usr/local/bin v3.92.4
+```
+or better, download and verify the released binary archive directly (checksum-verified) rather than
+executing a fetched shell script at all.
 
 ---
 
-_Reviewed: 2026-09-05T05:17:11Z_
+_Reviewed: 2026-09-05T14:05:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
