@@ -175,3 +175,9 @@ None.
 *Phase: 06-validated-release-candidate*
 *Plan: 09*
 *Completed: 2026-09-05*
+
+## Self-Check: PASSED
+
+All four checklist files and this SUMMARY.md were confirmed present on disk.
+All four task/summary commit hashes (`f62c480`, `b6612f1`, `eaf48a8`,
+`d268912`) were confirmed present in git history.

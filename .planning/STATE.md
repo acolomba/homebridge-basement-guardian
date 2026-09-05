@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 06
 current_phase_name: Validated Release Candidate
 status: executing
-stopped_at: Completed 06-07-PLAN.md
-last_updated: "2026-09-05T03:25:25.361Z"
+stopped_at: Completed 06-09-PLAN.md
+last_updated: "2026-09-05T03:34:41.530Z"
 last_activity: 2026-09-04
 last_activity_desc: Phase 06 execution started
-state_head: 7ed81048fe2d494cdfe7708e39f9cbb0a7e0cfc2
+state_head: d268912eeeb08ecf99e2734e69bbdec30286c7ac
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 73
-  completed_plans: 69
+  completed_plans: 70
   percent: 57
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 ## Current Position
 
 Phase: 06 (Validated Release Candidate) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-09-04 — Phase 06 execution started
 
@@ -141,6 +141,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P05 | 12min | 2 tasks | 4 files |
 | Phase 06 P06 | 12min | 2 tasks | 3 files |
 | Phase 06 P07 | 25min | 3 tasks | 5 files |
+| Phase 06 P09 | 20min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -432,6 +433,9 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-06: The plaintext-password disclosure is added to README.md for parity even though config.schema.json's GUI text already discloses it (RESEARCH.md Q1)
 - [Phase 06]: 06-07: Scoped cucumber.json's import globs per profile (default -> features/support/**, real -> features/real-pump/**), not just the tags exclusion, because setWorldConstructor silently overwrites on repeat calls and alphabetical import ordering would have made one profile's World silently win for both
 - [Phase 06]: 06-07: Added features/real-pump/support/steps.ts, absent from the plan's file lists, because cucumber-js --profile real --dry-run cannot resolve discovery.feature's steps without step definitions
+- [Phase 06]: [Phase 06] 06-09: Every dev/prep/ checklist item's status is written pending; this phase performs no hardware or paired-home measurement itself, so no item may be marked passed from this phase's own evidence (D-03, T-06-21)
+- [Phase 06]: [Phase 06] 06-09: G-002's existing 1-to-3 water-level transition (observed 2026-08-31, mapped 20% to 40%) is recorded as prior evidence, not re-asked for; only codes 0, 7, 15, 31 and the flood threshold remain open items
+- [Phase 06]: [Phase 06] 06-09: G-003, G-004, and Phase 3's still-open flood-automation check are combined into one session recipe because all three need the same paired real Apple Home, reusing 04-UAT.md's recorded forcing-harness field domains rather than re-deriving them
 
 ### Pending Todos
 
@@ -596,8 +600,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T03:25:24.362Z
-Stopped at: Completed 06-07-PLAN.md
+Last session: 2026-09-05T03:34:40.329Z
+Stopped at: Completed 06-09-PLAN.md
 Resume file: None
 
 **Read the resume file before doing anything.** It carries one operational fact that costs an hour
