@@ -1,0 +1,36 @@
+name: Publish
+
+# D-01: this is the only publish mechanism this phase wires, and it must
+# never fire on its own. workflow_dispatch is the sole trigger; the
+# maintainer runs it deliberately after this phase closes.
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Publish to npm
+        # D-026: staged prerelease on the `next` dist-tag. A classic token
+        # is used because a package with no prior registry publish cannot
+        # yet be configured for npm Trusted Publishing; switching to OIDC
+        # Trusted Publishing is a documented follow-up hardening step for
+        # after the first publish, not implemented here.
+        run: npm publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
