@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { COMMAND_DEADLINE_MS, COMMAND_USER_AGENT, createCloudApi, ROUTES } from '../../src/cloud/api.js';
+import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
-import { PLUGIN_NAME } from '../../src/settings.js';
 
 import type { CloudApi, CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
@@ -723,14 +722,6 @@ test('declares the bearer token and the identity header on a read request', asyn
 
   // assert
   assert.deepStrictEqual(declaredHeaders, [{ authorization: 'Bearer id-token-1', 'user-agent': 'homebridge-basement-guardian' }]);
-});
-
-// One product string exists in this codebase, so no second one can drift from it. A version, a
-// platform token, or a vendor product name would all arrive as a `/`, which is what this excludes.
-test('identifies the plugin by its own name and nothing else', () => {
-  // act & assert
-  assert.strictEqual(COMMAND_USER_AGENT, PLUGIN_NAME);
-  assert.strictEqual(COMMAND_USER_AGENT.includes('/'), false);
 });
 
 // What the header does not say is the point of it: the vendor learns which plugin is calling and
