@@ -12,7 +12,12 @@ import type { RealPumpWorld } from './realWorld.js';
 
 const MILLISECONDS_PER_SECOND = 1_000;
 
-When('the harness waits {int} seconds', async (seconds: number) => {
+// Cucumber's own step timeout defaults to 5000ms. This step's only caller waits up to 960 seconds,
+// so the ceiling below is fixed at registration time, well above that wait, because Cucumber's
+// step-options object cannot be computed per-invocation.
+const STEP_TIMEOUT_MS = 1_000_000;
+
+When('the harness waits {int} seconds', { timeout: STEP_TIMEOUT_MS }, async (seconds: number) => {
   await delay(seconds * MILLISECONDS_PER_SECOND);
 });
 
