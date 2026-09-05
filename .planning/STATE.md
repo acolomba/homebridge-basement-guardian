@@ -664,13 +664,18 @@ deciding whether to fix it or accept it.
 **What's left to close out Phase 6, in order:**
 
 1. Decide on the Warning finding above (fix with `/gsd-code-review 6 --fix` or accept as-is).
-2. Regression gate: re-run `npm run check` (or `npm test`) against the combined tree — last run
+2. Investigate and resolve `WINDOWS.md` ledger entry **45** (open, `unmet-truth`) — the real-pump
+   suite's HTTP/2 idle-socket-timeout crash, reproduced on 2 of 2 live runs against the real vendor
+   account on 2026-09-05. See the "06-08 (UPDATE 2026-09-05...)" bullet below before starting; this
+   blocks the release checklist's real-home-tests gate and is safety-relevant (an uncaught process
+   crash, not just a marked-stale telemetry gap).
+3. Regression gate: re-run `npm run check` (or `npm test`) against the combined tree — last run
    (before the LICENSE/NOTICE/README fix) was green: 1444 unit + 104 Cucumber, 0 failures.
-3. `verify_phase_goal`: spawn a `gsd-verifier` agent against phase 06's goal, all *-PLAN.md/
+4. `verify_phase_goal`: spawn a `gsd-verifier` agent against phase 06's goal, all *-PLAN.md/
    *-SUMMARY.md, and REQUIREMENTS.md (all 9 REL-01..09 already show `[x]` complete in
    REQUIREMENTS.md as of this session — verify this holds, don't just trust it).
-4. `update_roadmap`: `gsd_run query phase.complete "06"` once verification passes.
-5. Since Phase 6 is the last roadmap phase: run the milestone lifecycle — audit
+5. `update_roadmap`: `gsd_run query phase.complete "06"` once verification passes.
+6. Since Phase 6 is the last roadmap phase: run the milestone lifecycle — audit
    (`/gsd-audit-milestone`) → complete (`/gsd-complete-milestone`) → cleanup (`/gsd-cleanup`).
    Note: Phases 3 and 4 are still `verification_deferred_human` (see the Deferred Verification
    table below) — the milestone audit may flag this; it needs the maintainer's real hardware/
@@ -703,10 +708,20 @@ explicit instruction rather than trusting the agent's own default behavior.
   `SECURITY.md` is written regardless (best-effort policy, private-advisory pointer); the GitHub-side
   toggle is a maintainer follow-up (make the repo public, or confirm GHAS availability). Recorded
   in `06-05-SUMMARY.md` and `.planning/WINDOWS.md` as an open `unmet-truth` entry.
-- 06-08: a maintainer must eventually run `npx cucumber-js --profile real` by hand against the live
-  vendor account to confirm the real-pump scenarios behave as designed — recorded as a human-judgment
-  coverage item, never blocks phase completion, only the eventual `1.0.0` real-hardware validation
-  record (same category as G-001 through G-004).
+- 06-08 (UPDATE 2026-09-05, quick task 260905-fiy): the human `npx cucumber-js --profile real` run
+  against the live vendor account has now happened, twice. First run surfaced a harness bug —
+  `heartbeatSteps.ts`'s `the harness waits {int} seconds` step had no per-step timeout, so Cucumber's
+  own 5000ms default killed it long before the 960-second wait it needs; fixed in commit `892a6c7`.
+  Second run (after the fix, full ~16m real duration) reached **6/7 scenarios passing** — the one
+  failure is a newly discovered, reproducible (2/2 runs) defect: `heartbeats.feature`'s connection-
+  health scenario dies to an uncaught `InformationalError: socket idle timeout` from an unhandled
+  HTTP/2 'error' event, surfacing during the same ~960s idle window production's default 300s+
+  pollInterval would routinely create. Recorded as **open** `WINDOWS.md` ledger entry **45**
+  (`unmet-truth`, phase 06, `src/cloud/api.ts`) — this is NOT the same as the already-fixed CR-01/
+  WR-01/WR-02/WR-03 review findings; it is a live-account-only finding no static gate could have
+  caught. Blocks `dev/prep/release-checklist.md`'s "real-home tests pass with no failures" gate and
+  CLAUDE.md's "Release" constraint (`real-home tests` pass) until investigated and either fixed or
+  consciously waived.
 
 Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior gates).
 
