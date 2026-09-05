@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 
