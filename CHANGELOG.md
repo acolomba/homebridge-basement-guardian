@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Each Basement Guardian system now appears in HomeKit as one accessory carrying the pit level, both pumps, mains power, the battery, and the fault sensors.
 - The new `ignoredFaults` setting removes a notification sensor you do not want. It accepts seven names; every other service reports what the system reports and cannot be removed.
 - The plugin now updates HomeKit when the vendor cloud reports a change between polls, instead of waiting for the next poll.
+- An opt-in, read-only real-pump test suite lets a maintainer check the plugin against their own live Basement Guardian system.
+- `SECURITY.md` explains how to report a security problem privately and what support to expect.
 
 ### Changed
 
@@ -28,6 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - When the vendor refuses your account email or password, at the first sign-in or during a run, Apple Home shows the accessory as `No Response`. Correct the account and restart Homebridge to clear it.
 - When the live connection to one system goes quiet, the plugin now stops vouching for that system alone. Every other system on the account keeps vouching for its own services.
 - The warning for a lost pump controller link now names each service whose values stopped refreshing, instead of a few category words.
+- Continuous integration now tests the plugin against three supported Homebridge versions, in addition to both supported Node.js versions.
+- The package's license metadata and file headers now state where the Apache-2.0 template license ends and the project's own MIT license begins.
+- The README now recommends running the plugin as a child bridge, and warns that re-creating a child bridge breaks its Home app pairing.
+- The README now tells you to keep the vendor app's alarm and notifications on while this plugin is a prerelease.
+- The README now says flood notifications carry no guarantee of Apple's Critical Alerts delivery.
 
 ### Removed
 
