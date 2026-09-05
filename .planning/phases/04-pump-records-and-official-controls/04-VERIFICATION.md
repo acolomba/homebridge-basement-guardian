@@ -1,7 +1,9 @@
 ---
 phase: 04-pump-records-and-official-controls
 verified: 2026-09-01T20:06:25Z
-status: human_needed
+status: passed
+deferred_by: maintainer
+deferred_at: 2026-09-05T16:15:00Z
 score: 17/17 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
@@ -121,8 +123,18 @@ audit_acknowledged:
 **Phase Goal:** Users can inspect durable observed pump activity and safely operate the two controls exposed by the official Gemini client.
 **Verified:** 2026-09-01T20:06:25Z
 **Branch / HEAD:** `features/phase-04-pump-records-and-official-controls` @ `3d9d441`, working tree clean before and after verification.
-**Status:** human_needed
+**Status:** passed (2 of 6 human items already closed with real evidence; 4 deferred by the maintainer, 2026-09-05T16:15:00Z)
 **Re-verification:** No — initial verification.
+
+**Deferral note:** No gaps — all 17 must-haves verified against executed code, with six load-bearing
+assertions each confirmed by mutation. Item 1 (the one item flagged as able to change what an owner
+sees — cached-accessory upgrade adopting the four new record characteristics) and item 5 (Activity
+History documentation accuracy) both passed on 2026-09-04 against real hardware/real facts — see
+`04-UAT.md`. The maintainer reviewed the four remaining items (three Apple Home rendering
+questions needing a real paired home, plus G-001/Alarm Mute against real hardware) and explicitly
+chose to defer them: the rendering questions join Phase 3's flood-automation check in one
+real-home session, and G-001 already blocks `1.0.0` under REL-07, not this phase. Tracked in
+`04-UAT.md` and STATE.md's Deferred Verification table.
 
 ## How this was verified
 
