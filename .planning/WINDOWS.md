@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 5
 waived_count: 19
-fixed_count: 20
+fixed_count: 21
 total_count: 45
-last_updated: 2026-09-05T15:40:50.317Z
+last_updated: 2026-09-05T18:39:00.027Z
 ---
 
 # Broken Windows Ledger
@@ -59,7 +59,7 @@ last_updated: 2026-09-05T15:40:50.317Z
 | 42 | 05.1 | deviation | test/runtime/accountRuntime.test.ts |  | The silent-live-connection log line now names the deviceId; the shipped redaction case flipped from device:false to device:true (T-05.1-03 disposition). | waived | Confirmed correct, not a leak. The redaction case in test/runtime/accountRuntime.test.ts named 'names the controller and no route, no header, and no credential in the line a silent live connection records' (around line 2230) asserts device: true while scheme, authorization and secret all stay false. The log call site, liveReportingSilent(deviceId) in src/runtime/accountRuntime.ts (lines 78-83, called from recordFailure at line 589), interpolates only the vendor deviceId into the sentence; no route, header or credential is added. This matches the Phase 2 ruling of 2026-08-29 (STATE.md Accumulated Context, PROJECT.md D-027): the vendor deviceId is treated as non-sensitive and may enter logs and accessory context, with D-027 keeping it out of public artifacts only. D-14 (05.1-CONTEXT.md) is the decision that made this per-device change and states the same permission. The threat model disposition T-05.1-03 in 05.1-02-PLAN.md and 05.1-03-PLAN.md rates the same fact low severity and mitigate, and 05.1-02-SUMMARY.md records the device:false to device:true assertion flip as the plan's own D-14 instruction reaching a shipped assertion, not an accidental leak. No production code change needed. | 2026-09-04T04:25:17.091Z | 2026-09-04T21:13:55.243Z |
 | 43 | 05.1 | deviation | src/runtime/accountRuntime.ts | 762 | A stray message from a removed device still re-arms lastShadowMessageAt via health.recordShadowMessage; the stamp is inert but nothing releases it | fixed |  | 2026-09-04T05:02:44.791Z | 2026-09-04T21:01:33.546Z |
 | 44 | 06 | unmet-truth | SECURITY.md |  | Private vulnerability reporting could not be enabled via gh api (404 on PUT/GET) — likely gated behind GitHub Advanced Security for private repos on this account tier; requires maintainer action (make repo public or confirm GHAS) per 06-05-SUMMARY.md Known Gaps | open |  | 2026-09-05T02:43:40.441Z |  |
-| 45 | 06 | unmet-truth | src/cloud/api.ts |  | The real-pump suite's heartbeats.feature connection-health scenario fails reproducibly (2/2 live runs against the real vendor account, 2026-09-05) with an uncaught InformationalError: socket idle timeout from an HTTP/2 stream with no error listener, surfacing during a ~960s idle window between vendor calls -- the same order of magnitude as production's default 300s+ pollInterval. src/cloud/api.ts and src/cloud/auth.ts both call Node's global fetch() (undici), which can auto-negotiate HTTP/2 and pool connections; an idle pooled connection's session-idle-timeout event, if unhandled, crashes the whole process rather than surfacing as a caught rejection -- a materially worse failure mode than the stale/untrustworthy-marking this plugin's safety semantics are built around. Blocks dev/prep/release-checklist.md's real-home-tests-pass gate. Needs investigation: whether the idle-timeout error is catchable at the app level (explicit undici dispatcher/agent config, disabling HTTP/2, or per-connection error handling) or is inherent to Node's global fetch and needs a different transport. | open |  | 2026-09-05T15:40:50.317Z |  |
+| 45 | 06 | unmet-truth | src/cloud/api.ts |  | The real-pump suite's heartbeats.feature connection-health scenario fails reproducibly (2/2 live runs against the real vendor account, 2026-09-05) with an uncaught InformationalError: socket idle timeout from an HTTP/2 stream with no error listener, surfacing during a ~960s idle window between vendor calls -- the same order of magnitude as production's default 300s+ pollInterval. src/cloud/api.ts and src/cloud/auth.ts both call Node's global fetch() (undici), which can auto-negotiate HTTP/2 and pool connections; an idle pooled connection's session-idle-timeout event, if unhandled, crashes the whole process rather than surfacing as a caught rejection -- a materially worse failure mode than the stale/untrustworthy-marking this plugin's safety semantics are built around. Blocks dev/prep/release-checklist.md's real-home-tests-pass gate. Needs investigation: whether the idle-timeout error is catchable at the app level (explicit undici dispatcher/agent config, disabling HTTP/2, or per-connection error handling) or is inherent to Node's global fetch and needs a different transport. | fixed |  | 2026-09-05T15:40:50.317Z | 2026-09-05T18:39:00.027Z |
 
 ````json
 [
@@ -598,10 +598,10 @@ last_updated: 2026-09-05T15:40:50.317Z
     "file": "src/cloud/api.ts",
     "line": null,
     "description": "The real-pump suite's heartbeats.feature connection-health scenario fails reproducibly (2/2 live runs against the real vendor account, 2026-09-05) with an uncaught InformationalError: socket idle timeout from an HTTP/2 stream with no error listener, surfacing during a ~960s idle window between vendor calls -- the same order of magnitude as production's default 300s+ pollInterval. src/cloud/api.ts and src/cloud/auth.ts both call Node's global fetch() (undici), which can auto-negotiate HTTP/2 and pool connections; an idle pooled connection's session-idle-timeout event, if unhandled, crashes the whole process rather than surfacing as a caught rejection -- a materially worse failure mode than the stale/untrustworthy-marking this plugin's safety semantics are built around. Blocks dev/prep/release-checklist.md's real-home-tests-pass gate. Needs investigation: whether the idle-timeout error is catchable at the app level (explicit undici dispatcher/agent config, disabling HTTP/2, or per-connection error handling) or is inherent to Node's global fetch and needs a different transport.",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-05T15:40:50.317Z",
-    "resolved_at": null
+    "resolved_at": "2026-09-05T18:39:00.027Z"
   }
 ]
 ````

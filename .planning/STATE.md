@@ -664,11 +664,10 @@ deciding whether to fix it or accept it.
 **What's left to close out Phase 6, in order:**
 
 1. Decide on the Warning finding above (fix with `/gsd-code-review 6 --fix` or accept as-is).
-2. Investigate and resolve `WINDOWS.md` ledger entry **45** (open, `unmet-truth`) — the real-pump
-   suite's HTTP/2 idle-socket-timeout crash, reproduced on 2 of 2 live runs against the real vendor
-   account on 2026-09-05. See the "06-08 (UPDATE 2026-09-05...)" bullet below before starting; this
-   blocks the release checklist's real-home-tests gate and is safety-relevant (an uncaught process
-   crash, not just a marked-stale telemetry gap).
+2. ~~Investigate and resolve `WINDOWS.md` ledger entry **45**~~ — **DONE 2026-09-05**, commit
+   `ef58074`. Ledger entry 45 is now `fixed`. The real-pump suite passes 7/7 against the live
+   vendor account. See the "06-08 (UPDATE 2026-09-05...)" bullet below for the root cause and the
+   fix, and note that `engines.node` now includes `^26.0.0` and CI tests `26.x`.
 3. Regression gate: re-run `npm run check` (or `npm test`) against the combined tree — last run
    (before the LICENSE/NOTICE/README fix) was green: 1444 unit + 104 Cucumber, 0 failures.
 4. `verify_phase_goal`: spawn a `gsd-verifier` agent against phase 06's goal, all *-PLAN.md/
@@ -722,6 +721,28 @@ explicit instruction rather than trusting the agent's own default behavior.
   caught. Blocks `dev/prep/release-checklist.md`'s "real-home tests pass with no failures" gate and
   CLAUDE.md's "Release" constraint (`real-home tests` pass) until investigated and either fixed or
   consciously waived.
+- 06-08 (RESOLVED 2026-09-05, commit `ef58074`, ledger entry **45** now `fixed`): root cause was an
+  AND-gate of two conditions. (1) The machine ran Node 26.8.1, whose bundled undici flipped its
+  `allowH2` default from `false` to `true`; (2) both vendor `fetch()` call sites passed no
+  dispatcher, so they inherited that default and negotiated HTTP/2. One identical probe on three
+  real Node binaries settled it: 22.21.1 and 24.13.0 both negotiate HTTP/1.1, 26.8.1 negotiates
+  `h2`. On the h2 path undici arms a 4s session idle timer whose expiry destroys the pooled socket
+  with exactly `InformationalError("socket idle timeout")`, and undici guards a released-but-open
+  h2 stream with only a one-shot `stream.once('error', noop)`, so a second error escapes uncaught.
+  Fixed by routing vendor HTTP through userland undici's own `fetch` + `Agent({ allowH2: false })`
+  end to end (`src/cloud/httpDispatcher.ts`), injected as an `httpFetch` port mirroring the
+  existing `connect: MqttConnect` port. Pairing the fetch and the Agent inside one undici copy is
+  required for portability: a userland Agent passed as `dispatcher` to the BUILT-IN fetch is
+  rejected on Node 22 and 24 (`invalid onRequestStart method`), because the built-in fetch's
+  dispatch handler is shaped for its own bundled undici major — so the obvious one-line fix would
+  have converted a Node-26-only crash into total loss of function on both supported majors.
+  `engines.node` widened to `^22.10.0 || ^24.0.0 || ^26.0.0`, `undici ^7.29.1` added as the second
+  production dependency (not `^8`, which would raise the Node floor to `^22.19.0` for no benefit),
+  CI matrix gained `26.x`, and publish/package-audit moved to `26.x`. Also fixed in the same pass:
+  `api.ts`'s `narrow()` leaked an unconsumed body on every non-ok vendor response. Live
+  confirmation: the full real-pump suite passed **7/7 scenarios, 41/41 steps** in 32m against the
+  live vendor account on the same Node 26.8.1 binary that reproduced the crash twice, with zero
+  `InformationalError`. This unblocks the release checklist's "real-home tests pass" gate.
 
 Phase 5 and Phase 5.1 are both complete and verified (`passed`, 8/8 and prior gates).
 
