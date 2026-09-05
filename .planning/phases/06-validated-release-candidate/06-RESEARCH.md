@@ -582,7 +582,11 @@ unverified claim.
 **If this table is empty:** N/A — three assumptions are logged above, all with mitigations already
 built into the recommendation.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Both questions below carry an actionable recommendation and are incorporated into the phase's
+plans: Q1's README disclosure → 06-06 Task 1; Q2's run-the-matrix-cell recommendation → 06-01
+Task 1.
 
 1. **Does REL-08's plaintext-password disclosure need to be repeated in README.md, given it
    already appears in `config.schema.json`'s user-facing GUI text?**
