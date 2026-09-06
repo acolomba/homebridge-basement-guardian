@@ -42,7 +42,7 @@ export type CoreServiceKind =
  * truthful service all stay.
  */
 export type NotificationServiceKind =
-  | 'backup-pump-activated'
+  | 'backup-pump-running'
   | 'mains-power-lost'
   | 'primary-pump-fault'
   | 'backup-pump-fault'
@@ -58,7 +58,7 @@ export type NotificationServiceKind =
  * not declare.
  */
 export const NOTIFICATION_SERVICE_KINDS: readonly NotificationServiceKind[] = [
-  'backup-pump-activated',
+  'backup-pump-running',
   'mains-power-lost',
   'primary-pump-fault',
   'backup-pump-fault',

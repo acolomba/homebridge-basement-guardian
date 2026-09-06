@@ -178,8 +178,8 @@ test('CONF-06 offers the removable notification sensors as a list that cannot re
 test('CONF-06 offers exactly the seven removable notification sensors and no other value', () => {
   // arrange
   const expectedValues = [
-    'backup-pump-activated',
     'backup-pump-fault',
+    'backup-pump-running',
     'basement-guardian-offline',
     'mains-power-lost',
     'primary-pump-fault',

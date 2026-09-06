@@ -8,7 +8,7 @@ import type { CoreServiceKind, NotificationServiceKind, ServiceDescriptor, Servi
 // The seven removable names are written out here rather than read from the production list, so a
 // case fails when the two disagree instead of agreeing with whatever the module now declares.
 const REMOVABLE_SENSOR_NAMES = [
-  'backup-pump-activated',
+  'backup-pump-running',
   'mains-power-lost',
   'primary-pump-fault',
   'backup-pump-fault',
@@ -25,7 +25,7 @@ const PLACEHOLDER_UUID = 'placeholder-service-uuid';
 void ('sump-pit-flood' satisfies CoreServiceKind);
 void ('primary-pump-running' satisfies CoreServiceKind);
 void ('system-self-test' satisfies CoreServiceKind);
-void ('backup-pump-activated' satisfies NotificationServiceKind);
+void ('backup-pump-running' satisfies NotificationServiceKind);
 void ('pump-controller-link-lost' satisfies NotificationServiceKind);
 void ('backup-battery' satisfies ServiceKind);
 void ('mains-power-lost' satisfies ServiceKind);
@@ -40,7 +40,7 @@ void ('primary-pump-running' satisfies NotificationServiceKind);
 // @ts-expect-error HomeKit keys a service by type and subtype together, so the subtype is required
 void ({ kind: 'alarm-mute', serviceUuid: PLACEHOLDER_UUID, name: 'Alarm Mute' } satisfies ServiceDescriptor);
 // @ts-expect-error two rows of one kind and subtype differ only by service type, so the type identifier is required
-void ({ kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery' } satisfies ServiceDescriptor);
+void ({ kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery Level' } satisfies ServiceDescriptor);
 // @ts-expect-error a service kind is one of the declared names, not free-form text
 void ({ kind: 'sump-pit-humidity', subtype: 'sump-pit-humidity', serviceUuid: PLACEHOLDER_UUID, name: 'Sump Pit Humidity' } satisfies ServiceDescriptor);
 

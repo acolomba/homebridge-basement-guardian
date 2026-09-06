@@ -22,7 +22,7 @@ Feature: Keeping a record of what each pump did
     Then the "Backup Pump" service reports "Activations Observed Since Observation Start" as "0"
     When the vendor changes these device fields:
       | backup_pump_running | true |
-    Then the "Backup Pump Activated" sensor is activated
+    Then the "Backup Pump Running" sensor is activated
     Then the "Backup Pump" service reports "Activations Observed Since Observation Start" as "1"
     When the scenario reads "Observation Start" on the "Backup Pump" service
     When the scenario reads "Last Observed Activation At" on the "Backup Pump" service
@@ -36,7 +36,7 @@ Feature: Keeping a record of what each pump did
     When the vendor changes these device fields:
       | backup_pump_running | true |
     When the plugin starts
-    Then the "Backup Pump Activated" sensor is activated
+    Then the "Backup Pump Running" sensor is activated
     Then the "Backup Pump" service reports "Activations Observed Since Observation Start" as "0"
 
   # The two instants below are the device's own, and they are years before the scenario clock. A

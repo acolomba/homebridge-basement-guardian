@@ -64,11 +64,11 @@ const PUBLISHED_SERVICES: readonly ServiceDescriptor[] = [
   { kind: 'primary-pump', subtype: 'primary-pump', serviceUuid: PUMP_SERVICE_UUID, name: 'Primary Pump' },
   { kind: 'primary-pump-running', subtype: 'primary-pump-running', serviceUuid: CONTACT_SENSOR_UUID, name: 'Primary Pump Running' },
   { kind: 'backup-pump', subtype: 'backup-pump', serviceUuid: PUMP_SERVICE_UUID, name: 'Backup Pump' },
-  { kind: 'backup-pump-activated', subtype: 'backup-pump-activated', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Activated' },
+  { kind: 'backup-pump-running', subtype: 'backup-pump-running', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Running' },
   { kind: 'sump-mains-power', subtype: 'sump-mains-power', serviceUuid: SUMP_MAINS_POWER_SERVICE_UUID, name: 'Sump Mains Power' },
   { kind: 'mains-power-lost', subtype: 'mains-power-lost', serviceUuid: CONTACT_SENSOR_UUID, name: 'Mains Power Lost' },
-  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BATTERY_UUID, name: 'Backup Battery' },
-  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BACKUP_BATTERY_SERVICE_UUID, name: 'Backup Battery Facts' },
+  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BATTERY_UUID, name: 'Backup Battery Level' },
+  { kind: 'backup-battery', subtype: 'backup-battery', serviceUuid: BACKUP_BATTERY_SERVICE_UUID, name: 'Backup Battery' },
   { kind: 'primary-pump-fault', subtype: 'primary-pump-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Primary Pump Fault' },
   { kind: 'backup-pump-fault', subtype: 'backup-pump-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Backup Pump Fault' },
   { kind: 'water-sensor-fault', subtype: 'water-sensor-fault', serviceUuid: CONTACT_SENSOR_UUID, name: 'Water Sensor Fault' },
@@ -147,8 +147,8 @@ const CONTROLLER_LINK_WARNING =
 // cloud, which is still answering. Written out in full for the same reason as the constant above.
 const CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE =
   `Lost the pump controller link on ${DEVICE_ID}: the vendor cloud still answers, so the values on ` +
-  'Sump Pit Flood, Sump Pit Level, Primary Pump, Primary Pump Running, Backup Pump, Backup Pump Activated, ' +
-  'Sump Mains Power, Mains Power Lost, Backup Battery, Backup Battery Facts, Primary Pump Fault, ' +
+  'Sump Pit Flood, Sump Pit Level, Primary Pump, Primary Pump Running, Backup Pump, Backup Pump Running, ' +
+  'Sump Mains Power, Mains Power Lost, Backup Battery Level, Backup Battery, Primary Pump Fault, ' +
   'Backup Pump Fault, Water Sensor Fault, System Self-Test, and Alarm Mute are retained rather than ' +
   'refreshed until the link returns.';
 
@@ -288,7 +288,7 @@ const PENDING_WINDOW_MS = 30_000;
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
 // field would deactivate two live safety signals, and it says nothing about whether a pump is
 // running (D-02, D-014).
-const PUMP_SERVICES: readonly string[] = ['Primary Pump', 'Backup Pump', 'Primary Pump Running', 'Backup Pump Activated'];
+const PUMP_SERVICES: readonly string[] = ['Primary Pump', 'Backup Pump', 'Primary Pump Running', 'Backup Pump Running'];
 
 // The one device identity a case asks for when it wants the platform to have set none at all.
 const NO_DEVICE_CONTEXT = Symbol('no device context');
@@ -1824,7 +1824,7 @@ describe('createBasementGuardianAccessory', () => {
   // The two rows sharing the kind `backup-battery` carry different display names and different HAP
   // service types, and both are withdrawn. This is the case that catches a join collapsing to the
   // kind alone: with one key for two rows, one of these names goes missing or doubles. The needle for
-  // the first carries its trailing comma, because its name is a prefix of the second's.
+  // the second (facts) carries its trailing comma, because its name is a prefix of the first's (battery).
   test('names both services sharing the backup-battery kind, neither merged nor dropped', () => {
     // arrange
     const { log, warnings } = recordingLog();
@@ -1838,19 +1838,19 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        battery: warnings.map((warning) => warning.includes('Backup Battery,')),
-        facts: warnings.map((warning) => warning.includes('Backup Battery Facts')),
+        battery: warnings.map((warning) => warning.includes('Backup Battery Level')),
+        facts: warnings.map((warning) => warning.includes('Backup Battery,')),
       },
       { battery: [true], facts: [true] },
     );
   });
 
   // The case that makes the join key load-bearing. A battery group carrying only `voltageLow`
-  // projects a value for `Backup Battery Facts` and none for `Backup Battery`, so exactly one of the
-  // two rows sharing the kind is published. `toRow` sets the subtype to the kind verbatim, so a join
-  // on kind and subtype answers the same key for both rows and would name the service this accessory
-  // never published -- a tile an owner cannot open. The service type identifier is what tells them
-  // apart.
+  // projects a value for `Backup Battery` (facts row) and none for `Backup Battery Level` (battery
+  // row), so exactly one of the two rows sharing the kind is published. `toRow` sets the subtype to
+  // the kind verbatim, so a join on kind and subtype answers the same key for both rows and would
+  // name the service this accessory never published -- a tile an owner cannot open. The service type
+  // identifier is what tells them apart.
   test('names only the published one of the two services sharing the backup-battery kind', () => {
     // arrange
     const { log, warnings } = recordingLog();
@@ -1865,8 +1865,8 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        battery: warnings.map((warning) => warning.includes('Backup Battery,')),
-        facts: warnings.map((warning) => warning.includes('Backup Battery Facts')),
+        battery: warnings.map((warning) => warning.includes('Backup Battery Level')),
+        facts: warnings.map((warning) => warning.includes('Backup Battery,')),
       },
       { battery: [false], facts: [true] },
     );

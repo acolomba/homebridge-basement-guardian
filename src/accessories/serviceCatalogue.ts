@@ -702,8 +702,8 @@ function pumpDefinitions(hap: API['hap'], characteristics: CustomCharacteristics
       values: (input, trust) => backupPumpValues(hap, characteristics, input, trust),
     },
     {
-      kind: 'backup-pump-activated',
-      displayName: 'Backup Pump Activated',
+      kind: 'backup-pump-running',
+      displayName: 'Backup Pump Running',
       scope: 'pump',
       toleratedDistrust: [],
       serviceClass: hap.Service.ContactSensor,
@@ -740,7 +740,7 @@ function batteryDefinitions(hap: API['hap'], characteristics: CustomCharacterist
   return [
     {
       kind: 'backup-battery',
-      displayName: 'Backup Battery',
+      displayName: 'Backup Battery Level',
       scope: 'battery',
       toleratedDistrust: [],
       serviceClass: hap.Service.Battery,
@@ -748,7 +748,7 @@ function batteryDefinitions(hap: API['hap'], characteristics: CustomCharacterist
     },
     {
       kind: 'backup-battery',
-      displayName: 'Backup Battery Facts',
+      displayName: 'Backup Battery',
       scope: 'battery',
       toleratedDistrust: [],
       serviceClass: services.BackupBatteryService,

@@ -80,11 +80,11 @@ Feature: Publishing safety state to HomeKit
 
   Scenario: A backup pump activation publishes while a self test runs
     When the plugin starts
-    Then the "Backup Pump Activated" sensor is not activated
+    Then the "Backup Pump Running" sensor is not activated
     When the vendor changes these device fields:
       | test_running        | true |
       | backup_pump_running | true |
-    Then the "Backup Pump Activated" sensor is activated
+    Then the "Backup Pump Running" sensor is activated
     Then the "Backup Pump" service reports "Pump Running" as "true"
     Then the "Mains Power Lost" sensor is not activated
     Then the "Primary Pump Fault" sensor is not activated
@@ -143,7 +143,7 @@ Feature: Publishing safety state to HomeKit
     When the plugin starts
     Then the plugin publishes the "Sump Mains Power" service
     Then the plugin publishes no "Mains Power Lost" service
-    Then the plugin publishes the "Backup Pump Activated" service
+    Then the plugin publishes the "Backup Pump Running" service
     Then the plugin publishes the "Primary Pump Fault" service
     Then the plugin publishes the "Backup Pump Fault" service
     Then the plugin publishes the "Water Sensor Fault" service

@@ -536,7 +536,7 @@ function registerPumpCases(): void {
       const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning: false, backupRunning: true, testRunning } }) });
 
       // act
-      const projected = rowOf(hap, 'backup-pump-activated').project(input);
+      const projected = rowOf(hap, 'backup-pump-running').project(input);
 
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_NOT_DETECTED }]);
@@ -550,7 +550,7 @@ function registerPumpCases(): void {
       const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning: false, backupRunning: true, backupActivatedAt } }) });
 
       // act
-      const projected = rowOf(hap, 'backup-pump-activated').project(input);
+      const projected = rowOf(hap, 'backup-pump-running').project(input);
 
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_NOT_DETECTED }]);
@@ -567,7 +567,7 @@ function registerPumpCases(): void {
     });
 
     // act
-    const projected = rowOf(hap, 'backup-pump-activated').project(projectionInput({ decoded, offlineConfirmed: true }));
+    const projected = rowOf(hap, 'backup-pump-running').project(projectionInput({ decoded, offlineConfirmed: true }));
 
     // assert
     assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
@@ -831,7 +831,7 @@ function registerBatteryCases(): void {
       const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ healthCode, voltageLow, low }) }) });
 
       // act
-      const projected = { battery: rowNamed(hap, 'Backup Battery').project(input), facts: rowNamed(hap, 'Backup Battery Facts').project(input) };
+      const projected = { battery: rowNamed(hap, 'Backup Battery Level').project(input), facts: rowNamed(hap, 'Backup Battery').project(input) };
 
       // assert
       assert.deepStrictEqual(
@@ -853,7 +853,7 @@ function registerBatteryCases(): void {
       const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ protectionHoursCode, levelPercent }) }) });
 
       // act
-      const projected = { battery: rowNamed(hap, 'Backup Battery').project(input), facts: rowNamed(hap, 'Backup Battery Facts').project(input) };
+      const projected = { battery: rowNamed(hap, 'Backup Battery Level').project(input), facts: rowNamed(hap, 'Backup Battery').project(input) };
 
       // assert
       assert.deepStrictEqual(
@@ -871,7 +871,7 @@ function registerBatteryCases(): void {
     const input = projectionInput({ decoded: decodedState({ battery }) });
 
     // act
-    const projected = { battery: rowNamed(hap, 'Backup Battery').project(input), facts: rowNamed(hap, 'Backup Battery Facts').project(input) };
+    const projected = { battery: rowNamed(hap, 'Backup Battery Level').project(input), facts: rowNamed(hap, 'Backup Battery').project(input) };
 
     // assert
     assert.deepStrictEqual(
@@ -888,7 +888,7 @@ function registerBatteryCases(): void {
       const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ charging }) }) });
 
       // act
-      const projected = { battery: rowNamed(hap, 'Backup Battery').project(input), facts: rowNamed(hap, 'Backup Battery Facts').project(input) };
+      const projected = { battery: rowNamed(hap, 'Backup Battery Level').project(input), facts: rowNamed(hap, 'Backup Battery').project(input) };
 
       // assert
       assert.deepStrictEqual(
@@ -901,7 +901,7 @@ function registerBatteryCases(): void {
   test('never reports the backup battery as not chargeable, for any reading in this suite', () => {
     // arrange
     const hap = hapNamespace();
-    const row = rowNamed(hap, 'Backup Battery');
+    const row = rowNamed(hap, 'Backup Battery Level');
     const readings = BATTERY_READINGS.flatMap(({ healthCode, voltageLow, low }) =>
       [true, false].map((charging) => batteryGroup({ healthCode, voltageLow, low, charging })),
     );
@@ -1180,7 +1180,7 @@ describe('createServiceCatalogue', () => {
       { kind: 'primary-pump', subtype: 'primary-pump' },
       { kind: 'primary-pump-running', subtype: 'primary-pump-running' },
       { kind: 'backup-pump', subtype: 'backup-pump' },
-      { kind: 'backup-pump-activated', subtype: 'backup-pump-activated' },
+      { kind: 'backup-pump-running', subtype: 'backup-pump-running' },
       { kind: 'sump-mains-power', subtype: 'sump-mains-power' },
       { kind: 'mains-power-lost', subtype: 'mains-power-lost' },
       { kind: 'backup-battery', subtype: 'backup-battery' },
@@ -1214,11 +1214,11 @@ describe('createServiceCatalogue', () => {
       { displayName: 'Primary Pump', scope: 'pump', readScopes: ['pump', 'fault'], toleratedDistrust: [] },
       { displayName: 'Primary Pump Running', scope: 'pump', readScopes: ['pump'], toleratedDistrust: [] },
       { displayName: 'Backup Pump', scope: 'pump', readScopes: ['pump', 'fault'], toleratedDistrust: [] },
-      { displayName: 'Backup Pump Activated', scope: 'pump', readScopes: ['pump'], toleratedDistrust: [] },
+      { displayName: 'Backup Pump Running', scope: 'pump', readScopes: ['pump'], toleratedDistrust: [] },
       { displayName: 'Sump Mains Power', scope: 'power', readScopes: ['power'], toleratedDistrust: [] },
       { displayName: 'Mains Power Lost', scope: 'power', readScopes: ['power'], toleratedDistrust: [] },
+      { displayName: 'Backup Battery Level', scope: 'battery', readScopes: ['battery'], toleratedDistrust: [] },
       { displayName: 'Backup Battery', scope: 'battery', readScopes: ['battery'], toleratedDistrust: [] },
-      { displayName: 'Backup Battery Facts', scope: 'battery', readScopes: ['battery'], toleratedDistrust: [] },
       { displayName: 'Primary Pump Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
       { displayName: 'Backup Pump Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
       { displayName: 'Water Sensor Fault', scope: 'fault', readScopes: ['fault'], toleratedDistrust: [] },
@@ -1271,11 +1271,11 @@ describe('createServiceCatalogue', () => {
       'Primary Pump',
       'Primary Pump Running',
       'Backup Pump',
-      'Backup Pump Activated',
+      'Backup Pump Running',
       'Sump Mains Power',
       'Mains Power Lost',
+      'Backup Battery Level',
       'Backup Battery',
-      'Backup Battery Facts',
       'Primary Pump Fault',
       'Backup Pump Fault',
       'Water Sensor Fault',
@@ -1834,14 +1834,14 @@ describe('publishedService', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const facts = rowNamed(hap, 'Backup Battery Facts');
+    const facts = rowNamed(hap, 'Backup Battery');
     addedService(accessory, hap, facts);
 
     // act
-    const carried = { battery: publishedService(accessory, rowNamed(hap, 'Backup Battery')), facts: publishedService(accessory, facts)?.displayName };
+    const carried = { battery: publishedService(accessory, rowNamed(hap, 'Backup Battery Level')), facts: publishedService(accessory, facts)?.displayName };
 
     // assert
-    assert.deepStrictEqual(carried, { battery: undefined, facts: 'Backup Battery Facts' });
+    assert.deepStrictEqual(carried, { battery: undefined, facts: 'Backup Battery' });
   });
 });
 
@@ -1958,8 +1958,8 @@ describe('ensureService', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const battery = rowNamed(hap, 'Backup Battery');
-    const facts = rowNamed(hap, 'Backup Battery Facts');
+    const battery = rowNamed(hap, 'Backup Battery Level');
+    const facts = rowNamed(hap, 'Backup Battery');
     addedService(accessory, hap, battery);
     addedService(accessory, hap, facts);
 
@@ -1972,7 +1972,7 @@ describe('ensureService', () => {
     // assert
     assert.deepStrictEqual(
       { battery: retrieved.battery?.displayName, facts: retrieved.facts?.displayName, distinct: retrieved.battery !== retrieved.facts },
-      { battery: 'Backup Battery', facts: 'Backup Battery Facts', distinct: true },
+      { battery: 'Backup Battery Level', facts: 'Backup Battery', distinct: true },
     );
   });
 });
@@ -2022,7 +2022,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
 
     // act
     publishValue(service, hap.Characteristic.StatusActive, true);
@@ -2041,7 +2041,7 @@ describe('publishValue', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
     publishValue(service, hap.Characteristic.StatusActive, true);
 
     // act
@@ -2131,7 +2131,7 @@ describe('publishPersistentFailure', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
 
     // act
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -2159,7 +2159,7 @@ describe('publishPersistentFailure', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
     publishValue(service, hap.Characteristic.StatusActive, true);
 
     // act
@@ -2179,7 +2179,7 @@ describe('publishPersistentFailure', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
     publishValue(service, hap.Characteristic.BatteryLevel, 80);
 
     // act
@@ -2195,7 +2195,7 @@ describe('publishPersistentFailure', () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
-    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery'));
+    const service = addedService(accessory, hap, rowNamed(hap, 'Backup Battery Level'));
     publishValue(service, hap.Characteristic.StatusActive, true);
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 

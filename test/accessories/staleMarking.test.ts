@@ -45,7 +45,7 @@ function floodSensorReporting(accessory: HarnessPlatformAccessory, trusted: bool
 }
 
 function batteryReporting(accessory: HarnessPlatformAccessory, trusted: boolean): FakeHapService {
-  const battery = accessory.addService(HAP.Service.Battery, 'Backup Battery', 'backup-battery');
+  const battery = accessory.addService(HAP.Service.Battery, 'Backup Battery Level', 'backup-battery');
 
   battery.updateCharacteristic(HAP.Characteristic.BatteryLevel, 80);
   battery.updateCharacteristic(HAP.Characteristic.StatusActive, trusted);

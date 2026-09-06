@@ -19,7 +19,7 @@ const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number 
 // The removable sensor names are written out here rather than read from the production list, so a
 // case fails when the refusal stops enumerating one of them instead of agreeing with it (D-17).
 const REMOVABLE_SENSOR_NAMES: readonly NotificationServiceKind[] = [
-  'backup-pump-activated',
+  'backup-pump-running',
   'mains-power-lost',
   'primary-pump-fault',
   'backup-pump-fault',

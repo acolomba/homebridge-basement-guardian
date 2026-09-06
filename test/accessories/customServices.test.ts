@@ -85,7 +85,7 @@ const SERVICES: readonly ServiceExpectation[] = [
   },
   {
     name: 'BackupBatteryService',
-    displayName: 'Backup Battery Facts',
+    displayName: 'Backup Battery',
     subtype: 'backup-battery',
     required: ['Name', 'Battery Charging', 'Battery Voltage Low', 'Battery Health Code', 'Protection Hours Code'],
     optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],

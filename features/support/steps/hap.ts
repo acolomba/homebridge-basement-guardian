@@ -113,7 +113,7 @@ Then('a plugin type extends the hap service and the hap characteristic', assertS
 function assertFormatDefaults(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
-  const battery = new HAP.Service.Battery('Backup Battery', 'backup-battery');
+  const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
 
   assert.deepEqual(
     {
@@ -168,7 +168,7 @@ function declaresOptional(service: FakeHapService, characteristicClass: FakeChar
 function assertStandardOptionalDeclarations(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
-  const battery = new HAP.Service.Battery('Backup Battery', 'backup-battery');
+  const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
 
   assert.deepEqual(
     {
@@ -208,7 +208,7 @@ Then('the service adds the characteristic an update names', assertUpdateAddsTheC
 // Battery service is the one this plugin publishes on that declares neither status characteristic,
 // so its own declarations cannot be mistaken for the two appended here.
 function assertOptionalCharacteristicsAppend(): void {
-  const battery = new HAP.Service.Battery('Backup Battery', 'backup-battery');
+  const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
 
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
@@ -231,12 +231,12 @@ Then('the service appends an optional characteristic on every call', assertOptio
 function assertSiblingSubtypes(): void {
   const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
   const primaryPumpRunning = accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
-  const backupPumpActivated = accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Activated', 'backup-pump-activated');
+  const backupPumpRunning = accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Running', 'backup-pump-running');
 
   assert.deepEqual(
     {
       primary: accessory.getServiceById(HAP.Service.ContactSensor, 'primary-pump-running') === primaryPumpRunning,
-      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-activated') === backupPumpActivated,
+      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-running') === backupPumpRunning,
       primaryName: primaryPumpRunning.displayName,
       primarySubtype: primaryPumpRunning.subtype,
       unknownSubtype: accessory.getServiceById(HAP.Service.ContactSensor, 'water-sensor-fault'),
@@ -276,7 +276,7 @@ function refusalOfASecondContactSensor(displayName: string, subtype: string | un
 
 function assertDuplicateSubtypeRefused(): void {
   refusalOfASecondContactSensor(
-    'Backup Pump Activated',
+    'Backup Pump Running',
     'primary-pump-running',
     `Cannot add a Service with the same UUID '${CONTACT_SENSOR_UUID}' and subtype 'primary-pump-running' as another Service in this Accessory.`,
   );
@@ -286,7 +286,7 @@ Then('the accessory refuses a second service with the same type and subtype', as
 
 function assertMissingSubtypeRefused(): void {
   refusalOfASecondContactSensor(
-    'Backup Pump Activated',
+    'Backup Pump Running',
     undefined,
     `Cannot add a Service with the same UUID '${CONTACT_SENSOR_UUID}' as another Service in this Accessory without also defining a unique 'subtype' property.`,
   );
@@ -300,16 +300,16 @@ function assertRemoveServiceRemovesOnlyItsTarget(): void {
   const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
   const primaryPumpRunning = accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
 
-  accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Activated', 'backup-pump-activated');
+  accessory.addService(HAP.Service.ContactSensor, 'Backup Pump Running', 'backup-pump-running');
   accessory.removeService(primaryPumpRunning);
 
   assert.deepEqual(
     {
       primary: accessory.getServiceById(HAP.Service.ContactSensor, 'primary-pump-running'),
-      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-activated')?.displayName,
+      backup: accessory.getServiceById(HAP.Service.ContactSensor, 'backup-pump-running')?.displayName,
       accessoryInformation: accessory.getService(HAP.Service.AccessoryInformation)?.UUID,
     },
-    { primary: undefined, backup: 'Backup Pump Activated', accessoryInformation: HAP.Service.AccessoryInformation.UUID },
+    { primary: undefined, backup: 'Backup Pump Running', accessoryInformation: HAP.Service.AccessoryInformation.UUID },
   );
 }
 
