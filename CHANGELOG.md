@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-05
+
 ### Added
 
 - You can sign in with your Basement Guardian account from the Homebridge settings form.
@@ -33,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Continuous integration now tests the plugin against three supported Homebridge versions, in addition to both supported Node.js versions.
 - The package's license metadata and file headers now state where the Apache-2.0 template license ends and the project's own MIT license begins.
 - The README now recommends running the plugin as a child bridge, and warns that re-creating a child bridge breaks its Home app pairing.
-- The README now tells you to keep the vendor app's alarm and notifications on while this plugin is a prerelease.
+- The README now keeps the vendor alarm and notifications guidance, and names what real-hardware and real-home testing has not yet confirmed.
 - The README now says flood notifications carry no guarantee of Apple's Critical Alerts delivery.
 
 ### Removed
