@@ -26,11 +26,12 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        # D-026: staged prerelease on the `next` dist-tag. A classic token
-        # is used because a package with no prior registry publish cannot
-        # yet be configured for npm Trusted Publishing; switching to OIDC
-        # Trusted Publishing is a documented follow-up hardening step for
-        # after the first publish, not implemented here.
-        run: npm publish --tag next
+        # This publishes the real 0.1.0 release to npm's default `latest`
+        # tag. A classic token is used because a package with no prior
+        # registry publish cannot yet be configured for npm Trusted
+        # Publishing; switching to OIDC Trusted Publishing is a documented
+        # follow-up hardening step for after the first publish, not
+        # implemented here.
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
