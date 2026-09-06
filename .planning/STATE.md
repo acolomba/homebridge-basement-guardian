@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 Phase: 05 — Degraded Operation and Recovery
 Plan: Not started
 Status: Phase 06 shipped — PR #4
-Last activity: 2026-09-05
+Last activity: 2026-09-05 - Completed quick task 260905-t6o: Prepare release infrastructure (SonarCloud, npm latest tag, README badges/disclaimer, CHANGELOG 0.1.0 cut)
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -508,6 +508,17 @@ The remainder are `1.0.0` release gates, not phase blockers. Each phase delivers
 - G-003: Validate both pump Contact Sensors in an eligible real Apple home before release.
 - G-004: Validate `Sump Pit Flood` Leak Sensor notification delivery in a real eligible Apple home with a current home hub and the current Home architecture, and confirm that no documentation claims a Critical Alerts guarantee.
 
+**Deliberate exception, 2026-09-05 (quick task `260905-t6o`):** `REL-07` reads as written --
+"prereleases use SemVer `0.x`, npm `next`, ... while `latest` and `1.0.0` remain blocked until the
+required gates pass" -- so publishing to npm's `latest` tag is gated on G-001..G-004 regardless of
+the version number staying at `0.1.0`. The maintainer was shown this exact tension (all four gates
+still `pending`) and explicitly chose to publish `0.1.0` to `latest` anyway, overriding `REL-07`'s
+`latest` gate for this release. `.github/workflows/publish.yml` now publishes to npm's default
+`latest` tag; the actual `npm publish` run has not happened as of this note. Mitigation: README's
+opening disclaimer (rewritten in the same quick task) names Alarm Mute's unconfirmed behavior and
+the still-open real-Apple-Home checks, and keeps the instruction to leave the vendor's own alarm and
+notifications on.
+
 Carried forward from Phase 2:
 
 - [Phase 2 → Phase 3]: RESOLVED in the Phase 3 discussion (2026-08-30). Degraded state is marked
@@ -614,6 +625,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260905-t6o | Prepare release infrastructure: SonarCloud config + workflow, npm publish tag change to `latest` for the real 0.1.0 release, README badges and disclaimer rewrite, CHANGELOG 0.1.0 cut | 2026-09-05 | 3b76e49 | Complete — see the deliberate REL-07 exception note above | [260905-t6o-prepare-release-infrastructure-sonarclou](./quick/260905-t6o-prepare-release-infrastructure-sonarclou/) |
 | 260905-fiy | Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout | 2026-09-05 | 892a6c7 | Complete — fix verified via typecheck/build/dry-run, live real-pump re-run pending | [260905-fiy-fix-missing-per-step-timeout-on-the-real](./quick/260905-fiy-fix-missing-per-step-timeout-on-the-real/) |
 | 260904-od5 | Repair the stale ROADMAP.md progress table and checklist — Phase 3/4/5/5.1 flipped from stale/missing to their true measured status | 2026-09-04 | 13709c5 | Complete — checklist and table reconciled with STATE.md | [260904-od5-repair-the-stale-roadmap-md-progress-tab](./quick/260904-od5-repair-the-stale-roadmap-md-progress-tab/) |
 | 260904-o05 | Close WINDOWS.md ledger entries 37-40 — records drift between the ledger and 05-VALIDATION.md/05-VERIFICATION.md, all already reconciled in the live files | 2026-09-04 | 82f0eae | Fixed — 4/4 entries closed, no code or doc changes needed | [260904-o05-close-windows-md-ledger-entries-37-38-39](./quick/260904-o05-close-windows-md-ledger-entries-37-38-39/) |
