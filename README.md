@@ -8,7 +8,7 @@
 
 A Homebridge dynamic platform plugin for monitoring and protecting basements.
 
-> This plugin is in development and is not released. Some of the values it publishes are estimates, and some are provisional until they are validated against real hardware. The sections that follow name each one. Keep your Basement Guardian vendor alarm and vendor notifications enabled while you run a prerelease build -- this plugin does not yet replace them.
+> This is a real 0.1.0 release, not a staged or early build. "Values that are estimates" names the battery percentage and the water-level figures that are not yet real measurements. "The two controls" names Alarm Mute, whose behavior on real hardware nobody has confirmed. Full confirmation of the flood and equipment-fault notifications in a real Apple Home is also still pending. Until then, keep your Basement Guardian vendor alarm and notifications on. This plugin does not yet replace them.
 
 ## Requirements
 
