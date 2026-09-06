@@ -9,6 +9,12 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/homebridge-basement-guardian
 
     steps:
       - uses: actions/checkout@v5
@@ -26,12 +32,16 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        # This publishes the real 0.1.0 release to npm's default `latest`
-        # tag. A classic token is used because a package with no prior
-        # registry publish cannot yet be configured for npm Trusted
-        # Publishing; switching to OIDC Trusted Publishing is a documented
-        # follow-up hardening step for after the first publish, not
-        # implemented here.
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # This authenticates via npm Trusted Publishing (OIDC), so no
+        # stored secret exists in this file. A trusted publisher must be
+        # configured on npmjs.com's package settings (naming this repo,
+        # this workflow file, and the `npm` environment) linking this
+        # workflow before the next run can succeed -- set up once, now
+        # that the package has a first published version. Trusted
+        # Publishing cannot bootstrap a brand-new package
+        # (https://github.com/npm/cli/issues/8544); pi-claude-marketplace's
+        # own bootstrap history followed the identical path, using a
+        # stored secret for its first release too. Every release from
+        # here on carries build provenance and needs no long-lived
+        # credential.
+        run: npm publish --access public --provenance
