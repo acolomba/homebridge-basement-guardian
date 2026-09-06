@@ -16,15 +16,15 @@ This plugin supports only ["Gemini"](https://basement-guardian.com/collections/i
 
 This plugin publishes these accessories:
 
-- *Sump Pit Flood*: Mapped as a leak sensor, it activates at the highest water level the system reports.
-- *Sump Pit Level*: The water level in the pit. [\*]
-- *Primary Pump Running* and *Backup Pump Running*: Two sensors that follow live pump activity.
-- *Primary Pump* and *Backup Pump*: These carry the exact conditions the system reports for each pump. [\*]
-- *Sump Mains Power* and *Mains Power Lost*: These report the presence of mains power. [\*]
-- *Backup Battery Level* and *Backup Battery*: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. *Backup Battery* [\*] carries the exact values the system reports.
-- *Primary Pump Fault*, *Backup Pump Fault*, *Water Sensor Fault*, *Pump Controller Link Lost*, and *Basement Guardian Offline*: These report system faults.
-- *System Self-Test*: A switch that starts the self-test.
-- *Alarm Mute*: A switch to mute an audible alarm.
+- **Sump Pit Flood**: Mapped as a leak sensor, it activates at the highest water level the system reports.
+- **Sump Pit Level**: The water level in the pit. [\*]
+- **Primary Pump Running** and **Backup Pump Running**: Two sensors that follow live pump activity.
+- **Primary Pump** and **Backup Pump**: These carry the exact conditions the system reports for each pump. [\*]
+- **Sump Mains Power** and **Mains Power Lost**: These report the presence of mains power. [\*]
+- **Backup Battery Level** and **Backup Battery**: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. *Backup Battery*\* [\*] carries the exact values the system reports.
+- **Primary Pump Fault**, **Backup Pump Fault**, **Water Sensor Fault**, **Pump Controller Link Lost**, and **Basement Guardian Offline**: These report system faults.
+- **System Self-Test**: A switch that starts the self-test.
+- **Alarm Mute**: A switch to mute an audible alarm.
 
 > [!NOTE]
 > Entries marked [\*] show only in the [Eve](https://www.evehome.com/en-us/eve-app) app.
@@ -51,17 +51,34 @@ Add the platform through the Homebridge UI, or add it directly to `config.json`:
 
 Homebridge can run this plugin as a child bridge, which isolates its crashes, startup delays, and restarts from every other plugin on your Homebridge instance. We recommend a child bridge, but it is not required.
 
+The Homebridge UI can turn on child bridge mode for you. If you edit `config.json` by hand instead, add a `_bridge` entry with a unique `username` and `port`:
+
+```json
+{
+  "platform": "BasementGuardian",
+  "name": "Basement Guardian",
+  "email": "you@example.com",
+  "password": "your-account-password",
+  "_bridge": {
+    "username": "0E:83:FD:29:58:C9",
+    "port": 55197
+  }
+}
+```
+
+Both values must differ from your main bridge's and from any other child bridge's.
+
 ### Removing a notification sensor
 
-The `ignoredFaults` setting removes notification sensors you do not want in your home. It accepts these seven names:
+The `ignoredFaults` entry removes notification sensors you do not want in your home. It accepts these names:
 
+- `backup-pump-fault`
 - `backup-pump-running`
+- `basement-guardian-offline`
 - `mains-power-lost`
 - `primary-pump-fault`
-- `backup-pump-fault`
-- `water-sensor-fault`
 - `pump-controller-link-lost`
-- `basement-guardian-offline`
+- `water-sensor-fault`
 
 Add a name to remove that one sensor:
 
@@ -69,36 +86,16 @@ Add a name to remove that one sensor:
 {
   "platform": "BasementGuardian",
   "name": "Basement Guardian",
-  "ignoredFaults": ["basement-guardian-offline"]
+  "email": "you@example.com",
+  "password": "your-account-password",
+  "ignoredFaults": ["backup-pump-running"]
 }
 ```
 
-CAUTION: If you remove a sensor, you also remove whatever you attached to it in your home. Its automations, its scenes, and its Activity History go with it. Apple Home does not move them to another service.
+> [!CAUTION]
+> If you remove a sensor, you also remove whatever you attached to it in your home. Its automations, its scenes, and its Activity History go with it. Apple Home does not move them to another service.
 
 A removed sensor is the only thing you lose. The plugin still reads and uses the condition. Which sensor you remove decides how much of the condition stays visible.
-
-## What the activation record counts
-
-`Primary Pump` and `Backup Pump` each carry a record of what this plugin watched. `Observation Start` is the time the plugin first observed that pump. `Activations Observed Since Observation Start` counts the runs it saw after that time. `Last Observed Activation At` is when it saw the most recent one.
-
-The count is not a figure the system reports about its own life. The system publishes no such total. The count holds the runs this plugin watched, and nothing else.
-
-If the plugin stops, or the vendor cloud stops answering, the pump keeps running and the plugin does not see it. The record does not fill that gap afterward. The count and the last-activation time both stay where the outage left them.
-
-The two counts are not built the same way:
-
-- The primary count holds only the runs the plugin watched live. The system reports no timestamp for the primary pump, so a missed primary run is lost.
-- The backup count holds the runs the plugin watched live plus runs it recovered afterward. The system reports the time of the last backup run. When that time moves past the last one the plugin recorded, the plugin adds exactly one run.
-
-A recovered timestamp proves that at least one run happened. It does not prove how many. Neither count is a lifetime total for the pump.
-
-A backup pump run lasts about 7 to 15 seconds. The plugin polls the vendor cloud about every 15 minutes by default. A run that starts and ends between two polls is invisible to polling. The vendor cloud also pushes a change as it happens. This live push makes a count of primary runs possible.
-
-On a fresh install the plugin does not count a run from before it started to watch. The first backup timestamp it sees becomes the starting point rather than an activation. `Observation Start` records that moment.
-
-The plugin publishes no measure of how complete a count is. A count of 4 does not tell you whether the plugin watched for a day or for a year without a break. `Observation Start` tells you when the record began. Nothing tells you how much of that time the plugin watched.
-
-`Backup Pump` also carries `Last Activation Was Self-Test`. A self-test runs the backup pump, so a self-test run is in the count like any other run. This value records whether the last run was a self-test. `Primary Pump` does not carry it, because the system reports no timestamp that can classify a primary run.
 
 ## Contributing
 
@@ -108,4 +105,4 @@ Read [CONTRIBUTING](CONTRIBUTING.md) and [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md).
 
 The MIT License covers original work in this project. For details, read the [COPYING](COPYING) file.
 
-Two files carried forward from the Homebridge plugin template (`src/index.ts`, `src/settings.ts`) remain licensed under the Apache License 2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE) for the complete boundary and license texts.
+Two files carried forward from the Homebridge plugin template (`src/index.ts`, `src/settings.ts`) remain licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the complete boundary and license texts.
