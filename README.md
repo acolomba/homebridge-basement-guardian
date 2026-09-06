@@ -17,17 +17,14 @@ This plugin supports only ["Gemini"](https://basement-guardian.com/collections/i
 This plugin publishes these accessories:
 
 - **Sump Pit Flood**: Mapped as a leak sensor, it activates at the highest water level the system reports.
-- **Sump Pit Level**: The water level in the pit. [\*]
+- **Sump Pit Level**: The water level in the pit. [^1]
 - **Primary Pump Running** and **Backup Pump Running**: Two sensors that follow live pump activity.
-- **Primary Pump** and **Backup Pump**: These carry the exact conditions the system reports for each pump. [\*]
-- **Sump Mains Power** and **Mains Power Lost**: These report the presence of mains power. [\*]
-- **Backup Battery Level** and **Backup Battery**: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. **Backup Battery** [\*] carries the exact values the system reports.
+- **Primary Pump** and **Backup Pump**: These carry the exact conditions the system reports for each pump. [^1]
+- **Sump Mains Power** and **Mains Power Lost**: These report the presence of mains power. [^1]
+- **Backup Battery Level** and **Backup Battery**: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. **Backup Battery** [^1] carries the exact values the system reports.
 - **Primary Pump Fault**, **Backup Pump Fault**, **Water Sensor Fault**, **Pump Controller Link Lost**, and **Basement Guardian Offline**: These report system faults.
 - **System Self-Test**: A switch that starts the self-test.
 - **Alarm Mute**: A switch to mute an audible alarm.
-
-> [!NOTE]
-> Entries marked [\*] show only in the [Eve](https://www.evehome.com/en-us/eve-app) app.
 
 ## Prerequisites
 
@@ -106,3 +103,5 @@ Read [CONTRIBUTING](CONTRIBUTING.md) and [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md).
 The MIT License covers original work in this project. For details, read the [COPYING](COPYING) file.
 
 Two files carried forward from the Homebridge plugin template (`src/index.ts`, `src/settings.ts`) remain licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the complete boundary and license texts.
+
+[^1]: Only available in the [Eve](https://www.evehome.com/en-us/eve-app) app.
