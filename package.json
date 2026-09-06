@@ -10,7 +10,7 @@
   "homepage": "https://github.com/acolomba/homebridge-basement-guardian#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/acolomba/homebridge-basement-guardian.git"
+    "url": "git+https://github.com/acolomba/homebridge-basement-guardian.git"
   },
   "bugs": {
     "url": "https://github.com/acolomba/homebridge-basement-guardian/issues"
