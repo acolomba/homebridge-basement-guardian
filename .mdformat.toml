@@ -2,4 +2,4 @@ wrap = "no"
 number = true
 end_of_line = "lf"
 
-extensions = ["frontmatter", "gfm", "gfm_alerts"]
+extensions = ["frontmatter", "gfm", "gfm_alerts", "footnote"]

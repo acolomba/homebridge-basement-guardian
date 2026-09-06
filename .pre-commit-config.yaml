@@ -82,6 +82,7 @@ repos:
           - mdformat-frontmatter
           - mdformat-gfm
           - mdformat-gfm-alerts
+          - mdformat-footnote
         exclude: ^(\.github/ISSUE_TEMPLATE/|\.planning/)
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
