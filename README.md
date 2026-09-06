@@ -26,7 +26,8 @@ This plugin publishes these accessories:
 - *System Self-Test*: A switch to run the system self-test.
 - *Alarm Mute*: A switch to mute an audible alarm.
 
-\[\*\]: Only visible in the [Eve](https://www.evehome.com/en-us/eve-app) app.
+> [!NOTE]
+> Marked entries [\*] are visible only in the [Eve](https://www.evehome.com/en-us/eve-app) app.
 
 ## Prerequisites
 
@@ -40,7 +41,9 @@ Add the platform through the Homebridge UI, or add it directly to `config.json`:
 ```json
 {
   "platform": "BasementGuardian",
-  "name": "Basement Guardian"
+  "name": "Basement Guardian",
+  "email": "you@example.com",
+  "password": "your-account-password"
 }
 ```
 
