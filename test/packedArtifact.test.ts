@@ -12,8 +12,9 @@ interface PackReport {
 const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // The `files` allowlist admits `dist`, `config.schema.json`, `CHANGELOG.md`, and `NOTICE`; npm
-// force-includes `package.json`, `LICENSE`, and `README.md` whatever the allowlist says (D-21).
-const ALLOWED_ROOT_FILES = ['CHANGELOG.md', 'LICENSE', 'NOTICE', 'README.md', 'config.schema.json', 'package.json'];
+// force-includes `package.json`, `LICENSE`, `COPYING`, and `README.md` whatever the allowlist
+// says (D-21).
+const ALLOWED_ROOT_FILES = ['CHANGELOG.md', 'COPYING', 'LICENSE', 'NOTICE', 'README.md', 'config.schema.json', 'package.json'];
 const COMPILED_OUTPUT_PREFIX = 'dist/';
 const PLUGIN_ENTRY_POINT = 'dist/index.js';
 

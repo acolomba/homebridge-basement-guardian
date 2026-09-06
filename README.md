@@ -8,6 +8,9 @@
 
 A [Homebridge](https://homebridge.io) plugin that brings [Wayne Basement Guardian](https://basement-guardian.com) sump pumps into Apple HomeKit. It monitors pump activity, battery status, water level, and faults.
 
+> [!IMPORTANT]
+> Keep your Basement Guardian vendor alarm and notifications on. This plugin does not yet replace them, and it does not guarantee Critical Alerts delivery for a flood.
+
 ## Features
 
 This plugin supports only ["Gemini"](https://basement-guardian.com/collections/iot-pumps/products/copy-of-wayne-basement-guardian-system-battery) pumps. It does not support [Halo](https://basement-guardian.com/collections/iot-pumps/products/halo50).
@@ -43,6 +46,8 @@ Add the platform through the Homebridge UI, or add it directly to `config.json`:
   "password": "your-account-password"
 }
 ```
+
+Homebridge stores the account password in plain text in `config.json` and in backups. The plugin sends the password only to the vendor Auth0 tenant.
 
 ### Running as a child bridge
 
