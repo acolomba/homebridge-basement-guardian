@@ -42,6 +42,7 @@
     "prefallow": "npm run build",
     "prepublishOnly": "npm run lint && npm run build",
     "test": "npm run test:unit && npm run test:cucumber",
+    "test:coverage": "npm run build:test && mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-include=\"dist-test/src/**/*.js\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/unit.lcov \"dist-test/test/**/*.test.js\" && node -e 'const fs = require(\"node:fs\"); const path = \"coverage/unit.lcov\"; let content = fs.readFileSync(path, \"utf8\"); content = content.replace(/^SF:dist-test\\/src\\/(.*)\\.js$/gm, \"SF:src/$1.ts\"); fs.writeFileSync(path, content);'",
     "test:coverage:all": "npm run build:test && node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test-coverage-include=\"dist-test/src/**/*.js\" \"dist-test/test/**/*.test.js\"",
     "test:coverage:direct": "npm run build:test && node --test --experimental-test-coverage --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test-coverage-include",
     "test:cucumber": "npm run build:test && cucumber-js",
