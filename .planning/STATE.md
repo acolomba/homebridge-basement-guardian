@@ -3,10 +3,11 @@ gsd_state_version: 1.0
 current_phase: 05
 current_phase_name: Degraded Operation and Recovery
 status: "Phase 06 shipped — PR #4"
-stopped_at: Phase 04 complete, ready to plan Phase 05
-last_updated: "2026-09-05T20:26:58.589Z"
+stopped_at: "Completed quick task 260905-whi: Switch publish.yml to npm Trusted Publishing (OIDC)"
+last_updated: "2026-09-06T03:34:36.426Z"
 last_activity: 2026-09-05
-state_head: 43202c5dfc20aa66fb9cad852c35d02580603273
+last_activity_desc: "Completed quick task 260905-t6o: Prepare release infrastructure (SonarCloud, npm latest tag, README badges/disclaimer, CHANGELOG 0.1.0 cut)"
+state_head: 7aae39e6f3eb56b2077a907df4a7a10c8ebfd755
 progress:
   total_phases: 7
   completed_phases: 7
@@ -147,6 +148,7 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 | Phase 06 P02 | 48min | 3 tasks | 42 files |
 | Phase 06 P08 | 30min | 2 tasks | 6 files |
 | Phase 06 P10 | 7min | 2 tasks | 1 files |
+| Phase quick-260905-whi P01 | ~10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -447,6 +449,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-08: Token-cache reuse across a restart is proven by a SHA-256 content hash of the cache file rather than its mtime, and RealPumpWorld splits initialize()/createRuntime() so restart() rebuilds the account runtime over the same scratch directory instead of tearing it down
 - [Phase 06]: [Phase 06] 06-10: npm run check passed clean on the combined tree with no fallow exemption needed; fallow dupes reported two clone groups (one in this phase's new realWorld.ts) but neither crossed the --fail-on-issues threshold, confirmed by running fallow dupes standalone.
 - [Phase 06]: [Phase 06] 06-10: CHANGELOG.md's [Unreleased] section records all of Phase 6's user-visible additions/changes (real-pump suite, SECURITY.md, CI Homebridge matrix, license boundary, README child-bridge/prerelease-alarm/Critical-Alerts disclosures) with no G-00X gate claimed and no new version heading, per D-01.
+- [Phase 05]: [Quick task 260905-whi]: .github/workflows/publish.yml's publish job switched from a stored NPM_TOKEN secret to npm Trusted Publishing (OIDC) -- id-token: write, an environment block naming homebridge-basement-guardian's own npm page, and npm publish --access public --provenance -- now that 0.1.0 is confirmed live (Trusted Publishing cannot bootstrap a package's first publish). package.json's repository.url gained the git+ prefix npm's own publish step already normalized it to. User setup required before the next run: a trusted publisher must be registered on npmjs.com's package settings dashboard (no CLI path exists) linking this repo, publish.yml, and the npm environment.
 
 ### Pending Todos
 
@@ -518,6 +521,14 @@ still `pending`) and explicitly chose to publish `0.1.0` to `latest` anyway, ove
 opening disclaimer (rewritten in the same quick task) names Alarm Mute's unconfirmed behavior and
 the still-open real-Apple-Home checks, and keeps the instruction to leave the vendor's own alarm and
 notifications on.
+
+**UPDATE 2026-09-05 (same day):** `homebridge-basement-guardian@0.1.0` was published to npm's
+`latest` tag (verified via `npm view homebridge-basement-guardian dist-tags` -> `{"latest":
+"0.1.0"}`). G-001..G-004 remain `pending` -- this publish does not close them. Quick task
+`260905-whi` then switched `publish.yml` from a stored `NPM_TOKEN` to npm Trusted Publishing
+(OIDC), since Trusted Publishing cannot bootstrap a package's first version; every release after
+this first one needs no long-lived npm credential. A trusted publisher still needs registering on
+npmjs.com's dashboard before the next `workflow_dispatch` publish run will succeed.
 
 Carried forward from Phase 2:
 
@@ -625,6 +636,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260905-whi | Switch publish.yml to npm Trusted Publishing (OIDC), matching pi-claude-marketplace, now that 0.1.0 is live on the registry | 2026-09-05 | 7aae39e | Complete — trusted publisher registration on npmjs.com still needed before next publish run | [260905-whi-switch-publish-yml-to-npm-trusted-publis](./quick/260905-whi-switch-publish-yml-to-npm-trusted-publis/) |
 | 260905-t6o | Prepare release infrastructure: SonarCloud config + workflow, npm publish tag change to `latest` for the real 0.1.0 release, README badges and disclaimer rewrite, CHANGELOG 0.1.0 cut | 2026-09-05 | 3b76e49 | Complete — see the deliberate REL-07 exception note above | [260905-t6o-prepare-release-infrastructure-sonarclou](./quick/260905-t6o-prepare-release-infrastructure-sonarclou/) |
 | 260905-fiy | Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout | 2026-09-05 | 892a6c7 | Complete — fix verified via typecheck/build/dry-run, live real-pump re-run pending | [260905-fiy-fix-missing-per-step-timeout-on-the-real](./quick/260905-fiy-fix-missing-per-step-timeout-on-the-real/) |
 | 260904-od5 | Repair the stale ROADMAP.md progress table and checklist — Phase 3/4/5/5.1 flipped from stale/missing to their true measured status | 2026-09-04 | 13709c5 | Complete — checklist and table reconciled with STATE.md | [260904-od5-repair-the-stale-roadmap-md-progress-tab](./quick/260904-od5-repair-the-stale-roadmap-md-progress-tab/) |
@@ -658,8 +670,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-05T06:35:00.000Z
-Stopped at: Phase 04 complete, ready to plan Phase 05
+Last session: 2026-09-06T03:34:24.311Z
+Stopped at: Completed quick task 260905-whi: Switch publish.yml to npm Trusted Publishing (OIDC)
 regression gate / verify_phase_goal / milestone lifecycle
 Resume file: None
 
