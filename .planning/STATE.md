@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 Phase: 05 — Degraded Operation and Recovery
 Plan: Not started
 Status: Phase 06 shipped — PR #4
-Last activity: 2026-09-05 - Completed quick task 260905-t6o: Prepare release infrastructure (SonarCloud, npm latest tag, README badges/disclaimer, CHANGELOG 0.1.0 cut)
+Last activity: 2026-09-06 - Completed quick task 260906-d6e: Rename pump-running and battery services, refresh README/CONTRIBUTING prose, reset CHANGELOG 0.1.0 entry
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -636,6 +636,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260906-d6e | Rename "Backup Pump Activated" to "Backup Pump Running" and swap the two backup-battery displayNames ("Backup Battery Level" / "Backup Battery"), reorder config.schema.json's ignoredFaults enum, add required email/password to README's config example, convert the Eve-app footnote to a GFM admonition, run simple-english/humanizer over README.md and CONTRIBUTING.md, and reset CHANGELOG's 0.1.0 entry to two bullets | 2026-09-06 | 84f1f03 | Complete — typecheck/lint/fallow/format:check pass, cucumber 104/104, unit tests show no failure beyond 5 pre-existing unrelated ones | [260906-d6e-rename-pump-running-and-battery-services](./quick/260906-d6e-rename-pump-running-and-battery-services/) |
 | 260905-whi | Switch publish.yml to npm Trusted Publishing (OIDC), matching pi-claude-marketplace, now that 0.1.0 is live on the registry | 2026-09-05 | 7aae39e | Complete — trusted publisher registration on npmjs.com still needed before next publish run | [260905-whi-switch-publish-yml-to-npm-trusted-publis](./quick/260905-whi-switch-publish-yml-to-npm-trusted-publis/) |
 | 260905-t6o | Prepare release infrastructure: SonarCloud config + workflow, npm publish tag change to `latest` for the real 0.1.0 release, README badges and disclaimer rewrite, CHANGELOG 0.1.0 cut | 2026-09-05 | 3b76e49 | Complete — see the deliberate REL-07 exception note above | [260905-t6o-prepare-release-infrastructure-sonarclou](./quick/260905-t6o-prepare-release-infrastructure-sonarclou/) |
 | 260905-fiy | Fix missing per-step timeout on the real-pump heartbeat wait step so scenarios can actually complete their 960s wait instead of dying to Cucumber's 5000ms default step timeout | 2026-09-05 | 892a6c7 | Complete — fix verified via typecheck/build/dry-run, live real-pump re-run pending | [260905-fiy-fix-missing-per-step-timeout-on-the-real](./quick/260905-fiy-fix-missing-per-step-timeout-on-the-real/) |
