@@ -21,7 +21,7 @@ This plugin publishes these accessories:
 - **Primary Pump Running** and **Backup Pump Running**: Two sensors that follow live pump activity.
 - **Primary Pump** and **Backup Pump**: These carry the exact conditions the system reports for each pump. [\*]
 - **Sump Mains Power** and **Mains Power Lost**: These report the presence of mains power. [\*]
-- **Backup Battery Level** and **Backup Battery**: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. *Backup Battery*\* [\*] carries the exact values the system reports.
+- **Backup Battery Level** and **Backup Battery**: The battery level is an estimate. The system reports one of four protection bands, and the plugin publishes them as 25, 50, 75, and 100 percent. **Backup Battery** [\*] carries the exact values the system reports.
 - **Primary Pump Fault**, **Backup Pump Fault**, **Water Sensor Fault**, **Pump Controller Link Lost**, and **Basement Guardian Offline**: These report system faults.
 - **System Self-Test**: A switch that starts the self-test.
 - **Alarm Mute**: A switch to mute an audible alarm.
