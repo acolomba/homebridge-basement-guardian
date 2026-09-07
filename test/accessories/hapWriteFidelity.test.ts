@@ -249,17 +249,23 @@ test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
   assert.strictEqual(resolved.here, resolved.throughTheHost);
 });
 
-test('D-17 runs against the HAP version the plugin host declares', () => {
-  // arrange
-  const installed = readManifest(require_.resolve(`${HAP_SPECIFIER}/package.json`));
-  const host = manifestOwning(require_.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER);
+// Homebridge 1.x depends on the legacy unscoped `hap-nodejs` package (versions
+// 0.12.0/0.14.3, confirmed against the npm registry); only Homebridge 2.x
+// depends on the scoped `@homebridge/hap-nodejs` line this project pins and
+// this file tests against. The two lines share no version to compare, so this
+// case is registered only once the host has migrated to the scoped package --
+// a Homebridge 1.x run has nothing here to assert against.
+const hapVersionTheHostDeclares = manifestOwning(require_.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER).dependencies?.[HAP_SPECIFIER];
 
-  // act
-  const versions = { installed: installed.version, declaredByTheHost: host.dependencies?.[HAP_SPECIFIER] };
+if (hapVersionTheHostDeclares !== undefined) {
+  test('D-17 runs against the HAP version the plugin host declares', () => {
+    // arrange
+    const installed = readManifest(require_.resolve(`${HAP_SPECIFIER}/package.json`));
 
-  // assert
-  assert.strictEqual(versions.installed, versions.declaredByTheHost);
-});
+    // act & assert
+    assert.strictEqual(installed.version, hapVersionTheHostDeclares);
+  });
+}
 
 test('stores the value and clears the status on an accepted write, on both implementations', async () => {
   // act

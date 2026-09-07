@@ -302,7 +302,7 @@ function isSameValue(previous: unknown, next: unknown): boolean {
 function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
 
-  return [...keys].filter((key) => !isSameValue(previous[key], next[key])).sort();
+  return [...keys].filter((key) => !isSameValue(previous[key], next[key])).sort((a, b) => a.localeCompare(b));
 }
 
 // One listener's failure is contained: the others still run and the reducer
