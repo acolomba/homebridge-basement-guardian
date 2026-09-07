@@ -72,6 +72,10 @@ jobs:
         run: npm run build
 
       - name: List outdated dependencies
+        # Informational only: `npm list --outdated` exits 1 whenever any
+        # dependency has a newer version available, which is not a build
+        # failure.
+        continue-on-error: true
         run: npm list --outdated
 
       - name: Audit production dependencies for known vulnerabilities
