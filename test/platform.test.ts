@@ -664,7 +664,7 @@ async function expectStoragePath(t: TestContext, api: API): Promise<{ user: API[
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-platform-'));
 
   t.after(async () => {
-    await rm(storagePath, { recursive: true, force: true });
+    await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   });
 
   const user = mock<API['user']>({ exactParams: true, name: 'homebridge user' });

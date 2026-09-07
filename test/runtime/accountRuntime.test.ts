@@ -2753,7 +2753,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
 
   t.after(async () => {
-    await rm(storagePath, { recursive: true, force: true });
+    await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   });
 
   const clock: Clock = { now: () => START_TIME };
@@ -2954,7 +2954,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     // act
@@ -2983,7 +2983,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     const runtime = createAccountRuntimeFromConfig({
@@ -3018,7 +3018,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     const runtime = createAccountRuntimeFromConfig({
@@ -3063,7 +3063,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     const runtime = createAccountRuntimeFromConfig({
@@ -3103,7 +3103,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     const runtime = createAccountRuntimeFromConfig({
@@ -3160,7 +3160,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
-      await rm(storagePath, { recursive: true, force: true });
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
     const runtime = createAccountRuntimeFromConfig({
