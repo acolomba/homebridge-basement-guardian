@@ -51,6 +51,13 @@ jobs:
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          # push and pull_request already carry branch/PR context in the event,
+          # and naming a branch on a pull_request breaks PR decoration.
+          # workflow_dispatch carries no such context, so without this the run
+          # is recorded against the project's main branch and overwrites main's
+          # analysis with the dispatched branch's code.
+          args: ${{ github.event_name == 'workflow_dispatch' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
