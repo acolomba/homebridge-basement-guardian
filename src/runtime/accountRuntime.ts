@@ -68,9 +68,9 @@ const AUTHENTICATION_STOPPED =
 // `:50-57`). One kind per device therefore gives each pump its own warning
 // cadence with no change to the limiter, and a pump that has been quiet all
 // afternoon can no longer hold back the first warning about the pump beside it.
-// The vendor `deviceId` is the Phase 2 ruling's non-sensitive value, permitted
-// in logs and in accessory context, and it names no route, header, credential
-// or account (D-14, D-027, AUTH-02).
+// The vendor `deviceId` is a non-sensitive value, permitted in logs and in
+// accessory context, and it names no route, header, credential or account
+// (D-14, D-027, AUTH-02).
 function liveReportingKind(deviceId: string): string {
   return `Live device reporting for ${deviceId}`;
 }
@@ -517,15 +517,6 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return shadowConnected ? 'shadow-and-poll' : 'poll-only';
   }
 
-  // The trust is computed once and reported from that one value, so what the
-  // plugin says about its own sight and what HomeKit marks cannot disagree.
-  //
-  // It runs on every poll outcome rather than from the poll loop alone, because
-  // `launch()` records its own first inventory outcome without going through
-  // that loop, and a report wired only into the loop would arrive a whole poll
-  // interval late -- an hour at the configuration maximum. A poll a shutdown
-  // aborted returns before both recorders, so it advances nothing and reports
-  // nothing.
   // Whether the plugin currently has a proven way to reach the vendor, derived
   // from the same three flags the monitoring path is derived from and storing
   // nothing of its own.
@@ -597,6 +588,15 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     options.onMonitoringHealth(account, monitoringTrustByDevice(account));
   }
 
+  // The trust is computed once and reported from that one value, so what the
+  // plugin says about its own sight and what HomeKit marks cannot disagree.
+  //
+  // It runs on every poll outcome rather than from the poll loop alone, because
+  // `launch()` records its own first inventory outcome without going through
+  // that loop, and a report wired only into the loop would arrive a whole poll
+  // interval late -- an hour at the configuration maximum. A poll a shutdown
+  // aborted returns before both recorders, so it advances nothing and reports
+  // nothing.
   function reportMonitoringHealth(): void {
     const account = monitoringTrustNow();
     const byDevice = monitoringTrustByDevice(account);
