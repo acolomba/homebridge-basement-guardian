@@ -4,10 +4,9 @@
  *
  * Homebridge writes this record to disk in plain text and keeps it in backups,
  * so it holds no credential, no token, no temporary AWS credential, and no raw
- * vendor response. It does hold the vendor `deviceId`, which embeds the
- * account identifier; that value is non-sensitive, and only public artifacts
- * (fixtures, committed samples, and anything published) still keep it out
- * (D-01, D-027).
+ * vendor response. It does hold the vendor `deviceId`; that value is
+ * non-sensitive, and only public artifacts (fixtures, committed samples, and
+ * anything published) still keep it out (D-01, D-027).
  *
  * It also holds no telemetry snapshot and no timer. A stored snapshot would be
  * a second source of safety state that nothing refreshes, and it would read as

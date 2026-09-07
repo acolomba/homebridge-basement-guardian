@@ -505,8 +505,7 @@ for (const { cause, stored } of DAMAGED_RECORDS) {
   });
 }
 
-// A log line names a capability or a fact, never an identifier: the vendor device identifier
-// carries the account identifier inside it.
+// This line names a fact and no identifier.
 test('names no device or account identifier in the line about an unreadable record', () => {
   // arrange
   const { records, warnings } = pumpRecords(damagedContext({ primaryPump: 'primary' }));

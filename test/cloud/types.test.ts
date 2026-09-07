@@ -11,8 +11,7 @@ void ({ desiredData: { test_running: true } } satisfies DeviceCommand);
 // @ts-expect-error a command carries its fields under desiredData
 void ({ test_running: true } satisfies DeviceCommand);
 
-// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
-// placeholder in place of the real account identifier.
+// Fixture device identifiers are placeholders and carry no real vendor value.
 function geminiDevice(): ApiDevice {
   const connectivity: ApiConnectivity = { connected: true, timestamp: 1_700_000_000_000 };
 

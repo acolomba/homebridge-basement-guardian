@@ -26,7 +26,7 @@ export const COMMAND_DEADLINE_MS = 2_500;
  * recorded coverage decision being revisited (SYNC-01).
  *
  * A label is what a failure carries. The constructed URL never is: it holds the
- * base URL, and a device path holds the account identifier (AUTH-02).
+ * base URL and, on a device route, a device identifier (AUTH-02).
  */
 export const ROUTES = {
   devices: 'GET /devices',

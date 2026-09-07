@@ -9,9 +9,9 @@
 // deadline would be untestable without awaiting a real timer.
 import timers from 'node:timers/promises';
 
-// The refusal names no topic, no payload, and no identifier. It travels into a
-// consumer that reports it, and a device identifier embeds the account
-// identifier (AUTH-02).
+// The refusal names no topic, no payload, and no identifier: it travels into a
+// consumer that reports it, so a topic or a payload named here would reach a
+// log through that consumer (AUTH-02).
 const DEADLINE_REFUSAL = 'The broker did not answer a transport operation within its deadline.';
 
 /**
