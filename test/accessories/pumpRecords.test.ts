@@ -505,8 +505,9 @@ for (const { cause, stored } of DAMAGED_RECORDS) {
   });
 }
 
-// A log line names a capability or a fact, never an identifier: the vendor device identifier
-// carries the account identifier inside it.
+// The warning names a capability and a cause. That is everything the reader needs, so the line
+// carries no identifier. The reason is what the sentence has to say, not sensitivity: a vendor
+// device identifier is admitted to runtime logs.
 test('names no device or account identifier in the line about an unreadable record', () => {
   // arrange
   const { records, warnings } = pumpRecords(damagedContext({ primaryPump: 'primary' }));
