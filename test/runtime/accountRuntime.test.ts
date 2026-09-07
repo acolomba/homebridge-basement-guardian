@@ -91,6 +91,14 @@ function liveReportingRecoveredLine(deviceId: string): string {
   return `Live device reporting for ${deviceId} recovered.`;
 }
 
+// The line a removal Homebridge refused records, restated here for the same
+// reason. It names the controller, because the failing activity is that
+// controller's removal and not the account's, and a two-pump case has to say
+// which accessory is stranded.
+function removalRefusedLine(deviceId: string): string {
+  return `Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`;
+}
+
 // Every recovery the failure log announced, whole lines and in order. A count
 // alone cannot tell "the right pump recovered" from "a pump recovered", which is
 // the whole question on a two-pump account (D-14).
@@ -2662,9 +2670,9 @@ describe('DEV-05 removal reconciliation', () => {
         stillStored: store.snapshot(DEVICE_ID) !== undefined,
         keepsItsAnchor: anchors.stored.has(DEVICE_ID),
         silence: silenceOf(monitoringByDevice).at(-1),
-        errors: countOfLine(logged, `error Could not remove ${DEVICE_ID} from HomeKit; it stays published and stays watched.`),
+        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
       },
-      { attempts: [DEVICE_ID], stillStored: true, keepsItsAnchor: true, silence: true, errors: 1 },
+      { attempts: [DEVICE_ID], stillStored: true, keepsItsAnchor: true, silence: true, warnings: 1 },
     );
 
     // act
@@ -2672,6 +2680,90 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
+  });
+
+  // A refused removal strands an accessory this plugin has already vouched for, so the first one
+  // is said the moment it happens rather than held back by the cadence its repeats are subject to.
+  test('reports a refused removal as soon as the removal is refused', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { attempts: [...removed], warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`) },
+      { attempts: [DEVICE_ID], warnings: 1 },
+    );
+  });
+
+  // The documented refusal is a UUID another plugin had already bridged, which no poll clears, so
+  // the removal is refused again for the life of the process. The attempt has to keep happening --
+  // nothing else ever removes the accessory -- while the line does not: unlimited, it writes the
+  // same sentence 288 times a day at the shortest interval the configuration allows (D-14).
+  test('says nothing further about a pump refused again inside the reminder window, and still retries every poll', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed],
+        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
+        repeats: countOfLine(logged, `debug ${removalRefusedLine(DEVICE_ID)}`),
+      },
+      { attempts: [DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID], warnings: 1, repeats: 3 },
+    );
+  });
+
+  // The kind is per device for the reason the live-reporting kind is: a pump refused all afternoon
+  // must not hold back the first report about the pump beside it, whose accessory is stranded just
+  // as badly. Both refusals land in the same poll at the same clock reading, so one shared kind
+  // would send the second straight to debug (D-14).
+  test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed].sort(),
+        pump: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
+        pumpBesideIt: countOfLine(logged, `warn ${removalRefusedLine(OTHER_DEVICE_ID)}`),
+      },
+      { attempts: [DEVICE_ID, OTHER_DEVICE_ID].sort(), pump: 1, pumpBesideIt: 1 },
+    );
   });
 
   // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so

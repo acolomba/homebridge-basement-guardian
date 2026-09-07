@@ -85,6 +85,23 @@ function liveReportingSilent(deviceId: string): string {
   );
 }
 
+// One system's removal from HomeKit, named as its own failing activity.
+//
+// The `deviceId` is part of the kind for the reason it is part of
+// `liveReportingKind`: `FailureLog` rate-limits per kind string, so one kind per
+// device gives each refused removal its own cadence, and a pump Homebridge has
+// been refusing all afternoon can no longer hold back the first report about the
+// pump beside it, whose accessory is stranded just as badly (D-14).
+function removalKind(deviceId: string): string {
+  return `HomeKit removal of ${deviceId}`;
+}
+
+// The line one refused removal records. It names the controller and says what
+// the refusal left standing, because that is what an owner acts on.
+function removalRefused(deviceId: string): string {
+  return `Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`;
+}
+
 /**
  * The half of the shadow client's options the runtime owns.
  *
@@ -449,12 +466,25 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // holds -- the false normal this plugin refuses (D-014).
       try {
         options.onDeviceRemoved(deviceId);
-      } catch (error: unknown) {
+      } catch {
         // The system stays published, stays watched and stays distrustable,
         // and the next poll tries the removal again: `observe` reports a
         // deviceId on every call while it stays absent, so the retry needs no
         // state of its own (D-029).
-        options.log.error(`Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`, error);
+        //
+        // The reporting is rate-limited and the attempt above never is. The
+        // documented refusal is a UUID another plugin had already bridged,
+        // which no poll clears, so the removal is refused again on every poll
+        // for the life of the process; an unlimited line would write the same
+        // sentence 288 times a day at the shortest interval the configuration
+        // allows. It goes through the failure log for the reason a failing
+        // poll and a lost shadow do: said once, then on the reminder cadence,
+        // per kind, with no warn-once flag of its own (D-14).
+        //
+        // The refusal itself is not repeated into the line, for the reason
+        // `describeFailure` states: an arbitrary error's message is not this
+        // plugin's to quote, and a `reason` is the complete line to log.
+        options.failures.recordFailure(removalKind(deviceId), removalRefused(deviceId));
 
         continue;
       }
@@ -469,17 +499,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // reset the silence window of a pump that is genuinely quiet, forever.
       //
       // Its arrival stamp goes, its persisted arrival anchor goes with it,
-      // and so does its live-reporting kind. The anchor is written back to
-      // disk, so a store that only ever grew would carry an entry for every
-      // system the account has ever held; dropping it here is what keeps the
-      // stored set no larger than the account.
-      // The failure log rate-limits per kind, and the kind of a system that
-      // has left the account can never recover, so leaving it would hold an
-      // entry for the life of the process and rate-limit whatever identifier
-      // came back next. It is forgotten rather than recorded successful:
-      // this system's reporting did not come back, the system went away, and
-      // `recordSuccess` would announce a recovery that never happened
-      // (D-14).
+      // and so do both of the failure-log kinds it owns. The anchor is
+      // written back to disk, so a store that only ever grew would carry an
+      // entry for every system the account has ever held; dropping it here is
+      // what keeps the stored set no larger than the account.
+      // The failure log rate-limits per kind, and neither kind of a system
+      // that has left the account can ever report again, so leaving either
+      // would hold an entry for the life of the process and rate-limit
+      // whatever identifier came back next. Both are forgotten rather than
+      // recorded successful: this system's reporting did not come back, the
+      // system went away, and a removal that finally landed is that departure
+      // rather than a recovery an owner wants announced (D-14).
       //
       // The recovery latch needs nothing here. `reportMonitoringHealth`
       // rebuilds it wholesale from the map it is about to push, and the
@@ -488,6 +518,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       health.forgetDevice(deviceId);
       options.anchors.forget(deviceId);
       options.failures.forget(liveReportingKind(deviceId));
+      options.failures.forget(removalKind(deviceId));
     }
   }
 
