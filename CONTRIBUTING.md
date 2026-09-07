@@ -21,6 +21,14 @@ npm run lint
 npm run build
 ```
 
+Install the git hooks:
+
+```shell
+pre-commit install --install-hooks
+```
+
+The hooks run the linters, the formatters, and a secret scan before each commit, and they check the commit message against the Conventional Commits rules. Do not use `--no-verify` to skip them. A hook that fails stops the commit, so fix the report, stage the fix, and commit again.
+
 This command runs the complete quality gate: type checking, linting, code-health analysis, format verification, a build, and the tests:
 
 ```shell
