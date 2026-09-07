@@ -2,7 +2,7 @@
   "name": "homebridge-basement-guardian",
   "displayName": "Basement Guardian",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "A Homebridge plugin for monitoring and protecting basements.",
   "author": "Alessandro Colomba",

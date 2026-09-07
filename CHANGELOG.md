@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-07
+
+- Internal code quality fixes, with no change to plugin behavior.
+- The lockfile now agrees with the declared Node.js version range.
+
 ## [0.1.0] - 2026-09-05
 
 - Initial release.
