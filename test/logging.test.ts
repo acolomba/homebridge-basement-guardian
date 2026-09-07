@@ -216,17 +216,40 @@ test('AUTH-02 leaves the sentence full stop after an authorization token it subs
   verify(delegate);
 });
 
+// The credential value opens with an `s` and a second field follows it, so the
+// whole value class is load-bearing here. A class that excluded the letter `s`
+// instead of whitespace -- one dropped `String.raw` away -- would stop at the
+// first letter of a real session token and write the rest of it to the log
+// under a line that still reads redacted (AUTH-02).
 for (const field of AWS_SESSION_CREDENTIAL_FIELDS) {
-  test(`AUTH-02 substitutes the temporary credential field ${field}`, () => {
+  test(`AUTH-02 substitutes the temporary credential field ${field} and leaves the field beside it whole`, () => {
     // arrange
     const delegate = createDelegate();
     when(() => {
-      delegate.debug(`aws credentials {"${field}":"${REDACTED}"}`);
+      delegate.debug(`aws credentials {"${field}":"${REDACTED}","Expiration":"2026-09-07T00:00:00Z"}`);
     }).thenReturn(undefined);
     const log = createRedactingLogger({ delegate, secrets: [] });
 
     // act
-    log.debug(`aws credentials {"${field}":"temporary-credential-value"}`);
+    log.debug(`aws credentials {"${field}":"session/token+value=","Expiration":"2026-09-07T00:00:00Z"}`);
+
+    // assert
+    verify(delegate);
+  });
+
+  // The unquoted, space-separated form a vendor error sentence carries. The
+  // separator groups are what reach the value at all, and the value class is
+  // what hands back the words after it.
+  test(`AUTH-02 substitutes the temporary credential field ${field} written unquoted around spaces`, () => {
+    // arrange
+    const delegate = createDelegate();
+    when(() => {
+      delegate.debug(`aws credentials ${field} = ${REDACTED} and nothing else`);
+    }).thenReturn(undefined);
+    const log = createRedactingLogger({ delegate, secrets: [] });
+
+    // act
+    log.debug(`aws credentials ${field} = session-credential-value and nothing else`);
 
     // assert
     verify(delegate);
@@ -260,6 +283,24 @@ test('AUTH-02 substitutes an authentication request body whose password was neve
 
   // act
   log.debug('posting {"username":"account@example.test","password":"account-password"}');
+
+  // assert
+  verify(delegate);
+});
+
+// The same body written with spaces around its separators, which is what the
+// separator groups exist for: without them the pattern never reaches the value
+// and the whole body goes to the log unredacted.
+test('AUTH-02 substitutes an authentication request body written with spaces around its separators', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting {"username" : "${REDACTED}", "password" : "${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting {"username" : "account@example.test", "password" : "account-password"}');
 
   // assert
   verify(delegate);
