@@ -60,6 +60,7 @@
     "eslint": "^10.9.0",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-sonarjs": "^4.0.3",
+    "eslint-plugin-unicorn": "^74.0.0",
     "fallow": "^3.16.0",
     "globals": "^17.6.0",
     "homebridge": "^2.4.0",
