@@ -332,6 +332,14 @@ interface Script {
   shadow: readonly boolean[];
   /** Whether closing the shadow connection rejects. */
   closeFails: boolean;
+  /**
+   * Whether unregistering an accessory throws.
+   *
+   * Homebridge answers a removal for an accessory it never bridged by
+   * throwing, which is the state an accessory reaches when its UUID collided
+   * with one another plugin had already bridged.
+   */
+  removalFails: boolean;
   /** Work the shadow start waits for, which is how a case lands a shutdown inside that window. */
   whileShadowStarts: () => Promise<void>;
   pollIntervalMs: number;
@@ -520,6 +528,11 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     },
     onDeviceRemoved: (deviceId: string): void => {
       removed.push(deviceId);
+
+      if (script.removalFails ?? false) {
+        throw new Error('Cannot find the bridged Accessory to remove.');
+      }
+
       // What the platform's own handler does with this signal, at
       // `src/platform.ts:480`. A harness that only records the call leaves the
       // device in the store, so the runtime goes on reporting on a system the
@@ -2622,6 +2635,44 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+  });
+
+  // A removal Homebridge refuses leaves an accessory published that this plugin has already
+  // vouched for. Everything that could still distrust that accessory -- its arrival stamp, its
+  // persisted anchor, its absence count -- therefore has to survive the refusal. Pruned ahead of
+  // the removal, the tile goes on reading no leak and a normal pump for a system the account no
+  // longer holds, nothing ever retries the removal, and nothing is said about any of it (D-014).
+  test('keeps a pump whose removal was refused watched, distrusted and reported, and tries the removal again', async (t) => {
+    // arrange
+    const { runtime, store, logged, anchors, removed, monitoringByDevice, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed],
+        stillStored: store.snapshot(DEVICE_ID) !== undefined,
+        keepsItsAnchor: anchors.stored.has(DEVICE_ID),
+        silence: silenceOf(monitoringByDevice).at(-1),
+        errors: countOfLine(logged, `error Could not remove ${DEVICE_ID} from HomeKit; it stays published and stays watched.`),
+      },
+      { attempts: [DEVICE_ID], stillStored: true, keepsItsAnchor: true, silence: true, errors: 1 },
+    );
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
   });
 
   // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so

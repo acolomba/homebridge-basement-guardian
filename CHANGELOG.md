@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+- If the plugin cannot remove a system that left your account, it now marks that system untrustworthy and reports the error.
+
 ## [0.1.1] - 2026-09-07
 
 - Internal code quality fixes, with no change to plugin behavior.
