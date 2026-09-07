@@ -2236,10 +2236,10 @@ describe('the degraded monitoring path', () => {
     );
   });
 
-  // The line names the controller and nothing else about the account. The vendor deviceId is the one
-  // identifier a Phase 2 ruling admits to logs, and on a two-pump account a sentence without it does
-  // not say which basement stopped being watched. Everything the redaction rules actually forbid --
-  // route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
+  // The line names the controller and nothing else about the account. The vendor deviceId is a
+  // non-sensitive value and the one identifier admitted to logs, and on a two-pump account a sentence
+  // without it does not say which basement stopped being watched. Everything the redaction rules
+  // actually forbid -- route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
   test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
     // arrange
     const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });

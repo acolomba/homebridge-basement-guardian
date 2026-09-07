@@ -33,9 +33,8 @@ const NANOSECONDS_PER_MILLISECOND = 1_000_000n;
  * The process monotonic counter. Wire this at the composition root only.
  *
  * `process.hrtime.bigint()` is documented as "not subject to clock drift", and
- * a Linux time-namespace probe run during this phase's research offset
- * `CLOCK_MONOTONIC` and `CLOCK_BOOTTIME` independently and showed this source
- * following the first and not the second.
+ * a Linux time-namespace probe offset `CLOCK_MONOTONIC` and `CLOCK_BOOTTIME`
+ * independently and showed this source following the first and not the second.
  *
  * The limit that follows from that: `CLOCK_MONOTONIC` does not advance across a
  * system suspend, so a host that sleeps for two hours resumes with this counter

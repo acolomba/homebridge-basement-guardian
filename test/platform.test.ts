@@ -2247,7 +2247,7 @@ describe('removeDiscoveredDevice', () => {
 // The static gate on the platform's runtime context.
 //
 // `DiscoveryContext` was assembled inline in each of the three runtime callbacks, over the same nine
-// fields written out three times. That is the drift `05-CONTEXT.md` D-12 exists to prevent: a field
+// fields written out three times. That is the drift D-12 exists to prevent: a field
 // added to two of the three gives the monitoring path a different plugin from the discovery path,
 // and no runtime layer can see it. Both spellings type-check, both lint, and every behavioural case
 // passes, because each literal satisfies `DiscoveryContext` on its own. Reading the source text is
