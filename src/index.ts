@@ -8,6 +8,6 @@ import type { API } from 'homebridge';
 /**
  * This method registers the platform with Homebridge
  */
-export default (api: API): void => {
+export default function registerPlatform(api: API): void {
   api.registerPlatform(PLATFORM_NAME, BasementGuardianPlatform);
-};
+}

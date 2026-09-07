@@ -17,9 +17,9 @@ const AUTHENTICATION_BODY_FIELDS = 'password|username';
 // A token carries dots, so the class holds one, but the match may not end on a
 // dot: a token at the end of a sentence would otherwise swallow the full stop.
 const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=-](?:[\w.+/=-]*[\w+/=-])?/g;
-const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\\s*[:=]\\s*"?)[^",\\s}]+`, 'g');
-const PRESIGNED_URL_PATTERN = new RegExp(`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\\s"]+`, 'g');
-const AUTHENTICATION_BODY_PATTERN = new RegExp(`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\\s*[:=]\\s*"?)[^",}]+`, 'gi');
+const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
+const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
+const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)[^",}]+`, 'gi');
 
 const CREDENTIAL_PATTERNS: readonly RegExp[] = [AUTHORIZATION_PATTERN, AWS_SESSION_CREDENTIAL_PATTERN, PRESIGNED_URL_PATTERN, AUTHENTICATION_BODY_PATTERN];
 

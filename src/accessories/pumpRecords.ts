@@ -199,6 +199,13 @@ function recordValues(pump: PumpObservation | undefined): PumpRecordValues {
   };
 }
 
+// A watched activation takes this observation's own receipt time, because it is something the
+// plugin saw rather than something the device timed.
+function countWatchedActivation(pump: PumpObservation, receivedAt: number): void {
+  pump.activationCount += 1;
+  pump.lastActivationAt = receivedAt;
+}
+
 /**
  * Creates the pump records over one accessory's stored context.
  *
@@ -252,13 +259,6 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
     record = seeded;
 
     return seeded;
-  }
-
-  // A watched activation takes this observation's own receipt time, because it is something the
-  // plugin saw rather than something the device timed.
-  function countWatchedActivation(pump: PumpObservation, receivedAt: number): void {
-    pump.activationCount += 1;
-    pump.lastActivationAt = receivedAt;
   }
 
   // The device publishes a new backup-pump timestamp only after the pump stops, so the first
