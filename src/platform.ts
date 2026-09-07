@@ -494,6 +494,10 @@ export interface PlatformDeps {
   httpFetch: HttpFetch;
 }
 
+// Shared rather than built per construction, which is inert here: the record holds one function and
+// nothing mutates it.
+const DEFAULT_PLATFORM_DEPS: PlatformDeps = { httpFetch };
+
 /**
  * Composition root of the dynamic platform.
  *
@@ -524,7 +528,7 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     log: Logging,
     readonly config: PlatformConfig,
     readonly api: API,
-    deps: PlatformDeps = { httpFetch },
+    deps: PlatformDeps = DEFAULT_PLATFORM_DEPS,
   ) {
     // Installed before anything else can log, so no secret reaches the
     // delegate unredacted. The refusal below quotes no configured value: it is

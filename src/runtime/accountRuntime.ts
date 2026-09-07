@@ -68,9 +68,12 @@ const AUTHENTICATION_STOPPED =
 // `:50-57`). One kind per device therefore gives each pump its own warning
 // cadence with no change to the limiter, and a pump that has been quiet all
 // afternoon can no longer hold back the first warning about the pump beside it.
-// The vendor `deviceId` is the Phase 2 ruling's non-sensitive value, permitted
-// in logs and in accessory context, and it names no route, header, credential
-// or account (D-14, D-027, AUTH-02).
+// The vendor `deviceId` carries the account identifier: it reads
+// `<account-id>_<serial-number>`, and the first segment is an opaque
+// 24-character lowercase hexadecimal key. That key names no person, and it
+// unlocks no route, no header and no credential, so the value is permitted in
+// runtime logs and in accessory context. A public artifact still replaces it
+// with a placeholder (D-14, D-027, AUTH-02).
 function liveReportingKind(deviceId: string): string {
   return `Live device reporting for ${deviceId}`;
 }
@@ -83,6 +86,23 @@ function liveReportingSilent(deviceId: string): string {
     `No device message has arrived on the live connection from ${deviceId} for two heartbeat intervals, ` +
     'so HomeKit is marking what it shows untrustworthy until one does.'
   );
+}
+
+// One system's removal from HomeKit, named as its own failing activity.
+//
+// The `deviceId` is part of the kind for the reason it is part of
+// `liveReportingKind`: `FailureLog` rate-limits per kind string, so one kind per
+// device gives each refused removal its own cadence, and a pump Homebridge has
+// been refusing all afternoon can no longer hold back the first report about the
+// pump beside it, whose accessory is stranded just as badly (D-14).
+function removalKind(deviceId: string): string {
+  return `HomeKit removal of ${deviceId}`;
+}
+
+// The line one refused removal records. It names the controller and says what
+// the refusal left standing, because that is what an owner acts on.
+function removalRefused(deviceId: string): string {
+  return `Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`;
 }
 
 /**
@@ -413,54 +433,95 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return;
     }
 
-    try {
-      const freshDevices = await options.api.devices(root.signal);
-      const stillPresent = new Set(freshDevices.map((device) => device.deviceId));
+    let freshDevices: readonly ApiDevice[];
 
-      // Only the deviceIds actually under confirmation are re-observed here
-      // (CR-01): replaying the whole fleet through `reconciliation.observe()`
-      // let a transient omission on this extra request advance an unrelated,
-      // otherwise-healthy deviceId's absence count.
-      for (const deviceId of confirmedAbsent) {
-        if (stillPresent.has(deviceId)) {
-          // Reappeared since the confirming poll: forget it so a future
-          // absence starts a fresh epoch.
-          reconciliation.forget(deviceId);
-        } else {
-          // Confirmed and about to be removed: stop tracking it so it can
-          // never re-trigger this final check again once it is gone.
-          reconciliation.forget(deviceId);
-          // Everything keyed by this device is pruned here and nowhere else. A
-          // device missing from one inventory is not a removed device -- that is
-          // what these two confirming polls decide -- and dropping its state on
-          // every poll that omitted it would re-admit it on the next one and
-          // reset the silence window of a pump that is genuinely quiet, forever.
-          //
-          // Its arrival stamp goes, its persisted arrival anchor goes with it,
-          // and so does its live-reporting kind. The anchor is written back to
-          // disk, so a store that only ever grew would carry an entry for every
-          // system the account has ever held; dropping it here is what keeps the
-          // stored set no larger than the account.
-          // The failure log rate-limits per kind, and the kind of a system that
-          // has left the account can never recover, so leaving it would hold an
-          // entry for the life of the process and rate-limit whatever identifier
-          // came back next. It is forgotten rather than recorded successful:
-          // this system's reporting did not come back, the system went away, and
-          // `recordSuccess` would announce a recovery that never happened
-          // (D-14).
-          //
-          // The recovery latch needs nothing here. `reportMonitoringHealth`
-          // rebuilds it wholesale from the map it is about to push, and the
-          // removal runs before the poll records its outcome, so the entry is
-          // already gone by the end of this same poll.
-          health.forgetDevice(deviceId);
-          options.anchors.forget(deviceId);
-          options.failures.forget(liveReportingKind(deviceId));
-          options.onDeviceRemoved(deviceId);
-        }
-      }
+    try {
+      freshDevices = await options.api.devices(root.signal);
     } catch {
-      // Deliberately silent, for the reason above.
+      // Deliberately silent, for the reason above. The `try` holds the fetch
+      // and nothing else: every statement below it changes state, and a
+      // failure there is a different fact that has to be reported rather than
+      // dropped.
+      return;
+    }
+
+    const stillPresent = new Set(freshDevices.map((device) => device.deviceId));
+
+    // Only the deviceIds actually under confirmation are re-observed here
+    // (CR-01): replaying the whole fleet through `reconciliation.observe()`
+    // let a transient omission on this extra request advance an unrelated,
+    // otherwise-healthy deviceId's absence count.
+    for (const deviceId of confirmedAbsent) {
+      if (stillPresent.has(deviceId)) {
+        // Reappeared since the confirming poll: forget it so a future absence
+        // starts a fresh epoch.
+        reconciliation.forget(deviceId);
+
+        continue;
+      }
+
+      // The accessory goes first and every prune below waits on it, because
+      // each prune drops a mechanism that can still distrust this system: its
+      // absence count, its arrival stamp, its persisted anchor, its reporting
+      // kind. Pruning ahead of a removal that then failed would leave a
+      // published accessory that nothing can ever mark untrustworthy again,
+      // reading no leak and a normal pump for a system the account no longer
+      // holds -- the false normal this plugin refuses (D-014).
+      try {
+        options.onDeviceRemoved(deviceId);
+      } catch {
+        // The system stays published, stays watched and stays distrustable,
+        // and the next poll tries the removal again: `observe` reports a
+        // deviceId on every call while it stays absent, so the retry needs no
+        // state of its own (D-029).
+        //
+        // The reporting is rate-limited and the attempt above never is. The
+        // documented refusal is a UUID another plugin had already bridged,
+        // which no poll clears, so the removal is refused again on every poll
+        // for the life of the process; an unlimited line would write the same
+        // sentence 288 times a day at the shortest interval the configuration
+        // allows. It goes through the failure log for the reason a failing
+        // poll and a lost shadow do: said once, then on the reminder cadence,
+        // per kind, with no warn-once flag of its own (D-14).
+        //
+        // The refusal itself is not repeated into the line, for the reason
+        // `describeFailure` states: an arbitrary error's message is not this
+        // plugin's to quote, and a `reason` is the complete line to log.
+        options.failures.recordFailure(removalKind(deviceId), removalRefused(deviceId));
+
+        continue;
+      }
+
+      // Confirmed and now removed: stop tracking it so it can never
+      // re-trigger this final check again once it is gone.
+      reconciliation.forget(deviceId);
+      // Everything keyed by this device is pruned here and nowhere else. A
+      // device missing from one inventory is not a removed device -- that is
+      // what these two confirming polls decide -- and dropping its state on
+      // every poll that omitted it would re-admit it on the next one and
+      // reset the silence window of a pump that is genuinely quiet, forever.
+      //
+      // Its arrival stamp goes, its persisted arrival anchor goes with it,
+      // and so do both of the failure-log kinds it owns. The anchor is
+      // written back to disk, so a store that only ever grew would carry an
+      // entry for every system the account has ever held; dropping it here is
+      // what keeps the stored set no larger than the account.
+      // The failure log rate-limits per kind, and neither kind of a system
+      // that has left the account can ever report again, so leaving either
+      // would hold an entry for the life of the process and rate-limit
+      // whatever identifier came back next. Both are forgotten rather than
+      // recorded successful: this system's reporting did not come back, the
+      // system went away, and a removal that finally landed is that departure
+      // rather than a recovery an owner wants announced (D-14).
+      //
+      // The recovery latch needs nothing here. `reportMonitoringHealth`
+      // rebuilds it wholesale from the map it is about to push, and the
+      // removal runs before the poll records its outcome, so the entry is
+      // already gone by the end of this same poll.
+      health.forgetDevice(deviceId);
+      options.anchors.forget(deviceId);
+      options.failures.forget(liveReportingKind(deviceId));
+      options.failures.forget(removalKind(deviceId));
     }
   }
 
@@ -490,15 +551,6 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return shadowConnected ? 'shadow-and-poll' : 'poll-only';
   }
 
-  // The trust is computed once and reported from that one value, so what the
-  // plugin says about its own sight and what HomeKit marks cannot disagree.
-  //
-  // It runs on every poll outcome rather than from the poll loop alone, because
-  // `launch()` records its own first inventory outcome without going through
-  // that loop, and a report wired only into the loop would arrive a whole poll
-  // interval late -- an hour at the configuration maximum. A poll a shutdown
-  // aborted returns before both recorders, so it advances nothing and reports
-  // nothing.
   // Whether the plugin currently has a proven way to reach the vendor, derived
   // from the same three flags the monitoring path is derived from and storing
   // nothing of its own.
@@ -570,6 +622,15 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     options.onMonitoringHealth(account, monitoringTrustByDevice(account));
   }
 
+  // The trust is computed once and reported from that one value, so what the
+  // plugin says about its own sight and what HomeKit marks cannot disagree.
+  //
+  // It runs on every poll outcome rather than from the poll loop alone, because
+  // `launch()` records its own first inventory outcome without going through
+  // that loop, and a report wired only into the loop would arrive a whole poll
+  // interval late -- an hour at the configuration maximum. A poll a shutdown
+  // aborted returns before both recorders, so it advances nothing and reports
+  // nothing.
   function reportMonitoringHealth(): void {
     const account = monitoringTrustNow();
     const byDevice = monitoringTrustByDevice(account);

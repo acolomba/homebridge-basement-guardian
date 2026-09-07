@@ -297,8 +297,15 @@ function isSameValue(previous: unknown, next: unknown): boolean {
 }
 
 // Compares the merged telemetry record key by key. This reports which keys
-// moved and does not judge which of them matter, because no family adapter
-// exists yet to define relevance (D-19).
+// moved and does not judge which of them matter, because the store decodes no
+// telemetry field and holds no family knowledge: relevance is the accessory
+// tier's to decide, downstream of here (D-19, D-20).
+//
+// Teaching a family adapter's notion of relevance to this function would be a
+// safety regression rather than a saving. `notify` returns on an empty changed
+// list, and that notification is the only path a between-poll pump run reaches
+// HomeKit on, so a key the filter judged uninteresting would silently suppress
+// the live update for a running pump (SAFE-03, SAFE-07).
 function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
 

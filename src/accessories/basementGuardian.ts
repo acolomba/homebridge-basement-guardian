@@ -399,8 +399,8 @@ function untrustedScopesOf(reasons: ReadonlyMap<TrustScope, DistrustReason>, las
 // reconnection. The count only ever reads `connectivity.connected`, never the
 // device's own `data.offline` report, because an alert raised from a transport
 // hiccup teaches the owner to ignore it (RES-03, D-016).
-function nextOfflineCount(previous: number, connected: boolean, threshold: number): number {
-  return connected ? 0 : Math.min(previous + 1, threshold);
+function nextOfflineCount(previous: number, connectivity: DeviceSnapshot['connectivity'], threshold: number): number {
+  return connectivity.connected ? 0 : Math.min(previous + 1, threshold);
 }
 
 // The empty string, never a fabricated time, is what a scope that has never
@@ -1004,7 +1004,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         // would leave a device that stopped resolving and then went offline
         // never activating the one adapter RES-03 exists for (RES-03, D-09).
         if (source === 'poll') {
-          offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
+          offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity, offlineThreshold);
         }
 
         deviceDistrust = { violated: NON_CONNECTIVITY_SCOPES, controllerLinkLost: false };
@@ -1035,7 +1035,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       // everything else and leaves the confirmation run exactly where the last
       // poll left it (RES-03, D-09).
       if (source === 'poll') {
-        offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity.connected, offlineThreshold);
+        offlineCount = nextOfflineCount(offlineCount, snapshot.connectivity, offlineThreshold);
       }
 
       if (metadata !== undefined) {

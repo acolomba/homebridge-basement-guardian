@@ -9,9 +9,9 @@
  * non-dev entries there (the same scoping `dependencyLicenses.test.ts` uses) and recursively
  * scans every `.js` file under each one -- every production dependency's own code plus every
  * transitive dependency npm actually installed -- for known telemetry/analytics-SDK
- * identifiers. This is a defensive signature scan, not a substitute for the fuller review
- * recorded in `06-RESEARCH.md` (npm audit clean, mqtt.js is a well-known open-source MQTT
- * client) -- see Assumption A2 there.
+ * identifiers. This is a defensive signature scan, not a substitute for the fuller manual
+ * review of those two dependencies (npm audit clean, mqtt.js is a well-known open-source
+ * MQTT client).
  */
 
 import assert from 'node:assert/strict';

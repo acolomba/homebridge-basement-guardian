@@ -11,7 +11,7 @@ const DEFAULT_NAME = 'Basement Guardian';
 // The practical RFC-5322 shape the settings form already enforces through
 // `format: "email"`. A hand-edited config.json bypasses the form, so the
 // runtime checks the same shape again.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@][^\s@.]*\.[^\s@]+$/;
 
 /** An integer field, its inclusive bounds, and the value an absent field takes. */
 interface IntegerBounds {

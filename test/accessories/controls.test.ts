@@ -584,10 +584,10 @@ for (const refusalCase of VENDOR_REFUSALS) {
 
 // Every line a refusal writes, across all six causes. A log is a channel the plugin controls, so
 // what it may not carry is asserted directly: a bearer token, the vendor base URL, or a response
-// body (AUTH-02). The device identifier is asserted PRESENT, not absent: the 2026-08-29 ruling
-// treats a vendor `deviceId` as non-sensitive and admits it to logs and accessory context, and
-// without it a multi-pump account cannot tell which pump refused. `D-027` still keeps it out of
-// public artifacts, which is a different channel from this one.
+// body (AUTH-02). The device identifier is asserted PRESENT, not absent: a vendor `deviceId` is a
+// non-sensitive value, admitted to logs and accessory context, and without it a multi-pump account
+// cannot tell which pump refused. `D-027` still keeps it out of public artifacts, which is a
+// different channel from this one.
 test('names the capability and the device in every refusal line and quotes no token or URL', async () => {
   // arrange
   const warnings: string[] = [];

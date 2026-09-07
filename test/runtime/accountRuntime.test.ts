@@ -91,6 +91,14 @@ function liveReportingRecoveredLine(deviceId: string): string {
   return `Live device reporting for ${deviceId} recovered.`;
 }
 
+// The line a removal Homebridge refused records, restated here for the same
+// reason. It names the controller, because the failing activity is that
+// controller's removal and not the account's, and a two-pump case has to say
+// which accessory is stranded.
+function removalRefusedLine(deviceId: string): string {
+  return `Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`;
+}
+
 // Every recovery the failure log announced, whole lines and in order. A count
 // alone cannot tell "the right pump recovered" from "a pump recovered", which is
 // the whole question on a two-pump account (D-14).
@@ -332,6 +340,14 @@ interface Script {
   shadow: readonly boolean[];
   /** Whether closing the shadow connection rejects. */
   closeFails: boolean;
+  /**
+   * Whether unregistering an accessory throws.
+   *
+   * Homebridge answers a removal for an accessory it never bridged by
+   * throwing, which is the state an accessory reaches when its UUID collided
+   * with one another plugin had already bridged.
+   */
+  removalFails: boolean;
   /** Work the shadow start waits for, which is how a case lands a shutdown inside that window. */
   whileShadowStarts: () => Promise<void>;
   pollIntervalMs: number;
@@ -520,6 +536,11 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     },
     onDeviceRemoved: (deviceId: string): void => {
       removed.push(deviceId);
+
+      if (script.removalFails ?? false) {
+        throw new Error('Cannot find the bridged Accessory to remove.');
+      }
+
       // What the platform's own handler does with this signal, at
       // `src/platform.ts:480`. A harness that only records the call leaves the
       // device in the store, so the runtime goes on reporting on a system the
@@ -2223,10 +2244,10 @@ describe('the degraded monitoring path', () => {
     );
   });
 
-  // The line names the controller and nothing else about the account. The vendor deviceId is the one
-  // identifier a Phase 2 ruling admits to logs, and on a two-pump account a sentence without it does
-  // not say which basement stopped being watched. Everything the redaction rules actually forbid --
-  // route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
+  // The line names the controller and nothing else about the account. The vendor deviceId is a
+  // non-sensitive value and the one identifier admitted to logs, and on a two-pump account a sentence
+  // without it does not say which basement stopped being watched. Everything the redaction rules
+  // actually forbid -- route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
   test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
     // arrange
     const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
@@ -2622,6 +2643,128 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+  });
+
+  // A removal Homebridge refuses leaves an accessory published that this plugin has already
+  // vouched for. Everything that could still distrust that accessory -- its arrival stamp, its
+  // persisted anchor, its absence count -- therefore has to survive the refusal. Pruned ahead of
+  // the removal, the tile goes on reading no leak and a normal pump for a system the account no
+  // longer holds, nothing ever retries the removal, and nothing is said about any of it (D-014).
+  test('keeps a pump whose removal was refused watched, distrusted and reported, and tries the removal again', async (t) => {
+    // arrange
+    const { runtime, store, logged, anchors, removed, monitoringByDevice, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed],
+        stillStored: store.snapshot(DEVICE_ID) !== undefined,
+        keepsItsAnchor: anchors.stored.has(DEVICE_ID),
+        silence: silenceOf(monitoringByDevice).at(-1),
+        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
+      },
+      { attempts: [DEVICE_ID], stillStored: true, keepsItsAnchor: true, silence: true, warnings: 1 },
+    );
+
+    // act
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    // assert
+    assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
+  });
+
+  // A refused removal strands an accessory this plugin has already vouched for, so the first one
+  // is said the moment it happens rather than held back by the cadence its repeats are subject to.
+  test('reports a refused removal as soon as the removal is refused', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { attempts: [...removed], warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`) },
+      { attempts: [DEVICE_ID], warnings: 1 },
+    );
+  });
+
+  // The documented refusal is a UUID another plugin had already bridged, which no poll clears, so
+  // the removal is refused again for the life of the process. The attempt has to keep happening --
+  // nothing else ever removes the accessory -- while the line does not: unlimited, it writes the
+  // same sentence 288 times a day at the shortest interval the configuration allows (D-14).
+  test('says nothing further about a pump refused again inside the reminder window, and still retries every poll', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed],
+        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
+        repeats: countOfLine(logged, `debug ${removalRefusedLine(DEVICE_ID)}`),
+      },
+      { attempts: [DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID], warnings: 1, repeats: 3 },
+    );
+  });
+
+  // The kind is per device for the reason the live-reporting kind is: a pump refused all afternoon
+  // must not hold back the first report about the pump beside it, whose accessory is stranded just
+  // as badly. Both refusals land in the same poll at the same clock reading, so one shared kind
+  // would send the second straight to debug (D-14).
+  test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
+    // arrange
+    const { runtime, logged, removed, advance } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
+      pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      removalFails: true,
+    });
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        attempts: [...removed].sort(),
+        pump: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
+        pumpBesideIt: countOfLine(logged, `warn ${removalRefusedLine(OTHER_DEVICE_ID)}`),
+      },
+      { attempts: [DEVICE_ID, OTHER_DEVICE_ID].sort(), pump: 1, pumpBesideIt: 1 },
+    );
   });
 
   // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so

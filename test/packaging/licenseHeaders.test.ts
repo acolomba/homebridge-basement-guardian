@@ -44,8 +44,8 @@ test('NOTICE exists and names the Apache-licensed template this project began fr
 /**
  * The two `src/*.ts` files that stayed near-verbatim Apache-2.0 template material (D-035's
  * default reading). `src/platform.ts` was reexamined and classified MIT instead: it is over
- * 80% new code since the template import, an explicit maintainer decision recorded in this
- * plan's own SUMMARY rather than the RESEARCH.md-recommended default (T-06-06).
+ * 80% new code since the template import, an explicit maintainer decision that departs from
+ * that default (T-06-06).
  */
 const APACHE_DERIVED_FILES: readonly string[] = ['src/index.ts', 'src/settings.ts'];
 

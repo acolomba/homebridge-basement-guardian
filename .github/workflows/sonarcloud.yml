@@ -31,17 +31,18 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Use Node.js 26.x
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 26.x
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build the project
         run: npm run build
@@ -51,6 +52,13 @@ jobs:
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          # push and pull_request already carry branch/PR context in the event,
+          # and naming a branch on a pull_request breaks PR decoration.
+          # workflow_dispatch carries no such context, so without this the run
+          # is recorded against the project's main branch and overwrites main's
+          # analysis with the dispatched branch's code.
+          args: ${{ github.event_name == 'workflow_dispatch' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -2,6 +2,7 @@ import eslint from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import importX from 'eslint-plugin-import-x';
 import sonarjs from 'eslint-plugin-sonarjs';
+import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -84,6 +85,28 @@ export default tseslint.config(
         project: ['./tsconfig.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    // SonarCloud analyzes src/ alone: sonar.test.exclusions drops test/ and
+    // features/, so the full Sonar ruleset is scoped here to match what the
+    // server actually reports. The shared block above keeps its own smaller
+    // sonarjs selection repo-wide.
+    //
+    // Only the rules are spread: the shared block already registers the sonarjs
+    // plugin, and ESLint 10 rejects a second registration of the same name.
+    files: ['src/**/*.ts'],
+    plugins: {
+      unicorn,
+    },
+    rules: {
+      ...sonarjs.configs.recommended.rules,
+      // Sonar imports these four from the unicorn ruleset; eslint-plugin-sonarjs
+      // ships no equivalent, so they come straight from the source plugin.
+      'unicorn/consistent-function-scoping': 'error', // typescript:S7721
+      'unicorn/no-object-as-default-parameter': 'error', // typescript:S7737
+      'unicorn/no-anonymous-default-export': 'error', // typescript:S7726
+      'unicorn/prefer-string-raw': 'error', // typescript:S7780
     },
   },
   {

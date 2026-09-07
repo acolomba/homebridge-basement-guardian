@@ -976,14 +976,14 @@ export function publishValue(service: Service, characteristic: CharacteristicCla
  * Makes one characteristic unreadable under a named status, and leaves the
  * value it holds exactly where it is.
  *
- * This is the one act `03-CONTEXT.md` D-05 otherwise forbids. Pushing a
- * `HapStatusError` presents the accessory as "No Response", and a degradation
- * that will clear itself must never present that way, because greying out a
- * tile for a condition that fixes itself teaches an owner to ignore the one
- * signal that needs them. `D-10` grants the exception to a single cause -- a
- * vendor refusal of the account credentials -- which never self-clears and
- * which an automatic retry makes worse rather than merely failing to fix, so
- * "requires user action" is literal there and nowhere else (RES-04, D-10).
+ * This is the one act D-05 otherwise forbids. Pushing a `HapStatusError`
+ * presents the accessory as "No Response", and a degradation that will clear
+ * itself must never present that way, because greying out a tile for a
+ * condition that fixes itself teaches an owner to ignore the one signal that
+ * needs them. `D-10` grants the exception to a single cause -- a vendor
+ * refusal of the account credentials -- which never self-clears and which an
+ * automatic retry makes worse rather than merely failing to fix, so "requires
+ * user action" is literal there and nowhere else (RES-04, D-10).
  *
  * It is a separate function beside `publishValue` rather than a widening of it.
  * An error is not a `CharacteristicValue`, and widening that parameter would

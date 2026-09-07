@@ -196,8 +196,8 @@ function fakeSubject(): WriteSubject {
 }
 
 // One write script, run against each implementation in turn. Neither record is the expected value:
-// the assertion is that the two agree, so a semantic this phase got wrong would have to be wrong the
-// same way in the real HAP source, which is the point of comparing rather than restating.
+// the assertion is that the two agree, so a semantic the stand-in got wrong would have to be wrong
+// the same way in the real HAP source, which is the point of comparing rather than restating.
 type WriteScript = (subject: WriteSubject, refuse: (status: number) => Error) => Promise<WriteRecord>;
 
 async function bothRecords(script: WriteScript): Promise<{ real: WriteRecord; fake: WriteRecord }> {
@@ -370,8 +370,8 @@ test('leaves the stored status on On when StatusActive is pushed, on both implem
 // The ordering the macrotask choice rests on, confirmed against real HAP rather than against the
 // stand-in alone. A push queued as a microtask inside the handler runs before HAP's own catch
 // assigns the status, so it clears a status that has not been set yet and the refusal survives it.
-// Without this case that ordering would be the one write semantic in the whole phase proven only
-// against a stand-in this phase wrote (D-04).
+// Without this case that ordering would be the one write semantic proven against the stand-in
+// alone (D-04).
 test('survives a push queued as a microtask inside the handler, on both implementations', async () => {
   // act
   const { real, fake } = await bothRecords(async (subject, refuse) => {

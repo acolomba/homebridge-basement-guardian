@@ -13,6 +13,12 @@ import type { HttpFetch } from './httpDispatcher.js';
 import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
+// This http:// string is Auth0's own documented OAuth grant_type identifier for
+// the password-realm extension grant -- an opaque constant Auth0's server
+// matches verbatim, not an endpoint this plugin contacts. Changing it to
+// https:// would break authentication. SonarCloud suppresses the same finding
+// (typescript:S5332) through the e1 entry in sonar-project.properties.
+// eslint-disable-next-line sonarjs/no-clear-text-protocols
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
 const GRANT_ROUTE = 'POST /oauth/token';
