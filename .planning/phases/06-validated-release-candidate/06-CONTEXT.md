@@ -32,6 +32,17 @@ something this phase performs.
     publish (no more relying on the version string alone), so a manual or
     workflow-triggered `npm publish --tag next` is the standard shape either
     way — this doesn't change the decision, just confirms the mechanism.
+  - **Amended 2026-09-07:** the scope statement was right for Phase 6, but the
+    conclusion drawn from it was wrong. "No publish during this phase" became
+    `workflow_dispatch` as the workflow's permanent and only trigger, and the
+    comment in `publish.yml` hardened that into "it must never fire on its
+    own." A one-off scope limit is not a release policy. `publish.yml` now
+    publishes on a push of a `v*.*.*` tag, which is the ordinary shape for a
+    released package and what `pi-claude-marketplace` uses. The reversibility
+    note above no longer holds: pushing a version tag now publishes to npm,
+    and an npm publish cannot be undone. The tag push is the deliberate
+    maintainer action this decision asked for; it is now the tag rather than a
+    button in the Actions tab.
 
 ### CI Compatibility Matrix
 - **D-02:** Extend the existing `.github/workflows/build.yml` Node-version

@@ -156,6 +156,17 @@ Progress: [███░░░░░░░] 2 of 6 phases verified ([████
 
 All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Current planning anchors:
 
+- **[Post-Phase 06, decided 2026-09-07]: A tagged commit publishes; Phase 6's D-01 is amended.**
+  Phase 06's D-01 said Phase 6 stops at "ready to publish," which was right for that phase. The
+  workflow encoded it as `workflow_dispatch` being the permanent and only trigger, and `publish.yml`'s
+  comment hardened it into "it must never fire on its own." That turned a one-off scope limit into a
+  release policy it was never meant to be. `publish.yml` now runs on a push of a `v*.*.*` tag, gates
+  on the full `build.yml` matrix through `workflow_call`, refuses to publish when the tag and
+  `package.json` disagree, and creates the GitHub release. D-01's reversibility note is void: a tag
+  push now publishes to npm and an npm publish cannot be undone. Note that `D-01` is defined in five
+  phase contexts with five unrelated meanings, so a bare `D-01` in a source comment is ambiguous; the
+  one `publish.yml` cites is Phase 06's.
+
 - **[Post-Phase 05, decided 2026-09-03]: Marking breadth follows the cause, not the transport.** A
   cause that describes one pump marks that pump; a cause that describes the account marks every pump.
   Shadow silence becomes per-pump, joining a lost controller link, which is already per-pump. The two
