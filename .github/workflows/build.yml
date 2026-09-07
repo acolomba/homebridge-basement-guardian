@@ -39,15 +39,21 @@ jobs:
         homebridge-version: ['1.8.0', '1.11.4', '2.4.0']
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        # `npm install` can rewrite package-lock.json mid-run, so CI could
+        # pass against a dependency tree that is not the committed one.
+        # `npm ci` installs the lockfile exactly and fails when package.json
+        # and the lockfile disagree. The matrix pin below stays `npm install
+        # --no-save`, which `npm ci` cannot express.
+        run: npm ci
 
       - name: Pin matrix-selected Homebridge version
         # --no-save keeps package-lock.json's own ^2.4.0 pin untouched by CI.
