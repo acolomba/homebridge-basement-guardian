@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-04)
 Phase: 05 — Degraded Operation and Recovery
 Plan: Not started
 Status: Phase 06 shipped — PR #4
-Last activity: 2026-09-06 - Completed quick task 260906-d6e: Rename pump-running and battery services, refresh README/CONTRIBUTING prose, reset CHANGELOG 0.1.0 entry
+Last activity: 2026-09-07 - Completed quick task 260907-c7j: refinements, Sonar alignment, and a converged pr-review-toolkit loop
 
 **The per-phase counter read `2 of 7` while waves 1 through 4 were already done, and is reconciled
 here by hand.** `state.advance-plan` moves it one step per call and was called once for a wave that
@@ -636,6 +636,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260907-c7j | Capture the package-lock.json regeneration, clear the eight open SonarCloud findings, bump to 0.1.1, enforce the Sonar ruleset locally in eslint, and run the pr-review-toolkit review loop to convergence | 2026-09-07 | 6cc2c7b | Complete -- 5 blocking review findings fixed and re-verified closed; round 2 clean across all dimensions; npm run check green (1467 unit, 104 scenarios), coverage 100% | [260907-c7j-capture-package-lock-json-change-address](./quick/260907-c7j-capture-package-lock-json-change-address/) |
 | 260906-d6e | Rename "Backup Pump Activated" to "Backup Pump Running" and swap the two backup-battery displayNames ("Backup Battery Level" / "Backup Battery"), reorder config.schema.json's ignoredFaults enum, add required email/password to README's config example, convert the Eve-app footnote to a GFM admonition, run simple-english/humanizer over README.md and CONTRIBUTING.md, and reset CHANGELOG's 0.1.0 entry to two bullets | 2026-09-06 | 84f1f03 | Complete — typecheck/lint/fallow/format:check pass, cucumber 104/104, unit tests show no failure beyond 5 pre-existing unrelated ones | [260906-d6e-rename-pump-running-and-battery-services](./quick/260906-d6e-rename-pump-running-and-battery-services/) |
 | 260905-whi | Switch publish.yml to npm Trusted Publishing (OIDC), matching pi-claude-marketplace, now that 0.1.0 is live on the registry | 2026-09-05 | 7aae39e | Complete — trusted publisher registration on npmjs.com still needed before next publish run | [260905-whi-switch-publish-yml-to-npm-trusted-publis](./quick/260905-whi-switch-publish-yml-to-npm-trusted-publis/) |
 | 260905-t6o | Prepare release infrastructure: SonarCloud config + workflow, npm publish tag change to `latest` for the real 0.1.0 release, README badges and disclaimer rewrite, CHANGELOG 0.1.0 cut | 2026-09-05 | 3b76e49 | Complete — see the deliberate REL-07 exception note above | [260905-t6o-prepare-release-infrastructure-sonarclou](./quick/260905-t6o-prepare-release-infrastructure-sonarclou/) |
@@ -662,6 +663,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| review_advisory | Refused HomeKit removal still refetches the device inventory every poll, doubling the REST rate; only the log was throttled (8d8ffc0) | Deferred | 2026-09-07 | 1.0 |
 | Device family | HALO adapter implementation | Deferred | Initialization | v2 |
 | Setup | Custom setup interface | Deferred | Initialization | v2 |
 | uat_gaps | 04/04-UAT.md | testing::scenarios=0 | 2026-09-05 | 1.0 |
