@@ -1,14 +1,40 @@
 name: Publish
 
-# D-01: this is the only publish mechanism this phase wires, and it must
-# never fire on its own. workflow_dispatch is the sole trigger; the
-# maintainer runs it deliberately after this phase closes.
+# D-01: npm is the only publish mechanism, and it never fires on an ordinary
+# commit. Pushing a `v*.*.*` tag is the sole trigger, so a release is always a
+# deliberate act. `workflow_dispatch` is deliberately absent: a manual run
+# carries a branch ref, which would defeat the version/tag guard and make
+# `gh release create --verify-tag` fail, and it could publish a commit that no
+# tag or GitHub release ever points at.
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+# The group name starts with a literal, not `github.workflow`. Inside a called
+# workflow, `github.workflow` resolves to the CALLER's name, so a callee whose
+# group is built from it evaluates to the same string as its caller and waits
+# on a group the caller already holds. The run then deadlocks before any job
+# starts. build.yml declares no concurrency today, but the literal prefix keeps
+# adding one later from reintroducing that failure.
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  # Run the full build and lint matrix against the tagged commit before
+  # publishing. No path filter -- a release tag must always run the whole
+  # gate, whatever files the tagged commit happens to touch.
+  build:
+    uses: ./.github/workflows/build.yml
+
   publish:
+    needs: [build]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -26,13 +52,31 @@ jobs:
           cache: "npm"
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Verify the package version matches the tag
+        # An npm publish cannot be taken back. Without this check, tagging
+        # v0.1.2 while package.json still reads 0.1.1 publishes 0.1.1 under a
+        # v0.1.2 tag, and nothing anywhere reports the disagreement.
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          PKG_VERSION="$(npm pkg get version | tr -d '"')"
+          TAG_VERSION="${TAG#v}"
+          echo "package.json version: $PKG_VERSION"
+          echo "tag version:          $TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version $PKG_VERSION does not match tag $TAG"
+            exit 1
+          fi
+
       - name: Install dependencies
+        # `prepublishOnly` (`npm run lint && npm run build`) runs during
+        # `npm publish`, so the publish step needs node_modules present.
         run: npm ci
 
-      - name: Build the project
-        run: npm run build
-
       - name: Publish to npm
+        # `prepublishOnly` lints and builds the package here, so this job
+        # carries no separate build step.
+        #
         # This authenticates via npm Trusted Publishing (OIDC), so no
         # stored secret exists in this file. A trusted publisher must be
         # configured on npmjs.com's package settings (naming this repo,
@@ -46,3 +90,17 @@ jobs:
         # here on carries build provenance and needs no long-lived
         # credential.
         run: npm publish --access public --provenance
+
+  release:
+    needs: [publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
