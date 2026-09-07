@@ -218,9 +218,12 @@ test('AUTH-02 leaves the sentence full stop after an authorization token it subs
 
 // The credential value opens with an `s` and a second field follows it, so the
 // whole value class is load-bearing here. A class that excluded the letter `s`
-// instead of whitespace -- one dropped `String.raw` away -- would stop at the
-// first letter of a real session token and write the rest of it to the log
-// under a line that still reads redacted (AUTH-02).
+// instead of whitespace -- one dropped `String.raw` away -- cannot match this
+// value at all: the line is then written with the token whole and no
+// `[redacted]` anywhere in it. The danger that guards against is quieter, and
+// this case stands in for it: on a session token that merely contains an `s`,
+// the same degraded class stops at that letter and writes the rest of the token
+// to the log under a line that still reads redacted (AUTH-02).
 for (const field of AWS_SESSION_CREDENTIAL_FIELDS) {
   test(`AUTH-02 substitutes the temporary credential field ${field} and leaves the field beside it whole`, () => {
     // arrange
