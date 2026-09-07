@@ -18,6 +18,7 @@ export default tseslint.config(
       'build/**',
       'coverage/**',
       'dist/**',
+      'dist-test/**',
       'docs/research/**',
       'node_modules/**',
       'tmp/**',
@@ -80,14 +81,31 @@ export default tseslint.config(
     files: ['**/*.ts'],
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
   {
+    // The unit runner's test() returns a promise at every call site, which
+    // strictTypeChecked reports as a floating promise under --max-warnings=0.
+    // The exemption names the unit tree alone: the cucumber harness starts
+    // servers, brokers, and clients, so a promise it abandons is a real defect.
+    files: ['test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
+    },
+  },
+  {
     files: ['**/*.{js,mjs}'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    // The local Homebridge harness is a developer CLI; printing is its purpose.
+    files: ['dev/**/*.mjs'],
+    rules: {
+      'no-console': 'off',
+    },
   },
   {
     files: ['eslint.config.js'],

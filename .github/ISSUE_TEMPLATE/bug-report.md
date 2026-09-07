@@ -27,7 +27,8 @@ Show the Homebridge logs here, remove any sensitive information.
 **Plugin Config:**
 
 ```json
-Show your Homebridge config.json here, remove any sensitive information.
+Paste only the "platform": "BasementGuardian" block from your config.json.
+Remove the email and password fields before pasting.
 ```
 
 **Screenshots:**

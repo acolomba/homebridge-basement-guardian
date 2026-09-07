@@ -4,5 +4,9 @@
     "source.fixAll.eslint": "explicit"
   },
   "editor.rulers": [160],
-  "eslint.enable": true
+  "eslint.enable": true,
+  "sonarlint.connectedMode.project": {
+    "connectionId": "acolomba",
+    "projectKey": "acolomba_homebridge-basement-guardian"
+  }
 }

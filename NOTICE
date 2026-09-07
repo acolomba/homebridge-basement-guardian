@@ -1,0 +1,19 @@
+Basement Guardian
+Copyright (c) 2026 Alessandro Colomba
+
+This project was started from the Homebridge plugin template
+(https://github.com/homebridge/homebridge-plugin-template), which is licensed
+under the Apache License, Version 2.0. Two files carried forward from that
+template and modified for this project remain licensed under Apache-2.0:
+
+- src/index.ts
+- src/settings.ts
+
+src/platform.ts also began from that template but has since replaced nearly
+all of its material with original implementation; it is reclassified as
+original work and licensed under the MIT License.
+
+Every other file under src/ is original work created for this project and is
+licensed under the MIT License.
+
+See LICENSE for the complete text of both licenses.

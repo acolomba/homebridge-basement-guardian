@@ -1,5 +1,6 @@
 # Ignore compiled code
 dist
+dist-test
 
 # ------------- Defaults ------------- #
 .DS_Store
@@ -125,8 +126,14 @@ dist
 .idea
 
 /test/hbConfig/*
-!/test/hbConfig/auth.json
-!/test/hbConfig/config.json
+!/test/hbConfig/config.example.json
+
+# A developer run of `npm run watch` puts a real account password here.
+/test/hbConfig/config.json
+
+# The dev container's storage. Its generated config.json holds a real account
+# password, and the rest is pairing state.
+/dev/homebridge/
 
 # AI harness local state
 **/.claude/settings.local.json

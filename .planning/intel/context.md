@@ -35,6 +35,29 @@
 
     A replacement removes pump, power, charging, test, and fault values from the cache.
 
+    ### Measured shadow message shapes
+
+    The probe watched one Gemini account with one device for 90 minutes on 2026-09-03. The device stayed in steady state.
+
+    The probe recorded seven messages: one `get/accepted` and six `update/accepted`. All seven carried a `reported.data` section. None omitted it.
+
+    Each heartbeat carried both sections. `reported.data` held six keys and `reported.state` held `wifi_signal_dbm`. Every heartbeat payload measured 584 bytes. The probe recorded the count of the telemetry keys, not their names.
+
+    The `get/accepted` document held 19 keys under `reported.data`. It held three metadata keys: `mcu_firmware_version`, `wifi_firmware_version` and `wifi_signal_dbm`.
+
+    The seven-field heartbeat list above therefore splits across the two sections. Six fields arrive as telemetry. `wifi_signal_dbm` arrives as device metadata.
+
+    Five consecutive heartbeat gaps measured 898.2, 898.7, 898.6, 898.6 and 897.9 seconds. The mean was 898.4 seconds. This confirms the 898.3-second figure above, from a second independent measurement.
+
+    The probe did not observe a report that carried device metadata and no telemetry. The metadata section never travelled alone.
+
+    These limits apply to the measurement:
+
+    - Six heartbeats is a small sample.
+    - The device stayed in steady state. No pump cycle, fault, power event, reconnect or firmware update occurred. Event-driven reports are therefore unmeasured.
+    - The account held one device. Nothing about a multi-device account was observable.
+    - The plugin subscribes to `get/accepted`, `get/rejected` and `update/accepted` only. A `shadow/update/delta` message cannot reach it, so the probe could not observe one.
+
     ## 2. AWS credential lifecycle
 
     `GET /credentials/aws` returns STS credentials with an approximate one-hour lifetime. It also returns a new AWS IoT client ID.

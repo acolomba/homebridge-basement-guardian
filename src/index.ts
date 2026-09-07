@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// Modified from the Homebridge plugin template (https://github.com/homebridge/homebridge-plugin-template).
 import { BasementGuardianPlatform } from './platform.js';
 import { PLATFORM_NAME } from './settings.js';
 

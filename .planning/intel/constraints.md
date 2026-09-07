@@ -67,12 +67,16 @@
 
     The plugin uses these routes:
 
-    | Method | Path | Purpose |
-    | --- | --- | --- |
-    | `GET` | `/devices` | Discover devices and get snapshots. |
-    | `GET` | `/devices/{deviceId}` | Get one device and its shadow snapshot. |
-    | `PUT` | `/devices/{deviceId}/data` | Send a family-specific device command. |
-    | `GET` | `/credentials/aws` | Get the AWS IoT endpoint, client ID, and temporary credentials. |
+    | Method | Path | Purpose | Response envelope |
+    | --- | --- | --- | --- |
+    | `GET` | `/devices` | Discover devices and get snapshots. | `{ "devices": [ <device>, ... ] }` |
+    | `GET` | `/devices/{deviceId}` | Get one device and its shadow snapshot. | `{ "device": <device> }` |
+    | `PUT` | `/devices/{deviceId}/data` | Send a family-specific device command. | Not measured. |
+    | `GET` | `/credentials/aws` | Get the AWS IoT endpoint, client ID, and temporary credentials. | `{ endpoint, clientId, credentials }` |
+
+    A measurement against the live vendor API on 2026-08-29 confirmed these envelopes. One `wayneWaterGemini` device was available. The measurement also confirmed the `/credentials/aws` body that section 5 gives.
+
+    The list route wraps its result in the plural key `devices`. The single-device route wraps its result in the singular key `device`. The two routes use different keys on purpose. Neither route answers a bare array or a bare device record.
 
     The vendor service also defines account, device-management, firmware, location, rule, and contact routes. V1 does not use those routes.
 
@@ -97,6 +101,8 @@
     ```
 
     A successful command returns HTTP 200 with `{ "success": true }`.
+
+    This success body is unverified. The measurement of 2026-08-29 sent no command, because a command operates a real sump pump.
 
     The official Gemini client permits a self-test while equipment faults are present. It disables the command only when the device is offline.
 
@@ -157,6 +163,8 @@
 
     The shadow can include `mcu_target_version` and `wifi_firmware_version` when the REST snapshot omits them.
 
+    The measurement of 2026-08-29 contradicts this sentence on the tested device. The embedded `shadow.state` object omitted both fields too. This claim is unconfirmed. It can still be true on other firmware versions.
+
     ## 6. Device models
 
     ### Gemini identity
@@ -164,24 +172,51 @@
     Gemini is the dual-pump system with battery backup.
 
     ```text
-    deviceId       <account-id>_<serial-number>
-    serialNumber   <serial-number>
-    name           <user-selected-name>
-    deviceTypeId   wayneWaterGemini
-    productLine    wayneWater
-    connectivity   { connected: <boolean>, timestamp: <unix-milliseconds> }
+    accountId                 <account-id>
+    deviceId                  <account-id>_<serial-number>
+    deviceTypeId              wayneWaterGemini
+    location                  <object>
+    name                      <user-selected-name>
+    homeId                    null
+    roomId                    null
+    state                     <object>
+    data                      <object>
+    timestamp                 <unix-milliseconds>
+    shadow                    <object>
+    attributes                <object>
+    connectivity              { connected: <boolean>, timestamp: <unix-milliseconds> }
+    attributes.serialNumber   <serial-number>
+    attributes.productLine    wayneWater
     ```
 
-    The plugin uses `deviceId` only as the stable physical-accessory identifier. Public logs and fixtures must replace it with a placeholder.
+    The measurement of 2026-08-29 read one `wayneWaterGemini` device. The first 13 lines of the block are the top-level keys, in the order the record returned them. The last two lines are nested fields, shown here because the plugin reads them.
+
+    The `deviceId` value is the `accountId` value, then an underscore, then the `attributes.serialNumber` value. Both segments matched byte for byte.
+
+    The `accountId` value is 24 lowercase hexadecimal characters. The `attributes.serialNumber` value was 15 characters on the tested device. The `homeId` and `roomId` values were null on the tested device.
+
+    The `state`, `data`, `shadow`, and `attributes` values are nested objects. The `timestamp` value is a number. The `serialNumber` and `productLine` fields are inside the `attributes` object and are not top-level fields.
+
+    The plugin uses `deviceId` as the stable physical-accessory identifier. The decision of 2026-08-29 records that the vendor `deviceId` is not sensitive. The `<account-id>` segment is an opaque 24-character lowercase hexadecimal key. The segment is not an email address.
+
+    Thus, the plugin can store `deviceId` in accessory context and write it to runtime logs.
+
+    D-027 still governs public artifacts. Committed fixtures, samples, issue reports, and published documents must replace `deviceId` with a placeholder.
 
     ### Gemini metadata
 
-    | Field | Type |
-    | --- | --- |
-    | `wifi_signal_dbm` | Number. |
-    | `mcu_firmware_version` | String. |
-    | `wifi_firmware_version` | String. |
-    | `mcu_target_version` | String. |
+    These fields are in the `state` object of the device record.
+
+    | Field | Type | Observed on 2026-08-29 |
+    | --- | --- | --- |
+    | `wifi_signal_dbm` | Number. | Yes |
+    | `mcu_firmware_version` | String. | Yes |
+    | `wifi_firmware_version` | String. | Not observed |
+    | `mcu_target_version` | String. | Not observed |
+
+    The measurement did not find `wifi_firmware_version` or `mcu_target_version` in the REST `state` object. It also did not find them in the embedded `shadow.state` object.
+
+    The measurement covered one device with one firmware version. The absence of these fields on that device does not prove that the fields never appear.
 
     ### Gemini telemetry
 

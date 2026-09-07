@@ -1,0 +1,47 @@
+name: Publish
+
+# D-01: this is the only publish mechanism this phase wires, and it must
+# never fire on its own. workflow_dispatch is the sole trigger; the
+# maintainer runs it deliberately after this phase closes.
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/homebridge-basement-guardian
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Node.js 26.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Publish to npm
+        # This authenticates via npm Trusted Publishing (OIDC), so no
+        # stored secret exists in this file. A trusted publisher must be
+        # configured on npmjs.com's package settings (naming this repo,
+        # this workflow file, and the `npm` environment) linking this
+        # workflow before the next run can succeed -- set up once, now
+        # that the package has a first published version. Trusted
+        # Publishing cannot bootstrap a brand-new package
+        # (https://github.com/npm/cli/issues/8544); pi-claude-marketplace's
+        # own bootstrap history followed the identical path, using a
+        # stored secret for its first release too. Every release from
+        # here on carries build provenance and needs no long-lived
+        # credential.
+        run: npm publish --access public --provenance

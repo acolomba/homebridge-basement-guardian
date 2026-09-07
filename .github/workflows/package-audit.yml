@@ -1,0 +1,51 @@
+name: Package Audit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  package-audit:
+    runs-on: ubuntu-latest
+
+    # Packaging content does not vary by Homebridge version, so this job
+    # runs no matrix; it audits the one real tarball `npm pack` produces.
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Node.js 26.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the project
+        run: npm run build
+
+      - name: Pack the plugin
+        run: npm pack
+
+      - name: Extract the packed artifact
+        run: |
+          mkdir -p /tmp/pack
+          tar -xzf homebridge-basement-guardian-*.tgz -C /tmp/pack
+
+      - name: Install trufflehog
+        # Pinned to the same revision .pre-commit-config.yaml already pins
+        # for the trufflehog hook, so both scans run identical code.
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/v3.92.4/scripts/install.sh | sh -s -- -b /usr/local/bin v3.92.4
+
+      - name: Scan the packed artifact for secrets
+        # REL-04: this scans the real packed tarball's contents, not just
+        # the path list `npm pack --dry-run --json` already audits.
+        run: trufflehog filesystem /tmp/pack --results=verified,unknown --fail

@@ -2,16 +2,83 @@
   "pluginAlias": "BasementGuardian",
   "pluginType": "platform",
   "singular": true,
-  "strictValidation": false,
+  "strictValidation": true,
+  "headerDisplay": "Sign in with your Basement Guardian account. Homebridge stores the password in plain text in `config.json` and includes it in backups. The plugin sends the password only to the vendor Auth0 tenant.",
   "schema": {
     "type": "object",
-    "required": ["name"],
-    "additionalProperties": false,
+    "required": ["email", "password"],
     "properties": {
       "name": {
         "title": "Name",
         "type": "string",
-        "default": "Basement Guardian"
+        "default": "Basement Guardian",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "Shown in the Homebridge log. Not the accessory name."
+      },
+      "email": {
+        "title": "Account email",
+        "type": "string",
+        "format": "email",
+        "description": "The email address you sign in to the Basement Guardian app with."
+      },
+      "password": {
+        "title": "Account password",
+        "type": "string",
+        "widget": "password",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "The form masks this field. Homebridge stores the value in plain text in `config.json` and in backups."
+      },
+      "clientId": {
+        "title": "Authentication client ID",
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S",
+        "description": "Optional override for the bundled public Auth0 client ID. Leave this unset unless the vendor changes the client ID."
+      },
+      "pollInterval": {
+        "title": "REST poll interval (seconds)",
+        "type": "integer",
+        "minimum": 300,
+        "maximum": 3600,
+        "placeholder": "900",
+        "description": "Backstop poll of the cloud API. Live state arrives over the device shadow; this only catches a silently dead socket and refreshes the reachability flag. The device reports about every 15 minutes, so polling faster gains nothing."
+      },
+      "offlineConfirmationPollCount": {
+        "title": "Offline confirmation poll count",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8,
+        "default": 2,
+        "description": "Activate the offline condition after this many consecutive successful polls report the device disconnected."
+      },
+      "ignoredFaults": {
+        "title": "Notification sensors to leave out",
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "enum": [
+            "backup-pump-fault",
+            "backup-pump-running",
+            "basement-guardian-offline",
+            "mains-power-lost",
+            "primary-pump-fault",
+            "pump-controller-link-lost",
+            "water-sensor-fault"
+          ],
+          "enumNames": [
+            "Backup Pump Fault",
+            "Backup Pump Running",
+            "Basement Guardian Offline",
+            "Mains Power Lost",
+            "Primary Pump Fault",
+            "Pump Controller Link Lost",
+            "Water Sensor Fault"
+          ]
+        },
+        "description": "Leaving a sensor out removes only that Apple Home notification sensor. The condition, the owning service's status characteristics, the diagnostics, and the truthful service all remain. Apple builds Activity History from the published service, so leaving a sensor out also removes its history view. An unrecognised or repeated name stops the plugin from starting."
       }
     }
   }
