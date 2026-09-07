@@ -153,7 +153,8 @@ const testConstants: ProtocolConstants = {
   protocol: 'wss',
 };
 
-// Fixture device identifiers are placeholders and carry no real vendor value.
+// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
+// placeholder in place of the real account identifier.
 function geminiDevice(): ApiDevice {
   return {
     deviceId: DEVICE_ID,

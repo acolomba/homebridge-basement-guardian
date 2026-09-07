@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Nothing here logs a topic, a device identifier, a URL, or a payload. The
 // signed URL carries the credential scope, the session token, and the
-// signature (AUTH-02).
+// signature, and the device identifier embeds the account identifier (AUTH-02).
 
 import { presignIotWebsocketUrl } from './sigv4.js';
 import { isRecord } from './types.js';
@@ -137,7 +137,8 @@ const TOPIC_WILDCARD = /[+#]/;
 // would be dropped by the unresolved-route path without a word. The identifier
 // is refused instead. The device keeps the poll, which is the reconciliation
 // backstop anyway, so this narrows the scope rather than losing the device, and
-// the message says so once without quoting the identifier (D-15, AUTH-02).
+// the message says so once without quoting the identifier, which embeds the
+// account identifier (D-15, AUTH-02).
 function usableDevices(deviceIds: readonly string[], log: Logging): readonly string[] {
   const usable = deviceIds.filter((deviceId: string) => !TOPIC_WILDCARD.test(deviceId));
 

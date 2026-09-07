@@ -173,9 +173,10 @@ const DEFAULT_CREDENTIALS: AwsCredentialsResponse = {
 };
 
 // The vendor's own account identifier appears in every wire record. This service keeps one fixed
-// placeholder while a scenario brings its own device identifiers. Nothing in the plugin reads the
-// account identifier or splits a deviceId, so nothing depends on any relation between the two; a
-// future change that did depend on one would not be caught by this service.
+// placeholder while a scenario brings its own device identifiers, so the vendor's measured relation
+// between deviceId, the account identifier, and the serial number does not hold here. Nothing in the
+// plugin reads the account identifier or splits a deviceId today, so nothing depends on it; a future
+// change that did depend on the relation would not be caught by this service.
 const ACCOUNT_ID = 'fake-account-id';
 const PRODUCT_LINE = 'wayneWater';
 

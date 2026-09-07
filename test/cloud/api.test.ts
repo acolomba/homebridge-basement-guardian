@@ -18,7 +18,8 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 const auth: AuthClient = { idToken: () => Promise.resolve('id-token-1') };
 
-// Fixture device identifiers are placeholders and carry no real vendor value.
+// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
+// placeholder in place of the real account identifier.
 function geminiDevice(): ApiDevice {
   return {
     deviceId: 'account-1_serial-1',

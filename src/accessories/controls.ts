@@ -511,10 +511,11 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   //
   // The line names the device, the capability and a cause, and nothing else: no
   // URL, header value, token, or response body (AUTH-02). The `deviceId` is
-  // deliberate. It is a non-sensitive value, admitted to logs and accessory
-  // context; `D-027` still keeps it out of public artifacts. Without it a
-  // multi-pump account cannot tell which pump refused a control, which matters
-  // more here than the residual `D-027` already weighed.
+  // deliberate. It reads `<account-id>_<serial-number>`, and it is a
+  // non-sensitive value, admitted to logs and accessory context; `D-027` still
+  // keeps it out of public artifacts. Without it a multi-pump account cannot
+  // tell which pump refused a control, which matters more here than the
+  // residual `D-027` already weighed.
   function refuseLocally(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, refusal: LocalRefusal): never {
     armClearingPush(service, reported);
     log.warn(`Refused ${capability} on ${deviceId}: ${refusal.cause}.`);
