@@ -68,9 +68,12 @@ const AUTHENTICATION_STOPPED =
 // `:50-57`). One kind per device therefore gives each pump its own warning
 // cadence with no change to the limiter, and a pump that has been quiet all
 // afternoon can no longer hold back the first warning about the pump beside it.
-// The vendor `deviceId` is a non-sensitive value, permitted in logs and in
-// accessory context, and it names no route, header, credential or account
-// (D-14, D-027, AUTH-02).
+// The vendor `deviceId` carries the account identifier: it reads
+// `<account-id>_<serial-number>`, and the first segment is an opaque
+// 24-character lowercase hexadecimal key. That key names no person, and it
+// unlocks no route, no header and no credential, so the value is permitted in
+// runtime logs and in accessory context. A public artifact still replaces it
+// with a placeholder (D-14, D-027, AUTH-02).
 function liveReportingKind(deviceId: string): string {
   return `Live device reporting for ${deviceId}`;
 }
