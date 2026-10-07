@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # typescript-eslint's peer dependency caps the typescript major it supports;
+      # a major bump fails npm install (ERESOLVE) until typescript-eslint catches up.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "npm"
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    cooldown:
+      default-days: 7

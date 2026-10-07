@@ -12,6 +12,13 @@ on:
       - main
   workflow_dispatch:
   workflow_call:
+    secrets:
+      SONAR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   build:
@@ -41,6 +48,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v7
@@ -54,26 +63,28 @@ jobs:
         # `npm ci` installs the lockfile exactly and fails when package.json
         # and the lockfile disagree. The matrix pin below stays `npm install
         # --no-save`, which `npm ci` cannot express.
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Pin matrix-selected Homebridge version
         # --no-save keeps package-lock.json's own ^2.4.0 pin untouched by CI.
-        run: npm install --no-save homebridge@${{ matrix.homebridge-version }}
+        run: npm install --ignore-scripts --no-save homebridge@${{ matrix.homebridge-version }} # zizmor: ignore[adhoc-packages] -- Exact matrix pins verify supported Homebridge versions.
 
-      - name: Lint the project
-        run: npm run lint
+      - name: Clear the ESLint cache
+        run: rm -rf node_modules/.cache/eslint
 
-      - name: Check formatting
-        run: npm run format:check
+      - name: Run the full check pipeline
+        run: npm run check
+        env:
+          TEST_CONCURRENCY: "4"
 
-      - name: Check types
-        run: npm run typecheck
-
-      - name: Check code health
-        run: npm run fallow
-
-      - name: Run tests
-        run: npm test
+      - name: Save accepted direct coverage
+        if: matrix.node-version == '26.x' && matrix.homebridge-version == '2.4.0'
+        uses: actions/upload-artifact@v7
+        with:
+          name: direct-coverage-lcov
+          path: coverage/direct.lcov
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Build the project
         run: npm run build
@@ -87,3 +98,12 @@ jobs:
 
       - name: Audit production dependencies for known vulnerabilities
         run: npm audit --omit=dev
+
+  sonarcloud:
+    needs: [build]
+    if: >-
+      github.ref_type != 'tag' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request'
+          || github.event.pull_request.head.repo.full_name == github.repository)
+    uses: $/.github/workflows/sonarcloud.yml
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

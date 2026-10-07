@@ -1,8 +1,8 @@
 {
-  "entry": ["src/index.ts"],
+  "entry": ["src/index.ts", "scripts/*.mjs", "test/**/*.test.ts", "dev/*.mjs"],
   "ignoreDependencies": ["aedes", "mqtt", "ws"],
   "ignoreFindings": ["src/device/events.ts"],
-  "ignorePatterns": ["dist-test/**", "dev/homebridge/**"],
+  "ignorePatterns": ["dist-test/**", "dev/homebridge/**", ".pi/**", ".planning/**", ".worktrees/**"],
   "production": false,
   "health": {
     "maxCyclomatic": 20,

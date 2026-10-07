@@ -29,26 +29,19 @@ Read only the pages that apply to the task. Compare current documentation with t
 
 - NEVER rebase, never rewrite history. Update branches by merging.
 
-- When committing from inside a worktree, prefix the commit with `SKIP=trufflehog`, but only after confirming the scan is clean by the filesystem route below. Do not extend `SKIP=` to other hooks.
-
-  The hook entry is `trufflehog git file://. --since-commit HEAD --results=verified --fail` -- a **git-mode** scan. In a linked worktree `.git` is a text file holding `gitdir: <main>/.git/worktrees/<name>`, not a directory, so the scan cannot find `.git/index` and aborts with:
-
-  ```text
-  error preparing repo: failed to read index file: open <worktree>/.git/index: not a directory
-  ```
-
-  This is structural, not transient. `pre-commit run trufflehog --all-files` fails identically, so it does **not** confirm anything -- run a filesystem scan over the paths you are committing instead:
-
-  ```bash
-  TH=$(find "${PRE_COMMIT_HOME:-$HOME/.cache/pre-commit}" -type f -name trufflehog -perm -u+x | head -1)
-  "$TH" filesystem <changed paths> --results=verified,unknown --fail
-  ```
-
-  `filesystem` mode scans file contents rather than git history, which is the right question at commit time: do the files being committed contain secrets. `--results=verified,unknown` is deliberately stricter than the hook's `verified`-only setting, because unverifiable candidates still warrant a look. Exit 0 with `verified_secrets: 0` and `unverified_secrets: 0` is the clean result. Committing from the main checkout is unaffected -- the hook works normally there.
+- The secret hook scans staged file paths in filesystem mode, including linked worktrees. Run all hooks without `SKIP` overrides.
 
 - When writing PR descriptions, use the `simple-english` and `humanizer` skills if available.
 
 - Always use `--squash` when merging PRs (`gh pr merge --squash`). The repository does not allow merge commits or rebase merges.
+
+### Build verification
+
+Read `skills/local-verification/SKILL.md` before choosing checks. Commit hooks run `npm run check:commit` for build inputs. Run `npm run check` before final handoff. The complete gate includes Cucumber and isolated coverage for every source module.
+
+### TypeScript skills
+
+Use `skills/typescript-google-style-review/SKILL.md` and `skills/typescript-comments/SKILL.md` for TypeScript changes. Use the unit-testing skills for `test/` and the Cucumber skill for `features/`. Preserve `.js` imports and the compiled test layout.
 
 ### Versioning
 
