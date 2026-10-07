@@ -1,0 +1,22 @@
+# changes here will be overwritten by copier
+_commit: 80b3fa0b81d90742c828799977680dd24d760a3a
+_src_path: https://github.com/acolomba/blueprint-typescript.git
+agents:
+- claude
+- codex
+- pi
+author_email: acolomba@gmail.com
+author_name: Alessandro Colomba
+behavioral_tests: true
+build: true
+codegraph: false
+copyright_license: MIT
+description: A Homebridge plugin for monitoring and protecting basements.
+github_owner: acolomba
+gsd: false
+integration_tests: false
+node_version: '22'
+package_name: homebridge-basement-guardian
+project_name: homebridge-basement-guardian
+publish_npm: true
+source_layout: src

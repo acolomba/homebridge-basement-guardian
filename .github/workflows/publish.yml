@@ -29,7 +29,10 @@ jobs:
   # publishing. No path filter -- a release tag must always run the whole
   # gate, whatever files the tagged commit happens to touch.
   build:
-    uses: ./.github/workflows/build.yml
+    uses: $/.github/workflows/build.yml
+    permissions:
+      contents: read
+      pull-requests: read
 
   publish:
     needs: [build]
@@ -44,12 +47,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Use Node.js 26.x
         uses: actions/setup-node@v7
         with:
           node-version: 26.x
-          cache: "npm"
+          package-manager-cache: false
           registry-url: 'https://registry.npmjs.org'
 
       - name: Verify the package version matches the tag
@@ -71,7 +76,7 @@ jobs:
       - name: Install dependencies
         # `prepublishOnly` (`npm run lint && npm run build`) runs during
         # `npm publish`, so the publish step needs node_modules present.
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Publish to npm
         # `prepublishOnly` lints and builds the package here, so this job

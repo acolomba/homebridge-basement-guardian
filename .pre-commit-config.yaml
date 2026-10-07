@@ -1,4 +1,4 @@
-exclude: ^(\.agents/|\.claude/|\.codex/)
+exclude: ^(\.agents/|\.claude/|\.codex/|\.pi/)
 
 default_install_hook_types:
   - pre-commit
@@ -29,17 +29,6 @@ repos:
       - id: forbid-submodules
       - id: forbid-new-submodules
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        files: '\.(js|json|mjs|ts)$'
-        # Pin prettier to match the npm devDependency (the mirror otherwise
-        # floats and CI resolved a version that reformats TS union types
-        # differently from the local check).
-        additional_dependencies:
-          - prettier@3.9.6
-
   - repo: https://github.com/sirosen/texthooks
     rev: 0.7.1
     hooks:
@@ -54,9 +43,12 @@ repos:
       - id: forbid-bidi-controls
 
   - repo: https://github.com/trufflesecurity/trufflehog
-    rev: v3.92.4
+    rev: v3.97.9
     hooks:
       - id: trufflehog
+        entry: trufflehog filesystem --results=verified,unknown --fail --no-update
+        pass_filenames: true
+        stages: [pre-commit]
 
   - repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
@@ -67,12 +59,14 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
-        args: ["-d", "{extends: default, rules: {line-length: disable, document-start: disable, truthy: disable}}"]
+        args: ["--strict", "-d", "{extends: default, rules: {line-length: disable, document-start: disable, truthy: disable, comments: {min-spaces-from-content: 1}}}"]
+        exclude: ^\.copier-answers\.yml$
 
   - repo: https://github.com/google/yamlfmt
     rev: v0.20.0
     hooks:
       - id: yamlfmt
+        exclude: ^\.copier-answers\.yml$
 
   - repo: https://github.com/hukkin/mdformat
     rev: 1.0.0
@@ -91,35 +85,25 @@ repos:
       - id: markdownlint-cli2
         exclude: ^(\.github/ISSUE_TEMPLATE/|\.planning/)
 
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+        # --no-progress is repeated here. Setting args replaces the upstream list
+        # instead of adding to it.
+        args: ["--no-progress", "--config", "zizmor.yml"]
+
   - repo: local
     hooks:
-      # Each hook runs the whole project because pass_filenames is false.
-      # The files pattern only determines whether the hook runs. Include every
-      # source path and configuration file that can change the tool result.
-      #
-      # Pre-commit does not select deleted files. Thus, a delete-only commit can
-      # skip these hooks. CI must run the complete npm check as the merge gate.
-      - id: npm-lint
-        name: npm lint
-        entry: npm run lint
+      - id: prettier
+        name: prettier
+        entry: node_modules/.bin/prettier --write --cache --cache-strategy content
+        language: system
+        files: '\.(js|json|mjs|ts)$'
+      # CI runs the complete gate on every pull request, including deletions.
+      - id: npm-check
+        name: npm run check:commit
+        entry: npm run check:commit
         language: system
         pass_filenames: false
-        files: '^(eslint\.config\.js|tsconfig\.json|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json)$'
-      - id: npm-format-check
-        name: npm format check
-        entry: npm run format:check
-        language: system
-        pass_filenames: false
-        files: '^(\.prettierrc\.json|\.prettierignore|eslint\.config\.js|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
-      - id: npm-typecheck
-        name: npm typecheck
-        entry: npm run typecheck
-        language: system
-        pass_filenames: false
-        files: '^((src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json|tsconfig\.json)$'
-      - id: npm-fallow
-        name: npm fallow
-        entry: npm run fallow
-        language: system
-        pass_filenames: false
-        files: '^(\.fallowrc\.json|tsconfig\.json|eslint\.config\.js|(src|test|features)/.*\.(mjs|ts)|package(-lock)?\.json)$'
+        files: '^(\.editorconfig|\.fallowrc\.json|\.gitattributes|\.gitignore|\.prettierignore|\.prettierrc\.json|eslint\.config\.js|package(-lock)?\.json|sonar-project\.properties|tsconfig(\.build|\.test)?\.json|cucumber\.json|(src|test|features|\.github/workflows)/.*|scripts/.*\.mjs|config\.schema\.json)$'
