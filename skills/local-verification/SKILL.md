@@ -1,11 +1,11 @@
 ---
 name: local-verification
-description: Select and schedule this repository's build checks when planning, implementing, debugging, or verifying changes.
+description: Select and schedule this repository's build checks when planning, implementing, debugging, or verifying changes through GSD.
 ---
 
 # Local verification
 
-A commit runs `npm run check:commit` when staged files match the `npm-check` hook's build-input pattern. A PR/release handoff runs `npm run check` on the whole tree. CI runs the full check from a clean installation. Keep the hook's build-input pattern and the CI workflow's build inputs in sync when adding inputs.
+A commit runs `npm run check:commit` when staged files match the `npm-check` hook's build-input pattern. A GSD gate or PR/release handoff runs `npm run check` on the whole tree. CI runs the full check from a clean installation. Keep the hook's build-input pattern and the CI workflow's build inputs in sync when adding inputs.
 
 ## Commands
 
@@ -25,10 +25,10 @@ Pre-commit passes no deleted file to a hook and applies its top-level exclusions
 
 ESLint caches file content and configuration under `node_modules/.cache/eslint/`. Typed lint also reads other files' types, so cached results can become stale. CI clears this cache before checking; delete it yourself when fresh local lint is needed. TypeScript and Prettier also use native disposable caches.
 
-## Completion gates
+## Completion and GSD gates
 
-A passing commit hook is incremental evidence, not full verification. Final PR/release handoff requires the full check.
+A passing commit hook is incremental evidence, not full verification. Give each task a concrete `<verify>` command and record each commit hook result. Keep `workflow.test_command` set to `npm run check`. GSD's post-merge wave, phase, and merge gates run it on the combined tree. A quick task that commits a build input also runs it in the main checkout after merging its executor worktree, before completion. The 2,400-second timeout is a limit, not a passing result. Final PR/release handoff requires the full check.
 
-Reuse passing evidence only from this session and for unchanged inputs. Record the command, exit status, commit, Node version, and scope. Use a clean verified commit as the reference; for a dirty tree, retain its exact diff and untracked contents for comparison. A path list is insufficient. Never reuse after source, test support, dependency, configuration, runtime, or tool changes. Rerun when uncertain. No persistent success marker replaces this comparison.
+Reuse passing evidence only from this session and for unchanged inputs. Record the command, exit status, commit, Node version, and scope. Use a clean verified commit as the reference; for a dirty tree, retain its exact diff and untracked contents for comparison. A path list is insufficient. Planning-only Markdown commits may reuse evidence if `git diff <verified-commit> -- . ':(exclude,glob).planning/**/*.md'` is empty and no new untracked executable inputs exist. Never reuse after source, test support, dependency, configuration, runtime, or tool changes. Rerun when uncertain. No persistent success marker replaces this comparison.
 
-This scheduling policy takes precedence over generic instructions to run the whole suite after every task. It does not permit skipping a required handoff gate or accepting a failed or timed-out check.
+This scheduling policy takes precedence over generic instructions to run the whole suite after every task. It does not permit skipping a required combined-tree or handoff gate or accepting a failed or timed-out check.
