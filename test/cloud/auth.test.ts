@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { getEventListeners } from 'node:events';
 import { access, chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -163,6 +164,33 @@ function stubFetch(t: TestContext, respond: (callIndex: number) => Response): { 
 
 function grantResponse(idToken: string): Response {
   return new Response(JSON.stringify({ id_token: idToken, expires_in: TOKEN_LIFETIME_SECONDS }), { status: 200 });
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve, reject };
+}
+
+function controlledGrant() {
+  const started = deferred<AbortSignal>();
+  const response = deferred<Response>();
+  const requests: AbortSignal[] = [];
+  const httpFetch: AuthClientOptions['httpFetch'] = (_input, init) => {
+    const signal = init?.signal;
+    assert.ok(signal instanceof AbortSignal);
+    requests.push(signal);
+    started.resolve(signal);
+
+    return response.promise;
+  };
+
+  return { started, response, requests, httpFetch };
 }
 
 test('sends the password-realm grant the vendor tenant expects', async (t) => {
@@ -346,6 +374,234 @@ test('AUTH-01 issues one grant for two callers that start together with no curre
   // assert
   assert.deepStrictEqual(idTokens, ['id-token-1', 'id-token-1']);
   assert.strictEqual(grantRequests.length, 1);
+});
+
+test('keeps the joined caller grant alive when the first caller aborts', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const started = deferred<AbortSignal>();
+  const response = deferred<Response>();
+  const first = new AbortController();
+  const joined = new AbortController();
+  const messages: string[] = [];
+  let requests = 0;
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: (_input, init) => {
+        requests += 1;
+        const signal = init?.signal;
+        assert.ok(signal instanceof AbortSignal);
+        signal.addEventListener(
+          'abort',
+          () => {
+            response.reject(signal.reason);
+          },
+          { once: true },
+        );
+        started.resolve(signal);
+
+        return response.promise;
+      },
+      log: createRecordingLog(messages),
+    }),
+  );
+
+  // act
+  const firstToken = authClient.idToken(first.signal);
+  const joinedToken = authClient.idToken(joined.signal);
+  const firstRejected = assert.rejects(firstToken, { name: 'AbortError' });
+  const joinedOutcome = joinedToken.then(
+    (idToken) => ({ status: 'fulfilled', idToken }),
+    () => ({ status: 'rejected' }),
+  );
+  const transport = await started.promise;
+  first.abort();
+  await firstRejected;
+  response.resolve(grantResponse('id-token-1'));
+
+  // assert
+  assert.deepStrictEqual(await joinedOutcome, { status: 'fulfilled', idToken: 'id-token-1' });
+  assert.strictEqual(transport.aborted, false);
+  assert.deepStrictEqual(parseJson(await readFile(join(storagePath, TOKEN_CACHE_FILENAME), 'utf8')), {
+    idToken: 'id-token-1',
+    expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+    emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+    salt: 'salt-1',
+  });
+  assert.strictEqual(requests, 1);
+  assert.deepStrictEqual(messages, []);
+});
+
+test('rejects a joined caller promptly while the first caller receives its token', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grant = controlledGrant();
+  const first = new AbortController();
+  const joined = new AbortController();
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch }));
+
+  // act
+  const firstToken = authClient.idToken(first.signal);
+  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'AbortError' });
+  const transport = await grant.started.promise;
+  joined.abort();
+  await joinedRejected;
+  grant.response.resolve(grantResponse('id-token-1'));
+
+  // assert
+  assert.strictEqual(await firstToken, 'id-token-1');
+  assert.strictEqual(transport.aborted, false);
+  assert.strictEqual(grant.requests.length, 1);
+  assert.deepStrictEqual(getEventListeners(first.signal, 'abort'), []);
+  assert.deepStrictEqual(getEventListeners(joined.signal, 'abort'), []);
+});
+
+for (const sharedRoot of [false, true]) {
+  test(`aborts the shared transport when ${sharedRoot ? 'the root cancels both callers' : 'both callers leave'}`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const grant = controlledGrant();
+    const first = new AbortController();
+    const joined = sharedRoot ? first : new AbortController();
+    const messages: string[] = [];
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch, log: createRecordingLog(messages) }));
+
+    // act
+    const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'AbortError' });
+    const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'AbortError' });
+    const transport = await grant.started.promise;
+    first.abort();
+    joined.abort();
+    await Promise.all([firstRejected, joinedRejected]);
+    const teardownRejected = assert.rejects(authClient.idToken(new AbortController().signal), { name: 'AbortError' });
+    grant.response.reject(transport.reason);
+    await teardownRejected;
+
+    // assert
+    assert.strictEqual(transport.aborted, true);
+    assert.strictEqual(grant.requests.length, 1);
+    assert.deepStrictEqual(messages, []);
+    assert.deepStrictEqual(getEventListeners(first.signal, 'abort'), []);
+    assert.deepStrictEqual(getEventListeners(joined.signal, 'abort'), []);
+  });
+}
+
+test('starts no grant for an already aborted caller', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const caller = new AbortController();
+  const authClient = createAuthClient(authOptions(storagePath));
+  caller.abort();
+
+  // act & assert
+  await assert.rejects(authClient.idToken(caller.signal), { name: 'AbortError' });
+  assert.deepStrictEqual(grantRequests, []);
+});
+
+test('does not join a grant after cancellation during the initial cache read', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const caller = new AbortController();
+  const authClient = createAuthClient(authOptions(storagePath));
+
+  // act
+  const canceled = assert.rejects(authClient.idToken(caller.signal), { name: 'AbortError' });
+  caller.abort();
+  await canceled;
+  const idToken = await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.strictEqual(idToken, 'id-token-1');
+  assert.strictEqual(grantRequests.length, 1);
+  assert.deepStrictEqual(getEventListeners(caller.signal, 'abort'), []);
+});
+
+test('settles surviving callers on grant failure and permits a later explicit grant', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grant = controlledGrant();
+  const first = new AbortController();
+  const joined = new AbortController();
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: (input, init) => (grant.requests.length === 0 ? grant.httpFetch(input, init) : Promise.resolve(grantResponse('id-token-2'))),
+    }),
+  );
+
+  // act
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
+  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
+  await grant.started.promise;
+  grant.response.reject(new Error('network failure'));
+  await Promise.all([firstRejected, joinedRejected]);
+  const idToken = await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.strictEqual(idToken, 'id-token-2');
+  assert.deepStrictEqual(getEventListeners(first.signal, 'abort'), []);
+  assert.deepStrictEqual(getEventListeners(joined.signal, 'abort'), []);
+});
+
+test('rejects cancellation during cache writing while a surviving caller registers the token', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grant = controlledGrant();
+  const first = new AbortController();
+  const registered: string[] = [];
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: grant.httpFetch,
+      createSalt: () => {
+        first.abort();
+        return 'salt-1';
+      },
+      registerSecret: (secret) => {
+        registered.push(secret);
+      },
+    }),
+  );
+
+  // act
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'AbortError' });
+  const joinedToken = authClient.idToken(new AbortController().signal);
+  const transport = await grant.started.promise;
+  grant.response.resolve(grantResponse('id-token-1'));
+  await firstRejected;
+
+  // assert
+  assert.deepStrictEqual(registered, []);
+  assert.strictEqual(await joinedToken, 'id-token-1');
+  assert.deepStrictEqual(registered, ['id-token-1']);
+  assert.strictEqual(transport.aborted, false);
+  assert.strictEqual(grant.requests.length, 1);
+});
+
+test('retains the shared transport deadline while callers are waiting', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const grant = controlledGrant();
+  const deadline = new AbortController();
+  const timeoutSpy = t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  const messages: string[] = [];
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch, log: createRecordingLog(messages) }));
+
+  // act
+  const rejected = assert.rejects(authClient.idToken(new AbortController().signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
+  const transport = await grant.started.promise;
+  deadline.abort(new DOMException('Deadline expired', 'TimeoutError'));
+  grant.response.reject(transport.reason);
+  await rejected;
+
+  // assert
+  assert.strictEqual(transport.aborted, true);
+  assert.deepStrictEqual(messages, ['warn Authentication could not be completed (a network error); the plugin will try again.']);
+  assert.deepStrictEqual(
+    timeoutSpy.mock.calls.map((call) => call.arguments),
+    [[1_000]],
+  );
+  assert.strictEqual(grant.requests.length, 1);
 });
 
 test('AUTH-01 stores the granted token in the cache file under the storage path', async (t) => {

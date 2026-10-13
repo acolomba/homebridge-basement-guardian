@@ -98,6 +98,12 @@ interface CachedToken {
   expiresAtMs: number;
 }
 
+interface GrantAttempt {
+  controller: AbortController;
+  token: Promise<CachedToken>;
+  waiters: number;
+}
+
 // What one client remembers about its failures: the code that stopped it for
 // good, and the kind of the last transient failure it reported.
 interface FailurePolicy {
@@ -393,6 +399,7 @@ async function readBody(response: Response): Promise<unknown> {
 async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
   const response = await fetchGrant(options, policy, signal);
   const body = await readBody(response);
+  signal.throwIfAborted();
 
   if (!response.ok) {
     throw await grantFailure(options, policy, response.status, body);
@@ -413,9 +420,57 @@ async function requestGrant(options: AuthClientOptions, policy: FailurePolicy, s
 // concurrent callers can share the whole attempt rather than only its request.
 async function grantAndCache(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<CachedToken> {
   const granted = await requestGrant(options, policy, signal);
+  signal.throwIfAborted();
   await writeCachedToken(options, granted);
+  signal.throwIfAborted();
 
   return granted;
+}
+
+// Each caller stops waiting promptly, even when shared filesystem work or a
+// transport is still settling. Both handlers observe the shared promise after
+// cancellation, and each caller releases its place exactly once.
+function waitFor<T>(pending: Promise<T>, signal: AbortSignal, release?: (cancelled: boolean) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+
+    function finish(cancelled: boolean, listener: () => void): boolean {
+      if (settled) {
+        return false;
+      }
+
+      settled = true;
+      signal.removeEventListener('abort', listener);
+      release?.(cancelled);
+
+      return true;
+    }
+
+    function abort(): void {
+      finish(true, abort);
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- AbortSignal reasons are caller-owned and must pass through unchanged.
+      reject(signal.reason);
+    }
+
+    pending.then(
+      (token) => {
+        if (finish(false, abort)) {
+          resolve(token);
+        }
+      },
+      (error: unknown) => {
+        if (finish(false, abort)) {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- Shared rejections pass unchanged, including arbitrary abort reasons.
+          reject(error);
+        }
+      },
+    );
+    signal.addEventListener('abort', abort, { once: true });
+
+    if (signal.aborted) {
+      abort();
+    }
+  });
 }
 
 /**
@@ -444,7 +499,7 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
   let cached: CachedToken | undefined;
   let cacheRead: Promise<CachedToken | undefined> | undefined;
-  let inFlight: Promise<CachedToken> | undefined;
+  let inFlight: GrantAttempt | undefined;
   let registered: string | undefined;
 
   // A caller arriving while an attempt is in flight joins it instead of opening
@@ -453,14 +508,32 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   // it settles, so a later lapse, or a retry after a transient failure, starts
   // a fresh one.
   function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
-    inFlight ??= grantAndCache(options, policy, signal).finally(() => {
-      inFlight = undefined;
-    });
+    if (inFlight === undefined) {
+      const controller = new AbortController();
+      const token = grantAndCache(options, policy, controller.signal).finally(() => {
+        inFlight = undefined;
+      });
+      inFlight = { controller, token, waiters: 0 };
+    }
 
-    return inFlight;
+    const attempt = inFlight;
+    // Keep an abandoned attempt in its slot until its request and cache work
+    // settle, so a caller during teardown cannot open a duplicate grant.
+    attempt.controller.signal.throwIfAborted();
+    attempt.waiters += 1;
+
+    return waitFor(attempt.token, signal, (cancelled) => {
+      attempt.waiters -= 1;
+
+      if (cancelled && attempt.waiters === 0) {
+        attempt.controller.abort();
+      }
+    });
   }
 
   async function currentToken(signal: AbortSignal): Promise<CachedToken> {
+    signal.throwIfAborted();
+
     if (policy.haltedReason !== undefined) {
       throw new AuthHaltedError(HALTED, policy.haltedReason);
     }
@@ -468,7 +541,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     // The read is shared rather than flagged, so a second caller waits for the
     // answer instead of seeing an empty cache and stepping around it (WR-04).
     cacheRead ??= readCachedToken(options);
-    cached ??= await cacheRead;
+    const stored = await waitFor(cacheRead, signal);
+    signal.throwIfAborted();
+    cached ??= stored;
 
     if (cached !== undefined && isCurrent(cached.expiresAtMs, options.clock)) {
       return cached;
@@ -479,7 +554,9 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
 
   return {
     async idToken(signal: AbortSignal): Promise<string> {
-      cached = await currentToken(signal);
+      const token = await currentToken(signal);
+      signal.throwIfAborted();
+      cached = token;
 
       // A bearer token is credential material the moment it is in hand,
       // whether it was granted or read back from the cache. It is registered
