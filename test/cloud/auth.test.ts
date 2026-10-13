@@ -266,10 +266,11 @@ test('never negotiates HTTP/2 with the vendor tenant, even when the server offer
   const authClient = createAuthClient(authOptions(storagePath, { constants: { ...testConstants, auth0Url: server.url.replace(/\/$/, '') }, httpFetch }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
   const negotiatedProtocol = await server.negotiatedProtocol();
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });
 
@@ -282,9 +283,10 @@ test('identifies the plugin on the grant request, alongside its content type', a
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(grantRequests, [
     {
       method: 'POST',
@@ -310,9 +312,10 @@ test('AUTH-02 registers the granted token as a secret', async (t) => {
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(registeredSecrets, ['id-token-1']);
 });
 
@@ -324,10 +327,11 @@ test('AUTH-02 registers one token once however many requests carry it', async (t
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
-  await authClient.idToken(new AbortController().signal);
+  const firstToken = await authClient.idToken(new AbortController().signal);
+  const secondToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.deepStrictEqual([firstToken, secondToken], ['id-token-1', 'id-token-1']);
   assert.deepStrictEqual(registeredSecrets, ['id-token-1']);
 });
 
@@ -341,13 +345,15 @@ test('AUTH-02 registers a replacement token once the previous one has expired', 
   const authClient = createAuthClient(
     authOptions(storagePath, { httpFetch: grantFetch, clock, registerSecret: (secret: string) => registeredSecrets.push(secret) }),
   );
-  await authClient.idToken(new AbortController().signal);
+  const firstToken = await authClient.idToken(new AbortController().signal);
 
   // act
   currentTime += TOKEN_LIFETIME_MS;
-  await authClient.idToken(new AbortController().signal);
+  const secondToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(firstToken, 'id-token-1');
+  assert.strictEqual(secondToken, 'id-token-2');
   assert.deepStrictEqual(registeredSecrets, ['id-token-1', 'id-token-2']);
 });
 
@@ -655,9 +661,10 @@ test('AUTH-01 stores the granted token in the cache file under the storage path'
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(
     await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
     Buffer.from(
@@ -788,9 +795,10 @@ test('D-08 logs nothing on a first start, when no cache file exists yet', async 
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(messages, []);
 });
 
@@ -801,9 +809,10 @@ test('AUTH-02 writes neither the account email nor the account password into the
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(
     await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
     Buffer.from(
@@ -864,9 +873,10 @@ test('AUTH-02 leaves no temporary file beside the cache file it wrote', async (t
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  await authClient.idToken(new AbortController().signal);
+  const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
+  assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
 });
 
@@ -950,9 +960,10 @@ if (process.platform !== 'win32') {
     currentTime = START_TIME + TOKEN_LIFETIME_MS + 1_000;
 
     // act
-    await authClient.idToken(new AbortController().signal);
+    const idToken = await authClient.idToken(new AbortController().signal);
 
     // assert
+    assert.strictEqual(idToken, 'id-token-2');
     const { mode } = await stat(cachePath);
     assert.strictEqual(mode & PERMISSION_BITS, OWNER_ONLY_MODE);
   });
