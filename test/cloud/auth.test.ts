@@ -131,7 +131,9 @@ function authOptions(storagePath: string, overrides: Partial<AuthClientOptions> 
     password: ACCOUNT_PASSWORD,
     storagePath,
     requestTimeoutMs: 1_000,
-    httpFetch: (input, init) => globalThis.fetch(input, init),
+    httpFetch: () => {
+      throw new Error('No synthetic HTTP transport was provided.');
+    },
     clock: { now: () => START_TIME },
     createSalt: () => 'salt-1',
     registerSecret: () => undefined,
@@ -155,10 +157,13 @@ async function writeCacheText(storagePath: string, text: string): Promise<void> 
 }
 
 // Records every grant request and answers each one with a fresh Response.
-function stubFetch(t: TestContext, respond: (callIndex: number) => Response): { url: string; body: string; headers: Record<string, string> }[] {
+function createGrantTransport(respond: (callIndex: number) => Response): {
+  requests: { url: string; body: string; headers: Record<string, string> }[];
+  httpFetch: AuthClientOptions['httpFetch'];
+} {
   const grantRequests: { url: string; body: string; headers: Record<string, string> }[] = [];
 
-  t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
+  const httpFetch: AuthClientOptions['httpFetch'] = (input, init) => {
     const callIndex = grantRequests.length;
     grantRequests.push({
       url: input.toString(),
@@ -167,9 +172,9 @@ function stubFetch(t: TestContext, respond: (callIndex: number) => Response): { 
     });
 
     return Promise.resolve(respond(callIndex));
-  });
+  };
 
-  return grantRequests;
+  return { requests: grantRequests, httpFetch };
 }
 
 function grantResponse(idToken: string): Response {
@@ -206,8 +211,8 @@ function controlledGrant() {
 test('sends the password-realm grant the vendor tenant expects', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -262,8 +267,8 @@ test('never negotiates HTTP/2 with the vendor tenant, even when the server offer
 test('identifies the plugin on the grant request, alongside its content type', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -279,8 +284,8 @@ test('AUTH-02 registers the granted token as a secret', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   const registeredSecrets: string[] = [];
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -293,8 +298,8 @@ test('AUTH-02 registers one token once however many requests carry it', async (t
   // arrange
   const storagePath = await createStoragePath(t);
   const registeredSecrets: string[] = [];
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -310,8 +315,10 @@ test('AUTH-02 registers a replacement token once the previous one has expired', 
   const registeredSecrets: string[] = [];
   let currentTime = START_TIME;
   const clock: Clock = { now: () => currentTime };
-  stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
-  const authClient = createAuthClient(authOptions(storagePath, { clock, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  const { httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(
+    authOptions(storagePath, { httpFetch: grantFetch, clock, registerSecret: (secret: string) => registeredSecrets.push(secret) }),
+  );
   await authClient.idToken(new AbortController().signal);
 
   // act
@@ -325,8 +332,8 @@ test('AUTH-02 registers a replacement token once the previous one has expired', 
 test('reuses the cached token while it is still valid', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const firstToken = await authClient.idToken(new AbortController().signal);
@@ -343,8 +350,8 @@ test('authenticates again once the cached token has expired', async (t) => {
   const storagePath = await createStoragePath(t);
   let currentTime = START_TIME;
   const clock: Clock = { now: () => currentTime };
-  const grantRequests = stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
-  const authClient = createAuthClient(authOptions(storagePath, { clock }));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, clock }));
 
   // act
   const firstToken = await authClient.idToken(new AbortController().signal);
@@ -361,8 +368,8 @@ test('AUTH-01 answers two callers that start together from the cache file, witho
   // arrange
   const storagePath = await createStoragePath(t);
   await writeCacheText(storagePath, JSON.stringify(cacheContents()));
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
@@ -375,8 +382,8 @@ test('AUTH-01 answers two callers that start together from the cache file, witho
 test('AUTH-01 issues one grant for two callers that start together with no current token', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
@@ -499,9 +506,9 @@ for (const sharedRoot of [false, true]) {
 test('starts no grant for an already aborted caller', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const caller = new AbortController();
-  const authClient = createAuthClient(authOptions(storagePath));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   caller.abort();
 
   // act & assert
@@ -512,9 +519,9 @@ test('starts no grant for an already aborted caller', async (t) => {
 test('does not join a grant after cancellation during the initial cache read', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const caller = new AbortController();
-  const authClient = createAuthClient(authOptions(storagePath));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const canceled = assert.rejects(authClient.idToken(caller.signal), { name: 'AbortError' });
@@ -617,8 +624,8 @@ test('retains the shared transport deadline while callers are waiting', async (t
 test('AUTH-01 stores the granted token in the cache file under the storage path', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -636,8 +643,8 @@ test('AUTH-01 answers from the cache file a restart left behind, without authent
   // arrange
   const storagePath = await createStoragePath(t);
   await writeCacheText(storagePath, JSON.stringify(cacheContents()));
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -651,8 +658,8 @@ test('AUTH-01 authenticates again when the cache file holds an expired token', a
   // arrange
   const storagePath = await createStoragePath(t);
   await writeCacheText(storagePath, JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -666,8 +673,8 @@ test('AUTH-01 authenticates before expiry when the cached token expires inside t
   // arrange
   const storagePath = await createStoragePath(t);
   await writeCacheText(storagePath, JSON.stringify(cacheContents({ expiresAt: START_TIME + HALF_HOUR_MS })));
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -682,8 +689,8 @@ test('D-08 authenticates again when the cache file fingerprints a different acco
   const storagePath = await createStoragePath(t);
   await writeCacheText(storagePath, JSON.stringify(cacheContents({ emailFingerprint: fingerprintOf('salt-1', 'other@example.test') })));
   const messages: string[] = [];
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -707,8 +714,8 @@ for (const { description, text } of [
     const storagePath = await createStoragePath(t);
     await writeCacheText(storagePath, text);
     const messages: string[] = [];
-    const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-    const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+    const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
     // act
     const idToken = await authClient.idToken(new AbortController().signal);
@@ -725,8 +732,8 @@ test('D-08 authenticates, keeps serving at debug level, and orphans no temporary
   const storagePath = await createStoragePath(t);
   await mkdir(join(storagePath, TOKEN_CACHE_FILENAME));
   const messages: string[] = [];
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -745,8 +752,8 @@ test('D-08 logs nothing on a first start, when no cache file exists yet', async 
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -758,8 +765,8 @@ test('D-08 logs nothing on a first start, when no cache file exists yet', async 
 test('AUTH-02 writes neither the account email nor the account password into the cache file', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -777,9 +784,10 @@ test('writes through the injected full temporary path in an empty directory', as
   const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
   const temporaryPath = join(storagePath, 'injected-cache.tmp');
   const targets: string[] = [];
-  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const authClient = createAuthClient(
     authOptions(storagePath, {
+      httpFetch: grantFetch,
       createTemporaryPath: (target) => {
         targets.push(target);
 
@@ -813,8 +821,8 @@ test('writes through the injected full temporary path in an empty directory', as
 test('AUTH-02 leaves no temporary file beside the cache file it wrote', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   await authClient.idToken(new AbortController().signal);
@@ -830,8 +838,8 @@ if (DIRECTORY_MODES_BLOCK_WRITES) {
     const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
     const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
     await writeCacheText(storagePath, earlierContents);
-    stubFetch(t, () => grantResponse('id-token-1'));
-    const authClient = createAuthClient(authOptions(storagePath));
+    const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
     await chmod(storagePath, READ_ONLY_DIRECTORY_MODE);
 
     // act
@@ -857,9 +865,10 @@ if (process.platform !== 'win32') {
     await chmod(cachePath, OWNER_ONLY_MODE);
     await writeFile(strandedPath, strandedContents);
     await chmod(strandedPath, GROUP_READABLE_MODE);
-    const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+    const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
     const authClient = createAuthClient(
       authOptions(storagePath, {
+        httpFetch: grantFetch,
         createTemporaryPath: (target) => {
           targets.push(target);
 
@@ -895,8 +904,8 @@ if (process.platform !== 'win32') {
     const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
     let currentTime = START_TIME;
     const clock: Clock = { now: () => currentTime };
-    stubFetch(t, (callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
-    const authClient = createAuthClient(authOptions(storagePath, { clock }));
+    const { httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, clock }));
     await authClient.idToken(new AbortController().signal);
     await chmod(cachePath, GROUP_READABLE_MODE);
     currentTime = START_TIME + TOKEN_LIFETIME_MS + 1_000;
@@ -913,8 +922,8 @@ if (process.platform !== 'win32') {
 test('D-13 rejects the account credentials the vendor refused', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -934,8 +943,8 @@ test('D-13 deletes the cached token when the vendor refuses the account credenti
   const storagePath = await createStoragePath(t);
   const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
   await writeCacheText(storagePath, JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -951,8 +960,10 @@ test('D-13 deletes the cached token when the vendor refuses the account credenti
 test('D-13 makes no further attempt once the vendor has refused the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(
+    () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }),
+  );
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
 
   // act & assert
@@ -972,12 +983,12 @@ test('D-13 makes no further attempt once the vendor has refused the account cred
 test('D-13 logs one error naming the fix when the vendor refuses the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
   const log = mock<Logging>({ exactParams: true, name: 'log' });
   when(() => {
     log.error(REJECTION_LOG);
   }).thenReturn(undefined);
-  const authClient = createAuthClient(authOptions(storagePath, { log }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -991,8 +1002,8 @@ test('AUTH-02 repeats no credential, request body, or response body into the log
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
   const failureBody = JSON.stringify({ error: 'invalid_grant', error_description: `Wrong password for ${ACCOUNT_EMAIL}: ${ACCOUNT_PASSWORD}` });
-  stubFetch(t, () => new Response(failureBody, { status: 403 }));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(failureBody, { status: 403 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -1009,8 +1020,8 @@ for (const { status, code } of [
   test(`D-13 stops on HTTP ${String(status)}, which the vendor does not enumerate as a rejection`, async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
-    stubFetch(t, () => new Response(JSON.stringify({ error: code }), { status }));
-    const authClient = createAuthClient(authOptions(storagePath));
+    const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: code }), { status }));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
     // act & assert
     await assert.rejects(
@@ -1028,8 +1039,8 @@ for (const { status, code } of [
 test('names an unknown error code when the failure body carries none', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 7 }), { status: 400 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 7 }), { status: 400 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1046,8 +1057,8 @@ test('names an unknown error code when the failure body carries none', async (t)
 test('names an unknown error code when the failure body is not a record', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify('unauthorized'), { status: 401 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify('unauthorized'), { status: 401 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1064,8 +1075,8 @@ test('names an unknown error code when the failure body is not a record', async 
 test('D-22 answers a throttled grant with the long retry interval', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1083,8 +1094,10 @@ test('D-22 answers a throttled grant with the long retry interval', async (t) =>
 test('D-22 keeps trying after a throttled grant instead of stopping', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(
+    () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }),
+  );
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
 
   // act & assert
@@ -1103,8 +1116,8 @@ test('D-22 warns once, naming the 429, the thirty-day window, and how to stop th
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -1119,8 +1132,10 @@ test('keeps the cache file and stays ready to retry when the vendor answers HTTP
   const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
   const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
   await writeCacheText(storagePath, earlierContents);
-  const grantRequests = stubFetch(t, () => new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(
+    () => new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }),
+  );
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1146,12 +1161,13 @@ test('treats a network failure as transient rather than as a refusal', async (t)
   const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
   await writeCacheText(storagePath, earlierContents);
   let attempts = 0;
-  t.mock.method(globalThis, 'fetch', () => {
+  const grantFetch: AuthClientOptions['httpFetch'] = () => {
     attempts += 1;
 
     return Promise.reject(new Error('connect ECONNREFUSED 203.0.113.1:443'));
-  });
-  const authClient = createAuthClient(authOptions(storagePath));
+  };
+
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1173,8 +1189,8 @@ test('treats a network failure as transient rather than as a refusal', async (t)
 test('treats a failure body that is not JSON as transient, on the status alone', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response('<html>gateway error</html>', { status: 502 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response('<html>gateway error</html>', { status: 502 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1192,8 +1208,8 @@ test('treats a failure body that is not JSON as transient, on the status alone',
 test('treats a status that is neither a refusal nor a throttle as transient', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  stubFetch(t, () => new Response(JSON.stringify({ error: 'moved' }), { status: 302 }));
-  const authClient = createAuthClient(authOptions(storagePath));
+  const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'moved' }), { status: 302 }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act & assert
   await assert.rejects(
@@ -1215,8 +1231,8 @@ for (const { description, body } of [
   test(`refuses a grant response that ${description}`, async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
-    stubFetch(t, () => new Response(body, { status: 200 }));
-    const authClient = createAuthClient(authOptions(storagePath));
+    const { httpFetch: grantFetch } = createGrantTransport(() => new Response(body, { status: 200 }));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
     // act & assert
     await assert.rejects(
@@ -1275,8 +1291,10 @@ test('D-14 warns once, drops the repeat to debug, and reports the recovery at in
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, (callIndex) => (callIndex < 2 ? new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }) : grantResponse('id-token-1')));
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const { httpFetch: grantFetch } = createGrantTransport((callIndex) =>
+    callIndex < 2 ? new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }) : grantResponse('id-token-1'),
+  );
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -1296,10 +1314,10 @@ test('D-14 warns again when a transient failure of another kind follows', async 
   // arrange
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
-  stubFetch(t, (callIndex) =>
+  const { httpFetch: grantFetch } = createGrantTransport((callIndex) =>
     callIndex === 0 ? new Response(JSON.stringify({ error: 'server_error' }), { status: 500 }) : new Response(JSON.stringify({}), { status: 503 }),
   );
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
   await assert.rejects(() => authClient.idToken(new AbortController().signal));
@@ -1317,14 +1335,15 @@ test('lets an abort through untouched and logs nothing for it', async (t) => {
   const storagePath = await createStoragePath(t);
   const messages: string[] = [];
   const shutdown = new AbortController();
-  t.mock.method(globalThis, 'fetch', () => {
+  const grantFetch: AuthClientOptions['httpFetch'] = () => {
     shutdown.abort();
     const aborted = new Error('This operation was aborted');
     aborted.name = 'AbortError';
 
     return Promise.reject(aborted);
-  });
-  const authClient = createAuthClient(authOptions(storagePath, { log: createRecordingLog(messages) }));
+  };
+
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act & assert
   await assert.rejects(
