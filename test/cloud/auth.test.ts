@@ -844,28 +844,49 @@ if (DIRECTORY_MODES_BLOCK_WRITES) {
 }
 
 if (process.platform !== 'win32') {
-  test('AUTH-02 writes an owner-only cache file on a POSIX host where an earlier run left a wider temporary file behind', async (t) => {
+  test('AUTH-02 preserves an occupied injected temporary file and the prior cache bytes', async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
     const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
-    const strandedPath = `${cachePath}.${String(process.pid)}.tmp`;
-    await writeFile(strandedPath, 'stranded', 'utf8');
+    const strandedPath = join(storagePath, 'occupied-cache.tmp');
+    const strandedContents = Buffer.from([0, 255, 195, 40, 10]);
+    const earlierContents = Buffer.from(JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
+    const targets: string[] = [];
+    const messages: string[] = [];
+    await writeFile(cachePath, earlierContents);
+    await chmod(cachePath, OWNER_ONLY_MODE);
+    await writeFile(strandedPath, strandedContents);
     await chmod(strandedPath, GROUP_READABLE_MODE);
-    stubFetch(t, () => grantResponse('id-token-1'));
-    const authClient = createAuthClient(authOptions(storagePath));
+    const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+    const authClient = createAuthClient(
+      authOptions(storagePath, {
+        createTemporaryPath: (target) => {
+          targets.push(target);
+
+          return strandedPath;
+        },
+        log: createRecordingLog(messages),
+      }),
+    );
 
     // act
-    await authClient.idToken(new AbortController().signal);
+    const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+    const memoryToken = await authClient.idToken(new AbortController().signal);
 
     // assert
-    const { mode } = await stat(cachePath);
-    assert.strictEqual(mode & PERMISSION_BITS, OWNER_ONLY_MODE);
-    assert.deepStrictEqual(parseJson(await readFile(cachePath, 'utf8')), {
-      idToken: 'id-token-1',
-      expiresAt: START_TIME + TOKEN_LIFETIME_MS,
-      emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
-      salt: 'salt-1',
-    });
+    assert.deepStrictEqual(idTokens, ['id-token-1', 'id-token-1']);
+    assert.strictEqual(memoryToken, 'id-token-1');
+    assert.deepStrictEqual(await readFile(cachePath), earlierContents);
+    assert.deepStrictEqual(await readFile(strandedPath), strandedContents);
+    assert.strictEqual((await stat(cachePath)).mode & PERMISSION_BITS, OWNER_ONLY_MODE);
+    assert.strictEqual((await stat(strandedPath)).mode & PERMISSION_BITS, GROUP_READABLE_MODE);
+    assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME, 'occupied-cache.tmp']);
+    assert.deepStrictEqual(messages, [
+      'debug The cached token is at or inside its renewal margin; authenticating again.',
+      'debug The token cache could not be written; the token is held in memory only.',
+    ]);
+    assert.deepStrictEqual(targets, [cachePath]);
+    assert.strictEqual(grantRequests.length, 1);
   });
 
   test('AUTH-02 restores owner-only permissions on a POSIX host when a second grant rewrites the cache file', async (t) => {
