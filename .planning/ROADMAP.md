@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Initial Release** — Phases 1-6 (shipped 2026-10-13)
+- 🚧 **code-review-sweep Code Review Sweep** — Phases 1-8 (in progress)
 
 ## Phases
 
@@ -20,3 +21,142 @@
 Full phase details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 </details>
+
+### In progress code-review-sweep (Code Review Sweep)
+
+**Milestone Goal:** Every source, unit-test, and Cucumber file conforms to the project's TypeScript style, comment, unit-testing, and behavioral-testing rules, and every bug found on the way is fixed behind a regression test.
+
+Phase 1 fixes the five spot-check findings and uses them to prove the review loop, the findings ledger, and the file-header form. Phases 2 to 7 each sweep one part of the tree with the same loop. Phase 8 re-reviews the whole repository and runs the full `npm run check` gate. Product behavior changes only where a bug is fixed.
+
+**Rulebooks:** `skills/typescript-google-style-review`, `skills/typescript-comments`, `skills/typescript-unit-testing`, `skills/typescript-unit-testing-review`, `skills/cucumber-behavioral-testing`, `features/CLAUDE.md`, and `skills/local-verification`. Seed findings: `.planning/research/SPOT-CHECK-FINDINGS.md`.
+
+**Phase numbering:** Numbering restarts at 1 for this milestone. Integer phases are planned work. Decimal phases (2.1, 2.2) are urgent insertions marked `INSERTED`.
+
+- [ ] **Phase 1: Known Findings and Loop Proof** - Fix the five spot-check findings and prove the loop, the ledger, and the header form on them.
+- [ ] **Phase 2: Cloud Conformance** - `src/cloud/**` and `test/cloud/**` conform to the rules.
+- [ ] **Phase 3: Device and Persistence Conformance** - `src/device/**`, `src/persistence/**`, and their tests conform to the rules.
+- [ ] **Phase 4: Runtime Conformance** - `src/runtime/**` and `test/runtime/**` conform to the rules.
+- [ ] **Phase 5: Accessories Conformance** - `src/accessories/**` and `test/accessories/**` conform to the rules.
+- [ ] **Phase 6: Root Module Conformance** - The root modules `src/*.ts` and their tests conform to the rules.
+- [ ] **Phase 7: Cucumber Feature Conformance** - Gherkin, step definitions, and support code under `features/**` conform to the rules.
+- [ ] **Phase 8: Final Sweep and Gate** - A full-repo re-review finds nothing open, the bug ledger is complete, and the full `npm run check` passes.
+
+## Phase Details
+
+### Phase 1: Known Findings and Loop Proof
+**Goal**: The five spot-check findings are fixed behind tests that can fail, and the review loop, the findings ledger, and the file-header form that later phases reuse are proven on them.
+**Depends on**: Nothing (first phase of this milestone)
+**Requirements**: SPOT-01, SPOT-02, SPOT-03, SPOT-04, PROC-01, PROC-02, PROC-03
+**Success Criteria** (what must be TRUE):
+  1. The auth cache test plants the stranded temporary file under the exact name production uses, through a temporary-name source injected by `AuthClientOptions`, and removing `flag: 'wx'` from `src/cloud/auth.ts` makes that test fail (SPOT-01; SC-01, SC-04).
+  2. The control refusal-log test runs one `test()` per refusal row and asserts each exact log line, so a wrong cause on a row that shares status `-70412` fails a named test. The device-state frozen checks fail when the snapshot or nested value is missing, and each stale-version case reads the store after the refused patch and asserts the stored state (SPOT-02, SPOT-03; SC-02, SC-03).
+  3. A caller that joins an in-flight token grant is not aborted when the first caller aborts, and a regression test committed before the fix was seen to fail. If the shared abort is kept instead, `src/cloud/auth.ts` documents it and a test pins it (SPOT-04; SC-05).
+  4. The phase ledger records the rule, location, severity, and outcome (fixed, or rejected with a stated reason) of SC-01 to SC-05 and of every finding the loop raised. The last re-review round reports no open finding, or the phase stopped at the round cap with a report. The ledger format and the loop steps are written down for Phases 2 to 8 to copy (PROC-01, PROC-02).
+  5. One file-header form (SPDX line, then copyright and `@fileoverview` JSDoc) is recorded as the milestone rule, every file this phase touched carries it, and the license-header gate passes (PROC-03).
+**Plans**: TBD
+**Batching**: Three batches share no file, so they can run in one wave: the `src/cloud/auth.ts` / `test/cloud/auth.test.ts` pair (SPOT-01, SPOT-04), `test/accessories/controls.test.ts` (SPOT-02), and `test/device/state.test.ts` (SPOT-03). Decide the header form during discussion, before planning, so each batch applies it to the files it already touches. The loop's scope here is SC-01 to SC-05 plus anything the fixes introduce. The spot check's WARNING lines go to the phases that own their files (Phases 2, 3, and 5) and are re-verified there. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 2: Cloud Conformance
+**Goal**: Every module under `src/cloud/**` and every file under `test/cloud/**` conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1
+**Requirements**: CLOUD-01
+**Success Criteria** (what must be TRUE):
+  1. The ledger lists all eight `src/cloud/**` modules and all nine `test/cloud/**` files as reviewed, each carries the Phase 1 header form, and the spot-check WARNING lines for `auth.ts` and `auth.test.ts` each have an outcome: the `.length`-only and standalone negative `includes` assertions, the `T | undefined` fields, the global `fetch` default, and the test-only `TOKEN_CACHE_FILENAME` export.
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
+  4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
+**Plans**: TBD
+**Batching**: Eight pairs plus the `test/cloud/alpnServer.ts` test helper. `auth.ts` (496 lines) and `shadow.ts` (475 lines) can each be a batch of their own; the six smaller modules fit in two or three batches. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 3: Device and Persistence Conformance
+**Goal**: Every module under `src/device/**` and `src/persistence/**`, and each paired test, conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1
+**Requirements**: DEV-01
+**Success Criteria** (what must be TRUE):
+  1. The ledger lists all eight `src/device/**` pairs and the `src/persistence/accessoryContext.ts` pair as reviewed, each file carries the Phase 1 header form, and the spot-check WARNING lines for `state.ts` and `state.test.ts` each have an outcome: the `T | undefined` fields, the `DeviceSnapshot` fields that are not `readonly`, the missing or implementation-note JSDoc, the value named `data`, the design-rationale comments inside cases, and the `.length`-only or single-field assertions.
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
+  4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
+**Plans**: TBD
+**Batching**: Nine pairs. `state.ts` (403 lines) and `gemini.ts` (402 lines) can each be a batch of their own; the six small device modules and `accessoryContext.ts` fit in one or two batches. A change to an exported type such as `DeviceSnapshot` can reach files in other subsystems; the plan that makes the change owns those edits in its wave. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 4: Runtime Conformance
+**Goal**: Every module under `src/runtime/**` and every file under `test/runtime/**` conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1
+**Requirements**: RUN-01
+**Success Criteria** (what must be TRUE):
+  1. The ledger lists all ten `src/runtime/**` pairs as reviewed, including `accountRuntime.ts` and its full 3,365-line test, and each file carries the Phase 1 header form.
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
+  4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
+**Plans**: TBD
+**Batching**: Ten pairs. `accountRuntime.ts` (1,283 lines; test 3,365 lines) is a batch of its own and can split across sequential waves if one plan cannot hold it; the nine small modules fit in two or three batches. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 5: Accessories Conformance
+**Goal**: Every module under `src/accessories/**` and every file under `test/accessories/**` conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1
+**Requirements**: ACC-01
+**Success Criteria** (what must be TRUE):
+  1. The ledger lists all ten `src/accessories/**` modules and all fourteen `test/accessories/**` files as reviewed, including the four static-gate and fidelity tests, and each file carries the Phase 1 header form. The spot-check WARNING lines for `controls.ts` and `controls.test.ts` each have an outcome: no `describe()` per exported entrypoint, the case that tests the fake HAP, the hand-rolled `.bind` spy, `// act & assert` over two statements, the undocumented `as unknown as Service` casts, and the `LOCAL_REFUSALS` comment on the wrong constant.
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
+  4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
+**Plans**: TBD
+**Batching**: The largest phase: ten pairs plus four tests with no single source (`timerFreedom`, `hapImportScope`, `accessoryReadPathScope`, `hapWriteFidelity`), about 3.9K source and 9.8K test lines. Plans run in several waves. `basementGuardian.ts` (test 3,456 lines) and `serviceCatalogue.ts` (test 2,291 lines) each take a batch of their own, `controls.ts` carries the spot-check WARNING lines, and the four gate tests form one batch reviewed against the unit-testing rules. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 6: Root Module Conformance
+**Goal**: The root modules `src/platform.ts`, `config.ts`, `logging.ts`, `index.ts`, `settings.ts`, and `protocol.ts`, and their paired tests, conform to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1, Phase 5
+**Requirements**: ROOT-01
+**Success Criteria** (what must be TRUE):
+  1. The ledger lists the six root modules and their paired tests as reviewed, including the full 2,375-line `test/platform.test.ts`, and each file carries the Phase 1 header form. The repo-level gate tests stay unchanged unless a fix needs them, and the ledger says why for each one touched.
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
+  4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
+**Plans**: TBD
+**Batching**: Six pairs. `platform.ts` (644 lines; test 2,375 lines) is a batch of its own; the other five fit in one or two batches. This phase runs after Phase 5 because `platform.ts` wires the accessories tier, so the two phases must not edit that wiring at the same time. Classify `test/configSchema.test.ts` and `test/packageManifest.test.ts` during discussion: each is either a root-module test in scope or a repo-level gate test left for the future requirement. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 7: Cucumber Feature Conformance
+**Goal**: Every Gherkin file, step definition, and support module under `features/**` follows `features/CLAUDE.md`, `skills/cucumber-behavioral-testing`, and the TypeScript rules, and any bug found there is fixed behind a regression test.
+**Depends on**: Phase 1
+**Requirements**: FEAT-01, FEAT-02
+**Success Criteria** (what must be TRUE):
+  1. All fifteen `features/**/*.feature` files, including the three under `features/real-pump/`, use sentence-case scenario names, lower-case steps, no `And`, no "should", the present tense, "these" before a data table, and "the" for a specific thing (FEAT-01).
+  2. Step definitions are grouped into modules by function rather than by feature file, ordered `Given()`, `When()`, `Then()`, and named for the given thing, the action, or `assert` plus the condition. All 21 TypeScript files under `features/support/**` and `features/real-pump/support/**` follow the TypeScript rules and carry the Phase 1 header form (FEAT-02).
+  3. The default Cucumber profile passes with the same scenario count as at phase start, or the ledger explains each change in the count, and `cucumber-js --profile real --dry-run` resolves every real-pump step without contacting the vendor.
+  4. The phase ledger records each finding's rule, location, severity, and outcome, and the last re-review round reports no open finding, or the phase stopped at the round cap with a report (applies PROC-01 and PROC-02).
+  5. Every bug found has a regression test that was committed and seen failing before its fix, and every source/test pair a fix touched still reaches 100% direct coverage (applies BUG-01).
+**Plans**: TBD
+**Batching**: Batches split the `.feature` files (Gherkin rules) from the TypeScript step and support code. `features/support/world.ts` and `features/support/steps/harness.ts` serve every scenario, so a batch that edits them runs in a wave of its own. The real-pump files get static review and a dry run only, never a live run. Plans are batches grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
+
+### Phase 8: Final Sweep and Gate
+**Goal**: The whole in-scope tree passes one more review as a unit, the milestone bug ledger is complete and audited, and the full `npm run check` gate passes at milestone end.
+**Depends on**: Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7
+**Requirements**: GATE-01, GATE-02, BUG-01
+**Success Criteria** (what must be TRUE):
+  1. A full-repo re-review of every in-scope file (`src/**`, the paired tests under `test/**`, and `features/**`) against all the rulebooks reports no open finding, including drift across subsystems such as a file without the Phase 1 header form (GATE-02).
+  2. The full `npm run check` passes on the final combined tree: static checks, unpaired unit tests, Cucumber, and 100% direct line, function, and branch coverage for every source/test pair run alone (GATE-01).
+  3. The milestone bug ledger lists every bug found in Phases 1 to 8. Each entry names its regression test and its fix commit, and the test fails when run against the tree just before the fix (BUG-01).
+  4. Every phase ledger from Phase 1 to Phase 8 gives every finding an outcome, fixed or rejected with a stated reason, and every phase that stopped at the round cap has a report.
+**Plans**: TBD
+**Batching**: One full-repo review pass, split across reviewer subagents by subsystem, then fix batches under the same rules as earlier phases: no two plans in the same wave edit the same file, review → triage → fix → re-review capped at about four rounds, `gsd-code-reviewer` and `gsd-code-fixer` subagents with the project's `agent_skills`, and atomic commits that pass the pre-commit hooks; never `--no-verify`. The full `npm run check` runs on the combined tree after the last fix.
+
+## Progress
+
+**Execution order:** Phases run in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Phases 2 to 7 need only Phase 1 (the header form and the ledger format). Phase 6 also runs after Phase 5, because `src/platform.ts` wires the accessories tier. Phase 8 runs after all the others.
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Known Findings and Loop Proof | code-review-sweep | 0/TBD | Not started | - |
+| 2. Cloud Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 3. Device and Persistence Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 4. Runtime Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |

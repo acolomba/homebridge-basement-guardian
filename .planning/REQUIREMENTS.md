@@ -58,12 +58,36 @@ Each covers the source modules and their paired tests against the style, comment
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| PROC-01 | Phase 1 | Pending |
+| PROC-02 | Phase 1 | Pending |
+| PROC-03 | Phase 1 | Pending |
+| SPOT-01 | Phase 1 | Pending |
+| SPOT-02 | Phase 1 | Pending |
+| SPOT-03 | Phase 1 | Pending |
+| SPOT-04 | Phase 1 | Pending |
+| CLOUD-01 | Phase 2 | Pending |
+| DEV-01 | Phase 3 | Pending |
+| RUN-01 | Phase 4 | Pending |
+| ACC-01 | Phase 5 | Pending |
+| ROOT-01 | Phase 6 | Pending |
+| FEAT-01 | Phase 7 | Pending |
+| FEAT-02 | Phase 7 | Pending |
+| BUG-01 | Phase 8 | Pending |
+| GATE-01 | Phase 8 | Pending |
+| GATE-02 | Phase 8 | Pending |
+
+PROC-01, PROC-02, and BUG-01 apply to every phase. Each maps to one phase for
+traceability: PROC-01 and PROC-02 to Phase 1, where the ledger format and the loop
+are set up, and BUG-01 to Phase 8, where the milestone bug ledger is audited.
+Phases 2 to 7 state in their success criteria that they apply all three. PROC-03
+is decided in Phase 1. Phases 2 to 7 apply the header form to their own files,
+and the Phase 8 re-review confirms that every file carries it.
 
 **Coverage:**
-- Milestone requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15
+- Milestone requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-13*
-*Last updated: 2026-10-13 after initial definition*
+*Last updated: 2026-10-13 after roadmap creation*

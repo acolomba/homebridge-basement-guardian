@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 milestone: code-review-sweep
 milestone_name: Code Review Sweep
 status: planning
-last_updated: "2026-10-13T16:35:00.732Z"
+last_updated: "2026-10-13T16:43:13.000Z"
 last_activity: 2026-10-13
 progress:
-  total_phases: 0
+  total_phases: 8
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-13)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 1 — Known Findings and Loop Proof
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-13 — Milestone code-review-sweep started
+Phase: 1 of 8 (Known Findings and Loop Proof)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-13 — Roadmap created for code-review-sweep (8 phases, 15/15 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -108,6 +110,15 @@ Last activity: 2026-10-13 — Milestone code-review-sweep started
 ### Decisions
 
 All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Current planning anchors:
+
+- **[code-review-sweep roadmap, 2026-10-13]: Eight phases, numbered from 1.** Phase 1
+  fixes SC-01 to SC-05 and sets the file-header form, the findings-ledger format, and
+  the review loop that Phases 2 to 8 reuse. Phases 2 to 7 sweep `src/cloud`,
+  `src/device` + `src/persistence`, `src/runtime`, `src/accessories`, the root modules,
+  and `features/**`. Phase 6 runs after Phase 5 because `platform.ts` wires the
+  accessories tier. The spot check's WARNING lines go to Phases 2, 3, and 5, which own
+  their files. PROC-01 and PROC-02 trace to Phase 1 and BUG-01 to Phase 8, but every
+  phase applies all three.
 
 - **[Post-Phase 06, decided 2026-09-07]: A tagged commit publishes; Phase 6's D-01 is amended.**
   Phase 06's D-01 said Phase 6 stops at "ready to publish," which was right for that phase. The
@@ -617,10 +628,12 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-09-06T03:34:24.311Z
-Stopped at: Completed quick task 260905-whi: Switch publish.yml to npm Trusted Publishing (OIDC)
-regression gate / verify_phase_goal / milestone lifecycle
+Last session: 2026-10-13
+Stopped at: Roadmap created for milestone code-review-sweep (8 phases)
 Resume file: None
+
+The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
+for history; they do not describe code-review-sweep work.
 
 **Read this before doing anything.** Phase 6 (Validated Release Candidate) has all 10 plans
 executed and committed on branch `features/phase-06-validated-release-candidate` (unpushed —
@@ -722,4 +735,4 @@ completion exists only locally until someone pushes it.
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Discuss Phase 1 with /gsd-discuss-phase 1, and decide the file-header form there, before planning.
