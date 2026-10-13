@@ -1,6 +1,6 @@
 ---
 name: babysit-pr
-description: After a PR is opened, drive it to a clean state -- pass the project's TypeScript review skills under skills/, then get the SonarQube PR quality gate green -- with the heavy work delegated to subagents. Invoke manually; not automatic.
+description: After a PR is opened (e.g. by /gsd-ship), drive it to a clean state -- pass the project's TypeScript review skills under skills/, then get the SonarQube PR quality gate green -- with the heavy work delegated to subagents. Invoke manually; not automatic.
 argument-hint: "[PR number] (defaults to the current branch's PR)"
 disable-model-invocation: true
 model: sonnet
