@@ -52,7 +52,7 @@ The secret hook scans file contents and works in linked worktrees. Run all hooks
 
 ## Blueprint maintenance
 
-`.copier-answers.yml` records the selected options and exact revision from [blueprint-typescript PR #5](https://github.com/acolomba/blueprint-typescript/pull/5). The adoption preserves the Homebridge compatibility matrix, package metadata, mixed license, product documentation, and compiled-test layout. Claude Code, Codex, and Pi remain configured. GSD configuration stays project-owned; CodeGraph and the separate Node integration suite are disabled.
+`.copier-answers.yml` records the selected options and the exact blueprint revision. The adoption preserves the Homebridge compatibility matrix, package metadata, mixed license, product documentation, and compiled-test layout. Claude Code, Codex, and Pi remain configured. GSD is enabled: the blueprint supplies the worktree hooks, the discuss-agent-skills capability, and the base `.planning/config.json`, and the project keeps its `features/*` phase branching, TDD, security gates, and interactive mode. `AGENTS.md` holds the agent instructions, and `CLAUDE.md` imports it. CodeGraph and the separate Node integration suite are disabled.
 
 To preview an update from a specific revision:
 
@@ -62,7 +62,7 @@ copier update --trust --skip-tasks --vcs-ref <revision> --pretend
 
 Apply the same command without `--pretend`, resolve conflicts, and run `npm run check` and the pre-commit hooks. Review the retained customizations before accepting generated changes.
 
-`scripts/init.sh` installs dependencies and hooks and registers Fallow with Claude Code and Codex. It preserves existing GSD installations and third-party skills.
+`scripts/init.sh` installs dependencies and hooks, installs gsd-core locally for Claude Code, Codex, and Pi with the discuss-agent-skills capability, and registers Fallow with Claude Code and Codex. It preserves third-party skills.
 
 ## Local Homebridge
 

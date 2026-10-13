@@ -135,6 +135,10 @@ dist
 # password, and the rest is pairing state.
 /dev/homebridge/
 
+# fallow skill pointers; scripts/init.sh writes them per machine
+/.agents/skills/fallow/
+/.claude/skills/fallow
+
 # AI harness local state
 **/.claude/settings.local.json
 /.claude/jobs/
@@ -144,12 +148,15 @@ dist
 
 # GSD generated state
 /.gsd
+/.gsd-capabilities.json
+/.planning/research/.cache/
 /.claude/.gsd-profile
 /.claude/agents/gsd-*
 /.claude/commands/gsd-*
 /.claude/gsd-core/*
 /.claude/gsd-file-manifest.json
 /.claude/gsd-install-state.json
+/.claude/gsd-local-patches/*
 /.claude/gsd-migration-journal/*
 /.claude/hooks/gsd-*
 /.claude/hooks/lib/
@@ -164,6 +171,7 @@ dist
 /.codex/gsd-core/*
 /.codex/gsd-file-manifest.json
 /.codex/gsd-install-state.json
+/.codex/gsd-local-patches/*
 /.codex/gsd-migration-journal/*
 /.codex/hooks.json
 /.codex/hooks/gsd-*

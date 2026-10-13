@@ -1,7 +1,7 @@
 /**
  * @fileoverview The static gate on the one import that reaches the pinned HAP package.
  *
- * `CLAUDE.md` and `src/accessories/customCharacteristics.ts` forbid this plugin from
+ * `AGENTS.md` and `src/accessories/customCharacteristics.ts` forbid this plugin from
  * importing HAP-NodeJS directly. Every HomeKit type comes from the `api.hap` namespace
  * Homebridge injects, so the plugin runs against the HAP the host bridge carries rather
  * than against a copy it pinned for itself. That is a **runtime** rule and nothing here
