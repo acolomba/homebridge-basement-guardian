@@ -183,6 +183,31 @@ function grantResponse(idToken: string): Response {
   return new Response(JSON.stringify({ id_token: idToken, expires_in: TOKEN_LIFETIME_SECONDS }), { status: 200 });
 }
 
+function expectCloudFailure(status: number): (error: unknown) => boolean {
+  return (error: unknown) => {
+    assert.ok(error instanceof CloudRequestError);
+    assert.deepStrictEqual({ status: error.status, route: error.route }, { status, route: GRANT_ROUTE });
+
+    return true;
+  };
+}
+
+function expectRejectedCredentials(reason: string): (error: unknown) => boolean {
+  return (error: unknown) => {
+    assert.ok(error instanceof AuthRejectedError);
+    assert.strictEqual(error.reason, reason);
+
+    return true;
+  };
+}
+
+function expectThrottledGrant(error: unknown): boolean {
+  assert.ok(error instanceof AuthThrottledError);
+  assert.strictEqual(error.retryAfterMs, THIRTY_MINUTES_MS);
+
+  return true;
+}
+
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -581,8 +606,8 @@ test('settles surviving callers on grant failure and permits a later explicit gr
   );
 
   // act
-  const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
-  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), expectCloudFailure(0));
+  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), expectCloudFailure(0));
   await grant.started.promise;
   grant.response.reject(new Error('network failure'));
   await Promise.all([firstRejected, joinedRejected]);
@@ -638,7 +663,7 @@ test('retains the shared transport deadline while callers are waiting', async (t
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch, log: createRecordingLog(messages) }));
 
   // act
-  const rejected = assert.rejects(authClient.idToken(new AbortController().signal), { name: 'CloudRequestError', status: 0, route: GRANT_ROUTE });
+  const rejected = assert.rejects(authClient.idToken(new AbortController().signal), expectCloudFailure(0));
   const transport = await grant.started.promise;
   deadline.abort(new DOMException('Deadline expired', 'TimeoutError'));
   grant.response.reject(transport.reason);
@@ -997,7 +1022,7 @@ test('D-13 deletes the cached token when the vendor refuses the account credenti
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectRejectedCredentials('invalid_grant'));
 
   // assert
   const remains = await access(cachePath).then(
@@ -1014,7 +1039,7 @@ test('D-13 makes no further attempt once the vendor has refused the account cred
     () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }),
   );
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectRejectedCredentials('invalid_grant'));
 
   // act & assert
   await assert.rejects(
@@ -1041,7 +1066,7 @@ test('D-13 logs one error naming the fix when the vendor refuses the account cre
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectRejectedCredentials('invalid_grant'));
 
   // assert
   verify(log);
@@ -1056,7 +1081,7 @@ test('AUTH-02 repeats no credential, request body, or response body into the log
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectRejectedCredentials('invalid_grant'));
 
   // assert
   assert.deepStrictEqual(messages, [`error ${REJECTION_LOG}`]);
@@ -1148,13 +1173,14 @@ test('D-22 keeps trying after a throttled grant instead of stopping', async (t) 
     () => new Response(JSON.stringify({ error: 'too_many_attempts' }), { status: 429 }),
   );
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectThrottledGrant);
 
   // act & assert
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
       assert.ok(error instanceof AuthThrottledError);
+      assert.strictEqual(error.retryAfterMs, THIRTY_MINUTES_MS);
 
       return true;
     },
@@ -1170,7 +1196,7 @@ test('D-22 warns once, naming the 429, the thirty-day window, and how to stop th
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectThrottledGrant);
 
   // assert
   assert.deepStrictEqual(messages, [`warn ${THROTTLE_LOG}`]);
@@ -1199,7 +1225,7 @@ test('keeps the cache file and stays ready to retry when the vendor answers HTTP
       return true;
     },
   );
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(500));
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
   assert.strictEqual(grantRequests.length, 2);
 });
@@ -1231,7 +1257,7 @@ test('treats a network failure as transient rather than as a refusal', async (t)
       return true;
     },
   );
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(0));
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
   assert.strictEqual(attempts, 2);
 });
@@ -1248,6 +1274,7 @@ test('treats a failure body that is not JSON as transient, on the status alone',
     (error: unknown) => {
       assert.ok(error instanceof CloudRequestError);
       assert.strictEqual(error.status, 502);
+      assert.strictEqual(error.route, GRANT_ROUTE);
       assert.strictEqual(error.message, 'POST /oauth/token failed with HTTP 502.');
 
       return true;
@@ -1267,6 +1294,7 @@ test('treats a status that is neither a refusal nor a throttle as transient', as
     (error: unknown) => {
       assert.ok(error instanceof CloudRequestError);
       assert.strictEqual(error.status, 302);
+      assert.strictEqual(error.route, GRANT_ROUTE);
 
       return true;
     },
@@ -1290,6 +1318,7 @@ for (const { description, body } of [
       (error: unknown) => {
         assert.ok(error instanceof CloudRequestError);
         assert.strictEqual(error.status, 200);
+        assert.strictEqual(error.route, GRANT_ROUTE);
         assert.strictEqual(error.message, 'POST /oauth/token returned a response the plugin cannot read.');
 
         return true;
@@ -1347,8 +1376,8 @@ test('D-14 warns once, drops the repeat to debug, and reports the recovery at in
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(500));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(500));
   const idToken = await authClient.idToken(new AbortController().signal);
 
   // assert
@@ -1370,8 +1399,8 @@ test('D-14 warns again when a transient failure of another kind follows', async 
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
   // act
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
-  await assert.rejects(() => authClient.idToken(new AbortController().signal));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(500));
+  await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(503));
 
   // assert
   assert.deepStrictEqual(messages, [
