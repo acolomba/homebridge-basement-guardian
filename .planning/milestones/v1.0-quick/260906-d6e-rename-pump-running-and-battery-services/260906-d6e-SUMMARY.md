@@ -5,26 +5,30 @@ subsystem: homekit-services
 tags: [homebridge, hap, config-schema, changelog, simple-english, humanizer]
 
 # Dependency graph
+
 requires:
   - phase: 06
     provides: published 0.1.0 release with the prior service names and CHANGELOG body
 provides:
-  - "backup-pump-running" slug/displayName replacing "backup-pump-activated"
+  - '"backup-pump-running" slug/displayName replacing "backup-pump-activated"'
   - Swapped backup-battery displayNames ("Backup Battery Level" for the standard Battery
     service, "Backup Battery" for the vendor-facts service)
   - Alphabetically reordered config.schema.json ignoredFaults enum/enumNames
   - README config example with required email/password fields and a GFM admonition
   - Simple-english/humanizer prose pass over README.md and CONTRIBUTING.md
   - Two-bullet CHANGELOG 0.1.0 entry
+
 affects: [readme, contributing, changelog, config-schema, homekit-service-names]
 
 # Actuals (#2632)
+
 actuals:
   tokens: 15823
   tasks: 4
   commits: 4
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -71,6 +75,7 @@ patterns-established: []
 requirements-completed: [SAFE-02, CONF-06]
 
 # Coverage metadata
+
 coverage:
   - id: D1
     description: "Backup Pump Activated renamed to Backup Pump Running (slug backup-pump-running) everywhere in src/, config.schema.json, test/, features/, and README.md"
@@ -135,9 +140,14 @@ coverage:
     human_judgment: false
 
 # Metrics
+
 duration: 70min
 completed: 2026-09-06
 status: complete
+audit_acknowledged:
+  milestone: v1.0
+  at: 2026-10-13
+  status: complete
 ---
 
 # Quick Task 260906-d6e: Rename Pump-Running and Battery Services Summary

@@ -18,13 +18,14 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 - ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
 - ✓ Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state. — Phase 2
+- ✓ Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics. — v1.0
+- ✓ Self-test and alarm-mute controls follow only the official Gemini command contract and reported device state. — v1.0 (alarm-mute contract stays provisional until G-001)
+- ✓ Cached accessories preserve safety state and identity through restarts, transport failures, profile drift, and transient discovery failures. — v1.0
+- ✓ The package, tests, licensing, privacy controls, and support paths are ready for a controlled release. — v1.0 (real-home gates G-001 to G-004 still block `1.0.0`)
 
 ### Active
 
-- [ ] Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics.
-- [ ] Self-test and alarm-mute controls follow only the official Gemini command contract and reported device state.
-- [ ] Cached accessories preserve safety state and identity through restarts, transport failures, profile drift, and transient discovery failures.
-- [ ] The package, tests, licensing, privacy controls, support paths, and real-home validation are ready for a safe `1.0.0` release.
+- [ ] The real-home and hardware gates G-001, G-002, G-003, and G-004 close before `1.0.0` is published.
 
 ### Out of Scope
 
@@ -186,4 +187,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-09-04 after Phase 5.1 — per-pump trust withdrawal, controller-link diagnostic, and monotonic silence clock completed; RES-01/RES-02 refined and remain Complete*
+*Last updated: 2026-10-13 after v1.0 milestone — Initial Release archived; 0.1.x published, `1.0.0` still gated on G-001 to G-004*
