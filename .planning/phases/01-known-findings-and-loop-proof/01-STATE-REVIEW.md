@@ -10,7 +10,7 @@ Revision: `33c4fff9f4b014960b631e7c7bf0ebd3abeb4b98`; no state-pair diff.
 
 | ID | Requirement | Rule | Location at initial revision | Severity | Outcome |
 | --- | --- | --- | --- | --- | --- |
-| SC-03 | SPOT-03 | Unit-testing Assertions: independent whole values and public state; review BLOCKER for weak assertions | `test/device/state.test.ts:232-247,313-328,445-460,483,495-497,604` | BLOCKER | Accepted; repair and verification in progress |
+| SC-03 | SPOT-03 | Unit-testing Assertions: independent whole values and public state; review BLOCKER for weak assertions | `test/device/state.test.ts:232-247,313-328,445-460,483,495-497,604` | BLOCKER | Fixed in tracer and expansion commits; final round 1 clean |
 
 `Object.isFrozen(undefined)` returns true. Frozen checks must first prove
 complete expected snapshots or nested records. Version rows and metadata
@@ -114,4 +114,29 @@ inspection also confirms the changed test's locked form.
 - Required `SKIP=npm-check pre-commit run --files <owned changed files>`
   passed before foreground commits. Actual commit hooks remained enabled.
 
-Final re-review and expansion commit are recorded in the summary close-out.
+Expansion commit: `548f2fa2a04765c5e8530a2ad7ed7890ba53bfe7`; paths are
+`test/device/state.test.ts` and this report. Foreground hooks passed, including
+static checks, unpaired tests, and isolated state coverage. No tracked file was
+deleted by any commit.
+
+## Final re-review: round 1
+
+Reviewer: `/root/phase1_state/state_review`, role `gsd-code-reviewer`.
+Reviewed revision: `548f2fa2a04765c5e8530a2ad7ed7890ba53bfe7` against
+initial `33c4fff9f4b014960b631e7c7bf0ebd3abeb4b98`. The persistent executable
+diff contains only the owned test. The working source/test pair matched HEAD.
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 1 | 0 | 0 | 0 | 0 |
+
+SC-03 is fixed. Final locations: discovery 242-255, nested telemetry 266-276,
+version rows 355-374, metadata watermark 501-517, nested metadata 541-551,
+merged snapshot 563-574, released snapshot 682-691. Header lines 1-13 satisfy
+the locked form. No introduced, rejected, or reopened IDs were found.
+
+The reviewer inspected all six mutation records and their named failures,
+restored bytes, build/owner exits, and empty production diff. It reused passing
+hook, owner, direct-coverage, license, and Fallow evidence for the unchanged
+pair. Existing Phase 3 warnings remain deferred. Counts were sent to the
+coordinator before any further work. No D-09 stop condition occurred.
