@@ -1,7 +1,7 @@
 ---
 phase: "01"
 slug: "known-findings-and-loop-proof"
-status: complete
+status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-13"
@@ -164,3 +164,11 @@ Phases 2, 3, and 5; archived release and real-home results are not current proof
 RED-evidence, header, and commit contract. The coordinator records the full
 combined-tree result after Wave 1 and applies the unchanged-input policy before
 reusing it at phase end. Every plan summary requires `## Threat Flags`.
+
+## Validation Audit 2026-10-13
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

@@ -1,12 +1,53 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "code-review-sweep",
-  "phases": [],
+  "milestone": "code-review-sweep — Code Review Sweep",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Known Findings and Loop Proof",
+      "status": "pending"
+    },
+    {
+      "number": "2",
+      "name": "Cloud Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Device and Persistence Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Runtime Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Accessories Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "6",
+      "name": "Root Module Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "7",
+      "name": "Cucumber Feature Conformance",
+      "status": "pending"
+    },
+    {
+      "number": "8",
+      "name": "Final Sweep and Gate",
+      "status": "pending"
+    }
+  ],
   "next": {
-    "command": "/gsd:discuss-phase",
-    "label": "Discuss the first phase",
-    "reason": "Project initialized — plan your first phase"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 8 · 0% · executing"
   },
-  "updated_at": "2026-10-13T16:35:00.735Z"
+  "updated_at": "2026-10-13T19:50:41.169Z"
 }

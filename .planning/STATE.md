@@ -4,17 +4,17 @@ milestone: code-review-sweep
 milestone_name: Code Review Sweep
 current_phase: 1
 current_phase_name: Known Findings and Loop Proof
-status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-10-13T19:48:40.600Z"
+status: Awaiting human verification
+stopped_at: Phase 1 verified 14/14; four bounded human judgments pending
+last_updated: "2026-10-13T20:46:05.455Z"
 last_activity: 2026-10-13
-last_activity_desc: Roadmap created for code-review-sweep (8 phases, 15/15 requirements mapped)
-state_head: 961b18880f465f3ea9a78cbcc35401fcf1000dad
+last_activity_desc: Phase 1 execution started
+state_head: 4a4ffd1a85a56b61fbc217b757712d064c1ac08b
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 4
   percent: 0
 ---
 
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-10-13)
 
 ## Current Position
 
-Phase: 1 (Known Findings and Loop Proof) — READY TO EXECUTE
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-13 — Roadmap created for code-review-sweep (8 phases, 15/15 requirements mapped)
+Phase: 1 (Known Findings and Loop Proof) — EXECUTING
+Plan: 1 of 4
+Status: Awaiting human verification
+Last activity: 2026-10-13 — Phase 1 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -431,6 +431,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 06]: [Phase 06] 06-10: CHANGELOG.md's [Unreleased] section records all of Phase 6's user-visible additions/changes (real-pump suite, SECURITY.md, CI Homebridge matrix, license boundary, README child-bridge/prerelease-alarm/Critical-Alerts disclosures) with no G-00X gate claimed and no new version heading, per D-01.
 - [Phase 05]: [Quick task 260905-whi]: .github/workflows/publish.yml's publish job switched from a stored NPM_TOKEN secret to npm Trusted Publishing (OIDC) -- id-token: write, an environment block naming homebridge-basement-guardian's own npm page, and npm publish --access public --provenance -- now that 0.1.0 is confirmed live (Trusted Publishing cannot bootstrap a package's first publish). package.json's repository.url gained the git+ prefix npm's own publish step already normalized it to. User setup required before the next run: a trusted publisher must be registered on npmjs.com's package settings dashboard (no CLI path exists) linking this repo, publish.yml, and the npm environment.
 - [Phase 01]: Commit complete RED regression patch and failure evidence before active test plus GREEN fix; maintainer-approved passing-hook exception
+- [Phase 01]: TDD subject-pattern gate cannot detect domain-scoped commits; approved D-06 evidence919d70d precedes fix3878103 and actual regression provenance is verified. Preserve project prohibition on GSD phase commit titles.
 
 ### Pending Todos
 
@@ -634,9 +635,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-13T19:15:16.161Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-known-findings-and-loop-proof/01-CONTEXT.md
+Last session: 2026-10-13T20:46:05.421Z
+Stopped at: Phase 1 verified 14/14; four bounded human judgments pending
+Resume file: .planning/phases/01-known-findings-and-loop-proof/01-UAT.md
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
 for history; they do not describe code-review-sweep work.
