@@ -563,15 +563,31 @@ test('rejects a joined caller promptly while the first caller receives its token
   assert.deepStrictEqual(getEventListeners(joined.signal, 'abort'), []);
 });
 
-for (const sharedRoot of [false, true]) {
-  test(`aborts the shared transport when ${sharedRoot ? 'the root cancels both callers' : 'both callers leave'}`, async (t) => {
+for (const { description, createCallers } of [
+  {
+    description: 'both callers leave',
+    createCallers: () => ({
+      first: new AbortController(),
+      joined: new AbortController(),
+      firstReason: new Error('First caller cancelled.'),
+      joinedReason: new Error('Joined caller cancelled.'),
+    }),
+  },
+  {
+    description: 'the root cancels both callers',
+    createCallers: () => {
+      const first = new AbortController();
+      const firstReason = new Error('First caller cancelled.');
+
+      return { first, joined: first, firstReason, joinedReason: firstReason };
+    },
+  },
+]) {
+  test(`aborts the shared transport when ${description}`, async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
     const grant = controlledGrant();
-    const first = new AbortController();
-    const joined = sharedRoot ? first : new AbortController();
-    const firstReason = new Error('First caller cancelled.');
-    const joinedReason = sharedRoot ? firstReason : new Error('Joined caller cancelled.');
+    const { first, joined, firstReason, joinedReason } = createCallers();
     const messages: string[] = [];
     const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch, log: createRecordingLog(messages) }));
 
