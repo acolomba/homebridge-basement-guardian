@@ -27,7 +27,7 @@ import type { Logging } from 'homebridge';
 // matches verbatim, not an endpoint this plugin contacts. Changing it to
 // https:// would break authentication. SonarCloud suppresses the same finding
 // (typescript:S5332) through the e1 entry in sonar-project.properties.
-// eslint-disable-next-line sonarjs/no-clear-text-protocols
+// eslint-disable-next-line sonarjs/no-clear-text-protocols -- Auth0 requires this opaque grant identifier verbatim; it is not a contacted endpoint.
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
 const GRANT_ROUTE = 'POST /oauth/token';
