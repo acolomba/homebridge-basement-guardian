@@ -1,0 +1,1 @@
+No external API integration: Phase 2 reviews and fixes conformance in the existing cloud clients, wire guards and tests while preserving their current API contracts; it adds no service, endpoint, SDK capability or protocol integration.
