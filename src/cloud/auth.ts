@@ -92,6 +92,8 @@ export interface AuthClientOptions {
   clock: Clock;
   /** Supplies the salt the cached fingerprint is computed over. */
   createSalt: () => string;
+  /** Supplies the complete temporary cache path when a token is written. */
+  createTemporaryPath?: (target: string) => string;
   /** Registers the granted token with the redacting logger (AUTH-02). */
   registerSecret: (secret: string) => void;
   log: Logging;
@@ -259,7 +261,7 @@ async function writeCachedToken(options: AuthClientOptions, token: CachedToken):
   };
 
   try {
-    await storeCache(temporaryPath(target), target, JSON.stringify(cache));
+    await storeCache((options.createTemporaryPath ?? temporaryPath)(target), target, JSON.stringify(cache));
   } catch {
     // The token itself is usable, so a cache that cannot be written costs one
     // grant on the next start rather than this one.

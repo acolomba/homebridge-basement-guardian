@@ -771,6 +771,45 @@ test('AUTH-02 writes neither the account email nor the account password into the
   assert.strictEqual(contents.includes('id-token-1'), true);
 });
 
+test('writes through the injected full temporary path in an empty directory', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const temporaryPath = join(storagePath, 'injected-cache.tmp');
+  const targets: string[] = [];
+  const grantRequests = stubFetch(t, () => grantResponse('id-token-1'));
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      createTemporaryPath: (target) => {
+        targets.push(target);
+
+        return temporaryPath;
+      },
+    }),
+  );
+
+  // act
+  const idTokens = await Promise.all([authClient.idToken(new AbortController().signal), authClient.idToken(new AbortController().signal)]);
+
+  // assert
+  assert.deepStrictEqual(idTokens, ['id-token-1', 'id-token-1']);
+  assert.deepStrictEqual(
+    await readFile(cachePath),
+    Buffer.from(
+      JSON.stringify({
+        idToken: 'id-token-1',
+        expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+        emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+        salt: 'salt-1',
+      }),
+    ),
+  );
+  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+  assert.strictEqual((await stat(cachePath)).mode & PERMISSION_BITS, OWNER_ONLY_MODE);
+  assert.deepStrictEqual(targets, [cachePath]);
+  assert.strictEqual(grantRequests.length, 1);
+});
+
 test('AUTH-02 leaves no temporary file beside the cache file it wrote', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
