@@ -73,6 +73,7 @@ const CACHE_UNUSABLE = 'The cached token could not be read; authenticating again
 const CACHE_OTHER_ACCOUNT = 'The cached token belongs to a different account; authenticating again.';
 const CACHE_STALE = 'The cached token is at or inside its renewal margin; authenticating again.';
 const CACHE_NOT_WRITTEN = 'The token cache could not be written; the token is held in memory only.';
+const CACHE_NOT_DELETED = 'The token cache could not be deleted; authentication remains stopped.';
 
 /** The cache file's name inside the Homebridge storage directory. */
 const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
@@ -335,7 +336,11 @@ function reportRecovery(options: AuthClientOptions, policy: FailurePolicy): void
 }
 
 async function deleteCachedToken(options: AuthClientOptions): Promise<void> {
-  await rm(cachePath(options), { force: true });
+  try {
+    await rm(cachePath(options), { force: true });
+  } catch {
+    options.log.debug(CACHE_NOT_DELETED);
+  }
 }
 
 async function grantFailure(options: AuthClientOptions, policy: FailurePolicy, status: number, body: unknown): Promise<Error> {

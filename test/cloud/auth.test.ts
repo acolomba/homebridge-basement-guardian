@@ -1052,6 +1052,54 @@ test('D-13 rejects the account credentials the vendor refused', async (t) => {
   );
 });
 
+test('D-13 preserves the terminal refusal when the cache path is a directory', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const cachePath = join(storagePath, '.basement-guardian-token.json');
+  const preservedPath = join(cachePath, 'preserved.bin');
+  const preservedContents = Buffer.from([0, 255, 195, 40, 10]);
+  await mkdir(cachePath);
+  await writeFile(preservedPath, preservedContents);
+  const messages: string[] = [];
+  const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(
+    () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }),
+  );
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
+
+  // act
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof AuthRejectedError);
+      assert.strictEqual(error.reason, 'invalid_grant');
+      assert.strictEqual(error.message, 'the vendor rejected the account credentials with HTTP 403 (invalid_grant).');
+
+      return true;
+    },
+  );
+  await assert.rejects(
+    () => authClient.idToken(new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof AuthHaltedError);
+      assert.strictEqual(error.reason, 'invalid_grant');
+      assert.strictEqual(error.message, 'authentication stopped after the vendor refused the account credentials.');
+
+      return true;
+    },
+  );
+
+  // assert
+  assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-token.json']);
+  assert.deepStrictEqual(await readdir(cachePath), ['preserved.bin']);
+  assert.deepStrictEqual(await readFile(preservedPath), preservedContents);
+  assert.strictEqual(grantRequests.length, 1);
+  assert.deepStrictEqual(messages, [
+    'debug The cached token could not be read; authenticating again.',
+    `error ${REJECTION_LOG}`,
+    'debug The token cache could not be deleted; authentication remains stopped.',
+  ]);
+});
+
 test('D-13 deletes the cached token when the vendor refuses the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
