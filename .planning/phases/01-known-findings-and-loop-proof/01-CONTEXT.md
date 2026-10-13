@@ -23,7 +23,7 @@ Fix SC-01 through SC-05 and prove the review loop, findings ledger, and file-hea
 
 - **D-04:** Cancel only the caller whose signal aborts. Other callers continue waiting for the same grant.
 - **D-05:** Cancel the shared request when no callers remain. Preserve prompt shutdown and the existing request timeout. Do not create duplicate concurrent grants or automatic retries.
-- **D-06:** Prove the joined-caller defect with a regression test committed and observed failing before the production fix. Test cancellation when all callers leave as well.
+- **D-06:** Prove the joined-caller defect with an active regression test observed failing against unchanged production source. Before the fix, commit a planning-only evidence record containing the complete regression patch, failing command/output, and source commit. Then commit the active test and production fix together after GREEN and passing hooks. The maintainer approved this exception to the roadmap's literal active-test-first commit requirement on 2026-10-13. Test cancellation when all callers leave as well. Apply this evidence-first policy to bugs found during this sweep; never bypass hooks or hide active tests from discovery.
 
 ### Review records and stopping
 

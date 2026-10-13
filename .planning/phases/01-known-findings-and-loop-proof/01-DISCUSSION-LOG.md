@@ -33,6 +33,10 @@ The proposed copyright text is `Copyright (c) 2026 Alessandro Colomba`. The SPDX
 
 ## Implementation discretion
 
+### Regression commit policy follow-up
+
+Research identified a conflict between committing an active failing regression before its fix and the mandatory passing commit hook. The maintainer selected option 1: commit failure evidence first, then commit the active test and fix after GREEN. The evidence includes the complete regression patch, failing command/output, and source commit. Options 2 (literal test-first with a compatible hook policy) and 3 (stop) were not selected.
+
 Routine implementation details remain governed by repository rules and the roadmap. No product behavior beyond the agreed cancellation fix was added.
 
 ## Deferred Ideas
