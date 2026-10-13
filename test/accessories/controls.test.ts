@@ -592,6 +592,19 @@ for (const refusalCase of VENDOR_REFUSALS) {
   });
 }
 
+test('logs the exact refusal for a runtime with no way to reach the vendor', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands } = recordingCommands();
+  const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => false);
+
+  // act
+  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+
+  // assert
+  assert.deepStrictEqual(warnings, ['Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.']);
+});
+
 // Every line a refusal writes, across all six causes. A log is a channel the plugin controls, so
 // what it may not carry is asserted directly: a bearer token, the vendor base URL, or a response
 // body (AUTH-02). The device identifier is asserted PRESENT, not absent: a vendor `deviceId` is a
