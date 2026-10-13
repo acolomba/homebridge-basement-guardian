@@ -24,12 +24,13 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 **Rulebooks:** `skills/typescript-google-style-review`, `skills/typescript-comments`, `skills/typescript-unit-testing` (+ `-review`), `skills/cucumber-behavioral-testing`, `features/CLAUDE.md`, `skills/local-verification`.
 
-**Working method:** Each phase runs a bounded review → triage → fix → re-review loop, modelled on `.claude/commands/babysit-pr.md`: reviewers and fixers run as subagents, each fix is an atomic commit that passes the hooks, and the loop stops after about four rounds or a round that does not reduce the open count. Fix scope is every finding, not only blockers. A bug gets a failing test before its fix.
+**Working method:** Each phase runs a bounded review → triage → fix → re-review loop, modelled on `.claude/commands/babysit-pr.md`: reviewers and fixers run as subagents, each fix is an atomic commit that passes the hooks, and the loop stops after about four rounds or a round that does not reduce the open count. Fix scope is every finding, not only blockers. A bug gets an active failing regression before its fix. The maintainer approved committing its complete patch and observed failure as a planning-only record first, then the active test and fix together after GREEN and passing hooks (code-review-sweep Phase 1, D-06).
 
 ## Requirements
 
 ### Validated
 
+- ✓ SC-01 through SC-05 have discriminating regression or mutation evidence, clean independent reviews, and a passing full repository gate. — code-review-sweep, Phase 1
 - ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
 - ✓ Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state. — Phase 2
 - ✓ Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics. — v1.0
@@ -204,4 +205,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-10-13 after starting milestone code-review-sweep*
+*Last updated: 2026-10-13 after completing code-review-sweep Phase 1*

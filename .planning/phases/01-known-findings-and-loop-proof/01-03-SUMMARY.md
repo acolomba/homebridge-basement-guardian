@@ -36,7 +36,7 @@ coverage:
     requirement: SPOT-03
     verification:
       - kind: unit
-        ref: npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts
+        ref: test/device/state.test.ts
         status: pass
       - kind: other
         ref: 01-STATE-REVIEW.md#expansion-verification
@@ -91,23 +91,23 @@ status: complete
 Every commit used the required pre-commit step and enabled foreground hooks.
 Actual committed paths were checked; no tracked file was deleted.
 
-## Verification
+## Check Results
 
 Node `v26.11.1`; existing `features/code-review-sweep` checkout; synthetic
 fixtures only. Source `src/device/state.ts` is byte-identical to the starting
 revision, SHA-256 `a685723083677ac98895ead0d815a3092b9c51b7fa28308c0dce67de786d2ec4`.
 
-- `npm run build:test && node --test dist-test/test/device/state.test.js`
+- npm run build:test && node --test dist-test/test/device/state.test.js
   passed 54/54. Tracer feedback repeated the build and TAP owner command
   before expansion and passed 54/54.
-- `npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts`
+- npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts
   exited 0; isolated lines, functions, and branches are all 100%.
-- `node --test dist-test/test/packaging/licenseHeaders.test.js` passed 5/5.
+- node --test dist-test/test/packaging/licenseHeaders.test.js passed 5/5.
   Manual inspection also verified the changed test header.
 - Fallow guard and `./node_modules/.bin/fallow audit --base main` passed.
   Required `SKIP=npm-check pre-commit run --files <owned changed files>` and
   successful commit hooks passed. These are focused checks; the coordinator
-  owns the combined-tree `npm run check` gate.
+  owns the combined-tree npm run check gate.
 
 The [state report](./01-STATE-REVIEW.md) records exact mutation directions,
 named failures, command exits, revision scope, restorations, and review counts.

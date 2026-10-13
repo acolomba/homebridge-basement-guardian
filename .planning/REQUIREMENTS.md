@@ -12,16 +12,16 @@ Rulebooks: `skills/typescript-google-style-review`, `skills/typescript-comments`
 
 ### Process
 
-- [ ] **PROC-01**: Each phase writes a findings ledger. Every finding records its rule, location, severity, and outcome (fixed, or rejected with a stated reason).
-- [ ] **PROC-02**: Each phase converges. The last re-review reports no open finding within about four rounds, or the phase stops and reports why.
-- [ ] **PROC-03**: One file-header form (SPDX line, then copyright and `@fileoverview` JSDoc) is decided once and applied to every file, and the license-header gate still passes.
+- [x] **PROC-01**: Each phase writes a findings ledger. Every finding records its rule, location, severity, and outcome (fixed, or rejected with a stated reason).
+- [x] **PROC-02**: Each phase converges. The last re-review reports no open finding within about four rounds, or the phase stops and reports why.
+- [x] **PROC-03**: One file-header form (SPDX line, then copyright and `@fileoverview` JSDoc) is decided once and applied to every file, and the license-header gate still passes.
 
 ### Known findings
 
-- [ ] **SPOT-01**: The auth cache test plants a real stranded temporary file through an injected temporary-name source (SC-01, SC-04).
-- [ ] **SPOT-02**: The control refusal-log test asserts the exact line for each refusal row, one `test()` per row (SC-02).
-- [ ] **SPOT-03**: The device-state frozen checks fail when the snapshot is missing, and the stale-version cases assert the stored state (SC-03).
-- [ ] **SPOT-04**: An aborted first caller cannot cancel a second caller that joined the same token grant, or the behavior is documented and tested (SC-05).
+- [x] **SPOT-01**: The auth cache test plants a real stranded temporary file through an injected temporary-name source (SC-01, SC-04).
+- [x] **SPOT-02**: The control refusal-log test asserts the exact line for each refusal row, one `test()` per row (SC-02).
+- [x] **SPOT-03**: The device-state frozen checks fail when the snapshot is missing, and the stale-version cases assert the stored state (SC-03).
+- [x] **SPOT-04**: An aborted first caller cannot cancel a second caller that joined the same token grant, or the behavior is documented and tested (SC-05).
 
 ### Conformance
 
@@ -58,13 +58,13 @@ Each covers the source modules and their paired tests against the style, comment
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROC-01 | Phase 1 | Pending |
-| PROC-02 | Phase 1 | Pending |
-| PROC-03 | Phase 1 | Pending |
-| SPOT-01 | Phase 1 | Pending |
-| SPOT-02 | Phase 1 | Pending |
-| SPOT-03 | Phase 1 | Pending |
-| SPOT-04 | Phase 1 | Pending |
+| PROC-01 | Phase 1 | Complete |
+| PROC-02 | Phase 1 | Complete |
+| PROC-03 | Phase 1 | Complete |
+| SPOT-01 | Phase 1 | Complete |
+| SPOT-02 | Phase 1 | Complete |
+| SPOT-03 | Phase 1 | Complete |
+| SPOT-04 | Phase 1 | Complete |
 | CLOUD-01 | Phase 2 | Pending |
 | DEV-01 | Phase 3 | Pending |
 | RUN-01 | Phase 4 | Pending |

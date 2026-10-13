@@ -1,7 +1,7 @@
 ---
 phase: 01-known-findings-and-loop-proof
 verified: 2026-10-13T20:42:18Z
-status: human_needed
+status: passed
 score: 14/14 must-haves verified
 covered_files:
   - .planning/phases/01-known-findings-and-loop-proof/01-01-PLAN.md
@@ -22,6 +22,7 @@ covered_files:
   - .planning/phases/01-known-findings-and-loop-proof/01-SECURITY.md
   - .planning/phases/01-known-findings-and-loop-proof/01-SOURCE-AUDIT.md
   - .planning/phases/01-known-findings-and-loop-proof/01-STATE-REVIEW.md
+  - .planning/phases/01-known-findings-and-loop-proof/01-UAT.md
   - .planning/phases/01-known-findings-and-loop-proof/01-VALIDATION.md
   - package.json
   - scripts/test-coverage-direct.mjs
@@ -34,7 +35,7 @@ covered_files:
   - test/cloud/auth.test.ts
   - test/device/state.test.ts
   - test/packaging/licenseHeaders.test.ts
-covered_digest: "v3:sha256:4e853baa2f8f82508b88bec405c9cfd1158dd8a43909edbd87016177ee47f39c"
+covered_digest: "v3:sha256:865ceaa2169023c1921a423162a72fb3119dc57bea724fa8fb2706d1e9171532"
 behavior_unverified: 0
 overrides_applied: 1
 overrides:
@@ -49,46 +50,39 @@ decision_coverage:
 flagged_assumptions:
   - id: E-07
     requirement: SPOT-03
-    status: uncertain
-    reason: "State behavior is exercised; the supplied taxonomy has no classified category or completeness oracle."
+    status: accepted
+    reason: "The maintainer accepted the explicit state checks for this bounded phase. No taxonomy completeness is claimed."
   - id: E-08
     requirement: SPOT-04
-    status: uncertain
-    reason: "The explicit caller-cancellation matrix is exercised; the supplied taxonomy has no classified category or completeness oracle."
+    status: accepted
+    reason: "The maintainer accepted the explicit D-04/D-05 caller-cancellation matrix for this bounded phase. No taxonomy completeness is claimed."
 prohibitions:
   - id: P-01
     statement: "MUST NOT replace unknown or stale protection telemetry with guessed normal measurements to make this conformance sweep pass."
-    status: unverified
-    flagged: true
-    evidence: "State production is unchanged from phase baseline; assertion repairs use independent literal inputs and outputs. No enforcement descriptor exists."
+    status: verified
+    flagged: false
+    evidence: "Accepted by explicit maintainer judgment on 2026-10-13: state production is unchanged from phase baseline and assertions use independent literal inputs/outputs. No automated enforcement descriptor is claimed."
   - id: P-02
     statement: "MUST NOT present paused or skipped findings, deferred hardware gates, or archived milestone verification as fixed or verified work in the current sweep."
-    status: unverified
-    flagged: true
-    evidence: "Live seed outcomes, explicit clean round counts, real Git provenance, and separately deferred warnings were inspected. No enforcement descriptor exists."
-human_verification:
-  - test: "E-07: Decide whether the explicit SC-03 snapshot, nested-value, and canonical-store checks suffice for this bounded phase."
-    expected: "Accept those checks without claiming taxonomy completeness, or name a specific additional state edge to implement."
-    why_human: "The supplied unclassified taxonomy row has no category or deterministic acceptance criterion."
-  - test: "E-08: Decide whether the explicit D-04/D-05 cancellation matrix suffices for this bounded phase."
-    expected: "Accept first/joined/root/all-caller cancellation, cache overlap, failure settlement, and no-duplicate-grant checks without claiming taxonomy completeness, or name an additional edge."
-    why_human: "The supplied unclassified taxonomy row has no category or deterministic acceptance criterion."
-  - test: "P-01: Review that this assertion sweep preserves unknown/stale telemetry semantics."
-    expected: "Accept the unchanged state production and independent complete-value assertions as satisfying the prohibition, or identify a concrete violation."
-    why_human: "The prohibition has no wired enforcement descriptor; automated verification must keep it flagged-unverified pending explicit judgment."
-  - test: "P-02: Review that the live ledger accurately separates fixed findings from deferred or unverified work."
-    expected: "Accept SC-01..SC-05 as fixed, the three clean round-1 reports, and the separate later-phase warnings/hardware/archive scope, or identify a misleading completion claim."
-    why_human: "The prohibition has no wired enforcement descriptor; automated verification must keep it flagged-unverified pending explicit judgment."
+    status: verified
+    flagged: false
+    evidence: "Accepted by explicit maintainer judgment on 2026-10-13: live seed outcomes, clean round counts, real Git provenance, and separately deferred warnings accurately state current completion. No automated enforcement descriptor is claimed."
+human_verification: []
+human_resolution:
+  accepted_by: maintainer
+  accepted_at: "2026-10-13"
+  accepted_items: [E-07, E-08, P-01, P-02]
+  scope: "Bounded Phase 1 checks and claims; no taxonomy completeness or automated prohibition enforcement claimed."
 ---
 
 # Phase 1: Known Findings and Loop Proof Verification Report
 
 **Phase Goal:** The five spot-check findings are fixed behind tests that can fail, and the review loop, the findings ledger, and the file-header form that later phases reuse are proven on them.
 **Verified:** 2026-10-13T20:42:18Z
-**Status:** human_needed
+**Status:** passed
 **Re-verification:** No — initial verification; no previous live phase VERIFICATION.md existed.
 
-The code and process checks support the phase goal. Four explicit judgment flags remain unresolved. They prevent a `passed` disposition; they do not indicate an observed implementation failure. The score covers positive truths only and does not count either prohibition as verified.
+The code and process checks support the phase goal. The maintainer accepted E-07, E-08, P-01, and P-02 on 2026-10-13. The 14/14 score covers the positive truths; prohibition satisfaction is recorded as explicit human judgment, not automated enforcement.
 
 ## Goal Achievement
 
@@ -113,7 +107,7 @@ The first five rows retain all live roadmap success criteria. The following rows
 | 13 | E-12/E-13/E-14/D-09: Explicit zero is clean; a positive-count stall, reopened fixed finding, or round four pauses all batches with retry/skip/stop; actual rounds and RED/fix ordering are chronological. | ✓ VERIFIED | Actual rounds ended at 1 with zero, so no stop trigger occurred. Protocol explicitly requires immediate interruption and forbids further dispatch/fixes/commits pending maintainer choice. Report/Git chronology was inspected. This is a documented orchestration contract, not a claim that untriggered stop branches were executed. |
 | 14 | E-15..E-18: All four parallel-owned TypeScript files retain the same exact header; source classification, isolated 100% coverage, and full combined-tree gate pass on restored inputs. | ✓ VERIFIED | Header inspection confirms exact form. Current production controls/state equal baseline; build inputs equal verified `218ab0c`. Full log records 104 scenarios/1156 steps and 43 isolated pairs. Owned direct LCOV counts all match; no executable untracked input exists. |
 
-**Score:** 14/14 positive truths verified, including one accepted override; 0 present, behavior-unverified. Four separate judgment items remain UNCERTAIN (WARNING).
+**Score:** 14/14 positive truths verified, including one accepted override; 0 present, behavior-unverified. All four separate judgment items were accepted by the maintainer; none remains pending.
 
 ### Required Artifacts
 
@@ -130,7 +124,7 @@ The first five rows retain all live roadmap success criteria. The following rows
 | `test/device/state.test.ts` | Complete frozen and canonical-store assertions | ✓ VERIFIED | Public store actions/readbacks with independent complete values; owner 54/54. |
 | `01-STATE-REVIEW.md` | SC-03 outcomes, six mutations, clean round | ✓ VERIFIED | Named failures/restoration and real commits match retained JSON/TAP captures. |
 | `01-FINDINGS.md` | Single complete seed/round ledger | ✓ VERIFIED | Five outcomes and three clean rounds reconcile with unique reports and Git objects. |
-| `01-VALIDATION.md` | Task/threat/header/full-gate evidence | ✓ VERIFIED | Eight task rows, correct runnable commands, measured gate, explicit four remaining flags. |
+| `01-VALIDATION.md` | Task/threat/header/full-gate evidence | ✓ VERIFIED | Eight task rows, correct runnable commands, measured gate; its four phase-end flags are resolved by explicit maintainer acceptance in `01-UAT.md`. |
 | `01-REVIEW-PROTOCOL.md` | Reusable header/loop/evidence contract | ✓ VERIFIED | Referenced by plans and ledger, specifies ownership, rounds, D-06 and D-09. |
 
 Artifact paths without prefixes in this table are under the live phase directory. Conditional controls/state production-bug RED JSON files are intentionally absent: no production bug was found in those assertion-only batches.
@@ -178,7 +172,7 @@ Verifier process ran each named test below against the unchanged compiled inputs
 
 The full gate was not repeated. Same-session `npm run check`, exit 0 at `218ab0cac702c5699ced277aaf499fe5f5194d54`, Node v26.11.1, completed at 20:27:52Z. Its retained log `/private/tmp/guardian-phase1-full-check.log` independently shows six static checks passing, 104 scenarios, 1156 steps, and merged LCOV for 43 isolated pairs.
 
-Current changed paths since that revision are planning-only. The retained full dirty diff includes ROADMAP/STATE Markdown and baseline `.planning/state.json`. After excluding planning Markdown, its remaining diff exactly equals the current non-Markdown diff. The milestone lock bytes also equal the retained snapshot. New review/security Markdown is non-executable. No source, test, dependency, configuration, tool, or runtime input changed. Thus compilation, owners, full-gate and license results can be reused under local-verification.
+At automated verification, changed paths since that revision were planning-only. The retained full dirty diff included ROADMAP/STATE Markdown and baseline `.planning/state.json`. After excluding planning Markdown, its remaining diff exactly matched the verification-time non-Markdown diff; the milestone lock bytes also matched. Subsequent human resolution, phase advancement, and summary-reference corrections change planning metadata only. No source, test, dependency, configuration, tool, or runtime input changed. Compilation, owners, full-gate and license results remain applicable under local-verification.
 
 | Isolated owner source | Covered lines | Covered functions | Covered branches |
 | --- | --- | --- | --- |
@@ -205,9 +199,9 @@ No `scripts/*/tests/probe-*.sh` or runnable phase-declared shell probe exists. T
 | --- | --- | --- | --- | --- |
 | SPOT-01 | 01-01 | Real stranded temporary file through injected name source | ✓ SATISFIED | Truths 1, 6, 7; full-path collision and exclusive-create negative control. |
 | SPOT-02 | 01-02 | Exact refusal line, one test per row | ✓ SATISFIED | Truths 2, 10; eight active fresh literal cases and wrong-cause RED. |
-| SPOT-03 | 01-03 | Missing frozen values fail; stale patches assert stored state | ✓ SATISFIED | Truths 2, 11; whole values, canonical reads, six failing negative controls. P-01/E-07 judgment remains separate. |
-| SPOT-04 | 01-01 | First caller cannot abort joined grant | ✓ SATISFIED | Truths 3, 8, 9; fresh joined survival, accepted D-06 proof history. E-08 judgment remains separate. |
-| PROC-01 | 01-01..04 | Complete findings ledger | ✓ SATISFIED | Truths 4, 12; five stable complete outcomes. P-02 judgment remains separate. |
+| SPOT-03 | 01-03 | Missing frozen values fail; stale patches assert stored state | ✓ SATISFIED | Truths 2, 11; whole values, canonical reads, six failing negative controls. P-01/E-07 accepted by human judgment. |
+| SPOT-04 | 01-01 | First caller cannot abort joined grant | ✓ SATISFIED | Truths 3, 8, 9; fresh joined survival, accepted D-06 proof history. E-08 accepted by human judgment. |
+| PROC-01 | 01-01..04 | Complete findings ledger | ✓ SATISFIED | Truths 4, 12; five stable complete outcomes. P-02 accepted by human judgment. |
 | PROC-02 | 01-01..04 | Converge or stop/report within bounded rounds | ✓ SATISFIED | Truths 4, 13; all round-1 closing counts zero, no D-09 trigger; explicit reusable stop contract. |
 | PROC-03 | 01-01..04 | Locked header applied, license gate passes | ✓ SATISFIED for this phase | Truths 5, 14; all four touched headers, license 5/5; later phases apply form to their scope. |
 
@@ -233,11 +227,11 @@ No unresolved `TBD`, `FIXME`, or `XXX` occurs in the four changed TypeScript fil
 
 | File/item | Line/location | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `01-SOURCE-AUDIT.md` | E-07/E-08 | Unclassified edge taxonomy | WARNING | Concrete behavior is tested; completeness judgment remains explicit. |
-| Plans 01-03/01-04 | P-01/P-02 prohibitions | Descriptor-less flagged-unverified constraints | WARNING | Requires human judgment; neither is counted as verified. |
+| `01-SOURCE-AUDIT.md` | E-07/E-08 | Unclassified edge taxonomy | WARNING — resolved by human judgment | Concrete behavior is tested; the maintainer accepted bounded scope without claiming taxonomy completeness. |
+| Plans 01-03/01-04 | P-01/P-02 prohibitions | Descriptor-less constraints originally flagged-unverified | WARNING — resolved by human judgment | Both judgments accepted by the maintainer; no automated enforcement descriptor is claimed. |
 | `01-SECURITY.md` | T-01-07 row | Earlier medium label corrected to high, matching the source plan | INFO — resolved | Mitigation remains closed and supported by six negative controls. Metadata correction changed no code or test input. |
 
-The disconfirmation pass checked exact collision naming, same-status cause aliasing, missing frozen values, hidden canonical-store corruption, and shared abort ownership. Each has substantive discrimination evidence. The remaining partial evidence concerns taxonomy/prohibition judgments, not an uncovered asserted runtime invariant. No coincidental-reliance item was identified: public seeding establishes store versions; explicit awaited sequencing and waiter counting enforce cancellation order.
+The disconfirmation pass checked exact collision naming, same-status cause aliasing, missing frozen values, hidden canonical-store corruption, and shared abort ownership. Each has substantive discrimination evidence. Taxonomy/prohibition judgments were resolved explicitly by the maintainer; they do not establish automated enforcement or taxonomy completeness. No coincidental-reliance item was identified: public seeding establishes store versions; explicit awaited sequencing and waiter counting enforce cancellation order.
 
 ### Deferred Items
 
@@ -245,35 +239,22 @@ The live roadmap explicitly assigns original auth WARNINGs to Phase 2, device/st
 
 ### Human Verification Required
 
-These are four bounded decisions, not vendor/hardware tests or duplicate D-06 approval. Explicit human resolution is required because the live plans defer these judgments and neither prohibition has wired enforcement.
+None. The maintainer accepted all four bounded judgments on 2026-10-13; `01-UAT.md` records 4/4 passed with zero pending items.
 
-#### 1. E-07 — State taxonomy scope
+### Human Resolution Completed
 
-**Test:** Review the missing snapshot/nested-value and canonical-store checks supporting SC-03.
-**Expected:** Accept the explicit cases as sufficient for this bounded phase without claiming taxonomy completeness, or specify an additional state edge.
-**Why human:** The supplied taxonomy row has no classified category or deterministic acceptance criterion.
+| Item | Accepted scope | Outcome |
+| --- | --- | --- |
+| E-07 | Explicit snapshot/nested-value/canonical-store checks suffice for Phase 1; no taxonomy completeness claimed. | Accepted by maintainer |
+| E-08 | Explicit D-04/D-05 cancellation matrix suffices for Phase 1; no taxonomy completeness claimed. | Accepted by maintainer |
+| P-01 | Unchanged state production and independent assertions preserve unknown/stale protection telemetry semantics. | Satisfied by explicit human judgment |
+| P-02 | Five fixed seeds and three clean rounds accurately separate later-phase warnings and hardware/archive scope. | Satisfied by explicit human judgment |
 
-#### 2. E-08 — Cancellation taxonomy scope
-
-**Test:** Review the D-04/D-05 matrix: first/joined caller aborts, all/root cancellation, pre-aborted/cache-overlap calls, settlement, deadline, and teardown without duplicate/retry.
-**Expected:** Accept that explicit matrix as sufficient for this bounded phase without claiming taxonomy completeness, or specify an additional cancellation edge.
-**Why human:** The supplied taxonomy row has no classified category or deterministic acceptance criterion.
-
-#### 3. P-01 — Preserve protection semantics
-
-**Test:** Review unchanged `src/device/state.ts` and the independent expected snapshots in the assertion diff.
-**Expected:** Accept that the sweep adds no guessed normal value for unknown/stale telemetry, or identify a concrete violation.
-**Why human:** Descriptor-less prohibition; source inspection is useful evidence but cannot silently replace explicit judgment.
-
-#### 4. P-02 — Accurate completion claims
-
-**Test:** Review the five ledger outcomes, three explicit clean rounds, and separate later-phase warnings/hardware/archive scope.
-**Expected:** Accept that paused, skipped, hardware, and archived work is not presented as fixed or verified current work, or identify a misleading claim.
-**Why human:** Descriptor-less prohibition; the deterministic checks prove commits/counts, while the completion wording still needs judgment.
+The descriptor-less prohibitions have human resolution, not invented automatic enforcement. No vendor/hardware approval or further D-06 approval is implied.
 
 ### Gaps Summary
 
-No implementation blocker was found. All five seeds have discriminating evidence; source, public callers, tests, and process records are connected. The final status is `human_needed` solely for E-07, E-08, P-01, and P-02. The prohibitions remain prominently **unverified-prohibition — human review recommended**. No source, shared planning state, or Git index was modified by this verifier; this report is left uncommitted for the coordinator.
+No implementation blocker was found. All five seeds have discriminating evidence; source, public callers, tests, and process records are connected. The final status is `passed` after the maintainer accepted E-07, E-08, P-01, and P-02. No implementation or judgment item remains pending. No source, shared planning state, or Git index was modified by this verifier; this report is left uncommitted for the coordinator.
 
 ---
 

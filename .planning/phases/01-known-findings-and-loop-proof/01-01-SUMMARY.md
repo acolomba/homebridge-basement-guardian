@@ -53,7 +53,7 @@ coverage:
     requirement: PROC-03
     verification:
       - kind: unit
-        ref: node --test dist-test/test/packaging/licenseHeaders.test.js
+        ref: test/packaging/licenseHeaders.test.ts
         status: pass
       - kind: other
         ref: 01-AUTH-REVIEW.md#Review rounds
@@ -127,15 +127,15 @@ The later exclusive-create negative control is recorded separately under
 `mutationEvidence`; it is not production-bug RED. Generic active-test-first
 commit/path heuristics do not supersede the approved evidence policy.
 
-## Verification
+## Check Results
 
 Node v26.11.1; offline auth scope with real temporary files and one local
 loopback adapter case. No live account, hardware, or package installation.
 
 | Gate | Outcome |
 | --- | --- |
-| `npm run build:test && node --test --test-reporter=tap dist-test/test/cloud/auth.test.js` | Exit 0; 61/61 final auth tests passed |
-| `npm run test:coverage:direct -- src/cloud/auth.ts test/cloud/auth.test.ts` | Exit 0; 100% lines/functions/branches on restored source |
+| npm run build:test && node --test --test-reporter=tap dist-test/test/cloud/auth.test.js | Exit 0; 61/61 final auth tests passed |
+| npm run test:coverage:direct -- src/cloud/auth.ts test/cloud/auth.test.ts | Exit 0; 100% lines/functions/branches on restored source |
 | Auth plus compiled license-header gate | Exit 0; 65/65 at the header/tracer snapshot |
 | Focused ESLint | Exit 0; no warnings |
 | Required pre-commit and enabled foreground commit hooks | Passed for all evidence/code commits; incremental check:commit passed for code |
@@ -144,7 +144,7 @@ loopback adapter case. No live account, hardware, or package installation.
 | Mutation restoration | Source diff to 3c9327e empty; rebuild and isolated coverage GREEN |
 
 Full command scope and commit provenance are in `01-AUTH-REVIEW.md`. The
-coordinator owns the combined `npm run check` gate, central findings ledger,
+coordinator owns the combined npm run check gate, central findings ledger,
 state, roadmap, and shared requirement completion. This summary records this
 plan's completed contributions; shared requirement IDs remain subject to the
 coordinator's `requirements.ready-ids` check.

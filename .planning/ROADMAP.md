@@ -32,7 +32,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 
 **Phase numbering:** Numbering restarts at 1 for this milestone. Integer phases are planned work. Decimal phases (2.1, 2.2) are urgent insertions marked `INSERTED`.
 
-- [ ] **Phase 1: Known Findings and Loop Proof** - Fix the five spot-check findings and prove the loop, the ledger, and the header form on them.
+- [x] **Phase 1: Known Findings and Loop Proof** - Fix the five spot-check findings and prove the loop, the ledger, and the header form on them. (completed 2026-10-13)
 - [ ] **Phase 2: Cloud Conformance** - `src/cloud/**` and `test/cloud/**` conform to the rules.
 - [ ] **Phase 3: Device and Persistence Conformance** - `src/device/**`, `src/persistence/**`, and their tests conform to the rules.
 - [ ] **Phase 4: Runtime Conformance** - `src/runtime/**` and `test/runtime/**` conform to the rules.
@@ -173,7 +173,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | In Progress | - |
+| 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 3. Device and Persistence Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 4. Runtime Conformance | code-review-sweep | 0/TBD | Not started | - |
