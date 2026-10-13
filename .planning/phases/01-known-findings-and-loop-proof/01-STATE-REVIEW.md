@@ -63,3 +63,55 @@ Both negative controls ran compiled state owner tests with the TAP reporter:
 Restoration `git diff -- src/device/state.ts` is empty after each mutation.
 Original source SHA-256 is recorded in the final mutation evidence. The
 tracer proves the intended failure direction and restored GREEN before expansion.
+
+## Expansion verification
+
+Source revision: `2fabe98cb24efa6e743a8d966a85f28155b73369`, with the
+owned test diff extending all remaining SC-03 cases. No other executable
+input changed. Each experiment used `npm run build:test`, followed by
+`node --test --test-reporter=tap dist-test/test/device/state.test.js`.
+Every target executed and failed with `ERR_ASSERTION` at its complete-value
+expectation. Each restoration then rebuilt and passed all 54 state tests.
+
+| Mutation | Named test | Expected / observed | Mutation exit | Restored build / owner |
+| --- | --- | --- | --- | --- |
+| Omit `readings` from discovery data when nested readings are supplied | `freezes a structured value nested inside the telemetry record` | Expected `readings: { depth: 3 }`; actual record holds only `fault: null` | 1 | 0 / 0 |
+| Replace nested-radio metadata with `{}` in `nextSnapshot` | `freezes a structured value nested inside the metadata record` | Expected `radio: { signal: -54 }`; actual metadata `{}` | 1 | 0 / 0 |
+| Delete the entry on release rather than storing the released snapshot | `returns a released snapshot no consumer can modify` | Expected complete released snapshot; actual `undefined` | 1 | 0 / 0 |
+| Store `nextSnapshot` for rejected version 7 while returning `previous` | `advances a watermark it already held on a patch that reports only device metadata, so a superseded telemetry patch stays refused` | Expected stored water level 1/version 8; actual 31/7; returned old snapshot still passes | 1 | 0 / 0 |
+
+Tracer controls began at 20:19:52 and 20:19:58 UTC; expansion controls at
+20:22:29, 20:22:43, 20:22:54, and 20:23:03 UTC on 2026-10-13.
+All six restored source files matched their original bytes and SHA-256
+`a685723083677ac98895ead0d815a3092b9c51b7fa28308c0dce67de786d2ec4`.
+`git diff -- src/device/state.ts` was empty after each restoration. Full TAP
+captures and exact replacement strings were retained during execution under
+`/tmp/state-negative-evidence/`; the named failures and outcomes above are the
+persistent evidence. These are negative controls, not production-bug reports;
+no `01-STATE-RED-EVIDENCE.json` is warranted.
+
+`npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts`
+exited 0. The pair ran alone; the coverage runner requires all line, function,
+and branch counts to be covered, so all three metrics are 100%.
+`node --test dist-test/test/packaging/licenseHeaders.test.js` exited 0: 5/5
+tests passed. This gate validates source classification; direct header
+inspection also confirms the changed test's locked form.
+
+## Commit and tool evidence
+
+- `07eaaadcc0b246808a483aac2279f45c8571ddb4`: header-only commit;
+  committed path `test/device/state.test.ts`; all foreground hooks passed.
+- `2fabe98cb24efa6e743a8d966a85f28155b73369`: tracer assertions and this
+  report; committed paths verified. An initial commit attempt failed on two
+  unnecessary optional chains after whole-value equality narrowed the type.
+  Removing those chains corrected the task-induced lint errors; restaging and
+  a new foreground attempt passed all hooks. No failed attempt produced a commit.
+- Tracer feedback `npm run build:test && node --test --test-reporter=tap
+  dist-test/test/device/state.test.js` exited 0 at the tracer commit before
+  expansion; all 54 tests passed.
+- Fallow guard: no configured boundary or policy rules for either owned path.
+  `./node_modules/.bin/fallow audit --base main` exited 0 before each commit.
+- Required `SKIP=npm-check pre-commit run --files <owned changed files>`
+  passed before foreground commits. Actual commit hooks remained enabled.
+
+Final re-review and expansion commit are recorded in the summary close-out.
