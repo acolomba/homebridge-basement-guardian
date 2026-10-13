@@ -25,11 +25,6 @@ const DEVICE_ID = 'account-1_serial-1';
 const SELF_TEST = 'system-self-test';
 const ALARM_MUTE = 'alarm-mute';
 
-// Fixture secrets a log line must never quote. Neither reaches this module, which is the point: the
-// assertion states what may not appear rather than trusting that nothing passes it in.
-const BEARER_TOKEN = 'id-token-1';
-const BASE_URL = 'https://api.example.test';
-
 // The outcome the command port answers for a write no local rule refuses. A local refusal never
 // reaches it, so the value it carries is irrelevant to those rows.
 const ACCEPTED: CommandOutcome = { accepted: true };
@@ -423,11 +418,13 @@ interface RefusalCase {
   confirmationObservable: boolean;
   outcome: CommandOutcome;
   status: number;
+  expectedWarning: string;
 }
 
 const LOCAL_REFUSALS: readonly RefusalCase[] = [
   {
     cause: 'a write of anything but on',
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
     value: false,
     reported: false,
     offlineConfirmed: false,
@@ -438,6 +435,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'a runtime with no way to reach the vendor',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
     value: true,
     reported: false,
     offlineConfirmed: false,
@@ -448,6 +446,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'a live path that cannot carry the device answer',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
     value: true,
     reported: false,
     offlineConfirmed: false,
@@ -458,6 +457,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'a capability whose reported field has not decoded',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
     value: true,
     reported: undefined,
     offlineConfirmed: false,
@@ -468,6 +468,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'a device confirmed offline',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
     value: true,
     reported: false,
     offlineConfirmed: true,
@@ -478,6 +479,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'a duplicate request while the capability already reads active',
+    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
     value: true,
     reported: true,
     offlineConfirmed: false,
@@ -491,6 +493,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
 const VENDOR_REFUSALS: readonly RefusalCase[] = [
   {
     cause: 'a vendor error',
+    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: vendor-error. It is not retried.',
     value: true,
     reported: false,
     offlineConfirmed: false,
@@ -501,6 +504,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
   },
   {
     cause: 'an exceeded deadline',
+    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: timed-out. It is not retried.',
     value: true,
     reported: false,
     offlineConfirmed: false,
@@ -592,37 +596,15 @@ for (const refusalCase of VENDOR_REFUSALS) {
   });
 }
 
-test('logs the exact refusal for a runtime with no way to reach the vendor', async () => {
-  // arrange
-  const warnings: string[] = [];
-  const { commands } = recordingCommands();
-  const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => false);
-
-  // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
-
-  // assert
-  assert.deepStrictEqual(warnings, ['Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.']);
-});
-
-// Every line a refusal writes, across all six causes. A log is a channel the plugin controls, so
-// what it may not carry is asserted directly: a bearer token, the vendor base URL, or a response
-// body (AUTH-02). The device identifier is asserted PRESENT, not absent: a vendor `deviceId` is a
-// non-sensitive value, admitted to logs and accessory context, and without it a multi-pump account
-// cannot tell which pump refused. `D-027` still keeps it out of public artifacts, which is a
-// different channel from this one.
-test('names the capability and the device in every refusal line and quotes no token or URL', async () => {
-  // arrange
-  const warnings: string[] = [];
-  const log = warningLog(warnings);
-
-  // act
-  for (const refusalCase of REFUSALS) {
+for (const refusalCase of REFUSALS) {
+  test(`logs the exact refusal for ${refusalCase.cause}`, async () => {
+    // arrange
+    const warnings: string[] = [];
     const { commands } = recordingCommands(refusalCase.outcome);
     const { service } = boundSwitch(
       {
         commands,
-        log,
+        log: warningLog(warnings),
         offlineConfirmed: () => refusalCase.offlineConfirmed,
         commandTransportReady: () => refusalCase.transportReady,
         liveConfirmationObservable: () => refusalCase.confirmationObservable,
@@ -630,20 +612,13 @@ test('names the capability and the device in every refusal line and quotes no to
       () => refusalCase.reported,
     );
 
+    // act
     await assertRefused(service, refusalCase.value, refusalCase.status);
-  }
 
-  // assert
-  assert.deepStrictEqual(
-    warnings.map((warning) => ({
-      capability: warning.includes('self-test'),
-      token: warning.includes(BEARER_TOKEN),
-      baseUrl: warning.includes(BASE_URL),
-      deviceId: warning.includes(DEVICE_ID),
-    })),
-    Array.from(REFUSALS, () => ({ capability: true, token: false, baseUrl: false, deviceId: true })),
-  );
-});
+    // assert
+    assert.deepStrictEqual(warnings, [refusalCase.expectedWarning]);
+  });
+}
 
 // The exact cause text each half of the command gate writes. They are written out here rather than
 // read off the module, so a reworded line fails at the assertion as well as behind it: the whole
