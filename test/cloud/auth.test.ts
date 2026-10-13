@@ -157,15 +157,23 @@ async function writeCacheText(storagePath: string, text: string): Promise<void> 
 }
 
 // Records every grant request and answers each one with a fresh Response.
+interface GrantRequest {
+  method: string;
+  url: string;
+  body: string;
+  headers: Record<string, string>;
+}
+
 function createGrantTransport(respond: (callIndex: number) => Response): {
-  requests: { url: string; body: string; headers: Record<string, string> }[];
+  requests: GrantRequest[];
   httpFetch: AuthClientOptions['httpFetch'];
 } {
-  const grantRequests: { url: string; body: string; headers: Record<string, string> }[] = [];
+  const grantRequests: GrantRequest[] = [];
 
   const httpFetch: AuthClientOptions['httpFetch'] = (input, init) => {
     const callIndex = grantRequests.length;
     grantRequests.push({
+      method: init?.method ?? '',
       url: input.toString(),
       body: typeof init?.body === 'string' ? init.body : '',
       headers: Object.fromEntries(new Headers(init?.headers).entries()),
@@ -219,23 +227,21 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
 
   // assert
   assert.strictEqual(idToken, 'id-token-1');
-  assert.deepStrictEqual(
-    grantRequests.map((request) => request.url),
-    ['https://tenant.example.test/oauth/token'],
-  );
-  assert.deepStrictEqual(
-    grantRequests.map((request) => parseJson(request.body)),
-    [
-      {
+  assert.deepStrictEqual(grantRequests, [
+    {
+      method: 'POST',
+      url: 'https://tenant.example.test/oauth/token',
+      headers: { 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian' },
+      body: JSON.stringify({
         grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
         realm: 'example-realm',
         client_id: 'client-id-1',
         username: ACCOUNT_EMAIL,
         password: ACCOUNT_PASSWORD,
         scope: 'openid profile email',
-      },
-    ],
-  );
+      }),
+    },
+  ]);
 });
 
 // A real loopback connection over the production httpFetch port, not a mocked fetch: undici's
@@ -274,10 +280,21 @@ test('identifies the plugin on the grant request, alongside its content type', a
   await authClient.idToken(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(
-    grantRequests.map((request) => request.headers),
-    [{ 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian' }],
-  );
+  assert.deepStrictEqual(grantRequests, [
+    {
+      method: 'POST',
+      url: 'https://tenant.example.test/oauth/token',
+      headers: { 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian' },
+      body: JSON.stringify({
+        grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
+        realm: 'example-realm',
+        client_id: 'client-id-1',
+        username: ACCOUNT_EMAIL,
+        password: ACCOUNT_PASSWORD,
+        scope: 'openid profile email',
+      }),
+    },
+  ]);
 });
 
 test('AUTH-02 registers the granted token as a secret', async (t) => {
