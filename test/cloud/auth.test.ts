@@ -19,7 +19,7 @@ import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
 import { mock, verify, when } from 'strong-mock';
 
-import { createAuthClient, TOKEN_CACHE_FILENAME } from '../../src/cloud/auth.js';
+import { createAuthClient } from '../../src/cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
 import { httpFetch } from '../../src/cloud/httpDispatcher.js';
 
@@ -147,7 +147,7 @@ function cacheContents(overrides: Partial<TokenCacheContents> = {}): TokenCacheC
 }
 
 async function writeCacheText(storagePath: string, text: string): Promise<void> {
-  await writeFile(join(storagePath, TOKEN_CACHE_FILENAME), text, 'utf8');
+  await writeFile(join(storagePath, '.basement-guardian-token.json'), text, 'utf8');
 }
 
 // Records every grant request and answers each one with a fresh Response.
@@ -222,7 +222,7 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(
-    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    await readFile(join(storagePath, '.basement-guardian-token.json')),
     Buffer.from(
       JSON.stringify({
         idToken: 'id-token-1',
@@ -468,7 +468,7 @@ test('keeps the joined caller grant alive when the first caller aborts', async (
   assert.deepStrictEqual(await joinedOutcome, { status: 'fulfilled', idToken: 'id-token-1' });
   assert.strictEqual(transport.aborted, false);
   assert.deepStrictEqual(
-    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    await readFile(join(storagePath, '.basement-guardian-token.json')),
     Buffer.from(
       JSON.stringify({
         idToken: 'id-token-1',
@@ -666,7 +666,7 @@ test('AUTH-01 stores the granted token in the cache file under the storage path'
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(
-    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    await readFile(join(storagePath, '.basement-guardian-token.json')),
     Buffer.from(
       JSON.stringify({
         idToken: 'id-token-1',
@@ -769,7 +769,7 @@ for (const { description, text } of [
 test('D-08 authenticates, keeps serving at debug level, and orphans no temporary file when the cache path cannot be read or written', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  await mkdir(join(storagePath, TOKEN_CACHE_FILENAME));
+  await mkdir(join(storagePath, '.basement-guardian-token.json'));
   const messages: string[] = [];
   const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
@@ -780,7 +780,7 @@ test('D-08 authenticates, keeps serving at debug level, and orphans no temporary
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.strictEqual(grantRequests.length, 1);
-  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+  assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-token.json']);
   assert.deepStrictEqual(messages, [
     'debug The cached token could not be read; authenticating again.',
     'debug The token cache could not be written; the token is held in memory only.',
@@ -814,7 +814,7 @@ test('AUTH-02 writes neither the account email nor the account password into the
   // assert
   assert.strictEqual(idToken, 'id-token-1');
   assert.deepStrictEqual(
-    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    await readFile(join(storagePath, '.basement-guardian-token.json')),
     Buffer.from(
       JSON.stringify({
         idToken: 'id-token-1',
@@ -829,7 +829,7 @@ test('AUTH-02 writes neither the account email nor the account password into the
 test('writes through the injected full temporary path in an empty directory', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const cachePath = join(storagePath, '.basement-guardian-token.json');
   const temporaryPath = join(storagePath, 'injected-cache.tmp');
   const targets: string[] = [];
   const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
@@ -860,7 +860,7 @@ test('writes through the injected full temporary path in an empty directory', as
       }),
     ),
   );
-  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+  assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-token.json']);
   assert.strictEqual((await stat(cachePath)).mode & PERMISSION_BITS, OWNER_ONLY_MODE);
   assert.deepStrictEqual(targets, [cachePath]);
   assert.strictEqual(grantRequests.length, 1);
@@ -877,14 +877,14 @@ test('AUTH-02 leaves no temporary file beside the cache file it wrote', async (t
 
   // assert
   assert.strictEqual(idToken, 'id-token-1');
-  assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME]);
+  assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-token.json']);
 });
 
 if (DIRECTORY_MODES_BLOCK_WRITES) {
   test('AUTH-02 leaves an earlier cache file byte-for-byte unchanged when the temporary file cannot be written', async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
-    const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+    const cachePath = join(storagePath, '.basement-guardian-token.json');
     const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
     await writeCacheText(storagePath, earlierContents);
     const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
@@ -904,7 +904,7 @@ if (process.platform !== 'win32') {
   test('AUTH-02 preserves an occupied injected temporary file and the prior cache bytes', async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
-    const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+    const cachePath = join(storagePath, '.basement-guardian-token.json');
     const strandedPath = join(storagePath, 'occupied-cache.tmp');
     const strandedContents = Buffer.from([0, 255, 195, 40, 10]);
     const earlierContents = Buffer.from(JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
@@ -938,7 +938,7 @@ if (process.platform !== 'win32') {
     assert.deepStrictEqual(await readFile(strandedPath), strandedContents);
     assert.strictEqual((await stat(cachePath)).mode & PERMISSION_BITS, OWNER_ONLY_MODE);
     assert.strictEqual((await stat(strandedPath)).mode & PERMISSION_BITS, GROUP_READABLE_MODE);
-    assert.deepStrictEqual(await readdir(storagePath), [TOKEN_CACHE_FILENAME, 'occupied-cache.tmp']);
+    assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-token.json', 'occupied-cache.tmp']);
     assert.deepStrictEqual(messages, [
       'debug The cached token is at or inside its renewal margin; authenticating again.',
       'debug The token cache could not be written; the token is held in memory only.',
@@ -950,7 +950,7 @@ if (process.platform !== 'win32') {
   test('AUTH-02 restores owner-only permissions on a POSIX host when a second grant rewrites the cache file', async (t) => {
     // arrange
     const storagePath = await createStoragePath(t);
-    const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+    const cachePath = join(storagePath, '.basement-guardian-token.json');
     let currentTime = START_TIME;
     const clock: Clock = { now: () => currentTime };
     const { httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
@@ -991,7 +991,7 @@ test('D-13 rejects the account credentials the vendor refused', async (t) => {
 test('D-13 deletes the cached token when the vendor refuses the account credentials', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const cachePath = join(storagePath, '.basement-guardian-token.json');
   await writeCacheText(storagePath, JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 })));
   const { httpFetch: grantFetch } = createGrantTransport(() => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 403 }));
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
@@ -1179,7 +1179,7 @@ test('D-22 warns once, naming the 429, the thirty-day window, and how to stop th
 test('keeps the cache file and stays ready to retry when the vendor answers HTTP 500', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const cachePath = join(storagePath, '.basement-guardian-token.json');
   const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
   await writeCacheText(storagePath, earlierContents);
   const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(
@@ -1207,7 +1207,7 @@ test('keeps the cache file and stays ready to retry when the vendor answers HTTP
 test('treats a network failure as transient rather than as a refusal', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const cachePath = join(storagePath, TOKEN_CACHE_FILENAME);
+  const cachePath = join(storagePath, '.basement-guardian-token.json');
   const earlierContents = JSON.stringify(cacheContents({ expiresAt: START_TIME - 1_000 }));
   await writeCacheText(storagePath, earlierContents);
   let attempts = 0;

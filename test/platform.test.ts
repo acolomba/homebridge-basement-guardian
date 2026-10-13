@@ -24,7 +24,6 @@ import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.
 import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
-import { TOKEN_CACHE_FILENAME } from '../src/cloud/auth.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
@@ -827,7 +826,7 @@ describe('BasementGuardianPlatform', () => {
     launch?.();
     // Both files the plugin keeps under the storage directory: the token cache,
     // and the arrival anchors the silence measurement needs across a restart.
-    const stored = [ARRIVAL_ANCHOR_FILENAME, TOKEN_CACHE_FILENAME].sort();
+    const stored = [ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-token.json'].sort();
     await until(async () => {
       const entries = await readdir(storagePath);
 

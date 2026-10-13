@@ -14,7 +14,6 @@ import { join } from 'node:path';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { TOKEN_CACHE_FILENAME } from '../../../src/cloud/auth.js';
 import { DEFAULT_ID_TOKEN } from '../fakeAuth0.js';
 import {
   ACCOUNT_EMAIL,
@@ -67,7 +66,7 @@ const FOREIGN_CACHE = {
 async function tokenCachePath(world: BasementGuardianWorld): Promise<string> {
   const homebridge = await world.homebridge();
 
-  return join(homebridge.storagePath, TOKEN_CACHE_FILENAME);
+  return join(homebridge.storagePath, '.basement-guardian-token.json');
 }
 
 async function isPresent(path: string): Promise<boolean> {

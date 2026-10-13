@@ -18,7 +18,6 @@ import { join } from 'node:path';
 import { After, Before, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect } from 'mqtt';
 
-import { TOKEN_CACHE_FILENAME } from '../../../src/cloud/auth.js';
 import { httpFetch } from '../../../src/cloud/httpDispatcher.js';
 import { createFamilyRegistry } from '../../../src/device/registry.js';
 import { createRedactingLogger } from '../../../src/logging.js';
@@ -196,7 +195,7 @@ export class RealPumpWorld extends World {
    * the cached token leaves both untouched (AUTH-01).
    */
   async tokenCacheFingerprint(): Promise<string | undefined> {
-    const path = join(this.scratchDirectoryPath(), TOKEN_CACHE_FILENAME);
+    const path = join(this.scratchDirectoryPath(), '.basement-guardian-token.json');
 
     try {
       const contents = await readFile(path, 'utf8');

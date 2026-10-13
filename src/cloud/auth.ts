@@ -75,7 +75,7 @@ const CACHE_STALE = 'The cached token is at or inside its renewal margin; authen
 const CACHE_NOT_WRITTEN = 'The token cache could not be written; the token is held in memory only.';
 
 /** The cache file's name inside the Homebridge storage directory. */
-export const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
+const TOKEN_CACHE_FILENAME = '.basement-guardian-token.json';
 
 /** Everything the authentication client needs, by injection. */
 export interface AuthClientOptions {
