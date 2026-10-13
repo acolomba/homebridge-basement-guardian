@@ -344,7 +344,14 @@ test('AUTH-02 registers the granted token as a secret', async (t) => {
   const storagePath = await createStoragePath(t);
   const registeredSecrets: string[] = [];
   const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: grantFetch,
+      registerSecret: (secret: string) => {
+        registeredSecrets.push(secret);
+      },
+    }),
+  );
 
   // act
   const idToken = await authClient.idToken(new AbortController().signal);
@@ -359,7 +366,14 @@ test('AUTH-02 registers one token once however many requests carry it', async (t
   const storagePath = await createStoragePath(t);
   const registeredSecrets: string[] = [];
   const { httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
-  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, registerSecret: (secret: string) => registeredSecrets.push(secret) }));
+  const authClient = createAuthClient(
+    authOptions(storagePath, {
+      httpFetch: grantFetch,
+      registerSecret: (secret: string) => {
+        registeredSecrets.push(secret);
+      },
+    }),
+  );
 
   // act
   const firstToken = await authClient.idToken(new AbortController().signal);
@@ -378,7 +392,13 @@ test('AUTH-02 registers a replacement token once the previous one has expired', 
   const clock: Clock = { now: () => currentTime };
   const { httpFetch: grantFetch } = createGrantTransport((callIndex) => grantResponse(`id-token-${String(callIndex + 1)}`));
   const authClient = createAuthClient(
-    authOptions(storagePath, { httpFetch: grantFetch, clock, registerSecret: (secret: string) => registeredSecrets.push(secret) }),
+    authOptions(storagePath, {
+      httpFetch: grantFetch,
+      clock,
+      registerSecret: (secret: string) => {
+        registeredSecrets.push(secret);
+      },
+    }),
   );
   const firstToken = await authClient.idToken(new AbortController().signal);
 
