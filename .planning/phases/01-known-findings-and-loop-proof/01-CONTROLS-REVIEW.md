@@ -12,7 +12,7 @@ Reviewer: independent `gsd-code-reviewer`, agent
 
 | ID | Requirement | Rule | Location | Severity | Disposition |
 | --- | --- | --- | --- | --- | --- |
-| SC-02 | SPOT-02 | Unit-test assertions and data-driven cases | `test/accessories/controls.test.ts:591-623` | BLOCKER | Accepted; repair in progress |
+| SC-02 | SPOT-02 | Unit-test assertions and data-driven cases | Original `test/accessories/controls.test.ts:591-623`; repaired `424-516,599-620` | BLOCKER | Fixed in `d023bbb`; independently re-reviewed |
 
 The warning case reduces complete content to four substring booleans. An
 offline refusal can name the unsupported-off cause while retaining status
@@ -108,11 +108,74 @@ not ok 1 - logs the exact refusal for a runtime with no way to reach the vendor
 # duration_ms 135.708375
 ```
 
+Tracer commit: `906daa9647fc51273d46c3207dd16ddb3520a16c`,
+`test(controls): prove exact unavailable transport warning`. Fallow audit
+against `main` passed. Required pre-commit passed after its trailing-whitespace
+fixer; the enabled foreground commit hook passed. Inspection confirmed only
+the owned test and this review record changed, with no deletions.
+
 Restoration verified the exact source blob above and an empty source diff.
 `npm run build:test && node --test --test-reporter=tap dist-test/test/accessories/controls.test.js`
 exited 0 with 57/57 passing tests. Isolated compiled pair coverage exited 0
 and required 100% line/function/branch coverage. Restoration was verified
 by 2026-10-13T20:10:11Z. No mutation was staged or committed.
+
+The post-commit tracer feedback gate ran the plan's exact automated command,
+`npm run build:test && node --test dist-test/test/accessories/controls.test.js`,
+and exited 0 with 57/57 tests passing at `906daa9`. This automated-only gate
+allowed expansion under the configured end-of-phase verification mode.
+
+## Expansion verification and commit
+
+Expansion commit: `d023bbb0381050abdab195e1f8abb94e6036c658`,
+`test(controls): assert each exact refusal warning`. The patch preserves all
+eight existing refusal rows and unrelated tests. Each row has an independently
+authored complete line. Each sibling test creates new commands, service,
+binder, timers, and warnings. Exact one-element array equality rejects wrong
+causes, no warnings, empty warnings, and additional warnings. The transport
+tracer's title remains in the generated cases.
+
+The removed token/URL constants and comments became unused when the weak
+boolean-summary case was replaced. The unrelated status loop remains.
+
+At Node v26.11.1, against this exact code snapshot:
+
+| Command or check | Exit | Evidence scope |
+| --- | --- | --- |
+| `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` | 0 | Isolated controls pair; 100% lines, functions, branches |
+| `node --test dist-test/test/accessories/controls.test.js` | 0 | 63/63 owner tests, including eight named exact-log rows |
+| `node --test dist-test/test/packaging/licenseHeaders.test.js` | 0 | 5/5 license classification tests |
+| Required `SKIP=npm-check pre-commit run --files test/accessories/controls.test.ts` | 0 | Formatting, secrets, and applicable hooks |
+| Fallow audit against `main` | 0 | Verdict pass; no new dead-code, complexity, or duplication findings |
+| Enabled foreground `git commit` hook | 0 | Incremental `npm run check:commit` passed |
+| Source blob and baseline source diff | 0 | Original blob retained; production controls unchanged |
+
+Committed paths were inspected: the expansion changes only the owned test,
+with no tracked file deletion. The coordinator supplies the combined-tree
+`npm run check`; focused evidence does not establish that gate.
+
+## Review rounds
+
+Round 1 reviewer: independent `gsd-code-reviewer`, agent
+`/root/phase1_controls/controls_review`. Reviewed revision:
+`d023bbb0381050abdab195e1f8abb94e6036c658`. Diff: initial triage revision
+`07424ba` through `d023bbb`, scoped to the owned test; the source/test pair
+and mutation record were also inspected. The reviewer reused the exact-input
+focused verification and hook evidence under local-verification rules.
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 (SC-02) | 1 (SC-02) | 0 | 0 | 0 | 0 |
+
+Closing = 1 - 1 - 0 + 0 + 0 = 0. The reviewer explicitly found no introduced
+finding and no open finding in the triaged scope. No new controls IDs were
+needed. The result was sent to the coordinator before any further work.
+There was no stall, recurrence, or fourth-round cap; no maintainer pause was
+triggered. Deferred seed warnings retain their Phase 5 ownership.
+
+No genuine production bug was found in this batch, so the conditional
+`01-CONTROLS-RED-EVIDENCE.json` was not created. The temporary mutation is
+recorded separately above.
 
 ## Threat Flags
 
