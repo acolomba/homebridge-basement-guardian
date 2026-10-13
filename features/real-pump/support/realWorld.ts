@@ -1,22 +1,13 @@
+// SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview The per-scenario world for the opt-in real-pump suite.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Builds observation-only real-pump scenarios with the account runtime.
  *
- * This world is deliberately narrower than features/support/world.ts: it builds only the
- * plugin's own account runtime, through the same createAccountRuntimeFromConfig seam production
- * uses, and never a BasementGuardianPlatform, a DiscoveryContext, or a BasementGuardianAccessory.
- * With no HomeKit accessory layer built, there is no write handler anywhere in this suite that
- * could ever reach the runtime's command-issuing surface in the first place --
- * test/realPumpCommandBlock.test.ts proves that mechanically by scanning this file's own text
- * (T-06-15, D-04).
- *
- * Every collaborator the runtime needs is the real one: the bundled protocol constants, the real
- * system clock and monotonic clock, the real `mqtt` connect function. Only the account
- * credentials are supplied by the operator, through BG_EMAIL and BG_PASSWORD, and both are
- * registered with the redacting logger before the runtime can ever use them (T-06-17, AUTH-02).
- *
- * This world never imports features/support/world.ts. That module calls setWorldConstructor(),
- * and Before/After -- importing it here would register a second, competing World and a second
- * scenario-teardown hook into this profile's own support-code graph.
+ * Registers its own World and hooks independently of the default scenario world.
  */
 
 import { createHash, randomBytes } from 'node:crypto';

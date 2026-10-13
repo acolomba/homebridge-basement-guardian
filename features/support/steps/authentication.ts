@@ -1,8 +1,11 @@
+// SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview Steps about signing in to the vendor tenant.
- *
- * These steps arm the tenant, drive a restart, and ask what the tenant received, what the token
- * cache holds, and what the log said. Nothing here names the HTTP client the plugin uses.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Defines tenant sign-in and token-cache scenario steps.
  */
 
 import assert from 'node:assert/strict';
