@@ -135,6 +135,10 @@ dist
 # password, and the rest is pairing state.
 /dev/homebridge/
 
+# fallow skill pointers; scripts/init.sh writes them per machine
+/.agents/skills/fallow/
+/.claude/skills/fallow
+
 # AI harness local state
 **/.claude/settings.local.json
 /.claude/jobs/
