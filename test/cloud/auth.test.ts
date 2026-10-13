@@ -582,8 +582,10 @@ test('starts no grant for an already aborted caller', async (t) => {
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   caller.abort(callerReason);
 
-  // act & assert
+  // act
   await assert.rejects(authClient.idToken(caller.signal), expectAbortReason(callerReason));
+
+  // assert
   assert.deepStrictEqual(grantRequests, []);
 });
 
@@ -1056,7 +1058,7 @@ test('D-13 makes no further attempt once the vendor has refused the account cred
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   await assert.rejects(() => authClient.idToken(new AbortController().signal), expectRejectedCredentials('invalid_grant'));
 
-  // act & assert
+  // act
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
@@ -1067,6 +1069,8 @@ test('D-13 makes no further attempt once the vendor has refused the account cred
       return true;
     },
   );
+
+  // assert
   assert.strictEqual(grantRequests.length, 1);
 });
 
@@ -1190,7 +1194,7 @@ test('D-22 keeps trying after a throttled grant instead of stopping', async (t) 
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
   await assert.rejects(() => authClient.idToken(new AbortController().signal), expectThrottledGrant);
 
-  // act & assert
+  // act
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
@@ -1200,6 +1204,8 @@ test('D-22 keeps trying after a throttled grant instead of stopping', async (t) 
       return true;
     },
   );
+
+  // assert
   assert.strictEqual(grantRequests.length, 2);
 });
 
@@ -1228,7 +1234,7 @@ test('keeps the cache file and stays ready to retry when the vendor answers HTTP
   );
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
-  // act & assert
+  // act
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
@@ -1241,6 +1247,8 @@ test('keeps the cache file and stays ready to retry when the vendor answers HTTP
     },
   );
   await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(500));
+
+  // assert
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
   assert.strictEqual(grantRequests.length, 2);
 });
@@ -1260,7 +1268,7 @@ test('treats a network failure as transient rather than as a refusal', async (t)
 
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
-  // act & assert
+  // act
   await assert.rejects(
     () => authClient.idToken(new AbortController().signal),
     (error: unknown) => {
@@ -1273,6 +1281,8 @@ test('treats a network failure as transient rather than as a refusal', async (t)
     },
   );
   await assert.rejects(() => authClient.idToken(new AbortController().signal), expectCloudFailure(0));
+
+  // assert
   assert.strictEqual(await readFile(cachePath, 'utf8'), earlierContents);
   assert.strictEqual(attempts, 2);
 });
