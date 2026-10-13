@@ -21,5 +21,12 @@ fi
 # npm
 npm install
 
+# gsd
+npx --yes @opengsd/gsd-core@latest --install --local --claude --codex --pi --force-statusline
+node .claude/gsd-core/bin/gsd-tools.cjs capability install \
+    ./gsd-capabilities/discuss-agent-skills \
+    --scope project \
+    --yes
+
 # Register Fallow for Claude Code and Codex without changing project instructions.
 npx fallow agent install --harness claude --harness codex --without hooks --without guide --approve
