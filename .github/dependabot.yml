@@ -9,6 +9,9 @@ updates:
       # a major bump fails npm install (ERESOLVE) until typescript-eslint catches up.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # The HAP version must match the one the homebridge devDependency declares
+      # (test D-17). Bump it by hand in the same PR as homebridge.
+      - dependency-name: "@homebridge/hap-nodejs"
     labels:
       - "dependencies"
       - "npm"
