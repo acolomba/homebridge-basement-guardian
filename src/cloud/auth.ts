@@ -118,8 +118,8 @@ interface GrantAttempt {
 // What one client remembers about its failures: the code that stopped it for
 // good, and the kind of the last transient failure it reported.
 interface FailurePolicy {
-  haltedReason: string | undefined;
-  lastTransient: string | undefined;
+  haltedReason?: string;
+  lastTransient?: string;
 }
 
 // A failure worth trying again, described once so the log line, the error, and
@@ -330,7 +330,7 @@ function reportTransient(options: AuthClientOptions, policy: FailurePolicy, fail
 function reportRecovery(options: AuthClientOptions, policy: FailurePolicy): void {
   if (policy.lastTransient !== undefined) {
     options.log.info(RECOVERED);
-    policy.lastTransient = undefined;
+    delete policy.lastTransient;
   }
 }
 
@@ -514,7 +514,7 @@ function waitFor<T>(pending: Promise<T>, signal: AbortSignal, release?: (cancell
  * into a thirty-day block that no restart clears.
  */
 export function createAuthClient(options: AuthClientOptions): AuthClient {
-  const policy: FailurePolicy = { haltedReason: undefined, lastTransient: undefined };
+  const policy: FailurePolicy = {};
   let cached: CachedToken | undefined;
   let cacheRead: Promise<CachedToken | undefined> | undefined;
   let inFlight: GrantAttempt | undefined;
