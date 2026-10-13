@@ -1,48 +1,12 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": null,
-  "phases": [
-    {
-      "number": "1",
-      "name": "Secure Cloud Foundation",
-      "status": "complete"
-    },
-    {
-      "number": "2",
-      "name": "Safe Gemini Discovery and Identity",
-      "status": "complete"
-    },
-    {
-      "number": "3",
-      "name": "Safety Monitoring in HomeKit",
-      "status": "complete"
-    },
-    {
-      "number": "4",
-      "name": "Pump Records and Official Controls",
-      "status": "complete"
-    },
-    {
-      "number": "5",
-      "name": "Degraded Operation and Recovery",
-      "status": "pending"
-    },
-    {
-      "number": "5.1",
-      "name": "Per-Pump Trust and Monotonic Silence",
-      "status": "complete"
-    },
-    {
-      "number": "6",
-      "name": "Validated Release Candidate",
-      "status": "complete"
-    }
-  ],
+  "milestone": "code-review-sweep",
+  "phases": [],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:discuss-phase",
+    "label": "Discuss the first phase",
+    "reason": "Project initialized — plan your first phase"
   },
-  "updated_at": "2026-10-13T16:20:19.421Z"
+  "updated_at": "2026-10-13T16:35:00.735Z"
 }

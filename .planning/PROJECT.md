@@ -12,6 +12,20 @@ HomeKit must promptly show trustworthy basement-protection conditions while clea
 
 An npm-ready v1 release candidate passes repository quality checks on Node.js 22 and 24 and supported Homebridge 1.x/2.x runtimes, with hardware and real-home gates G-001, G-002, G-003, and G-004 closed before `1.0.0` can be published.
 
+## Current Milestone: code-review-sweep -- Code Review Sweep
+
+**Goal:** Every source, unit-test, and Cucumber file conforms to the project's TypeScript style, comment, unit-testing, and behavioral-testing rules, and every bug found on the way is fixed behind a regression test.
+
+**Target features:**
+- Fix the five spot-check findings (`SC-01` to `SC-05` in `.planning/research/SPOT-CHECK-FINDINGS.md`) and prove the batch loop on them.
+- Review and fix each subsystem in turn: `src/cloud`, `src/device` + `src/persistence`, `src/runtime`, `src/accessories`, and the root modules, each with its paired tests.
+- Review and fix `features/**` against `skills/cucumber-behavioral-testing` and `features/CLAUDE.md`.
+- Close with a full-repo re-review and the complete `npm run check` gate.
+
+**Rulebooks:** `skills/typescript-google-style-review`, `skills/typescript-comments`, `skills/typescript-unit-testing` (+ `-review`), `skills/cucumber-behavioral-testing`, `features/CLAUDE.md`, `skills/local-verification`.
+
+**Working method:** Each phase runs a bounded review → triage → fix → re-review loop, modelled on `.claude/commands/babysit-pr.md`: reviewers and fixers run as subagents, each fix is an atomic commit that passes the hooks, and the loop stops after about four rounds or a round that does not reduce the open count. Fix scope is every finding, not only blockers. A bug gets a failing test before its fix.
+
 ## Requirements
 
 ### Validated
@@ -26,6 +40,9 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 ### Active
 
 - [ ] The real-home and hardware gates G-001, G-002, G-003, and G-004 close before `1.0.0` is published.
+- [ ] Every `src/` module and its paired test conform to the TypeScript style, comment, and unit-testing rules (code-review-sweep).
+- [ ] Every `features/**` file conforms to the behavioral-testing rules and `features/CLAUDE.md` (code-review-sweep).
+- [ ] Every bug found during the sweep is fixed behind a regression test (code-review-sweep).
 
 ### Out of Scope
 
@@ -187,4 +204,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-10-13 after v1.0 milestone — Initial Release archived; 0.1.x published, `1.0.0` still gated on G-001 to G-004*
+*Last updated: 2026-10-13 after starting milestone code-review-sweep*
