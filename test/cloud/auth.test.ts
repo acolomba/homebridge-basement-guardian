@@ -1232,6 +1232,45 @@ for (const { description, body } of [
   });
 }
 
+for (const { description, body } of [
+  { description: 'has zero lifetime', body: '{"id_token":"id-token-1","expires_in":0}' },
+  { description: 'has negative lifetime', body: '{"id_token":"id-token-1","expires_in":-1}' },
+  { description: 'has infinite lifetime', body: '{"id_token":"id-token-1","expires_in":1e309}' },
+  { description: 'overflows the derived expiry', body: '{"id_token":"id-token-1","expires_in":1e308}' },
+]) {
+  test(`refuses a grant response that ${description}`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: () => Promise.resolve(new Response(body, { status: 200 })) }));
+
+    // act & assert
+    await assert.rejects(
+      () => authClient.idToken(new AbortController().signal),
+      (error: unknown) => {
+        assert.ok(error instanceof CloudRequestError);
+        assert.strictEqual(error.status, 200);
+        assert.strictEqual(error.route, GRANT_ROUTE);
+
+        return true;
+      },
+    );
+  });
+}
+
+test('authenticates again when the cache file carries an infinite expiry', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const contents = JSON.stringify(cacheContents()).replace('1702592000000', '1e309');
+  await writeCacheText(storagePath, contents);
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: () => Promise.resolve(grantResponse('id-token-1')) }));
+
+  // act
+  const idToken = await authClient.idToken(new AbortController().signal);
+
+  // assert
+  assert.strictEqual(idToken, 'id-token-1');
+});
+
 test('D-14 warns once, drops the repeat to debug, and reports the recovery at info', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);

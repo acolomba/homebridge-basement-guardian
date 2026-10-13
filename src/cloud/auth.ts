@@ -149,6 +149,7 @@ function isTokenCacheFile(value: unknown): value is TokenCacheFile {
     isRecord(value) &&
     typeof value.idToken === 'string' &&
     typeof value.expiresAt === 'number' &&
+    Number.isFinite(value.expiresAt) &&
     typeof value.emailFingerprint === 'string' &&
     typeof value.salt === 'string'
   );
@@ -369,11 +370,17 @@ function readGrant(body: unknown, clock: Clock): CachedToken | undefined {
   const idToken = body.id_token;
   const expiresInSeconds = body.expires_in;
 
-  if (typeof idToken !== 'string' || typeof expiresInSeconds !== 'number') {
+  if (typeof idToken !== 'string' || typeof expiresInSeconds !== 'number' || !Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
     return undefined;
   }
 
-  return { idToken, expiresAtMs: clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND };
+  const expiresAtMs = clock.now() + expiresInSeconds * MILLISECONDS_PER_SECOND;
+
+  if (!Number.isFinite(expiresAtMs)) {
+    return undefined;
+  }
+
+  return { idToken, expiresAtMs };
 }
 
 async function fetchGrant(options: AuthClientOptions, policy: FailurePolicy, signal: AbortSignal): Promise<Response> {
