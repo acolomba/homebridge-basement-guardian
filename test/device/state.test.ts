@@ -335,6 +335,15 @@ describe('applyReportedPatch', () => {
       // assert
       assert.strictEqual(snapshot?.data.water_level, waterLevel);
       assert.strictEqual(snapshot.shadowVersion, applied);
+      assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: waterLevel, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: applied,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: FIRST_RECEIPT,
+      });
     });
   }
 
@@ -502,9 +511,18 @@ describe('applyReportedPatch', () => {
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: { wifi_signal_dbm: -54 }, version: 1 });
 
     // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 7, primary_pump_running: false, ac_power: true },
+      metadata: { wifi_signal_dbm: -54 },
+      shadowVersion: 1,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
     assert.strictEqual(Object.isFrozen(snapshot), true);
-    assert.strictEqual(Object.isFrozen(snapshot?.data), true);
-    assert.strictEqual(Object.isFrozen(snapshot?.metadata), true);
+    assert.strictEqual(Object.isFrozen(snapshot.data), true);
+    assert.strictEqual(Object.isFrozen(snapshot.metadata), true);
   });
 });
 
