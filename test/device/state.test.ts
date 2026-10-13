@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests canonical device snapshots and state-store behavior.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
