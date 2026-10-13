@@ -82,9 +82,11 @@ function fingerprintOf(salt: string, email: string): string {
 }
 
 function createRecordingLog(messages: string[]): Logging {
-  const record = (level: string) => (message: string) => {
-    messages.push(`${level} ${message}`);
-  };
+  function record(level: string): (message: string) => void {
+    return (message: string) => {
+      messages.push(`${level} ${message}`);
+    };
+  }
 
   return Object.assign(record('log'), {
     prefix: 'basement guardian',
@@ -150,7 +152,6 @@ async function writeCacheText(storagePath: string, text: string): Promise<void> 
   await writeFile(join(storagePath, '.basement-guardian-token.json'), text, 'utf8');
 }
 
-// Records every grant request and answers each one with a fresh Response.
 interface GrantRequest {
   method: string;
   url: string;
@@ -158,6 +159,7 @@ interface GrantRequest {
   headers: Record<string, string>;
 }
 
+// Records every grant request and answers each one with a fresh Response.
 function createGrantTransport(respond: (callIndex: number) => Response): {
   requests: GrantRequest[];
   httpFetch: AuthClientOptions['httpFetch'];
