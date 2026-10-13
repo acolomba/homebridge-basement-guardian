@@ -75,12 +75,6 @@ interface TokenCacheContents {
   salt: string;
 }
 
-function parseJson(text: string): unknown {
-  const parsed: unknown = JSON.parse(text);
-
-  return parsed;
-}
-
 // The digest the cache stores in place of the account email, computed from the
 // stored salt rather than through the production helper.
 function fingerprintOf(salt: string, email: string): string {
@@ -227,6 +221,17 @@ test('sends the password-realm grant the vendor tenant expects', async (t) => {
 
   // assert
   assert.strictEqual(idToken, 'id-token-1');
+  assert.deepStrictEqual(
+    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    Buffer.from(
+      JSON.stringify({
+        idToken: 'id-token-1',
+        expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+        emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+        salt: 'salt-1',
+      }),
+    ),
+  );
   assert.deepStrictEqual(grantRequests, [
     {
       method: 'POST',
@@ -456,12 +461,17 @@ test('keeps the joined caller grant alive when the first caller aborts', async (
   // assert
   assert.deepStrictEqual(await joinedOutcome, { status: 'fulfilled', idToken: 'id-token-1' });
   assert.strictEqual(transport.aborted, false);
-  assert.deepStrictEqual(parseJson(await readFile(join(storagePath, TOKEN_CACHE_FILENAME), 'utf8')), {
-    idToken: 'id-token-1',
-    expiresAt: START_TIME + TOKEN_LIFETIME_MS,
-    emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
-    salt: 'salt-1',
-  });
+  assert.deepStrictEqual(
+    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    Buffer.from(
+      JSON.stringify({
+        idToken: 'id-token-1',
+        expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+        emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+        salt: 'salt-1',
+      }),
+    ),
+  );
   assert.strictEqual(requests, 1);
   assert.deepStrictEqual(messages, []);
 });
@@ -648,12 +658,17 @@ test('AUTH-01 stores the granted token in the cache file under the storage path'
   await authClient.idToken(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(parseJson(await readFile(join(storagePath, TOKEN_CACHE_FILENAME), 'utf8')), {
-    idToken: 'id-token-1',
-    expiresAt: START_TIME + TOKEN_LIFETIME_MS,
-    emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
-    salt: 'salt-1',
-  });
+  assert.deepStrictEqual(
+    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    Buffer.from(
+      JSON.stringify({
+        idToken: 'id-token-1',
+        expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+        emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+        salt: 'salt-1',
+      }),
+    ),
+  );
 });
 
 test('AUTH-01 answers from the cache file a restart left behind, without authenticating', async (t) => {
