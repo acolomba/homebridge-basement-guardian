@@ -789,10 +789,17 @@ test('AUTH-02 writes neither the account email nor the account password into the
   await authClient.idToken(new AbortController().signal);
 
   // assert
-  const contents = await readFile(join(storagePath, TOKEN_CACHE_FILENAME), 'utf8');
-  assert.strictEqual(contents.includes(ACCOUNT_EMAIL), false);
-  assert.strictEqual(contents.includes(ACCOUNT_PASSWORD), false);
-  assert.strictEqual(contents.includes('id-token-1'), true);
+  assert.deepStrictEqual(
+    await readFile(join(storagePath, TOKEN_CACHE_FILENAME)),
+    Buffer.from(
+      JSON.stringify({
+        idToken: 'id-token-1',
+        expiresAt: START_TIME + TOKEN_LIFETIME_MS,
+        emailFingerprint: fingerprintOf('salt-1', ACCOUNT_EMAIL),
+        salt: 'salt-1',
+      }),
+    ),
+  );
 });
 
 test('writes through the injected full temporary path in an empty directory', async (t) => {
