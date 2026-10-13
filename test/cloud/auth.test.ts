@@ -183,6 +183,14 @@ function grantResponse(idToken: string): Response {
   return new Response(JSON.stringify({ id_token: idToken, expires_in: TOKEN_LIFETIME_SECONDS }), { status: 200 });
 }
 
+function expectAbortReason(reason: unknown): (error: unknown) => boolean {
+  return (error: unknown) => {
+    assert.strictEqual(error, reason);
+
+    return true;
+  };
+}
+
 function expectCloudFailure(status: number): (error: unknown) => boolean {
   return (error: unknown) => {
     assert.ok(error instanceof CloudRequestError);
@@ -452,6 +460,7 @@ test('keeps the joined caller grant alive when the first caller aborts', async (
   const started = deferred<AbortSignal>();
   const response = deferred<Response>();
   const first = new AbortController();
+  const firstReason = new Error('First caller cancelled.');
   const joined = new AbortController();
   const messages: string[] = [];
   let requests = 0;
@@ -479,13 +488,13 @@ test('keeps the joined caller grant alive when the first caller aborts', async (
   // act
   const firstToken = authClient.idToken(first.signal);
   const joinedToken = authClient.idToken(joined.signal);
-  const firstRejected = assert.rejects(firstToken, { name: 'AbortError' });
+  const firstRejected = assert.rejects(firstToken, expectAbortReason(firstReason));
   const joinedOutcome = joinedToken.then(
     (idToken) => ({ status: 'fulfilled', idToken }),
     () => ({ status: 'rejected' }),
   );
   const transport = await started.promise;
-  first.abort();
+  first.abort(firstReason);
   await firstRejected;
   response.resolve(grantResponse('id-token-1'));
 
@@ -513,13 +522,14 @@ test('rejects a joined caller promptly while the first caller receives its token
   const grant = controlledGrant();
   const first = new AbortController();
   const joined = new AbortController();
+  const joinedReason = new Error('Joined caller cancelled.');
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch }));
 
   // act
   const firstToken = authClient.idToken(first.signal);
-  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'AbortError' });
+  const joinedRejected = assert.rejects(authClient.idToken(joined.signal), expectAbortReason(joinedReason));
   const transport = await grant.started.promise;
-  joined.abort();
+  joined.abort(joinedReason);
   await joinedRejected;
   grant.response.resolve(grantResponse('id-token-1'));
 
@@ -538,17 +548,19 @@ for (const sharedRoot of [false, true]) {
     const grant = controlledGrant();
     const first = new AbortController();
     const joined = sharedRoot ? first : new AbortController();
+    const firstReason = new Error('First caller cancelled.');
+    const joinedReason = sharedRoot ? firstReason : new Error('Joined caller cancelled.');
     const messages: string[] = [];
     const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grant.httpFetch, log: createRecordingLog(messages) }));
 
     // act
-    const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'AbortError' });
-    const joinedRejected = assert.rejects(authClient.idToken(joined.signal), { name: 'AbortError' });
+    const firstRejected = assert.rejects(authClient.idToken(first.signal), expectAbortReason(firstReason));
+    const joinedRejected = assert.rejects(authClient.idToken(joined.signal), expectAbortReason(joinedReason));
     const transport = await grant.started.promise;
-    first.abort();
-    joined.abort();
+    first.abort(firstReason);
+    joined.abort(joinedReason);
     await Promise.all([firstRejected, joinedRejected]);
-    const teardownRejected = assert.rejects(authClient.idToken(new AbortController().signal), { name: 'AbortError' });
+    const teardownRejected = assert.rejects(authClient.idToken(new AbortController().signal), expectAbortReason(transport.reason));
     grant.response.reject(transport.reason);
     await teardownRejected;
 
@@ -566,11 +578,12 @@ test('starts no grant for an already aborted caller', async (t) => {
   const storagePath = await createStoragePath(t);
   const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const caller = new AbortController();
+  const callerReason = new Error('Caller cancelled.');
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
-  caller.abort();
+  caller.abort(callerReason);
 
   // act & assert
-  await assert.rejects(authClient.idToken(caller.signal), { name: 'AbortError' });
+  await assert.rejects(authClient.idToken(caller.signal), expectAbortReason(callerReason));
   assert.deepStrictEqual(grantRequests, []);
 });
 
@@ -579,11 +592,12 @@ test('does not join a grant after cancellation during the initial cache read', a
   const storagePath = await createStoragePath(t);
   const { requests: grantRequests, httpFetch: grantFetch } = createGrantTransport(() => grantResponse('id-token-1'));
   const caller = new AbortController();
+  const callerReason = new Error('Caller cancelled.');
   const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch }));
 
   // act
-  const canceled = assert.rejects(authClient.idToken(caller.signal), { name: 'AbortError' });
-  caller.abort();
+  const canceled = assert.rejects(authClient.idToken(caller.signal), expectAbortReason(callerReason));
+  caller.abort(callerReason);
   await canceled;
   const idToken = await authClient.idToken(new AbortController().signal);
 
@@ -624,12 +638,13 @@ test('rejects cancellation during cache writing while a surviving caller registe
   const storagePath = await createStoragePath(t);
   const grant = controlledGrant();
   const first = new AbortController();
+  const firstReason = new Error('Caller cancelled during cache writing.');
   const registered: string[] = [];
   const authClient = createAuthClient(
     authOptions(storagePath, {
       httpFetch: grant.httpFetch,
       createSalt: () => {
-        first.abort();
+        first.abort(firstReason);
         return 'salt-1';
       },
       registerSecret: (secret) => {
@@ -639,7 +654,7 @@ test('rejects cancellation during cache writing while a surviving caller registe
   );
 
   // act
-  const firstRejected = assert.rejects(authClient.idToken(first.signal), { name: 'AbortError' });
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), expectAbortReason(firstReason));
   const joinedToken = authClient.idToken(new AbortController().signal);
   const transport = await grant.started.promise;
   grant.response.resolve(grantResponse('id-token-1'));
@@ -1409,30 +1424,31 @@ test('D-14 warns again when a transient failure of another kind follows', async 
   ]);
 });
 
-test('lets an abort through untouched and logs nothing for it', async (t) => {
-  // arrange
-  const storagePath = await createStoragePath(t);
-  const messages: string[] = [];
-  const shutdown = new AbortController();
-  const grantFetch: AuthClientOptions['httpFetch'] = () => {
-    shutdown.abort();
-    const aborted = new Error('This operation was aborted');
-    aborted.name = 'AbortError';
+for (const { description, createReason } of [
+  { description: 'an Error', createReason: () => new Error('Caller shutdown.') },
+  { description: 'a string', createReason: () => 'caller-shutdown' },
+  { description: 'an object', createReason: () => ({ action: 'caller-shutdown' }) },
+]) {
+  test(`lets ${description} abort reason through untouched and logs nothing for it`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const messages: string[] = [];
+    const shutdown = new AbortController();
+    const cancellationReason: unknown = createReason();
+    const grantFetch: AuthClientOptions['httpFetch'] = () => {
+      shutdown.abort(cancellationReason);
 
-    return Promise.reject(aborted);
-  };
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- AbortSignal reasons are caller-owned and pass through unchanged.
+      return Promise.reject(cancellationReason);
+    };
 
-  const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
+    const authClient = createAuthClient(authOptions(storagePath, { httpFetch: grantFetch, log: createRecordingLog(messages) }));
 
-  // act & assert
-  await assert.rejects(
-    () => authClient.idToken(shutdown.signal),
-    (error: unknown) => {
-      assert.ok(error instanceof Error);
-      assert.strictEqual(error.name, 'AbortError');
+    // act
+    const rejectedToken = authClient.idToken(shutdown.signal);
 
-      return true;
-    },
-  );
-  assert.deepStrictEqual(messages, []);
-});
+    // assert
+    await assert.rejects(rejectedToken, expectAbortReason(cancellationReason));
+    assert.deepStrictEqual(messages, []);
+  });
+}
