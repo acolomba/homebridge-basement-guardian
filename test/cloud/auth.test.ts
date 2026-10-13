@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests token grants, cancellation, and cache ownership.
+ */
+
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { getEventListeners } from 'node:events';
