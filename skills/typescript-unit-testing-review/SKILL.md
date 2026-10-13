@@ -13,7 +13,7 @@ The central question for every case: **would a plausible wrong implementation st
 
 Require passing owner tests and direct coverage for the source-test pair. Use the writer's or commit hook's evidence when it covers the reviewed inputs under `skills/local-verification/SKILL.md`; otherwise compile with `npm run build:test` and run `node --test dist-test/test/<path>.test.js` and `npm run test:coverage:direct -- <source-path> <test-path>`. A failed command or missing applicable evidence is a finding.
 
-Use the same project's scheduling policy for full verification: shared test support changes select all pairs, and final PR/release gates require a full result. An ordinary task review may accept focused evidence; do not imply that it proves the full project passed. Do not repeat a full check when valid unchanged-input evidence already supplies it.
+Use the same project's scheduling policy for full verification: shared test support changes select all pairs, and combined GSD merge/phase or final PR/release gates require a full result. An ordinary task review may accept focused evidence; do not imply that it proves the full project passed. Do not repeat a full check when valid unchanged-input evidence already supplies it.
 
 ## Tools
 
