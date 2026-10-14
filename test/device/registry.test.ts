@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import { geminiFamily } from '../../src/device/gemini.js';
-import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
+import { HALO_DEVICE_TYPE_ID } from '../../src/device/halo.js';
 import { createFamilyRegistry } from '../../src/device/registry.js';
 
 import type { FamilyOutcome } from '../../src/device/registry.js';
@@ -52,10 +52,10 @@ describe('createFamilyRegistry', () => {
     const registry = createFamilyRegistry();
 
     // act
-    const outcome = registry.lookup(HALO_DEVICE_TYPE_ID);
+    const outcome = registry.lookup('wayneWaterHalo');
 
     // assert
-    assert.deepStrictEqual(outcome, { kind: 'unsupported', deviceTypeId: HALO_DEVICE_TYPE_ID, displayName: HALO_DISPLAY_NAME });
+    assert.deepStrictEqual(outcome, { kind: 'unsupported', deviceTypeId: 'wayneWaterHalo', displayName: 'Wayne Water HALO' });
     assert.notStrictEqual(outcome.kind, 'implemented');
     assert.notStrictEqual(outcome.kind, 'unknown');
   });
