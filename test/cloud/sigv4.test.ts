@@ -51,8 +51,8 @@ const STRING_TO_SIGN = [
   createHash('sha256').update(CANONICAL_REQUEST).digest('hex'),
 ].join('\n');
 
-function hmac(key: Buffer | string, data: string): Buffer {
-  return createHmac('sha256', key).update(data).digest();
+function hmac(key: Buffer | string, payload: string): Buffer {
+  return createHmac('sha256', key).update(payload).digest();
 }
 
 // The four-step signing-key derivation, spelled out here so the expected
