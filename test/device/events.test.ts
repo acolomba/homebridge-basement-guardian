@@ -19,7 +19,7 @@ import type {
 
 const DEVICE_ID = 'account-1_serial-1';
 const OBSERVED_AT = 1_700_000_777_000;
-const DEVICE_TIME = 1_700_000_000_000;
+const DEVICE_TIME = 1_700_000_000;
 
 void ({ deviceId: DEVICE_ID, observedAt: OBSERVED_AT } satisfies DeviceEventBase);
 void ({ type: 'primary-pump-started', deviceId: DEVICE_ID, observedAt: OBSERVED_AT } satisfies PrimaryPumpStarted);
