@@ -89,12 +89,24 @@ test('forwards the request method, headers, and body, and returns the server res
   );
 });
 
-test('rejects immediately when the caller supplies an already-aborted signal', async (t) => {
+test('rejects with the caller reason without sending an already-aborted request', async (t) => {
   // arrange
   const server = await startEchoServer(t);
+  const cancellation = new Error('caller cancelled the request');
 
-  // act & assert
-  await assert.rejects(() => httpFetch(server.url, { signal: AbortSignal.abort() }));
+  // act
+  const fetching = httpFetch(server.url, { signal: AbortSignal.abort(cancellation) });
+
+  // assert
+  await assert.rejects(
+    () => fetching,
+    (error: unknown) => {
+      assert.strictEqual(error, cancellation);
+
+      return true;
+    },
+  );
+  assert.strictEqual(server.request(), undefined);
 });
 
 // A real loopback connection, not a mocked fetch: this module's entire purpose is to steer which
