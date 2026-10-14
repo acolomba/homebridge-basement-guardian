@@ -113,7 +113,11 @@ async function narrow<T>(call: VendorCall<T>, response: Response, signal: AbortS
   if (!response.ok) {
     // An error response's body is never read, so it is cancelled instead: an unconsumed body
     // otherwise leaves the underlying stream open until the connection's own teardown reaps it.
-    await response.body?.cancel();
+    try {
+      await response.body?.cancel();
+    } catch {
+      // Cleanup failure must preserve the fixed HTTP error and its sanitized fields.
+    }
 
     throw new CloudRequestError(`${call.route} failed with HTTP ${String(response.status)}.`, response.status, call.route);
   }

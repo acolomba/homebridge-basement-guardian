@@ -884,3 +884,36 @@ test('preserves root cancellation while a device response body is pending', asyn
     return true;
   });
 });
+
+test('retains the typed HTTP failure when response body cancellation rejects', async () => {
+  // arrange
+  const cloudApi = createCloudApi(
+    apiOptions({
+      httpFetch: () =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.error(new Error('private response material'));
+              },
+            }),
+            { status: 403 },
+          ),
+        ),
+    }),
+  );
+
+  // act & assert
+  await assert.rejects(
+    () => cloudApi.device('account-1_serial-1', new AbortController().signal),
+    (error: unknown) => {
+      assert.ok(error instanceof CloudRequestError);
+      assert.deepStrictEqual(
+        { name: error.name, message: error.message, status: error.status, route: error.route },
+        { name: 'CloudRequestError', message: 'GET /devices/{deviceId} failed with HTTP 403.', status: 403, route: 'GET /devices/{deviceId}' },
+      );
+
+      return true;
+    },
+  );
+});
