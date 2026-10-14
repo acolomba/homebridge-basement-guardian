@@ -122,9 +122,14 @@ test('negotiates HTTP/1.1 even when the server offers HTTP/2', async (t) => {
   });
 
   // act
-  await httpFetch(server.url);
+  const response = await httpFetch(server.url);
+  const body: unknown = await response.json();
   const negotiatedProtocol = await server.negotiatedProtocol();
 
   // assert
+  assert.deepStrictEqual(
+    { status: response.status, contentType: response.headers.get('content-type'), body },
+    { status: 200, contentType: 'application/json', body: { answer: 'echoed' } },
+  );
   assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });
