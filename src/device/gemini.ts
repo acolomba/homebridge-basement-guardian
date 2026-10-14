@@ -225,9 +225,9 @@ function validate(snapshot: DeviceSnapshot): FamilyValidation {
   return violations.length === 0 ? { valid: true } : { valid: false, violations };
 }
 
-// `decode()` runs only after `validate()` confirms every field's shape, so a
-// mismatch here means that contract was broken rather than a value this
-// module should guess at.
+// `decode()` checks each scope's own fields before decoding that scope. These
+// guards refuse a field that changes type between its check and its read,
+// rather than guessing at a value from a record that stopped being stable.
 function booleanField(data: Readonly<Record<string, unknown>>, field: string): boolean {
   const value = data[field];
 
