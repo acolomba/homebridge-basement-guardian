@@ -730,3 +730,59 @@ warning. The failed attempt is not passing evidence. Header inspection is
 manual for source and owner; the packaging gate covers only source SPDX.
 Clean pre-step and actual normal commit proof follow execution. The remaining
 assertion repair remains separate; correction counter is still 0.
+
+CR-04-PORTS-005 committed as
+`8fb80f9e7c488a3c5bf0f392a54aec3ff64f45ff`, exactly monotonic source,
+owner and report. Source blob `1a4a105d8f9efd86d8cfdf9c2e20f4b9c3538192`;
+owner blob `9b2041a05dcea8968f6ad701e9983579cbb299f0`.
+`cause005-prestep` ran exact `SKIP=npm-check pre-commit run --files src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0, clean before staging. `cause005-commit` retains cwd/toplevel/feature
+branch guards, named staging and foreground normal commit, exit 0. Its ordinary
+pre-commit `npm run check:commit` and gitlint passed; no bypass was used.
+
+### CR-04-PORTS-006 repair — exact monotonic observations
+
+The complete rewritten owner uses context-owned `process.hrtime.bigint`
+stubs through the unchanged public `systemMonotonicClock.now()`.
+`1_999_999n` answers literal `1`, followed by `2_000_000n` answering literal
+`2`; the whole `{ earlier, later }` observation pins truncation and advance.
+A separate case holds the elapsed input fixed and moves a distinctly controlled
+wall clock backward, asserting exact `{ earlier: 1, later: 1 }`. Both cases
+have separate arrange/act/assert blocks. Context cleanup restores globals;
+no production hook, export, API, runtime behavior or time domain changed.
+Read the entire modified owner and unchanged production section again.
+
+#### Assertion maintenance control (separate from genuine bug RED)
+
+Plausible wrong public behavior: divide by `1_000_000_000n` to return whole
+seconds. Strict compiler and exact-file lint accept this numeric implementation;
+coverage alone cannot distinguish its units. `cause006-control-before` retains
+source HEAD `8fb80f9e7c488a3c5bf0f392a54aec3ff64f45ff`, correct source blob
+`1a4a105d8f9efd86d8cfdf9c2e20f4b9c3538192`, rewritten owner blob
+`33d3e5dd77ef752c2fbd1a1b77824871f7ea5331`, complete dirty diff and bytes.
+The temporary control changes only the divisor; its full bytes/diff and native
+outputs are retained in the following command records.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-monotonic-assertions | `node_modules/.bin/fallow guard src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts --format json --quiet --explain` | 0; guard before owner/control edits |
+| cause006-control-typecheck | `npm run typecheck` | 0; both strict projects accept wrong units |
+| cause006-control-lint | `node_modules/.bin/eslint --max-warnings=0 src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | 0; no cache, accepts wrong units |
+| cause006-control-build | `npm run build:test` | 0; fresh controlled implementation |
+| cause006-control-owner | `node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js` | 1; both intended assertions fail; 0 pass/skip/cancel/todo |
+| cause006-control-restored | captured `node -e` byte comparison against `git show HEAD:src/runtime/monotonicClock.ts` | 0; exact source bytes restored to blob above |
+| cause006-build | `npm run build:test` | 0; fresh restored source |
+| cause006-owner | `node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js` | 0; 2 pass, 0 fail/skip/cancel/todo |
+| cause006-direct | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | 0; isolated 100% lines/functions/branches |
+| cause006-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 0; kind audit, verdict pass |
+
+Native failure semantics: the boundary case expected `{ earlier: 1, later: 2 }`
+and received `{ earlier: 0, later: 0 }`; the wall-correction case expected
+`{ earlier: 1, later: 1 }` and received `{ earlier: 0, later: 0 }`.
+Both are named `ERR_ASSERTION`, `AssertionError`, `deepStrictEqual` failures,
+not setup/import/compile failures. Complete untouched TAP and separate stderr
+are in `cause006-control-owner.stdout`, `.stderr` and `.json`.
+Restoration was independently byte-compared before rebuilt GREEN. No control
+mutation is staged. This is test maintenance on correct production, with no
+genuine D-04 JSON or evidence-only bug commit. Cause scope is owner and report
+(2 final paths); the temporary control touched the already-owned source only.

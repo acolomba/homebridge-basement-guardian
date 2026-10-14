@@ -20,36 +20,30 @@ import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
 // suite.
 void ({ now: () => 0 } satisfies MonotonicClock);
 
-// The wall-clock reading the mocked Date answers, chosen so a reading taken
-// from the wrong base is unmistakable rather than plausible.
-const MOCKED_WALL_TIME_MS = 1_700_000_000_000;
-
-test('reports whole milliseconds, so a duration is never a rounded float', () => {
-  // act
-  const reading = systemMonotonicClock.now();
-
-  // assert
-  assert.strictEqual(Number.isInteger(reading), true);
-});
-
-test('reads a base of its own rather than the wall clock, which is the whole reason the port exists', (t) => {
+test('truncates nanoseconds to whole milliseconds and advances at the boundary', (t) => {
   // arrange
-  t.mock.timers.enable({ apis: ['Date'], now: MOCKED_WALL_TIME_MS });
-
-  // act
-  const reading = systemMonotonicClock.now();
-
-  // assert
-  assert.notStrictEqual(reading, MOCKED_WALL_TIME_MS);
-});
-
-test('never reports a smaller reading than one taken before it', () => {
-  // arrange
+  let nanoseconds = 1_999_999n;
+  t.mock.method(process.hrtime, 'bigint', () => nanoseconds);
   const earlier = systemMonotonicClock.now();
 
   // act
+  nanoseconds = 2_000_000n;
   const later = systemMonotonicClock.now();
 
   // assert
-  assert.strictEqual(later >= earlier, true);
+  assert.deepStrictEqual({ earlier, later }, { earlier: 1, later: 2 });
+});
+
+test('keeps elapsed readings independent of wall-clock corrections', (t) => {
+  // arrange
+  t.mock.method(process.hrtime, 'bigint', () => 1_999_999n);
+  t.mock.timers.enable({ apis: ['Date'], now: 1_700_000_000_000 });
+  const earlier = systemMonotonicClock.now();
+
+  // act
+  t.mock.timers.setTime(1_699_000_000_000);
+  const later = systemMonotonicClock.now();
+
+  // assert
+  assert.deepStrictEqual({ earlier, later }, { earlier: 1, later: 1 });
 });
