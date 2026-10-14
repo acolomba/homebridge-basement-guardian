@@ -492,3 +492,35 @@ temporary project root are skipped; this is retained in separate stderr.
 The failed sandbox attempt does not count as passing evidence. Cause scope is
 owner and report (2 paths). The required clean pre-step and foreground commit
 result will be appended after execution. PORTS correction counter remains 0.
+
+CR-04-PORTS-002 committed as
+`ce3608815f4a9561a4807c209ae2144e7757d2cf`, owner and report only. Owner blob
+is `4da2a0ab4d8e106c115978e2c55be25a79cab07e`; source remains the cause-001
+blob. `cause002-prestep` used exact
+`SKIP=npm-check pre-commit run --files test/runtime/accessoryStore.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0 and clean on the first attempt before staging. `cause002-commit`
+retains exact cwd/toplevel/feature-branch guards, named add and normal commit,
+exit 0. Its pre-commit `npm run check:commit` passed; commit-message stage has
+no matching build files. There are no skipped fixes or uncommitted controls.
+
+### CR-04-PORTS-003 repair — wall-clock headers
+
+Added the approved three header sections to the source and owner, preserving
+Clock's public interface JSDoc, epoch-millisecond member documentation and
+composition-only adapter documentation. Read both complete edited files and
+inspected each section/blank line. Runtime/test statements are unchanged.
+Cause scope is source, owner and report (3 paths), separate from AAA repair.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-clock-header | `node_modules/.bin/fallow guard src/runtime/clock.ts test/runtime/clock.test.ts --format json --quiet --explain` | 0; no configured boundary zones/rule packs |
+| cause003-build | `npm run build:test` | 0; fresh strict compiled owner |
+| cause003-owner | `node --test --test-reporter=tap dist-test/test/runtime/clock.test.js` | 0; 2 tests passed, no skips/cancellations |
+| cause003-direct | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | 0; isolated 100% line/function/branch acceptance |
+| cause003-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 0; kind audit, verdict pass, no introduced findings |
+
+The audit retains its cache-entrypoint warning in stderr. Clean pre-step and
+actual foreground commit proof follow execution. No public contract changed;
+clock consumers still read wall epoch milliseconds, separately from elapsed
+time. Actual monitoring-health, auth, shadow, device-state, failure-log and
+account credential-rotation bodies were read, along with platform composition.
