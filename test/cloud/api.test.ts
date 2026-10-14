@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Verifies vendor REST requests, results, deadlines and privacy.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getCACertificates, setDefaultCACertificates } from 'node:tls';

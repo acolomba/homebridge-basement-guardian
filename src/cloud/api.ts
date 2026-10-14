@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Calls vendor REST routes with validated results and deadlines.
+ */
+
 import { PLUGIN_USER_AGENT } from '../settings.js';
 
 import { CloudRequestError } from './errors.js';

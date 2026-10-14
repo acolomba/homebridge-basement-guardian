@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Verifies cloud error classes and their structured fields.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
