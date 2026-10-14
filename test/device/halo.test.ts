@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/** @fileoverview Verifies the HALO identity contract and product name. */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
