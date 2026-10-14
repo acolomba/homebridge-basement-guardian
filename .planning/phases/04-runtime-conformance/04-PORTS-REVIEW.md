@@ -786,3 +786,47 @@ Restoration was independently byte-compared before rebuilt GREEN. No control
 mutation is staged. This is test maintenance on correct production, with no
 genuine D-04 JSON or evidence-only bug commit. Cause scope is owner and report
 (2 final paths); the temporary control touched the already-owned source only.
+
+CR-04-PORTS-006 committed as
+`419cab0a8d14dfef16a127f0e02b6be591a3b6da`, owner and report only.
+`cause006-prestep` and final `cause006-prestep-final` both ran exact
+`SKIP=npm-check pre-commit run --files test/runtime/monotonicClock.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0. The final clean repetition follows a report hash correction and
+precedes staging. No fixer changed source/owner bytes. `cause006-commit`
+retains cwd/toplevel/feature-branch and unchanged-source guards, named stage
+and foreground normal commit, exit 0; incremental check:commit and gitlint
+passed. No bypass or failing code commit occurred.
+
+Before expanding to timers, task 04-02-01 was rerun at this exact source HEAD:
+`monotonic-tracer-after-build` (`npm run build:test`),
+`monotonic-tracer-after-owner`
+(`node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js`)
+and `monotonic-tracer-after-direct`
+(`npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts`)
+all returned 0. The two complete owner cases passed with zero skips,
+cancellations, failures and TODOs; isolated line/function/branch acceptance
+is 100%. No selected run refreshes merged `coverage/direct.lcov`.
+
+### CR-04-PORTS-007 repair — timer headers
+
+Added the approved SPDX/copyright/fileoverview sections and blank-line spacing
+to source and owner. Re-read both full edited files. All original public
+interface documentation, the unknown handle type, justified narrowing, lazy
+scheduling and cancellation implementations and all five owner cases remain
+unchanged. Their complete callback logs still discriminate before-delay,
+after-delay, interval repetition and cancellation through public operations.
+Cause scope is source, owner and report (3 paths); no helper/adaptation exists.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-timers-header | `node_modules/.bin/fallow guard src/runtime/timers.ts test/runtime/timers.test.ts --format json --quiet --explain` | 0; before edits, no configured boundary zones/rule packs |
+| cause007-build | `npm run build:test` | 0; fresh strict compiled owner |
+| cause007-owner | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js` | 0; 5 pass, 0 fail/skip/cancel/todo |
+| cause007-direct | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` | 0; isolated 100% lines/functions/branches |
+| cause007-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 0; kind audit, verdict pass |
+
+The audit's cache-entrypoint warning is retained in separate stderr.
+No timer assertion or runtime control was needed for this header-only cause.
+There is no genuine bug JSON or production repair. Actual normal pre-step and
+commit results follow execution. Original round-0 evidence stays unchanged;
+no independent correction has run in this repair slice.

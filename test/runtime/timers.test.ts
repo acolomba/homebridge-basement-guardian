@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks process timer scheduling and cancellation.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
