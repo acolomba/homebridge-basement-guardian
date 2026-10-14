@@ -21,12 +21,11 @@
  * when it last ran, plus the vendor name last adopted for the display name
  * (D-030).
  *
- * Every observation member below is new in this release, so the only migration
- * that exists is absent to seeded: there is no earlier record shape to read,
- * convert, or version. That is why each is optional rather than defaulted --
- * an installation restored from before this release carries the device
- * identity and the vendor name and nothing else, and the plugin must be able
- * to tell "never observed" from "observed nothing" (D-08, D-020).
+ * Observation records are absent until the first observation seeds them.
+ * The reducer resumes a readable stored record without changing its epoch.
+ * An unreadable stored record causes a warning and a new observation epoch
+ * at the next observation. Optional record members distinguish "never observed"
+ * from "observed nothing" (D-08, D-020).
  */
 
 /** What the plugin has observed about one pump since it started watching it. */
@@ -98,10 +97,9 @@ export interface AccessoryContext {
    * What the plugin observed about the primary pump, absent until it has
    * observed anything.
    *
-   * Absent is the ordinary first-run state rather than an error: an
-   * installation restored from before this release carries no observation at
-   * all, so there is nothing to migrate from and the seeding path is the only
-   * one that has ever existed.
+   * Absent is the ordinary first-run state. The first observation seeds the
+   * records; readable stored records resume their existing epoch. An unreadable
+   * stored record starts a new epoch at the next observation (D-020).
    */
   primaryPump?: PumpObservation;
   /** What the plugin observed about the backup pump, absent on a first run for the same reason. */
