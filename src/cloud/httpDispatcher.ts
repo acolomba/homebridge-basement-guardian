@@ -11,7 +11,7 @@
 
 import { Agent, fetch as undiciFetch } from 'undici';
 
-/** Fetches one HTTP request. Injected, so a test can default it to the platform's global fetch. */
+/** Fetches one HTTP request. Tests explicitly inject an offline implementation. */
 export type HttpFetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 // One shared Agent for every vendor request: undici pools connections per Agent, so a fresh Agent
