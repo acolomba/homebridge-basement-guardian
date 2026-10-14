@@ -211,5 +211,5 @@ prohibition judgments remain outside this contribution.
 All five owned artifacts exist. The five recorded commits are ancestors of
 the measured closing report revision and their actual paths match this scope.
 No tracked deletion, new stub, skipped runtime target or active mutation
-remains. Initial inventory and the bounded failed audit history are preserved.
+remains. Initial inventory and the bounded earlier audit history are preserved.
 Summary closeout commit is recorded in the terminal handoff.

@@ -253,3 +253,17 @@ blockers, warnings or info. Both parent deterministic command probes exited
 not_applicable does not prove filesystem resolution. Decision translation
 passed 7/7; post-planning coverage passed DEV-01 plus all seven decisions,
 8/8 with no uncovered items. Execution and seal flags remain pending.
+
+## Executed bounded declaration amendment
+
+During 03-02, CR-004's non-exported verdict interfaces conflicted with the
+configured public-declaration private-type-leak rule. The coordinator amended
+only owning task03-02-02 before the alternate repair, adding its plan as the
+fifth declared path and naming the two documented public verdict interfaces
+in Artifacts. All existing FamilyValidation discriminants/fields and actual
+consumers remain. Plan schema/structure passed; source+amendment committed
+29ddff5e with audit0/pass and normal hooks. No suppression, forced import,
+extra source path, new runtime feature or reset of the initial batch counter
+was introduced. The failed audit attempt is retained in the DECODING report.
+This supersedes only the initial non-exported interface recommendation,
+not the remaining ownership, probe accounting or pending verification claims.
