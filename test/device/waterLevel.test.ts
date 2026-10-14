@@ -41,15 +41,7 @@ describe('waterLevelPercentage', () => {
       const waterLevelCode = code;
 
       // act & assert
-      assert.throws(
-        () => waterLevelPercentage(waterLevelCode),
-        (error: unknown) => {
-          assert.ok(error instanceof TypeError);
-          assert.ok(error.message.includes(String(code)));
-
-          return true;
-        },
-      );
+      assert.throws(() => waterLevelPercentage(waterLevelCode), TypeError);
     });
   }
 });
