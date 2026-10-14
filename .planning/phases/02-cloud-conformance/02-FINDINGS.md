@@ -358,3 +358,58 @@ and active test commit. This becomes the sixth genuine bug only when actual
 regression evidence is collected; the diagnostic probe is not a RED record.
 The ALPN active-H2 concern and E-02-01/P-02-01/P-02-02 judgments remain pending.
 No final phase success, new coverage, fix or rerun is claimed here.
+
+## Final Routing Correction Closure
+
+The independent API correction round 3 at
+a973483f4a9a47e8dc861be3138cbbad3a633e67 closes CR-02-API-017.
+Current accepted total is 56: 56 fixed, zero open, rejected or reopened.
+The open row in the preceding section records the initial review snapshot.
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | --- | --- | --- | --- | --- | --- |
+| API 3, first correction of final-review cause 017 | 1 | 1 | 0 | 0 | 0 | 0 |
+
+Reviewer /root/phase2_final_review retains the standard 22-file scope in
+02-REVIEW.md, reads the complete changed API pair, and verifies identical
+Git blobs for the other 20 previously reviewed files. All earlier 55 remedies
+remain fixed. No D-03 trigger occurs; the next API round would be round 4 and
+would require a global pause even if clean.
+
+| Finding | Disposition | Active regression and actual evidence |
+| --- | --- | --- |
+| CR-02-API-017 | Fixed BLOCKER | Four independent test/cloud/api.test.ts targets reject '.'/'..' through device()/sendCommand(), asserting fixed promise TypeError and absent auth/HTTP; source b66f725, full evidence 6839060, source/test fix b8b660a, independent clean review a973483 |
+
+The sixth genuine bug record is the current 02-API-RED-EVIDENCE.json; its
+priorEvidence[0] retains the complete previous record, including older archives
+and controls. Independently verified ancestry is source→evidence→fix→HEAD,
+with evidence-only JSON paths and unchanged production blob
+c3c11843113f897de2c8e4d2973ed35b475ab381. Native RED executed 37 cases:
+33 pass and four intended ERR_ASSERTION Missing expected rejection failures,
+with no skipped, cancelled or todo cases. All four targets executed once.
+The classifier returns RED_EVIDENCE_OK/target_test_failed. GREEN differs from
+the saved active patch only by two lint-required blank lines; setup/assertions
+correspond semantically, without a byte-identical patch claim.
+
+The minimum helper guard refuses exactly the two control segments. Async
+public implementations preserve promise rejection before authentication/HTTP.
+The fixed native TypeError invents no HTTP status and contains no identifier
+or URL. Ordinary opaque IDs/encoding, identity, deadlines, no retry and earlier
+error/cancellation fixes remain intact. Complete native API now passes 37/37,
+with isolated 159/159 lines, 14/14 functions and 31/31 branches. Both cause
+commits and the committed fix report pass normal hooks. No unrelated edit,
+dependency, helper, public error type or protocol assumption was introduced.
+
+Fresh npm run check on clean a973483 exited 0, Node v26.11.1, observed before
+2026-10-14T13:38:55Z. All static checks, 104 Cucumber scenarios/1,156 steps and
+43 isolated pairs passed and merged coverage/direct.lcov. Log:
+/private/tmp/guardian-phase2-api017-full-check.log. This supersedes Wave 4
+for current build inputs and covers prior-phase regression owners. TDD
+review-checkpoint returns block false (no type:tdd plans); six actual D-04
+histories still supply the required provenance independently of that heuristic.
+
+Inherited Fallow duplication is retained separately, with no introduced group.
+The routing concern is now fixed; vendor occurrence/security impact were never
+claimed. ALPN active-H2 teardown and E-02-01/P-02-01/P-02-02 judgments remain
+pending. Independent validation/security refresh and goal verification follow;
+this closure does not mark CLOUD-01 overall or the phase complete.

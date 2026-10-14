@@ -325,12 +325,35 @@ isolated coverage, combined gate and independent re-review complete.
 
 | Correction | Requirement | Required check | Status |
 | --- | --- | --- | --- |
-| CR-02-API-017 | CLOUD-01 | Both dot-only IDs through device() and sendCommand(): fixed promise rejection, no auth/HTTP; complete RED/source/evidence/fix history, API isolated 100%, full combined gate and API round 3 re-review | Pending |
+| CR-02-API-017 | CLOUD-01 | Both dot-only IDs through device() and sendCommand(): fixed promise rejection, no auth/HTTP; complete RED/source/evidence/fix history, API isolated 100%, full combined gate and API round 3 re-review | Pass: four active regressions; 37/37 owner; isolated 159/159 lines,14/14 functions,31/31 branches; round 3 closes 1→0 |
 
 The earlier API routing concern is now a confirmed public-contract defect,
 without a vendor occurrence or security-impact claim. The ALPN concern stays
 unconfirmed. The authored-control security audit remains bounded evidence,
 not a waiver of this new finding. Revalidate affected gates after the fix.
+
+## Routing Correction Measured Gate
+
+Fresh npm run check on clean a973483f4a9a47e8dc861be3138cbbad3a633e67,
+with source/test fix b8b660a71f5970fbeee8579c97f8b70c6af60926, exited 0
+on Node v26.11.1 before 2026-10-14T13:38:55Z. Log:
+/private/tmp/guardian-phase2-api017-full-check.log. All six static checks,
+104 scenarios/1,156 steps and 43 isolated pairs passed. The prior phase's
+controls, auth, state and license-header owners are included in this full
+gate; no duplicate broad run is needed for unchanged inputs.
+
+02-REVIEW-FIX.md retains the sixth genuine bug's full RED/source/evidence/fix
+history and four active targets. 02-REVIEW.md independently closes API round 3,
+opening one/fixed one/new zero/reopened zero/closing zero, without resetting
+the D-03 counter. The other 55 findings stay fixed. Evidence 6839060 predates
+source/test fix b8b660a; older nested records remain complete. Two lint-required
+blank lines distinguish the GREEN patch from the saved RED patch semantically.
+
+The API's current native coverage is 159/159 lines,14/14 functions,31/31 branches;
+the earlier eight-pair table is the pre-correction snapshot. Other cloud input
+blobs remain unchanged. Current final-input evidence supersedes the Wave 4
+reference. Status remains partial pending independent validation/security
+refresh and goal verification. Phase-end judgment and ALPN limits stay visible.
 
 ## Validation Audit 2026-10-14
 
