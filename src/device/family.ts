@@ -34,8 +34,9 @@ export interface FieldViolation {
    * The scope that stops being trustworthy while this field is invalid.
    *
    * One bad field deactivates one scope, never the whole device (D-014).
-   * `undefined` marks a field no published service reads, so a violation on it
-   * is still recorded and diagnosable without deactivating anything.
+   * `undefined` marks metadata that no safety trust scope owns. Firmware
+   * metadata feeds AccessoryInformation, but a violation records the invalid
+   * field without deactivating a safety scope.
    */
   scope: TrustScope | undefined;
 }
