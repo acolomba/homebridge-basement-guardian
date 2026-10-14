@@ -4,6 +4,7 @@ Milestone: code-review-sweep. Requirement: DEV-01. Initial revision:
 7cfedb24f9ce172a9a19dd651d9e0b1c8b20d8ea. Current applied event/health revision:
 4deb91efab59f0059ab270f5dfc52d56aeba3eac. This report starts the one SUPPORT
 inventory and counter retained through plans 03-05, 03-06 and 03-07.
+Current HALO/registry applied revision: 6ad32c3f112c9e9184264a498be26d1d666e6a72.
 
 ## Independent initial review — round 0
 
@@ -35,10 +36,10 @@ The packaging gate checks source SPDX only; it does not prove test headers.
 | test/device/events.test.ts | 1: starts with imports, all sections absent | 1–9: approved sections applied; 03-05 |
 | src/device/health.ts | 1–16: MIT SPDX, no separate copyright or spacing | 1–22: approved sections applied; 03-05 |
 | test/device/health.test.ts | 1: starts with imports, all sections absent | 1–9: approved sections applied; 03-05 |
-| src/device/halo.ts | 1–17: MIT SPDX, no separate copyright or spacing | Pending 03-06; unchanged |
-| test/device/halo.test.ts | 1: starts with imports, all sections absent | Pending 03-06; unchanged |
-| src/device/registry.ts | 1–11: MIT SPDX, no separate copyright or spacing | Pending 03-06; unchanged |
-| test/device/registry.test.ts | 1: starts with imports, all sections absent | Pending 03-06; unchanged |
+| src/device/halo.ts | 1–17: MIT SPDX, no separate copyright or spacing | 1–22 at 6ad32c3f: approved sections applied; 03-06 |
+| test/device/halo.test.ts | 1: starts with imports, all sections absent | 1–7 at 6ad32c3f: approved sections applied; 03-06 |
+| src/device/registry.ts | 1–11: MIT SPDX, no separate copyright or spacing | 1–16 at 6ad32c3f: approved sections applied; 03-06 |
+| test/device/registry.test.ts | 1: starts with imports, all sections absent | 1–7 at 6ad32c3f: approved sections applied; 03-06 |
 | src/persistence/accessoryContext.ts | 1–25: MIT SPDX, no separate copyright or spacing | Pending 03-07; unchanged |
 | test/persistence/accessoryContext.test.ts | 1: starts with imports, all sections absent | Pending 03-07; unchanged |
 
@@ -59,8 +60,11 @@ Copyright (c) 2026 Alessandro Colomba and overview JSDoc sections, with one
 blank line between sections. Events source/owner applied at
 eca71a386c0d82c913d75e5144b4533547acb2ff; health source/owner applied at
 95623884bb892b1a11097b65e52a67e88ea25315. Both exact pair commits passed
-audits, clean pre-steps and normal hooks. HALO/registry/persistence portions
-remain open and unapplied. This shared ID is not closed.
+audits, clean pre-steps and normal hooks. HALO sections applied at
+72c4574b9737d9b35e37e52296223f62d52acfee; registry sections applied at
+7d79ac127dc7d8cc0062d8bf3e5bdc6689b208a7. Their bounded independent preflight
+passed at 6ad32c3f. Persistence remains unapplied; full correction acceptance
+is pending. This shared ID is not closed.
 
 ### CR-03-SUPPORT-002 — WARNING — Backup activation cause
 
@@ -113,33 +117,44 @@ selector and fresh real serviceCatalogue owner pass; final acceptance pending.
 
 ### CR-03-SUPPORT-006 — WARNING — Registry anonymous verdict objects
 
-Rule: Google style “Types”: object types use interfaces. Initial/current
+Rule: Google style “Types”: object types use interfaces. Initial
 registry source :19–22 uses three inline object alternatives in FamilyOutcome.
 Minimum remedy is documented named verdict interfaces with the same public
 union/discriminants/members/generic/mutability. The configured
 private-type-leaks:error rule matters; the earlier family private-interface
-attempt is not a compliant analog. Pending original registry owner 03-06;
-any additional public variant export requires the bounded owning-wave
-amendment before edit. No dispatch defect or accepted behavior bug exists.
+attempt is not a compliant analog. The coordinator amended 03-06 before edits
+to authorize documented exported ImplementedFamilyOutcome<T>,
+UnsupportedFamilyOutcome and UnknownFamilyOutcome. Applied at
+75f02e93913ac37ac376b4de7c290a375e391b62 with that existing plan amendment;
+current source :23–43 at 6ad32c3f. Exact original generic, tags, fields and
+mutability remain. No default generic, readonly conversion, forced import,
+suppression or runtime change. Configured export/type/private-leak check
+has zero issues. Bounded preflight passed; full correction remains pending.
+No dispatch defect or accepted behavior bug exists.
 
 ### CR-03-SUPPORT-007 — WARNING — HALO ordinary test phases
 
 Rule: unit writer/reviewer “Case structure”: act & assert applies to the
-single throwing/rejection expression. Initial/current HALO owner :15–23 uses
+single throwing/rejection expression. Initial HALO owner :15–23 uses
 that marker for constant assertions. Minimum remedy separates ordinary
 phases for the retained product-name case; coordinate with 010 rather than
-expanding the redundant identity case. Pending original HALO owner 03-06.
+expanding the redundant identity case. Applied at
+8847f1c195d23c5af24ab8d021d2f318a925a448, only HALO owner; current :23–31
+at 6ad32c3f. Ordinary arrange/act/assert and independent product-name literal
+remain. Bounded preflight passed; full correction remains pending.
 
 ### CR-03-SUPPORT-008 — BLOCKER — Independent registry HALO expectation
 
 Rule: unit writer/reviewer “Assertions”: independent expected values and
-isolated pairing. Initial/current registry owner :42–50 obtains both its
+isolated pairing. Initial registry owner :42–50 obtains both its
 lookup input and identity/name expectation from HALO production constants.
 A coordinated wrong constant could pass this pair. Minimum remedy uses
 literal wayneWaterHalo and the independent complete unsupported result with
-Wayne Water HALO. Keep current Gemini/unknown whole outcomes. Pending
-original registry owner 03-06; existing constants are correct, so this is
-assertion maintenance rather than a genuine production bug.
+Wayne Water HALO. Applied at 6ad32c3f112c9e9184264a498be26d1d666e6a72,
+only registry owner; current :50–60. Whole Gemini binding and unknown outcomes
+remain. Bounded preflight passed; full correction remains pending. Existing
+constants are correct, so this is assertion maintenance rather than a genuine
+production bug.
 
 ### CR-03-SUPPORT-009 — BLOCKER — Persistence source-prose scaffolding
 
@@ -157,11 +172,14 @@ has been established and no helper need has been confirmed.
 ### CR-03-SUPPORT-010 — WARNING — Redundant HALO identity runtime case
 
 Rule: unit writer “Patterns — Do not test what a gate already enforces.”
-Initial/current HALO owner :15–18; source :20–23. The runtime constant's direct
+Initial HALO owner :15–18; source :20–23. The runtime constant's direct
 assignment already has the exact literal type wayneWaterHalo. Retain meaningful
 compiler positive/negatives and independent runtime product-name assertion;
 remove this redundant identity case without changing the production constant.
-Pending original HALO owner 03-06.
+Applied at bb6d16593a14d72ebac2dd5f6b15aed6bc12a7df, only HALO owner.
+Current :16–21 preserves the positive and both negatives; :23–31 retains
+the independent product-name case. Source constant remains :28 at 6ad32c3f.
+Bounded preflight passed; full correction remains pending.
 
 ## Rejected and bounded contract candidates
 
@@ -320,11 +338,90 @@ dispatch deviation if it needs a new record.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Independent initial round 0 | 10 | 0 | 0 | 0 | 0 | 10 |
 
-Applied event/health causes 002–005 and their 001 header portions await full
-independent acceptance. Unapplied causes 006–010 and remaining 001 portions
-stay with 03-06/03-07. No full correction or independent closing count ran
+Applied event/health causes 002–005 and HALO/registry causes 006–008/010,
+plus their 001 header portions, await full independent acceptance. Unapplied
+009 and remaining persistence 001 portions stay with 03-07. No full correction
+or independent closing count ran
 here. Complete SUPPORT correction follows 03-07 with this original counter.
 E-03-01/P-03-01/P-03-02 remain unresolved; DEV-01 remains pending overall.
+
+## HALO/registry execution and bounded preflight
+
+Fixer: /root/phase3_halo_registry/halo_registry_fixer, role gsd-code-fixer.
+Independent preflight reviewer: /root/phase3_halo_registry/halo_registry_preflight,
+role gsd-code-reviewer. Both dispatched with fresh context, resolved high
+effort and omitted empty model fields. Each foreground handoff waited for its
+named terminal response; interim messages were not completion. Full required
+rulebooks, four owning files, current SUPPORT history and actual callers were
+read. No write/build/Git overlap occurred.
+
+| Cause | Actual commit | Actual paths |
+| --- | --- | --- |
+| 001 HALO | 72c4574b9737d9b35e37e52296223f62d52acfee | src/device/halo.ts; test/device/halo.test.ts |
+| 010 | bb6d16593a14d72ebac2dd5f6b15aed6bc12a7df | test/device/halo.test.ts |
+| 007 | 8847f1c195d23c5af24ab8d021d2f318a925a448 | test/device/halo.test.ts |
+| 001 registry | 7d79ac127dc7d8cc0062d8bf3e5bdc6689b208a7 | src/device/registry.ts; test/device/registry.test.ts |
+| 006 | 75f02e93913ac37ac376b4de7c290a375e391b62 | src/device/registry.ts; 03-06-PLAN.md |
+| 008 | 6ad32c3f112c9e9184264a498be26d1d666e6a72 | test/device/registry.test.ts |
+
+Each cause passed fresh build/owner execution, its isolated selector, Fallow
+audit against 7cfedb24, exact clean SKIP=npm-check pre-commit pre-step before
+staging, and ordinary foreground commit with normal check:commit hooks.
+All six commits exited 0 and changed only the five authorized paths. No
+formatter changed pre-step inputs; no tracked deletion or untracked input
+remains. Ledger gsd-plan-head-before-03-06 records f04f0864. Existing
+phase03/plan03-06 isolation:none sentinel was read and preserved.
+
+Exact pre-edit Fallow dead-code --trace src/device/registry.ts:FamilyOutcome
+ran at 19:29:24 UTC on original blob 5fbe6570, before replacing the alias's
+inline alternatives. Independent --type-aware --symbol-impact queries used
+tsconfig.json and tsconfig.test.json with --format json --quiet; both exit 0,
+status/completeness complete, one/four direct consumers. Actual platform,
+runtime command and accessory consumers were read. Variant traces report no
+direct external imports; this is not direct-import evidence. Installed
+TypeScript checker proves real transitive public union use at platform 1,
+platform owner 8, accessory owner 8 and registry owner 5 references.
+
+Node v26.11.1, npm 11.20.0, Fallow 3.27.0. Native index initially holds 72
+complete captures: /private/tmp/halo-registry-fixer-index.json. Records retain
+full separate stdout/stderr, arguments, exits, UTC times, runtime, revision,
+source/test blobs and exact dirty/staged/untracked inputs. Final validation
+checks actual commit paths/ancestry and pre-step -> stage -> hook ordering.
+
+- Final npm run build:test && node --test dist-test/test/device/halo.test.js
+  dist-test/test/device/registry.test.js: exit 0 at 6ad32c3f, 19:37:32.890–
+  19:37:36.425 UTC; nine tests pass, zero fail/skip/cancel/todo.
+- npm run test:coverage:direct -- src/device/halo.ts test/device/halo.test.ts:
+  exit 0, 19:37:36.540–19:37:40.425 UTC. Isolated native compiled LCOV has
+  lines 6/6, functions 0/0, branches 1/1.
+- npm run test:coverage:direct -- src/device/registry.ts
+  test/device/registry.test.ts: exit 0, 19:37:40.535–19:37:44.482 UTC.
+  Isolated native compiled LCOV has lines 53/53, functions 3/3, branches 9/9.
+- The outcome interfaces are erased declarations. These runtime measurements
+  make no numerical runtime claim for them. Both sources' compiler-erased
+  JavaScript matches baseline; HALO source tokens and registry runtime tokens
+  match. Original required generic/member types/optionality/mutability and
+  union alternative order are independently verified. All four headers pass.
+
+Initial HALO-header audit exited 2 because the sandbox could not create its
+temporary baseline worktree; the authorized escalated retry exited 0/verdict
+pass. Both captures remain. Two temporary preservation-harness attempts
+exited 1 on lexical semicolon comparison and compiler internal union ordering.
+Only the /private/tmp proof harness changed to compare property AST shapes
+and variant sets; final proof passed, with source alternative order checked
+separately. These attempts are not production failures or genuine RED.
+
+Independent read-only preflight at 6ad32c3f reported PREFLIGHT PASS, no concrete
+defect, reopening or D-03 stop trigger. It independently inspected raw native
+evidence, Git objects, exact trace timing, current blobs, caller bodies and
+compiler-erased shapes without builds or mutations. This bounded acceptance
+is not a full SUPPORT correction round and assigns no closing count. Initial
+ten IDs and counter 0 remain. Full correction follows 03-07. WINDOWS 46/47
+remain OPEN/unwaived; successful current checks do not repair historical gaps.
+No genuine bug RED, source mutation, conditional evidence file, install,
+live call, new adapter/default/migration or coordinator state edit occurred.
+The coordinator owns the fresh full npm run check; isolated checks and hooks
+do not replace it or refresh merged coverage/direct.lcov.
 
 ## Threat Flags
 
