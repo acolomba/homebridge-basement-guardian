@@ -79,7 +79,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 02-01-PLAN.md
 - [x] 02-02-PLAN.md
 - [x] 02-03-PLAN.md
-- [ ] 02-04-PLAN.md
+- [x] 02-04-PLAN.md
 - [ ] 02-05-PLAN.md
 
 **Batching**: Eight pairs plus the `test/cloud/alpnServer.ts` test helper. `auth.ts` (496 lines) and `shadow.ts` (475 lines) can each be a batch of their own; the six smaller modules fit in two or three batches. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
@@ -180,7 +180,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
-| 2. Cloud Conformance | code-review-sweep | 3/5 | In Progress | - |
+| 2. Cloud Conformance | code-review-sweep | 4/5 | In Progress | - |
 | 3. Device and Persistence Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 4. Runtime Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |

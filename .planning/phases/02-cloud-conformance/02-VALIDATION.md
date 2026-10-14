@@ -40,9 +40,9 @@ for every runnable automated command. No execution result is inferred here.
 | 02-03-01 | npm run build:test && node --test dist-test/test/cloud/api.test.js; npm run test:coverage:direct -- src/cloud/api.ts test/cloud/api.test.ts | T-02-08, T-02-09, T-02-10 | Nonzero, missing owner/coverage or wrong public deadline/privacy result | Pass: owner 33/33; isolated 100%; both real bug records |
 | 02-03-02 | npm run test:coverage:direct -- src/cloud/types.ts test/cloud/types.test.ts | T-02-08 | Nonzero, missing source coverage or any metric below 100% | Pass: owner 77/77; isolated 100% |
 | 02-03-03 | npm run test:coverage:direct -- src/cloud/errors.ts test/cloud/errors.test.ts | T-02-10 | Nonzero, wrong structured error or any metric below 100% | Pass: owner 5/5; isolated 100%; rounds 15→1→0 |
-| 02-04-01 | npm run build:test && node --test dist-test/test/cloud/httpDispatcher.test.js; npm run test:coverage:direct -- src/cloud/httpDispatcher.ts test/cloud/httpDispatcher.test.ts | T-02-11, T-02-12 | Nonzero, listener/setup error, wrong ALPN/HTTP result or coverage below 100% | Pending |
-| 02-04-02 | npm run test:coverage:direct -- src/cloud/mqttTransport.ts test/cloud/mqttTransport.test.ts | T-02-12, T-02-13 | Nonzero, lifecycle/teardown contract failure or coverage below 100% | Pending |
-| 02-04-03 | npm run test:coverage:direct -- src/cloud/sigv4.ts test/cloud/sigv4.test.ts | T-02-11, T-02-13 | Nonzero, wrong exact signing bytes or coverage below 100% | Pending |
+| 02-04-01 | npm run build:test && node --test dist-test/test/cloud/httpDispatcher.test.js; npm run test:coverage:direct -- src/cloud/httpDispatcher.ts test/cloud/httpDispatcher.test.ts | T-02-11, T-02-12 | Nonzero, listener/setup error, wrong ALPN/HTTP result or coverage below 100% | Pass: owner 3/3; isolated 100%; complete response and cancellation |
+| 02-04-02 | npm run test:coverage:direct -- src/cloud/mqttTransport.ts test/cloud/mqttTransport.test.ts | T-02-12, T-02-13 | Nonzero, lifecycle/teardown contract failure or coverage below 100% | Pass: owner 21/21; isolated 100%; strict interactions and callback-owned end |
+| 02-04-03 | npm run test:coverage:direct -- src/cloud/sigv4.ts test/cloud/sigv4.test.ts | T-02-11, T-02-13 | Nonzero, wrong exact signing bytes or coverage below 100% | Pass: owner 9/9; isolated 100%; independent round 13→0 |
 | 02-05-01 | PLAN.md's Node ledger-section assertion, then real provenance inspection | T-02-14 | Nonzero, missing ledger sections/CLOUD-01 or absent LEDGER_TRACER_OK | Pending |
 | 02-05-02 | npm run build:test && node --test dist-test/test/packaging/licenseHeaders.test.js && npm run check | T-02-14, T-02-15, T-02-16 | Nonzero, timeout, static/Cucumber failure or any isolated pair below 100% | Pending |
 
@@ -165,3 +165,35 @@ contract limitation into the central ledger and phase-end judgment.
 Summary validation and schema-drift gate pass; codebase drift is skipped without
 STRUCTURE.md. This clean verified HEAD replaces the Wave 2 reuse reference.
 Transport/signing review, final consolidation and phase judgments remain pending.
+
+## Wave 4 measured evidence
+
+The coordinator ran npm run check on clean HEAD
+e57e7d4d3a6276838a8d5024cdb0644413d28d75, with reviewed code revision
+fb3de06560c1978281bfd8ee4f97c3fd8b9d1204, Node v26.11.1. Exit 0 was
+observed before 2026-10-14T12:39:55Z. All static gates passed, 104 Cucumber
+scenarios and 1,156 steps passed, and all 43 isolated pairs passed and merged
+their LCOV into coverage/direct.lcov. Complete log:
+/private/tmp/guardian-phase2-wave4-full-check.log.
+
+The committed transport report and summary account for 13 fixed findings,
+one independent round 13→0, actual passing hooks and four separately restored
+assertion controls. No genuine production bug was established in this batch.
+The authorized test/cloud/sigv4Seeds.ts holds the existing fresh input seed.
+It has a complete header and independent full-file review; its support edit
+passed the all-pair commit selector. Final cloud inventory is 19 files, including
+both authorized seed helpers in addition to the original 17.
+
+The ALPN helper's active HTTP/2 session-close concern remains UNCONFIRMED.
+The expected HTTP/1.1 cases pass; no executed current failure establishes a
+finding. Carry it alongside the API dot-only concern into the central ledger
+and phase-end judgment without inventing a production bug or cleanup change.
+
+Summary validation and schema-drift gate pass; codebase drift is skipped without
+STRUCTURE.md. The executor completed its records before the requested stop
+reached it. Actual committed completion was reconciled, so no duplicate retry
+was dispatched. Its recorded elapsed time includes the delayed closeout.
+
+This clean verified HEAD replaces the Wave 3 reuse reference. Final ledger,
+independent phase audits and phase-end judgments remain pending. Subsequent
+planning-only edits can reuse this result only after exact input comparison.
