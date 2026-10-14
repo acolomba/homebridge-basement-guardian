@@ -82,7 +82,8 @@ void ({
   metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
 } satisfies ScopedDomainState);
 
-// Only the scope that lost its link is absent; the rest keep publishing current values.
+// Every required group is present even when its value is undefined.
+// Connectivity can remain available while all other groups are absent.
 void ({
   water: undefined,
   pump: undefined,
