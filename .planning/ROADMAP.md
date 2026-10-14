@@ -77,7 +77,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 
 **Plans**: TBD
 - [x] 02-01-PLAN.md
-- [ ] 02-02-PLAN.md
+- [x] 02-02-PLAN.md
 - [ ] 02-03-PLAN.md
 - [ ] 02-04-PLAN.md
 - [ ] 02-05-PLAN.md
@@ -180,7 +180,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
-| 2. Cloud Conformance | code-review-sweep | 1/5 | In Progress | - |
+| 2. Cloud Conformance | code-review-sweep | 2/5 | In Progress | - |
 | 3. Device and Persistence Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 4. Runtime Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |

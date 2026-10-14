@@ -5,16 +5,16 @@ milestone_name: Code Review Sweep
 current_phase: 2
 current_phase_name: Cloud Conformance
 status: executing
-stopped_at: Cloud auth complete; full wave gate passed; shadow next
-last_updated: "2026-10-13T23:57:28.968Z"
+stopped_at: Cloud shadow complete; full wave gate passed; REST/wire/errors next
+last_updated: "2026-10-14T00:22:36.954Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: eccbe11e0cfe7baa6970dbb65776a6d95858dc4d
+state_head: d7db0c2847ae7417bf6361f53ba193b67339dc0a
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
+  completed_plans: 6
   percent: 13
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-13)
 ## Current Position
 
 Phase: 2 (Cloud Conformance) — READY TO EXECUTE
-Plan: 1 of 5 complete; shadow next
+Plan: 2 of 5 complete; REST, wire types and errors next
 Status: Executing
 Last activity: 2026-10-13 — Phase 1 complete, transitioned to Phase 2
 
@@ -637,9 +637,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-13T23:57:28.931Z
-Stopped at: Cloud auth complete; full wave gate passed; shadow next
-Resume file: .planning/phases/02-cloud-conformance/02-02-PLAN.md
+Last session: 2026-10-14T00:22:36.914Z
+Stopped at: Cloud shadow complete; full wave gate passed; REST/wire/errors next
+Resume file: .planning/phases/02-cloud-conformance/02-03-PLAN.md
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
 for history; they do not describe code-review-sweep work.
