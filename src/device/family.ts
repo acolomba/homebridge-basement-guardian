@@ -198,6 +198,8 @@ export interface DeviceFamily<TDomainState> {
    * on the first malformed value the vendor sends.
    */
   decode(snapshot: DeviceSnapshot): TDomainState;
+  /** Lists the device controls the family supports for the decoded state. */
   capabilities(state: TDomainState): readonly DeviceCapability[];
+  /** Builds the family's desiredData body for the requested control state; reported state remains authoritative. */
   command(capability: DeviceCapability, requested: boolean): FamilyCommand;
 }
