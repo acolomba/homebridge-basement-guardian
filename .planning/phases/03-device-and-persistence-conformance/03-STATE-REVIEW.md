@@ -517,3 +517,217 @@ This evidence addition is restaged and rechecked before the commit.
 Actual normal-hook result, commit hash/path inspection and rebuilt tracer
 feedback are supplied to the coordinator after the foreground commit.
 No correction round or accepted-ID closure is claimed by this repair record.
+
+## Cause repair pass: task 03-01-02
+
+Fixer: `/root/phase3_state/state_expansion_fix`, role gsd-code-fixer.
+Starting revision: `ca8b3ddf2fc9a79f2e6c1afa853e67d1f70db306`.
+Repaired code revision: `b05e58f75b82510537552109a80601ccf02b7b0c`.
+All checks ran in the existing feature checkout, under the persisted
+`isolation: none` dispatch. No worktree, branch, shared ledger or summary
+was changed. The actual branch remained `features/code-review-sweep`.
+
+This pass applies the remaining accepted causes. It is not an independent
+correction review. The initial round remains round 0 with ten accepted IDs.
+No correction count is reset, and no independent closure is claimed.
+The complete source/owner and new seed require the next full review.
+No genuine production bug or SC-03 reopening was identified; no production
+RED JSON was created.
+
+### Applied causes and actual commits
+
+Each row has requirement DEV-01 and retains its initial rule, severity and
+revision-qualified finding above. The status is applied, awaiting independent
+review. All actual code commits exited 0 with enabled normal hooks.
+
+| ID suffix | Applied repair | Full commit | Actual committed paths |
+| --- | --- | --- | --- |
+| 001 | Complete first-versioned returned/stored snapshots, second released device, held state after unknown release/remove, and listener-failure returned/stored state; retains the prior unversioned tracer | `169e4ed4a116d7b3986ba4cc6d0cb97debc72202` | `test/device/state.test.ts` |
+| 002 | Records complete next/previous snapshots and changedKeys; independently compares all six notified envelopes after returned/stored state | `3e4ba69c38f7a883390494f147a7e8a71f377da6` | `test/device/state.test.ts` |
+| 003 | Advances the injected clock before each release; keeps the whole independent unchanged snapshot and empty notifications | `f78999a1f58c9f0e8557ff04be5a5caee050ea35` | `test/device/state.test.ts` |
+| 005 | Clarifies identity and public snapshot/list/discovery/removal/release contracts; relocates safety rationale beside implementation | `72417aba9e365f4736e2a54b8a9c26656ef45ec0` | `src/device/state.ts` |
+| 006 | Renames only the writable telemetry local to vendorTelemetry | `b3e792c8a526403165357c963eb3864d32d2fcba` | `test/device/state.test.ts` |
+| 007 | Removes obsolete wider-guard history; retains present receipt/telemetry rationale and durable IDs | `1de1a61d0bc894a8e9000c28d21c210a0704f2cf` | `test/device/state.test.ts` |
+| 008 | Moves only existing fresh geminiDevice/geminiIdentity functions to a documented, typed concern seed with the approved header | `18e8b83757f7aa1dcf38f8b61cb17ed116e48539` | `test/device/state.test.ts`; new `test/device/stateSeeds.ts` |
+| 009 | Separates non-throwing unknown-snapshot and empty-deviceIds actions from assertions | `df9d37d03fc5f5b8b8e429af0f10b362628c792e` | `test/device/state.test.ts` |
+| 010 | Keeps both desired true/null negative compiler contracts at module scope; removes only their runtime wrappers | `b05e58f75b82510537552109a80601ccf02b7b0c` | `test/device/state.test.ts` |
+
+The earlier header repair remains
+`5808523c26899d15f8f0a4b0be7b147de6863d86` (004, source only).
+The earlier unversioned tracer remains
+`ca8b3ddf2fc9a79f2e6c1afa853e67d1f70db306` (001, owner and report).
+Git object inspection confirms every path above and no tracked-file deletion.
+
+At the repaired revision, key owner locations are first-versioned 371,
+two-device release 568, repeated release 645, unknown release 726,
+notification cases 766/800/875/913/947/996, unknown removal 1051,
+unknown snapshot 1109 and empty identifiers 1122.
+Compile negatives are at 83/91, telemetry local at 216 and rationale at 455.
+Source identity is at 17, public methods 92-128, and relocated removal/release
+notes at 361-400. Seed declarations are at 15/27.
+
+### Preservation and six current seed dispositions
+
+Required keys holding undefined remain required. No optionalization or
+readonly interface change was made: the complete public shapes and the
+class/interface rule distinction still reject those two candidate warnings.
+Public documentation is repaired by 004/005; local naming by 006; rationale
+only by the accepted 007 portion; whole promises by 001/002/003.
+The initial evidence rejects blanket rationale deletion and arbitrary interface
+mutability changes. These decisions retain their independent-review obligation.
+
+SC-03 whole expectations before frozen checks, nested presence assertions,
+version-row canonical refusal reads, metadata-watermark canonical reads and
+released snapshot presence all remain. Scalar receipt/running promises remain
+scalar assertions. Empty notification lists remain whole silence promises.
+Canonical/vendor data field names and all production declarations remain exact.
+
+A TypeScript scanner comparison against the recorded baseline
+`aa826a50a0afeda9a95ab05d38240219bfcb5595` exited 0 and emitted
+`SOURCE_NON_COMMENT_TOKENS_IDENTICAL`. It compares token kind and text with
+trivia omitted, including interface declarations. The complete source change
+is header/documentation/comments; no runtime or type token changed.
+Final source SHA-256:
+`fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`.
+
+The relocated release notes retain per-controller ownership, fleet disconnection,
+open-socket silence, telemetry reacquisition, bounded first-document ordering,
+clean-session/no-replay, partial merges, heartbeat correction and false-normal
+risks. Existing device/local clock and SC-3 rationale remains unchanged.
+C-002, D-030, D-020, SYNC-03, D-13 and the other existing durable IDs remain.
+
+### Repeated-release assertion control
+
+This is a separate test-fixture control against implemented behavior, not
+production-bug RED. After a successful build, a temporary source change
+restamped receivedAt only for account-1_serial-1 with water_level 4,
+wifi_signal_dbm -54 and an already absent shadow watermark. It isolates the
+second release. The replacement stored expression was:
+
+```typescript
+freeze({ ...snapshot, shadowVersion: undefined, receivedAt: deviceId === 'account-1_serial-1' && snapshot.shadowVersion === undefined && snapshot.data.water_level === 4 && snapshot.metadata.wifi_signal_dbm === -54 ? options.clock.now() : snapshot.receivedAt })
+```
+
+The full TAP owner ran at 2026-10-14T16:18:48.471943Z and ended
+16:18:48.744766Z, exit 1. Exactly the case
+`moves no value and notifies nobody when it runs again on a later poll of the same silence`
+failed with ERR_ASSERTION. It expected receivedAt 1700000777000 and observed
+1700000889000; 53 of 54 tests passed, with zero skipped/cancelled tests.
+The fixed-clock fixture would observe the original timestamp under this mutation.
+
+Mutated source SHA-256:
+`1b125ec5762209f30d50cb526b09d9076f3bcf77a9986e252fbb320bac615a4a`.
+Restored source SHA-256:
+`070c580951f786152b5105da9d6776e742345e1740aec5c5751c1d2d0bda06bd`,
+identical to pre-control bytes. The restored source diff was empty.
+Restored build exited 0 at 16:19:01.993731Z; owner exited 0 at
+16:19:07.406328Z with 54/54; direct selector exited 0 at 16:19:10.736171Z.
+Complete native stdout/stderr, command arrays and timestamps are in
+`/tmp/state-expansion-003-control-owner.json`,
+`/tmp/state-expansion-003-restored-build.json`,
+`/tmp/state-expansion-003-restored-owner.json` and
+`/tmp/state-expansion-003-direct.json`. No mutation was committed.
+
+### Native checks, semantic limits and hooks
+
+Node v26.11.1; npm 11.20.0; installed Fallow 3.27.0. No install or live
+service/hardware run occurred. Source/owner/helper headers were read in full.
+Initial guard exited 0 before edits; the new helper guard also exited 0.
+No architecture zones or policy packs are configured, so zero configured
+violations is not measured architecture compliance.
+
+Before every cause commit, the exact recorded-base command was
+`./node_modules/.bin/fallow audit --base aa826a50a0afeda9a95ab05d38240219bfcb5595 --format json --quiet`.
+Each raw exit was 0 with verdict pass and zero introduced findings.
+The seed audit's stderr reported two cached TypeScript entry points outside
+the temporary root and a resolver/entry-point cache fallback; those diagnostics
+remain in its capture. No unavailable audit was converted into a passing result.
+
+The first Git staging/commit command for 001 exited 128 at index.lock creation
+because the linked worktree Git directory was outside the sandbox write scope.
+It staged nothing and created no commit. The justified elevated retry passed
+ordinary hooks. Later Git commits used that authorized scope. No hook bypass,
+amendment, reset, rebase, stash or history rewrite occurred.
+
+Each cause had fresh build:test, full compiled TAP owner and isolated direct
+coverage, all exit 0. Causes through 009 had 54 runtime tests. Cause 010 keeps
+the two compiler-enforced negatives and reduces runtime tests to 52.
+Pre-step commands used exact changed paths and SKIP=npm-check; actual commit
+hooks had no SKIP override. All normal check:commit hooks passed.
+The seed's staged support path selected all pairs under the existing selector.
+
+The fresh final code checks at b05e58f were:
+build:test 16:28:48.527123Z–16:28:51.135208Z, exit 0;
+full TAP owner 16:28:51.172322Z–16:28:51.429644Z, exit 0, 52/52;
+direct selector 16:28:51.463890Z–16:28:54.829153Z, exit 0.
+The native isolated source-only coverage run ended 16:28:55.157160Z, exit 0:
+lines 264/264, functions 23/23, branches 61/61, all 100%.
+Complete command arrays and native streams are in
+`/tmp/state-expansion-final-build.json`,
+`/tmp/state-expansion-final-owner.json`,
+`/tmp/state-expansion-final-direct.json` and
+`/tmp/state-expansion-final-native.json`.
+Its native TAP and single LCOV record are
+`/tmp/state-expansion-final-native.tap` and
+`/tmp/state-expansion-final-native.lcov`.
+These are focused checks. No full npm run check was run by this fixer;
+the coordinator owns the combined gate.
+
+For 003/005/006/007/008/009/010, full ordinary native captures use
+`/tmp/state-expansion-<suffix>-build.json`, `-owner.json`, `-direct.json`,
+`-audit.json`, `-pre.json` and `-commit.json`; 003 uses the restored build/
+owner names listed above. Earlier 001/002 owner TAP remains in
+`/tmp/state-expansion-001-owner.tap` and
+`/tmp/state-expansion-002-owner.tap`, with raw checks/hooks in the tool record.
+
+Before moving the private seed functions, exact impact queries in both projects
+returned raw 2, export-not-found: they were private locals, not exports.
+That is no semantic no-use proof. Actual definitions and all local calls were
+read. After the move, both seed exports have complete/high-confidence test
+project results, each with only the state owner as direct consumer/targeted test.
+Production project results return raw 0 but status unavailable/no-project,
+because the declaration is outside that project's inputs. They establish no
+absence of consumers. No production API/type change depended on those results.
+The baseline production shape queries remain baseline evidence, not fresh
+queries at the repaired revision.
+
+Fresh post-commit helper query captures, with exact stdout/stderr and raw exits,
+are `/tmp/state-expansion-008-impact-production-geminiDevice.json`,
+`/tmp/state-expansion-008-impact-production-geminiIdentity.json`,
+`/tmp/state-expansion-008-impact-test-geminiDevice.json` and
+`/tmp/state-expansion-008-impact-test-geminiIdentity.json`.
+All four raw exits are 0; semantic completeness differs as stated above.
+The new helper still requires independent full-file review.
+
+### CR-03-STATE-008 pre-step ordering deviation
+
+The exact pre-step was
+`SKIP=npm-check pre-commit run --files test/device/state.test.ts test/device/stateSeeds.ts`.
+At 16:24:48.412373Z–16:24:50.929472Z it exited 1: Prettier collapsed the
+shorter owner type-import block to one line. The seed bytes did not change.
+The fixer staged both formatted paths, then launched the normal foreground
+commit at 16:24:56.976568Z before repeating the pre-step. This ordering
+violated the required repeat-until-clean sequence.
+
+Commit `18e8b83757f7aa1dcf38f8b61cb17ed116e48539` ended at
+16:25:13.448419Z, exit 0, with all applicable normal hooks passing.
+Inspection confirmed only the owner and new seed were committed.
+The late exact pre-step on those committed bytes ran
+16:25:39.507049Z–16:25:41.809937Z, exit 0, and changed no bytes.
+It does not retroactively prove ordering compliance. The deviation was
+reported to the parent/coordinator before remaining cause work; continuation
+was explicitly authorized. No history was rewritten. The 009 and 010 clean
+pre-steps were observed before staging/committing their corresponding changes.
+
+The complete ordering evidence remains in
+`/tmp/state-expansion-008-pre.json`,
+`/tmp/state-expansion-008-commit.json` and
+`/tmp/state-expansion-008-pre-late-repeat.json`.
+This process deviation remains for coordinator disposition. It is not a
+production defect, assertion control or correction review round.
+
+The report-only pre-step at 16:32:05.618960Z–16:32:07.815580Z exited 1
+because end-of-file-fixer removed an extra trailing blank line. It changed
+no executable input. Its capture is `/tmp/state-expansion-report-pre.json`.
+The exact report-only pre-step is repeated after this record addition and
+must pass before the report is committed; its result is supplied at handoff.
