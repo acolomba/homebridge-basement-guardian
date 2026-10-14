@@ -20,6 +20,7 @@ import { startAlpnServer } from './alpnServer.js';
 
 import type { CloudApi, CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
+import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { TestContext } from 'node:test';
 
@@ -90,11 +91,13 @@ function awsCredentialsResponse(): AwsCredentialsResponse {
 }
 
 function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
+  const fixedError = new Error('HTTP transport not supplied');
+
   return {
     baseUrl: 'https://api.example.test',
     auth,
     requestTimeoutMs: REQUEST_TIMEOUT_MS,
-    httpFetch: (input, init) => globalThis.fetch(input, init),
+    httpFetch: () => Promise.reject(fixedError),
     ...overrides,
   };
 }
@@ -108,10 +111,10 @@ interface RecordedRequest {
 }
 
 // Records every request and answers each one with a fresh Response.
-function stubFetch(t: TestContext, respond: () => Response): RecordedRequest[] {
+function stubFetch(respond: () => Response): { httpFetch: HttpFetch; vendorRequests: RecordedRequest[] } {
   const vendorRequests: RecordedRequest[] = [];
 
-  t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
+  const httpFetch: HttpFetch = (input, init) => {
     const headers = new Headers(init?.headers);
 
     vendorRequests.push({
@@ -123,28 +126,28 @@ function stubFetch(t: TestContext, respond: () => Response): RecordedRequest[] {
     });
 
     return Promise.resolve(respond());
-  });
+  };
 
-  return vendorRequests;
+  return { httpFetch, vendorRequests };
 }
 
 // Records the complete header set each request declares, so a case asserts the exact keys and values
 // rather than the presence of the ones it thought to ask about.
-function stubHeaderRecordingFetch(t: TestContext, respond: () => Response): Record<string, string>[] {
+function stubHeaderRecordingFetch(respond: () => Response): { httpFetch: HttpFetch; declaredHeaders: Record<string, string>[] } {
   const declaredHeaders: Record<string, string>[] = [];
 
-  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
+  const httpFetch: HttpFetch = (_input, init) => {
     declaredHeaders.push(Object.fromEntries(new Headers(init?.headers).entries()));
 
     return Promise.resolve(respond());
-  });
+  };
 
-  return declaredHeaders;
+  return { httpFetch, declaredHeaders };
 }
 
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
-function stubHangingFetch(t: TestContext): void {
-  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
+function stubHangingFetch(): HttpFetch {
+  return (_input, init) => {
     const { signal } = init ?? {};
 
     return new Promise<Response>((_resolve, reject) => {
@@ -160,7 +163,7 @@ function stubHangingFetch(t: TestContext): void {
 
       signal?.addEventListener('abort', abort);
     });
-  });
+  };
 }
 
 // Replaces the per-request deadline with a signal the case owns, and records the
@@ -185,16 +188,16 @@ function stubDeadlines(t: TestContext): { requested: number[]; expire: () => voi
 
 // Records the signal each request carries, so a case can compare it with the
 // signal the token fetch was handed.
-function stubSignalRecordingFetch(t: TestContext): (AbortSignal | null | undefined)[] {
+function stubSignalRecordingFetch(): { httpFetch: HttpFetch; requestSignals: (AbortSignal | null | undefined)[] } {
   const requestSignals: (AbortSignal | null | undefined)[] = [];
 
-  t.mock.method(globalThis, 'fetch', (_input: string | URL, init?: RequestInit) => {
+  const httpFetch: HttpFetch = (_input, init) => {
     requestSignals.push(init?.signal);
 
     return Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
-  });
+  };
 
-  return requestSignals;
+  return { httpFetch, requestSignals };
 }
 
 // Answers with a token and records the signal the token fetch was given.
@@ -223,10 +226,10 @@ test('waits at most 2500 milliseconds for the vendor to accept a command', () =>
   assert.strictEqual(COMMAND_DEADLINE_MS, 2_500);
 });
 
-test('authorizes the device request with the bearer token the auth client supplies', async (t) => {
+test('authorizes the device request with the bearer token the auth client supplies', async () => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
@@ -238,10 +241,10 @@ test('authorizes the device request with the bearer token the auth client suppli
   ]);
 });
 
-test('reads an empty account as an empty device list', async (t) => {
+test('reads an empty account as an empty device list', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
@@ -250,10 +253,10 @@ test('reads an empty account as an empty device list', async (t) => {
   assert.deepStrictEqual(devices, []);
 });
 
-test('lifts the serial number the vendor nests under attributes', async (t) => {
+test('lifts the serial number the vendor nests under attributes', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
@@ -265,10 +268,10 @@ test('lifts the serial number the vendor nests under attributes', async (t) => {
   );
 });
 
-test('carries no vendor field inward beyond the six the plugin reads', async (t) => {
+test('carries no vendor field inward beyond the six the plugin reads', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
@@ -280,10 +283,10 @@ test('carries no vendor field inward beyond the six the plugin reads', async (t)
   );
 });
 
-test('reads one device from the device route', async (t) => {
+test('reads one device from the device route', async () => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceBody()), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const device = await cloudApi.device('account-1_serial-1', new AbortController().signal);
@@ -301,10 +304,10 @@ test('reads one device from the device route', async (t) => {
   ]);
 });
 
-test('encodes a device identifier that needs percent-encoding into the path', async (t) => {
+test('encodes a device identifier that needs percent-encoding into the path', async () => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(deviceBody()), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.device('account 1/serial#1', new AbortController().signal);
@@ -316,10 +319,10 @@ test('encodes a device identifier that needs percent-encoding into the path', as
   );
 });
 
-test('reads the shadow endpoint, the client identifier, and the temporary credentials', async (t) => {
+test('reads the shadow endpoint, the client identifier, and the temporary credentials', async () => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const credentials = await cloudApi.awsCredentials(new AbortController().signal);
@@ -331,10 +334,10 @@ test('reads the shadow endpoint, the client identifier, and the temporary creden
   ]);
 });
 
-test('sends a device command as a desiredData body and reports the vendor answer', async (t) => {
+test('sends a device command as a desiredData body and reports the vendor answer', async () => {
   // arrange
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const commandResult = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
@@ -352,10 +355,10 @@ test('sends a device command as a desiredData body and reports the vendor answer
   ]);
 });
 
-test('reports a refused command rather than raising', async (t) => {
+test('reports a refused command rather than raising', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify({ success: false }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ success: false }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const commandResult = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { alarm_audio_muted: true } }, new AbortController().signal);
@@ -364,10 +367,10 @@ test('reports a refused command rather than raising', async (t) => {
   assert.deepStrictEqual(commandResult, { success: false });
 });
 
-test('refuses a device response the vendor answered with an error status', async (t) => {
+test('refuses a device response the vendor answered with an error status', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -383,10 +386,10 @@ test('refuses a device response the vendor answered with an error status', async
   );
 });
 
-test('refuses a device response whose shape the plugin cannot read', async (t) => {
+test('refuses a device response whose shape the plugin cannot read', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -407,10 +410,10 @@ test('refuses a device response whose shape the plugin cannot read', async (t) =
 // discriminates, because it is exactly the shape the plugin used to accept
 // unwrapped. A wire record here would be refused for the wrong reason and prove
 // nothing about the envelope.
-test('refuses a device list the vendor sent as a bare top-level array', async (t) => {
+test('refuses a device list the vendor sent as a bare top-level array', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -427,10 +430,10 @@ test('refuses a device list the vendor sent as a bare top-level array', async (t
 });
 
 // The body is the NORMALIZED record for the same reason as the case above.
-test('refuses a single device the vendor sent with no envelope around it', async (t) => {
+test('refuses a single device the vendor sent with no envelope around it', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -446,10 +449,10 @@ test('refuses a single device the vendor sent with no envelope around it', async
   );
 });
 
-test('refuses a credential response whose shape the plugin cannot read', async (t) => {
+test('refuses a credential response whose shape the plugin cannot read', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify({ endpoint: 'shadow.example.test' }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ endpoint: 'shadow.example.test' }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -465,10 +468,10 @@ test('refuses a credential response whose shape the plugin cannot read', async (
   );
 });
 
-test('refuses a command response whose shape the plugin cannot read', async (t) => {
+test('refuses a command response whose shape the plugin cannot read', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify({ accepted: 'yes' }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ accepted: 'yes' }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -484,10 +487,10 @@ test('refuses a command response whose shape the plugin cannot read', async (t) 
   );
 });
 
-test('keeps the token, the base URL, and the response body out of a failed request error', async (t) => {
+test('keeps the token, the base URL, and the response body out of a failed request error', async () => {
   // arrange
-  stubFetch(t, () => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -508,8 +511,8 @@ test('keeps the token, the base URL, and the response body out of a failed reque
 test('deadlines a read route with the configured request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  stubFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.devices(new AbortController().signal);
@@ -521,8 +524,8 @@ test('deadlines a read route with the configured request timeout', async (t) => 
 test('deadlines a command with the command deadline rather than the request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
@@ -531,11 +534,11 @@ test('deadlines a command with the command deadline rather than the request time
   assert.deepStrictEqual(deadlines.requested, [COMMAND_DEADLINE_MS]);
 });
 
-test('aborts an in-flight device request when the root signal aborts', async (t) => {
+test('aborts an in-flight device request when the root signal aborts', async () => {
   // arrange
-  stubHangingFetch(t);
+  const httpFetch = stubHangingFetch();
   const rootController = new AbortController();
-  const cloudApi = createCloudApi(apiOptions());
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = cloudApi.devices(rootController.signal);
@@ -553,8 +556,8 @@ test('aborts a device request on its own deadline while the root signal stays op
   // and the request never settles. The command case below already owns its deadline
   // this way.
   const deadlines = stubDeadlines(t);
-  stubHangingFetch(t);
-  const cloudApi = createCloudApi(apiOptions());
+  const httpFetch = stubHangingFetch();
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
   const rootController = new AbortController();
 
   // act
@@ -569,9 +572,9 @@ test('aborts a device request on its own deadline while the root signal stays op
 test('aborts a command on its own deadline while the root signal stays open', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  stubHangingFetch(t);
+  const httpFetch = stubHangingFetch();
   const rootController = new AbortController();
-  const cloudApi = createCloudApi(apiOptions());
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const commandResult = cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, rootController.signal);
@@ -582,10 +585,10 @@ test('aborts a command on its own deadline while the root signal stays open', as
   assert.strictEqual(rootController.signal.aborted, false);
 });
 
-test('refuses a device response whose body is not JSON at all', async (t) => {
+test('refuses a device response whose body is not JSON at all', async () => {
   // arrange
-  stubFetch(t, () => new Response('<html><body>gateway error</body></html>', { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch } = stubFetch(() => new Response('<html><body>gateway error</body></html>', { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
   await assert.rejects(
@@ -602,11 +605,11 @@ test('refuses a device response whose body is not JSON at all', async (t) => {
   );
 });
 
-test('deadlines the token fetch with the same signal it deadlines the request with', async (t) => {
+test('deadlines the token fetch with the same signal it deadlines the request with', async () => {
   // arrange
   const tokenSignals: AbortSignal[] = [];
-  const requestSignals = stubSignalRecordingFetch(t);
-  const cloudApi = createCloudApi(apiOptions({ auth: stubRecordingAuth(tokenSignals) }));
+  const { httpFetch, requestSignals } = stubSignalRecordingFetch();
+  const cloudApi = createCloudApi(apiOptions({ httpFetch, auth: stubRecordingAuth(tokenSignals) }));
   const rootController = new AbortController();
 
   // act
@@ -627,8 +630,8 @@ test('abandons a command without sending it when its deadline expired before the
     idToken: (signal: AbortSignal): Promise<string> =>
       signal.aborted ? Promise.reject(new Error('the token fetch was aborted')) : Promise.resolve('id-token-1'),
   };
-  const vendorRequests = stubFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions({ auth: lapsedAuth }));
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch, auth: lapsedAuth }));
   deadlines.expire();
 
   // act & assert
@@ -662,10 +665,11 @@ function vendorBodies(): Record<keyof CloudApi, string> {
 
 // Runs every operation of the client and reports what actually left the
 // process, as `METHOD /path` lines in invocation order.
-async function reachedRoutes(t: TestContext, cloudApi: CloudApi): Promise<string[]> {
+async function reachedRoutes(): Promise<string[]> {
   const bodies = vendorBodies();
   let nextBody = '';
-  const vendorRequests = stubFetch(t, () => new Response(nextBody, { status: 200 }));
+  const { httpFetch, vendorRequests } = stubFetch(() => new Response(nextBody, { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
   const operations = invocations(cloudApi);
 
   for (const [name, invoke] of Object.entries(operations)) {
@@ -685,24 +689,20 @@ test('offers exactly four operations, so no fifth vendor route is callable (SYNC
   assert.deepStrictEqual(Object.keys(cloudApi).sort(), Object.keys(invocations(cloudApi)).sort());
 });
 
-test('reaches only the four declared routes when every operation runs (SYNC-01)', async (t) => {
+test('reaches only the four declared routes when every operation runs (SYNC-01)', async () => {
   // arrange
-  const cloudApi = createCloudApi(apiOptions());
-
   // act
-  const routesReached = await reachedRoutes(t, cloudApi);
+  const routesReached = await reachedRoutes();
 
   // assert
   assert.deepStrictEqual(routesReached, ['GET /devices', 'GET /devices/account-1_serial-1', 'GET /credentials/aws', 'PUT /devices/account-1_serial-1/data']);
 });
 
-test('touches no excluded account-management path family (SYNC-01)', async (t) => {
+test('touches no excluded account-management path family (SYNC-01)', async () => {
   // arrange
   const excluded = ['account', 'accounts', 'users', 'firmware', 'locations', 'rules', 'contacts'];
-  const cloudApi = createCloudApi(apiOptions());
-
   // act
-  const routesReached = await reachedRoutes(t, cloudApi);
+  const routesReached = await reachedRoutes();
 
   // assert
   const pathFamilies = [...new Set(routesReached.map((route) => route.split('/').at(1) ?? ''))].sort();
@@ -716,10 +716,10 @@ test('touches no excluded account-management path family (SYNC-01)', async (t) =
 // The plugin's first request with a body is also its first that says anything about itself. What it
 // may declare is asserted as a complete key set rather than as the presence of one header, so a
 // fifth header cannot appear without this case saying so (AUTH-02).
-test('declares exactly four headers on a command request', async (t) => {
+test('declares exactly four headers on a command request', async () => {
   // arrange
-  const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
@@ -732,10 +732,10 @@ test('declares exactly four headers on a command request', async (t) => {
 
 // Every REST request identifies itself the same way now, so the read branch's complete header set
 // is the bearer token plus the identity header and nothing else (REL-03, REL-04).
-test('declares the bearer token and the identity header on a read request', async (t) => {
+test('declares the bearer token and the identity header on a read request', async () => {
   // arrange
-  const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.devices(new AbortController().signal);
@@ -746,10 +746,10 @@ test('declares the bearer token and the identity header on a read request', asyn
 
 // What the header does not say is the point of it: the vendor learns which plugin is calling and
 // nothing about the installation it is calling from (AUTH-02).
-test('says nothing about the installation in the command user agent', async (t) => {
+test('says nothing about the installation in the command user agent', async () => {
   // arrange
-  const declaredHeaders = stubHeaderRecordingFetch(t, () => new Response(JSON.stringify({ success: true }), { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions());
+  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
