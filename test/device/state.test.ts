@@ -378,13 +378,22 @@ describe('applyReportedPatch', () => {
   test('applies an unversioned patch and leaves the applied version where the last versioned patch set it', () => {
     // arrange
     const store = versionedStore();
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 3, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 5,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    };
 
     // act
     const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: undefined });
 
     // assert
-    assert.strictEqual(snapshot?.data.water_level, 3);
-    assert.strictEqual(snapshot.shadowVersion, 5);
+    assert.deepStrictEqual(snapshot, expectedSnapshot);
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), expectedSnapshot);
   });
 
   test('applies the first versioned patch to a device the shadow has not yet versioned', () => {
