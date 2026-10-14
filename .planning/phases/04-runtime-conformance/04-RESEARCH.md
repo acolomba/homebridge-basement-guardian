@@ -440,14 +440,14 @@ This phase does not research replacement libraries or upgrade the stack. [VERIFI
 
 All other proposed batching and tracer choices are planning recommendations within the approved discretion. They are not claimed external facts or new locked product decisions. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:76-89]
 
-## Open Questions
+## Resolved Planning Procedures and Pending Execution Observations
 
-1. **Actual accepted causes and helper inventory:** execution must complete independent full-file reviews. No finding ID, helper creation, source repair, bug count or clean verdict is preassigned. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:10-15,76-89]
-2. **Private target support:** rerun the exact alias/member trace at the actual pre-edit revision. Preserve an unsupported result as a gap; public-symbol scans do not fill it. [VERIFIED: .planning/WINDOWS.md:622-632]
-3. **Phase 4 end judgments:** derive real taxonomy/prohibition flags from its plans. Phase 3 acceptance does not preapprove them. Do not invent a new blocker or copy old descriptors. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:98-104]
-4. **Timing:** no Phase 4 owner duration or new full-gate result was measured by research. Execution records actual durations and exits. [VERIFIED: research command inventory]
+1. **RESOLVED FOR PLANNING — accepted causes and helper inventory:** use complete independent initial reviews before repairs and full correction reviews after all batch slices, with stable finding IDs and continuous D-02/D-03 counters. Create a helper only for a confirmed writer-rule cause under D-06. Actual findings, helpers, bug counts and clean verdicts remain pending execution; none is preassigned. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:10-15,29-37,76-89]
+2. **RESOLVED FOR PLANNING — private target support:** per D-06, run the exact alias/member query separately in both compiler projects at the actual pre-edit revision and inspect lexical/public-signature uses before removal. Retain an unsupported or incomplete result as an unmet trace obligation and use a contract-preserving repair; do not infer deletion permission from a neighboring public-symbol scan. Actual target support and native results remain pending execution. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:52-58,83-89; .planning/WINDOWS.md:622-632]
+3. **RESOLVED FOR PLANNING — Phase 4 end judgments:** carry the actual phase-specific taxonomy/prohibition flags into the seal under D-02/D-07, then have the parent present any remaining judgments with current evidence and limits. Preserve unresolved flags until actual answers; Phase 3 acceptance supplies no Phase 4 answer or check descriptor. Those answers remain pending execution and seal. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:98-104]
+4. **RESOLVED FOR PLANNING — timing and native outcomes:** per D-04/D-07, execution captures actual commands, exits, versions and start/end times for owner, regression and full-gate evidence. Planning estimates do not substitute for measurements. No Phase 4 owner duration or new full-gate result has been measured or claimed. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:38-44,59-63; research command inventory]
 
-No unresolved product choice prevents planning. The questions concern later execution evidence. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:98-99,191-195]
+No unresolved product or research choice prevents planning. These procedures are settled under existing policy; their listed observations remain pending execution. This planning resolution starts or resets no D-03 execution counter. [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:98-99,191-195]
 
 ## Environment Availability
 

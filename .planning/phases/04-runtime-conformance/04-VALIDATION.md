@@ -9,11 +9,11 @@ created: "2026-10-14"
 
 # Phase 4 — Validation Strategy
 
-This is a planning-only draft for RUN-01. No Phase 4 source repair, full-file
-execution review, owner test, mutation, regression RED, direct coverage or full
-gate ran during research. Pending rows do not imply missing production behavior.
-The planner must bind actual task IDs, wave numbers and threat references before
-execution. [VERIFIED: research command inventory; .planning/REQUIREMENTS.md:32]
+This is a bound planning strategy for RUN-01, with twenty concrete tasks in ten
+serial waves. No Phase 4 source repair, full-file execution review, owner test,
+mutation, regression RED, direct coverage or full gate ran during planning.
+Pending rows do not imply missing production behavior. Draft/Nyquist flags stay
+false until actual execution meets their obligations.
 
 ## Test Infrastructure
 
@@ -34,17 +34,17 @@ accepts type-only sources with no executable LCOV record after strict compilatio
 It does not fabricate numerical runtime coverage. [VERIFIED:
 package.json:35-59; scripts/test-coverage-direct.mjs:137-190]
 
-## Proposed Ownership and Sampling
+## Bound Ownership and Sampling
 
 | Batch | Full initial scope | Suggested order | Final independent correction scope |
 | --- | --- | --- | --- |
-| PORTS | accessoryStore, clock, monotonicClock, timers and all four owners | First | All eight files plus actual additions |
-| POLICIES | commandPort, failureLog, retryPolicy and all three owners | After shared ports | All six files plus actual additions |
-| TRUST | arrivalAnchors, monitoringHealth and both owners | After shared contracts | All four files plus actual additions |
-| ACCOUNT | Complete accountRuntime source and its complete owner | After shared work, or explicit bounded compatibility tasks | Both full files, actual helpers and required external adaptations |
-| Coordinator | Reports, inventory, real Git/evidence and current gate | Seal | All current scope and records |
+| PORTS | accessoryStore, clock, monotonicClock, timers and all four owners | 04-01/02, waves 1/2 | All eight files plus actual additions |
+| POLICIES | commandPort, failureLog, retryPolicy and all three owners | 04-03/04, waves 3/4 | All six files plus actual additions |
+| TRUST | arrivalAnchors, monitoringHealth and both owners | 04-05/06, waves 5/6 | All four files plus actual additions |
+| ACCOUNT | Complete accountRuntime source and its complete owner | 04-07/08/09, waves 7/8/9 | Both full files, actual helpers and required external adaptations |
+| Coordinator | Reports, inventory, real Git/evidence and current gate | 04-10, wave 10 | All current scope and records |
 
-The batch order is a planning recommendation within approved discretion.
+The batch order is the selected planning choice within approved discretion.
 ACCOUNT keeps one counter and original IDs across every sequential plan.
 Initial review covers each whole batch before its first repair. A plan slice
 does not substitute for review of the full 1,283-line source or 3,365-line owner.
@@ -95,31 +95,37 @@ headers in owners/helpers and bounded external consumers.
 [VERIFIED: scripts/test-coverage-direct.mjs:35-36;
 test/packaging/licenseHeaders.test.ts:50-103]
 
-## Per-Task Verification Map — Unbound Draft
+## Per-Task Verification Map — Bound, Not Executed
 
-These rows describe prospective verification, not final plan/task IDs or
-executed outcomes. The planner must replace the draft IDs and wave placeholders
-with real task references. Every cause task needs an exact automated command
-and its explicit failure condition. [VERIFIED:
-.planning/phases/04-runtime-conformance/04-CONTEXT.md:29-32,59-63]
+Every PLAN verify block carries literal root-relative automated commands and an
+explicit failure condition. BUILD plus the exact compiled owner gives feedback;
+PAIR commands rebuild and check each source alone. Two declaration-only owners
+retain honest strict compiler contracts with no artificial runtime denominator.
 
-| Draft task | Batch | Wave | Requirement | Proposed threat | Secure behavior | Command keys / required evidence | Existing input | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DRAFT-INIT | Coordinator | Bind | PROC-01/02/03 | T-04-EVIDENCE | Complete scope, rules and original counters | Concrete inventory/ledger tracer must be authored | No new tracer yet | Pending |
-| DRAFT-PORT-CONTRACTS | PORTS | Bind | RUN-01 | T-04-STATE | Meaningful port compiler contracts; no test-only runtime wrapper | TYPE, PAIR-STORE | Existing owner | Pending |
-| DRAFT-TIME | PORTS | Bind | RUN-01 | T-04-TIME | Distinct wall/elapsed sources; exact timer execution/cancel | PAIR-CLOCK, PAIR-MONOTONIC, PAIR-TIMERS | Existing owners | Pending |
-| DRAFT-COMMAND-CONTRACT | POLICIES | Bind | RUN-01 | T-04-COMMAND | Exact accepted/refused union; required cause; one attempt | TYPE, PAIR-COMMAND; both-project exact traces if changed | Existing owner | Pending |
-| DRAFT-LOGGING | POLICIES | Bind | RUN-01 | T-04-PRIVACY | Whole promised lines and per-kind cadence | PAIR-LOG | Existing owner | Pending |
-| DRAFT-RETRY | POLICIES | Bind | RUN-01 | T-04-LIFECYCLE | Pending guard, capped delay and root cancellation | PAIR-RETRY | Existing owner | Pending |
-| DRAFT-ANCHORS | TRUST | Bind | RUN-01 | T-04-TIME/PRIVACY | Whole persisted bytes/state, restart restoration and cleanup | PAIR-ANCHORS | Existing owner | Pending |
-| DRAFT-HEALTH | TRUST | Bind | RUN-01 | T-04-STATE/TIME | Per-device silence, restored anchor, independent clocks | PAIR-HEALTH | Existing owner | Pending |
-| DRAFT-ACCOUNT-LIFECYCLE | ACCOUNT | Bind | RUN-01 | T-04-LIFECYCLE/PRIVACY | Current owner, late-start/stop/halt behavior, role registration | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Existing full owner | Pending |
-| DRAFT-ACCOUNT-STATE | ACCOUNT | Bind | RUN-01 | T-04-STATE/TIME/REMOVAL | Full canonical/trust readback and callback-before-prune | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Existing full owner | Pending |
-| DRAFT-ACCOUNT-COMMAND | ACCOUNT | Bind | RUN-01 | T-04-COMMAND | Exact outcome/body/request and no optimistic canonical state | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Existing full owner | Pending |
-| DRAFT-BUG | Owning batch | Conditional | BUG-01 | Relevant owner threat | Active intended RED on unchanged production before GREEN | Actual native target, full patch, complete historical evidence checker | Only if real bug exists | Conditional |
-| DRAFT-CORRECTION | Each batch | Bind | PROC-01/02 | T-04-EVIDENCE | Full batch independent review and exact round arithmetic | Report, native checks, stable IDs and reviewed revision | Reports not authored | Pending |
-| DRAFT-WAVE | Coordinator | Every code wave | GATE-01 | All owning wave threats | Current combined inputs remain valid | FULL | Existing command | Pending |
-| DRAFT-SEAL | Coordinator | Final | RUN-01 / PROC-01/02/03 | T-04-EVIDENCE | Complete scope, current review/gate, truthful provenance | Bound ledger tracer, LICENSE, all touched pairs, FULL | Tracer missing | Pending |
+| Task | Batch | Wave | Requirement | Threat refs | Secure behavior | Commands / evidence | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 04-01-01 | PORTS | 1 | RUN-01, PROC-01/03 | T-04-01/02 | Full eight-file initial review; real persistence shape | BUILD + accessoryStore owner, PAIR-STORE; complete report/headers | Pending |
+| 04-01-02 | PORTS | 1 | RUN-01 | T-04-01/02 | Epoch wall-time contract | BUILD + clock owner, PAIR-CLOCK | Pending |
+| 04-02-01 | PORTS | 2 | RUN-01 | T-04-03 | Independent elapsed/bigint conversion | BUILD + monotonicClock owner, PAIR-MONOTONIC | Pending |
+| 04-02-02 | PORTS | 2 | RUN-01, PROC-02/03 | T-04-04 | Exact timer/cancel; full PORTS correction | BUILD + timers owner, PAIR-TIMERS; complete eight-file review/counts | Pending |
+| 04-03-01 | POLICIES | 3 | RUN-01 | T-04-05 | Full six-file initial; exact command union/callers | BUILD + commandPort owner, PAIR-COMMAND; separate project traces | Pending |
+| 04-03-02 | POLICIES | 3 | RUN-01 | T-04-06 | Safe whole log stream/per-kind cadence | BUILD + failureLog owner, PAIR-LOG | Pending |
+| 04-04-01 | POLICIES | 4 | RUN-01 | T-04-07 | Capped/pending/root-abort retry | BUILD + retryPolicy owner, PAIR-RETRY | Pending |
+| 04-04-02 | POLICIES | 4 | RUN-01, PROC-02/03 | T-04-08 | Full six-file correction/counts | BUILD + commandPort/failureLog/retryPolicy owners; terminal report | Pending |
+| 04-05-01 | TRUST | 5 | RUN-01 | T-04-09 | Full four-file initial; real storage/restore | BUILD + arrivalAnchors owner, PAIR-ANCHORS | Pending |
+| 04-05-02 | TRUST | 5 | RUN-01 | T-04-10 | Actual restart/privacy history; all arrival causes | PAIR-ANCHORS; canonical Git narrative triage | Pending |
+| 04-06-01 | TRUST | 6 | RUN-01 | T-04-11 | Two-device whole trust/clock/anchor projection | BUILD + monitoringHealth owner, PAIR-HEALTH | Pending |
+| 04-06-02 | TRUST | 6 | RUN-01, PROC-02/03 | T-04-12 | All health causes/full TRUST correction | PAIR-HEALTH; complete four-file review/counts | Pending |
+| 04-07-01 | ACCOUNT | 7 | RUN-01 | T-04-13 | Entire source/full owner initial review; restore before launch | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT; full round0 scope | Pending |
+| 04-07-02 | ACCOUNT | 7 | RUN-01 | T-04-13/14 | Lifecycle/poll/rotation/halt/shutdown/secret registration | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
+| 04-08-01 | ACCOUNT | 8 | RUN-01 | T-04-15 | Whole canonical/reported/narrow trust and SC-03 | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
+| 04-08-02 | ACCOUNT | 8 | RUN-01 | T-04-16 | Physical inventory/final check/callback/prune/refusal | PAIR-ACCOUNT | Pending |
+| 04-09-01 | ACCOUNT | 9 | RUN-01 | T-04-17 | Exact command request/outcome; no retry/optimism | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
+| 04-09-02 | ACCOUNT | 9 | RUN-01, PROC-01/02/03 | T-04-18 | Every remaining cause/full ACCOUNT correction | PAIR-ACCOUNT; whole source/full owner/additions/counts | Pending |
+| 04-10-01 | Coordinator | 10 | RUN-01, PROC-01 | T-04-19 | Real report/blob/Git/native ledger tracer | Exact inline node predicate; RUNTIME_LEDGER_TRACER_OK | Pending |
+| 04-10-02 | Coordinator | 10 | RUN-01, BUG-01, GATE-01 | T-04-19/20 | Unique all-scope/history/threat/current-input audit | Exact inline scope/history predicates; LICENSE; FULL | Pending |
+| Owning cause task | Any original batch | Conditional | BUG-01 | Actual owning threat | Intended active unchanged-production RED/evidence-before-GREEN | Native TAP + existing current CLI/nested classifier and actual Git ancestry | Conditional |
+| Parent combined gate | Coordinator | Every wave 1–10 and phase | GATE-01 | Every owning wave threat | Current combined input, no omitted step | FULL; exact same-session input comparison only | Pending |
 
 No batch is predeclared clean. No helper or external source edit is preauthorized
 by this map alone. A confirmed cause receives explicit same-wave paths and its
@@ -129,11 +135,11 @@ count toward that budget. [VERIFIED:
 
 ## Wave 0 Requirements
 
-- [ ] Create the phase review protocol and concrete batch ownership.
-- [ ] Create the central ledger with all 20 current files and header/review status.
+- [x] Author the phase review protocol and concrete batch ownership (planning only).
+- [x] Author the pending central ledger with all 20 exact files and header/review status.
 - [ ] Create batch reports without invented initial findings or clean results.
-- [ ] Bind actual task/wave/threat IDs and all automated failure conditions.
-- [ ] Author one concrete ledger/provenance tracer with an independent expectation.
+- [x] Bind actual task/wave/threat IDs and all automated failure conditions.
+- [x] Author concrete ledger/provenance and exact unique-inventory predicates in 04-10 (not executed).
 - [ ] Verify the forced isolation sentinel directly before executor dispatch.
 - [ ] Record the actual source baseline and applicable same-session check evidence.
 
@@ -153,8 +159,11 @@ skills/typescript-unit-testing/SKILL.md:204-225]
 A genuine bug requires an executed active target failing its intended assertion
 on unchanged production. Retain complete TAP, command, real exit, target,
 expected/actual, versions, timestamps, source commit/blob identities and full
-patch. Validate each current/historical record, recursively preserving
-priorEvidence. Commit planning-only evidence before GREEN production edits.
+patch. Validate each current on-disk record with the existing native
+check tdd-red-evidence command, then each nested archived record with the same
+installed classifyRedEvidence function, recursively preserving priorEvidence.
+Audit actual source/evidence/fix Git ancestry and unchanged production blobs.
+Commit planning-only evidence before GREEN production edits.
 No failing code, skipped regression or hook bypass enters Git.
 [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:38-44;
 .planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md:155-190]
@@ -171,6 +180,18 @@ and account slices. Record real counts before further edits or dispatch.
 [VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:33-37,76-81]
 
 ## Manual-Only Judgments and Limits
+
+04-10's inline audit compares exact unique twenty core paths and ten pairs,
+current runtime tracked/untracked inventory, all actual helpers/adaptations,
+current review/header blobs, every native pair/commit/history and continuous
+rounds. The new generated 04-SEAL-AUDIT.json is an evidence output excluded by
+the actual formatter/ESLint/Fallow/TypeScript/build selectors. Retain its real
+before/after metadata difference; no claim that the JSON was unchanged or
+general JSON reuse shortcut follows. Exact checkedInputManifest path/blob
+comparison covers every other tracked/untracked path except planning Markdown,
+with raw dirty diff/untracked snapshots and actual tool versions. Any source,
+support, configuration, dependency, runtime or tool change requires a new full
+parent gate under local-verification. No Phase04 automated outcome is observed.
 
 | Item | Treatment |
 | --- | --- |
