@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks per-scope trust, monitoring paths and absent clocks.
+ */
+
 import type { DeviceHealth, DistrustReason, MonitoringPath, TrustScope, UntrustedScope } from '../../src/device/health.js';
 
 const DEVICE_ID = 'account-1_serial-1';
