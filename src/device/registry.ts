@@ -20,11 +20,27 @@ import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from './halo.js';
 
 import type { DeviceFamily } from './family.js';
 
+/** An implemented profile and the family adapter that answers for it. */
+export interface ImplementedFamilyOutcome<T> {
+  kind: 'implemented';
+  family: DeviceFamily<T>;
+}
+
+/** A recognized profile whose family adapter is not implemented. */
+export interface UnsupportedFamilyOutcome {
+  kind: 'unsupported';
+  deviceTypeId: string;
+  displayName: string;
+}
+
+/** A profile the registry does not recognize. */
+export interface UnknownFamilyOutcome {
+  kind: 'unknown';
+  deviceTypeId: string;
+}
+
 /** The verdict on one vendor `deviceTypeId`. */
-export type FamilyOutcome<T> =
-  | { kind: 'implemented'; family: DeviceFamily<T> }
-  | { kind: 'unsupported'; deviceTypeId: string; displayName: string }
-  | { kind: 'unknown'; deviceTypeId: string };
+export type FamilyOutcome<T> = ImplementedFamilyOutcome<T> | UnsupportedFamilyOutcome | UnknownFamilyOutcome;
 
 /** Looks up the family adapter for one vendor `deviceTypeId`. */
 export interface FamilyRegistry {
