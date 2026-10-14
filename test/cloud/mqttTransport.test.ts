@@ -19,6 +19,7 @@ import type {
   MqttClientEvents,
   MqttClientIdentity,
   MqttClientLike,
+  MqttConnect,
   MqttConnectOptions,
   MqttTransport,
   MqttTransportOptions,
@@ -47,13 +48,7 @@ interface PreparedConnection {
   options: MqttTransportOptions;
   client: MqttClientLike;
   handlers: Partial<MqttClientEvents>;
-  connectUrls: string[];
   connectOptions: MqttConnectOptions | undefined;
-  signed: MqttClientIdentity[];
-  subscribed: string[][];
-  published: { topic: string; payload: string }[];
-  /** Whether each end was forceful, in the order the ends were asked for. */
-  ends: () => readonly boolean[];
 }
 
 interface Harness extends PreparedConnection {
@@ -64,42 +59,31 @@ interface Harness extends PreparedConnection {
 // subscribe and publish callbacks report success or an error.
 function prepareConnection(failures: ClientFailures = {}): PreparedConnection {
   const handlers: Partial<MqttClientEvents> = {};
-  const connectUrls: string[] = [];
-  const signed: MqttClientIdentity[] = [];
-  const subscribed: string[][] = [];
-  const published: { topic: string; payload: string }[] = [];
   let connectOptions: MqttConnectOptions | undefined;
-  const ends: boolean[] = [];
 
   const client: MqttClientLike = {
     options: { clientId: 'client-first' },
     on: <Event extends keyof MqttClientEvents>(event: Event, handler: MqttClientEvents[Event]): void => {
       handlers[event] = handler;
     },
-    subscribe: (topics: string[], callback: (error: Error | null) => void): void => {
-      subscribed.push(topics);
-
+    subscribe: (...request: Parameters<MqttClientLike['subscribe']>): void => {
       if (failures.withhold !== true) {
-        callback(failures.subscribe ?? null);
+        request[1](failures.subscribe ?? null);
       }
     },
-    publish: (topic: string, payload: string, callback: (error?: Error) => void): void => {
-      published.push({ topic, payload });
-
+    publish: (...request: Parameters<MqttClientLike['publish']>): void => {
       if (failures.withhold !== true) {
-        callback(failures.publish);
+        request[2](failures.publish);
       }
     },
-    end: (force: boolean, callback: (error?: Error) => void): void => {
-      ends.push(force);
-      callback();
+    end: (...request: Parameters<MqttClientLike['end']>): void => {
+      request[1]();
     },
   };
 
   const options: MqttTransportOptions = {
-    connect: (url: string, options: MqttConnectOptions): MqttClientLike => {
-      connectUrls.push(url);
-      connectOptions = options;
+    connect: (...request: Parameters<MqttConnect>): MqttClientLike => {
+      connectOptions = request[1];
 
       return client;
     },
@@ -107,26 +91,16 @@ function prepareConnection(failures: ClientFailures = {}): PreparedConnection {
     clientId: 'client-first',
     deadlineMs: DEADLINE_MS,
     userAgent: 'harness-user-agent',
-    signUrl: (live: MqttClientIdentity): string => {
-      signed.push(live);
-      live.options.clientId = 'client-signed';
-
-      return SIGNED_URL;
-    },
+    signUrl: (): string => SIGNED_URL,
   };
 
   return {
     options,
     client,
     handlers,
-    connectUrls,
     get connectOptions(): MqttConnectOptions | undefined {
       return connectOptions;
     },
-    signed,
-    subscribed,
-    published,
-    ends: () => ends,
   };
 }
 
@@ -147,49 +121,85 @@ function connectTransport(harnessed: Harness): void {
 test('opens exactly one connection, to the supplied url', () => {
   // arrange
   const connection = prepareConnection();
+  const connect = mock<MqttConnect>({ exactParams: true, name: 'connect' });
+  when(() =>
+    connect(BROKER_URL, {
+      clientId: 'client-first',
+      protocolVersion: 4,
+      reconnectPeriod: 0,
+      clean: true,
+      resubscribe: true,
+      transformWsUrl: It.matches((hook: MqttConnectOptions['transformWsUrl']) => typeof hook === 'function'),
+      wsOptions: { headers: { 'User-Agent': 'harness-user-agent' } },
+    }),
+  ).thenReturn(connection.client);
+  connection.options.connect = connect;
 
   // act
   createMqttTransport(connection.options);
 
   // assert
-  assert.deepStrictEqual(connection.connectUrls, [BROKER_URL]);
+  verify(connect);
 });
 
 test('disables the library reconnect timer and asks for a clean, resubscribing session', () => {
   // arrange
   const connection = prepareConnection();
+  const connect = mock<MqttConnect>({ exactParams: true, name: 'connect' });
+  when(() =>
+    connect(BROKER_URL, {
+      clientId: 'client-first',
+      protocolVersion: 4,
+      reconnectPeriod: 0,
+      clean: true,
+      resubscribe: true,
+      transformWsUrl: It.matches((hook: MqttConnectOptions['transformWsUrl']) => typeof hook === 'function'),
+      wsOptions: { headers: { 'User-Agent': 'harness-user-agent' } },
+    }),
+  ).thenReturn(connection.client);
+  connection.options.connect = connect;
 
   // act
   createMqttTransport(connection.options);
 
   // assert
-  const { connectOptions } = connection;
-  assert.deepStrictEqual(
-    {
-      clientId: connectOptions?.clientId,
-      protocolVersion: connectOptions?.protocolVersion,
-      reconnectPeriod: connectOptions?.reconnectPeriod,
-      clean: connectOptions?.clean,
-      resubscribe: connectOptions?.resubscribe,
-    },
-    { clientId: 'client-first', protocolVersion: 4, reconnectPeriod: 0, clean: true, resubscribe: true },
-  );
+  verify(connect);
 });
 
 test('signs the WebSocket handshake with the caller-supplied identity header', () => {
   // arrange
   const connection = prepareConnection();
+  const connect = mock<MqttConnect>({ exactParams: true, name: 'connect' });
+  when(() =>
+    connect(BROKER_URL, {
+      clientId: 'client-first',
+      protocolVersion: 4,
+      reconnectPeriod: 0,
+      clean: true,
+      resubscribe: true,
+      transformWsUrl: It.matches((hook: MqttConnectOptions['transformWsUrl']) => typeof hook === 'function'),
+      wsOptions: { headers: { 'User-Agent': 'harness-user-agent' } },
+    }),
+  ).thenReturn(connection.client);
+  connection.options.connect = connect;
 
   // act
   createMqttTransport(connection.options);
 
   // assert
-  assert.deepStrictEqual(connection.connectOptions?.wsOptions, { headers: { 'User-Agent': 'harness-user-agent' } });
+  verify(connect);
 });
 
 test('returns the signed url from the transform hook and ignores the url the hook receives', () => {
   // arrange
-  const { client, connectOptions } = harness();
+  const connection = prepareConnection();
+  const signUrl = mock<MqttTransportOptions['signUrl']>({ exactParams: true, name: 'sign URL' });
+  when(() => signUrl(It.is(connection.client)))
+    .thenReturn(SIGNED_URL)
+    .twice();
+  connection.options.signUrl = signUrl;
+  createMqttTransport(connection.options);
+  const { client, connectOptions } = connection;
 
   // act
   const fromPortedUrl = connectOptions?.transformWsUrl(HOOK_URL, {}, client);
@@ -197,47 +207,73 @@ test('returns the signed url from the transform hook and ignores the url the hoo
 
   // assert
   assert.deepStrictEqual([fromPortedUrl, fromBareUrl], [SIGNED_URL, SIGNED_URL]);
+  verify(signUrl);
 });
 
 test('hands the live client to the signer, so the refreshed identifier reaches the handshake', () => {
   // arrange
-  const { client, connectOptions, signed } = harness();
+  const connection = prepareConnection();
+  const signUrl = mock<MqttTransportOptions['signUrl']>({ exactParams: true, name: 'sign URL' });
+  when(() => signUrl(It.is(connection.client))).thenReturn(SIGNED_URL);
+  connection.options.signUrl = (live: MqttClientIdentity): string => {
+    const signedUrl = signUrl(live);
+    live.options.clientId = 'client-signed';
+
+    return signedUrl;
+  };
+
+  createMqttTransport(connection.options);
+  const { client, connectOptions } = connection;
 
   // act
-  connectOptions?.transformWsUrl(HOOK_URL, {}, client);
+  const signedUrl = connectOptions?.transformWsUrl(HOOK_URL, {}, client);
 
   // assert
-  assert.deepStrictEqual({ identifier: client.options.clientId, seen: signed.length }, { identifier: 'client-signed', seen: 1 });
+  assert.strictEqual(signedUrl, SIGNED_URL);
+  assert.deepStrictEqual(client.options, { clientId: 'client-signed' });
+  verify(signUrl);
 });
 
 test('forwards the connect notification to the registered handler', () => {
   // arrange
   const { transport, handlers } = harness();
   const observed: string[] = [];
+  const onConnect = mock<MqttClientEvents['connect']>({ exactParams: true, name: 'connect notification' });
+  when(() => {
+    onConnect();
+  }).thenReturn(undefined);
 
   // act
-  transport.onConnect(() => {
+  transport.onConnect((...notification: Parameters<MqttClientEvents['connect']>) => {
     observed.push('connect');
+    onConnect(...notification);
   });
   handlers.connect?.();
 
   // assert
   assert.deepStrictEqual(observed, ['connect']);
+  verify(onConnect);
 });
 
 test('forwards the message notification with its topic and payload', () => {
   // arrange
   const { transport, handlers } = harness();
   const messages: { topic: string; payload: Buffer }[] = [];
+  const onMessage = mock<MqttClientEvents['message']>({ exactParams: true, name: 'message notification' });
+  when(() => {
+    onMessage('topic-a', Buffer.from([0x00, 0xff, 0x80, 0x41]));
+  }).thenReturn(undefined);
 
   // act
-  transport.onMessage((topic: string, payload: Buffer) => {
-    messages.push({ topic, payload });
+  transport.onMessage((...notification: Parameters<MqttClientEvents['message']>) => {
+    messages.push({ topic: notification[0], payload: notification[1] });
+    onMessage(...notification);
   });
   handlers.message?.('topic-a', Buffer.from([0x00, 0xff, 0x80, 0x41]));
 
   // assert
   assert.deepStrictEqual(messages, [{ topic: 'topic-a', payload: Buffer.from([0x00, 0xff, 0x80, 0x41]) }]);
+  verify(onMessage);
 });
 
 test('forwards the error notification with its error', () => {
@@ -245,41 +281,68 @@ test('forwards the error notification with its error', () => {
   const { transport, handlers } = harness();
   const observed: unknown[] = [];
   const failure = new Error('socket failed');
+  const onError = mock<MqttClientEvents['error']>({ exactParams: true, name: 'error notification' });
+  when(() => {
+    onError(It.is(failure));
+  }).thenReturn(undefined);
 
   // act
-  transport.onError((error: Error) => {
-    observed.push(error);
+  transport.onError((...notification: Parameters<MqttClientEvents['error']>) => {
+    observed.push(notification[0]);
+    onError(...notification);
   });
   handlers.error?.(failure);
 
   // assert
   assert.deepStrictEqual(observed, [failure]);
+  verify(onError);
 });
 
 test('forwards the close notification to the registered handler', () => {
   // arrange
   const { transport, handlers } = harness();
   const observed: string[] = [];
+  const onClose = mock<MqttClientEvents['close']>({ exactParams: true, name: 'close notification' });
+  when(() => {
+    onClose();
+  }).thenReturn(undefined);
 
   // act
-  transport.onClose(() => {
+  transport.onClose((...notification: Parameters<MqttClientEvents['close']>) => {
     observed.push('close');
+    onClose(...notification);
   });
   handlers.close?.();
 
   // assert
   assert.deepStrictEqual(observed, ['close']);
+  verify(onClose);
 });
 
 test('subscribes to the complete topic list in one call', async () => {
   // arrange
-  const { transport, subscribed } = harness();
+  const { transport, client } = harness();
+  let completeSubscribe: ((error: Error | null) => void) | undefined;
+  const subscribe = mock<MqttClientLike['subscribe']>({ exactParams: true, name: 'subscribe' });
+  when(() => {
+    subscribe(
+      ['topic-a', 'topic-b', 'topic-c'],
+      It.matches((callback: (error: Error | null) => void) => {
+        completeSubscribe = callback;
+
+        return typeof callback === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.subscribe = subscribe;
 
   // act
-  await transport.subscribe(['topic-a', 'topic-b', 'topic-c']);
+  const subscribing = transport.subscribe(['topic-a', 'topic-b', 'topic-c']);
+  completeSubscribe?.(null);
+  await subscribing;
 
   // assert
-  assert.deepStrictEqual(subscribed, [['topic-a', 'topic-b', 'topic-c']]);
+  verify(subscribe);
 });
 
 test('rejects with the error the subscribe callback reports', async () => {
@@ -300,13 +363,29 @@ test('rejects with the error the subscribe callback reports', async () => {
 
 test('publishes the payload to the topic', async () => {
   // arrange
-  const { transport, published } = harness();
+  const { transport, client } = harness();
+  let completePublish: ((error?: Error) => void) | undefined;
+  const publish = mock<MqttClientLike['publish']>({ exactParams: true, name: 'publish' });
+  when(() => {
+    publish(
+      'topic-a',
+      '',
+      It.matches((callback: (error?: Error) => void) => {
+        completePublish = callback;
+
+        return typeof callback === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.publish = publish;
 
   // act
-  await transport.publish('topic-a', '');
+  const publishing = transport.publish('topic-a', '');
+  completePublish?.();
+  await publishing;
 
   // assert
-  assert.deepStrictEqual(published, [{ topic: 'topic-a', payload: '' }]);
+  verify(publish);
 });
 
 test('rejects with the error the publish callback reports', async () => {
