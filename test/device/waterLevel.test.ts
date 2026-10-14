@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks the provisional water-level ladder and flood threshold.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
