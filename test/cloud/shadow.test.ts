@@ -413,26 +413,21 @@ describe('handshake signing', () => {
     await client.start([DEVICE_A]);
 
     // act
-    const signed = new URL(transports[0]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+    const signedUrl = transports[0]?.options.signUrl(live);
 
     // assert
     assert.deepStrictEqual(
       {
-        origin: signed.origin,
-        path: signed.pathname,
-        credential: signed.searchParams.get('X-Amz-Credential'),
-        date: signed.searchParams.get('X-Amz-Date'),
-        token: signed.searchParams.get('X-Amz-Security-Token'),
-        signatureLength: signed.searchParams.get('X-Amz-Signature')?.length,
+        signedUrl,
         clientId: live.options.clientId,
       },
       {
-        origin: 'wss://broker.invalid',
-        path: '/mqtt',
-        credential: 'test-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
-        date: '20260828T120000Z',
-        token: 'test-session-token',
-        signatureLength: 64,
+        signedUrl:
+          'wss://broker.invalid/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+          '&X-Amz-Credential=test-access-key-id%2F20260828%2Fus-east-1%2Fiotdevicegateway%2Faws4_request' +
+          '&X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host' +
+          '&X-Amz-Signature=6f48c3fdb554779577c3ced7d2a61642ff5b8b04356ebe682675eb4b03f3eea7' +
+          '&X-Amz-Security-Token=test-session-token',
         clientId: 'client-first',
       },
     );
@@ -719,24 +714,25 @@ describe('the connection lifecycle', () => {
     t.mock.timers.tick(500);
     await nextEventLoopTurn();
     const live = { options: { clientId: 'client-stale' } };
-    const signed = new URL(transports[1]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+    const signedUrl = transports[1]?.options.signUrl(live);
 
     // assert
     assert.deepStrictEqual(
       {
         url: transports[1]?.options.url,
         clientId: transports[1]?.options.clientId,
-        origin: signed.origin,
-        credential: signed.searchParams.get('X-Amz-Credential'),
-        token: signed.searchParams.get('X-Amz-Security-Token'),
+        signedUrl,
         refreshed: live.options.clientId,
       },
       {
         url: 'wss://broker-two.invalid/mqtt',
         clientId: 'client-second',
-        origin: 'wss://broker-two.invalid',
-        credential: 'test-next-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
-        token: 'test-next-session-token',
+        signedUrl:
+          'wss://broker-two.invalid/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+          '&X-Amz-Credential=test-next-access-key-id%2F20260828%2Fus-east-1%2Fiotdevicegateway%2Faws4_request' +
+          '&X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host' +
+          '&X-Amz-Signature=42cdf710fc115e046b68b89e23713e794c25a0a8d944ca708c4bcc2ac54851d1' +
+          '&X-Amz-Security-Token=test-next-session-token',
         refreshed: 'client-second',
       },
     );
