@@ -3,25 +3,22 @@ status: testing
 phase: 02-cloud-conformance
 source: [02-VERIFICATION.md]
 started: "2026-10-14T14:09:18Z"
-updated: "2026-10-14T14:09:18Z"
+updated: "2026-10-14T14:18:53Z"
 ---
 
 ## Current Test
 
-number: 1
-name: E-02-01 — taxonomy completion boundary
+number: 2
+name: P-02-01 — truthful safety telemetry
 expected: |
-  Cloud Conformance has a clean 19-file inventory/22-file changed-code review,
-  56 fixed findings, six verified bug histories and a passing full gate.
-  The requirement defines no exhaustive behavior taxonomy, so one fallback
-  assumption remains flagged. Passing tests do not prove taxonomy completeness.
+  Confirm that the cloud fixes preserve unknown, stale, omitted and invalid
+  values as absent or untrustworthy, without guessing a normal measurement
+  or condition. Cloud telemetry remains opaque; device-family interpretation
+  stays outside cloud.
 
-  1. Accept the full-file review and concrete tests as this phase's completion
-     boundary; retain the taxonomy assumption explicitly.
-  2. Define additional taxonomy or coverage work before closing the phase.
-  3. Stop here with the phase pending.
-
-  Reply with the choice number, or describe a different disposition.
+  The evidence includes complete wire-validation cases, current-connection
+  reported-patch guards and the non-finite-version regression. These concrete
+  checks support the judgment without claiming exhaustive safety proof.
 awaiting: user response
 
 ## Tests
@@ -29,7 +26,9 @@ awaiting: user response
 ### 1. E-02-01 — taxonomy completion boundary
 
 expected: Record an explicit Phase 2 resolution, or retain the unclassified fallback as an acknowledged assumption with a stated completion boundary. Do not claim exhaustive taxonomy from test coverage.
-result: [pending]
+result: pass
+reported: "pass"
+judgment: Retain E-02-01 as an acknowledged taxonomy assumption; accept complete full-file review and concrete tests as this phase's completion boundary, without claiming exhaustive taxonomy coverage.
 
 ### 2. P-02-01 — truthful safety telemetry
 
@@ -44,9 +43,9 @@ result: [pending]
 ## Summary
 
 total: 3
-passed: 0
+passed: 1
 issues: 0
-pending: 3
+pending: 2
 skipped: 0
 blocked: 0
 
