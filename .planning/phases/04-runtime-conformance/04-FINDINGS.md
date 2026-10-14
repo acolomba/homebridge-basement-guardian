@@ -1,27 +1,28 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Planning status only: no Phase04 independent execution review, accepted finding,
-bug, repair, assertion control, owner run, coverage result or full gate is claimed.
+Current through 04-01: complete PORTS initial review, four applied repairs,
+one restored assertion control and the combined-wave gate are recorded below.
+Other batches remain pending; no genuine production bug has been confirmed.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
 
 Initial source/test baseline: 008218be4badf44455ab35906f1dfcff06089bf8.
-Exactly twenty initial core paths form ten mirrored pairs. All are pending full
-review AND complete-header inspection. ACCOUNT initial sizes are 1,283 source
+Exactly twenty initial core paths form ten mirrored pairs. PORTS has full initial
+review and complete-header inspection; other batches remain pending. ACCOUNT initial sizes are 1,283 source
 lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
 | --- | --- | --- | --- | --- | --- |
-| PORTS | src/runtime/accessoryStore.ts | core | Pending | Pending | Pending |
-| PORTS | test/runtime/accessoryStore.test.ts | core | Pending | Pending | Pending |
-| PORTS | src/runtime/clock.ts | core | Pending | Pending | Pending |
-| PORTS | test/runtime/clock.test.ts | core | Pending | Pending | Pending |
-| PORTS | src/runtime/monotonicClock.ts | core | Pending | Pending | Pending |
-| PORTS | test/runtime/monotonicClock.test.ts | core | Pending | Pending | Pending |
-| PORTS | src/runtime/timers.ts | core | Pending | Pending | Pending |
-| PORTS | test/runtime/timers.test.ts | core | Pending | Pending | Pending |
+| PORTS | src/runtime/accessoryStore.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
+| PORTS | test/runtime/accessoryStore.test.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
+| PORTS | src/runtime/clock.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
+| PORTS | test/runtime/clock.test.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
+| PORTS | src/runtime/monotonicClock.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
+| PORTS | test/runtime/monotonicClock.test.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
+| PORTS | src/runtime/timers.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
+| PORTS | test/runtime/timers.test.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
 | POLICIES | src/runtime/commandPort.ts | core | Pending | Pending | Pending |
 | POLICIES | test/runtime/commandPort.test.ts | core | Pending | Pending | Pending |
 | POLICIES | src/runtime/failureLog.ts | core | Pending | Pending | Pending |
@@ -44,7 +45,7 @@ No source-only license result substitutes for owner/helper header inspection.
 
 | Batch | Plans | Report | Initial review | Last correction round | Open IDs |
 | --- | --- | --- | --- | --- | --- |
-| PORTS | 04-01/02 | 04-PORTS-REVIEW.md | Pending | Not started | Unknown until review |
+| PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 0; partial repairs only | 005/006/007; 3 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | Pending | Not started | Unknown until review |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | Pending | Not started | Unknown until review |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
@@ -58,7 +59,7 @@ ACCOUNT keeps one counter across all slices and any added owning cause tasks.
 
 | Candidate | Review question | Owning task | Disposition / evidence |
 | --- | --- | --- | --- |
-| S-04-01 | accessoryStore compiler positives/negatives versus tests of a literal recorder | 04-01-01 | Pending |
+| S-04-01 | accessoryStore compiler positives/negatives versus tests of a literal recorder | 04-01-01 | Accepted CR-04-PORTS-002; compiler repair applied |
 | S-04-02 | CommandOutcome inline-object union against interface/public constituent rules | 04-03-01 | Pending |
 | S-04-03 | Optional versus required-present undefined; actual exhaustive public shape | Every affected cause, coordinated in 04-09-02 | Pending |
 | S-04-04 | Readonly advice versus interface rule scope and actual mutation contract | Every affected cause, coordinated in 04-09-02 | Pending |
@@ -76,6 +77,16 @@ stable finding IDs where applicable. A research example is not proof of a bug.
 | ID | Requirement | Exact rule/section | Initial revision:path:line | Current revision:path:line | Severity | First reviewer | Disposition/reason | Native checks/raw exits | Source/evidence/fix commits and paths |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
+Seven PORTS IDs were independently observed at 6f475a0. The complete
+04-PORTS-REVIEW.md retains each exact rule, revision-qualified initial/current
+location, severity, observer, blobs and native command mapping. Its current
+disposition table at 84f4ca8 is authoritative: 001/002/003/004 repaired pending
+full independent correction; 005/006/007 remain open. Cause commits are
+227c799, ce36088, fd53a74 and 84f4ca8 respectively. Initial 2 BLOCKERs +
+5 WARNINGs = 7; 4 applied, 0 rejected/new/reopened, 3 continuing (1 BLOCKER,
+2 WARNINGs). Counter remains 0; no full correction or clean batch is claimed.
+S-04-03/04 were rejected for PORTS only; later batches retain their obligations.
+S-04-05 accepted as CR-04-PORTS-006, with other owners still pending.
 No rows are allocated before actual independent observation.
 Use CR-04-PORTS-NNN / POLICIES / TRUST / ACCOUNT per protocol.
 
@@ -130,3 +141,31 @@ It proves exact unique twenty core paths and ten pairs plus all actual additions
 full scope/header provenance, stable IDs/rules/locations/dispositions/counts,
 all threat/evidence histories and final checked inputs. Automated readiness
 does not supply pending human judgments or authorize shared-state advancement.
+
+## Coordinator wave 1 evidence
+
+At clean 4a69d1434c4cb682c40dbf1a6f757dd127c78dbb, `npm run check`
+returned 0 on Node v26.11.1, 2026-10-14T23:05:55.982633Z to
+23:06:31.058351Z. Six static checks, 104 Cucumber scenarios / 1156 steps
+and all 43 isolated pairs passed. Native full output and metadata are
+`/private/tmp/guardian-phase4-wave1-full-check.log` and
+`/private/tmp/guardian-phase4-wave1-gate.json`. This is current combined-wave
+evidence, not inherited Phase3 evidence; RUN-01 remains Pending.
+
+Clock assertion control returned seconds temporarily: strict typecheck/lint
+passed, native TAP returned 1 with both intended wrong-unit assertions.
+Exact source blob c6b98a6e2c6863ae0a567d38f1665e40fceb122b was restored,
+then fresh build, two cases and isolated coverage passed. This is a separate
+restored control, not genuine bug RED. Store is declaration-only with strict
+positive/negative compiler contracts and honest selector acceptance.
+
+All four cause commits have clean first pre-steps before staging and passing
+normal hooks. The cause-002 sandbox audit exit 2 remains historical failure;
+authorized retry exit 0/verdict pass supplies the actual audit result. Complete
+native records live under guardian-04-ports-initial-native and
+guardian-04-ports-fix-native in /private/tmp. No helper, API/body change,
+new package, source control mutation or new process-window waiver is claimed.
+
+The first generic summary advisory mistook two test commands for file paths.
+Explicit real output paths corrected its selection; recheck passed all four
+checks. No runtime evidence changed. Full PORTS correction follows 04-02.

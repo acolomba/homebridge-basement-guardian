@@ -73,6 +73,9 @@ completed: 2026-10-14
 
 ## Task Commits
 
+Actual created review record: `.planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`.
+Actual modified source: `src/runtime/accessoryStore.ts`.
+
 | Task | Cause | Commit | Exact committed paths |
 | --- | --- | --- | --- |
 | 04-01-01 | CR-04-PORTS-001, store headers | `227c799cebde0e77be9a85c605348ad00add1a69` | Store source, mirrored owner, PORTS report |
@@ -120,6 +123,11 @@ For clock assertion maintenance, the fixer temporarily returned seconds from the
 This was a restored control of existing assertions, not a genuine production regression. No conditional RED JSON, evidence-only bug commit or failing-code commit was created. The declaration-only owner uses compiler contracts and needs no runtime wrapper or runtime assertion control.
 
 ## Deviations from Plan
+
+The coordinator's first generic summary check misclassified two backticked
+test commands as created file paths. Its self-check and commit checks passed;
+only those inferred file probes failed. Explicit actual paths above let the
+advisory probe real outputs without changing any test or product evidence.
 
 None in source scope or product behavior. As required by AGENTS and the explicit owning plan, commits use Conventional titles without phase/milestone text, and execution stays on the authorized `features/code-review-sweep` checkout. Shared STATE, ROADMAP, REQUIREMENTS, WINDOWS, FINDINGS and VALIDATION remain with the coordinator. Header causes stay separate from functional/test causes.
 
