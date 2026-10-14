@@ -12,13 +12,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
+import { It, mock, verify, when } from 'strong-mock';
+
 import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
 import { httpFetch } from '../../src/cloud/httpDispatcher.js';
 
 import { startAlpnServer } from './alpnServer.js';
 
-import type { CloudApi, CloudApiOptions } from '../../src/cloud/api.js';
+import type { CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
 import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
 import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
@@ -228,7 +230,20 @@ test('waits at most 2500 milliseconds for the vendor to accept a command', () =>
 
 test('authorizes the device request with the bearer token the auth client supplies', async () => {
   // arrange
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -236,14 +251,12 @@ test('authorizes the device request with the bearer token the auth client suppli
 
   // assert
   assert.deepStrictEqual(devices, [geminiDevice()]);
-  assert.deepStrictEqual(vendorRequests, [
-    { method: 'GET', url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1', contentType: undefined, body: undefined },
-  ]);
+  verify(httpFetch);
 });
 
 test('reads an empty account as an empty device list', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -255,37 +268,44 @@ test('reads an empty account as an empty device list', async () => {
 
 test('lifts the serial number the vendor nests under attributes', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(
-    devices.map((device) => device.serialNumber),
-    ['serial-1'],
-  );
+  assert.deepStrictEqual(devices, [geminiDevice()]);
 });
 
 test('carries no vendor field inward beyond the six the plugin reads', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
   const devices = await cloudApi.devices(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(
-    devices.map((device) => Object.keys(device).sort()),
-    [['connectivity', 'data', 'deviceId', 'deviceTypeId', 'name', 'serialNumber']],
-  );
+  assert.deepStrictEqual(devices, [geminiDevice()]);
 });
 
 test('reads one device from the device route', async () => {
   // arrange
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -293,35 +313,51 @@ test('reads one device from the device route', async () => {
 
   // assert
   assert.deepStrictEqual(device, geminiDevice());
-  assert.deepStrictEqual(vendorRequests, [
-    {
-      method: 'GET',
-      url: 'https://api.example.test/devices/account-1_serial-1',
-      authorization: 'Bearer id-token-1',
-      contentType: undefined,
-      body: undefined,
-    },
-  ]);
+  verify(httpFetch);
 });
 
 test('encodes a device identifier that needs percent-encoding into the path', async () => {
   // arrange
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account%201%2Fserial%231'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.device('account 1/serial#1', new AbortController().signal);
+  const device = await cloudApi.device('account 1/serial#1', new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(
-    vendorRequests.map((vendorRequest) => vendorRequest.url),
-    ['https://api.example.test/devices/account%201%2Fserial%231'],
-  );
+  assert.deepStrictEqual(device, geminiDevice());
+  verify(httpFetch);
 });
 
 test('reads the shadow endpoint, the client identifier, and the temporary credentials', async () => {
   // arrange
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/credentials/aws'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -329,35 +365,48 @@ test('reads the shadow endpoint, the client identifier, and the temporary creden
 
   // assert
   assert.deepStrictEqual(credentials, awsCredentialsResponse());
-  assert.deepStrictEqual(vendorRequests, [
-    { method: 'GET', url: 'https://api.example.test/credentials/aws', authorization: 'Bearer id-token-1', contentType: undefined, body: undefined },
-  ]);
+  verify(httpFetch);
 });
 
 test('sends a device command as a desiredData body and reports the vendor answer', async () => {
   // arrange
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1/data'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: 'Bearer id-token-1',
+              'Content-Type': 'application/json',
+              'User-Agent': 'homebridge-basement-guardian',
+              Accept: 'application/json',
+            },
+            body: '{"desiredData":{"test_running":true}}',
+            signal: undefined,
+          },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  const commandResult = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+  const commandAnswer = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(commandResult, { success: true });
-  assert.deepStrictEqual(vendorRequests, [
-    {
-      method: 'PUT',
-      url: 'https://api.example.test/devices/account-1_serial-1/data',
-      authorization: 'Bearer id-token-1',
-      contentType: 'application/json',
-      body: '{"desiredData":{"test_running":true}}',
-    },
-  ]);
+  assert.deepStrictEqual(commandAnswer, { success: true });
+  verify(httpFetch);
 });
 
 test('reports a refused command rather than raising', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ success: false }), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ success: false }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -369,7 +418,7 @@ test('reports a refused command rather than raising', async () => {
 
 test('refuses a device response the vendor answered with an error status', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -388,7 +437,7 @@ test('refuses a device response the vendor answered with an error status', async
 
 test('refuses a device response whose shape the plugin cannot read', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -412,7 +461,7 @@ test('refuses a device response whose shape the plugin cannot read', async () =>
 // nothing about the envelope.
 test('refuses a device list the vendor sent as a bare top-level array', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -432,7 +481,7 @@ test('refuses a device list the vendor sent as a bare top-level array', async ()
 // The body is the NORMALIZED record for the same reason as the case above.
 test('refuses a single device the vendor sent with no envelope around it', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(geminiDevice()), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(geminiDevice()), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -451,7 +500,7 @@ test('refuses a single device the vendor sent with no envelope around it', async
 
 test('refuses a credential response whose shape the plugin cannot read', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ endpoint: 'shadow.example.test' }), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ endpoint: 'shadow.example.test' }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -470,7 +519,7 @@ test('refuses a credential response whose shape the plugin cannot read', async (
 
 test('refuses a command response whose shape the plugin cannot read', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ accepted: 'yes' }), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ accepted: 'yes' }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -489,7 +538,7 @@ test('refuses a command response whose shape the plugin cannot read', async () =
 
 test('keeps the token, the base URL, and the response body out of a failed request error', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ error: { code: 403, message: 'Token is missing' } }), { status: 403 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -511,26 +560,28 @@ test('keeps the token, the base URL, and the response body out of a failed reque
 test('deadlines a read route with the configured request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.devices(new AbortController().signal);
+  const devices = await cloudApi.devices(new AbortController().signal);
 
   // assert
+  assert.deepStrictEqual(devices, []);
   assert.deepStrictEqual(deadlines.requested, [REQUEST_TIMEOUT_MS]);
 });
 
 test('deadlines a command with the command deadline rather than the request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  const { httpFetch } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+  const commandAnswer = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
 
   // assert
+  assert.deepStrictEqual(commandAnswer, { success: true });
   assert.deepStrictEqual(deadlines.requested, [COMMAND_DEADLINE_MS]);
 });
 
@@ -587,7 +638,7 @@ test('aborts a command on its own deadline while the root signal stays open', as
 
 test('refuses a device response whose body is not JSON at all', async () => {
   // arrange
-  const { httpFetch } = stubFetch(() => new Response('<html><body>gateway error</body></html>', { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response('<html><body>gateway error</body></html>', { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -613,9 +664,10 @@ test('deadlines the token fetch with the same signal it deadlines the request wi
   const rootController = new AbortController();
 
   // act
-  await cloudApi.devices(rootController.signal);
+  const devices = await cloudApi.devices(rootController.signal);
 
   // assert
+  assert.deepStrictEqual(devices, []);
   assert.strictEqual(tokenSignals.length, 1);
   assert.strictEqual(requestSignals.length, 1);
   assert.ok(tokenSignals[0] instanceof AbortSignal);
@@ -639,78 +691,96 @@ test('abandons a command without sending it when its deadline expired before the
   assert.deepStrictEqual(vendorRequests, []);
 });
 
-// One invocation per operation. The `Record<keyof CloudApi, ...>` annotation is
-// the closed door: adding a fifth operation to `CloudApi` stops this file from
-// compiling until the operation is listed here, so no new vendor route can
-// reach the network without the route cases below being revisited (SYNC-01).
-function invocations(cloudApi: CloudApi): Record<keyof CloudApi, () => Promise<unknown>> {
-  return {
-    devices: () => cloudApi.devices(new AbortController().signal),
-    device: () => cloudApi.device('account-1_serial-1', new AbortController().signal),
-    awsCredentials: () => cloudApi.awsCredentials(new AbortController().signal),
-    sendCommand: () => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal),
-  };
-}
-
-// One well-formed answer per operation, so every call passes narrowing and its
-// request is recorded rather than being cut short by a rejection.
-function vendorBodies(): Record<keyof CloudApi, string> {
-  return {
-    devices: JSON.stringify(deviceListBody([geminiWireDevice()])),
-    device: JSON.stringify(deviceBody()),
-    awsCredentials: JSON.stringify(awsCredentialsResponse()),
-    sendCommand: JSON.stringify({ success: true }),
-  };
-}
-
-// Runs every operation of the client and reports what actually left the
-// process, as `METHOD /path` lines in invocation order.
-async function reachedRoutes(): Promise<string[]> {
-  const bodies = vendorBodies();
-  let nextBody = '';
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(nextBody, { status: 200 }));
-  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
-  const operations = invocations(cloudApi);
-
-  for (const [name, invoke] of Object.entries(operations)) {
-    nextBody = bodies[name as keyof CloudApi];
-    await invoke();
-  }
-
-  return vendorRequests.map((request) => `${request.method} ${new URL(request.url).pathname}`);
-}
-
 test('offers exactly four operations, so no fifth vendor route is callable (SYNC-01)', () => {
   // arrange
   const cloudApi = createCloudApi(apiOptions());
 
-  // act & assert
-  assert.deepStrictEqual(Object.keys(cloudApi).sort(), ['awsCredentials', 'device', 'devices', 'sendCommand']);
-  assert.deepStrictEqual(Object.keys(cloudApi).sort(), Object.keys(invocations(cloudApi)).sort());
+  // act
+  const operations = Object.keys(cloudApi).sort();
+
+  // assert
+  assert.deepStrictEqual(operations, ['awsCredentials', 'device', 'devices', 'sendCommand']);
 });
 
 test('reaches only the four declared routes when every operation runs (SYNC-01)', async () => {
   // arrange
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/credentials/aws'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(awsCredentialsResponse()), { status: 200 }));
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1/data'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: 'Bearer id-token-1',
+              'Content-Type': 'application/json',
+              'User-Agent': 'homebridge-basement-guardian',
+              Accept: 'application/json',
+            },
+            body: '{"desiredData":{"test_running":true}}',
+            signal: undefined,
+          },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const cloudApi = createCloudApi(apiOptions({ httpFetch }));
+
   // act
-  const routesReached = await reachedRoutes();
+  const devices = await cloudApi.devices(new AbortController().signal);
+  const device = await cloudApi.device('account-1_serial-1', new AbortController().signal);
+  const credentials = await cloudApi.awsCredentials(new AbortController().signal);
+  const commandAnswer = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(routesReached, ['GET /devices', 'GET /devices/account-1_serial-1', 'GET /credentials/aws', 'PUT /devices/account-1_serial-1/data']);
-});
-
-test('touches no excluded account-management path family (SYNC-01)', async () => {
-  // arrange
-  const excluded = ['account', 'accounts', 'users', 'firmware', 'locations', 'rules', 'contacts'];
-  // act
-  const routesReached = await reachedRoutes();
-
-  // assert
-  const pathFamilies = [...new Set(routesReached.map((route) => route.split('/').at(1) ?? ''))].sort();
-  assert.deepStrictEqual(pathFamilies, ['credentials', 'devices']);
   assert.deepStrictEqual(
-    pathFamilies.filter((family) => excluded.includes(family)),
-    [],
+    { devices, device, credentials, commandAnswer },
+    { devices: [geminiDevice()], device: geminiDevice(), credentials: awsCredentialsResponse(), commandAnswer: { success: true } },
   );
+  verify(httpFetch);
 });
 
 // The plugin's first request with a body is also its first that says anything about itself. What it
@@ -718,30 +788,66 @@ test('touches no excluded account-management path family (SYNC-01)', async () =>
 // fifth header cannot appear without this case saying so (AUTH-02).
 test('declares exactly four headers on a command request', async () => {
   // arrange
-  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1/data'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: 'Bearer id-token-1',
+              'Content-Type': 'application/json',
+              'User-Agent': 'homebridge-basement-guardian',
+              Accept: 'application/json',
+            },
+            body: '{"desiredData":{"test_running":true}}',
+            signal: undefined,
+          },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+  const commandAnswer = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(declaredHeaders, [
-    { authorization: 'Bearer id-token-1', 'content-type': 'application/json', 'user-agent': 'homebridge-basement-guardian', accept: 'application/json' },
-  ]);
+  assert.deepStrictEqual(commandAnswer, { success: true });
+  verify(httpFetch);
 });
 
 // Every REST request identifies itself the same way now, so the read branch's complete header set
 // is the bearer token plus the identity header and nothing else (REL-03, REL-04).
 test('declares the bearer token and the identity header on a read request', async () => {
   // arrange
-  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          { method: 'GET', headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' }, signal: undefined },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.devices(new AbortController().signal);
+  const devices = await cloudApi.devices(new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(declaredHeaders, [{ authorization: 'Bearer id-token-1', 'user-agent': 'homebridge-basement-guardian' }]);
+  assert.deepStrictEqual(devices, []);
+  verify(httpFetch);
 });
 
 // What the header does not say is the point of it: the vendor learns which plugin is calling and
@@ -785,10 +891,11 @@ test('never negotiates HTTP/2 with the vendor, even when the server offers it', 
   const cloudApi = createCloudApi(apiOptions({ baseUrl: server.url, httpFetch }));
 
   // act
-  await cloudApi.devices(new AbortController().signal);
+  const devices = await cloudApi.devices(new AbortController().signal);
   const negotiatedProtocol = await server.negotiatedProtocol();
 
   // assert
+  assert.deepStrictEqual(devices, []);
   assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });
 
