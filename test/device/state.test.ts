@@ -80,6 +80,22 @@ function versionedStore(): DeviceStateStore {
   return store;
 }
 
+void ({
+  data: { water_level: 1 },
+  state: undefined,
+  version: 6,
+  // @ts-expect-error requested control state is never canonical safety state, so the patch shape gives it nowhere to land
+  desired: { test_running: true },
+} satisfies ReportedPatch);
+
+void ({
+  data: undefined,
+  state: undefined,
+  version: 6,
+  // @ts-expect-error an acknowledgement is not a sensor reading, so a null requested value has nowhere to land either
+  desired: { test_running: null },
+} satisfies ReportedPatch);
+
 describe('applyDiscovery', () => {
   test('builds a snapshot that keeps device time apart from local receipt time', () => {
     // arrange
@@ -293,28 +309,6 @@ describe('applyReportedPatch', () => {
     // assert
     assert.deepStrictEqual(snapshot?.data, { water_level: 15, primary_pump_running: false, ac_power: true });
     assert.deepStrictEqual(snapshot.metadata, { wifi_signal_dbm: -54 });
-  });
-
-  test('carries no member able to hold a requested control value', () => {
-    // act & assert
-    void ({
-      data: { water_level: 1 },
-      state: undefined,
-      version: 6,
-      // @ts-expect-error requested control state is never canonical safety state, so the patch shape gives it nowhere to land
-      desired: { test_running: true },
-    } satisfies ReportedPatch);
-  });
-
-  test('carries no member able to hold an acknowledged control value', () => {
-    // act & assert
-    void ({
-      data: undefined,
-      state: undefined,
-      version: 6,
-      // @ts-expect-error an acknowledgement is not a sensor reading, so a null requested value has nowhere to land either
-      desired: { test_running: null },
-    } satisfies ReportedPatch);
   });
 
   for (const { version, waterLevel, applied } of [
