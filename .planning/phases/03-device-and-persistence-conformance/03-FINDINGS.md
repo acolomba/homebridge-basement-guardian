@@ -312,7 +312,7 @@ No open code ID, SC-03 reopening, non-reducing round or fourth round occurred.
 Report 5689cf2 and summary 92ce4c6 preserve all 001–015 rules, locations, actual
 fix hashes/paths, native checks and prior histories.
 
-All three runtime source/owner pairs and Gemini helper received complete
+All three source/owner pairs and the Gemini helper received complete
 independent rereads and header inspections; family is a declaration-only pair.
 Current water/Gemini owners pass 109/109 (21 + 88), whole real decoder probes
 for legal 31 and illegal 2 pass 2/2; all three direct selectors exit 0. Water
