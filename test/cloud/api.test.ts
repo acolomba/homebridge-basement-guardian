@@ -104,35 +104,6 @@ function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
   };
 }
 
-interface RecordedRequest {
-  method: string;
-  url: string;
-  authorization: string | undefined;
-  contentType: string | undefined;
-  body: string | undefined;
-}
-
-// Records every request and answers each one with a fresh Response.
-function stubFetch(respond: () => Response): { httpFetch: HttpFetch; vendorRequests: RecordedRequest[] } {
-  const vendorRequests: RecordedRequest[] = [];
-
-  const httpFetch: HttpFetch = (input, init) => {
-    const headers = new Headers(init?.headers);
-
-    vendorRequests.push({
-      method: init?.method ?? '',
-      url: input.toString(),
-      authorization: headers.get('authorization') ?? undefined,
-      contentType: headers.get('content-type') ?? undefined,
-      body: typeof init?.body === 'string' ? init.body : undefined,
-    });
-
-    return Promise.resolve(respond());
-  };
-
-  return { httpFetch, vendorRequests };
-}
-
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
 function stubHangingFetch(): HttpFetch {
   return (_input, init) => {
@@ -140,7 +111,9 @@ function stubHangingFetch(): HttpFetch {
 
     return new Promise<Response>((_resolve, reject) => {
       const abort = (): void => {
-        reject(new Error('the request was aborted'));
+        const reason: unknown = signal?.reason;
+        assert.ok(reason instanceof Error);
+        reject(reason);
       };
 
       if (signal?.aborted === true) {
@@ -169,7 +142,7 @@ function stubDeadlines(t: TestContext): { requested: number[]; expire: () => voi
   return {
     requested,
     expire: (): void => {
-      deadline.abort();
+      deadline.abort(new DOMException('request deadline expired', 'TimeoutError'));
     },
   };
 }
@@ -578,10 +551,18 @@ test('aborts an in-flight device request when the root signal aborts', async () 
 
   // act
   const devices = cloudApi.devices(rootController.signal);
-  rootController.abort();
+  await Promise.resolve();
+  const cancellation = new DOMException('bridge stopped', 'AbortError');
+  rootController.abort(cancellation);
 
   // assert
-  await assert.rejects(() => devices);
+  await assert.rejects(devices, (error: unknown) => {
+    assert.ok(error instanceof DOMException);
+    assert.strictEqual(error.name, 'AbortError');
+    assert.strictEqual(error, cancellation);
+
+    return true;
+  });
 });
 
 test('aborts a device request on its own deadline while the root signal stays open', async (t) => {
@@ -598,10 +579,16 @@ test('aborts a device request on its own deadline while the root signal stays op
 
   // act
   const devices = cloudApi.devices(rootController.signal);
+  await Promise.resolve();
   deadlines.expire();
 
   // assert
-  await assert.rejects(() => devices);
+  await assert.rejects(devices, (error: unknown) => {
+    assert.ok(error instanceof DOMException);
+    assert.deepStrictEqual({ name: error.name, message: error.message }, { name: 'TimeoutError', message: 'request deadline expired' });
+
+    return true;
+  });
   assert.strictEqual(rootController.signal.aborted, false);
 });
 
@@ -614,10 +601,16 @@ test('aborts a command on its own deadline while the root signal stays open', as
 
   // act
   const commandResult = cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, rootController.signal);
+  await Promise.resolve();
   deadlines.expire();
 
   // assert
-  await assert.rejects(() => commandResult);
+  await assert.rejects(commandResult, (error: unknown) => {
+    assert.ok(error instanceof DOMException);
+    assert.deepStrictEqual({ name: error.name, message: error.message }, { name: 'TimeoutError', message: 'request deadline expired' });
+
+    return true;
+  });
   assert.strictEqual(rootController.signal.aborted, false);
 });
 
@@ -664,16 +657,27 @@ test('abandons a command without sending it when its deadline expired before the
   // arrange
   const deadlines = stubDeadlines(t);
   const lapsedAuth: AuthClient = {
-    idToken: (signal: AbortSignal): Promise<string> =>
-      signal.aborted ? Promise.reject(new Error('the token fetch was aborted')) : Promise.resolve('id-token-1'),
+    idToken: (signal: AbortSignal): Promise<string> => {
+      signal.throwIfAborted();
+
+      return Promise.resolve('id-token-1');
+    },
   };
-  const { httpFetch, vendorRequests } = stubFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
   const cloudApi = createCloudApi(apiOptions({ httpFetch, auth: lapsedAuth }));
   deadlines.expire();
 
-  // act & assert
-  await assert.rejects(() => cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal));
-  assert.deepStrictEqual(vendorRequests, []);
+  // act
+  const commandAnswer = cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+
+  // assert
+  await assert.rejects(commandAnswer, (error: unknown) => {
+    assert.ok(error instanceof DOMException);
+    assert.deepStrictEqual({ name: error.name, message: error.message }, { name: 'TimeoutError', message: 'request deadline expired' });
+
+    return true;
+  });
+  verify(httpFetch);
 });
 
 test('offers exactly four operations, so no fifth vendor route is callable (SYNC-01)', () => {
