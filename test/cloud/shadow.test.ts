@@ -240,8 +240,14 @@ function body(document: unknown): Buffer {
 
 describe('SHADOW_TOPICS', () => {
   test('exposes the get, get-accepted, get-rejected, and update-accepted helpers and no others', () => {
-    // act & assert
-    assert.deepStrictEqual(Object.keys(SHADOW_TOPICS), ['get', 'getAccepted', 'getRejected', 'updateAccepted']);
+    // arrange
+    const expectedHelpers = ['get', 'getAccepted', 'getRejected', 'updateAccepted'];
+
+    // act
+    const helpers = Object.keys(SHADOW_TOPICS);
+
+    // assert
+    assert.deepStrictEqual(helpers, expectedHelpers);
   });
 
   for (const { helper, topic } of [
@@ -251,8 +257,14 @@ describe('SHADOW_TOPICS', () => {
     { helper: 'updateAccepted' as const, topic: `$aws/things/${DEVICE_A}/shadow/update/accepted` },
   ]) {
     test(`builds the ${helper} topic for a device identifier carrying an underscore`, () => {
-      // act & assert
-      assert.strictEqual(SHADOW_TOPICS[helper](DEVICE_A), topic);
+      // arrange
+      const deviceId = DEVICE_A;
+
+      // act
+      const deviceTopic = SHADOW_TOPICS[helper](deviceId);
+
+      // assert
+      assert.strictEqual(deviceTopic, topic);
     });
   }
 });
@@ -862,8 +874,11 @@ describe('createShadowClient', () => {
     // arrange
     const { client } = harness();
 
-    // act & assert
-    assert.strictEqual(client.connected, false);
+    // act
+    const connectedBeforeStart = client.connected;
+
+    // assert
+    assert.strictEqual(connectedBeforeStart, false);
   });
 
   test('stays connected when a connection it has replaced closes', async (t) => {
