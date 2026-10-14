@@ -63,3 +63,60 @@ export function withCredentials(overrides: Readonly<Record<string, unknown>>): u
 
   return { ...response, credentials: { ...response.credentials, ...structuredClone(overrides) } };
 }
+
+/** Returns fresh malformed wire seeds for both device envelope guards. */
+export function malformedWireDevices(): { description: string; device: () => unknown }[] {
+  return [
+    { description: 'a null value', device: () => null },
+    { description: 'an undefined value', device: () => undefined },
+    { description: 'a string', device: () => 'wayneWaterGemini' },
+    { description: 'an array', device: () => [geminiWireDevice({ water_level: 1, primary_pump_running: false })] },
+    { description: 'an empty record', device: () => ({}) },
+    {
+      description: 'a record with no device identifier',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), deviceId: undefined }),
+    },
+    {
+      description: 'a record whose device identifier is a number',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), deviceId: 7 }),
+    },
+    {
+      description: 'a record whose device type is a number',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), deviceTypeId: 7 }),
+    },
+    { description: 'a record whose name is a number', device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), name: 7 }) },
+    {
+      description: 'a record with no attributes',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), attributes: undefined }),
+    },
+    {
+      description: 'a record whose attributes are a string',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), attributes: 'serial-1' }),
+    },
+    {
+      description: 'a record whose nested serial number is a number',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), attributes: { serialNumber: 7 } }),
+    },
+    {
+      description: 'a record carrying its serial number at the top level',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), attributes: undefined, serialNumber: 'serial-1' }),
+    },
+    {
+      description: 'a record with no connectivity',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), connectivity: undefined }),
+    },
+    {
+      description: 'a record whose connected flag is a string',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), connectivity: { connected: 'true', timestamp: 1 } }),
+    },
+    {
+      description: 'a record whose connectivity timestamp is a string',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), connectivity: { connected: true, timestamp: 'now' } }),
+    },
+    {
+      description: 'a record whose data is a string',
+      device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), data: 'water_level=1' }),
+    },
+    { description: 'a record whose data is an array', device: () => ({ ...geminiWireDevice({ water_level: 1, primary_pump_running: false }), data: [1] }) },
+  ];
+}
