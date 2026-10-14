@@ -80,8 +80,8 @@ interface TelemetryScopeRow {
   required: boolean;
 }
 
-// One metadata field and a value of the wrong type for it. No published service
-// reads device metadata, so every row owns no scope.
+// One metadata field and a value of the wrong type for it. Firmware feeds
+// AccessoryInformation, while no metadata field owns a safety trust scope.
 interface MetadataScopeRow {
   field: GeminiMetadataField;
   wrongValue: unknown;
@@ -199,7 +199,7 @@ describe('validate', () => {
   }
 
   for (const { field, wrongValue } of METADATA_SCOPES) {
-    test(`RES-01 attributes a wrong-type ${field} violation to no scope, because no published service reads it`, () => {
+    test(`RES-01 attributes a wrong-type ${field} violation to no safety trust scope`, () => {
       // arrange
       const snapshot = buildSnapshot(validTelemetry(), { [field]: wrongValue });
 

@@ -104,9 +104,9 @@ const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set(PROTECTION_HOURS
 // WW-GEM-ALERT-1, -2, -3, and -11).
 const LOW_BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 32]);
 
-// `undefined` names the metadata fields. No published service reads them, so a
-// violation on one is still recorded and diagnosable without deactivating
-// anything, and no member is added to `TrustScope` for them.
+// `undefined` names metadata fields with no safety trust scope. Firmware feeds
+// AccessoryInformation; a violation preserves its last valid information without
+// deactivating a safety scope or adding a member to `TrustScope`.
 type GeminiFieldScope = TrustScope | undefined;
 
 /** How one field failed, before the scope that owns it is stamped on. */
@@ -198,8 +198,8 @@ const TELEMETRY_CHECKS: readonly TelemetryCheck[] = [
 ];
 
 // Every metadata field is optional: the vendor omits all four on some
-// firmware, and an absent field is not a violation. None of the four belongs to
-// a scope, because no published service reads them.
+// firmware, and an absent field is not a violation. Firmware feeds
+// AccessoryInformation, while none of these fields owns a safety trust scope.
 const METADATA_CHECKS: readonly TelemetryCheck[] = [
   { scope: undefined, check: optionalNumber('wifi_signal_dbm') },
   { scope: undefined, check: optionalString('mcu_firmware_version') },
