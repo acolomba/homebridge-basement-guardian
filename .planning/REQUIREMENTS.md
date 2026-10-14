@@ -27,7 +27,7 @@ Rulebooks: `skills/typescript-google-style-review`, `skills/typescript-comments`
 
 Each covers the source modules and their paired tests against the style, comment, and unit-testing rules.
 
-- [ ] **CLOUD-01**: `src/cloud/**` and `test/cloud/**` conform.
+- [x] **CLOUD-01**: `src/cloud/**` and `test/cloud/**` conform.
 - [ ] **DEV-01**: `src/device/**`, `src/persistence/**`, and their tests conform.
 - [ ] **RUN-01**: `src/runtime/**` and `test/runtime/**` conform.
 - [ ] **ACC-01**: `src/accessories/**` and `test/accessories/**` conform.
@@ -65,7 +65,7 @@ Each covers the source modules and their paired tests against the style, comment
 | SPOT-02 | Phase 1 | Complete |
 | SPOT-03 | Phase 1 | Complete |
 | SPOT-04 | Phase 1 | Complete |
-| CLOUD-01 | Phase 2 | Pending |
+| CLOUD-01 | Phase 2 | Complete |
 | DEV-01 | Phase 3 | Pending |
 | RUN-01 | Phase 4 | Pending |
 | ACC-01 | Phase 5 | Pending |

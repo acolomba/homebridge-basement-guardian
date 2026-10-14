@@ -11,7 +11,7 @@
     {
       "number": "2",
       "name": "Cloud Conformance",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "3",
@@ -46,8 +46,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 2 of 8 · 13% · executing"
+    "label": "Advance to the next step (plan phase 3)",
+    "reason": "Phase 3 of 8 — needs a plan"
   },
-  "updated_at": "2026-10-13T22:36:08.400Z"
+  "updated_at": "2026-10-14T14:36:38.789Z"
 }

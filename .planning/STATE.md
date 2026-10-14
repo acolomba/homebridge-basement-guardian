@@ -2,45 +2,45 @@
 gsd_state_version: "1.0"
 milestone: code-review-sweep
 milestone_name: Code Review Sweep
-current_phase: 2
-current_phase_name: Cloud Conformance
-status: executing
-stopped_at: Cloud transport/signing complete; full wave gate passed; final ledger audit next
-last_updated: "2026-10-14T12:40:04.694Z"
-last_activity: 2026-10-13
-last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: e57e7d4d3a6276838a8d5024cdb0644413d28d75
+current_phase: 3
+current_phase_name: Device and Persistence Conformance
+status: planning
+stopped_at: Cloud conformance complete; ready to discuss device and persistence conformance
+last_updated: "2026-10-14T14:36:39.437Z"
+last_activity: 2026-10-14
+last_activity_desc: Phase 2 complete, transitioned to Phase 3
+state_head: d5013fe2a9ff5164aeb110e41a14837480b5d8c4
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
-  percent: 13
+  completed_plans: 9
+  percent: 25
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-13)
+See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 2 — Cloud Conformance
+**Current focus:** Phase 3 — Device and Persistence Conformance
 
 ## Current Position
 
-Phase: 2 (Cloud Conformance) — READY TO EXECUTE
-Plan: 4 of 5 complete; final cloud ledger audit next
-Status: Executing
-Last activity: 2026-10-13 — Phase 1 complete, transitioned to Phase 2
+Phase: 3 — Device and Persistence Conformance
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-14 — Phase 2 complete, transitioned to Phase 3
 
-Progress: [█░░░░░░░░░] 13%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 41
+- Total plans completed: 40
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -48,7 +48,7 @@ Progress: [█░░░░░░░░░] 13%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 02 | 6 | - | - |
+| 2 | 5 | - | - |
 | 05.1 | 7 | - | - |
 | 06 | 10 | - | - |
 | 03 | 8 | - | - |
@@ -637,9 +637,9 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-14T12:40:04.656Z
-Stopped at: Cloud transport/signing complete; full wave gate passed; final ledger audit next
-Resume file: .planning/phases/02-cloud-conformance/02-05-PLAN.md
+Last session: 2026-10-14T14:36:39.390Z
+Stopped at: Cloud conformance complete; ready to discuss device and persistence conformance
+Resume file: None
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
 for history; they do not describe code-review-sweep work.
