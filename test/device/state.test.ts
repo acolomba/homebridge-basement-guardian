@@ -480,9 +480,8 @@ describe('applyReportedPatch', () => {
     assert.strictEqual(snapshot?.receivedAt, SECOND_RECEIPT);
   });
 
-  // The two questions a reported document answers are pinned together here,
-  // because conflating them is what the wider guard did. A report of device
-  // metadata observed the device, so it moves the receipt time; it delivered no
+  // A report of device metadata observed the device, so it moves the receipt
+  // time; it delivered no
   // reading, so it establishes no watermark and the poll keeps the telemetry.
   // Narrowing either question alone fails this case (CR-03, SYNC-02, D-014).
   test('advances the receipt time and establishes no watermark for a patch that reports only device metadata', () => {
