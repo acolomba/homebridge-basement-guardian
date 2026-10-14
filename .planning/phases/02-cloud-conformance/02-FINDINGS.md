@@ -324,3 +324,37 @@ reviewable evidence without marking CLOUD-01 overall done.
 ## Threat Flags
 
 None -- no security-relevant surface outside the plan's <threat_model> was introduced.
+
+## Final Phase Review Follow-Up
+
+At a0df3a682476612e364a1c601843390f5a418245, independent reviewer
+/root/phase2_final_review completed a standard full 22-file review. Its
+02-REVIEW.md confirms all 55 earlier fixes remain fixed and identifies one
+new BLOCKER, CR-02-API-017. Current accepted total is 56: 55 fixed, one open,
+zero rejected or reopened. The prior audit above remains a historical snapshot.
+
+| Finding | Rule / revision-qualified location | Severity | Disposition | Evidence / next check |
+| --- | --- | --- | --- | --- |
+| CR-02-API-017 | CLOUD-01 opaque identity and closed device routes; a0df3a6:src/cloud/api.ts:82-83,167,199-208; types.ts:142-149 | BLOCKER | Open: new confirmed bug | Injected offline actual-export probe accepts '.' and '..' but commands target PUT /devices/data and PUT /data; active pre-fix read/command regressions and minimum refusal fix pending |
+
+This promotes the previously unconfirmed routing candidate to a demonstrated
+public API defect. It claims no vendor occurrence, authorization bypass or
+real device actuation. No enforced input precondition excludes these IDs.
+The minimum repair refuses only the two URL control segments locally, before
+authentication or HTTP dispatch, through a fixed sanitized promise rejection.
+Ordinary opaque IDs and percent encoding remain unchanged; no vendor regex,
+identity reinterpretation or public test hook is authorized.
+
+The initial whole-phase review starts a new cause with opening accepted open
+zero, new one, reopened zero, closing one. It is not a post-fix correction
+round. API batch correction rounds 1 and 2 remain recorded above. The next
+independent correction assessment is API round 3, also the first correction
+of this new whole-phase cause. Round 4 must pause even if clean; no loop
+counter is reset to evade D-03. No current stop trigger occurred.
+
+D-04 requires full active failing test patch/native intended failure/source
+and version evidence committed planning-only before the minimum GREEN source
+and active test commit. This becomes the sixth genuine bug only when actual
+regression evidence is collected; the diagnostic probe is not a RED record.
+The ALPN active-H2 concern and E-02-01/P-02-01/P-02-02 judgments remain pending.
+No final phase success, new coverage, fix or rerun is claimed here.

@@ -1,8 +1,8 @@
 ---
 phase: "02"
 slug: "cloud-conformance"
-status: validated
-nyquist_compliant: true
+status: partial
+nyquist_compliant: false
 wave_0_complete: true
 created: "2026-10-13"
 ---
@@ -311,6 +311,26 @@ judgment prohibitions. All three and both unconfirmed concerns are carried
 to the parent security/verifier/maintainer review. No inherited Phase 1 approval
 or automated taxonomy completion is claimed. No D-03 stop occurred in the
 audited chronology; CLOUD-01 overall and phase advancement remain parent-owned.
+
+## Final Review Coverage Follow-Up
+
+The independent Nyquist audit at 66fbd236892e27add2d98eeb3b289a43d6142eca
+covered all 13 original tasks, with no missing automated checks. Its covered
+verdict is historical evidence. The subsequent full 22-file code review at
+a0df3a682476612e364a1c601843390f5a418245 established new CR-02-API-017:
+dot-only IDs misroute device reads and commands under the existing string
+contract. Prior passing tests do not cover this input. The validation status
+is partial and nyquist_compliant false until active regressions, repair,
+isolated coverage, combined gate and independent re-review complete.
+
+| Correction | Requirement | Required check | Status |
+| --- | --- | --- | --- |
+| CR-02-API-017 | CLOUD-01 | Both dot-only IDs through device() and sendCommand(): fixed promise rejection, no auth/HTTP; complete RED/source/evidence/fix history, API isolated 100%, full combined gate and API round 3 re-review | Pending |
+
+The earlier API routing concern is now a confirmed public-contract defect,
+without a vendor occurrence or security-impact claim. The ALPN concern stays
+unconfirmed. The authored-control security audit remains bounded evidence,
+not a waiver of this new finding. Revalidate affected gates after the fix.
 
 ## Validation Audit 2026-10-14
 
