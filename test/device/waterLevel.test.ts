@@ -70,27 +70,22 @@ describe('isPitFlooded', () => {
 });
 
 describe('PROVISIONAL_WATER_LEVEL_PERCENTAGES', () => {
-  test('D-01 maps the six legal water_level codes and no others', () => {
+  test('D-01 maps the six legal water_level codes to their percentages and no others', () => {
     // arrange
     const ladder = PROVISIONAL_WATER_LEVEL_PERCENTAGES;
 
     // act
-    const codes = [...ladder.keys()];
+    const entries = [...ladder.entries()];
 
     // assert
-    assert.strictEqual(PROVISIONAL_WATER_LEVEL_PERCENTAGES.size, 6);
-    assert.deepStrictEqual(codes, [0, 1, 3, 7, 15, 31]);
-  });
-
-  test('D-01 maps those codes to five even steps above zero', () => {
-    // arrange
-    const ladder = PROVISIONAL_WATER_LEVEL_PERCENTAGES;
-
-    // act
-    const percentages = [...ladder.values()];
-
-    // assert
-    assert.deepStrictEqual(percentages, [0, 20, 40, 60, 80, 100]);
+    assert.deepStrictEqual(entries, [
+      [0, 0],
+      [1, 20],
+      [3, 40],
+      [7, 60],
+      [15, 80],
+      [31, 100],
+    ]);
   });
 
   test('D-03 places exactly one legal code at or above the flood threshold', () => {
