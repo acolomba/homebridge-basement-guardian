@@ -524,3 +524,85 @@ actual foreground commit proof follow execution. No public contract changed;
 clock consumers still read wall epoch milliseconds, separately from elapsed
 time. Actual monitoring-health, auth, shadow, device-state, failure-log and
 account credential-rotation bodies were read, along with platform composition.
+
+CR-04-PORTS-003 committed as
+`fd53a74eca0be5f5aece5717f6403756460dcd9b`, exactly the three named paths.
+Source blob: `c6b98a6e2c6863ae0a567d38f1665e40fceb122b`; owner blob:
+`b234b348a8ecdec02c223357721dff9126155a23`.
+`cause003-prestep` ran exact
+`SKIP=npm-check pre-commit run --files src/runtime/clock.ts test/runtime/clock.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0, clean on the first attempt before staging. `cause003-commit` retains
+guarded cwd/toplevel/feature branch, named stage and normal foreground commit,
+exit 0; pre-commit `npm run check:commit` passed. No bypass was used.
+
+### CR-04-PORTS-004 repair — separate wall-clock act/assert
+
+The first case reads the public `systemClock.now()` into `reading` in its act
+block, then asserts the independent literal epoch value in its assert block.
+Its context-owned deterministic Date setup and the exact advance assertion
+remain. Read the complete edited owner. The final production file is identical
+to the committed header-cause bytes; no operation, API or time domain changed.
+Cause scope is the owner and report (2 final paths). The separate temporary
+assertion control touched the already-owned source and was fully restored.
+
+#### Assertion maintenance control (not genuine bug RED)
+
+Plausible wrong public behavior: the system adapter returns seconds by dividing
+`Date.now()` by `1_000`. Compiler and lint accept that numeric expression; those
+checks cannot establish epoch-millisecond units. This controlled experiment
+checks the assertions preserved by the AAA edit, not a previously shipped bug.
+No conditional RED JSON or evidence-before-GREEN bug commit is warranted.
+
+Before the mutation, `cause004-control-before` records HEAD
+`fd53a74eca0be5f5aece5717f6403756460dcd9b`, source blob
+`c6b98a6e2c6863ae0a567d38f1665e40fceb122b`, owner blob
+`76e54e0379e93a0827c99cf0de959a64edfa463a` and exact dirty/untracked bytes.
+The control changes only `now: () => Date.now()` to
+`now: () => Date.now() / 1_000`. Complete control diff, source blob and native
+streams are retained by the following captures at that same source HEAD.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-clock-aaa | `node_modules/.bin/fallow guard src/runtime/clock.ts test/runtime/clock.test.ts --format json --quiet --explain` | 0; exact source/owner guard before edits/control |
+| cause004-control-typecheck | `npm run typecheck` | 0; both strict projects accept the wrong units |
+| cause004-control-lint | `node_modules/.bin/eslint --max-warnings=0 src/runtime/clock.ts test/runtime/clock.test.ts` | 0; no cache, accepts the wrong units |
+| cause004-control-build | `npm run build:test` | 0; fresh wrong-unit owner |
+| cause004-control-owner | `node --test --test-reporter=tap dist-test/test/runtime/clock.test.js` | 1; 2 intended assertion failures, 0 pass/skip/cancel |
+| cause004-control-restored | exact byte comparison of working source with `git show HEAD:src/runtime/clock.ts` via captured `node -e` argv | 0; exact bytes restored to source blob above |
+| cause004-build | `npm run build:test` | 0; fresh restored production |
+| cause004-owner | `node --test --test-reporter=tap dist-test/test/runtime/clock.test.js` | 0; 2 tests pass, 0 fail/skip/cancel |
+| cause004-direct | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | 0; isolated 100% line/function/branch acceptance |
+| cause004-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 0; kind audit, verdict pass, no introduced findings |
+
+Verbatim intended assertion details from full native control TAP:
+
+```text
+not ok 1 - reports the current process time in milliseconds
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1700000000000
+  actual: 1700000000
+  operator: 'strictEqual'
+not ok 2 - reports a time that advances with the process clock
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1500
+  actual: 1.5
+  operator: 'strictEqual'
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+```
+
+Both named assertions executed and failed for the intended wrong units;
+there was no compile/import/setup failure. Complete untouched TAP with stacks,
+timestamps and separate empty stderr is `cause004-control-owner.stdout` and
+`.json`. The exact restoration is independently byte-compared before rebuilt
+GREEN; no control mutation is staged or committed. The rebuilt GREEN owner
+trailer reports 2 pass, 0 fail/cancel/skip/todo. This is separate from D-04
+genuine production bug history. No genuine production bug was found.
