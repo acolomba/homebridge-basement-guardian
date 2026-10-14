@@ -11,6 +11,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { It, mock, verify, when } from 'strong-mock';
+
 import { createMqttTransport } from '../../src/cloud/mqttTransport.js';
 
 import type { MqttClientEvents, MqttClientIdentity, MqttClientLike, MqttConnectOptions, MqttTransport } from '../../src/cloud/mqttTransport.js';
@@ -287,24 +289,81 @@ test('ends the client once and resolves both times when ended twice', async () =
   // arrange
   const harnessed = harness();
   connectTransport(harnessed);
+  let completeEnd: (() => void) | undefined;
+  const end = mock<MqttClientLike['end']>({ exactParams: true, name: 'end' });
+  when(() => {
+    end(
+      false,
+      It.matches((callback: (error?: Error) => void) => {
+        completeEnd = callback;
+
+        return typeof callback === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  harnessed.client.end = end;
+  const completions: string[] = [];
 
   // act
-  await harnessed.transport.end();
-  await harnessed.transport.end();
+  const firstEnd = harnessed.transport.end();
+  const secondEnd = harnessed.transport.end();
+  const firstCompletion = firstEnd.then(() => {
+    completions.push('first');
+  });
+  const secondCompletion = secondEnd.then(() => {
+    completions.push('second');
+  });
+  await Promise.resolve();
+  const beforeCallback = [...completions];
+  completeEnd?.();
+  const completed = await Promise.all([firstCompletion, secondCompletion]);
+  const repeatedEnd = harnessed.transport.end();
+  await repeatedEnd;
 
   // assert
-  assert.deepStrictEqual(harnessed.ends(), [false]);
+  assert.deepStrictEqual(
+    { beforeCallback, completions, completed },
+    {
+      beforeCallback: [],
+      completions: ['first', 'second'],
+      completed: [undefined, undefined],
+    },
+  );
+  assert.strictEqual(firstEnd, secondEnd);
+  assert.strictEqual(firstEnd, repeatedEnd);
+  verify(end);
 });
 
 test('SYNC-05 drops a client that never connected, because a graceful end would never close its socket', async () => {
   // arrange
-  const { transport, ends } = harness();
+  const { transport, client } = harness();
+  let completeEnd: (() => void) | undefined;
+  const end = mock<MqttClientLike['end']>({ exactParams: true, name: 'end' });
+  when(() => {
+    end(
+      true,
+      It.matches((callback: (error?: Error) => void) => {
+        completeEnd = callback;
+
+        return typeof callback === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.end = end;
+  const completions: string[] = [];
 
   // act
-  await transport.end();
+  const ending = transport.end().then(() => {
+    completions.push('finished');
+  });
+  await Promise.resolve();
+  const beforeCallback = [...completions];
+  completeEnd?.();
+  await ending;
 
   // assert
-  assert.deepStrictEqual(ends(), [true]);
+  assert.deepStrictEqual({ beforeCallback, completions }, { beforeCallback: [], completions: ['finished'] });
+  verify(end);
 });
 
 for (const { operation, run } of [
