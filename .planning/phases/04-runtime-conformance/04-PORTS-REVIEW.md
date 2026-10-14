@@ -830,3 +830,371 @@ No timer assertion or runtime control was needed for this header-only cause.
 There is no genuine bug JSON or production repair. Actual normal pre-step and
 commit results follow execution. Original round-0 evidence stays unchanged;
 no independent correction has run in this repair slice.
+
+CR-04-PORTS-007 committed as
+`8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa`, exactly timer source, owner
+and report. Source blob `7fb32bb219bc4f20cff82e13bec518afc591b38f`;
+owner blob `979addb2ddaad063e92781464dca8d16da376cb8`.
+`cause007-prestep` ran exact
+`SKIP=npm-check pre-commit run --files src/runtime/timers.ts test/runtime/timers.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0, clean before staging. `cause007-commit` retains cwd/toplevel/feature
+guards, exact named stage and foreground normal commit, exit 0. Its ordinary
+incremental check:commit and gitlint passed. All three cause commit streams
+include the passing pre-commit check:commit and subsequent commit-message stage
+with no matching build files. No hook bypass or failed commit occurred.
+
+### Current repair disposition and terminal handoff
+
+Current source revision: `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa`.
+Original round-0 frontmatter and history remain historical evidence.
+
+| Accepted cause | Current revision-qualified location | Repair / actual commit |
+| --- | --- | --- |
+| CR-04-PORTS-005 | `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:src/runtime/monotonicClock.ts:1`, `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:test/runtime/monotonicClock.test.ts:1` | Repaired; `8fb80f9e7c488a3c5bf0f392a54aec3ff64f45ff` |
+| CR-04-PORTS-006 | `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:test/runtime/monotonicClock.test.ts:23` | Repaired; `419cab0a8d14dfef16a127f0e02b6be591a3b6da` |
+| CR-04-PORTS-007 | `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:src/runtime/timers.ts:1`, `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:test/runtime/timers.test.ts:1` | Repaired; `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa` |
+
+Cause-repair accounting: original 001–007 (7), repaired 001–007 (7), rejected
+accepted IDs none, new/reopened IDs none; `7 - 7 - 0 + 0 + 0 = 0` pending
+independent full-batch confirmation. This records attempted repairs, not a clean
+independent verdict. Correction counter remains **0**. The parent still must
+dispatch the fresh complete eight-file PORTS correction and apply D-03 before
+any further work. No correction or counter reset occurred here.
+
+`ports-final-contracts` independently compared the complete original public
+documentation/API/implementation suffix of both sources and the timer owner's
+import-through-EOF suffix against plan baseline, exit 0. Only source headers
+changed; bigint division and all timer semantics remain exact. The monotonic
+owner blob is `33d3e5dd77ef752c2fbd1a1b77824871f7ea5331`.
+`ports-final-previous-unchanged` ran exact four-path Git comparison against
+baseline, exit 0: prior accessoryStore/clock repairs are untouched.
+`ports-final-git` retains real three-commit ancestry and exact named paths,
+exit 0. No tracked file deletion, helper or external adaptation was introduced.
+
+Focused verification ran in the existing authorized checkout on Node v26.11.1.
+No new cross-version, host-suspend, live vendor, hardware, private-input,
+Cucumber or full `npm run check` result is claimed. The parent owns the current
+combined-wave full gate. T-04-03 has independent exact elapsed-unit observations
+and a restored wrong-unit control; T-04-04 retains the complete passing timer
+owner and unchanged scheduling/cancellation bytes. RUN-01 remains Pending.
+
+Only this final report metadata is left dirty for the parent's execution-record
+commit. All three cause changes are committed. No SUMMARY, shared state,
+ROADMAP, REQUIREMENTS, WINDOWS, central ledger, validation or seal was changed.
+All child commands have completed. Terminal return releases the exclusive
+writer/build/control/Git/report lease.
+
+## Independent full PORTS correction — ROUND 1
+
+Reviewer: `/root/phase4_ports_finish/ports_full_correction`, typed
+`gsd-code-reviewer`, independent fresh context. Reviewed source revision:
+`8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa`, existing
+`features/code-review-sweep` checkout. This appended section is authoritative
+for the current correction; the original frontmatter and ROUND 0 remain
+historical. Current status: **issues_found — 1 BLOCKER, 0 WARNING, 0 INFO**.
+Correction counter: **1**.
+
+The reviewer read complete AGENTS, all five style/comment/unit writer/unit
+reviewer/local-verification books, both owning plans, context, research,
+patterns, review protocol, complete existing report and 04-01 summary.
+Fresh Codex resolver returned empty model and effort `high`; configured
+agent-skills named comments, style and unit reviewer and did not replace the
+five books. All eight full current files, including every header and every
+case, received manual review. This was not a diff-only check. No helper or
+external adaptation was added: the actual source/test/feature comparison
+against the initial review contains exactly these original eight paths.
+
+### Complete current scope and manual judgments
+
+Every location in this correction is qualified by the source revision above.
+All eight headers have MIT SPDX first, separate original-work copyright and
+purpose overview JSDoc blocks, and one blank line between sections. Existing
+LICENSE/NOTICE attribution places these files in original MIT work. Owner
+headers were inspected directly; the source-only packaging gate cannot prove
+their conformance.
+
+| Exact full path | Lines read | Current Git blob | Manual judgment |
+| --- | ---: | --- | --- |
+| src/runtime/accessoryStore.ts | 1–36 | `a7ce446ff9d47ec6106d0a6f609bff1472b9677f` | Required callable persist and accessory scope retained; full public documentation/header checked |
+| test/runtime/accessoryStore.test.ts | 1–19 | `4da2a0ab4d8e106c115978e2c55be25a79cab07e` | Meaningful satisfies positives and described missing/non-callable negatives; zero authored runtime cases |
+| src/runtime/clock.ts | 1–25 | `c6b98a6e2c6863ae0a567d38f1665e40fceb122b` | Lazy public wall-clock boundary returns epoch milliseconds; complete header/API checked |
+| test/runtime/clock.test.ts | 1–43 | `76e54e0379e93a0827c99cf0de959a64edfa463a` | Exact independent epoch and advance; separate ordinary act/assert; context-owned time |
+| src/runtime/monotonicClock.ts | 1–57 | `1a4a105d8f9efd86d8cfdf9c2e20f4b9c3538192` | Bigint division precedes Number; elapsed arbitrary epoch retained; full narrative/header checked |
+| test/runtime/monotonicClock.test.ts | 1–49 | `33d3e5dd77ef752c2fbd1a1b77824871f7ea5331` | Exact truncation/advance and independent wall-correction observations; context cleanup |
+| src/runtime/timers.ts | 1–53 | `7fb32bb219bc4f20cff82e13bec518afc591b38f` | Four lazy forwarding operations; justified native handle narrowing; complete header/API checked |
+| test/runtime/timers.test.ts | 1–108 | `979addb2ddaad063e92781464dca8d16da376cb8` | Five complete cases, compiler shapes, AAA and cleanup checked; new CR-04-PORTS-008 below |
+
+Manual review included imports/exports, documentation, naming, type assertions,
+public behavior, expected-value independence, mocks, test isolation and all
+non-toolchain rules. No generic helper, production test hook, suppressed
+coverage or fabricated runtime wrapper exists. Public signatures, visibility,
+mutability and persisted data contracts remain unchanged. No exact-symbol
+contract-change/deletion trace is claimed or needed for these header/test
+repairs.
+
+Actual caller context included platform composition and its accessory-bound
+persist closure, pumpRecords' changed-only persistence, monitoring-health's
+separate elapsed/wall readings, controls' stored timeout handle and matching
+injected cancellation, restored-control scheduling and the existing feature
+timer adapter. The `unknown` handle remains appropriate: the binder records a
+handle from its supplied timers object and cancels through that object. No
+public narrowing or generic native-handle assumption is proposed. These caller
+reads provide boundary context, not completed later subsystem reviews.
+
+The monotonic narrative distinguishes the historical Linux probe from the
+cited suspend consequence that was not observed. This review performs no host
+suspend experiment and adds no cross-platform guarantee. S-04-01 is resolved
+by the strict declaration owner; S-04-03/04 remain inapplicable to these method
+ports for the original rule/source reasons. S-04-05's original monotonic cause
+is fixed; its complete current timer review additionally found the separate
+single-shot protection gap below.
+
+### Original accepted causes independently confirmed fixed
+
+| Stable ID | Current location | Independent disposition and actual repair commit |
+| --- | --- | --- |
+| CR-04-PORTS-001 | Store source/owner lines 1–9 | Fixed: approved full headers; `227c799cebde0e77be9a85c605348ad00add1a69` |
+| CR-04-PORTS-002 | Store owner lines 11–19 | Fixed: compiler-only positives and meaningful negatives replace recorder self-tests; `ce3608815f4a9561a4807c209ae2144e7757d2cf` |
+| CR-04-PORTS-003 | Clock source/owner lines 1–9 | Fixed: approved full headers; `fd53a74eca0be5f5aece5717f6403756460dcd9b` |
+| CR-04-PORTS-004 | Clock owner lines 23–31 | Fixed: ordinary action and exact assertion have separate phases; `84f4ca8d82f72d435895e31fe49aa0e7d85531a7` |
+| CR-04-PORTS-005 | Monotonic source/owner lines 1–9 | Fixed: approved headers preserve distinct time/suspend narrative; `8fb80f9e7c488a3c5bf0f392a54aec3ff64f45ff` |
+| CR-04-PORTS-006 | Monotonic owner lines 23–49 | Fixed: 1_999_999n → 1, 2_000_000n → 2 plus separate fixed-elapsed/backward-wall case; `419cab0a8d14dfef16a127f0e02b6be591a3b6da` |
+| CR-04-PORTS-007 | Timer source/owner lines 1–9 | Fixed: approved full headers; `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa` |
+
+Actual Git history confirms all seven repair hashes are ancestors of the
+reviewed HEAD. New timer assertion cause 008 is distinct from header cause 007;
+it does not reopen or rename that fixed cause.
+
+### New narrative finding
+
+#### CR-04-PORTS-008 — BLOCKER: Timeout owner accepts repeated execution
+
+**Requirement:** RUN-01. **First independent observation:** ROUND 1 reviewer
+above, current revision. **File:**
+`8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:test/runtime/timers.test.ts:31-44`.
+Related public promise:
+`8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa:src/runtime/timers.ts:26-27`.
+
+**Rule:** Unit writer central case discriminator and Assertions; unit reviewer
+central question and Classifying findings: a plausible wrong implementation
+that passes the owner is a test-reliability BLOCKER.
+
+**Issue:** The timeout owner advances only to the first firing. It never
+observes the same uncancelled timeout at a later deadline. A timeout callback
+that re-arms itself with another timeout violates the documented single-shot
+promise while passing all five cases. Early-execution and pre-first-run cancel
+cases do not distinguish it. The interval cases exercise a separate method.
+Current production correctly forwards to native setTimeout; this finding is
+missing regression protection, not a discovered production bug.
+
+**Native confirmation:** `round1-timeout-repeat-control` read freshly compiled
+source and complete owner, constructed data-URL module copies in memory, and
+changed only the source copy's timeout forwarding to:
+
+```javascript
+setTimeout: (handler, delayMs) => {
+  function repeat() {
+    handler();
+    setTimeout(repeat, delayMs);
+  }
+  return setTimeout(repeat, delayMs);
+},
+```
+
+The complete copied owner ran and reported 5 pass, 0 fail/cancel/skip/todo,
+raw exit 0, at 2026-10-14T23:17:32.434531–23:17:32.561589Z. Its complete
+stdout/stderr, exact argv/replacement and compiled-input SHA-256 are retained
+in that native record. This uses repeated mocked setTimeout, not an unmocked
+setInterval substitution. No repository or compiled file was modified; the
+command also checked both compiled files remained byte-identical. This is a
+read-only assertion counterexample, not intended RED, production bug history,
+or a control mutation entering Git.
+
+**Fix:** In this complete owner, advance a timeout through its first firing
+and at least one later full delay without cancelling it, then independently
+assert the whole callback log is still `['ran']`. Preserve separate AAA phases
+and context-owned timers. A separate active case may state the single-shot
+promise directly. Prove the strengthened assertion rejects the repeating
+counterexample, keep exact restored-source evidence for any file-based
+control, then rebuild and run this owner and isolated direct selector. Route
+this bounded test-maintenance cause to 04-02-02; do not alter correct production.
+
+**Disposition:** Accepted/open; no repair or fix commit exists. No genuine
+D-04 production RED JSON is warranted by this test-maintenance finding.
+
+### Fresh native checks and input provenance
+
+All fresh records are under
+`/private/tmp/guardian-04-ports-fix-native/round1-<label>.json`, with complete
+byte-exact `.stdout` and `.stderr`. The previously read capture runner retains
+exact argv/cwd, raw exitCode, UTC start/end, elapsed time, HEAD/branch, every
+tracked/nonignored untracked path's bytes/SHA-256/Git blob, full binary dirty
+diff and complete untracked bytes before and after each command. The 13
+toolchain/owner/direct records compare exactly equal before/after: same HEAD,
+only the pre-existing PORTS-report Markdown dirt, and no untracked files.
+The in-memory control also leaves repository inputs unchanged. No prior
+full-gate evidence is reused.
+
+Observed tool identity in `round1-tools`: Node `v26.11.1`, npm `11.20.0`,
+TypeScript `6.0.3`, ESLint `10.11.0`, Prettier `3.9.6`; Node binary, compiler,
+ESLint/Prettier entrypoints, direct selector and capture-runner SHA-256 are
+retained. The following UTC ranges are all on 2026-10-14; every row returned 0.
+
+| Label | Exact command or parameterized argv | UTC start → end | Result |
+| --- | --- | --- | --- |
+| typecheck | `npm run typecheck` | 23:15:47.385357 → 23:15:49.981510 | Both strict projects; positives/negatives compile |
+| lint | `node_modules/.bin/eslint --max-warnings=0` followed by all eight exact inventory paths in source/owner pair order | 23:15:50.285300 → 23:15:53.580468 | No cache; all eight files |
+| format | `node_modules/.bin/prettier --check` followed by the same eight exact paths | 23:15:53.890547 → 23:15:54.115018 | All eight files |
+| build | `npm run build:test` | 23:15:54.422018 → 23:15:57.263398 | Fresh compiled owners |
+| owner-accessoryStore | `node --test --test-reporter=tap dist-test/test/runtime/accessoryStore.test.js` | 23:16:00.589899 → 23:16:00.823645 | Zero authored cases; one passing native file subtest |
+| direct-accessoryStore | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | 23:16:01.143477 → 23:16:04.655362 | Declaration-only selector acceptance |
+| owner-clock | `node --test --test-reporter=tap dist-test/test/runtime/clock.test.js` | 23:16:04.980372 → 23:16:05.222713 | 2 pass |
+| direct-clock | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | 23:16:05.523309 → 23:16:08.990011 | Isolated full line/function/branch acceptance |
+| owner-monotonicClock | `node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js` | 23:16:09.310294 → 23:16:09.552229 | 2 pass |
+| direct-monotonicClock | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | 23:16:09.879266 → 23:16:13.381235 | Isolated full line/function/branch acceptance |
+| owner-timers | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js` | 23:16:13.694046 → 23:16:13.930692 | 5 pass; does not resolve cause 008 |
+| direct-timers | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` | 23:16:14.226470 → 23:16:17.589611 | Isolated full line/function/branch acceptance |
+
+All owner trailers have zero fail/cancel/skip/todo. Direct selector code was
+read: executable pairs require one exact source LCOV record and equal
+LF/LH, FNF/FNH, BRF/BRH; declaration-only no-record acceptance is separate.
+Thus executable direct acceptance is 100%; no declaration percentage or merged
+LCOV denominator is invented. Each direct command rebuilt serially. No
+selected check refreshes merged `coverage/direct.lcov`.
+
+The existing cause-006 control was independently inspected, including full
+native failure output and captured source/owner blobs. Both intended exact
+assertions failed for the wrong billion divisor with `{ earlier: 0, later: 0 }`;
+restoration matched source blob `1a4a105d8f9efd86d8cfdf9c2e20f4b9c3538192`,
+followed by rebuilt GREEN and direct acceptance. The unchanged owner is blob
+`33d3e5dd77ef752c2fbd1a1b77824871f7ea5331`. Its source HEAD
+`8fb80f9e7c488a3c5bf0f392a54aec3ff64f45ff` and cause-006 test-only repair
+are retained in actual history. That is a restored maintenance control on
+correct production, not a genuine bug regression. No production defect was
+confirmed in this full correction.
+
+### Round accounting and D-03 evaluation before this append
+
+| Set | Exact stable IDs | Count |
+| --- | --- | ---: |
+| Opening, independently awaiting confirmation | CR-04-PORTS-001, CR-04-PORTS-002, CR-04-PORTS-003, CR-04-PORTS-004, CR-04-PORTS-005, CR-04-PORTS-006, CR-04-PORTS-007 | 7 |
+| Fixed | CR-04-PORTS-001, CR-04-PORTS-002, CR-04-PORTS-003, CR-04-PORTS-004, CR-04-PORTS-005, CR-04-PORTS-006, CR-04-PORTS-007 | 7 |
+| Rejected accepted IDs | None | 0 |
+| New | CR-04-PORTS-008 | 1 |
+| Reopened | None | 0 |
+| Closing open | CR-04-PORTS-008 | 1 |
+
+`closing = 7 - 7 - 0 + 1 + 0 = 1`. Opening severity: 2 BLOCKER,
+5 WARNING. Closing severity: 1 BLOCKER, 0 WARNING. Attempted-repair zero was
+not used as an independent opening zero. No previously fixed ID reopened.
+
+Before this record write, the reviewer evaluated D-03: open count reduced
+7 → 1; reopened set is empty; correction round is 1, below 4. **No stop
+trigger applies.** PORTS remains OPEN. Parent must evaluate this terminal
+result before any repair/build/commit/dispatch; route cause 008 to its original
+owning task and retain the continuous counter for another full eight-file
+correction. No clean batch or explicit zero is claimed.
+
+No code, helper, Git/index, shared record or SUMMARY was modified by this
+reviewer. Only this correction section was appended. No installs, private
+inputs, live vendor, hardware, cross-version or suspend experiment occurred.
+The parent still owes the current full combined-wave `npm run check`; these
+focused passes do not complete that gate or RUN-01, which remains Pending.
+All command processes are terminal. Report/build/control resources are
+released at the reviewer's terminal result; there is no retained background
+process or mutation to restore.
+
+Closeout provenance: `round1-final-provenance` returned 1 because its helper
+incorrectly assumed every tracked path was a regular file. The capture
+runner labels three directory symlinks under `.claude/skills/` as `missing`;
+they are existing symlinks, not missing source inputs. The corrected read-only
+`round1-final-provenance-retry` returned 0 at
+2026-10-14T23:19:24.174268–23:19:24.409745Z. It compared all 682 other
+tracked paths with the opening bytes, checked the three link targets against
+their HEAD blobs, confirmed no untracked files and all seven repair ancestors,
+and proved the original 58,615 report bytes remain an exact prefix. Only this
+ROUND 1 section was appended. Both complete native attempts remain retained;
+the failed helper is not a passing check or production defect. This explanatory
+paragraph is the final report-only addition after that prefix comparison.
+
+## CR-04-PORTS-008 repair — single-shot timeout observation
+
+Fixer: `/root/phase4_ports_finish/ports_timeout_once_fix`, typed
+gsd-code-fixer with fresh context. Read complete AGENTS, all five rulebooks,
+owning 04-02 plan, context, research, patterns, protocol, preceding summary,
+complete report and timer pair before editing. The parent evaluated ROUND 1
+before dispatch: `7 - 7 - 0 + 1 + 0 = 1`, reduced 7 to 1, no reopened IDs,
+round 1 below 4. No D-03 stop applies. The continuous correction counter
+remains **1**; this repair is not an independent correction review.
+
+The first existing case now states the single-shot promise, advances through
+the first 1,000 ms and another full 1,000 ms without cancellation, then compares
+the whole callback log with independent literal `['ran']`. Separate AAA phases,
+context-owned timers, headers, ESM imports and every other case remain intact.
+Read the modified section and complete unchanged production section again.
+No signature, member, mutability, visibility, alias or consumer contract changes.
+Actual platform composition and control scheduling/cancellation callers were
+read; conditional contract-change/deletion impact probes are not applicable.
+
+Final cause scope: `test/runtime/timers.test.ts` and this report (2 paths).
+Temporary assertion control also touched `src/runtime/timers.ts`, restored
+exactly; the full cause remains within five paths. No helper or adaptation was
+created. Owner blob: `aa95042ff3b93edcfe8a59c5cc5781364fd4d9e7`.
+Production blob remains `7fb32bb219bc4f20cff82e13bec518afc591b38f`.
+
+### Separate assertion maintenance control
+
+The plausible wrong implementation recursively re-arms `setTimeout` after
+calling its handler, using the ROUND 1 counterexample. Compiler and lint cannot
+establish single-shot scheduling. The temporary source control passed strict
+typecheck and exact-file lint, then the complete freshly built native owner
+failed only the intended strengthened assertion: expected `['ran']`, actual
+`['ran', 'ran']`. Native TAP reports 4 pass, 1 fail, zero skip/cancel/todo,
+raw exit 1, at 2026-10-14T23:21:43.996532–23:21:44.246525Z.
+
+The first control lint returned 1 for a required blank line before `return`.
+That unsuccessful attempt is retained; after adding the blank line, the retry
+returned 0. The intended native assertion failure followed the successful
+compile/lint/build, with no setup/import failure. Exact source bytes were
+restored and independently compared with `git show 8177bec:src/runtime/timers.ts`
+before rebuilding GREEN. No control mutation is staged or committed.
+Production was already correct: no genuine D-04 RED JSON, evidence-only bug
+commit or production repair is warranted. The canonical execute-mvp-tdd gate
+was read; this test-maintenance cause adds no product behavior.
+
+### Current native evidence and verification location
+
+All checks ran in the existing authorized feature checkout, with persisted
+phase 04/plan 04-02 `isolation: none`, not a temporary worktree. Source HEAD
+through verification is `8177bec3c1abca9d8ac10e8135d59e6cbf9ddafa`.
+Observed Node `v26.11.1`, npm `11.20.0`; no tool/runtime change or install.
+The read-before-reuse runner `/private/tmp/guardian-04-ports-fix-capture.py`
+retains complete argv/cwd, raw exit, UTC start/end/duration, full stdout and
+separate stderr in `/private/tmp/guardian-04-ports-fix-native/cause008-*.json`.
+Each record includes before/after HEAD/branch/Git directory, all tracked and
+nonignored untracked blobs/SHA-256, binary dirty diff and full untracked bytes.
+Exact streams also remain in matching `.stdout` and `.stderr` files.
+
+| Capture label | Exact command / observation | Raw exit |
+| --- | --- | ---: |
+| cause008-initial | `node -e` tool/source-blob identity probe | 0 |
+| cause008-guard | `node_modules/.bin/fallow guard src/runtime/timers.ts test/runtime/timers.test.ts --format json --quiet --explain` | 0 |
+| cause008-control-typecheck | `npm run typecheck`; both strict projects accept recursive re-arm | 0 |
+| cause008-control-lint | `node_modules/.bin/eslint --max-warnings=0 src/runtime/timers.ts test/runtime/timers.test.ts`; temporary control missing blank line | 1 |
+| cause008-control-lint-retry | Same exact lint after control-only blank line | 0 |
+| cause008-control-build | `npm run build:test` | 0 |
+| cause008-control-owner | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js`; intended second-call assertion | 1 |
+| cause008-control-restored | Captured `node -e` complete byte comparison with original Git source | 0 |
+| cause008-build | `npm run build:test`; restored production | 0 |
+| cause008-owner | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js`; 5 pass, zero fail/skip/cancel/todo | 0 |
+| cause008-direct | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts`; isolated 100% lines/functions/branches | 0 |
+| cause008-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain`; kind audit, verdict pass | 0 |
+
+Cause 008 is repaired pending independent full-batch confirmation. ROUND 1's
+last independent open set remains `{CR-04-PORTS-008}` (1 BLOCKER); the parent
+must obtain another full eight-file correction with the same counter before
+claiming clean closure. All seven earlier fixed IDs remain untouched.
+The parent still owes the combined-wave full `npm run check`; focused checks
+do not complete RUN-01, which remains Pending. No SUMMARY/shared record,
+package, live vendor, hardware or private input was changed or exercised.
+Clean pre-step and actual commit evidence follow execution.

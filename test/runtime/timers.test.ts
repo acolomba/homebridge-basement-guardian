@@ -28,7 +28,7 @@ void ({
 // @ts-expect-error a stand-in answers every member, so a module cannot defer through one it omits
 void ({ setTimeout: () => undefined, clearTimeout: () => undefined } satisfies Timers);
 
-test('runs a scheduled handler once its delay elapses', (t) => {
+test('runs a scheduled handler only once after its delay elapses', (t) => {
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const runs: string[] = [];
@@ -37,6 +37,7 @@ test('runs a scheduled handler once its delay elapses', (t) => {
   systemTimers.setTimeout(() => {
     runs.push('ran');
   }, 1_000);
+  t.mock.timers.tick(1_000);
   t.mock.timers.tick(1_000);
 
   // assert
