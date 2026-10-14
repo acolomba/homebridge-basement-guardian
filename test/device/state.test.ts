@@ -673,14 +673,18 @@ describe('releaseShadowSource', () => {
   // not restamped, and no listener hears about a change that did not happen.
   test('moves no value and notifies nobody when it runs again on a later poll of the same silence', () => {
     // arrange
-    const store = createDeviceStateStore(fixedStoreOptions());
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
     store.applyDiscovery(geminiDevice());
     store.applyReportedPatch(DEVICE_ID, { data: { water_level: 4 }, state: { wifi_signal_dbm: -54 }, version: 90 });
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
+    currentTime = SECOND_RECEIPT;
     store.releaseShadowSource(DEVICE_ID);
+    currentTime = SECOND_RECEIPT + 1_000;
     store.releaseShadowSource(DEVICE_ID);
 
     // assert
