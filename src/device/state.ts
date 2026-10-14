@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Stores immutable canonical device snapshots and reported state.
+ */
+
 import { isDeepStrictEqual } from 'node:util';
 
 import type { ApiConnectivity, ApiDevice } from '../cloud/types.js';
