@@ -32,7 +32,7 @@ export interface PrimaryPumpStarted extends DeviceEventBase {
   type: 'primary-pump-started';
 }
 
-/** The backup pump began running, which means the primary pump did not cope. */
+/** The backup pump began running. */
 export interface BackupPumpStarted extends DeviceEventBase {
   type: 'backup-pump-started';
 }
