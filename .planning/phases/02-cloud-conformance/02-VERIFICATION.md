@@ -1,58 +1,66 @@
 ---
 phase: 02-cloud-conformance
-verified: "2026-10-14T14:03:22Z"
-status: human_needed
-score: "15/18 must-haves verified"
-covered_files: [".planning/phases/02-cloud-conformance/02-01-PLAN.md",".planning/phases/02-cloud-conformance/02-01-SUMMARY.md",".planning/phases/02-cloud-conformance/02-02-PLAN.md",".planning/phases/02-cloud-conformance/02-02-SUMMARY.md",".planning/phases/02-cloud-conformance/02-03-PLAN.md",".planning/phases/02-cloud-conformance/02-03-SUMMARY.md",".planning/phases/02-cloud-conformance/02-04-PLAN.md",".planning/phases/02-cloud-conformance/02-04-SUMMARY.md",".planning/phases/02-cloud-conformance/02-05-PLAN.md",".planning/phases/02-cloud-conformance/02-05-SUMMARY.md",".planning/phases/02-cloud-conformance/02-API-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-API-REVIEW.md",".planning/phases/02-cloud-conformance/02-AUTH-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-AUTH-REVIEW.md",".planning/phases/02-cloud-conformance/02-FINDINGS.md",".planning/phases/02-cloud-conformance/02-REVIEW-DISPOSITION.md",".planning/phases/02-cloud-conformance/02-REVIEW-FIX.md",".planning/phases/02-cloud-conformance/02-REVIEW-PROTOCOL.md",".planning/phases/02-cloud-conformance/02-REVIEW.md",".planning/phases/02-cloud-conformance/02-SECURITY.md",".planning/phases/02-cloud-conformance/02-SHADOW-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-SHADOW-REVIEW.md",".planning/phases/02-cloud-conformance/02-SOURCE-AUDIT.md",".planning/phases/02-cloud-conformance/02-TRANSPORT-REVIEW.md",".planning/phases/02-cloud-conformance/02-VALIDATION.md",".planning/phases/02-cloud-conformance/FALLOW-normalized.json",".planning/phases/02-cloud-conformance/FALLOW.json","AGENTS.md","LICENSE","NOTICE","cucumber.json","features/real-pump/support/realWorld.ts","features/support/steps/authentication.ts","package-lock.json","package.json","scripts/check-corresponding-tests.mjs","scripts/test-coverage-direct.mjs","scripts/test-reporter.mjs","skills/local-verification/SKILL.md","skills/typescript-comments/SKILL.md","skills/typescript-google-style-review/SKILL.md","skills/typescript-unit-testing-review/SKILL.md","skills/typescript-unit-testing/SKILL.md","src/cloud/api.ts","src/cloud/auth.ts","src/cloud/errors.ts","src/cloud/httpDispatcher.ts","src/cloud/mqttTransport.ts","src/cloud/shadow.ts","src/cloud/sigv4.ts","src/cloud/types.ts","src/device/state.ts","src/logging.ts","src/protocol.ts","src/runtime/accountRuntime.ts","src/settings.ts","test/accessories/controls.test.ts","test/cloud/alpnServer.ts","test/cloud/api.test.ts","test/cloud/apiSeeds.ts","test/cloud/auth.test.ts","test/cloud/errors.test.ts","test/cloud/httpDispatcher.test.ts","test/cloud/mqttTransport.test.ts","test/cloud/shadow.test.ts","test/cloud/sigv4.test.ts","test/cloud/sigv4Seeds.ts","test/cloud/types.test.ts","test/device/state.test.ts","test/packaging/licenseHeaders.test.ts","test/platform.test.ts","tsconfig.json","tsconfig.test.json"]
-covered_digest: "v3:sha256:c27c6bf29787d70a4294714a3826bb9ec265cba8ea01029f1cdf6665b930e52a"
+verified: "2026-10-14T14:30:19Z"
+status: passed
+score: "18/18 must-haves verified"
+covered_files: [".planning/phases/02-cloud-conformance/02-01-PLAN.md",".planning/phases/02-cloud-conformance/02-01-SUMMARY.md",".planning/phases/02-cloud-conformance/02-02-PLAN.md",".planning/phases/02-cloud-conformance/02-02-SUMMARY.md",".planning/phases/02-cloud-conformance/02-03-PLAN.md",".planning/phases/02-cloud-conformance/02-03-SUMMARY.md",".planning/phases/02-cloud-conformance/02-04-PLAN.md",".planning/phases/02-cloud-conformance/02-04-SUMMARY.md",".planning/phases/02-cloud-conformance/02-05-PLAN.md",".planning/phases/02-cloud-conformance/02-05-SUMMARY.md",".planning/phases/02-cloud-conformance/02-API-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-API-REVIEW.md",".planning/phases/02-cloud-conformance/02-AUTH-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-AUTH-REVIEW.md",".planning/phases/02-cloud-conformance/02-FINDINGS.md",".planning/phases/02-cloud-conformance/02-REVIEW-DISPOSITION.md",".planning/phases/02-cloud-conformance/02-REVIEW-FIX.md",".planning/phases/02-cloud-conformance/02-REVIEW-PROTOCOL.md",".planning/phases/02-cloud-conformance/02-REVIEW.md",".planning/phases/02-cloud-conformance/02-SECURITY.md",".planning/phases/02-cloud-conformance/02-SHADOW-RED-EVIDENCE.json",".planning/phases/02-cloud-conformance/02-SHADOW-REVIEW.md",".planning/phases/02-cloud-conformance/02-SOURCE-AUDIT.md",".planning/phases/02-cloud-conformance/02-TRANSPORT-REVIEW.md",".planning/phases/02-cloud-conformance/02-UAT.md",".planning/phases/02-cloud-conformance/02-VALIDATION.md",".planning/phases/02-cloud-conformance/COVERAGE.md",".planning/phases/02-cloud-conformance/FALLOW-normalized.json",".planning/phases/02-cloud-conformance/FALLOW.json","AGENTS.md","LICENSE","NOTICE","cucumber.json","features/real-pump/support/realWorld.ts","features/support/steps/authentication.ts","package-lock.json","package.json","scripts/check-corresponding-tests.mjs","scripts/test-coverage-direct.mjs","scripts/test-reporter.mjs","skills/local-verification/SKILL.md","skills/typescript-comments/SKILL.md","skills/typescript-google-style-review/SKILL.md","skills/typescript-unit-testing-review/SKILL.md","skills/typescript-unit-testing/SKILL.md","src/cloud/api.ts","src/cloud/auth.ts","src/cloud/errors.ts","src/cloud/httpDispatcher.ts","src/cloud/mqttTransport.ts","src/cloud/shadow.ts","src/cloud/sigv4.ts","src/cloud/types.ts","src/device/state.ts","src/logging.ts","src/protocol.ts","src/runtime/accountRuntime.ts","src/settings.ts","test/accessories/controls.test.ts","test/cloud/alpnServer.ts","test/cloud/api.test.ts","test/cloud/apiSeeds.ts","test/cloud/auth.test.ts","test/cloud/errors.test.ts","test/cloud/httpDispatcher.test.ts","test/cloud/mqttTransport.test.ts","test/cloud/shadow.test.ts","test/cloud/sigv4.test.ts","test/cloud/sigv4Seeds.ts","test/cloud/types.test.ts","test/device/state.test.ts","test/packaging/licenseHeaders.test.ts","test/platform.test.ts","tsconfig.json","tsconfig.test.json"]
+covered_digest: "v3:sha256:cfbc90ce9cef107d79d9206fae3e2516e88da9e7926cfe2214a0db6516c40fa7"
 behavior_unverified: 0
 overrides_applied: 0
 decision_coverage:
   honored: 7
   total: 7
   not_honored: []
-judgment_flags:
+re_verification:
+  previous_status: human_needed
+  previous_score: "15/18"
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
+judgment_resolutions:
   - id: E-02-01
-    status: unverified
-    reason: "One unclassified/unresolved fallback-taxonomy assumption; concrete tests do not establish taxonomy completeness."
+    status: acknowledged_assumption
+    reported: "pass"
+    accepted_by: maintainer
+    source: ".planning/phases/02-cloud-conformance/02-UAT.md#1"
+    decision: "Full-file review and concrete tests define the completion boundary; taxonomy completeness is not claimed."
   - id: P-02-01
-    status: unverified
+    status: confirmed
     verification: judgment
-    flagged: true
-    reason: "Descriptorless safety prohibition requires explicit Phase 2 maintainer judgment."
+    reported: "pass"
+    accepted_by: maintainer
+    source: ".planning/phases/02-cloud-conformance/02-UAT.md#2"
+    decision: "Absent/untrustworthy telemetry remains, without guessed normal values; family interpretation stays outside cloud."
   - id: P-02-02
-    status: unverified
+    status: confirmed
     verification: judgment
-    flagged: true
-    reason: "Descriptorless truthful-completion prohibition requires explicit Phase 2 maintainer judgment."
-human_verification:
-  - test: "E-02-01: Decide the unresolved CLOUD-01 fallback taxonomy."
-    expected: "Record an explicit Phase 2 decision resolving the edge or retaining it as an acknowledged assumption with a stated completion boundary. Do not claim taxonomy completeness from test coverage."
-    why_human: "The requirement supplies no behavior-shape taxonomy or enforcement descriptor; the supplied edge is unclassified/unresolved."
-  - test: "P-02-01: Review the complete cloud changes for truthful safety telemetry."
-    expected: "Confirm or reject that unknown, stale, omitted and invalid values retain their absence/untrustworthy semantics, with family meaning outside cloud. Record the actual Phase 2 judgment."
-    why_human: "The judgment prohibition has no deterministic enforcement descriptor. Concrete wire, reported-only and overflow tests support bounded behavior, not an exhaustive safety verdict."
-  - test: "P-02-02: Review truthful completion and the bounded ALPN limitation."
-    expected: "Confirm or reject the current 19-file/22-file review scope, 56 fixed findings, six genuine histories, unchanged-input gate reuse and retained judgments. Keep active-H2 teardown explicitly unconfirmed/unmeasured and limit cleanup claims to current HTTP/1.1 consumers; do not invent a waiver or all-protocol guarantee."
-    why_human: "This descriptorless prohibition governs the meaning of completion records and requires an explicit maintainer decision. Phase 1 approval does not approve Phase 2."
+    reported: "pass"
+    accepted_by: maintainer
+    source: ".planning/phases/02-cloud-conformance/02-UAT.md#3"
+    decision: "Completion matches stated scope; active-H2 teardown remains unconfirmed/unmeasured and cleanup evidence covers current HTTP/1.1 only."
+retained_limits:
+  - "E-02-01 remains an acknowledged taxonomy assumption, without exhaustive coverage claim."
+  - "Active-H2 teardown remains unconfirmed/unmeasured; no universal protocol cleanup guarantee."
+  - "No vendor occurrence, actuation, hardware completion, accepted risk or risk waiver is inferred."
+human_verification: []
 ---
 
 # Phase 2: Cloud Conformance Verification Report
 
 **Phase Goal:** Every module under src/cloud/** and every file under test/cloud/** conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
 
-**Verified:** 2026-10-14T14:03:22Z
-**Status:** human_needed
-**Re-verification:** No — initial verification; the owner returned missing before this report.
-**Checked revision:** 3682927fbb333e6d8873136bc70630842ba8e2dd, features/code-review-sweep.
+**Verified:** 2026-10-14T14:30:19Z
+**Status:** passed
+**Re-verification:** Yes — regenerated after actual Phase 2 UAT. The previous human_needed report became stale when covered judgment evidence changed.
+**Checked revision:** d93db7bf0a007ad2af61daee599bbeecb50aac1c, features/code-review-sweep.
 
-Concrete implementation, review closure, regression provenance and automated gates pass. E-02-01 and the two descriptorless judgment prohibitions remain UNCERTAIN (WARNING). The phase goal is therefore awaiting maintainer judgment; this report does not advance CLOUD-01 or the phase.
+Concrete implementation, review closure, regression provenance and automated gates pass. Current committed 02-UAT.md records the maintainer's actual pass response and explicit decision for E-02-01, P-02-01 and P-02-02. All18 must-haves are verified, with no pending human item. The taxonomy assumption and unmeasured active-H2 teardown limit remain stated. Shared requirement and phase advancement are parent-owned.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-The merged contract keeps all five ROADMAP criteria. Ten additional plan-specific checks capture behavior and final-gate detail. Three explicit judgment items extend the scored set so an automated-only 15/15 cannot obscure the unresolved handoff. Duplicate review/header/coverage statements map to these checks in the following table.
+The merged contract keeps all five ROADMAP criteria. Ten additional plan-specific checks capture behavior and final-gate detail. Three explicit judgment items extend the scored set. Automated evidence is15/15, and actual maintainer judgment is3/3. Duplicate review/header/coverage statements map to these checks in the following table.
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
@@ -66,16 +74,16 @@ The merged contract keeps all five ROADMAP criteria. Ten additional plan-specifi
 | 8 | Only a current connection's accepted reported document reaches the public patch callback. | VERIFIED | shadow.ts:158 routes closed accepted/rejected topics; :197 narrows reported sections; :391 gates current ownership. Complete patch, desired-state exclusion and stale-connection cases discriminate the path. Fresh named overflowing-version and replaced-connection checks pass; owner55/55 passes. |
 | 9 | Shadow current connection, subscription readiness, deadlines, rotation and shutdown remain covered offline. | VERIFIED | attach guards all notifications; live/onConnected follows awaited subscribe and initial publishes; replacement ends previous transport; closing blocks reconnect and memoizes end. Active owner cases cover readiness/refusal/replacement/rotation/shutdown with injected transports/context timers; unchanged-input55/55 passes. |
 | 10 | REST public results retain route, deadline, error and privacy contracts. | VERIFIED | api.ts:83 refuses exact '.'/'..'; async public methods preserve promise rejection before auth/HTTP. :169 composite deadline covers token+HTTP+body, :108 preserves abort reasons, :120 contains cleanup failures. Four active017 cases and ordinary/encoding/header/deadline/no-retry cases pass37/37; fresh refusal/body-timeout named checks pass. |
-| 11 | Wire validation preserves opaque telemetry and current absence semantics rather than guessing normal values. | VERIFIED | types.ts guards unknown shapes and builds exactly six normalized fields; cloud does not decode family data. Shadow sections keep undefined absence and finite-only version. types owner77/77 and shadow55/55 discriminate malformed envelopes, omitted data and overflowing version. This proves concrete behavior; P-02-01 remains a separate judgment. |
+| 11 | Wire validation preserves opaque telemetry and current absence semantics rather than guessing normal values. | VERIFIED | types.ts guards unknown shapes and builds exactly six normalized fields; cloud does not decode family data. Shadow sections keep undefined absence and finite-only version. types owner77/77 and shadow55/55 discriminate malformed envelopes, omitted data and overflowing version. Concrete behavior is proven; the maintainer separately confirmed P-02-01 in actual Phase2 UAT. |
 | 12 | Vendor HTTP retains paired userland undici fetch/Agent and explicit HTTP/1.1. | VERIFIED | httpDispatcher.ts imports Agent/fetch from the same undici package, sets allowH2:false, passes its Agent on every request. Current case-owned ALPN owner asserts complete response then actual HTTP/1.1; same-input3/3 and full gate pass. No live vendor test or active-H2 cleanup guarantee is inferred. |
 | 13 | MQTT callbacks, deadlines and teardown retain observable behavior; signing retains independently expected exact bytes. | VERIFIED | mqttTransport forwards exact callbacks/Buffers, cancels callback-settled timers, uses callback-owned memoized end and forced end before connect. Fresh named shared-end test passes; owner21/21. Signer owner9/9 compares independently specified complete URLs/Node crypto oracle; production does not compute expected values. |
 | 14 | All eight isolated pairs and full combined-tree npm run check pass on final inputs. | VERIFIED | Fresh full exit0 at clean a973483, Node26.11.1 before13:38:55Z: six static checks, unpaired owners,104 scenarios/1156 steps and43 isolated pairs. Verifier read log and proved exact non-planning-Markdown diff empty, no untracked inputs, same runtime. This is valid same-session reuse, not a verifier full rerun. |
-| 15 | Outstanding review pauses and high/critical threats prevent a successful seal, and judgment flags stay visible for phase-end review. | VERIFIED | No pending D-03 pause; SECURITY refreshed at3f58756 reports17/17 authored mitigations closed,15high/2medium, zero accepted/transferred risks. Validation14/14 covered, nyquist/wave0 true. All three flags preserved here and in evidence records; overall status remains human_needed. |
-| 16 | E-02-01/CLOUD-01 fallback taxonomy is explicitly resolved by Phase 2 judgment. | UNCERTAIN — WARNING | The sole deterministic fallback edge remains unclassified/unresolved, verification null. No explicit behavior-shape taxonomy or Phase2 maintainer resolution exists. Human item1. |
-| 17 | P-02-01: MUST NOT turn unknown, stale, omitted, or invalid basement-protection telemetry into guessed measurement or normal condition during conformance fixes. | UNCERTAIN — WARNING | Judgment tier with no descriptor; flagged-unverified. Concrete source/tests support preservation, but an LLM verdict cannot supply the required human judgment. Human item2. |
-| 18 | P-02-02: MUST NOT present paused, skipped, unreviewed, unresolved, archived, or hardware-only evidence as completed Cloud Conformance work. | UNCERTAIN — WARNING | Judgment tier with no descriptor; flagged-unverified. Current records retain historical snapshots and correction updates, pending judgments and bounded ALPN limit. Human item3. |
+| 15 | Outstanding review pauses and high/critical threats prevent a successful seal, and judgment flags stay visible for phase-end review. | VERIFIED | No pending D-03 pause; SECURITY refreshed at3f58756 reports17/17 authored mitigations closed,15high/2medium, zero accepted/transferred risks. Validation14/14 covered, nyquist/wave0 true. All three actual decisions and their limits remain visible in current UAT/FINDINGS/VALIDATION/SECURITY. No unresolved judgment prevents the passed verdict. |
+| 16 | E-02-01/CLOUD-01 fallback taxonomy has an explicit Phase 2 judgment and completion boundary. | VERIFIED — human judgment | UAT checkpoint1 records reported:pass and explicit retention as an acknowledged taxonomy assumption. Full-file review and concrete tests define the accepted completion boundary; no exhaustive or deterministically classified taxonomy is claimed. |
+| 17 | P-02-01: MUST NOT turn unknown, stale, omitted, or invalid basement-protection telemetry into guessed measurement or normal condition during conformance fixes. | VERIFIED — human judgment | UAT checkpoint2 records reported:pass and explicit maintainer confirmation of absent/untrustworthy semantics, no guessed normal values and family interpretation outside cloud. This is actual Phase2 human judgment, not inferred LLM approval or a deterministic enforcement claim. |
+| 18 | P-02-02: MUST NOT present paused, skipped, unreviewed, unresolved, archived, or hardware-only evidence as completed Cloud Conformance work. | VERIFIED — human judgment | UAT checkpoint3 records reported:pass and explicit confirmation of19-file inventory/22-file review,56 fixed findings,six genuine histories and final-gate scope. Active-H2 teardown stays unconfirmed/unmeasured; cleanup evidence is current HTTP/1.1 only. No vendor occurrence, hardware completion or risk waiver is inferred. |
 
-**Score:** 15/18 verified; zero behavior-unverified truths; three judgment warnings; zero failed truths; zero overrides. The prohibition frontmatter's status:resolved is projection metadata, not evidence of enforcement or maintainer acceptance.
+**Score:** 18/18 verified:15 concrete checks plus3 actual maintainer judgments. Zero behavior-unverified truths, pending human items, failed truths or overrides. Original projection metadata alone was insufficient; actual UAT responses now supply the required judgment evidence.
 
 ### Complete PLAN must-have accounting
 
@@ -88,9 +96,13 @@ All five PLAN frontmatter requirement arrays contain only CLOUD-01. No plan trut
 | 02-03 | REST route/deadline/error/privacy; opaque wire absence; complete API/types/errors review/D-01; no findings/pause and three isolated100% pairs. | 10,11,1–3,3–4 |
 | 02-04 | Paired undici HTTP/1.1; MQTT lifecycle and exact signing; all transport files/helper reviewed/D-01; no findings/pause and three isolated100% pairs. | 12,13,1–3,3–4 |
 | 02-05 | Complete original inventory; stable finding/auth-warning/round records; genuine intended unchanged-production RED/ancestry; eight isolated pairs+full gate; pauses/high threats block seal and flags remain visible. | 1,2–3,5,4+14,15 |
-| 02-05 prohibitions/handoff | P-02-01 safety; P-02-02 transparency; E-02-01 taxonomy. | 17,18,16 — all require explicit human decisions |
+| 02-05 prohibitions/handoff | P-02-01 safety; P-02-02 transparency; E-02-01 taxonomy. | 17,18,16 — actual maintainer decisions passed3/3 |
 
-Plan05's deferred human-check is harvested into the three distinct items below. No fake user-interface or hardware UAT is added to this internal conformance phase.
+Plan05's deferred human-check is resolved through the three completed UAT checkpoints below. No fake user-interface or hardware UAT is added to this internal conformance phase.
+
+### Advisory (New Scope, Unevidenced)
+
+None. This regeneration addresses completed judgment evidence only. No new code correction review or API round4 was invoked; existing ALPN limits remain acknowledged without a new finding or waiver.
 
 ### Required Artifacts
 
@@ -144,7 +156,7 @@ No rendered UI artifact exists in this phase. The dynamic boundary flows were st
 
 ### Behavioral Spot-Checks
 
-Fresh checks use existing compiled output from the same-input full gate. Each named case completed in under one second, executed exactly one test and passed with no skips/cancellations. No build/server/vendor/hardware was started by the verifier; the auth case owns and removes its synthetic temporary directory.
+The following checks ran during initial verification and remain applicable on unchanged inputs. This regeneration did not rerun them. They used existing compiled output from the same-input full gate. Each named case completed in under one second, executed exactly one test and passed with no skips/cancellations. No build/server/vendor/hardware was started by the verifier; the auth case owns and removes its synthetic temporary directory.
 
 | Behavior | Exact command | Result |
 | --- | --- | --- |
@@ -178,7 +190,7 @@ The native LCOVs named in VALIDATION and guardian-api017-green.lcov were indepen
 
 ### Genuine Regression Provenance
 
-The verifier independently reran the classifier in its own process for all six complete current/archived records. Temporary archive extraction was scoped to /private/tmp and removed. All results are exit0/RED_EVIDENCE_OK, native TAP target_test_failed. The saved RED exit is1, with zero skipped/cancelled targets. Actual Git commits verify every source→evidence→fix→HEAD link, JSON-only evidence paths, owning source/test-only fix paths and equal production blobs through evidence.
+During initial verification, the verifier independently reran the classifier in its own process for all six complete current/archived records. Those unchanged-input results are reused here; no historical failure was recreated. Temporary archive extraction was scoped to /private/tmp and removed. All results are exit0/RED_EVIDENCE_OK, native TAP target_test_failed. The saved RED exit is1, with zero skipped/cancelled targets. Actual Git commits verify every source→evidence→fix→HEAD link, JSON-only evidence paths, owning source/test-only fix paths and equal production blobs through evidence.
 
 | Genuine finding | Source → evidence → fix (short hashes) | Intended RED |
 | --- | --- | --- |
@@ -197,22 +209,22 @@ Actual check tdd-review-checkpoint02 returns block:false, passed:true, tddPlans:
 
 ### Probe Execution
 
-No PLAN/SUMMARY declares a runnable shell probe path, and no conventional phase probe is required for this conformance work. The ledger's actual Node section/CLOUD-01 check was rerun and emitted LEDGER_TRACER_OK; a separate current ID check emitted LEDGER_CURRENT_56_IDS_OK. All six actual RED classifier processes were rerun, as documented above.
+No PLAN/SUMMARY declares a runnable shell probe path, and no conventional phase probe is required for this conformance work. Initial verification reran the actual ledger check, emitting LEDGER_TRACER_OK and LEDGER_CURRENT_56_IDS_OK, and all six RED classifier processes as documented above. These unchanged-input results are reused here.
 
-Fallback/prohibition equality is retained as planning evidence: edge1=0lifted+1assumption; prohibitions2=2authored+0unresolved assumptions. No runnable descriptor is supplied for E-02-01 or either prohibition. No probe PASS or enforcement completion is invented for them.
+Fallback/prohibition equality is retained as planning evidence: edge1=0lifted+1assumption; prohibitions2=2authored+0unresolved assumptions. No runnable descriptor is supplied for E-02-01 or either prohibition. No deterministic probe PASS or enforcement completion is invented for them; actual human decisions are recorded in current UAT.
 
 ### Requirements Coverage
 
 | Requirement | Source | Status | Evidence and limit |
 | --- | --- | --- | --- |
-| CLOUD-01 | All five plans; roadmap Phase2 | NEEDS HUMAN | Complete cloud conformance evidence passes; E-02-01/P-02-01/P-02-02 remain unresolved Phase2 judgments. Overall requirement remains pending. SUMMARY requirements-completed fields represent contributions. |
+| CLOUD-01 | All five plans; roadmap Phase2 | SATISFIED | All15 concrete checks and3 actual Phase2 UAT judgments pass. Taxonomy remains an acknowledged assumption, and bounded ALPN limits stay visible. SUMMARY fields are contributions; shared requirement bookkeeping remains parent-owned. |
 | PROC-01 | Applied by roadmapSC2 | SATISFIED for Phase2 |56 stable findings with rules/locations/severities/fixed outcomes and actual evidence. Milestone mapping remains Phase1. |
 | PROC-02 | Applied by roadmapSC3 | SATISFIED for Phase2 | Seven chronological independent correction rounds across batches, including API3, zero open/reopened; no cap reset or D-03 trigger. |
 | PROC-03 | Inherited header contract; roadmapSC1 | SATISFIED for Phase2 |19 inspected complete MIT headers, original attribution and unchanged LICENSE/NOTICE boundary. |
 | BUG-01 | Applied by roadmapSC5 | SATISFIED for Phase2 | Six genuine D-04 histories and active regressions; eight controls kept separate. Milestone-wide audit still belongs to Phase8. |
 | GATE-01/GATE-02 | Milestone Phase8, not PLAN claims | No Phase2 completion claim | Current full gate and scoped clean22-file review supply bounded evidence. No final whole-repo milestone sweep or end-milestone gate is claimed. |
 
-No orphaned Phase2 requirement: REQUIREMENTS maps only CLOUD-01 here and every plan claims it. Later phases3–8 name other subsystems and a final sweep; they do not specifically defer these three human judgments. No gap is hidden by later-phase deferral.
+No orphaned Phase2 requirement: REQUIREMENTS maps only CLOUD-01 here and every plan claims it. Later phases3–8 name other subsystems and a final sweep. These three human judgments were completed in Phase2, not deferred. No gap is hidden by later-phase deferral.
 
 ### Decision Coverage
 
@@ -237,7 +249,7 @@ The owner query check.decision-coverage-verify reports honored7/total7/not_honor
 
 | File/location | Observation | Classification | Goal implication |
 | --- | --- | --- | --- |
-| test/cloud/alpnServer.ts:125–136 | Listener close has no active-H2 session tracking/destruction/deadline. Current paired consumers enforce HTTP/1.1 and pass; no observed current failure confirms candidate. | Retained unconfirmed limit | No invented finding/waiver. P-02-02 human judgment must preserve bounded cleanup language. |
+| test/cloud/alpnServer.ts:125–136 | Listener close has no active-H2 session tracking/destruction/deadline. Current paired consumers enforce HTTP/1.1 and pass; no observed current failure confirms candidate. | Retained unconfirmed limit | No invented finding/waiver. Actual P-02-02 maintainer judgment explicitly preserves bounded cleanup language. |
 | FALLOW.json / FALLOW-normalized.json | Raw repo-base audit is fail/exit1 with complexity results; normalized payload contains one inherited World duplication candidate. | INFO, bounded structural input | Preserve raw verdict. Actual phase-base orientation in REVIEW is pass/exit0, introduced0/inherited1. No fabricated phase failure/pass or ignored accepted finding. No architecture coverage inferred. |
 | Earlier batch SUMMARY/ledger/validation snapshots | Historical55findings/fivebugs/API33/unconfirmed-routing text remains; appended current closure changes these to56/six/API37/fixed017. | INFO, chronology retained | Latest explicit correction and refreshed audits govern. Archived same-number milestone records are never progress evidence. |
 | Verifier header probe | Initial regex wrongly required an import after overview in import-free errors/types modules; corrected to next present section. | Check setup limitation, resolved | Corrected19-file check passes. No source defect/RED inferred. |
@@ -247,31 +259,37 @@ No unreferenced TBD/FIXME/XXX marker or product stub was found in the changed cl
 
 ## Human Verification Required
 
-### 1. E-02-01 — unresolved fallback taxonomy
+None. All three required judgments are complete; human_verification is empty.
 
-**Test:** Review the one unclassified/unresolved CLOUD-01 edge in SOURCE-AUDIT and decide its Phase2 disposition.
-**Expected:** Record an explicit resolution, or retain an acknowledged assumption with a stated completion boundary. Do not assert exhaustive taxonomy from passing coverage.
-**Why human:** No behavior-shape taxonomy or deterministic descriptor establishes what completeness means.
+## Completed Maintainer Judgments
 
-### 2. P-02-01 — safety telemetry judgment
+Committed 02-UAT.md is status:complete and updated2026-10-14T14:25:56.891Z. Each checkpoint preserves the actual reported response "pass" and its explicit decision. Totals are3passed,0issues,0pending,0skipped,0blocked. The verifier ran phase uat-passed2 --uat-only and observed passed:true, all three checks passing and blockers:[].
 
-**Test:** Review the complete cloud fixes and concrete unknown/omitted/invalid/reported-only expectations.
-**Expected:** Explicitly confirm or reject that no guessed normal state or measurement is introduced. Preserve family interpretation outside cloud and record the actual Phase2 decision.
-**Why human:** The prohibition is judgment tier and descriptorless. Concrete behavioral evidence cannot silently supply an exhaustive safety judgment.
+| Checkpoint | Actual response | Explicit maintainer decision | Retained boundary |
+| --- | --- | --- | --- |
+| E-02-01 | pass | Retain the taxonomy assumption; full-file review and concrete tests define the accepted completion boundary. | No exhaustive taxonomy or deterministic classification claim. |
+| P-02-01 | pass | Confirm absent/untrustworthy telemetry without guessed normal measurements/conditions; family interpretation stays outside cloud. | Actual Phase2 judgment, not inherited Phase1 approval or LLM inference. |
+| P-02-02 | pass | Confirm actual19-file inventory/22-file review,56 fixed findings,six histories and exact-input full gate. | Active-H2 teardown remains unconfirmed/unmeasured. Cleanup evidence covers current HTTP/1.1 only; no universal protocol guarantee, vendor occurrence, hardware completion or risk waiver. |
 
-### 3. P-02-02 — truthful completion and bounded ALPN limit
+Current Maintainer Judgment/Validation Judgment/Completion Judgment appendices in FINDINGS, VALIDATION and SECURITY agree. Earlier pending sections are historical snapshots. No accepted risk or verification override was added.
 
-**Test:** Review current inventory, chronological rounds, six histories, final same-input gate and the active-H2 limitation.
-**Expected:** Explicitly confirm or reject that completion claims describe actual reviewed/executed scope. Retain active-H2 teardown as unconfirmed/unmeasured and cleanup evidence as current HTTP/1.1 only. Keep E-02-01/P-02-01/P-02-02 flagged until actual decisions; no inherited Phase1 approval, universal teardown guarantee, fabricated waiver or hardware completion.
-**Why human:** Meaning and adequacy of these completion claims require the authored descriptorless judgment. The security17/17 result verifies declared controls, not this human approval.
+## Regeneration Evidence
+
+At clean d93db7bf0a007ad2af61daee599bbeecb50aac1c, exact executable-input diffs against both initial verification3682927 and the clean reviewed/full-gate referencea973483 are empty when planning Markdown is excluded. No untracked executable input exists; Node remainsv26.11.1. Full-gate and isolated/regression evidence are valid same-session reuse. No broad test, source audit, vendor/hardware call or new code correction round was needed.
+
+All five plans have summaries. Validation remains14/14covered/status:validated/nyquist_compliant:true/wave_0_complete:true. Security remains17/17closed,ASVS L1/high blocking,zero accepted/transferred risks. Actual tdd-review-checkpoint returned block:false,passed:true,tddPlans:0; six independently verified D-04 histories remain authoritative. This integer phase has no gap-parent action.
+
+COVERAGE.md still declares no new external API integration; its shortened reason satisfies the200-character gate. The verifier ran check api-coverage-verify-pre02 --raw and observed passed:true,block:false,none_declared:true,detected:false. Earlier query/root api-coverage aliases were rejected as unavailable command forms; only the successful actual check counts.
+
+The owner initially reported stale because covered judgment evidence changed. The fingerprint was recomputed with query verification.fingerprint over the complete prior covered set plus current UAT/COVERAGE; all75 covered_files and the CLI digest are copied verbatim. This is goal-verification regeneration, not API correction round4 or a loop-counter reset. API round4 would still globally pause if ever invoked.
 
 ## Gaps Summary
 
 No observable implementation, wiring, coverage, review-loop or genuine-regression gap remains. The fixed017 route failure is not carried as unresolved: exact '.'/'..' are refused with a fixed native TypeError promise rejection before auth/HTTP; ordinary opaque identity/encoding/deadlines/no retry remain intact. Vendor occurrence, actuation and security impact remain unproven.
 
-Three explicit judgment warnings keep status human_needed. No override or accepted risk was invented, and no further phase is authorized by this report. The parent owns UAT decisions and shared REQUIREMENTS/STATE/ROADMAP advancement. Only this report was written; source/index remain clean, and no commit was made.
+All18 must-haves are verified, including the three actual maintainer decisions, so status is passed. No pending human item or concrete gap remains. Taxonomy and ALPN limits remain explicit; no override or accepted risk was invented. The parent owns shared REQUIREMENTS/STATE/ROADMAP advancement. Only this report changed; source/index remain clean, and no commit was made.
 
 ---
 
-_Verified: 2026-10-14T14:03:22Z_
+_Verified: 2026-10-14T14:30:19Z_
 _Verifier: gsd-verifier (/root/phase2_verifier)_
