@@ -1,13 +1,13 @@
 ---
 phase: "02"
 slug: "cloud-conformance"
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-13"
 ---
 
-# Phase 2 — Validation Strategy
+# Phase 2 — Validation Results
 
 ## Test Infrastructure
 
@@ -28,7 +28,8 @@ Serialize compilation, mutation experiments, helper edits, Git and ledger writes
 
 All rows address CLOUD-01. Owner commands use current compiled output;
 coverage commands rebuild it. The plans include an immediate fails_when sibling
-for every runnable automated command. No execution result is inferred here.
+for every runnable automated command. Results below are executed checks or
+explicitly qualified same-session reuse, audited against current inputs.
 
 | Task ID | Automated command / scope | Threat Ref | Failure signal | Status |
 | --- | --- | --- | --- | --- |
@@ -43,8 +44,8 @@ for every runnable automated command. No execution result is inferred here.
 | 02-04-01 | npm run build:test && node --test dist-test/test/cloud/httpDispatcher.test.js; npm run test:coverage:direct -- src/cloud/httpDispatcher.ts test/cloud/httpDispatcher.test.ts | T-02-11, T-02-12 | Nonzero, listener/setup error, wrong ALPN/HTTP result or coverage below 100% | Pass: owner 3/3; isolated 100%; complete response and cancellation |
 | 02-04-02 | npm run test:coverage:direct -- src/cloud/mqttTransport.ts test/cloud/mqttTransport.test.ts | T-02-12, T-02-13 | Nonzero, lifecycle/teardown contract failure or coverage below 100% | Pass: owner 21/21; isolated 100%; strict interactions and callback-owned end |
 | 02-04-03 | npm run test:coverage:direct -- src/cloud/sigv4.ts test/cloud/sigv4.test.ts | T-02-11, T-02-13 | Nonzero, wrong exact signing bytes or coverage below 100% | Pass: owner 9/9; isolated 100%; independent round 13→0 |
-| 02-05-01 | PLAN.md's Node ledger-section assertion, then real provenance inspection | T-02-14 | Nonzero, missing ledger sections/CLOUD-01 or absent LEDGER_TRACER_OK | Pending |
-| 02-05-02 | npm run build:test && node --test dist-test/test/packaging/licenseHeaders.test.js && npm run check | T-02-14, T-02-15, T-02-16 | Nonzero, timeout, static/Cucumber failure or any isolated pair below 100% | Pending |
+| 02-05-01 | PLAN.md's Node ledger-section assertion, then real provenance inspection | T-02-14 | Nonzero, missing ledger sections/CLOUD-01 or absent LEDGER_TRACER_OK | Pass: LEDGER_TRACER_OK before/after tracer commit; genuine AUTH-015 ancestry and intended failure audited |
+| 02-05-02 | npm run build:test && node --test dist-test/test/packaging/licenseHeaders.test.js && npm run check | T-02-14, T-02-15, T-02-16 | Nonzero, timeout, static/Cucumber failure or any isolated pair below 100% | Pass: fresh build/header owner 5/5; Wave 4 full gate reused only after exact unchanged-input proof; 19 headers, 55 findings and five genuine records audited |
 
 For each module above, run `npm run test:coverage:direct -- src/cloud/<module>.ts test/cloud/<module>.test.ts`.
 Every pair alone must reach 100% lines, functions and branches. Shared helper
@@ -65,7 +66,7 @@ ledger immediately on a pause; central final consolidation occurs in 02-05.
 
 | Behavior | Requirement | Instructions |
 | --- | --- | --- |
-| Complete inventory | CLOUD-01, PROC-03 | Record all eight source/test pairs and the ALPN helper; inspect each full header. |
+| Complete inventory | CLOUD-01, PROC-03 | All eight source/test pairs, ALPN helper and two authorized seed helpers recorded; all 19 actual full headers inspected. |
 | Finding closure | CLOUD-01, PROC-01 | Record stable IDs, exact rules/locations, dispositions and real evidence. |
 | Bounded convergence | PROC-02 | Independent re-review; pause all work on stall, reopening or round four. |
 | Bug provenance | BUG-01 | Observe active RED on unchanged production; commit full patch/output/source record before GREEN fix; inspect real Git ancestry. |
@@ -85,17 +86,19 @@ Probe equality and recall/precision evidence are in 02-SOURCE-AUDIT.md.
 
 ## Validation Sign-Off
 
-- [ ] Final plans map every task to automated checks or explicit evidence checks.
-- [ ] No three consecutive tasks lack automated verification.
-- [ ] All references exist; no watch commands or live services.
-- [ ] All eight isolated pairs reach 100% direct coverage.
-- [ ] Full combined-tree gate passes.
-- [ ] Independent round evidence, complete ledger and headers pass.
-- [ ] Provenance is audited for each genuine bug.
-- [ ] nyquist_compliant and wave_0_complete reflect executed evidence.
+- [x] Final plans map every task to automated checks or explicit evidence checks.
+- [x] No three consecutive tasks lack automated verification.
+- [x] All references exist; no watch commands or live services.
+- [x] All eight isolated pairs reach 100% direct coverage.
+- [x] Full combined-tree gate passes with exact-input reuse proof.
+- [x] Independent round evidence, complete ledger and all 19 headers pass.
+- [x] Provenance is audited for all five genuine bugs.
+- [x] nyquist_compliant and wave_0_complete reflect executed evidence.
 
-**Approval:** Pending execution and independent validation. Phase 1 is an
-unchanged-source baseline for planning, not proof of future Phase 2 edits.
+**Approval:** Automated/evidence validation is complete. Independent final phase
+audits and maintainer judgment remain parent-owned and pending. E-02-01,
+P-02-01 and P-02-02 remain flagged as stated above. CLOUD-01 overall is not
+marked complete here. Phase 1 approval does not approve Phase 2 scope.
 
 ## Wave 1 measured evidence
 
@@ -197,3 +200,114 @@ was dispatched. Its recorded elapsed time includes the delayed closeout.
 This clean verified HEAD replaces the Wave 3 reuse reference. Final ledger,
 independent phase audits and phase-end judgments remain pending. Subsequent
 planning-only edits can reuse this result only after exact input comparison.
+
+## Final evidence audit and reuse
+
+The delegated coordinator audit runs in the same feature worktree, isolation
+none, on Node v26.11.1. Current audit revision is
+0a25640291039195ce9db2f23bc939be1819888e. The tracer was committed separately
+with enabled hooks; its structural command emits LEDGER_TRACER_OK before and
+after the commit. 02-FINDINGS.md now records all 19 cloud files, 55 stable
+accepted/fixed IDs, six chronological independent rounds, five genuine bugs,
+eight separate assertion controls and both unconfirmed concerns.
+
+Exact comparison command:
+git diff e57e7d4d3a6276838a8d5024cdb0644413d28d75 -- . ':(exclude,glob).planning/**/*.md'.
+Observed exit 0 and empty diff. git ls-files --others --exclude-standard
+has no entries at the audit snapshot. Current executable source/test/helper,
+dependency, configuration and tool inputs match the clean full-gate reference.
+The runtime is unchanged. Subsequent edits are only the three owned planning
+Markdown records, and that comparison must remain empty through records closeout.
+The same-session full npm run check is reused under local-verification; no
+fresh execution of the full suite is claimed. Its command, real exit 0, clean
+reference, Node version, scope, observation time and 2400-second limit are
+recorded in Wave 4 above. The retained log was read during this audit.
+
+Fresh targeted command at the audit snapshot:
+npm run build:test && node --test dist-test/test/packaging/licenseHeaders.test.js.
+Observed exit 0, five executed/passed cases, zero failed/skipped/cancelled.
+The actual packaging owner checks LICENSE/NOTICE and source SPDX only. Separate
+inspection verifies every current cloud source/test/helper header, copyright,
+overview and blank separator. LICENSE/NOTICE retain the original mixed boundary.
+No licensing or executable file was edited by this plan.
+
+### Isolated owner evidence
+
+All eight exact npm run test:coverage:direct selectors are recorded in their
+batch reports. Each owner ran alone and passed at 100% lines/functions/branches.
+The fresh native compiled-module LCOV files below were independently read and
+all covered/total metrics reconciled. Their source/test inputs match current
+HEAD. These are compiled-module denominators; source-mapped merged LCOV uses
+different line denominators and is not substituted for them.
+
+| Source / mirrored owner stem | Cases | Native lines | Functions | Branches | Fresh native LCOV |
+| --- | --- | --- | --- | --- | --- |
+| auth | 69 | 430/430 | 39/39 | 115/115 | /private/tmp/guardian-auth-r1-direct-current.lcov |
+| shadow | 55 | 339/339 | 30/30 | 74/74 | /private/tmp/guardian-shadow-final.lcov |
+| api | 33 | 156/156 | 14/14 | 28/28 | /private/tmp/guardian-api-round1-final.lcov |
+| types | 77 | 69/69 | 14/14 | 31/31 | /private/tmp/guardian-types-final.lcov |
+| errors | 5 | 71/71 | 8/8 | 9/9 | /private/tmp/guardian-errors-final.lcov |
+| httpDispatcher | 3 | 23/23 | 1/1 | 2/2 | /private/tmp/guardian-transport-http-final.lcov |
+| mqttTransport | 21 | 118/118 | 20/20 | 24/24 | /private/tmp/guardian-transport-mqtt-final.lcov |
+| sigv4 | 9 | 61/61 | 4/4 | 5/5 | /private/tmp/guardian-transport-sigv4-final.lcov |
+
+Every source path is src/cloud/<stem>.ts and its mirrored owner is
+test/cloud/<stem>.test.ts, compiled under dist-test/test/cloud. No owner is
+skipped or cancelled. Selected-pair runs do not refresh coverage/direct.lcov.
+The fresh Wave 4 full gate does refresh it from all 43 isolated pairs. This
+audit independently confirmed all eight cloud records there are complete.
+
+The actual staged selector in scripts/test-coverage-direct.mjs broadens
+test-support and feature TS changes to all pairs. Passing hooks and actual Git
+paths corroborate ALPN header commit f5d2456755a02c8508caf5f729447bf38f2067bc,
+API seed commit 28a65e176df0488d13d38233391780f0ef7922bb and signing seed commit
+27a5df7070e843c34e9d39ca1985f0c4daaba1b5. The auth filename/header edits also
+select all pairs. Both seed helpers received independent complete-file review;
+no helper meta-test or test-only production hook was introduced.
+
+### Provenance and threat checks
+
+All five complete genuine records, including both priorEvidence archives,
+classify RED_EVIDENCE_OK with exit 0 and intended active target failures. Actual
+Git ancestry, evidence-only paths, unchanged production blobs and complete
+saved regressions were inspected. AUTH-015 and SHADOW-010 patches are exact
+GREEN diffs; AUTH-001/API-015 have formatter-only differences, and API-014 also
+has lint-required callback block spelling. Inputs and assertions correspond
+semantically; the latter three are not claimed byte-identical. No setup or
+hook failure is used as RED. Eight mutation controls have separate failure,
+byte-exact restoration and rebuilt GREEN receipts and supply no bug proof.
+
+| Threat | Audited mitigation / result |
+| --- | --- |
+| T-02-14 | Actual report IDs, six independent rounds, five classifier/semantic failures and source/evidence/fix objects reconcile; no subject-only provenance claim. |
+| T-02-15 | Serial ownership, exact restoration receipts, clean-input full-gate reference and current empty non-Markdown diff; no untracked executable input or active experiment remains. |
+| T-02-16 | Ledger/validation contain synthetic sanitized evidence and fixed diagnostics; no live private store, vendor response, account or local-network identifier was read for this audit. Enabled secret hooks pass on records commits. |
+| T-02-SC | No package installation or dependency change occurred. |
+
+Fallow guard exits 0 with no configured architecture restrictions. This is a
+boundary-policy observation, not security certification. Fallow audits before
+the records commits use --base HEAD --format json --quiet --explain; real exits
+and verdicts are retained. Enabled foreground hooks run after the required
+SKIP=npm-check pre-commit run --files step. Metadata-only npm-check no-files
+selection is accurate incremental scope, not a substitute full gate.
+
+### Retained concerns and phase-end judgment
+
+API dot-only identifiers remain UNCONFIRMED, unresolved and uncounted:
+sendCommand('..') reaches /data and sendCommand('.') reaches /devices/data.
+WHATWG URL normalization changes the command target even though the public
+string/wire contracts accept these inputs. The documented vendor shape is no
+established hard precondition or observed occurrence. No speculative validation
+was added and this concern is neither fixed nor dismissed.
+
+ALPN active HTTP/2 session-close remains UNCONFIRMED, unresolved and uncounted:
+the helper uses server.close without session tracking/destruction. Expected
+HTTP/1.1 cases pass; no executed current failure establishes a finding. No
+unmeasured teardown guarantee or protocol redesign is inferred.
+
+E-02-01 remains one unclassified/unresolved fallback assumption. P-02-01 safety
+and P-02-02 truthful completion remain descriptorless, flagged-unverified
+judgment prohibitions. All three and both unconfirmed concerns are carried
+to the parent security/verifier/maintainer review. No inherited Phase 1 approval
+or automated taxonomy completion is claimed. No D-03 stop occurred in the
+audited chronology; CLOUD-01 overall and phase advancement remain parent-owned.
