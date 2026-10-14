@@ -3,7 +3,8 @@
 Milestone: code-review-sweep. Requirement: DEV-01. Batch baseline:
 55627f52d3f9ce5e94e484af268b4555c0d15c7b. One inventory and correction counter
 span 03-02 through 03-04. Initial triage is round 0. The current correction
-verdict and remaining owner handoff are recorded below.
+verdict and bounded owner-return history are recorded below. Correction round 2
+closes the code inventory; the coordinator's combined gate remains pending.
 
 ## Initial Independent Review
 
@@ -104,6 +105,7 @@ this is not a policy-compliance measurement.
 | Initial round 0 | 12 | 0 | 0 | 0 | 0 | 12 |
 | Later initial clarification | 12 | 0 | 0 | 2 | 0 | 14 |
 | Correction round 1 | 14 | 14 | 0 | 1 | 0 | 1 |
+| Correction round 2 | 1 | 1 | 0 | 0 | 0 | 0 |
 
 The complete independent correction review follows 03-04's initial repairs.
 Tracer checks, candidate clarifications and ordinary checks are not rounds.
@@ -670,3 +672,96 @@ No genuine RED, assertion control, full gate or overall DEV-01 closure is
 claimed. The coordinator owns the combined gate and shared records. WINDOWS
 46 and 47 remain explicitly unwaived; all earlier failures and histories above
 are preserved.
+
+## Independent Full Correction Review — Round 2
+
+Original typed reviewer /root/phase3_water/decoding_reviewer re-read all seven
+complete files at clean e8b99aa3c3ca42bedef002f16561fb7c93b524ee: family,
+Gemini and waterLevel sources and owners, plus geminiSeeds. It read current
+full report and actual family owner, complete applicable rulebooks, context,
+protocol, prior summaries, canonical decisions, actual consumers, Git objects
+and native evidence. Fresh GSD_RUNTIME=codex role resolution returned high
+effort with omitted model ID; configured reviewer skills were applied. The
+freshly persisted isolation-none sentinel was read directly. The review was
+serial and read-only: no code, compiled output, index, Git or planning mutation.
+
+Opening 1 - fixed 1 - rejected 0 + new 0 + reopened 0 = closing 0.
+CR-03-DECODING-015 is independently fixed. Open IDs: none. All fifteen IDs
+remain resolved. The counter is round 2, with initial twelve IDs, two later
+initial additions and round 1's new cause preserved. No accepted fix or SC-03
+reopened, no nonreducing open round occurred, and round four was not reached.
+D-03 has no stop trigger. This verdict was reported before further record work.
+
+| ID | Final disposition at e8b99aa3 | Current evidence |
+| --- | --- | --- |
+| 001 | Resolved | Complete seven-file header inventory below |
+| 002 | Resolved | Family 37-39; Gemini source 117-120,198-200; owner 51-52,164; actual firmware/safety consumers |
+| 003 | Resolved | Family capability/command descriptions 212-215 |
+| 004 | Resolved | Family documented public variants 44-53 and exact union 64; approved visibility amendment |
+| 005 | Resolved in code | Gemini 120,349; trace-process gap remains unwaived |
+| 006 | Resolved | Gemini actual scope/guard explanation 228-230 |
+| 007 | Resolved | Gemini whole independent invalid results 303-509; complete test_timestamp state/verdict 449-477 |
+| 008 | Resolved | Separate independent recent/ancient literals 575-607 |
+| 009 | Resolved | Fresh documented concern factories at helper 17-65; independent expectations |
+| 010 | Resolved | Separate ordinary AAA; combined phases only for throwing expressions |
+| 011 | Resolved | Narrow copying Proxy 194-215; four public TypeError cases 610-640 |
+| 012 | Resolved | Helper telemetry 55; canonical data 59 |
+| 013 | Resolved | Six native TypeError refusal cases at water owner 38-45 |
+| 014 | Resolved | Complete independently literal map entries at water owner 73-88 |
+| 015 | Fixed this round | Family owner 85-86 accurately describes positive literal 87-97; nine compiler negatives remain |
+
+The reviewer inspected the actual 1e8b074 cause object and independently
+confirmed that replacing the exact prior comment produces the current family
+owner byte-for-byte. Positive literals, all nine compiler negatives, non-comment
+tokens and production files are preserved. Actual paths, ancestry, native
+pre-step/normal-hook ordering and the separate e8b99aa record closeout were
+inspected. Original eighteen cause commits remain ancestors; 015 is the
+nineteenth cause commit. The water executor made no family or Gemini edit.
+
+Complete headers remain conforming: source family 1-18, Gemini 1-20 and
+waterLevel 1-22; all three mirrored owners and geminiSeeds 1-9. MIT SPDX is
+first, with correct separate copyright and overview blocks. Public descriptions,
+required undefined shape, compiler negatives, fresh seeds, guarded lookup and
+official command bodies remain intact.
+
+### Check Results and Evidence Limits
+
+The reviewer independently inspected native /tmp/family-015-*.json records:
+declaration selector exit 0 at 18:34:59.266009Z; fresh build exit 0 at
+18:35:25.231379Z; subsequent Gemini owner 88/88, zero fail/skip/cancel/todo;
+guard exit 0; cause audit exit 0/verdict pass. Clean exact-file pre-step ended
+18:35:46.822005Z before normal commit launch 18:35:53.875409Z, with commit
+exit 0 at 18:36:06.977335Z and selected check:commit passing. No numerical
+runtime coverage is claimed for the declaration-only family pair.
+
+Same-session water evidence remains applicable to unchanged source/owner and
+runtime inputs: successful isolated selectors, fresh combined 109/109 owners
+(water 21, Gemini 88), complete 2/2 legal-31/illegal-2 probes and native one-record
+compiled water LCOV 62/62 lines, 2/2 functions, 4/4 branches. The changed family
+owner has fresh declaration evidence; its comment-only repair changes no
+assertion or emitted behavior. Retained Gemini native percentages and the
+isolated selector establish 100% coverage. The historical 247/247 count stays
+independently unconfirmed; the older source-mapped 248/248 artifact remains
+a distinct representation, not substituted evidence.
+
+Both successful Gemini controls retain an executed intended ERR_ASSERTION
+failure. The TypeError-before-assert attempt remains unsuccessful. Saved bytes
+match actual source blobs; exact restoration and fresh rebuilt GREEN remain
+verified. Actual SC-03 whole-snapshot, nested-presence, frozen and canonical
+refusal cases remain intact. STATE files are unchanged since their closing review.
+
+Fallow orientation after live help used review against baseline 55627f52 with
+--brief --format json --quiet, raw exit 0 and reported verdict pass. Orientation
+is not a gate. Unconfigured architecture zones and rule packs confer no
+measured policy-compliance claim.
+
+WINDOWS 46 and 47 remain unwaived process gaps. Earlier failed attempts,
+private-interface conflict, approved amendment, retries and controls remain
+preserved. No later check establishes missing earlier trace or ordering.
+No genuine production behavior bug was accepted; no conditional RED record,
+mutation, install or private input was introduced.
+
+DECODING code review is independently closed at round 2. The earlier coordinator
+full gate predates water test changes and cannot prove this tree. A fresh
+coordinator npm run check remains required after terminal handoff. Overall
+DEV-01, phase completion and E-03-01/P-03-01/P-03-02 judgments remain pending.
