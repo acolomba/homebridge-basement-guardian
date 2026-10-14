@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/** @fileoverview Verifies family resolution and per-device explanation cadence. */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
