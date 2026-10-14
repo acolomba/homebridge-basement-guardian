@@ -398,11 +398,8 @@ test('refuses a device response whose shape the plugin cannot read', async () =>
   );
 });
 
-// The body is the NORMALIZED record, not the wire record: serial at the top level
-// and none of the vendor's other keys. That is the only payload that
-// discriminates, because it is exactly the shape the plugin used to accept
-// unwrapped. A wire record here would be refused for the wrong reason and prove
-// nothing about the envelope.
+// A normalized record places the serial number at the top level. The vendor
+// envelopes require nested attributes, so this payload distinguishes the wire boundary.
 test('refuses a device list the vendor sent as a bare top-level array', async () => {
   // arrange
   const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify([geminiDevice()]), { status: 200 }));
@@ -422,7 +419,7 @@ test('refuses a device list the vendor sent as a bare top-level array', async ()
   );
 });
 
-// The body is the NORMALIZED record for the same reason as the case above.
+// A normalized device lacks the required single-device envelope.
 test('refuses a single device the vendor sent with no envelope around it', async () => {
   // arrange
   const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(geminiDevice()), { status: 200 }));
@@ -862,12 +859,8 @@ test('says nothing about the installation in the command user agent', async () =
   verify(httpFetch);
 });
 
-// A real loopback connection over the production httpFetch port, not a mocked fetch: undici's
-// HTTP/2 idle-session teardown can leave an uncaught InformationalError, so which protocol actually
-// goes out on the wire is itself the behavior under test, not an implementation detail a mock could
-// paper over. The port is overridden here to the real production one rather than left at
-// apiOptions()'s test-default global fetch, because proving the PRODUCTION wiring never negotiates
-// HTTP/2 is the whole point of this case.
+// The loopback server offers HTTP/2. The production undici port must negotiate
+// HTTP/1.1 to avoid an uncaught idle-session teardown error.
 test('never negotiates HTTP/2 with the vendor, even when the server offers it', async (t) => {
   // arrange
   const server = await startAlpnServer(JSON.stringify(deviceListBody([])));
