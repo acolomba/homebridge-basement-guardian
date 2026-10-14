@@ -606,3 +606,75 @@ timestamps and separate empty stderr is `cause004-control-owner.stdout` and
 GREEN; no control mutation is staged or committed. The rebuilt GREEN owner
 trailer reports 2 pass, 0 fail/cancel/skip/todo. This is separate from D-04
 genuine production bug history. No genuine production bug was found.
+
+CR-04-PORTS-004 committed as
+`84f4ca8d82f72d435895e31fe49aa0e7d85531a7`, owner and report only.
+`cause004-prestep` ran exact
+`SKIP=npm-check pre-commit run --files test/runtime/clock.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0, clean on the first attempt before staging. `cause004-commit` retains
+the exact cwd/toplevel/feature-branch and restored-source guards, named staging
+and normal foreground commit, raw exit 0. Its pre-commit
+`npm run check:commit` passed. All four cause commits passed that incremental
+gate and gitlint; no hook failed, formatter changed inputs, or bypass occurred.
+Exact complete pre-step and commit streams for all four causes are retained.
+
+### Current disposition and handoff
+
+At current source revision `84f4ca8d82f72d435895e31fe49aa0e7d85531a7`:
+
+| Accepted cause | Current revision-qualified location | Disposition / commit |
+| --- | --- | --- |
+| CR-04-PORTS-001 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:src/runtime/accessoryStore.ts:1`, `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/accessoryStore.test.ts:1` | Repaired; `227c799cebde0e77be9a85c605348ad00add1a69` |
+| CR-04-PORTS-002 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/accessoryStore.test.ts:11` | Repaired; `ce3608815f4a9561a4807c209ae2144e7757d2cf` |
+| CR-04-PORTS-003 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:src/runtime/clock.ts:1`, `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/clock.test.ts:1` | Repaired; `fd53a74eca0be5f5aece5717f6403756460dcd9b` |
+| CR-04-PORTS-004 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/clock.test.ts:26` | Repaired; `84f4ca8d82f72d435895e31fe49aa0e7d85531a7` |
+| CR-04-PORTS-005 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:src/runtime/monotonicClock.ts:1`, `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/monotonicClock.test.ts:1` | Open; assigned 04-02-01 |
+| CR-04-PORTS-006 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/monotonicClock.test.ts:17` | Open; assigned 04-02-01 |
+| CR-04-PORTS-007 | `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:src/runtime/timers.ts:1`, `84f4ca8d82f72d435895e31fe49aa0e7d85531a7:test/runtime/timers.test.ts:1` | Open; assigned 04-02-02 |
+
+Original opening set: 001/002/003/004/005/006/007 (7). Repaired set:
+001/002/003/004 (4). Rejected accepted IDs: none. New accepted IDs: none.
+Reopened IDs: none. Continuing open set: 005/006/007 (3: 1 BLOCKER, 2 WARNING).
+Accounting is 7 - 4 - 0 + 0 + 0 = 3. This is a cause-repair handoff, not an
+independent correction. Full PORTS batch remains OPEN, correction counter 0;
+the complete correction waits for 04-02 and covers all eight original files.
+No D-03 correction stop trigger has occurred. The original review frontmatter
+and observation text remain the original round-0 evidence.
+
+Task 04-01-01 tracer was checked again at this current revision:
+`tracer-after-build` (`npm run build:test`), `tracer-after-owner`
+(`node --test --test-reporter=tap dist-test/test/runtime/accessoryStore.test.js`),
+and `tracer-after-direct`
+(`npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts`)
+all returned 0. There are zero declared runtime cases; the native TAP has one
+passing file subtest, with no failures/skips/cancellations. Strict positive and
+negative shapes remain compiled. Both tasks' accepted causes are disposed.
+
+Current blobs are source store `a7ce446ff9d47ec6106d0a6f609bff1472b9677f`,
+store owner `4da2a0ab4d8e106c115978e2c55be25a79cab07e`, source clock
+`c6b98a6e2c6863ae0a567d38f1665e40fceb122b`, and clock owner
+`76e54e0379e93a0827c99cf0de959a64edfa463a`.
+`final-source-contracts` independently compared every source byte from the
+original public documentation through EOF against the initial Git source,
+exit 0: both API/documentation/implementation suffixes are unchanged.
+Only the approved source headers differ. `final-future-unchanged` compared
+all four 04-02 paths against the initial commit with `git diff --exit-code`,
+exit 0. Their initial blobs still apply. `final-git` retains all four actual
+commit hashes, ancestry and exact named paths. No deletion or new executable
+file was introduced. No source control experiment enters those commits.
+
+Native executable-clock direct acceptance is isolated 100% lines/functions/
+branches under the existing selector. No numeric declaration denominator or
+new compiled/merged LCOV count is claimed. Selected runs do not refresh merged
+`coverage/direct.lcov`. Node 26.11.1 is the observed local toolchain, not new
+evidence for the declared Node 22/24 compatibility matrix. No full
+`npm run check`, Cucumber, live vendor, hardware or private-input check was run
+by this fixer. The parent still owes the current combined-wave full gate and
+later phase verification; RUN-01 stays Pending.
+
+This final report metadata is left for the parent's separate SUMMARY/record
+commit, as authorized. Only this report may be dirty at return; all four cause
+source/owner changes are committed. No SUMMARY, shared state, ledger, validation,
+seal, requirement, ROADMAP or WINDOWS file was modified. All command processes
+have completed, and writer/build/control/Git/report resources are released at
+the fixer's terminal response.
