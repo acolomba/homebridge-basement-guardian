@@ -257,7 +257,7 @@ describe('SHADOW_TOPICS', () => {
   }
 });
 
-describe('start', () => {
+describe('createShadowClient', () => {
   test('subscribes once to the three subscribable topics of every device and to nothing else', async () => {
     // arrange
     const { client, transports } = harness();
@@ -403,9 +403,7 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual({ pending: retry.pending, attempt: retry.attempt }, { pending: true, attempt: 1 });
   });
-});
 
-describe('handshake signing', () => {
   test('signs the handshake from the cached credentials and refreshes the client identifier', async () => {
     // arrange
     const { client, transports } = harness();
@@ -432,9 +430,7 @@ describe('handshake signing', () => {
       },
     );
   });
-});
 
-describe('message routing', () => {
   test('turns an update-accepted reported data section into a patch carrying the document version', async () => {
     // arrange
     const { client, transports, patches } = harness();
@@ -597,9 +593,7 @@ describe('message routing', () => {
       assert.deepStrictEqual({ patches, logged }, { patches: [], logged: [] });
     });
   }
-});
 
-describe('close', () => {
   test('ends the transport', async () => {
     // arrange
     const { client, transports } = harness();
@@ -640,9 +634,7 @@ describe('close', () => {
     // assert
     assert.deepStrictEqual({ ends: transports[0]?.ends(), connections: transports.length }, { ends: 1, connections: 1 });
   });
-});
 
-describe('the connection lifecycle', () => {
   test('reports connected between the connect notification and the close that follows it', async () => {
     // arrange
     const { client, transports } = harness();
