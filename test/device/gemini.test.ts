@@ -179,21 +179,27 @@ describe('validate', () => {
   });
 });
 
-// A record whose one field answers correctly the first time it is read and
-// differently afterwards. `validate()` reads each field once, so this is the
-// broken contract a group decoder's guard exists to catch.
-function fieldChangingAfterValidation(record: Record<string, unknown>, field: string, valueAfterValidation: unknown): Record<string, unknown> {
-  const reported = record[field];
-  let reads = 0;
+// Deliberately violates the stable-record contract: a scope check reads one
+// value and its decoder reads another, exercising the decoder's live guards.
+function fieldChangingAfterCheck(record: Record<string, unknown>, field: string, valueAfterCheck: unknown): Record<string, unknown> {
+  let checked = false;
 
-  return Object.defineProperty({ ...record }, field, {
-    enumerable: true,
-    get: () => {
-      reads += 1;
+  return new Proxy(
+    { ...record },
+    {
+      get(target, property): unknown {
+        if (property === field) {
+          if (checked) {
+            return valueAfterCheck;
+          }
 
-      return reads === 1 ? reported : valueAfterValidation;
+          checked = true;
+        }
+
+        return Reflect.get(target, property);
+      },
     },
-  });
+  );
 }
 
 describe('decode', () => {
@@ -583,33 +589,33 @@ describe('decode', () => {
     });
   });
 
-  test('throws when a boolean field stops matching the type validate() confirmed', () => {
+  test('throws when a boolean field changes type after its scope check', () => {
     // arrange
-    const snapshot = buildSnapshot(fieldChangingAfterValidation(validTelemetry(), 'primary_pump_running', 'not-a-boolean'));
+    const snapshot = buildSnapshot(fieldChangingAfterCheck(validTelemetry(), 'primary_pump_running', 'not-a-boolean'));
 
     // act & assert
     assert.throws(() => geminiFamily.decode(snapshot), TypeError);
   });
 
-  test('throws when a number field stops matching the type validate() confirmed', () => {
+  test('throws when a number field changes type after its scope check', () => {
     // arrange
-    const snapshot = buildSnapshot(fieldChangingAfterValidation(validTelemetry(), 'water_level', 'not-a-number'));
+    const snapshot = buildSnapshot(fieldChangingAfterCheck(validTelemetry(), 'water_level', 'not-a-number'));
 
     // act & assert
     assert.throws(() => geminiFamily.decode(snapshot), TypeError);
   });
 
-  test('throws when hours_of_protection stops matching the band validate() confirmed', () => {
+  test('throws when hours_of_protection changes band after its scope check', () => {
     // arrange
-    const snapshot = buildSnapshot(fieldChangingAfterValidation(validTelemetry(), 'hours_of_protection', 64));
+    const snapshot = buildSnapshot(fieldChangingAfterCheck(validTelemetry(), 'hours_of_protection', 64));
 
     // act & assert
     assert.throws(() => geminiFamily.decode(snapshot), TypeError);
   });
 
-  test('throws when a metadata string field stops matching the type validate() confirmed', () => {
+  test('throws when a metadata string field changes type after its check', () => {
     // arrange
-    const snapshot = buildSnapshot(validTelemetry(), fieldChangingAfterValidation(validMetadata(), 'mcu_firmware_version', 123));
+    const snapshot = buildSnapshot(validTelemetry(), fieldChangingAfterCheck(validMetadata(), 'mcu_firmware_version', 123));
 
     // act & assert
     assert.throws(() => geminiFamily.decode(snapshot), TypeError);
