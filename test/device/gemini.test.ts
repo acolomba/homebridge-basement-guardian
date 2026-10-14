@@ -604,8 +604,33 @@ describe('decode', () => {
     const recent = { ...buildSnapshot(telemetry, validMetadata()), receivedAt: RECEIVED_AT, deviceTimestamp: RECEIVED_AT };
     const ancient = { ...buildSnapshot(telemetry, validMetadata()), receivedAt: 0, deviceTimestamp: 0 };
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.decode(ancient), geminiFamily.decode(recent));
+    // act
+    const recentState = geminiFamily.decode(recent);
+    const ancientState = geminiFamily.decode(ancient);
+
+    // assert
+    assert.deepStrictEqual(recentState, {
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+      power: { mainsPresent: true },
+      battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+      fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+      connectivity: { reportedOffline: false },
+      'self-test': { running: false, testedAt: undefined },
+      'alarm-mute': { muted: false },
+      metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+    });
+    assert.deepStrictEqual(ancientState, {
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+      power: { mainsPresent: true },
+      battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+      fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+      connectivity: { reportedOffline: false },
+      'self-test': { running: false, testedAt: undefined },
+      'alarm-mute': { muted: false },
+      metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+    });
   });
 
   test('throws when a boolean field stops matching the type validate() confirmed', () => {
