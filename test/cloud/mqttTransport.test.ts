@@ -236,7 +236,20 @@ test('hands the live client to the signer, so the refreshed identifier reaches t
 
 test('forwards the connect notification to the registered handler', () => {
   // arrange
-  const { transport, handlers } = harness();
+  const { transport, client } = harness();
+  let notifyConnect: MqttClientEvents['connect'] | undefined;
+  const on = mock<MqttClientLike['on']>({ exactParams: true, name: 'register connect listener' });
+  when(() => {
+    on(
+      'connect',
+      It.matches((handler: MqttClientEvents['connect']) => {
+        notifyConnect = handler;
+
+        return typeof handler === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.on = on;
   const observed: string[] = [];
   const onConnect = mock<MqttClientEvents['connect']>({ exactParams: true, name: 'connect notification' });
   when(() => {
@@ -248,16 +261,30 @@ test('forwards the connect notification to the registered handler', () => {
     observed.push('connect');
     onConnect(...notification);
   });
-  handlers.connect?.();
+  notifyConnect?.();
 
   // assert
   assert.deepStrictEqual(observed, ['connect']);
+  verify(on);
   verify(onConnect);
 });
 
 test('forwards the message notification with its topic and payload', () => {
   // arrange
-  const { transport, handlers } = harness();
+  const { transport, client } = harness();
+  let notifyMessage: MqttClientEvents['message'] | undefined;
+  const on = mock<MqttClientLike['on']>({ exactParams: true, name: 'register message listener' });
+  when(() => {
+    on(
+      'message',
+      It.matches((handler: MqttClientEvents['message']) => {
+        notifyMessage = handler;
+
+        return typeof handler === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.on = on;
   const messages: { topic: string; payload: Buffer }[] = [];
   const onMessage = mock<MqttClientEvents['message']>({ exactParams: true, name: 'message notification' });
   when(() => {
@@ -269,16 +296,30 @@ test('forwards the message notification with its topic and payload', () => {
     messages.push({ topic: notification[0], payload: notification[1] });
     onMessage(...notification);
   });
-  handlers.message?.('topic-a', Buffer.from([0x00, 0xff, 0x80, 0x41]));
+  notifyMessage?.('topic-a', Buffer.from([0x00, 0xff, 0x80, 0x41]));
 
   // assert
   assert.deepStrictEqual(messages, [{ topic: 'topic-a', payload: Buffer.from([0x00, 0xff, 0x80, 0x41]) }]);
+  verify(on);
   verify(onMessage);
 });
 
 test('forwards the error notification with its error', () => {
   // arrange
-  const { transport, handlers } = harness();
+  const { transport, client } = harness();
+  let notifyError: MqttClientEvents['error'] | undefined;
+  const on = mock<MqttClientLike['on']>({ exactParams: true, name: 'register error listener' });
+  when(() => {
+    on(
+      'error',
+      It.matches((handler: MqttClientEvents['error']) => {
+        notifyError = handler;
+
+        return typeof handler === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.on = on;
   const observed: unknown[] = [];
   const failure = new Error('socket failed');
   const onError = mock<MqttClientEvents['error']>({ exactParams: true, name: 'error notification' });
@@ -291,16 +332,30 @@ test('forwards the error notification with its error', () => {
     observed.push(notification[0]);
     onError(...notification);
   });
-  handlers.error?.(failure);
+  notifyError?.(failure);
 
   // assert
   assert.deepStrictEqual(observed, [failure]);
+  verify(on);
   verify(onError);
 });
 
 test('forwards the close notification to the registered handler', () => {
   // arrange
-  const { transport, handlers } = harness();
+  const { transport, client } = harness();
+  let notifyClose: MqttClientEvents['close'] | undefined;
+  const on = mock<MqttClientLike['on']>({ exactParams: true, name: 'register close listener' });
+  when(() => {
+    on(
+      'close',
+      It.matches((handler: MqttClientEvents['close']) => {
+        notifyClose = handler;
+
+        return typeof handler === 'function';
+      }),
+    );
+  }).thenReturn(undefined);
+  client.on = on;
   const observed: string[] = [];
   const onClose = mock<MqttClientEvents['close']>({ exactParams: true, name: 'close notification' });
   when(() => {
@@ -312,10 +367,11 @@ test('forwards the close notification to the registered handler', () => {
     observed.push('close');
     onClose(...notification);
   });
-  handlers.close?.();
+  notifyClose?.();
 
   // assert
   assert.deepStrictEqual(observed, ['close']);
+  verify(on);
   verify(onClose);
 });
 
