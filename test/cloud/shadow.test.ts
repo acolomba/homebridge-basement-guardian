@@ -71,16 +71,6 @@ function credentials(): ShadowCredentials {
   };
 }
 
-function rotatedCredentials(): ShadowCredentials {
-  return {
-    endpoint: 'broker-two.invalid',
-    clientId: 'client-second',
-    accessKeyId: 'test-next-access-key-id',
-    secretAccessKey: 'test-next-secret-access-key',
-    sessionToken: 'test-next-session-token',
-  };
-}
-
 function silentLog(): Logging {
   function write(): void {
     return undefined;
@@ -684,7 +674,13 @@ describe('createShadowClient', () => {
     await connected(transports[0]);
 
     // act
-    rotate(rotatedCredentials());
+    rotate({
+      endpoint: 'broker-two.invalid',
+      clientId: 'client-second',
+      accessKeyId: 'test-next-access-key-id',
+      secretAccessKey: 'test-next-secret-access-key',
+      sessionToken: 'test-next-session-token',
+    } satisfies ShadowCredentials);
     await nextEventLoopTurn();
 
     // assert
@@ -700,7 +696,13 @@ describe('createShadowClient', () => {
     const { client, transports, rotate } = harness();
     await client.start([DEVICE_A]);
     await connected(transports[0]);
-    rotate(rotatedCredentials());
+    rotate({
+      endpoint: 'broker-two.invalid',
+      clientId: 'client-second',
+      accessKeyId: 'test-next-access-key-id',
+      secretAccessKey: 'test-next-secret-access-key',
+      sessionToken: 'test-next-session-token',
+    } satisfies ShadowCredentials);
 
     // act
     transports[0]?.close();
