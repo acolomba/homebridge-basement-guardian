@@ -1,35 +1,37 @@
 ---
-status: testing
+status: complete
 phase: 03-device-and-persistence-conformance
 source: [03-VERIFICATION.md]
 started: "2026-10-14T21:45:38.598923+00:00"
-updated: "2026-10-14T21:45:38.598923+00:00"
+updated: 2026-10-14T21:57:54.675Z
 ---
 
 ## Current Test
 
-number: 1
-name: E-03-01 — taxonomy completion boundary
-expected: |
-  Accept full-file review and concrete tests as the Phase 3 completion boundary while retaining E-03-01 as an acknowledged, unclassified taxonomy assumption. All 20 files were reviewed, all 38 findings are closed, and the final automated gate passed. This judgment does not claim exhaustive taxonomy coverage or deterministic classification.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. E-03-01 — taxonomy completion boundary
 
 expected: Accept full-file review and concrete tests as the Phase 3 completion boundary while retaining E-03-01 as an acknowledged, unclassified taxonomy assumption. All 20 files were reviewed, all 38 findings are closed, and the final automated gate passed. This judgment does not claim exhaustive taxonomy coverage or deterministic classification.
-result: [pending]
+result: pass
+reported: "pass"
+judgment: Retain E-03-01 as an acknowledged unclassified taxonomy assumption; accept full-file review and concrete tests as the Phase 3 completion boundary without exhaustive taxonomy or deterministic classification claims.
 
 ### 2. P-03-01 — preserved safety telemetry
 
 expected: Confirm that this bounded device/persistence conformance work preserves unknown, stale, omitted and invalid telemetry as absent or untrustworthy without guessed normal measurements or conditions. Independent whole-result tests, scoped controls and unchanged emitted runtime outputs support this judgment. Provisional water meanings, the opaque-key assumption, real hardware and live vendor behavior remain outside the automated evidence.
-result: [pending]
+result: pass
+reported: "pass"
+judgment: Confirm preserved absent or untrustworthy telemetry without guessed normal measurements or conditions in this bounded conformance scope; retain provisional meanings, the opaque-key assumption and hardware/live-vendor limits.
 
 ### 3. P-03-02 — truthful completion and historical limits
 
 expected: Confirm the stated 20-file, 38-closed-finding, zero-genuine-bug, five-successful-control and current passing-gate boundary. One unsuccessful TypeError-before-assert control remains unsuccessful. WINDOWS 46 (commit before the clean pre-step repeat) and 47 (missing exact pre-edit alias trace) remain OPEN and unwaived; current checks cannot reconstruct them. Three early hook streams lack separate retained JSON, and historical Gemini 247/247 remains unconfirmed. This judgment acknowledges those limits without waiving them or claiming later subsystem, hardware or release completion.
-result: [pending]
+result: pass
+reported: "pass"
+judgment: Confirm the stated reviewed and tested completion boundary with all disclosed historical limits. WINDOWS 46/47 remain OPEN and unwaived, three early hook streams lack separate retained JSON, the unsuccessful control supplies no assertion proof, and historical Gemini 247/247 remains unconfirmed. No later subsystem, hardware or release completion is implied.
 
 ### 4. Complete returned, canonical and listener state observations
 
@@ -130,9 +132,9 @@ verification: [{"kind":"other","ref":"03-SEAL-AUDIT.json","status":"pass"},{"kin
 ## Summary
 
 total: 15
-passed: 12
+passed: 15
 issues: 0
-pending: 3
+pending: 0
 skipped: 0
 blocked: 0
 

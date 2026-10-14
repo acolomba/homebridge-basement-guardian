@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Device and Persistence Conformance",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "4",
@@ -46,8 +46,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 3 of 8 · 25% · executing"
+    "label": "Advance to the next step (plan phase 4)",
+    "reason": "Phase 4 of 8 — needs a plan"
   },
-  "updated_at": "2026-10-14T20:21:46.854Z"
+  "updated_at": "2026-10-14T21:58:22.231Z"
 }
