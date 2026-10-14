@@ -88,24 +88,33 @@ describe('validate', () => {
     // arrange
     const snapshot = buildSnapshot(validTelemetry());
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
+    // act
+    const validation = geminiFamily.validate(snapshot);
+
+    // assert
+    assert.deepStrictEqual(validation, { valid: true });
   });
 
   test('returns valid when backup_pump_timestamp and test_timestamp are both present and correctly typed', () => {
     // arrange
     const snapshot = buildSnapshot({ ...validTelemetry(), backup_pump_timestamp: 1_699_999_000, test_timestamp: 1_699_998_000 });
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
+    // act
+    const validation = geminiFamily.validate(snapshot);
+
+    // assert
+    assert.deepStrictEqual(validation, { valid: true });
   });
 
   test('returns valid when every metadata field is present and correctly typed', () => {
     // arrange
     const snapshot = buildSnapshot(validTelemetry(), validMetadata());
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.validate(snapshot), { valid: true });
+    // act
+    const validation = geminiFamily.validate(snapshot);
+
+    // assert
+    assert.deepStrictEqual(validation, { valid: true });
   });
 
   for (const { field, scope, wrongValue } of TELEMETRY_SCOPES) {
@@ -123,8 +132,11 @@ describe('validate', () => {
 
   for (const { field, scope } of TELEMETRY_SCOPES.filter((row) => row.required)) {
     test(`RES-01 attributes a missing ${field} violation to the ${String(scope)} scope`, () => {
+      // arrange
+      const snapshot = buildSnapshot(telemetryWithout(field));
+
       // act
-      const validation = geminiFamily.validate(buildSnapshot(telemetryWithout(field)));
+      const validation = geminiFamily.validate(snapshot);
 
       // assert
       assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'missing', scope }] });
@@ -221,8 +233,11 @@ describe('decode', () => {
       metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
     };
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.decode(snapshot), expectedState);
+    // act
+    const state = geminiFamily.decode(snapshot);
+
+    // assert
+    assert.deepStrictEqual(state, expectedState);
   });
 
   test('decodes backupActivatedAt and every metadata member as undefined when the source omits them', () => {
@@ -255,8 +270,11 @@ describe('decode', () => {
       metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
     };
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.decode(snapshot), expectedState);
+    // act
+    const state = geminiFamily.decode(snapshot);
+
+    // assert
+    assert.deepStrictEqual(state, expectedState);
   });
 
   test('RES-01 omits the power scope for a missing ac_power while the water scope still carries its level', () => {
@@ -627,30 +645,57 @@ describe('capabilities', () => {
     // arrange
     const state = geminiFamily.decode(buildSnapshot(validTelemetry()));
 
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.capabilities(state), ['self-test', 'alarm-mute']);
+    // act
+    const capabilities = geminiFamily.capabilities(state);
+
+    // assert
+    assert.deepStrictEqual(capabilities, ['self-test', 'alarm-mute']);
   });
 });
 
 describe('command', () => {
   test('command("self-test", true) requests test_running true', () => {
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.command('self-test', true), { desiredData: { test_running: true } });
+    // arrange
+    const requested = true;
+
+    // act
+    const command = geminiFamily.command('self-test', requested);
+
+    // assert
+    assert.deepStrictEqual(command, { desiredData: { test_running: true } });
   });
 
   test('command("self-test", false) requests test_running false', () => {
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.command('self-test', false), { desiredData: { test_running: false } });
+    // arrange
+    const requested = false;
+
+    // act
+    const command = geminiFamily.command('self-test', requested);
+
+    // assert
+    assert.deepStrictEqual(command, { desiredData: { test_running: false } });
   });
 
   test('command("alarm-mute", true) requests alarm_audio_muted true', () => {
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.command('alarm-mute', true), { desiredData: { alarm_audio_muted: true } });
+    // arrange
+    const requested = true;
+
+    // act
+    const command = geminiFamily.command('alarm-mute', requested);
+
+    // assert
+    assert.deepStrictEqual(command, { desiredData: { alarm_audio_muted: true } });
   });
 
   test('command("alarm-mute", false) requests alarm_audio_muted false', () => {
-    // act & assert
-    assert.deepStrictEqual(geminiFamily.command('alarm-mute', false), { desiredData: { alarm_audio_muted: false } });
+    // arrange
+    const requested = false;
+
+    // act
+    const command = geminiFamily.command('alarm-mute', requested);
+
+    // assert
+    assert.deepStrictEqual(command, { desiredData: { alarm_audio_muted: false } });
   });
 });
 
