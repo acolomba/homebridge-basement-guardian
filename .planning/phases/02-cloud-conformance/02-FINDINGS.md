@@ -413,3 +413,25 @@ The routing concern is now fixed; vendor occurrence/security impact were never
 claimed. ALPN active-H2 teardown and E-02-01/P-02-01/P-02-02 judgments remain
 pending. Independent validation/security refresh and goal verification follow;
 this closure does not mark CLOUD-01 overall or the phase complete.
+
+## Maintainer Judgment
+
+The maintainer answered pass to each of the three distinct Phase 2 UAT
+checkpoints on 2026-10-14. 02-UAT.md retains each actual response and decision.
+
+- E-02-01 is retained as an acknowledged taxonomy assumption. Full-file review
+  and concrete tests define this phase's completion boundary; no exhaustive
+  taxonomy claim is made.
+- P-02-01 is explicitly confirmed for this cloud scope: absent or untrustworthy
+  telemetry semantics remain, with no guessed normal measurement/condition and
+  device-family interpretation outside cloud.
+- P-02-02 is explicitly confirmed for the stated 19-file inventory/22-file review,
+  56 fixed findings, six genuine histories and exact-input full gate. Active-H2
+  teardown stays unconfirmed/unmeasured, and cleanup claims cover current
+  HTTP/1.1 consumers only. No vendor occurrence, hardware completion or risk
+  waiver is claimed.
+
+These decisions supersede the earlier pending judgment snapshots. The taxonomy
+and ALPN limits remain visible; they are not invented findings or silently
+dismissed guarantees. UAT is 3/3 passed, zero issues/skips/blocked/pending.
+Canonical goal-verification sealing and shared phase advancement follow.
