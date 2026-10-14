@@ -221,3 +221,193 @@ No fixed finding reopened; no nonreducing correction or fourth round occurred.
 Overall DEV-01 remains pending. Existing WINDOWS 46 records the earlier
 STATE CR-008 pre-step ordering deviation and remains explicitly open process
 history; this family contribution neither waives nor closes it.
+
+## Gemini Execution Evidence
+
+Gemini execution started from be7a2350ecf7e05633c0d44679bf549b0ba6657d and
+finished its code at cd975d25a8f4a545a6a4f6a18794fb469c71fa09. The existing
+features/code-review-sweep checkout and directly read isolation-none sentinel
+were retained. Parent and children serialized code, builds, controls and Git.
+Fixer /root/phase3_gemini/gemini_cause_fixer used role gsd-code-fixer; narrow
+reviewer /root/phase3_gemini/gemini_tracer_review used gsd-code-reviewer. Actual
+GSD_RUNTIME=codex resolve-model calls returned effort high and omitted model
+IDs. Both read their configured complete skills plus the writer/reviewer and
+local-verification rules needed by this contribution.
+
+### Applied Gemini causes
+
+Locations in this table are qualified by the final code revision cd975d25.
+These are initial-pass repair outcomes; full independent DECODING correction
+acceptance remains scheduled after 03-04.
+
+| ID portion | Actual commit | Actual paths | Applied outcome and current location |
+| --- | --- | --- | --- |
+| 007 | b87c55ac489c13e0de7b6ee80911755d37e03edf | test/device/gemini.test.ts | Independent complete invalid telemetry/control/metadata results at 301-512; test_timestamp row 449-477 also expects the complete self-test-only violation |
+| 001 Gemini | 305ed865320e3a618ffab0c66bfa75c5c6d55479 | src/device/gemini.ts; test/device/gemini.test.ts | Separate MIT SPDX/copyright/overview sections at source/owner 1-9; water portion remains |
+| 002 Gemini | 9ec326b0ab9a8962d69b7b9ffbb069e323e7e017 | src/device/gemini.ts; test/device/gemini.test.ts | Actual firmware information use versus safety scope ownership at source 117-120,198-200 and owner 51-52,164 |
+| 005 | a63a9eb01d9ea23941c85c2d1d1a1d6093b442d8 | src/device/gemini.ts | Private alias inlined at scope member 120 and set annotation 349; required undefined values preserved; trace-process gap below |
+| 006 | 5555069b4ba1cee5a3ca64784a8e01cde28216ac | src/device/gemini.ts | Independent per-scope checks and stable-record guard explanation at 228-230; guard bodies unchanged |
+| 008 | 50b5d83542ae8a0f626355a3a8265faac49de137 | test/device/gemini.test.ts | Recent and ancient results each compare with a separate full independent literal at 575-607 |
+| 012 | 35956f11424ea4ba2f4d143afba46cc87224974d | test/device/gemini.test.ts | Snapshot parameter renamed telemetry before relocation; canonical data property retained |
+| 009 | 294f1c90350a95b9587ec6fdab3f9d052e5ce0f9 | test/device/gemini.test.ts; test/device/geminiSeeds.ts | Four reused fresh seed factories moved into their documented, headered concern helper at helper 18,40,50,55 |
+| 011 | e944df894677a1eae774a4295a0dc2863318cd2e | test/device/gemini.test.ts | Narrow Proxy changing-read fixture at 194-215; four existing TypeError guard cases at 610-640 still execute |
+| 010 Gemini | cd975d25a8f4a545a6a4f6a18794fb469c71fa09 | test/device/gemini.test.ts | Ordinary cases have separate arrange/act/assert; only four throwing expressions retain combined phases; water portion remains |
+
+All ten actual introducing commits passed recorded-baseline Fallow audits,
+clean exact-file SKIP=npm-check pre-commit run --files before commit launch,
+and normal foreground git commit hooks, each exit 0. Actual objects match the
+paths above; none deletes a tracked file. The source/header causes are separate
+from assertion repairs. No commit wrapper, hook bypass, amend, branch switch or
+history rewrite was used. Complete command captures include command arrays,
+cwd, UTC start/end, revision, exact dirty diff/untracked bytes, runtime versions,
+unmodified stdout, separate stderr and raw exitCode. The 91-capture index and
+ten-commit ordering/path audit are /tmp/gemini-fixer-handoff.json; native records
+are /tmp/gemini-*.json. For example, the first clean pre-step ended
+17:38:05.171179Z before the commit started 17:38:07.436276Z. The last clean
+code pre-step ended 17:49:26.602548Z before commit launch 17:49:28.581278Z.
+
+### Native tracer, controls and final checks
+
+All commands used Node v26.11.1, npm 11.20.0 and installed dependencies with
+offline synthetic inputs. The invalid test_timestamp tracer independently
+expects all nine required groups: self-test undefined, healthy pump booleans,
+required absent activation timestamp, existing water/power/battery/fault/
+connectivity/mute values and firmware metadata. It also observes the complete
+validation verdict naming only the self-test violation. Expectations never
+come from a production helper. Wrong metadata retains complete independent
+healthy safety groups; absent metadata retains present undefined members.
+Legitimate scalar battery/link promises remain scalar.
+
+- Fresh build:test, native owner and isolated direct selector passed before
+  the 007 commit. Fresh build:test and complete owner were repeated immediately
+  after it and before expansion: 88/88 pass, zero fail/skip/cancel/todo.
+- One redundant doesNotThrow water case was removed. The existing illegal
+  water case compares the whole independently expected result and naturally
+  also fails on a throw. Test count therefore changes from 89 to 88.
+- A deliberate test_timestamp scope=pump mutation was built at b87c55a.
+  The selected decode tracer executed one test but threw TypeError before its
+  assertion: /tmp/gemini-007-control-tap.json, exit 1. This is a failed control
+  attempt, not assertion-discrimination evidence or genuine production RED.
+- Under the same mutation, the named validation case executed one test and
+  failed ERR_ASSERTION on actual pump versus expected self-test. Command:
+  node --test --test-reporter=tap --test-name-pattern
+  'wrong-type test_timestamp violation to the self-test scope'
+  dist-test/test/device/gemini.test.js. Native capture
+  /tmp/gemini-007-control-validation-tap.json records exit 1, start
+  17:39:12.738538Z and end 17:39:13.008768Z. Exact saved source was restored
+  with cmp exit 0; fresh build and full owner then passed. Preservation record
+  verifies the saved bytes equal the actual b87c55a source blob.
+- A second separate control inverted primaryRunning at cd975d25. Command:
+  node --test --test-reporter=tap --test-name-pattern
+  'control field test_timestamp is invalid' dist-test/test/device/gemini.test.js.
+  It executed one test and failed the strengthened complete-state assertion:
+  actual primaryRunning true versus independently expected false. Capture
+  /tmp/gemini-007-healthy-control-tap.json records ERR_ASSERTION, exit 1,
+  start 17:52:22.702524Z and end 17:52:22.994516Z. Exact saved/restored SHA256
+  is 995177d1a87ade122a0abc7b574e6dc7c0b9469bf09bfea50772abb703107a91.
+  No mutated byte was committed.
+- Final restored npm run build:test exited 0, ending 17:52:26.288327Z.
+  The subsequent node --test --experimental-test-coverage --test-reporter=tap
+  dist-test/test/device/gemini.test.js exited 0, ending 17:52:27.158605Z:
+  88 tests, 88 pass, zero fail/skip/cancel/todo. Gemini runtime coverage is
+  100% lines/functions/branches; companion direct LCOV has 247/247 lines,
+  30/30 functions and 85/85 branches. Imported waterLevel's aggregate result
+  is not its owner coverage and is not used as that claim.
+- Final npm run test:coverage:direct -- src/device/gemini.ts
+  test/device/gemini.test.ts exited 0, ending 17:52:31.434469Z at cd975d25.
+  All final captures have empty dirty diff and no untracked inputs; paths are
+  /tmp/gemini-final-restored-build.json, -owner.json and -direct.json.
+- Seed staging selects all 43 existing pairs by the support-path rule at
+  scripts/test-coverage-direct.mjs:113-122. Its normal check:commit passed.
+  Quiet native output does not enumerate per-pair counts. This staged hook
+  does not include the coordinator's required full Cucumber wave gate.
+
+The Proxy fixture copies its input and changes only the selected field after
+its first read. It deliberately breaks the stable-record contract to reach
+four existing public decoder guards. It makes no vendor getter observation,
+adds no public test hook and removes no guard. The new helper supplies fresh
+telemetry/metadata/omission records and snapshot envelopes; whole expected
+results remain independent literals in the owner. All three headers and four
+helper export descriptions were inspected.
+
+### Exact consumers and preservation limits
+
+Four installed Fallow semantic impact commands used dead-code --type-aware
+--type-aware-project tsconfig.json or tsconfig.test.json --symbol-impact
+src/device/gemini.ts:geminiFamily or :GeminiDomainState --format json --quiet.
+All exited 0 with complete status and semantic completeness; records are
+/tmp/gemini-impact-<symbol>-src.json and -test.json. geminiFamily has production
+consumer registry and test-project consumers registry plus the Gemini,
+registry and basementGuardian owners. GeminiDomainState has no external
+production type consumer and one test consumer, its owner. Actual registry
+construction, external test constructors and structural accessory metadata/
+scope readers were read. These public symbol queries do not prove every
+structural downstream read. No public signature, shape or consumer changed.
+
+Guard exited 0 before changes, captured in /tmp/gemini-guard.json. It reports
+no configured architecture zones or rule packs; no measured policy-compliance
+claim follows. /tmp/gemini-preservation.json records equal source tokens after
+equivalent private-alias expansion and identical actual compiler-emitted
+production JavaScript with comments removed versus 55627f52. Emitted SHA256
+is ebf4c87470f4d37531d5e4ca1e7d265a9a5468d7fff57a22e83c67620de84418.
+Required undefined keys, guards, current numeric domains, provisional bands,
+official command bodies, separate clocks and identity/privacy remain intact.
+Numeric-validator concerns remain unconfirmed; no finite/range/unit policy
+was introduced. No genuine behavior bug was accepted, so no conditional
+03-GEMINI-RED-EVIDENCE.json was created.
+
+### Retained attempts and process deviation
+
+The first 007 audit exited 2 because a temporary baseline worktree was
+unavailable; /tmp/gemini-007-audit-sandbox.json retains it. Authorized retry
+/tmp/gemini-007-audit.json exited 0/verdict pass. The denied attempt is not a
+pass. Causes 007 and 011 had formatter pre-step exits 1; each restaged and
+repeated to a clean exit 0 BEFORE its normal commit. Those native records remain.
+
+The first 009 normal commit attempt exited 1 because import-x/order required
+a blank line between import groups. No commit existed from that attempt.
+/tmp/gemini-009-commit.json retains the full hook output. The fixer corrected
+the import group and included the reused telemetryWithout factory in the same
+helper, rebuilt, checked, audited, ran a clean pre-step and retried ordinary
+commit. Only the successful retry created 294f1c9; no partial 009 commit or
+history rewrite occurred.
+
+CR-005 has an explicit trace-process deviation. Before editing at 9ec326b, the
+fixer read the complete source and ran rg -n
+'GeminiFieldScope|untrustedScopesOf|scope:' src/device/gemini.ts. The output
+identified alias declaration 110 and two uses, scope member 122 and set return
+annotation 351. This source-search evidence is in its conversation output.
+It did not run or capture the required alias-specific pre-edit Fallow trace.
+The four public-symbol queries above do not cover this private alias. No later
+check is represented as an earlier trace or as compliant ordering. Expanded
+type/source-token and emitted-JavaScript equality are bounded preservation
+evidence, not replacement trace evidence. The coordinator authorized accurate
+record/summary closeout and owns the WINDOWS disposition. Existing WINDOWS 46
+remains open. No new behavior defect or D-03 reopening is inferred solely from
+this process gap, and no unnecessary source change or history rewrite follows.
+
+### Independent narrow tracer/helper check
+
+The typed read-only reviewer examined complete Gemini source/owner/helper and
+all five specified rulebooks at cd975d25, actual Git objects, command captures,
+controls and restoration hashes. It accepted current unchanged native evidence
+without rebuilding. It found no concrete issue or reopened finding in the
+tracer/helper scope. It confirmed complete independent invalid-self-test and
+age results, fresh documented seeds, all three headers, all four guarded
+TypeErrors, 88/88 tests and all three isolated metrics at 100%. It independently
+confirmed ten clean pre-step ends precede their commit starts and the first
+009 hook attempt created no commit. The separate trace gap is disclosed above.
+This is a narrow tracer/helper clarification, not a full correction round or
+whole-batch acceptance.
+
+### Current DECODING status after Gemini
+
+Original round 0 remains 12 confirmed IDs: 2 BLOCKER, 10 WARNING. No correction
+round has run and its count table above is unchanged. All Gemini portions are
+applied, pending the complete independent correction review. IDs 001 and 010
+still have unapplied water portions; all other initial code portions are
+applied. This two-ID repair remainder is not an independently reconciled
+closing count. No fixed finding reopened or nonreducing/fourth correction
+condition occurred. The coordinator still owns npm run check on the combined
+wave, shared records, process-ledger dispositions and phase advancement.
+DEV-01 remains pending; E-03-01, P-03-01 and P-03-02 remain unresolved judgments.
