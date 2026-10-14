@@ -73,7 +73,7 @@ interface VendorCall<T> {
   path: string;
   method: string;
   deadlineMs: number;
-  body: string | undefined;
+  body?: string;
   accepts: (value: unknown) => value is T;
 }
 
@@ -182,17 +182,17 @@ async function send<T>(options: CloudApiOptions, call: VendorCall<T>, signal: Ab
 export function createCloudApi(options: CloudApiOptions): CloudApi {
   return {
     devices(signal: AbortSignal): Promise<ApiDevice[]> {
-      const call = { route: ROUTES.devices, path: DEVICES_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+      const call = { route: ROUTES.devices, path: DEVICES_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isWireDeviceListResponse }, signal).then((body) => body.devices.map((device) => toApiDevice(device)));
     },
     device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
-      const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+      const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isWireDeviceResponse }, signal).then((body) => toApiDevice(body.device));
     },
     awsCredentials(signal: AbortSignal): Promise<AwsCredentialsResponse> {
-      const call = { route: ROUTES.awsCredentials, path: CREDENTIALS_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs, body: undefined };
+      const call = { route: ROUTES.awsCredentials, path: CREDENTIALS_PATH, method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isAwsCredentialsResponse }, signal);
     },
