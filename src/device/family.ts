@@ -41,6 +41,17 @@ export interface FieldViolation {
   scope: TrustScope | undefined;
 }
 
+/** A snapshot whose family fields all satisfy their contracts. */
+export interface ValidFamilyValidation {
+  valid: true;
+}
+
+/** A snapshot with field violations that identify the affected trust scopes. */
+export interface RejectedFamilyValidation {
+  valid: false;
+  violations: readonly FieldViolation[];
+}
+
 /**
  * The verdict on one snapshot.
  *
@@ -50,7 +61,7 @@ export interface FieldViolation {
  * did not fully validate and is self-guarding, so a vendor schema change never
  * becomes a confidently wrong reading (D-014).
  */
-export type FamilyValidation = { valid: true } | { valid: false; violations: readonly FieldViolation[] };
+export type FamilyValidation = ValidFamilyValidation | RejectedFamilyValidation;
 
 /**
  * The request body the vendor device-data route accepts.
