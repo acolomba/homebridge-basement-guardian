@@ -540,7 +540,7 @@ test('deadlines a command with the command deadline rather than the request time
 
   // assert
   assert.deepStrictEqual(commandAnswer, { success: true });
-  assert.deepStrictEqual(deadlines.requested, [COMMAND_DEADLINE_MS]);
+  assert.deepStrictEqual(deadlines.requested, [2_500]);
 });
 
 test('aborts an in-flight device request when the root signal aborts', async () => {
