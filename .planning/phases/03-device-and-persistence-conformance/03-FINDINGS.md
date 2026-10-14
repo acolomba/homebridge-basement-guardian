@@ -6,11 +6,11 @@ Planning baseline observed on features/code-review-sweep at
 build, native test, mutation control, independent execution review or Git
 commit is claimed by this planning record.
 
-Current accepted findings: 11 STATE causes independently fixed at round 2,
-plus 12 initial DECODING causes. All family/Gemini code portions are applied,
-pending full batch correction review; water portions 001/010 remain. SUPPORT
-is unreviewed and DEV-01 is pending. Initial planning text is historical;
-current executed appendices supersede pending statements only for their scope.
+Current accepted findings: 26 code causes, all independently closed: 11 STATE
+at round 2 and 15 DECODING at round 2. SUPPORT remains unreviewed. DEV-01 is
+pending. WINDOWS 46/47 remain open process deviations. Initial planning text
+is historical; current executed appendices supersede its pending statements
+only for their scope.
 
 ## Inventory
 
@@ -22,10 +22,10 @@ to the separate inventory below and do not silently change this core count.
 | --- | --- | --- | --- |
 | src/device/events.ts | SUPPORT / 03-05 | Pending | Pending |
 | test/device/events.test.ts | SUPPORT / 03-05 | Pending | Pending |
-| src/device/family.ts | DECODING / 03-02 | Initial full review at 55627f52; correction pending | Approved form fixed; pending full correction |
-| test/device/family.test.ts | DECODING / 03-02 | Initial full review at 55627f52; correction pending | Approved form fixed; pending full correction |
-| src/device/gemini.ts | DECODING / 03-03 | Initial full review; fixes and narrow tracer check applied; full correction pending | Approved form applied; full correction pending |
-| test/device/gemini.test.ts | DECODING / 03-03 | Initial full review; fixes and narrow tracer check applied; full correction pending | Approved form applied; full correction pending |
+| src/device/family.ts | DECODING / 03-02 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
+| test/device/family.test.ts | DECODING / 03-02 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
+| src/device/gemini.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
+| test/device/gemini.test.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | src/device/halo.ts | SUPPORT / 03-06 | Pending | Pending |
 | test/device/halo.test.ts | SUPPORT / 03-06 | Pending | Pending |
 | src/device/health.ts | SUPPORT / 03-05 | Pending | Pending |
@@ -34,8 +34,8 @@ to the separate inventory below and do not silently change this core count.
 | test/device/registry.test.ts | SUPPORT / 03-06 | Pending | Pending |
 | src/device/state.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | test/device/state.test.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
-| src/device/waterLevel.ts | DECODING / 03-04 | Initial full review at 55627f52; correction pending | Inspected; CR-001 still open |
-| test/device/waterLevel.test.ts | DECODING / 03-04 | Initial full review at 55627f52; correction pending | Inspected; CR-001 still open |
+| src/device/waterLevel.ts | DECODING / 03-04 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
+| test/device/waterLevel.test.ts | DECODING / 03-04 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | src/persistence/accessoryContext.ts | SUPPORT / 03-07 | Pending | Pending |
 | test/persistence/accessoryContext.test.ts | SUPPORT / 03-07 | Pending | Pending |
 
@@ -48,7 +48,7 @@ joins full-file review, complete header inspection and broad staged selection.
 | Conditional path | Owner | Current status |
 | --- | --- | --- |
 | test/device/stateSeeds.ts | 03-01 | Created for CR-008; full round-2 review/header inspected at ade72e10 |
-| test/device/geminiSeeds.ts | 03-03 | Created for009; four fresh factories, complete narrow helper review/header inspection; full batch review pending |
+| test/device/geminiSeeds.ts | 03-03 | Created for 009; four fresh factories, full round-2 review and complete header inspected at e8b99aa3 |
 | test/persistence/accessoryContextSeeds.ts | 03-07 | Not created; only confirmed post-triage reused-data cause |
 
 Required external consumers are read/validation targets until exact evidence
@@ -93,7 +93,7 @@ initial clarifications and tracer checks are not correction rounds.
 | Batch | Scope | Current round | Opening / fixed / rejected / new / reopened / closing | Verdict |
 | --- | --- | --- | --- | --- |
 | STATE | Source, owner and stateSeeds | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; initial 10, round 1 10→1, round 2 1→0 |
-| DECODING | Six core files plus Gemini seed across03-02/03/04 | Initial 0 | 12 initial; only water001/010 portions unapplied | Complete correction follows03-04; no independent closing count yet |
+| DECODING | Six core files plus Gemini seed across 03-02/03/04 | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; original 12 plus two initial clarifications, then rounds 14→1→0 |
 | SUPPORT | 10 files plus actual extensions across 03-05/06/07 | Not started | Unmeasured | Pending |
 
 One counter follows each batch across slices and resumed owner tasks. Every
@@ -291,3 +291,47 @@ Native log and exact command/time/revision scope are
 /private/tmp/guardian-phase3-wave3-gate.json. Summary verification passed;
 schema drift exited0/blockfalse/no schema; codebase drift skipped
 no-structure-md/blockfalse. Overall DEV-01 and Phase3 remain pending.
+
+## Executed water and complete DECODING closure — 03-04
+
+Water repairs: remaining header 001 at 5b4ada4, AAA 010 at 7b8a83c, native
+TypeError assertion form 013 at 4aeaef9, and complete independent literal map
+form 014 at 93a425d. Typed initial clarification accepted 013/014 as WARNINGs
+only; the original joint ordered keys/values already protected mapping. No
+weak-map behavior defect or genuine RED was claimed. The original 12-ID
+review is preserved separately; initial clarifications increased the opening
+inventory to 14, without creating or resetting a correction round.
+
+Full seven-file independent round 1: opening 14, fixed 14, rejected 0, new 1,
+reopened 0, closing 1. New 015 WARNING was a pre-existing inaccurate family
+owner comment, not a reopened remedy. The coordinator routed its comment-only
+repair back to original 03-02-02: 1e8b074, with record e8b99aa. Literal and all
+nine compiler negatives remained exact; no production edit or control needed.
+Full seven-file round 2: opening 1, fixed 1, rejected/new/reopened 0, closing 0.
+No open code ID, SC-03 reopening, non-reducing round or fourth round occurred.
+Report 5689cf2 and summary 92ce4c6 preserve all 001–015 rules, locations, actual
+fix hashes/paths, native checks and prior histories.
+
+All three runtime source/owner pairs and Gemini helper received complete
+independent rereads and header inspections; family is a declaration-only pair.
+Current water/Gemini owners pass 109/109 (21 + 88), whole real decoder probes
+for legal 31 and illegal 2 pass 2/2; all three direct selectors exit 0. Water
+native compiled LCOV is 62/62 lines, 2/2 functions, 4/4 branches. Gemini
+native percentages and current selector establish 100%; historical exact
+247/247 line counts remain reported and independently unconfirmed because
+that raw count artifact was not retained. Source-mapped representations are
+not substituted for that historical record. Complete 0/1/3/7/15/31 map and
+threshold 31, emitted behavior and provisional hardware limits are preserved.
+
+No genuine production bug was accepted. Both process deviations WINDOWS
+46/47 remain explicitly open and unwaived; code review closure does not claim
+perfect past procedure or resolve those historical exceptions.
+
+Parent full npm run check at clean 92ce4c6b2d6fec45aab17787e93c257baa4b3131,
+Node v26.11.1, 18:50:04–18:50:41 UTC, exited 0: all six static checks, 104
+Cucumber scenarios, 1,156 steps, 43 isolated pairs and refreshed merged LCOV.
+Native log and exact command/time/revision are
+/private/tmp/guardian-phase3-wave4-full-check.log and
+/private/tmp/guardian-phase3-wave4-gate.json. Summary verification passed;
+schema gate exit 0/block false/no schema; codebase drift skipped
+no-structure-md/block false. Overall DEV-01 and Phase 3 remain pending.
