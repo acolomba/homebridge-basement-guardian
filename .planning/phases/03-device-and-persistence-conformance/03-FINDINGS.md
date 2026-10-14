@@ -7,9 +7,9 @@ build, native test, mutation control, independent execution review or Git
 commit is claimed by this planning record.
 
 Current accepted findings: 36 causes: 11 STATE and 15 DECODING independently
-closed at round 2, plus 10 initial SUPPORT causes. Events/health portions are
-applied pending full SUPPORT correction; later HALO/registry/persistence
-portions remain. DEV-01 is pending. WINDOWS 46/47 remain open process
+closed at round 2, plus 10 initial SUPPORT causes. Events/health/HALO/registry
+portions are applied pending full SUPPORT correction; persistence portions
+remain. DEV-01 is pending. WINDOWS 46/47 remain open process
 deviations. Initial planning text is historical; current executed appendices
 supersede its pending statements only for their scope.
 
@@ -27,12 +27,12 @@ to the separate inventory below and do not silently change this core count.
 | test/device/family.test.ts | DECODING / 03-02 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | src/device/gemini.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | test/device/gemini.test.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
-| src/device/halo.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
-| test/device/halo.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
+| src/device/halo.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
+| test/device/halo.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
 | src/device/health.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
 | test/device/health.test.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| src/device/registry.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
-| test/device/registry.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
+| src/device/registry.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
+| test/device/registry.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
 | src/device/state.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | test/device/state.test.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | src/device/waterLevel.ts | DECODING / 03-04 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
@@ -95,7 +95,7 @@ initial clarifications and tracer checks are not correction rounds.
 | --- | --- | --- | --- | --- |
 | STATE | Source, owner and stateSeeds | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; initial 10, round 1 10→1, round 2 1→0 |
 | DECODING | Six core files plus Gemini seed across 03-02/03/04 | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; original 12 plus two initial clarifications, then rounds 14→1→0 |
-| SUPPORT | Ten core files across 03-05/06/07 | Initial 0 | Ten initial IDs; events/health portions applied | Full correction after 03-07; later-owner portions remain |
+| SUPPORT | Ten core files across 03-05/06/07 | Initial 0 | Ten initial IDs; events/health/HALO/registry portions applied | Full correction after 03-07; persistence portions remain |
 
 One counter follows each batch across slices and resumed owner tasks. Every
 correction verdict reconciles closing = opening - fixed - rejected + new +
@@ -377,5 +377,44 @@ scenarios, 1,156 steps and 43 isolated pairs; merged LCOV refreshed. Native
 log and exact command/time/revision are
 /private/tmp/guardian-phase3-wave5-full-check.log and
 /private/tmp/guardian-phase3-wave5-gate.json. Summary verification passed;
+schema gate exit 0/block false/no schema; codebase drift skipped
+no-structure-md/block false. Overall DEV-01 and Phase 3 remain pending.
+
+## Executed HALO and registry slice — 03-06
+
+The original SUPPORT initial inventory remains ten causes, counter 0. Applied
+HALO/registry portions of 001 and causes 006–008/010 await the full independent
+correction after persistence; 009 and persistence headers remain unapplied.
+Exact rules, locations and native histories are in 03-SUPPORT-REVIEW.md at
+a6f8bf65; summary 1afe95b7 is committed. No production bug or RED record arose.
+
+Cause commits: HALO headers 72c4574, redundant identity case bb6d165, ordinary
+AAA 8847f1c, registry headers 7d79ac1, named verdict interfaces 75f02e9 and
+independent whole HALO outcome 6ad32c3. All six had fresh focused checks,
+isolated selectors, passing recorded-base audit, clean exact-path pre-step
+before staging and ordinary passing hooks. The CR-006 bounded plan amendment
+was approved before source edits and committed atomically with the remedy.
+Documented exported ImplementedFamilyOutcome<T>, UnsupportedFamilyOutcome and
+UnknownFamilyOutcome retain FamilyOutcome<T>'s required generic, exact tags,
+fields and mutability. Exact alias trace and both production/test impact
+queries preceded edits. Actual transitive public use and configured export/
+private-leak checks passed without forced imports. Runtime output is unchanged.
+
+Fresh public HALO-to-registry tracer passes 9/9; native isolated HALO LCOV
+lines 6/6, functions 0/0, branches 1/1; registry lines 53/53, functions 3/3,
+branches 9/9. All nonempty denominators reach 100%. Independent fresh typed
+bounded preflight reported PASS after checking full files, rulebooks, actual
+Git ordering, traces and compiler preservation; this is not a full SUPPORT
+correction round and supplies no batch closing count. Initial sandbox audit
+exit 2 and two temporary proof-harness exit 1 attempts remain distinct from
+successful retries. No D-03 reopening/stop was established. WINDOWS 46/47
+remain open and unwaived.
+
+Parent full npm run check at clean 1afe95b7d222593dfaf18346f13ff70b04e29cbb,
+Node v26.11.1, 19:46:15–19:46:51 UTC exited 0: six static checks, 104 Cucumber
+scenarios, 1,156 steps and 43 isolated pairs; merged LCOV refreshed. Native
+log and exact command/time/revision are
+/private/tmp/guardian-phase3-wave6-full-check.log and
+/private/tmp/guardian-phase3-wave6-gate.json. Summary verification passed;
 schema gate exit 0/block false/no schema; codebase drift skipped
 no-structure-md/block false. Overall DEV-01 and Phase 3 remain pending.
