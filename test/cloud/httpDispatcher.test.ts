@@ -116,10 +116,10 @@ test('negotiates HTTP/1.1 even when the server offers HTTP/2', async (t) => {
   const server = await startAlpnServer(JSON.stringify({ answer: 'echoed' }));
   t.after(() => server.close());
   const originalCertificates = getCACertificates('default');
-  setDefaultCACertificates([...originalCertificates, server.certificate]);
   t.after(() => {
     setDefaultCACertificates(originalCertificates);
   });
+  setDefaultCACertificates([...originalCertificates, server.certificate]);
 
   // act
   const response = await httpFetch(server.url);
