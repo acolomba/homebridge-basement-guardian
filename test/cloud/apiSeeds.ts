@@ -24,6 +24,8 @@ export function geminiDevice(telemetry?: Readonly<Record<string, unknown>>): Api
 
 /** Returns all thirteen vendor wire keys, including unread account metadata. */
 export function geminiWireDevice(telemetry?: Readonly<Record<string, unknown>>): WireDevice & Record<string, unknown> {
+  const attributes = { productLine: 'wayneWater', serialNumber: 'serial-1' };
+
   return {
     accountId: 'account-1',
     deviceId: 'account-1_serial-1',
@@ -36,7 +38,7 @@ export function geminiWireDevice(telemetry?: Readonly<Record<string, unknown>>):
     data: structuredClone(telemetry ?? { water_level: 1 }),
     timestamp: 1_700_000_000_000,
     shadow: { state: { offline: false }, data: { water_level: 1 }, timestamp: 1_700_000_000_000 },
-    attributes: { serialNumber: 'serial-1' },
+    attributes,
     connectivity: { connected: true, timestamp: 1_700_000_000_000 },
   };
 }
@@ -53,4 +55,11 @@ export function awsCredentialsResponse(): AwsCredentialsResponse {
       Expiration: '2026-01-01T00:00:00.000Z',
     },
   };
+}
+
+/** Returns a fresh untrusted credential envelope with selected wire fields changed. */
+export function withCredentials(overrides: Readonly<Record<string, unknown>>): unknown {
+  const response = awsCredentialsResponse();
+
+  return { ...response, credentials: { ...response.credentials, ...structuredClone(overrides) } };
 }
