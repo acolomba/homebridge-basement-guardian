@@ -213,3 +213,58 @@ the measured closing report revision and their actual paths match this scope.
 No tracked deletion, new stub, skipped runtime target or active mutation
 remains. Initial inventory and the bounded earlier audit history are preserved.
 Summary closeout commit is recorded in the terminal handoff.
+
+## Bounded Owner Return — CR-03-DECODING-015
+
+This appendix records a later return to task 03-02-02. The original frontmatter
+metrics and preceding execution account remain historical, rather than counting
+intervening Gemini/water commits as family work.
+
+Independent full round 1 at 93a425d4 closed all fourteen initial IDs and found
+015 WARNING: the family positive compiler fixture's comment did not describe
+its literal. Opening 14 - fixed 14 - rejected 0 + new 1 + reopened 0 = closing
+1. No earlier fix or SC-03 reopened, so D-03 permits the bounded owner return.
+The coordinator dispatched it at clean 6009a05356fcbda9fbd45cee70765e59fd483290.
+
+Typed fixer /root/phase3_family/family_cause_fixer read the current full report,
+amended plan, family pair and applicable complete rulebooks. Fresh role
+resolution with GSD_RUNTIME=codex supplied high effort and an omitted model ID.
+The existing feature checkout and persisted none sentinel were retained; no
+new review or parallel task/build/Git work occurred.
+
+Commit 1e8b074c68b8f73ad122cae6d8d1d07d86c2e079, docs(device): clarify absent
+family scope compiler contract, changes only test/device/family.test.ts:85-86.
+The accurate comment explains required present keys with undefined values and
+available connectivity. Its positive literal, nine negative compiler contracts,
+non-comment tokens and compiler-emitted JavaScript remain unchanged. All
+production sources and later Gemini/water repairs are unchanged.
+
+### Check Results for the Owner Return
+
+Node v26.11.1, npm 11.20.0; synthetic offline inputs. Fresh family declaration
+selector exited 0, followed by fresh build:test exit 0 and native Gemini owner
+88/88 pass, zero fail/skip/cancel/todo. Declaration-only acceptance is not a
+numeric runtime coverage claim. Fallow guard exited 0 with no configured
+architecture policies; recorded-baseline audit exited 0/verdict pass.
+
+The exact-file pre-step exited 0 with no formatter changes and ended
+18:35:46.822005Z before normal commit launch 18:35:53.875409Z. Commit ended
+18:36:06.977335Z with exit 0 and check:commit Passed. Real object inspection
+confirms the single path and no deletion. Full command, output, exit, runtime,
+UTC time, revision and exact dirty-input captures remain in
+/tmp/family-015-*.json, including preservation and commit inspection records.
+
+015 is applied pending full seven-file round 2, opening 1. This owner check is
+not a correction round or full gate. The coordinator resumes water review and
+owns combined npm run check and overall DEV-01/phase completion. Existing
+WINDOWS 46/47 remain unwaived. The private-interface audit failure, earlier
+round counts and all other retained attempts remain in the shared report.
+No production defect, artificial RED, assertion mutation, new stub, skipped
+runtime target or new threat surface was introduced.
+
+### Self-Check for the Owner Return: PASSED
+
+The owner, current report and this summary exist. The fix commit is an ancestor
+of current HEAD and changes only its declared owner. Exact comment-only
+preservation and passing native checks are recorded. Record closeout remains
+separate from the introducing cause commit.

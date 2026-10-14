@@ -615,3 +615,58 @@ No code finding is invented from those process gaps.
 The prior coordinator full gate at a54cba5 predates the water test changes and
 cannot be reused for this tree. A fresh coordinator npm run check follows
 remaining repairs. DEV-01 and E-03-01/P-03-01/P-03-02 remain pending.
+
+## Bounded Family Owner Return — CR-03-DECODING-015
+
+The coordinator returned only 015 to original task 03-02-02 after independent
+round 1 at clean 6009a05356fcbda9fbd45cee70765e59fd483290. The executor read
+the current full report, amended plan, family pair and applicable rulebooks.
+Typed fixer /root/phase3_family/family_cause_fixer used the configured complete
+skills, freshly resolved omitted model ID and high effort with GSD_RUNTIME=codex.
+The persisted none sentinel was read directly; existing feature checkout and
+serial foreground ownership were retained. No review was dispatched here.
+
+Commit 1e8b074c68b8f73ad122cae6d8d1d07d86c2e079 changes only
+test/device/family.test.ts:85-86. Its comment now states that every required
+group is present even when undefined and connectivity can remain available
+while the other groups are absent. The complete positive literal and all nine
+expected-error negatives are byte-identical. No production source, interface,
+export, suppression, helper or later Gemini/water repair changed.
+
+Node v26.11.1 and npm 11.20.0 were used for all checks. Fallow guard before
+the edit exited 0 and reports no configured zones or rule packs. Fallow audit
+--base 55627f52d3f9ce5e94e484af268b4555c0d15c7b --format json --quiet exited
+0, verdict pass, ending 18:35:30.438827Z. Native capture is
+/tmp/family-015-audit-sandbox.json. No failed retry occurred for this cause.
+
+npm run test:coverage:direct -- src/device/family.ts test/device/family.test.ts
+exited 0, ending 18:34:59.266009Z; declaration-only acceptance after strict
+compilation supplies no numerical runtime coverage. Fresh npm run build:test
+exited 0 at 18:35:25.231379Z before node --test --test-reporter=tap
+dist-test/test/device/gemini.test.js exited 0 at 18:35:29.197139Z: 88 tests,
+88 pass, zero failed/skipped/cancelled/todo. These are the current owner cases
+after the earlier documented redundant test removal.
+
+The exact-file SKIP=npm-check pre-commit run --files test/device/family.test.ts
+exited 0 without byte changes, ending 18:35:46.822005Z. Normal foreground
+git commit launched at 18:35:53.875409Z and ended 18:36:06.977335Z, exit 0;
+its selected check:commit hook passed. Actual Git inspection confirms the
+single owner path, two added comment lines and one removed comment line, with
+no deletion or unrelated change. No hook bypass, amend or history rewrite ran.
+
+Ten retained records under /tmp/family-015-*.json include nine command captures
+and the preservation record. Command records keep complete stdout, separate
+stderr, raw exit, UTC start/end, revision and exact dirty diff. The preservation
+record and captured semantics command confirm unchanged owner tokens, identical
+compiler-emitted owner JavaScript with comments removed, all production sources
+unchanged, and nine active compiler negatives. Emitted SHA256 is
+8454cfeaaebc370c0562437ffe9a3a674fc78e6afd2903e04e754aa284c54e53.
+
+015 is applied pending the complete seven-file independent correction round 2,
+opening 1, through the resumed water reviewer. Round 1 stays opening 14, fixed
+14, rejected 0, new 1, reopened 0, closing 1. This bounded fix/check is not a
+correction verdict and does not reset the batch counter or declare it clean.
+No genuine RED, assertion control, full gate or overall DEV-01 closure is
+claimed. The coordinator owns the combined gate and shared records. WINDOWS
+46 and 47 remain explicitly unwaived; all earlier failures and histories above
+are preserved.
