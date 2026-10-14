@@ -297,7 +297,8 @@ deterministic enforcement PASS, hardware approval or inherited answer exists.
 - [x] Fresh combined gate and complete batch reviews cover current executable inputs.
 - [x] Independent typed aggregate evidence review returns terminal PASS without a D-03 stop.
 - [x] Independent Nyquist audit finds no automated coverage gaps across all 18 tasks.
-- [ ] Independent security and goal verification are accepted by the parent.
+- [x] Independent security audit closes all 18 authored threats at bounded ASVS L1 depth.
+- [ ] Independent goal verification is accepted by the parent.
 - [ ] Actual Phase03 E/P judgments are recorded.
 
 Automated Nyquist validation is complete. Phase approval remains pending
@@ -310,3 +311,18 @@ parent verification and actual Phase03 judgments.
 | Gaps found | 0 |
 | Resolved | 0 |
 | Escalated | 0 |
+
+## Parent security and final review acceptance
+
+Independent security audit at96eb04b closed18/18authored threats, without risk
+acceptance. Its actual evidence and limits are in03-SECURITY.md at a10902c5.
+The additional standard phase review at a10902c5 read20files and returned
+zero blockers/warnings/info, no reopened IDs and no D-03 stop. Report:
+03-REVIEW.md. Continuous batch counts are preserved.
+
+The execute:post tdd.review-checkpoint query exited0/blockfalse/passedtrue,
+with tddPlans0 because plans are type:execute. This heuristic skipped its review;
+it supplies no invented RED→GREEN proof. Independently established Phase03
+zero genuine production bugs and empty current/history RED inventory remain
+the actual D-04 applicability evidence. No finding disposition row is needed
+for the clean additional review. E/P answers and goal verification stay pending.
