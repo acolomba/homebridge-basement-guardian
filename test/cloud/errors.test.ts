@@ -43,8 +43,11 @@ test('a cloud request failure labels the route without naming a URL', () => {
   const requestFailure = new CloudRequestError('GET /devices failed with HTTP 500.', 500, 'GET /devices');
 
   // assert
-  assert.strictEqual(requestFailure.route.includes('://'), false);
-  assert.strictEqual(requestFailure.message.includes('://'), false);
+  assert.ok(requestFailure instanceof CloudRequestError);
+  assert.deepStrictEqual(
+    { name: requestFailure.name, message: requestFailure.message, status: requestFailure.status, route: requestFailure.route },
+    { name: 'CloudRequestError', message: 'GET /devices failed with HTTP 500.', status: 500, route: 'GET /devices' },
+  );
 });
 
 test('an authentication rejection carries the parsed vendor error code', () => {
