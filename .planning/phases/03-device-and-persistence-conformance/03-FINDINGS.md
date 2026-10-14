@@ -6,10 +6,9 @@ Planning baseline observed on features/code-review-sweep at
 build, native test, mutation control, independent execution review or Git
 commit is claimed by this planning record.
 
-Current accepted findings: 36 causes: 11 STATE and 15 DECODING independently
-closed at round 2, plus 10 initial SUPPORT causes. Events/health/HALO/registry
-portions are applied pending full SUPPORT correction; persistence portions
-remain. DEV-01 is pending. WINDOWS 46/47 remain open process
+Current accepted findings: 38 causes: 11 STATE, 15 DECODING and 12 SUPPORT,
+all independently closed in their respective round 2. DEV-01 remains pending
+the aggregate seal and phase verification. WINDOWS 46/47 remain open process
 deviations. Initial planning text is historical; current executed appendices
 supersede its pending statements only for their scope.
 
@@ -21,24 +20,24 @@ to the separate inventory below and do not silently change this core count.
 
 | File | Batch / plans | Full independent review | Complete header |
 | --- | --- | --- | --- |
-| src/device/events.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| test/device/events.test.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
+| src/device/events.ts | SUPPORT / 03-05 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| test/device/events.test.ts | SUPPORT / 03-05 | Complete: full round 2 at d262943b | Inspected: approved complete form |
 | src/device/family.ts | DECODING / 03-02 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | test/device/family.test.ts | DECODING / 03-02 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | src/device/gemini.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | test/device/gemini.test.ts | DECODING / 03-03 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
-| src/device/halo.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| test/device/halo.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| src/device/health.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| test/device/health.test.ts | SUPPORT / 03-05 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| src/device/registry.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
-| test/device/registry.test.ts | SUPPORT / 03-06 | Initial complete at 7cfedb24; full correction pending | Approved form applied; correction pending |
+| src/device/halo.ts | SUPPORT / 03-06 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| test/device/halo.test.ts | SUPPORT / 03-06 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| src/device/health.ts | SUPPORT / 03-05 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| test/device/health.test.ts | SUPPORT / 03-05 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| src/device/registry.ts | SUPPORT / 03-06 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| test/device/registry.test.ts | SUPPORT / 03-06 | Complete: full round 2 at d262943b | Inspected: approved complete form |
 | src/device/state.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | test/device/state.test.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | src/device/waterLevel.ts | DECODING / 03-04 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
 | test/device/waterLevel.test.ts | DECODING / 03-04 | Complete: full round 2 at e8b99aa3 | Inspected: approved complete form |
-| src/persistence/accessoryContext.ts | SUPPORT / 03-07 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
-| test/persistence/accessoryContext.test.ts | SUPPORT / 03-07 | Initial complete at 7cfedb24; full correction pending | Inspected; CR-001 still open |
+| src/persistence/accessoryContext.ts | SUPPORT / 03-07 | Complete: full round 2 at d262943b | Inspected: approved complete form |
+| test/persistence/accessoryContext.test.ts | SUPPORT / 03-07 | Complete: full round 2 at d262943b | Inspected: approved complete form |
 
 ## Conditional extension inventory
 
@@ -50,7 +49,7 @@ joins full-file review, complete header inspection and broad staged selection.
 | --- | --- | --- |
 | test/device/stateSeeds.ts | 03-01 | Created for CR-008; full round-2 review/header inspected at ade72e10 |
 | test/device/geminiSeeds.ts | 03-03 | Created for 009; four fresh factories, full round-2 review and complete header inspected at e8b99aa3 |
-| test/persistence/accessoryContextSeeds.ts | 03-07 | Not created; only confirmed post-triage reused-data cause |
+| test/persistence/accessoryContextSeeds.ts | 03-07 | Not created; type-only triage required no runtime helper |
 
 Required external consumers are read/validation targets until exact evidence
 requires edits. The protocol names bounded slots for cloud/shadow,
@@ -95,7 +94,7 @@ initial clarifications and tracer checks are not correction rounds.
 | --- | --- | --- | --- | --- |
 | STATE | Source, owner and stateSeeds | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; initial 10, round 1 10→1, round 2 1→0 |
 | DECODING | Six core files plus Gemini seed across 03-02/03/04 | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; original 12 plus two initial clarifications, then rounds 14→1→0 |
-| SUPPORT | Ten core files across 03-05/06/07 | Initial 0 | Ten initial IDs; events/health/HALO/registry portions applied | Full correction after 03-07; persistence portions remain |
+| SUPPORT | Ten core files across 03-05/06/07 | 2 | 2 / 2 / 0 / 0 / 0 / 0 | Clean; initial 10, round 1 10→2 (new 011/012), round 2 2→0 |
 
 One counter follows each batch across slices and resumed owner tasks. Every
 correction verdict reconciles closing = opening - fixed - rejected + new +
@@ -418,3 +417,50 @@ log and exact command/time/revision are
 /private/tmp/guardian-phase3-wave6-gate.json. Summary verification passed;
 schema gate exit 0/block false/no schema; codebase drift skipped
 no-structure-md/block false. Overall DEV-01 and Phase 3 remain pending.
+
+## Executed persistence and complete SUPPORT closure — 03-07
+
+Persistence header portion 001 committed at 970119b2; source-docblock runtime
+scaffold 009 replaced by meaningful compiler contracts at d5c7ea6c. Four prose
+runtime cases and their source-reader/parser were removed. Fifteen meaningful
+negative contracts and nine writable assignments retain required fields,
+privacy, genuinely optional absence and mutable storage. No helper was needed.
+The source remains declaration-only; zero authored runtime cases and Node's
+file-load sentinel are not behavioral coverage claims.
+
+Complete ten-file independent correction round 1 at d5c7ea6c: opening10,
+fixed10, rejected0, new2, reopened0, closing2. New WARNING 011 stale release/
+seeding narrative and 012 overbroad privacy prose belonged to original03-07-02.
+Separate source-only remedies 326b9241 and d262943b preserve declaration tokens
+and erased JavaScript. Documentation now reflects real resumption/recovery and
+the ratified deviceId context/log treatment with its unconfirmed opaque-key
+assumption, distinct from public/planning sanitization. No new permission arose.
+
+Complete ten-file independent correction round 2 at d262943b: opening2,
+fixed2, rejected/new/reopened0, closing0. All original001–010 remain fixed;
+all headers were inspected. Counts remain continuous10→2→0, no D-03 stop,
+no accepted genuine production bug or RED JSON. Authoritative full rules,
+locations, histories and verdict are in report253eb82f, summaryc5a1a276.
+Native /private/tmp/persistence-fixer-index.json retains87 captures at handoff,
+including sandbox audit2 and stage128 attempts before successful retries.
+All four cause commits had passing focused checks/audit, clean exact-file
+pre-step before staging, ordinary foreground commits and normal hooks.
+
+Fresh five-pair SUPPORT selector exited0 at20:10:41–44UTC. Events/health/context
+are verified declaration-only; unchanged runtime HALO/registry pair metrics
+remain100%. Real pumpRecords owner33/33 and selected platform persistence
+cases2/2 passed. Actual six pre-edit production/test symbol impacts completed;
+real mutation/persist callbacks inspected. This is bounded compatibility
+validation, not a completed accessory/platform sweep. Historical Gemini exact
+247/247 counts remain independently unconfirmed. WINDOWS46/47 stay open,
+unwaived, without retrospective compliance.
+
+Parent full npm run check at clean c5a1a276e2cfca0fb98e566f4cf125f7c285f1ce,
+Node v26.11.1,20:20:50–20:21:27UTC exited0: six static checks,104 Cucumber
+scenarios,1,156 steps and43 isolated pairs, merged LCOV refreshed. Native
+log and exact command/time/revision are
+/private/tmp/guardian-phase3-wave7-full-check.log and
+/private/tmp/guardian-phase3-wave7-gate.json. Summary verification passed;
+schema gate exit0/blockfalse/no schema; codebase drift skipped
+no-structure-md/blockfalse. DEV-01 remains pending the aggregate and phase
+verification, with E-03-01/P-03-01/P-03-02 judgments still unresolved.

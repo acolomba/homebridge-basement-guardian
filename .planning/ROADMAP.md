@@ -96,7 +96,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 6/8 plans executed in 8 serial waves
+**Plans**: 7/8 plans executed in 8 serial waves
 **Wave 1**
 - [x] 03-01-PLAN.md — State review and six warning dispositions
 
@@ -116,7 +116,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 03-06-PLAN.md — HALO and registry conformance
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 03-07-PLAN.md — Persistence and support review closure
+- [x] 03-07-PLAN.md — Persistence and support review closure
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 03-08-PLAN.md — Ledger, provenance and final scope audit
@@ -205,7 +205,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 |-------|-----------|----------------|--------|-----------|
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
-| 3. Device and Persistence Conformance | code-review-sweep | 6/8 | In Progress | - |
+| 3. Device and Persistence Conformance | code-review-sweep | 7/8 | In Progress | - |
 | 4. Runtime Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
