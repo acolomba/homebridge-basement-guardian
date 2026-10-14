@@ -62,10 +62,6 @@ const EXPECTED_SIGNATURE = hmac(SIGNING_KEY, STRING_TO_SIGN).toString('hex');
 const SIGNED_PART = `${HOST}/mqtt?${CANONICAL_QUERY}&X-Amz-Signature=${EXPECTED_SIGNATURE}`;
 const EXPECTED_URL = `wss://${SIGNED_PART}&X-Amz-Security-Token=${ENCODED_SESSION_TOKEN}`;
 
-function signatureOf(url: string): string | null {
-  return new URL(url).searchParams.get('X-Amz-Signature');
-}
-
 test('signs the canonical request the AWS IoT variant defines', () => {
   // arrange
   const input = baseInput();
@@ -101,13 +97,53 @@ test('builds the URL from the supplied scheme', () => {
   assert.strictEqual(url, `ws://${SIGNED_PART}&X-Amz-Security-Token=${ENCODED_SESSION_TOKEN}`);
 });
 
-for (const { change, createInput } of [
-  { change: 'a different secret access key', createInput: () => ({ ...baseInput(), secretAccessKey: 'other-secret-access-key' }) },
-  { change: 'a different region', createInput: () => ({ ...baseInput(), region: 'eu-test-1' }) },
-  { change: 'a different host', createInput: () => ({ ...baseInput(), host: 'other-broker.example' }) },
-  { change: 'a clock one second later', createInput: () => ({ ...baseInput(), now: new Date('2026-08-28T12:00:01.000Z') }) },
+for (const { change, createInput, expectedUrl } of [
+  {
+    change: 'a different secret access key',
+    createInput: () => ({ ...baseInput(), secretAccessKey: 'other-secret-access-key' }),
+    expectedUrl: [
+      'wss://broker.example/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&',
+      'X-Amz-Credential=test-access-key-id%2F20260828%2Fus-test-1%2Fiotdevicegateway%2Faws4_request&',
+      'X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host&',
+      'X-Amz-Signature=dff6f1d6c4787692168a04a3f977216a68196c7897a2ed4113e9cf8c764e4172&',
+      'X-Amz-Security-Token=test%2Fsession%2Btoken%3D%3D',
+    ].join(''),
+  },
+  {
+    change: 'a different region',
+    createInput: () => ({ ...baseInput(), region: 'eu-test-1' }),
+    expectedUrl: [
+      'wss://broker.example/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&',
+      'X-Amz-Credential=test-access-key-id%2F20260828%2Feu-test-1%2Fiotdevicegateway%2Faws4_request&',
+      'X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host&',
+      'X-Amz-Signature=365d07484ea01f47cac2a1d0f55519eeecd36393c86b6d08b3fa83abbee57adf&',
+      'X-Amz-Security-Token=test%2Fsession%2Btoken%3D%3D',
+    ].join(''),
+  },
+  {
+    change: 'a different host',
+    createInput: () => ({ ...baseInput(), host: 'other-broker.example' }),
+    expectedUrl: [
+      'wss://other-broker.example/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&',
+      'X-Amz-Credential=test-access-key-id%2F20260828%2Fus-test-1%2Fiotdevicegateway%2Faws4_request&',
+      'X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host&',
+      'X-Amz-Signature=c8dd738249a6da5a586003b98e1b2211b513445f107a24769d605d092b0d5ed3&',
+      'X-Amz-Security-Token=test%2Fsession%2Btoken%3D%3D',
+    ].join(''),
+  },
+  {
+    change: 'a clock one second later',
+    createInput: () => ({ ...baseInput(), now: new Date('2026-08-28T12:00:01.000Z') }),
+    expectedUrl: [
+      'wss://broker.example/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&',
+      'X-Amz-Credential=test-access-key-id%2F20260828%2Fus-test-1%2Fiotdevicegateway%2Faws4_request&',
+      'X-Amz-Date=20260828T120001Z&X-Amz-SignedHeaders=host&',
+      'X-Amz-Signature=c28c0d98266709131420cfc954ecf1841ff5557deabe95316b573704d2fc7407&',
+      'X-Amz-Security-Token=test%2Fsession%2Btoken%3D%3D',
+    ].join(''),
+  },
 ]) {
-  test(`produces a different signature for ${change}`, () => {
+  test(`signs the complete URL for ${change}`, () => {
     // arrange
     const input = createInput();
 
@@ -115,7 +151,7 @@ for (const { change, createInput } of [
     const url = presignIotWebsocketUrl(input);
 
     // assert
-    assert.notStrictEqual(signatureOf(url), EXPECTED_SIGNATURE);
+    assert.strictEqual(url, expectedUrl);
   });
 }
 
