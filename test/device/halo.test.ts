@@ -20,7 +20,13 @@ void ('wayneWaterGemini' satisfies HaloDeviceTypeId);
 // @ts-expect-error a device type the plugin has never seen is not a HALO
 void ('wayneWaterUnknown' satisfies HaloDeviceTypeId);
 
-test('HALO_DISPLAY_NAME carries a non-empty product name', () => {
-  // act & assert
-  assert.strictEqual(HALO_DISPLAY_NAME, 'Wayne Water HALO');
+test('HALO_DISPLAY_NAME carries the HALO product name', () => {
+  // arrange
+  const expectedDisplayName = 'Wayne Water HALO';
+
+  // act
+  const displayName = HALO_DISPLAY_NAME;
+
+  // assert
+  assert.strictEqual(displayName, expectedDisplayName);
 });
