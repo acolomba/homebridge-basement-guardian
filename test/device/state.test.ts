@@ -13,15 +13,10 @@ import { describe, test } from 'node:test';
 
 import { createDeviceStateStore } from '../../src/device/state.js';
 
+import { geminiDevice, geminiIdentity } from './stateSeeds.js';
+
 import type { ApiDevice } from '../../src/cloud/types.js';
-import type {
-  DeviceIdentity,
-  DeviceSnapshot,
-  DeviceSnapshotListener,
-  DeviceStateStore,
-  DeviceStateStoreOptions,
-  ReportedPatch,
-} from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore, DeviceStateStoreOptions, ReportedPatch } from '../../src/device/state.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { LogLevel, Logging } from 'homebridge';
 
@@ -38,23 +33,6 @@ interface Notification {
   changedKeys: readonly string[];
   next: DeviceSnapshot;
   previous: DeviceSnapshot | undefined;
-}
-
-// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
-// placeholder in place of the real account identifier.
-function geminiDevice(): ApiDevice {
-  return {
-    deviceId: DEVICE_ID,
-    deviceTypeId: 'wayneWaterGemini',
-    name: 'Sump System',
-    serialNumber: 'serial-1',
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-  };
-}
-
-function geminiIdentity(): DeviceIdentity {
-  return { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' };
 }
 
 // Logging is a callable interface with seven members, so the stub is a function
