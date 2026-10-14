@@ -59,12 +59,12 @@ the audit did not invent additional threat entries or waive unresolved concerns.
 
 ## Retained Concerns and Limits
 
-The offline injected-transport probe confirms the wire guard accepts dot-only
-IDs, while sendCommand('..') constructs PUT /data and sendCommand('.') constructs
-PUT /devices/data. The routing behavior is confirmed. Valid vendor applicability
-and impact remain unresolved. The documented vendor shape is no established
-hard precondition. T-02-08's authored predicates, opaque telemetry and absence
-controls are present; its closure does not establish universal path confinement.
+The initial audit retained dot-only routing as a concern. The final code review
+confirmed CR-02-API-017 as a public-contract defect, now independently fixed.
+The private helper refuses exactly '.' and '..' with a fixed TypeError, through
+promise rejection before token/authentication or HTTP. Ordinary opaque IDs and
+percent encoding remain unchanged. No vendor occurrence, authorization bypass,
+real actuation or security impact was established or claimed.
 
 The ALPN helper closes its listener but has no active-H2 session tracking,
 destruction or close deadline. Its body is unchanged except for the header.
@@ -97,3 +97,46 @@ pending independent code review, verification and maintainer judgment.
 - [x] status: verified reflects ASVS L1 authored-control evidence.
 
 **Approval:** Security mitigation verification only, 2026-10-14.
+
+## Independent Routing Correction Refresh
+
+Auditor /root/phase2_security returned SECURED again at
+3f58756db1e052308543d9776d7738467d30dd14: 17/17 authored mitigations closed,
+15 high and two medium, zero blocking/nonblocking open and no accepted or
+transferred risks. ASVS L1/high threshold is unchanged. The initial register's
+locations above refer to its explicitly stated historical revision; refreshed
+affected evidence is below.
+
+| Threat | Current correction evidence |
+| --- | --- |
+| T-02-08 | api.ts:83 guards exact control segments; :193/:203 promise rejection; types.ts predicates/opaque representation unchanged; four api.test.ts:229 regressions |
+| T-02-09 | api.ts:169 composite deadline before token, :170/:171 same auth/HTTP signal, :173 body signal; :27/:212 command deadline and single attempt unchanged |
+| T-02-10 | api.ts:84 fixed local TypeError contains no identifier/URL/status/cause; :93/:108/:120/:126 preserve sanitized response failures; complete error-field tests |
+| T-02-14 | Six independently classified genuine records; new b66f725→6839060→b8b660a ancestry, JSON-only evidence, unchanged production blob, complete archive and semantic patch correspondence; API round 3 closes 1→0 |
+| T-02-15 | Exact current inputs match clean a973483 full-gate reference, no untracked files, Node v26.11.1; other 17 cloud files and relevant external controls match the prior audit |
+| T-02-16 | Synthetic correction inputs/native failures/provenance; fixed local refusal excludes raw identifiers; no private account/cache/vendor material read |
+
+An independent offline actual-export probe confirms all four combinations
+return promises, reject with the complete fixed TypeError and touch neither
+auth nor HTTP. Ordinary/percent-encoded IDs retain exact paths. All six nested
+genuine histories classify RED_EVIDENCE_OK. The older complete API archive
+matches the original record; GREEN has only two extra lint blank lines.
+
+Fresh API evidence is 37/37 and isolated 159/159 lines,14/14 functions,31/31
+branches. Fresh full gate at a973483 exited 0: all six static checks,
+104 scenarios/1,156 steps and 43 pairs. Reuse is proved by exact unchanged
+inputs. No broad test rerun, install, network/vendor/hardware call or private
+read occurred in this audit. The parent alone had a dirty validation record.
+
+Unchanged threats retain their original mitigations. No new threat entry or
+risk waiver was invented. Routing is fixed; ALPN active-H2 and E-02-01/P-02-01/
+P-02-02 limitations remain pending. API round 3 has no stop trigger; round 4
+would require global pause. Overall phase approval is not supplied here.
+
+## Security Audit 2026-10-14
+
+| Metric | Count |
+|---|---|
+| Threats found | 17 |
+| Closed | 17 |
+| Open | 0 |
