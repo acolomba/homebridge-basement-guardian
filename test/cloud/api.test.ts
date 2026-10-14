@@ -133,20 +133,6 @@ function stubFetch(respond: () => Response): { httpFetch: HttpFetch; vendorReque
   return { httpFetch, vendorRequests };
 }
 
-// Records the complete header set each request declares, so a case asserts the exact keys and values
-// rather than the presence of the ones it thought to ask about.
-function stubHeaderRecordingFetch(respond: () => Response): { httpFetch: HttpFetch; declaredHeaders: Record<string, string>[] } {
-  const declaredHeaders: Record<string, string>[] = [];
-
-  const httpFetch: HttpFetch = (_input, init) => {
-    declaredHeaders.push(Object.fromEntries(new Headers(init?.headers).entries()));
-
-    return Promise.resolve(respond());
-  };
-
-  return { httpFetch, declaredHeaders };
-}
-
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
 function stubHangingFetch(): HttpFetch {
   return (_input, init) => {
@@ -547,10 +533,9 @@ test('keeps the token, the base URL, and the response body out of a failed reque
     (error: unknown) => {
       assert.ok(error instanceof CloudRequestError);
       assert.deepStrictEqual(
-        ['id-token-1', 'api.example.test', 'account-1_serial-1', 'Token is missing'].filter((secret) => `${error.message} ${error.route}`.includes(secret)),
-        [],
+        { name: error.name, message: error.message, status: error.status, route: error.route },
+        { name: 'CloudRequestError', message: 'GET /devices/{deviceId} failed with HTTP 403.', status: 403, route: 'GET /devices/{deviceId}' },
       );
-      assert.strictEqual(error.route, 'GET /devices/{deviceId}');
 
       return true;
     },
@@ -854,23 +839,38 @@ test('declares the bearer token and the identity header on a read request', asyn
 // nothing about the installation it is calling from (AUTH-02).
 test('says nothing about the installation in the command user agent', async () => {
   // arrange
-  const { httpFetch, declaredHeaders } = stubHeaderRecordingFetch(() => new Response(JSON.stringify({ success: true }), { status: 200 }));
+  const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+  when(() =>
+    httpFetch(
+      It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1/data'),
+      It.matches<RequestInit>((init) => {
+        assert.deepStrictEqual(
+          { ...init, signal: undefined },
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: 'Bearer id-token-1',
+              'Content-Type': 'application/json',
+              'User-Agent': 'homebridge-basement-guardian',
+              Accept: 'application/json',
+            },
+            body: '{"desiredData":{"test_running":true}}',
+            signal: undefined,
+          },
+        );
+
+        return init.signal instanceof AbortSignal;
+      }),
+    ),
+  ).thenResolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
-  await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
-  const userAgent = declaredHeaders[0]?.['user-agent'] ?? '';
+  const commandAnswer = await cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
 
   // assert
-  assert.deepStrictEqual(
-    {
-      token: userAgent.includes('id-token-1'),
-      host: userAgent.includes('api.example.test'),
-      deviceId: userAgent.includes('account-1_serial-1'),
-      accountId: userAgent.includes('account-1'),
-    },
-    { token: false, host: false, deviceId: false, accountId: false },
-  );
+  assert.deepStrictEqual(commandAnswer, { success: true });
+  verify(httpFetch);
 });
 
 // A real loopback connection over the production httpFetch port, not a mocked fetch: undici's
