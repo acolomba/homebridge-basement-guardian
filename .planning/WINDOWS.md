@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 19
 fixed_count: 21
-total_count: 46
-last_updated: 2026-10-14T17:00:50.997Z
+total_count: 47
+last_updated: 2026-10-14T18:04:25.131Z
 ---
 
 # Broken Windows Ledger
@@ -61,6 +61,7 @@ last_updated: 2026-10-14T17:00:50.997Z
 | 44 | 06 | unmet-truth | SECURITY.md |  | Private vulnerability reporting could not be enabled via gh api (404 on PUT/GET) — likely gated behind GitHub Advanced Security for private repos on this account tier; requires maintainer action (make repo public or confirm GHAS) per 06-05-SUMMARY.md Known Gaps | open |  | 2026-09-05T02:43:40.441Z |  |
 | 45 | 06 | unmet-truth | src/cloud/api.ts |  | The real-pump suite's heartbeats.feature connection-health scenario fails reproducibly (2/2 live runs against the real vendor account, 2026-09-05) with an uncaught InformationalError: socket idle timeout from an HTTP/2 stream with no error listener, surfacing during a ~960s idle window between vendor calls -- the same order of magnitude as production's default 300s+ pollInterval. src/cloud/api.ts and src/cloud/auth.ts both call Node's global fetch() (undici), which can auto-negotiate HTTP/2 and pool connections; an idle pooled connection's session-idle-timeout event, if unhandled, crashes the whole process rather than surfacing as a caught rejection -- a materially worse failure mode than the stale/untrustworthy-marking this plugin's safety semantics are built around. Blocks dev/prep/release-checklist.md's real-home-tests-pass gate. Needs investigation: whether the idle-timeout error is catchable at the app level (explicit undici dispatcher/agent config, disabling HTTP/2, or per-connection error handling) or is inherent to Node's global fetch and needs a different transport. | fixed |  | 2026-09-05T15:40:50.317Z | 2026-09-05T18:39:00.027Z |
 | 46 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md | 714 | [code-review-sweep] CR-03-STATE-008 commit 18e8b83757f7aa1dcf38f8b61cb17ed116e48539 began before repeating a formatter-changing pre-step. Normal all-pair hooks and later exact-byte pre-step passed; no history rewrite. The ordering deviation remains documented for phase/milestone disposition. | open |  | 2026-10-14T17:00:50.997Z |  |
+| 47 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md | 375 | [code-review-sweep] CR-03-DECODING-005 private GeminiFieldScope removal at a63a9eb lacked the required alias-specific pre-edit Fallow trace. Full source reads/two local uses, four public-symbol probes and runtime/type equivalence were recorded; none substitutes for that missing trace. No retroactive compliance or history rewrite; phase/milestone disposition remains. | open |  | 2026-10-14T18:04:25.131Z |  |
 
 ````json
 [
@@ -614,6 +615,19 @@ last_updated: 2026-10-14T17:00:50.997Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-14T17:00:50.997Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 47,
+    "kind": "deviation",
+    "phase": "3",
+    "file": ".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",
+    "line": 375,
+    "description": "[code-review-sweep] CR-03-DECODING-005 private GeminiFieldScope removal at a63a9eb lacked the required alias-specific pre-edit Fallow trace. Full source reads/two local uses, four public-symbol probes and runtime/type equivalence were recorded; none substitutes for that missing trace. No retroactive compliance or history rewrite; phase/milestone disposition remains.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-14T18:04:25.131Z",
     "resolved_at": null,
     "milestone": null
   }
