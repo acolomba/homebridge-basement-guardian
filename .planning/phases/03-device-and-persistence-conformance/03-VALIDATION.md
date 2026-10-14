@@ -1,8 +1,8 @@
 ---
 phase: "03"
 slug: "device-and-persistence-conformance"
-status: executed-awaiting-independent-validation
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-14"
 updated: "2026-10-14"
@@ -12,8 +12,8 @@ updated: "2026-10-14"
 
 Requirement DEV-01 remains pending independent phase verification and actual
 Phase 03 judgments. This record covers the executed eight-plan scope. It does
-not advance requirements or phase state. The parent owns the independent
-Nyquist and security verdicts.
+not advance requirements or phase state. The independent Nyquist audit finds
+no automated coverage gap. Security and goal verification remain parent-owned.
 
 ## Infrastructure and sampling
 
@@ -58,6 +58,83 @@ Node versions, actual committed paths, attempts and evidence limits.
 
 No feedback gap spans three consecutive tasks. T-03-SC applies to every plan:
 no install, live vendor/hardware profile or private account input occurred.
+
+## Independent Nyquist coverage audit
+
+Auditor: /root/phase3_nyquist. Inspected HEAD:
+c5dd108f32c70f1cf369bf164111d1db1fc70c24. The active verify:post hook includes
+validate-phase with GSD_RUNTIME=codex. This is State A: an existing validation
+record and eight executed plans with eight summaries.
+
+All 18 tasks map to DEV-01. Each task has an automated command and an explicit
+failure condition. Classification: 18 COVERED, zero PARTIAL and zero MISSING.
+No new test, fixture, runtime wrapper, skip or implementation repair is needed.
+The existing compiler negatives fail compilation when the required contract
+weakens. The executable cases compare public results with independent values.
+
+The command map uses these exact existing commands. Pair commands include a
+fresh strict build. The retained native records prove their executed outcomes.
+
+| Key | Automated command |
+| --- | --- |
+| STATE | `npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts` |
+| FAMILY | `npm run test:coverage:direct -- src/device/family.ts test/device/family.test.ts` |
+| GEMINI | `npm run test:coverage:direct -- src/device/gemini.ts test/device/gemini.test.ts` |
+| WATER | `npm run test:coverage:direct -- src/device/waterLevel.ts test/device/waterLevel.test.ts` |
+| EVENTS | `npm run test:coverage:direct -- src/device/events.ts test/device/events.test.ts` |
+| HEALTH | `npm run test:coverage:direct -- src/device/health.ts test/device/health.test.ts` |
+| HALO | `npm run test:coverage:direct -- src/device/halo.ts test/device/halo.test.ts` |
+| REGISTRY | `npm run test:coverage:direct -- src/device/registry.ts test/device/registry.test.ts` |
+| CONTEXT | `npm run test:coverage:direct -- src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts` |
+| FULL | `npm run check` |
+| TRACER | Exact `node -e` automated command in 03-08-PLAN.md, task 03-08-01 |
+| AGGREGATE | Exact `node -e` automated command in 03-08-PLAN.md, task 03-08-02 |
+
+| Task ID | Requirement | Type | Commands | Classification / status |
+| --- | --- | --- | --- | --- |
+| 03-01-01 | DEV-01 | Unit | STATE | COVERED / green |
+| 03-01-02 | DEV-01 | Unit | STATE | COVERED / green |
+| 03-01-03 | DEV-01 | Unit and review evidence | STATE, FULL | COVERED / green |
+| 03-02-01 | DEV-01 | Compiler contract and unit | FAMILY, GEMINI | COVERED / green |
+| 03-02-02 | DEV-01 | Compiler contract and unit | FAMILY, GEMINI | COVERED / green |
+| 03-03-01 | DEV-01 | Unit | GEMINI | COVERED / green |
+| 03-03-02 | DEV-01 | Unit | GEMINI | COVERED / green |
+| 03-04-01 | DEV-01 | Unit | WATER, GEMINI | COVERED / green |
+| 03-04-02 | DEV-01 | Unit, compiler contract and review evidence | WATER, FAMILY, GEMINI, FULL | COVERED / green |
+| 03-05-01 | DEV-01 | Compiler contract | EVENTS | COVERED / green |
+| 03-05-02 | DEV-01 | Compiler contract and consumer unit | HEALTH, FULL | COVERED / green |
+| 03-06-01 | DEV-01 | Unit | HALO, REGISTRY | COVERED / green |
+| 03-06-02 | DEV-01 | Unit | HALO, REGISTRY | COVERED / green |
+| 03-07-01 | DEV-01 | Compiler contract and consumer unit | CONTEXT, FULL | COVERED / green |
+| 03-07-02 | DEV-01 | Compiler contract and consumer unit | CONTEXT, FULL | COVERED / green |
+| 03-07-03 | DEV-01 | Compiler contract, unit and review evidence | EVENTS, HEALTH, HALO, REGISTRY, CONTEXT, FULL | COVERED / green |
+| 03-08-01 | DEV-01 | Artifact/Git integration | TRACER | COVERED / green |
+| 03-08-02 | DEV-01 | Artifact/Git integration and full gate | AGGREGATE, FULL | COVERED automated scope / green |
+
+The auditor independently checked the retained native stdout, raw exits, runtime,
+clean input records and source-only LCOV. Five executable owners passed
+170 authored cases: STATE 52, Gemini 88, water 21, HALO 1 and registry 8.
+Every nonempty line, function and branch denominator is fully covered.
+Four declaration-only owners have strict positive/negative compiler contracts.
+A file-load sentinel supplies no authored case or numerical runtime percentage.
+
+The auditor reran both exact PLAN JSON/Git predicates. Both exited 0 and emitted
+DEVICE_LEDGER_TRACER_OK and DEVICE_SEAL_AUTOMATED_AUDIT_OK respectively.
+A separate read-only comparison verified all 20 current SHA256/blob identities
+against their final review inputs. It also derived the 18 tasks directly from
+all eight plans and emitted NYQUIST_EXACT_INPUTS_AND_NATIVE_EVIDENCE_OK.
+
+The retained full gate at clean 629cfc4 exited 0 on Node v26.11.1 in this session.
+The auditor's nonplanning diff against that full revision was empty. No untracked
+input existed, and the Node runtime was unchanged. The full native command,
+stdout, stderr, timestamps and input bytes were inspected. Under local-verification,
+this evidence applies to the current inputs. No redundant full gate was run.
+
+WARNING: This verdict covers synthetic offline automation on Node v26.11.1.
+Human judgments, hardware evidence and the two historical process gaps remain
+outside automated closure. Historical Gemini 247/247 remains unconfirmed.
+No BLOCKER or actual test gap was found. No debug iteration or new control ran.
+Nyquist compliance records automated coverage only. DEV-01 remains pending.
 
 ## Current pair evidence
 
@@ -219,7 +296,17 @@ deterministic enforcement PASS, hardware approval or inherited answer exists.
 - [x] Genuine-RED applicability, five controls and one unsuccessful attempt are audited.
 - [x] Fresh combined gate and complete batch reviews cover current executable inputs.
 - [x] Independent typed aggregate evidence review returns terminal PASS without a D-03 stop.
-- [ ] Independent Nyquist, security and goal verification are accepted by the parent.
+- [x] Independent Nyquist audit finds no automated coverage gaps across all 18 tasks.
+- [ ] Independent security and goal verification are accepted by the parent.
 - [ ] Actual Phase03 E/P judgments are recorded.
 
-Approval remains pending parent verification and actual Phase03 judgments.
+Automated Nyquist validation is complete. Phase approval remains pending
+parent verification and actual Phase03 judgments.
+
+## Validation Audit 2026-10-14
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
