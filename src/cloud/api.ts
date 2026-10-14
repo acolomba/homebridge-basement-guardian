@@ -24,7 +24,7 @@ import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } 
  * never retried automatically, because the command may already have been
  * delivered (D-038).
  */
-export const COMMAND_DEADLINE_MS = 2_500;
+const COMMAND_DEADLINE_MS = 2_500;
 
 /**
  * The complete set of vendor routes this version reaches, by operation.
@@ -37,7 +37,7 @@ export const COMMAND_DEADLINE_MS = 2_500;
  * A label is what a failure carries. The constructed URL never is: it holds the
  * base URL, and a device path holds the account identifier (AUTH-02).
  */
-export const ROUTES = {
+const ROUTES = {
   devices: 'GET /devices',
   device: 'GET /devices/{deviceId}',
   command: 'PUT /devices/{deviceId}/data',

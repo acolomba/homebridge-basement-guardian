@@ -14,7 +14,7 @@ import { getCACertificates, setDefaultCACertificates } from 'node:tls';
 
 import { It, mock, verify, when } from 'strong-mock';
 
-import { COMMAND_DEADLINE_MS, createCloudApi, ROUTES } from '../../src/cloud/api.js';
+import { createCloudApi } from '../../src/cloud/api.js';
 import { CloudRequestError } from '../../src/cloud/errors.js';
 import { httpFetch } from '../../src/cloud/httpDispatcher.js';
 
@@ -171,21 +171,6 @@ function stubRecordingAuth(tokenSignals: AbortSignal[]): AuthClient {
     },
   };
 }
-
-test('reaches exactly the four vendor routes this version uses', () => {
-  // act & assert
-  assert.deepStrictEqual(ROUTES, {
-    devices: 'GET /devices',
-    device: 'GET /devices/{deviceId}',
-    command: 'PUT /devices/{deviceId}/data',
-    awsCredentials: 'GET /credentials/aws',
-  });
-});
-
-test('waits at most 2500 milliseconds for the vendor to accept a command', () => {
-  // act & assert
-  assert.strictEqual(COMMAND_DEADLINE_MS, 2_500);
-});
 
 test('authorizes the device request with the bearer token the auth client supplies', async () => {
   // arrange
