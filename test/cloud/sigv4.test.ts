@@ -14,15 +14,12 @@ import { test } from 'node:test';
 
 import { presignIotWebsocketUrl } from '../../src/cloud/sigv4.js';
 
-import type { PresignInput } from '../../src/cloud/sigv4.js';
+import { baseInput } from './sigv4Seeds.js';
 
 const HOST = 'broker.example';
 const REGION = 'us-test-1';
-const ACCESS_KEY_ID = 'test-access-key-id';
 const SECRET_ACCESS_KEY = 'test-secret-access-key';
-const SESSION_TOKEN = 'test/session+token==';
 const ENCODED_SESSION_TOKEN = 'test%2Fsession%2Btoken%3D%3D';
-const SIGNED_AT = '2026-08-28T12:00:00.000Z';
 
 // The signed query string is written out rather than assembled, so the
 // expectation below inherits nothing from the production canonicalization.
@@ -64,18 +61,6 @@ const EXPECTED_SIGNATURE = hmac(SIGNING_KEY, STRING_TO_SIGN).toString('hex');
 // the security token are the only parts that vary without resigning.
 const SIGNED_PART = `${HOST}/mqtt?${CANONICAL_QUERY}&X-Amz-Signature=${EXPECTED_SIGNATURE}`;
 const EXPECTED_URL = `wss://${SIGNED_PART}&X-Amz-Security-Token=${ENCODED_SESSION_TOKEN}`;
-
-function baseInput(): PresignInput {
-  return {
-    scheme: 'wss',
-    host: HOST,
-    region: REGION,
-    accessKeyId: ACCESS_KEY_ID,
-    secretAccessKey: SECRET_ACCESS_KEY,
-    sessionToken: SESSION_TOKEN,
-    now: new Date(SIGNED_AT),
-  };
-}
 
 function signatureOf(url: string): string | null {
   return new URL(url).searchParams.get('X-Amz-Signature');
