@@ -77,9 +77,13 @@ interface VendorCall<T> {
   accepts: (value: unknown) => value is T;
 }
 
-// The identifier is opaque and is never split, parsed, or logged. Encoding it
-// keeps a character it may contain from reshaping the path (T-01-31).
+// The identifier is opaque and is never split, parsed, or logged. Dot-only URL
+// control segments are refused; other identifiers are percent-encoded (T-01-31).
 function devicePath(deviceId: string, suffix: string): string {
+  if (deviceId === '.' || deviceId === '..') {
+    throw new TypeError('Device identifier cannot be used in a request path.');
+  }
+
   return `${DEVICES_PATH}/${encodeURIComponent(deviceId)}${suffix}`;
 }
 
@@ -186,7 +190,7 @@ export function createCloudApi(options: CloudApiOptions): CloudApi {
 
       return send(options, { ...call, accepts: isWireDeviceListResponse }, signal).then((body) => body.devices.map((device) => toApiDevice(device)));
     },
-    device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
+    async device(deviceId: string, signal: AbortSignal): Promise<ApiDevice> {
       const call = { route: ROUTES.device, path: devicePath(deviceId, ''), method: 'GET', deadlineMs: options.requestTimeoutMs };
 
       return send(options, { ...call, accepts: isWireDeviceResponse }, signal).then((body) => toApiDevice(body.device));
@@ -196,7 +200,7 @@ export function createCloudApi(options: CloudApiOptions): CloudApi {
 
       return send(options, { ...call, accepts: isAwsCredentialsResponse }, signal);
     },
-    sendCommand(deviceId: string, command: DeviceCommand, signal: AbortSignal): Promise<CommandResult> {
+    async sendCommand(deviceId: string, command: DeviceCommand, signal: AbortSignal): Promise<CommandResult> {
       const call = {
         route: ROUTES.command,
         path: devicePath(deviceId, COMMAND_SUFFIX),

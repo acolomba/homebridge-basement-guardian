@@ -226,6 +226,78 @@ test('encodes a device identifier that needs percent-encoding into the path', as
   verify(httpFetch);
 });
 
+for (const deviceId of ['.', '..']) {
+  test(`rejects device read identifier "${deviceId}" before authentication or HTTP`, async () => {
+    // arrange
+    const exchanges: string[] = [];
+    const auth: AuthClient = {
+      idToken: () => {
+        exchanges.push('authentication');
+
+        return Promise.resolve('id-token-1');
+      },
+    };
+
+    const httpFetch: HttpFetch = () => {
+      exchanges.push('HTTP');
+
+      return Promise.resolve(new Response(JSON.stringify({ device: geminiWireDevice() }), { status: 200 }));
+    };
+
+    const cloudApi = createCloudApi(apiOptions({ auth, httpFetch }));
+
+    // act
+    const device = cloudApi.device(deviceId, new AbortController().signal);
+
+    // assert
+    await assert.rejects(device, (error: unknown) => {
+      assert.ok(error instanceof TypeError);
+      assert.deepStrictEqual(
+        { name: error.name, message: error.message, cause: error.cause },
+        { name: 'TypeError', message: 'Device identifier cannot be used in a request path.', cause: undefined },
+      );
+
+      return true;
+    });
+    assert.deepStrictEqual(exchanges, []);
+  });
+
+  test(`rejects command identifier "${deviceId}" before authentication or HTTP`, async () => {
+    // arrange
+    const exchanges: string[] = [];
+    const auth: AuthClient = {
+      idToken: () => {
+        exchanges.push('authentication');
+
+        return Promise.resolve('id-token-1');
+      },
+    };
+
+    const httpFetch: HttpFetch = () => {
+      exchanges.push('HTTP');
+
+      return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }));
+    };
+
+    const cloudApi = createCloudApi(apiOptions({ auth, httpFetch }));
+
+    // act
+    const commandAnswer = cloudApi.sendCommand(deviceId, { desiredData: { test_running: true } }, new AbortController().signal);
+
+    // assert
+    await assert.rejects(commandAnswer, (error: unknown) => {
+      assert.ok(error instanceof TypeError);
+      assert.deepStrictEqual(
+        { name: error.name, message: error.message, cause: error.cause },
+        { name: 'TypeError', message: 'Device identifier cannot be used in a request path.', cause: undefined },
+      );
+
+      return true;
+    });
+    assert.deepStrictEqual(exchanges, []);
+  });
+}
+
 test('reads the shadow endpoint, the client identifier, and the temporary credentials', async () => {
   // arrange
   const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
