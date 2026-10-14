@@ -1116,8 +1116,11 @@ describe('snapshot', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
 
-    // act & assert
-    assert.strictEqual(store.snapshot('account-1_serial-9'), undefined);
+    // act
+    const snapshot = store.snapshot('account-1_serial-9');
+
+    // assert
+    assert.strictEqual(snapshot, undefined);
   });
 });
 
@@ -1126,8 +1129,11 @@ describe('deviceIds', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());
 
-    // act & assert
-    assert.deepStrictEqual(store.deviceIds(), []);
+    // act
+    const deviceIds = store.deviceIds();
+
+    // assert
+    assert.deepStrictEqual(deviceIds, []);
   });
 
   test('reports every stored identifier', () => {
