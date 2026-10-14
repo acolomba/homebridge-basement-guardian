@@ -852,24 +852,19 @@ describe('the connection lifecycle', () => {
     assert.deepStrictEqual(logged, ['debug The shadow connection failed and will reconnect.']);
   });
 
-  for (const secret of ['broker.invalid', 'wss://', 'accessKeyId', 'secretAccessKey', 'sessionToken', 'clientId', 'test-session-token']) {
-    test(`keeps ${secret} out of the reason reported to the disconnect handler`, async () => {
-      // arrange
-      const { client, transports, lifecycle } = harness();
-      await client.start([DEVICE_A]);
-      await connected(transports[0]);
+  test('reports a sanitized transport failure reason once', async () => {
+    // arrange
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
 
-      // act
-      transports[0]?.error(new Error('socket to wss://broker.invalid/mqtt?X-Amz-Security-Token=test-session-token failed'));
-      transports[0]?.close();
+    // act
+    transports[0]?.error(new Error('socket to wss://broker.invalid/mqtt?X-Amz-Security-Token=test-session-token failed'));
+    transports[0]?.close();
 
-      // assert
-      assert.deepStrictEqual(
-        lifecycle.filter((entry) => entry.includes(secret)),
-        [],
-      );
-    });
-  }
+    // assert
+    assert.deepStrictEqual(lifecycle, ['connected', 'disconnected transport-error']);
+  });
 
   test('reports not connected before any connection is opened', () => {
     // arrange
