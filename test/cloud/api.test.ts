@@ -768,9 +768,8 @@ test('reaches only the four declared routes when every operation runs (SYNC-01)'
   verify(httpFetch);
 });
 
-// The plugin's first request with a body is also its first that says anything about itself. What it
-// may declare is asserted as a complete key set rather than as the presence of one header, so a
-// fifth header cannot appear without this case saying so (AUTH-02).
+// The declared headers are asserted as a complete key set, so a fifth header
+// cannot appear without this case saying so (AUTH-02).
 test('declares exactly four headers on a command request', async () => {
   // arrange
   const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
