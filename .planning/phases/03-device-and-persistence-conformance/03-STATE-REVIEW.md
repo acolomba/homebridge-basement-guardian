@@ -1,20 +1,31 @@
 ---
 phase: 03-device-and-persistence-conformance
-reviewed: 2026-10-14T15:58:26Z
+reviewed: 2026-10-14T16:38:49Z
 depth: deep
-files_reviewed: 2
+files_reviewed: 3
 files_reviewed_list:
   - src/device/state.ts
   - test/device/state.test.ts
-reviewed_revision: aa826a50a0afeda9a95ab05d38240219bfcb5595
+  - test/device/stateSeeds.ts
+reviewed_revision: 1166da4d338eea327ceb08da7381dcf4982a6742
+reviewed_executable_revision: b05e58f75b82510537552109a80601ccf02b7b0c
 reviewer: /root/phase3_state/state_initial_review
-review_round: 0
+review_round: 1
 requirement: DEV-01
-findings:
+initial_review:
+  reviewed: 2026-10-14T15:58:26Z
+  revision: aa826a50a0afeda9a95ab05d38240219bfcb5595
+  files_reviewed: 2
   critical: 3
   warning: 7
-  info: 0
   total: 10
+findings:
+  critical: 0
+  warning: 1
+  info: 0
+  total: 1
+open_ids:
+  - CR-03-STATE-011
 status: issues_found
 ---
 
@@ -36,9 +47,11 @@ The installed Fallow skill and live CLI help were read before semantic queries.
 
 ## Narrative Findings (AI reviewer)
 
-All locations below are qualified by the reviewed revision above. All findings
-first opened in review 0, remain open, and concern DEV-01. No fix, evidence or
-source-change commit has been made by this reviewer.
+The following initial-review locations are qualified by
+`aa826a50a0afeda9a95ab05d38240219bfcb5595`. At round 0, all ten findings
+first opened, remained open, and concerned DEV-01. Current independent
+outcomes are recorded in the correction-review section below. No fix,
+evidence or source-change commit has been made by this reviewer.
 
 ### BLOCKER findings
 
@@ -731,3 +744,161 @@ because end-of-file-fixer removed an extra trailing blank line. It changed
 no executable input. Its capture is `/tmp/state-expansion-report-pre.json`.
 The exact report-only pre-step is repeated after this record addition and
 must pass before the report is committed; its result is supplied at handoff.
+
+## Independent complete correction review: round 1
+
+Reviewer: `/root/phase3_state/state_initial_review`, role gsd-code-reviewer.
+Reviewed at `1166da4d338eea327ceb08da7381dcf4982a6742`; repaired executable
+revision `b05e58f75b82510537552109a80601ccf02b7b0c`. The tree was clean
+before this report update. The complete 419-line source, 1,144-line owner,
+and 29-line new seed helper were reread, including all headers and unchanged
+code. AGENTS, the current plan/context/protocol/report, Phase 1 SC-03 proof,
+and all five complete relevant rulebooks were reread. Configured skill
+resolution remains comments/style/unit-review; writer/local-verification
+were additionally applied. Initial history, controls and actual commits above
+are preserved.
+
+Current Git blob identities:
+
+- source: `ccee11846085280f5618622a36d19b5ba511643d`;
+- owner: `fb738ab8f118a7f746b57412a5d2551739593db2`;
+- helper: `bdf56c4ebaf3cd07b6c2c2a26c29181367aab1e6`.
+
+### D-03 verdict determined before report mutation
+
+| Round | Opening | Fixed | Rejected | New | Reopened | Closing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 10 | 10 | 0 | 1 | 0 | 1 |
+
+Open IDs: `CR-03-STATE-011` only, WARNING. Every initial accepted ID is fixed.
+No fixed finding or SC-03 reopened. Closing 1 is lower than opening 10, and
+this is correction round 1, not round 4. Therefore D-03 does not trigger a
+global stop. This verdict was sent to the coordinator before updating the
+report. Further correction must retain the original STATE counter; the batch
+is not clean or closed.
+
+### Independently confirmed initial-ID outcomes
+
+Every row retains DEV-01, first review 0, its original severity and exact
+rule/section from the initial narrative. Locations below are at the reviewed
+round-one revision. Actual fixing hashes and committed paths are independently
+matched to Git objects, as recorded above.
+
+| ID | Severity | Current locations | Independent outcome |
+| --- | --- | --- | --- |
+| CR-03-STATE-001 | BLOCKER | owner 350-391,568-599,726-747,996-1033,1051-1070 | Fixed. Complete independently authored unversioned/first-versioned returned and stored snapshots; complete second released device; held snapshot after unknown release/remove; listener-failure returned/stored state before interactions. Tracer commit ca8b3dd plus cause commit 169e4ed. |
+| CR-03-STATE-002 | BLOCKER | owner 32-36,66-69,766-832,875-897,913-979,996-1033 | Fixed. Recorder retains all next/previous/changedKeys arguments. All six notified cases compare independent whole envelopes after returned/stored state, including exact undefined previous on first discovery and structured readings. Commit 3e4ba69. |
+| CR-03-STATE-003 | BLOCKER | owner 645-672 | Fixed. Mutable injected clock advances before both releases; whole canonical snapshot keeps FIRST_RECEIPT, with empty notifications. Separate intended-failure control verified below. Commit f78999a. |
+| CR-03-STATE-004 | WARNING | source 1-15; owner/helper 1-12 | Fixed. Every file has SPDX first, separate copyright and fileoverview JSDoc, then imports with one blank line between sections. Original MIT boundary remains. Source header commit 5808523; helper header introduced with 18e8b83. |
+| CR-03-STATE-005 | WARNING | source 17-24,92-128,360-400 | Fixed. Identity now distinguishes identifying/display facts; public methods describe absence, ownership, clocks, preservation and no-op behavior. Removal/release implementation rationale uses // beside implementation, preserving durable safety IDs. Commit 72417ab. |
+| CR-03-STATE-006 | WARNING | owner 214-226 | Fixed. Only fixture local is vendorTelemetry; canonical data key remains. Commit b3e792c. |
+| CR-03-STATE-007 | WARNING | owner 455-458 | Fixed. No obsolete wider-guard narration remains; current metadata receipt/telemetry ownership rationale and durable IDs remain. Other non-obvious scenario setup explanations are retained. Commit 1de1a61. |
+| CR-03-STATE-008 | WARNING | helper 14-29; owner import 16 and actual calls | Fixed in code. Fresh typed documented seed exports live beside the concern, return new literals, and are actually consumed. Full helper review found no additional seed defect. Commit 18e8b83; its process deviation remains separately disclosed below. |
+| CR-03-STATE-009 | WARNING | owner 1108-1131 | Fixed. Both non-throwing public reads use separate arrange/act/assert sections. Commit df9d37d. |
+| CR-03-STATE-010 | WARNING | owner 83-97 | Fixed. Both meaningful desired true/null negative compiler contracts survive at module level; synthetic runtime wrappers are gone. Runtime owner count is 52 rather than 54 for this stated reason. Commit b05e58f. |
+
+### New WARNING: CR-03-STATE-011 — Named logging arrow lacks its permitted declaration form
+
+**Requirement:** DEV-01. **First review:** 1. **Status:** open.
+**File:** `test/device/state.test.ts:40-43` at
+`1166da4d338eea327ceb08da7381dcf4982a6742`.
+**Rule:** Google style review, Functions:
+“A named function is a function declaration; an arrow assigned to const only
+for an explicit function type or a nested function needing the outer this.”
+**Issue:** `createRecordingLog` assigns the named function `record` to a
+const arrow. The binding has no explicit function-type annotation and the
+function does not need an outer this. Parameter/return annotations on the
+arrow do not provide the required explicit function-type binding. It is
+the only matching named const-arrow helper in the three reviewed files.
+**Fix:** Use a local `function record(message: string): void` declaration
+with the same messages.push body. Preserve all Logging members, call behavior,
+safe listener-error observations and exact payload expectations.
+**Independent evidence:** The complete helper and its uses at owner 45-55
+were read, and the Functions exception was checked against the actual body.
+This unchanged helper was missed in initial triage; it is a newly discovered
+cause, not recurrence of any fixed ID. No production behavior defect or
+unchanged-production RED is asserted. Fix/evidence commit hashes remain absent.
+
+### Six seed dispositions at round one
+
+| Seed | Current independent disposition |
+| --- | --- |
+| Required undefined versus optional shape | Rejection retained. Source 47-71 and complete constructors 206-214/263-271 keep every required key present; no optionalization. Original exact-consumer and constructor evidence remains applicable to unchanged declarations. |
+| Snapshot readonly members | Rejection retained. Source 33-52 remains an interface; class-only readonly rule does not establish a violation. Runtime freeze 150-170 remains. No invented interface rule or new writable-nested-alias contract. |
+| Public JSDoc versus implementation notes | Fixed by 004/005 at the source locations in the outcome table. |
+| Local data naming versus canonical field | Fixed by 006; owner 216-222 uses vendorTelemetry and preserves the data field. |
+| In-case rationale | Accepted obsolete-history part fixed by 007 at 455-458; blanket deletion remains rejected. Retained blocks at 482-485,641-644,695-698,723-725 explain non-obvious setup/ownership. |
+| Incomplete whole promises | Fixed by 001/002/003. Whole callback and canonical observations are independent; actual scalar promises and empty notification lists remain appropriately scoped. |
+
+### SC-03 and executable-preservation inspection
+
+SC-03 remains fixed: complete discovery snapshot before frozen checks
+236-249; nested telemetry with shape/presence 260-270; version-row complete
+returns and canonical refusals 327-345; metadata watermark whole return and
+canonical refusal 490-505; nested metadata presence before frozen 530-540;
+merged envelope before frozen 552-563; complete released stored snapshot
+683-692. No required key, nested value, canonical readback or frozen check
+was weakened. No SC-03 reopening occurred.
+
+A fresh read-only TypeScript scanner comparison independently found 1,417
+non-trivia kind/text tokens in both baseline source aa826a5 and current
+1166da4d, with exact equality. Current source SHA-256 independently matches
+`fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`.
+The approved source changes are documentation/header changes; runtime and
+type declarations remain exact. The original nested-alias candidate
+assessment is retained; no genuine production defect or RED JSON is established.
+
+### Native evidence independently inspected and reused
+
+`git diff b05e58f75b82510537552109a80601ccf02b7b0c -- .
+':(exclude,glob).planning/**/*.md'` was empty, and the tree had no untracked
+executable input. Git confirms HEAD differs from that executable revision
+only by the assigned report. Same-session evidence reuse therefore applies.
+
+- Final build/owner/direct/native JSON captures under
+  `/tmp/state-expansion-final-{build,owner,direct,native}.json` confirm
+  exact command arrays, real UTC timestamps and raw exit 0. Owner/native TAP
+  both record 52 tests, 52 pass, zero fail/skip/cancel/todo. Final native LCOV
+  contains exactly one source record, lines 264/264, functions 23/23,
+  branches 61/61. This is isolated state coverage, not aggregate coverage.
+- Actual normal commit captures for the repaired source, owner and seed
+  show enabled check:commit passing. Those hooks supply static evidence.
+  Seed support staging selected all pairs. Recorded-base audit captures
+  for 003/005/006/007/008/009/010 all have raw exit 0/verdict pass against
+  aa826a5; seed stderr cache/entry-point diagnostics remain preserved.
+- The tracer canonical/envelope control captures each have native exit 1,
+  the intended named tracer ERR_ASSERTION, 53/54 passing and zero skips/
+  cancellations. Their differing stored-water/returned-connectivity failures
+  prove both observations. Restoration captures have matching
+  `070c580951f786152b5105da9d6776e742345e1740aec5c5751c1d2d0bda06bd`
+  source hashes, build 0 and owner 54/54. The saved original source and
+  actual header-commit source independently hash to that same value.
+- The repeated-release control native capture has exit 1 and its intended
+  ERR_ASSERTION: receivedAt 1700000889000 versus 1700000777000, with 53/54.
+  Recorded restored build/owner/direct exits are 0, owner 54/54. Source
+  restoration precedes later documentation commits; no mutation is committed.
+- Helper exact-symbol capture stdout was inspected. Production project
+  status is unavailable/no-project despite raw exit 0, which supplies no
+  no-use proof. Both test-project results are complete/high confidence,
+  identifying only the state owner. Actual imports/calls and complete
+  seed bodies were reread. No new production API depends on unavailable
+  analysis; baseline shared-type evidence is explicitly baseline evidence.
+
+Node v26.11.1 and npm 11.20.0 apply to these runs. No reviewer build, test,
+coverage run, hook, audit, mutation, install, live call or Git/index write
+was performed. The combined npm run check remains coordinator-owned and
+pending; focused results do not close DEV-01 or the phase.
+
+### Disclosed process deviation remains visible
+
+Independent inspection confirms the CR-008 pre-step exited 1 at
+16:24:50.929472Z after formatting the owner import. The enabled normal commit
+started 16:24:56.976568Z and ended 16:25:13.448419Z with exit 0. The clean
+repeat occurred afterward, 16:25:39.507049Z–16:25:41.809937Z, exit 0.
+Those captures and actual commit 18e8b83 support the disclosed ordering
+deviation; the late repeat does not retroactively satisfy the sequence.
+The coordinator's explicit continuation authorization is retained.
+No runtime RED, reopened source finding, extra correction round, history
+rewrite or implied full workflow compliance is invented for this deviation.
+
+Round 1 ends with one open WARNING, CR-03-STATE-011. No global stop applies.
