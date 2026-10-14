@@ -15,7 +15,14 @@ import { It, mock, verify, when } from 'strong-mock';
 
 import { createMqttTransport } from '../../src/cloud/mqttTransport.js';
 
-import type { MqttClientEvents, MqttClientIdentity, MqttClientLike, MqttConnectOptions, MqttTransport } from '../../src/cloud/mqttTransport.js';
+import type {
+  MqttClientEvents,
+  MqttClientIdentity,
+  MqttClientLike,
+  MqttConnectOptions,
+  MqttTransport,
+  MqttTransportOptions,
+} from '../../src/cloud/mqttTransport.js';
 
 const BROKER_URL = 'wss://broker.invalid/mqtt';
 const SIGNED_URL = 'wss://broker.invalid/mqtt?signed=yes';
@@ -36,8 +43,8 @@ function pendingTimers(): number {
   return process.getActiveResourcesInfo().filter((resource: string) => resource === 'Timeout').length;
 }
 
-interface Harness {
-  transport: MqttTransport;
+interface PreparedConnection {
+  options: MqttTransportOptions;
   client: MqttClientLike;
   handlers: Partial<MqttClientEvents>;
   connectUrls: string[];
@@ -49,9 +56,13 @@ interface Harness {
   ends: () => readonly boolean[];
 }
 
+interface Harness extends PreparedConnection {
+  transport: MqttTransport;
+}
+
 // One connection's worth of client behavior. The failures decide whether the
 // subscribe and publish callbacks report success or an error.
-function harness(failures: ClientFailures = {}): Harness {
+function prepareConnection(failures: ClientFailures = {}): PreparedConnection {
   const handlers: Partial<MqttClientEvents> = {};
   const connectUrls: string[] = [];
   const signed: MqttClientIdentity[] = [];
@@ -85,7 +96,7 @@ function harness(failures: ClientFailures = {}): Harness {
     },
   };
 
-  const transport = createMqttTransport({
+  const options: MqttTransportOptions = {
     connect: (url: string, options: MqttConnectOptions): MqttClientLike => {
       connectUrls.push(url);
       connectOptions = options;
@@ -102,9 +113,28 @@ function harness(failures: ClientFailures = {}): Harness {
 
       return SIGNED_URL;
     },
-  });
+  };
 
-  return { transport, client, handlers, connectUrls, connectOptions, signed, subscribed, published, ends: () => ends };
+  return {
+    options,
+    client,
+    handlers,
+    connectUrls,
+    get connectOptions(): MqttConnectOptions | undefined {
+      return connectOptions;
+    },
+    signed,
+    subscribed,
+    published,
+    ends: () => ends,
+  };
+}
+
+function harness(failures: ClientFailures = {}): Harness {
+  const connection = prepareConnection(failures);
+  const transport = createMqttTransport(connection.options);
+
+  return { ...connection, transport };
 }
 
 // The transport records the connection on the notification's way through, so a
@@ -115,18 +145,25 @@ function connectTransport(harnessed: Harness): void {
 }
 
 test('opens exactly one connection, to the supplied url', () => {
-  // arrange & act
-  const { connectUrls } = harness();
+  // arrange
+  const connection = prepareConnection();
+
+  // act
+  createMqttTransport(connection.options);
 
   // assert
-  assert.deepStrictEqual(connectUrls, [BROKER_URL]);
+  assert.deepStrictEqual(connection.connectUrls, [BROKER_URL]);
 });
 
 test('disables the library reconnect timer and asks for a clean, resubscribing session', () => {
-  // arrange & act
-  const { connectOptions } = harness();
+  // arrange
+  const connection = prepareConnection();
+
+  // act
+  createMqttTransport(connection.options);
 
   // assert
+  const { connectOptions } = connection;
   assert.deepStrictEqual(
     {
       clientId: connectOptions?.clientId,
@@ -140,11 +177,14 @@ test('disables the library reconnect timer and asks for a clean, resubscribing s
 });
 
 test('signs the WebSocket handshake with the caller-supplied identity header', () => {
-  // arrange & act
-  const { connectOptions } = harness();
+  // arrange
+  const connection = prepareConnection();
+
+  // act
+  createMqttTransport(connection.options);
 
   // assert
-  assert.deepStrictEqual(connectOptions?.wsOptions, { headers: { 'User-Agent': 'harness-user-agent' } });
+  assert.deepStrictEqual(connection.connectOptions?.wsOptions, { headers: { 'User-Agent': 'harness-user-agent' } });
 });
 
 test('returns the signed url from the transform hook and ignores the url the hook receives', () => {
