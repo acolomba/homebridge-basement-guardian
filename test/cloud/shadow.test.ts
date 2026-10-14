@@ -93,7 +93,11 @@ function silentLog(): Logging {
 function fakeTransport(options: MqttTransportOptions, failures: TransportFailures): TransportRecorder {
   const subscribed: string[][] = [];
   const published: { topic: string; payload: string }[] = [];
-  const noop = (): void => undefined;
+
+  function noop(): void {
+    return undefined;
+  }
+
   let connect = noop;
   let close = noop;
   let message: (topic: string, payload: Buffer) => void = noop;
