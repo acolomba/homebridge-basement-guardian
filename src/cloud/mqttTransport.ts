@@ -169,7 +169,7 @@ export function createMqttTransport(options: MqttTransportOptions): MqttTranspor
     // the bare host, so that argument is deliberately unused and the signer
     // builds from the endpoint instead. The hook cannot await, which is why the
     // signer reads a cache the rotation timer keeps fresh (SYNC-04).
-    transformWsUrl: (_url: string, _connectOptions: object, live: MqttClientIdentity): string => options.signUrl(live),
+    transformWsUrl: (...handshake: Parameters<MqttConnectOptions['transformWsUrl']>): string => options.signUrl(handshake[2]),
     wsOptions: { headers: { 'User-Agent': options.userAgent } },
   });
   let ending: Promise<void> | undefined;
