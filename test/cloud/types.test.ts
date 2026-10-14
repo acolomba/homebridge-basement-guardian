@@ -145,145 +145,295 @@ const malformedCommandResults: { description: string; result: unknown }[] = [
 
 describe('isRecord', () => {
   test('accepts a plain object', () => {
-    // act & assert
-    assert.strictEqual(isRecord({ water_level: 1 }), true);
+    // arrange
+    const record = { water_level: 1 };
+
+    // act
+    const recordAccepted = isRecord(record);
+
+    // assert
+    assert.strictEqual(recordAccepted, true);
   });
 
   test('rejects a null value', () => {
-    // act & assert
-    assert.strictEqual(isRecord(null), false);
+    // arrange
+    const record = null;
+
+    // act
+    const recordAccepted = isRecord(record);
+
+    // assert
+    assert.strictEqual(recordAccepted, false);
   });
 
   test('rejects an array', () => {
-    // act & assert
-    assert.strictEqual(isRecord([1, 2]), false);
+    // arrange
+    const record = [1, 2];
+
+    // act
+    const recordAccepted = isRecord(record);
+
+    // assert
+    assert.strictEqual(recordAccepted, false);
   });
 
   test('rejects a string', () => {
-    // act & assert
-    assert.strictEqual(isRecord('water_level=1'), false);
+    // arrange
+    const record = 'water_level=1';
+
+    // act
+    const recordAccepted = isRecord(record);
+
+    // assert
+    assert.strictEqual(recordAccepted, false);
   });
 });
 
 describe('isWireDeviceListResponse', () => {
   test('accepts an empty account', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ devices: [] }), true);
+    // arrange
+    const wireResponse = { devices: [] };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, true);
   });
 
   test('accepts an envelope holding well-formed wire records', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ devices: [geminiWireDevice(), geminiWireDevice()] }), true);
+    // arrange
+    const wireResponse = { devices: [geminiWireDevice(), geminiWireDevice()] };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, true);
   });
 
   test('accepts a device that has reported no telemetry yet', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ devices: [{ ...geminiWireDevice(), data: {} }] }), true);
+    // arrange
+    const wireResponse = { devices: [{ ...geminiWireDevice(), data: {} }] };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, true);
   });
 
   test('rejects a bare top-level array', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse([geminiWireDevice()]), false);
+    // arrange
+    const wireResponse = [geminiWireDevice()];
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, false);
   });
 
   test('rejects a record carrying no devices key', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ deviceList: [geminiWireDevice()] }), false);
+    // arrange
+    const wireResponse = { deviceList: [geminiWireDevice()] };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, false);
   });
 
   test('rejects a devices key that is not an array', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ devices: geminiWireDevice() }), false);
+    // arrange
+    const wireResponse = { devices: geminiWireDevice() };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, false);
   });
 
   test('rejects the single-device envelope, so the two routes cannot be crossed', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceListResponse({ device: geminiWireDevice() }), false);
+    // arrange
+    const wireResponse = { device: geminiWireDevice() };
+
+    // act
+    const listAccepted = isWireDeviceListResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(listAccepted, false);
   });
 
   for (const { description, device } of malformedWireDevices) {
     test(`rejects an envelope holding ${description}`, () => {
-      // act & assert
-      assert.strictEqual(isWireDeviceListResponse({ devices: [device] }), false);
+      // arrange
+      const wireResponse = { devices: [device] };
+
+      // act
+      const listAccepted = isWireDeviceListResponse(wireResponse);
+
+      // assert
+      assert.strictEqual(listAccepted, false);
     });
   }
 });
 
 describe('isWireDeviceResponse', () => {
   test('accepts an envelope holding one well-formed wire record', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceResponse({ device: geminiWireDevice() }), true);
+    // arrange
+    const wireResponse = { device: geminiWireDevice() };
+
+    // act
+    const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(deviceAccepted, true);
   });
 
   test('rejects a value that is not a record', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceResponse([geminiWireDevice()]), false);
+    // arrange
+    const wireResponse = [geminiWireDevice()];
+
+    // act
+    const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(deviceAccepted, false);
   });
 
   test('rejects a bare unwrapped record', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceResponse(geminiWireDevice()), false);
+    // arrange
+    const wireResponse = geminiWireDevice();
+
+    // act
+    const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(deviceAccepted, false);
   });
 
   test('rejects a record carrying no device key', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceResponse({ theDevice: geminiWireDevice() }), false);
+    // arrange
+    const wireResponse = { theDevice: geminiWireDevice() };
+
+    // act
+    const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(deviceAccepted, false);
   });
 
   test('rejects the list envelope, so the two routes cannot be crossed', () => {
-    // act & assert
-    assert.strictEqual(isWireDeviceResponse({ devices: [geminiWireDevice()] }), false);
+    // arrange
+    const wireResponse = { devices: [geminiWireDevice()] };
+
+    // act
+    const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+    // assert
+    assert.strictEqual(deviceAccepted, false);
   });
 
   for (const { description, device } of malformedWireDevices) {
     test(`rejects an envelope holding ${description}`, () => {
-      // act & assert
-      assert.strictEqual(isWireDeviceResponse({ device }), false);
+      // arrange
+      const wireResponse = { device };
+
+      // act
+      const deviceAccepted = isWireDeviceResponse(wireResponse);
+
+      // assert
+      assert.strictEqual(deviceAccepted, false);
     });
   }
 });
 
 describe('toApiDevice', () => {
   test('lifts the serial number from the attributes the vendor nests it in', () => {
-    // act & assert
-    assert.deepStrictEqual(toApiDevice(narrowedWireDevice()), geminiDevice());
+    // arrange
+    const wireDevice = narrowedWireDevice();
+
+    // act
+    const device = toApiDevice(wireDevice);
+
+    // assert
+    assert.deepStrictEqual(device, geminiDevice());
   });
 
   test('returns exactly the six fields the plugin reads', () => {
-    // act & assert
-    assert.deepStrictEqual(toApiDevice(narrowedWireDevice()), geminiDevice());
+    // arrange
+    const wireDevice = narrowedWireDevice();
+
+    // act
+    const device = toApiDevice(wireDevice);
+
+    // assert
+    assert.deepStrictEqual(device, geminiDevice());
   });
 });
 
 describe('isAwsCredentialsResponse', () => {
   test('accepts a response carrying the endpoint, the client identifier, and all four credential fields', () => {
-    // act & assert
-    assert.strictEqual(isAwsCredentialsResponse(awsCredentialsResponse()), true);
+    // arrange
+    const credentialResponse = awsCredentialsResponse();
+
+    // act
+    const credentialsAccepted = isAwsCredentialsResponse(credentialResponse);
+
+    // assert
+    assert.strictEqual(credentialsAccepted, true);
   });
 
   for (const { description, response } of malformedCredentialResponses) {
     test(`rejects ${description}`, () => {
-      // act & assert
-      assert.strictEqual(isAwsCredentialsResponse(response), false);
+      // arrange
+      const credentialResponse = response;
+
+      // act
+      const credentialsAccepted = isAwsCredentialsResponse(credentialResponse);
+
+      // assert
+      assert.strictEqual(credentialsAccepted, false);
     });
   }
 });
 
 describe('isCommandResult', () => {
   test('accepts an accepted command', () => {
-    // act & assert
-    assert.strictEqual(isCommandResult({ success: true }), true);
+    // arrange
+    const command = { success: true };
+
+    // act
+    const commandAccepted = isCommandResult(command);
+
+    // assert
+    assert.strictEqual(commandAccepted, true);
   });
 
   test('accepts a refused command, because a refusal is a valid answer', () => {
-    // act & assert
-    assert.strictEqual(isCommandResult({ success: false }), true);
+    // arrange
+    const command = { success: false };
+
+    // act
+    const commandAccepted = isCommandResult(command);
+
+    // assert
+    assert.strictEqual(commandAccepted, true);
   });
 
   for (const { description, result } of malformedCommandResults) {
     test(`rejects ${description}`, () => {
-      // act & assert
-      assert.strictEqual(isCommandResult(result), false);
+      // arrange
+      const command = result;
+
+      // act
+      const commandAccepted = isCommandResult(command);
+
+      // assert
+      assert.strictEqual(commandAccepted, false);
     });
   }
 });
