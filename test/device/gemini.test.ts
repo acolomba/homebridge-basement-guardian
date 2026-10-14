@@ -15,9 +15,10 @@ import { describe, test } from 'node:test';
 
 import { geminiFamily } from '../../src/device/gemini.js';
 
+import { buildSnapshot, telemetryWithout, validMetadata, validTelemetry } from './geminiSeeds.js';
+
 import type { GeminiDeviceTypeId, GeminiDomainState, GeminiMetadataField, GeminiTelemetryField } from '../../src/device/gemini.js';
 import type { TrustScope } from '../../src/device/health.js';
-import type { DeviceSnapshot } from '../../src/device/state.js';
 
 void ('wayneWaterGemini' satisfies GeminiDeviceTypeId);
 void ('water_level' satisfies GeminiTelemetryField);
@@ -36,40 +37,7 @@ void ('mcu_firmware_version' satisfies GeminiTelemetryField);
 // @ts-expect-error the water level is telemetry, not metadata
 void ('water_level' satisfies GeminiMetadataField);
 
-const DEVICE_ID = 'account-1_serial-1';
 const RECEIVED_AT = 1_700_000_000_000;
-
-// Every required telemetry field, correctly typed and in its legal domain.
-function validTelemetry(): Record<string, unknown> {
-  return {
-    water_level: 1,
-    primary_pump_running: false,
-    primary_pump_fault: false,
-    backup_pump_running: false,
-    backup_pump_fault: false,
-    backup_pump_fuse_blown: false,
-    ac_power: true,
-    battery_charging: false,
-    battery_voltage_low: false,
-    battery_health: 8,
-    hours_of_protection: 8,
-    water_sensor_fault: false,
-    serial_communications: true,
-    alarm_audio_muted: false,
-    test_running: false,
-    offline: false,
-  };
-}
-
-// Every device metadata field, correctly typed.
-function validMetadata(): Record<string, unknown> {
-  return {
-    wifi_signal_dbm: -60,
-    mcu_firmware_version: '1.2.3',
-    wifi_firmware_version: '4.5.6',
-    mcu_target_version: '1.3.0',
-  };
-}
 
 // One telemetry field, the scope that stops being trustworthy while it is
 // invalid, a value of the wrong type for it, and whether the vendor may omit it.
@@ -114,24 +82,6 @@ const METADATA_SCOPES: readonly MetadataScopeRow[] = [
   { field: 'wifi_firmware_version', wrongValue: 123 },
   { field: 'mcu_target_version', wrongValue: 123 },
 ];
-
-// A valid telemetry record with one field left out, so the case exercises an
-// omission rather than a rebuilt object.
-function telemetryWithout(field: GeminiTelemetryField): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(validTelemetry()).filter(([name]) => name !== field));
-}
-
-function buildSnapshot(telemetry: Record<string, unknown>, metadata: Record<string, unknown> = {}): DeviceSnapshot {
-  return {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: RECEIVED_AT },
-    data: telemetry,
-    metadata,
-    shadowVersion: undefined,
-    deviceTimestamp: RECEIVED_AT,
-    receivedAt: RECEIVED_AT,
-  };
-}
 
 describe('validate', () => {
   test('returns valid for a snapshot with every required telemetry field present and correctly typed, and every metadata field absent', () => {
