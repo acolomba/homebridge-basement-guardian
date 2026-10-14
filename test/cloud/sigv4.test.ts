@@ -79,10 +79,12 @@ test('signs the canonical request the AWS IoT variant defines', () => {
 
 test('produces a byte-identical string for two calls with the same input', () => {
   // arrange
-  const url = presignIotWebsocketUrl(baseInput());
+  const input = baseInput();
+  const repeatedInput = baseInput();
 
   // act
-  const repeated = presignIotWebsocketUrl(baseInput());
+  const url = presignIotWebsocketUrl(input);
+  const repeated = presignIotWebsocketUrl(repeatedInput);
 
   // assert
   assert.strictEqual(repeated, url);
@@ -99,13 +101,16 @@ test('builds the URL from the supplied scheme', () => {
   assert.strictEqual(url, `ws://${SIGNED_PART}&X-Amz-Security-Token=${ENCODED_SESSION_TOKEN}`);
 });
 
-for (const { change, input } of [
-  { change: 'a different secret access key', input: { ...baseInput(), secretAccessKey: 'other-secret-access-key' } },
-  { change: 'a different region', input: { ...baseInput(), region: 'eu-test-1' } },
-  { change: 'a different host', input: { ...baseInput(), host: 'other-broker.example' } },
-  { change: 'a clock one second later', input: { ...baseInput(), now: new Date('2026-08-28T12:00:01.000Z') } },
+for (const { change, createInput } of [
+  { change: 'a different secret access key', createInput: () => ({ ...baseInput(), secretAccessKey: 'other-secret-access-key' }) },
+  { change: 'a different region', createInput: () => ({ ...baseInput(), region: 'eu-test-1' }) },
+  { change: 'a different host', createInput: () => ({ ...baseInput(), host: 'other-broker.example' }) },
+  { change: 'a clock one second later', createInput: () => ({ ...baseInput(), now: new Date('2026-08-28T12:00:01.000Z') }) },
 ]) {
   test(`produces a different signature for ${change}`, () => {
+    // arrange
+    const input = createInput();
+
     // act
     const url = presignIotWebsocketUrl(input);
 
