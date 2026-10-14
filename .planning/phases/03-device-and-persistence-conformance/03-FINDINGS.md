@@ -1,15 +1,15 @@
 # Phase 03 device and persistence findings ledger
 
-Milestone: code-review-sweep. Requirement: DEV-01. Status: PENDING EXECUTION.
+Milestone: code-review-sweep. Requirement: DEV-01. Status: EXECUTION IN PROGRESS.
 Planning baseline observed on features/code-review-sweep at
 0a9f993072de5a0e95da643bdf437b67feaca53e. No Phase 03 source/test repair,
 build, native test, mutation control, independent execution review or Git
 commit is claimed by this planning record.
 
-Accepted findings: 0 so far. This is an unreviewed initial ledger, NOT clean
-review evidence. DEV-01 is pending. Each row below remains pending until a typed
-independent full-file review and explicit complete-header inspection supply
-the actual reviewer, revision, command scope and result.
+Current accepted findings: 11 STATE causes, all fixed at independent round 2.
+DECODING and SUPPORT remain unreviewed. DEV-01 is pending. The initial planning
+text below is historical; the executed STATE record and current appendix
+supersede its pending statements only for that batch.
 
 ## Inventory
 
@@ -31,8 +31,8 @@ to the separate inventory below and do not silently change this core count.
 | test/device/health.test.ts | SUPPORT / 03-05 | Pending | Pending |
 | src/device/registry.ts | SUPPORT / 03-06 | Pending | Pending |
 | test/device/registry.test.ts | SUPPORT / 03-06 | Pending | Pending |
-| src/device/state.ts | STATE / 03-01 | Pending | Pending |
-| test/device/state.test.ts | STATE / 03-01 | Pending | Pending |
+| src/device/state.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
+| test/device/state.test.ts | STATE / 03-01 | Complete: round 2 at ade72e10 | Inspected: approved form |
 | src/device/waterLevel.ts | DECODING / 03-04 | Pending | Pending |
 | test/device/waterLevel.test.ts | DECODING / 03-04 | Pending | Pending |
 | src/persistence/accessoryContext.ts | SUPPORT / 03-07 | Pending | Pending |
@@ -46,7 +46,7 @@ joins full-file review, complete header inspection and broad staged selection.
 
 | Conditional path | Owner | Current status |
 | --- | --- | --- |
-| test/device/stateSeeds.ts | 03-01 | Not created; only confirmed reused-data cause |
+| test/device/stateSeeds.ts | 03-01 | Created for CR-008; full round-2 review/header inspected at ade72e10 |
 | test/device/geminiSeeds.ts | 03-03 | Not created; only confirmed reused-data cause |
 | test/persistence/accessoryContextSeeds.ts | 03-07 | Not created; only confirmed post-triage reused-data cause |
 
@@ -91,7 +91,7 @@ initial clarifications and tracer checks are not correction rounds.
 
 | Batch | Scope | Current round | Opening / fixed / rejected / new / reopened / closing | Verdict |
 | --- | --- | --- | --- | --- |
-| STATE | 2 files plus actual extensions | Not started | Unmeasured | Pending |
+| STATE | Source, owner and stateSeeds | 2 | 1 / 1 / 0 / 0 / 0 / 0 | Clean; initial 10, round 1 10→1, round 2 1→0 |
 | DECODING | 6 files plus actual extensions across 03-02/03/04 | Not started | Unmeasured | Pending |
 | SUPPORT | 10 files plus actual extensions across 03-05/06/07 | Not started | Unmeasured | Pending |
 
@@ -153,3 +153,59 @@ surfaces only the genuinely required evidence-backed judgments.
 None -- no security-relevant surface outside the plan's <threat_model> was
 introduced by this planning-only record. Execution must update this field
 from actual reviewed changes.
+
+## Executed STATE closeout — 03-01
+
+Authoritative full finding rules, original/current revision-qualified locations,
+severity, exact fixes and actual Git/control evidence are in
+03-STATE-REVIEW.md, final independent round 2 at ade72e10. The committed
+summary/report closeout is 26761a619dd9bbd6fbd4dbd1cefb7b38c31d59b4.
+All three actual batch files were reviewed in full with complete rulebooks.
+
+| Finding suffix (CR-03-STATE-) | Cause | Fixed commit | Current disposition |
+| --- | --- | --- | --- |
+| 001 | Whole returned and canonical snapshots | ca8b3dd, 169e4ed | Fixed, BLOCKER |
+| 002 | Complete listener envelopes | 3e4ba69 | Fixed, BLOCKER |
+| 003 | Repeated-release clock discrimination | f78999a | Fixed, BLOCKER |
+| 004 | Approved complete source header | 5808523 | Fixed, WARNING |
+| 005 | Identity/public docs and implementation comments | 72417ab | Fixed, WARNING |
+| 006 | Role-specific local telemetry name | b3e792c | Fixed, WARNING |
+| 007 | Obsolete rationale | 1de1a61 | Fixed, WARNING |
+| 008 | Fresh concern seed organization | 18e8b83 | Fixed in code, WARNING; process deviation below |
+| 009 | Separate non-throwing act/assert | df9d37d | Fixed, WARNING |
+| 010 | Module-level negative compile contracts | b05e58f | Fixed, WARNING |
+| 011 | Named local logger declaration | 90dac39 | Fixed, WARNING; new in round 1 |
+
+No IDs reopened and no D-03 stop triggered: round 1 opening10/fixed10/new1/
+closing1; round 2 opening1/fixed1/new0/closing0. Original counters retained.
+Required undefined fields and interface-readonly candidates were rejected
+from exact contracts. JSDoc, local naming, obsolete rationale and whole
+promises were repaired; blanket rationale deletion was rejected. SC-03
+whole frozen/present snapshots and canonical refusal readbacks remain intact.
+Production non-comment tokens match the pre-batch baseline. No genuine
+production defect or RED JSON was accepted. Three separate controls failed
+their intended assertions and restored exact source before rebuilt GREEN.
+
+Fresh owner52/52; native direct264/264 lines,23/23 functions,61/61 branches,
+all100%. Two synthetic runtime compile wrappers were removed while their
+negative type contracts remained. Shared seed staged checks selected allpairs.
+
+CR-008 violated pre-step ordering: formatter-changing pre-step exit1, then
+ordinary commit before repeat. Normal all-pair hooks passed; subsequent
+exact-byte corrective pre-step exited0 with clean tree. This does not prove
+compliant ordering retroactively. Report/summary and WINDOWS retain this
+actual deviation; history was preserved and continuation authorized.
+
+Parent full combined gate at clean26761a6, Nodev26.11.1:
+- npm run check first sandbox run16:57:31–16:57:39 UTC exit1: both package
+  inspection tests hit npm-cache EPERM. No code failure or bypass inferred.
+- Authorized filesystem retry16:58:07–16:58:42 UTC exited0. All six static
+  checks,104 Cucumber scenarios/1156steps, and43isolated pairs passed; merged
+  coverage/direct.lcov refreshed. Native log and command/time/commit record:
+  /private/tmp/guardian-phase3-wave1-full-check.log and
+  /private/tmp/guardian-phase3-wave1-gate.json. Failed run retained separately.
+- Schema drift gate exit0/blockfalse, no schemafiles; codebase drift skipped
+  no-structure-md/blockfalse. Summary verification passed.
+
+Overall DEV-01 and Phase3 remain pending. Phase3 E/P flags and hardware/release
+limitations are not resolved by this bounded batch.
