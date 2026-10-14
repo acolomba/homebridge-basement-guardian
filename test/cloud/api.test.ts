@@ -19,78 +19,17 @@ import { CloudRequestError } from '../../src/cloud/errors.js';
 import { httpFetch } from '../../src/cloud/httpDispatcher.js';
 
 import { startAlpnServer } from './alpnServer.js';
+import { awsCredentialsResponse, geminiDevice, geminiWireDevice } from './apiSeeds.js';
 
 import type { CloudApiOptions } from '../../src/cloud/api.js';
 import type { AuthClient } from '../../src/cloud/auth.js';
 import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
-import type { ApiDevice, AwsCredentialsResponse } from '../../src/cloud/types.js';
 import type { TestContext } from 'node:test';
 
 // Longer than the command deadline, which is what lets a case tell the two apart.
 const REQUEST_TIMEOUT_MS = 10_000;
 
 const auth: AuthClient = { idToken: () => Promise.resolve('id-token-1') };
-
-// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
-// placeholder in place of the real account identifier.
-function geminiDevice(): ApiDevice {
-  return {
-    deviceId: 'account-1_serial-1',
-    deviceTypeId: 'wayneWaterGemini',
-    name: 'Sump System',
-    serialNumber: 'serial-1',
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1 },
-  };
-}
-
-// The same device as the vendor sends it on the wire, with the thirteen top-level
-// keys in the vendor's own order. The literal carries no type annotation on
-// purpose: an untyped fixture cannot be reshaped by a later edit to a plugin
-// type, so it keeps describing the vendor's shape rather than the plugin's. The
-// serial number and the product line both sit under `attributes`; the eight keys
-// the plugin never reads are here so a case can prove they do not travel inward.
-function geminiWireDevice() {
-  return {
-    accountId: 'account-1',
-    deviceId: 'account-1_serial-1',
-    deviceTypeId: 'wayneWaterGemini',
-    location: 'placeholder-location',
-    name: 'Sump System',
-    homeId: null,
-    roomId: null,
-    state: { wifi_signal_dbm: -55, mcu_firmware_version: '1.0.0' },
-    data: { water_level: 1 },
-    timestamp: 1_700_000_000_000,
-    shadow: { state: { offline: false }, data: { water_level: 1 }, timestamp: 1_700_000_000_000 },
-    attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-  };
-}
-
-// The list route wraps its records under a plural key; the single-device route
-// wraps its one record under a singular key. The two keys are not the same.
-function deviceListBody(devices: unknown[]): { devices: unknown[] } {
-  return { devices };
-}
-
-function deviceBody(): { device: unknown } {
-  return { device: geminiWireDevice() };
-}
-
-// Every field here is invented; the vendor issues these values at runtime.
-function awsCredentialsResponse(): AwsCredentialsResponse {
-  return {
-    endpoint: 'shadow.example.test',
-    clientId: 'shadow-client-1',
-    credentials: {
-      AccessKeyId: 'access-key-1',
-      SecretAccessKey: 'secret-access-key-1',
-      SessionToken: 'session-token-1',
-      Expiration: '2026-01-01T00:00:00.000Z',
-    },
-  };
-}
 
 function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
   const fixedError = new Error('HTTP transport not supplied');
@@ -156,7 +95,7 @@ function stubSignalRecordingFetch(): { httpFetch: HttpFetch; requestSignals: (Ab
   const httpFetch: HttpFetch = (...request) => {
     requestSignals.push(request[1]?.signal);
 
-    return Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+    return Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
   };
 
   return { httpFetch, requestSignals };
@@ -188,7 +127,7 @@ test('authorizes the device request with the bearer token the auth client suppli
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ devices: [geminiWireDevice()] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -201,7 +140,7 @@ test('authorizes the device request with the bearer token the auth client suppli
 
 test('reads an empty account as an empty device list', async () => {
   // arrange
-  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -213,7 +152,7 @@ test('reads an empty account as an empty device list', async () => {
 
 test('lifts the serial number the vendor nests under attributes', async () => {
   // arrange
-  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ devices: [geminiWireDevice()] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -225,7 +164,7 @@ test('lifts the serial number the vendor nests under attributes', async () => {
 
 test('carries no vendor field inward beyond the six the plugin reads', async () => {
   // arrange
-  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ devices: [geminiWireDevice()] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -250,7 +189,7 @@ test('reads one device from the device route', async () => {
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ device: geminiWireDevice() }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -276,7 +215,7 @@ test('encodes a device identifier that needs percent-encoding into the path', as
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ device: geminiWireDevice() }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -382,7 +321,7 @@ test('refuses a device response the vendor answered with an error status', async
 
 test('refuses a device response whose shape the plugin cannot read', async () => {
   // arrange
-  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([{ deviceId: 'account-1_serial-1' }])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ devices: [{ deviceId: 'account-1_serial-1' }] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act & assert
@@ -501,7 +440,7 @@ test('keeps the token, the base URL, and the response body out of a failed reque
 test('deadlines a read route with the configured request timeout', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  const httpFetch: HttpFetch = () => Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -689,7 +628,7 @@ test('reaches only the four declared routes when every operation runs (SYNC-01)'
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceListBody([geminiWireDevice()])), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ devices: [geminiWireDevice()] }), { status: 200 }));
   when(() =>
     httpFetch(
       It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/devices/account-1_serial-1'),
@@ -702,7 +641,7 @@ test('reaches only the four declared routes when every operation runs (SYNC-01)'
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceBody()), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ device: geminiWireDevice() }), { status: 200 }));
   when(() =>
     httpFetch(
       It.matches<string | URL>((url) => url instanceof URL && url.href === 'https://api.example.test/credentials/aws'),
@@ -811,7 +750,7 @@ test('declares the bearer token and the identity header on a read request', asyn
         return init.signal instanceof AbortSignal;
       }),
     ),
-  ).thenResolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
+  ).thenResolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
   // act
@@ -864,7 +803,7 @@ test('says nothing about the installation in the command user agent', async () =
 // HTTP/1.1 to avoid an uncaught idle-session teardown error.
 test('never negotiates HTTP/2 with the vendor, even when the server offers it', async (t) => {
   // arrange
-  const server = await startAlpnServer(JSON.stringify(deviceListBody([])));
+  const server = await startAlpnServer(JSON.stringify({ devices: [] }));
   t.after(() => server.close());
   const originalCertificates = getCACertificates('default');
   setDefaultCACertificates([...originalCertificates, server.certificate]);
