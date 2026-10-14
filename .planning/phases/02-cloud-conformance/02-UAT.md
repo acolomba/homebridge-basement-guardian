@@ -3,22 +3,22 @@ status: testing
 phase: 02-cloud-conformance
 source: [02-VERIFICATION.md]
 started: "2026-10-14T14:09:18Z"
-updated: "2026-10-14T14:18:53Z"
+updated: "2026-10-14T14:20:39Z"
 ---
 
 ## Current Test
 
-number: 2
-name: P-02-01 — truthful safety telemetry
+number: 3
+name: P-02-02 — truthful completion and ALPN limit
 expected: |
-  Confirm that the cloud fixes preserve unknown, stale, omitted and invalid
-  values as absent or untrustworthy, without guessing a normal measurement
-  or condition. Cloud telemetry remains opaque; device-family interpretation
-  stays outside cloud.
+  Confirm that completion claims reflect the actual 19-file cloud inventory,
+  22-file changed-code review, 56 fixed findings, six genuine bug histories
+  and passing full gate on the final inputs.
 
-  The evidence includes complete wire-validation cases, current-connection
-  reported-patch guards and the non-finite-version regression. These concrete
-  checks support the judgment without claiming exhaustive safety proof.
+  Retain active HTTP/2 teardown as unconfirmed and unmeasured. ALPN cleanup
+  evidence covers the current HTTP/1.1 consumers; it does not establish a
+  guarantee for all protocols. No vendor occurrence, hardware completion
+  or risk waiver is claimed. The taxonomy assumption remains acknowledged.
 awaiting: user response
 
 ## Tests
@@ -33,7 +33,9 @@ judgment: Retain E-02-01 as an acknowledged taxonomy assumption; accept complete
 ### 2. P-02-01 — truthful safety telemetry
 
 expected: Explicitly confirm or reject that cloud fixes preserve unknown, stale, omitted and invalid values as absent or untrustworthy, without guessing a normal measurement or condition. Family interpretation remains outside cloud. Phase 1 approval supplies no Phase 2 judgment.
-result: [pending]
+result: pass
+reported: "pass"
+judgment: Confirm the cloud fixes preserve absent or untrustworthy telemetry semantics without guessed normal measurements or conditions; device-family interpretation remains outside cloud.
 
 ### 3. P-02-02 — truthful completion and ALPN limit
 
@@ -43,9 +45,9 @@ result: [pending]
 ## Summary
 
 total: 3
-passed: 1
+passed: 2
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
