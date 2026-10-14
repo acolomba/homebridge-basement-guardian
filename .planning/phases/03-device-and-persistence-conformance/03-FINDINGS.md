@@ -1,10 +1,11 @@
 # Phase 03 device and persistence findings ledger
 
-Milestone: code-review-sweep. Requirement: DEV-01. Status: EXECUTION IN PROGRESS.
+Milestone: code-review-sweep. Requirement: DEV-01. Status: AGGREGATE AUDIT IN PROGRESS.
 Planning baseline observed on features/code-review-sweep at
 0a9f993072de5a0e95da643bdf437b67feaca53e. No Phase 03 source/test repair,
 build, native test, mutation control, independent execution review or Git
-commit is claimed by this planning record.
+commit was claimed by the initial planning record. The executed sections below
+retain that history and identify current evidence explicitly.
 
 Current accepted findings: 38 causes: 11 STATE, 15 DECODING and 12 SUPPORT,
 all independently closed in their respective round 2. DEV-01 remains pending
@@ -62,10 +63,10 @@ header and owner/direct/full check. This grants no later subsystem sweep.
 
 ## Findings
 
-No accepted execution finding is entered yet. Review candidates do not become
+The original planning ledger contained no accepted finding. Review candidates do not become
 accepted defects by appearing in research. Allocate CR-03-STATE-NNN,
 CR-03-DECODING-NNN or CR-03-SUPPORT-NNN after full independent review. Each
-record needs DEV-01, exact rule/section, initial and current revision/location,
+record requires DEV-01, exact rule/section, initial and current revision/location,
 BLOCKER/WARNING, first review, fix/rejection rationale, named independent
 public assertion, commands/exits/scope, actual source/evidence/fix hashes and
 committed paths. Distinct causes remain separate; recurrence retains its ID.
@@ -78,17 +79,17 @@ not reopen it. A confirmed reopening invokes D-03.
 
 | Candidate ID | Category | Current disposition | Required evidence |
 | --- | --- | --- | --- |
-| STATE-W-01 | Required undefined / optional fields | Pending triage | Complete public shape, compiler negatives, parser construction and exact callers |
-| STATE-W-02 | DeviceSnapshot readonly members | Pending triage | Interface promise, runtime freeze, exact writes/aliases; class-only rule scope |
-| STATE-W-03 | Missing or implementation JSDoc | Pending triage | Actual exported contract and durable safety rationale |
-| STATE-W-04 | Local value named data | Pending triage | Role-local name; canonical vendor data field stays |
-| STATE-W-05 | In-case design-rationale comments | Pending triage | Setup necessity and complete writer/comment rulebook |
-| STATE-W-06 | Length/single-field whole promises | Pending triage | Title's public promise, independent whole expectation and true failure discrimination |
+| STATE-W-01 | Required undefined / optional fields | Rejected | ade72e10: state 47–71 and constructors 206–214/263–271; shadow constructs every key. Omission changes the contract under exactOptionalPropertyTypes. |
+| STATE-W-02 | DeviceSnapshot readonly members | Rejected | ade72e10: interface 33–52; class-only readonly rule does not establish an interface violation. Runtime deep freeze 150–170 and actual consumers preserve the existing promise. |
+| STATE-W-03 | Missing or implementation JSDoc | Fixed, CR-03-STATE-004/005 | 5808523/72417ab; ade72e10: public contracts 92–128, implementation rationale 360–400, complete header 1–15. |
+| STATE-W-04 | Local value named data | Fixed, CR-03-STATE-006 | b3e792c; ade72e10: owner 216–222 uses vendorTelemetry; canonical data field remains. |
+| STATE-W-05 | In-case design-rationale comments | Fixed accepted portion, CR-03-STATE-007 | 1de1a61; ade72e10: owner 455–458 removes obsolete narration. Blanket deletion rejected; non-obvious setup rationale remains. |
+| STATE-W-06 | Length/single-field whole promises | Fixed, CR-03-STATE-001/002/003 | ca8b3dd/169e4ed/3e4ba69/f78999a; ade72e10: independent whole returned/stored/callback observations and later-clock fixture. Scalar and silence promises retain their proper scope. |
 
 ## Review rounds
 
-No independent correction round has occurred. Initial full reviews/triage,
-initial clarifications and tracer checks are not correction rounds.
+The following current verdicts supersede the initial pending round ledger.
+Initial full reviews/triage, clarifications and tracer checks are not rounds.
 
 | Batch | Scope | Current round | Opening / fixed / rejected / new / reopened / closing | Verdict |
 | --- | --- | --- | --- | --- |
@@ -121,7 +122,10 @@ bug is found. All files live in this phase directory.
 
 ## Separate assertion controls
 
-No Phase 03 assertion control has run. Retain any actual named wrong-behavior
+The initial planning record claimed no control. Executed STATE has three
+successful assertion controls; Gemini has two and an earlier unsuccessful
+TypeError-before-assert attempt. Exact histories below retain each attempt.
+Retain any actual named wrong-behavior
 assertion failure, exact original/source restoration and rebuilt GREEN
 separately. Never count a control mutation as a production bug or commit it.
 Preserve Phase 1 SC-03's six independently restored controls as bounded prior
@@ -129,7 +133,7 @@ evidence; they do not validate the Phase 03 sweep.
 
 ## Checks and final-input evidence
 
-No Phase 03 implementation test/check result is claimed here. Commands and
+The initial planning record claimed no implementation check. Commands and
 task/threat map are in 03-VALIDATION.md. A future record stores command, real
 exit, exact reviewed inputs/revision or dirty diff/untracked contents, Node
 version and scope. Modified pairs require isolated 100% runtime metrics or
@@ -154,6 +158,12 @@ surfaces only the genuinely required evidence-backed judgments.
 None -- no security-relevant surface outside the plan's <threat_model> was
 introduced by this planning-only record. Execution must update this field
 from actual reviewed changes.
+
+## Historical executed slices
+
+These chronological snapshots retain partial, pending and earlier check claims
+at their named revisions. Current aggregate evidence supersedes them only for
+the scope it explicitly audits. No historical attempt or process gap is erased.
 
 ## Executed STATE closeout — 03-01
 
@@ -464,3 +474,25 @@ log and exact command/time/revision are
 schema gate exit0/blockfalse/no schema; codebase drift skipped
 no-structure-md/blockfalse. DEV-01 remains pending the aggregate and phase
 verification, with E-03-01/P-03-01/P-03-02 judgments still unresolved.
+
+## Aggregate tracer audit — 03-08-01
+
+At 7341b4f55f6f29072fc9b448fae3099d44515803, the coordinator traced
+CR-03-STATE-011 through the original rule, actual commit and final independent
+review. Google style Functions requires a named function declaration unless
+the permitted arrow exception applies. Initial round-one location is
+1166da4d:test/device/state.test.ts:40–43. The local logger lacked that exception.
+
+Actual cause commit 90dac3919a7dc190ac29defc93b53d6ccd91379d changes only
+test/device/state.test.ts:41–43, replacing the arrow with function record.
+Its body, Logging members and assertions remain. The native owner capture
+/private/tmp/state-011-owner.json records exit 0 and 52/52 with no skipped or
+cancelled target. The clean pre-step precedes the ordinary passing-hook commit;
+the original captures remain state-011-pre.json and state-011-commit.json.
+
+Independent gsd-code-reviewer round 2 at ade72e10f4ddd584067b080d1f78323fc93d3762
+confirmed this fix and all ten earlier IDs, with zero open/new/reopened IDs.
+The report-only closure commit is cf56276d664a91170c25f7210d49c246d885dd44.
+Actual objects, paths and ancestry were inspected. This is a conformance
+finding, not a genuine production bug. 03-SEAL-AUDIT.json stores the tracer.
+The whole aggregate audit and parent phase verification remain pending.
