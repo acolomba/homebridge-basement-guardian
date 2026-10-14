@@ -251,7 +251,7 @@ describe('toApiDevice', () => {
 
   test('returns exactly the six fields the plugin reads', () => {
     // act & assert
-    assert.deepStrictEqual(Object.keys(toApiDevice(narrowedWireDevice())).sort(), ['connectivity', 'data', 'deviceId', 'deviceTypeId', 'name', 'serialNumber']);
+    assert.deepStrictEqual(toApiDevice(narrowedWireDevice()), geminiDevice());
   });
 });
 
