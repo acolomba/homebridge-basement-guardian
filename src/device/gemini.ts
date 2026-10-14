@@ -104,11 +104,6 @@ const HOURS_OF_PROTECTION_VALUES: ReadonlySet<number> = new Set(PROTECTION_HOURS
 // WW-GEM-ALERT-1, -2, -3, and -11).
 const LOW_BATTERY_HEALTH_VALUES: ReadonlySet<number> = new Set([1, 2, 32]);
 
-// `undefined` names metadata fields with no safety trust scope. Firmware feeds
-// AccessoryInformation; a violation preserves its last valid information without
-// deactivating a safety scope or adding a member to `TrustScope`.
-type GeminiFieldScope = TrustScope | undefined;
-
 /** How one field failed, before the scope that owns it is stamped on. */
 interface FieldFault {
   field: string;
@@ -119,7 +114,10 @@ type FieldCheck = (data: Readonly<Record<string, unknown>>) => FieldFault | unde
 
 /** One field's shape check and the scope that stops being trustworthy while that field is invalid (D-04). */
 interface TelemetryCheck {
-  scope: GeminiFieldScope;
+  // `undefined` names metadata fields with no safety trust scope. Firmware feeds
+  // AccessoryInformation; a violation preserves its last valid information without
+  // deactivating a safety scope or adding a member to `TrustScope`.
+  scope: TrustScope | undefined;
   check: FieldCheck;
 }
 
@@ -348,7 +346,7 @@ function decodeMetadata(metadata: Readonly<Record<string, unknown>>): DeviceMeta
 // The scopes at least one telemetry field stopped vouching for. Every telemetry
 // field now names one, so a violation always costs exactly the scope its own
 // field owns and never more (D-014).
-function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<GeminiFieldScope> {
+function untrustedScopesOf(data: Readonly<Record<string, unknown>>): ReadonlySet<TrustScope | undefined> {
   return new Set(violationsOf(TELEMETRY_CHECKS, data).map((violation) => violation.scope));
 }
 
