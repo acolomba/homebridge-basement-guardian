@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
-// The client port below is declared by this consumer rather than imported from
-// the transport library, so the shadow client's own tests inject a plain object
-// and open no socket, while the transport-level scenarios drive the real
-// library against a local broker.
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Adapts one MQTT connection to shadow notifications and bounded operations.
+ * The consumer-declared client port allows offline injection.
+ */
 
 // The default import is deliberate: the named ESM export of a builtin is a
 // snapshot binding, which the test runner's timer mocks cannot replace, so the

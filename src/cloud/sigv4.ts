@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
-// Nothing here logs, and the produced URL never reaches an error message: it
-// carries the credential scope, the session token, and the signature (AUTH-02).
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Signs AWS IoT WebSocket URLs with temporary credentials.
+ * Signed URLs carry credentials and must stay out of diagnostics (AUTH-02).
+ */
 
 import { createHash, createHmac } from 'node:crypto';
 

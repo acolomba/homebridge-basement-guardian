@@ -1,22 +1,14 @@
 // SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview The vendor HTTP transport, routed through userland undici end to end.
- *
- * Node's built-in global `fetch()` bundles its own copy of undici, and that copy's `allowH2`
- * default has changed across Node majors: Node 22 and 24 default to HTTP/1.1, Node 26 defaults to
- * HTTP/2. Once undici negotiates HTTP/2, an upstream teardown race in its idle-session handling
- * (the `stream.once('error', noop)` guard it leaves on a released-but-still-open stream fires only
- * once) can let a socket-idle-timeout destroy escape as an uncaught `InformationalError` with no
- * listener left to catch it.
- *
- * Forcing `allowH2: false` removes this plugin from that code path entirely, but only when the
- * `Agent` enforcing it comes from the SAME undici copy as the `fetch()` dispatching through it:
- * passing a userland `Agent` as `dispatcher` to Node's BUILT-IN `fetch()` throws on Node 22 and 24,
- * because the built-in fetch's dispatch handler is shaped for ITS OWN bundled undici major, and a
- * userland Agent from a different major validates for a different handler shape. Routing through
- * this module's own `fetch` keeps the handler and the `Agent` paired from one undici copy, so the
- * vendor never negotiates HTTP/2 on any Node major, present or future.
+ * Copyright (c) 2026 Alessandro Colomba
  */
+
+/**
+ * @fileoverview Sends vendor HTTP requests through paired userland undici fetch and Agent.
+ * The shared Agent enforces HTTP/1.1 for every request.
+ */
+
 import { Agent, fetch as undiciFetch } from 'undici';
 
 /** Fetches one HTTP request. Injected, so a test can default it to the platform's global fetch. */

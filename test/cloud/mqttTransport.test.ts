@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests MQTT connection hooks, notifications, and operation completion.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
