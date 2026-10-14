@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview An architectural gate rather than a behaviour test.
- *
- * `src/runtime/accessoryStore.ts` declares a port and nothing else, so there is no behaviour here
- * to exercise and nothing is missing from this file. What is asserted instead is that the compiled
- * module exports no runtime value at all, which is what proves the port carries no implementation
- * of its own and that no consumer can reach a shared or process-wide store through it (D-08).
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks the accessory-persistence port.
  */
 
 import assert from 'node:assert/strict';

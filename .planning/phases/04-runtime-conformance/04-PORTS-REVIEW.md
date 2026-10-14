@@ -1,0 +1,448 @@
+---
+phase: 04-runtime-conformance
+reviewed: 2026-10-14T22:50:16Z
+depth: deep
+files_reviewed: 8
+files_reviewed_list:
+  - src/runtime/accessoryStore.ts
+  - test/runtime/accessoryStore.test.ts
+  - src/runtime/clock.ts
+  - test/runtime/clock.test.ts
+  - src/runtime/monotonicClock.ts
+  - test/runtime/monotonicClock.test.ts
+  - src/runtime/timers.ts
+  - test/runtime/timers.test.ts
+findings:
+  critical: 2
+  warning: 5
+  info: 0
+  total: 7
+status: issues_found
+batch: PORTS
+review_round: 0
+correction_rounds: 0
+source_revision: 6f475a0db1698847ed7a1c7238ccb461dfdb8bda
+first_reviewer: /root/phase4_ports_first/ports_initial_review
+---
+
+# Phase 04: Initial PORTS code review
+
+This is the independent ROUND 0 review, before any PORTS repair. All eight
+original files and complete headers were read. The five complete rulebooks,
+AGENTS, phase context/protocol/research/patterns/plan/validation/ledger and
+Fallow pointer plus installed skill were read. Configured skill injection
+did not replace the complete books.
+
+There are seven accepted open causes: two test-reliability BLOCKERs and five
+conformance WARNINGs. No production bug or security vulnerability was confirmed.
+No source, owner, helper or consumer was edited. No regression, assertion
+control, Git mutation, commit, full gate, or clean batch is claimed.
+
+## Narrative Findings (AI reviewer)
+
+All initial and current locations below are qualified by the same reviewed
+source revision: `6f475a0db1698847ed7a1c7238ccb461dfdb8bda`. File paths are
+relative to `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+The initial/current source blobs match exactly; this report is a new planning
+artifact. Every cause has requirement RUN-01. Header causes also implement
+PROC-03. First observer for every cause is the reviewer named in frontmatter.
+All dispositions are **accepted/open**; fix/evidence commits are **none**.
+
+### Critical Issues
+
+### CR-04-PORTS-002 — BLOCKER: Declaration owner tests its own recorder
+
+**Initial/current file:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/accessoryStore.test.ts:17-42`.
+
+**Rule:** `skills/typescript-unit-testing/SKILL.md`, Patterns / Type-only
+modules and Do not test what a gate already enforces; reviewer Patterns /
+Type-only modules and Assertions; reviewer Classifying findings: a case a
+wrong implementation would pass is BLOCKER.
+
+**Issue:** The second runtime case invokes only the object literal created at
+lines 31-35 and verifies that literal's keys and push. It does not invoke any
+production implementation. Its title claims that the recorder represents the
+whole port, but a new optional operation on AccessoryStore leaves this literal
+and both cases unchanged. Usage and unused members cannot be proved by
+enumerating the literal's keys. The first runtime case checks that a
+declaration emits no runtime exports, contrary to the explicit declaration-only
+owner policy. Neither case provides negative compiler contracts for a missing
+or non-callable persist member. The existing annotated literal is a positive
+compiler check, but its runtime self-test adds no port-contract protection.
+
+**Fix:** Keep this owner declaration-only. Import AccessoryStore as a type,
+retain a meaningful `satisfies` positive, and add described `@ts-expect-error`
+checks for missing and non-callable persist. Preserve the exact current
+`persist(): void` API. Do not add a wrapper, key enumeration, test export or
+fake coverage denominator. Do not propose `persist: () => 1` as a negative:
+TypeScript deliberately permits a value-returning function in a void-returning
+operation slot. Actual persistence and no-op observations belong to the
+platform/pump-record owners, whose production callers were read here.
+
+**Evidence/disposition:** S-04-01 independently accepted; current strict
+typecheck, owner and declaration-only direct selector pass (exit 0), showing
+that existing tools accept these runtime cases. This is an assertion/design
+defect, not a production bug; D-04 genuine RED is inapplicable. Owning repair:
+04-01-01. No repair or mutation control was performed.
+
+### CR-04-PORTS-006 — BLOCKER: Monotonic tests do not pin the clock reading or units
+
+**Initial/current file:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/monotonicClock.test.ts:17-44`.
+
+**Rule:** Unit writer Assertions / independently expected whole values;
+reviewer Assertions / standalone negative assertions and whole values;
+reviewer central question and Classifying findings / wrong implementation
+would pass. Unit writer Time / deterministic explicit boundary.
+
+**Issue:** These three cases assert only an integer, inequality with one wall
+timestamp, and `later >= earlier`. A constant zero satisfies all three. So does
+dividing hrtime nanoseconds by one billion to return whole seconds. The latter
+still executes the same lines/functions/branches and typechecks, but violates
+the module's promised milliseconds. The wall-domain check explicitly uses
+`assert.notStrictEqual`, which the rulebook rejects as a standalone expected
+value. The current uncontrollable live readings cannot establish the exact
+bigint division/truncation that this owner should protect.
+
+**Fix:** Observe the existing public systemMonotonicClock with context-owned
+deterministic `process.hrtime.bigint` boundary values. Assert independently
+written exact millisecond answers at a non-divisible nanosecond value and an
+advance across a millisecond boundary, while a distinctly controlled wall clock
+demonstrates independent domains. For example, `1_999_999n` must answer `1`,
+then `2_000_000n` must answer `2`. Keep strict numeric expectations and proper
+arrange/act/assert blocks. Preserve production behavior, public names,
+signatures and visibility; no new injection API or test hook is required by
+this finding. Context-owned method mocks restore after the case.
+
+**Evidence/disposition:** S-04-05 accepted for this owner. All three existing
+tests and the direct selector pass (exit 0); these passes do not discriminate
+the described wrong unit/constant implementations. Counterexamples above are
+code-review reasoning, not an executed mutation or genuine regression RED.
+Current production uses the correct divisor. Owning repair: 04-02-01.
+
+### Warnings
+
+### CR-04-PORTS-001 — WARNING: Accessory-store pair lacks the approved headers
+
+**Initial/current files:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:src/runtime/accessoryStore.ts:1-24`;
+`6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/accessoryStore.test.ts:1-10`.
+
+**Rule:** CONTEXT D-01; protocol Typed roles / complete headers; style Files
+and modules / copyright JSDoc, fileoverview JSDoc, exactly one blank line
+between present sections; style Classifying findings / documentation WARNING.
+
+**Issue:** Source has SPDX immediately followed by the interface's description,
+without separate copyright or file overview. Owner begins with the overview
+and lacks SPDX and copyright. The source-only license gate accepts the source
+SPDX and never inspects the owner, so it cannot enforce this complete contract.
+
+**Fix:** Apply SPDX MIT, blank line, separate copyright JSDoc with
+`Copyright (c) 2026 Alessandro Colomba`, blank line, purpose `@fileoverview`
+JSDoc, blank line, imports/implementation. Keep the interface's public purpose
+documented and preserve per-accessory persistence semantics. Original-work MIT
+classification was checked against LICENSE/NOTICE. Header-only repair stays
+separate from CR-04-PORTS-002. Owning repair: 04-01-01.
+
+### CR-04-PORTS-003 — WARNING: Wall-clock pair lacks the approved headers
+
+**Initial/current files:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:src/runtime/clock.ts:1-8`;
+`6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/clock.test.ts:1-6`.
+
+**Rule:** CONTEXT D-01; protocol complete headers; style Files and modules;
+style Classifying findings / documentation WARNING.
+
+**Issue:** Source lacks separate copyright/fileoverview blocks and SPDX spacing.
+Owner begins directly with imports and lacks all three header sections.
+
+**Fix:** Apply the approved MIT/copyright/purpose sections and exact blank-line
+separation to both files, retaining Clock's epoch-millisecond documentation and
+composition-only system adapter documentation. Keep this header-only cause
+separate from test-structure repair. Owning repair: 04-01-02.
+
+### CR-04-PORTS-004 — WARNING: Wall-clock observation combines ordinary act/assert phases
+
+**Initial/current file:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/clock.test.ts:16-17`.
+
+**Rule:** Unit writer Case structure: `// act & assert` only for one
+`assert.rejects()` or `assert.throws()` expression; reviewer Case structure;
+reviewer Classifying findings / AAA comments WARNING.
+
+**Issue:** An ordinary numeric result assertion uses the combined phase marker.
+It is neither a throwing nor rejecting operation, so the explicit exception
+does not apply. The assertion itself independently pins the exact epoch time;
+this finding does not claim weak behavior protection or a production defect.
+
+**Fix:** Read systemClock.now() into a role-named reading in a separate `// act`
+block; compare it with the literal expected epoch time in `// assert`.
+Retain the context-owned Date mock and current public API. Owning repair:
+04-01-02.
+
+### CR-04-PORTS-005 — WARNING: Monotonic-clock pair lacks the approved headers
+
+**Initial/current files:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:src/runtime/monotonicClock.ts:1-14`;
+`6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/monotonicClock.test.ts:1-6`.
+
+**Rule:** CONTEXT D-01; protocol complete headers; style Files and modules;
+style Classifying findings / documentation WARNING.
+
+**Issue:** Source lacks separate copyright/fileoverview blocks and SPDX spacing;
+owner lacks SPDX, copyright and fileoverview.
+
+**Fix:** Apply the approved MIT/copyright/purpose sections to the pair. Preserve
+the distinct elapsed-time contract and relevant scope of the existing
+suspend-limit explanation. Do not turn a historical Linux observation into a
+new cross-platform guarantee. Header-only repair stays separate from
+CR-04-PORTS-006. Owning repair: 04-02-01.
+
+### CR-04-PORTS-007 — WARNING: Timer pair lacks the approved headers
+
+**Initial/current files:** `6f475a0db1698847ed7a1c7238ccb461dfdb8bda:src/runtime/timers.ts:1-16`;
+`6f475a0db1698847ed7a1c7238ccb461dfdb8bda:test/runtime/timers.test.ts:1-6`.
+
+**Rule:** CONTEXT D-01; protocol complete headers; style Files and modules;
+style Classifying findings / documentation WARNING.
+
+**Issue:** Source lacks separate copyright/fileoverview blocks and SPDX spacing;
+owner lacks SPDX, copyright and fileoverview.
+
+**Fix:** Apply the approved MIT/copyright/purpose sections to both files without
+changing timer or cancellation semantics. Preserve the public unknown handle
+and documented narrowing. Owning repair: 04-02-02.
+
+Header IDs are separated by pair so each atomic header cause can fit the
+five-path budget and its assigned plan. They are not functional causes.
+
+## Full-file and complete-header inventory
+
+Every line below was reviewed, including imports, exports, full comments,
+compiler contracts, every runtime case, test data, mocks, assertions and
+cleanup. No helper or external adaptation was created. The blob is both the
+initial and current Git blob at the reviewed revision.
+
+| Exact path | Lines read | Initial/current blob | Complete header result | Manual result |
+| --- | ---: | --- | --- | --- |
+| src/runtime/accessoryStore.ts | 1-27 | 728c7d8dca615d0386424121b36cc8b87ad9ec07 | CR-04-PORTS-001 | Declaration and documented persist operation preserve per-accessory storage |
+| test/runtime/accessoryStore.test.ts | 1-42 | c3564e720774c7a42a59c6168fb825ac59e540e7 | CR-04-PORTS-001 | CR-04-PORTS-002; compiler-only owner needed |
+| src/runtime/clock.ts | 1-16 | 27105162565a3b6cc848642a351bb3d9923101fd | CR-04-PORTS-003 | Public adapter returns Date.now epoch milliseconds |
+| test/runtime/clock.test.ts | 1-30 | 3c325a0f215809a83d0d45ea479be6b991406fb0 | CR-04-PORTS-003 | Exact public reading and advance; CR-04-PORTS-004 |
+| src/runtime/monotonicClock.ts | 1-48 | 1973597a4c0f71f6c85a84107490acbcb554f5e7 | CR-04-PORTS-005 | bigint division before Number conversion; separate elapsed domain |
+| test/runtime/monotonicClock.test.ts | 1-45 | 490cb015c6bd18226a677703383759f6b1dc1797 | CR-04-PORTS-005 | CR-04-PORTS-006; includes missing arrange marker in first case to resolve in rewritten cases |
+| src/runtime/timers.ts | 1-44 | 4ecb4aabdafbc5050ba804a046415b73ff00039c | CR-04-PORTS-007 | Four forwarding operations, lazy side effects, justified unknown-handle narrowing |
+| test/runtime/timers.test.ts | 1-98 | 0dc5534abe2bbbfd3782dafc0d5802148ba5440c | CR-04-PORTS-007 | Positive/negative interface checks; complete callback logs for delay, repeat and cancellation cases |
+
+Full actual structural caller reads covered `src/platform.ts:1-644` and
+`src/accessories/pumpRecords.ts:1-361`. Platform lines 148-157 construct a
+closure bound to one accessory and persist only when that accessory is in the
+owned map. PumpRecordsOptions holds AccessoryStore and `observe` calls
+`store.persist()` only when changed (lines 313-349). These are consumer context,
+not a completed accessory/platform sweep. The imported type travels through
+basementGuardian; no public shape change is recommended.
+
+The full `test/device/health.test.ts:1-57` supplied the actual strict compiler
+analogy. The full `test/packaging/licenseHeaders.test.ts:1-103` established the
+source-only header boundary. LICENSE/NOTICE classification was read. Applicable
+auth and monitoring-health excerpts, actual platform composition and symbol-use
+searches checked clock domain preservation. Every runtime export has an actual
+consumer; no export removal, readonly conversion, method renaming or signature
+change is recommended. Exact two-project Fallow pretraces remain mandatory if
+a fixer chooses any such change; research traces are not refreshed pre-edit
+permission. Fallow was not executed by this reviewer.
+
+## Candidate dispositions
+
+| Candidate | Actual scope and disposition |
+| --- | --- |
+| S-04-01 | Accepted as CR-04-PORTS-002. The literal-recorder call observes itself; declaration-only policy requires meaningful positive/negative compiler contracts. Not a production bug. |
+| S-04-03 | Rejected for this scope. The four ports have no optional or required-present undefined state fields to convert. Timers' unknown handle is intentional; no undefined alias or exhaustive snapshot change is justified. Later runtime owners retain their own review obligation. |
+| S-04-04 | Rejected for this scope. The style readonly requirement applies to class properties never reassigned outside construction. These ports are interfaces with methods, not class storage fields; no immutable-interface contract is asserted. Do not make injected adapters or persisted observations readonly by inference. |
+| S-04-05 | Accepted for the monotonic owner as CR-04-PORTS-006; the store problem is already CR-04-PORTS-002, not a duplicate ID. Clock compares exact epoch and exact advance; no weak numeric assertion accepted there. Timer cases compare the complete independently written callback logs, including empty logs for absence. Their returned handles are used for cancellation, and separate pre-delay/repeat cases distinguish early and repeated execution. No count-only or negative-value assertion finding is accepted for timers. |
+| Adapter Date.now | Rejected as hidden-logic-dependency candidate. This is the public systemClock boundary itself, explicitly wired at composition. Context-owned deterministic Date mocking validly observes that boundary; changing the adapter API is unwarranted. |
+| S-04-02/06/07/08 | Outside this eight-file batch. No disposition is inferred for command variants, account cancellation, arrival history or runtime identifier narration. |
+
+The unit-review policy assigns BLOCKER to weak test protection even when
+production is currently correct. Header/AAA warnings use the explicit project
+conformance rules. No generic preference, performance finding, speculative
+runtime defect, guessed normal state or new clock/recovery policy is accepted.
+
+## Current native evidence
+
+Capture runner: `/private/tmp/guardian-04-ports-initial-capture.py`.
+Complete machine-readable native records:
+`/private/tmp/guardian-04-ports-initial-native/commands.json`.
+Each record retains argv, cwd, start/end UTC, measured duration, raw exitCode,
+complete stdout and separate stderr. Byte-exact streams are also retained as
+`<label>.stdout` and `<label>.stderr` in that directory. No streams or failed
+attempts were discarded. All captured commands returned 0; there were no
+unsuccessful native attempts in this pass.
+
+`before.json` and `after-checks.json` retain HEAD plus the complete tracked and
+non-ignored untracked path manifests, byte lengths, SHA-256 and Git blob hashes,
+and base64 untracked bytes. They compare exactly equal. Both recorded empty
+untracked arrays and clean `git status`; both `git diff --binary HEAD` streams
+are empty. This is current initial-source evidence, not prior-phase reuse.
+Ignored/private account files were not read. Installed tools were read only
+where specifically required; no installation or network request occurred.
+
+Observed versions: Node `v26.11.1`, npm `11.20.0`, TypeScript `6.0.3`, each raw
+exit 0. All source/owner inputs remained at the frontmatter revision.
+
+| Capture label | Exact command | UTC start → end on 2026-10-14 | Seconds | Exit/result |
+| --- | --- | --- | ---: | --- |
+| typecheck | `npm run typecheck` | 22:49:15.568607 → 22:49:18.190331 | 2.622 | 0, both strict projects |
+| lint | `node_modules/.bin/eslint --max-warnings=0 src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts src/runtime/clock.ts test/runtime/clock.test.ts src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts src/runtime/timers.ts test/runtime/timers.test.ts` | 22:49:18.191048 → 22:49:22.363006 | 4.172 | 0, all eight exact files, no lint cache |
+| format | `node_modules/.bin/prettier --check src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts src/runtime/clock.ts test/runtime/clock.test.ts src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts src/runtime/timers.ts test/runtime/timers.test.ts` | 22:49:22.363631 → 22:49:22.583264 | 0.220 | 0, all eight exact files |
+| build | `npm run build:test` | 22:49:22.583936 → 22:49:25.269838 | 2.686 | 0, fresh compiled owners |
+| owner-accessoryStore | `node --test --test-reporter=tap dist-test/test/runtime/accessoryStore.test.js` | 22:49:25.270521 → 22:49:25.508114 | 0.238 | 0, 2 tests/pass |
+| direct-accessoryStore | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | 22:49:25.508748 → 22:49:28.813943 | 3.305 | 0, declaration-only selector acceptance |
+| owner-clock | `node --test --test-reporter=tap dist-test/test/runtime/clock.test.js` | 22:49:28.814556 → 22:49:29.047016 | 0.232 | 0, 2 tests/pass |
+| direct-clock | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | 22:49:29.047673 → 22:49:32.382150 | 3.334 | 0, isolated full line/function/branch acceptance |
+| owner-monotonicClock | `node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js` | 22:49:32.382769 → 22:49:32.614002 | 0.231 | 0, 3 tests/pass |
+| direct-monotonicClock | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | 22:49:32.614668 → 22:49:35.897565 | 3.283 | 0, isolated full line/function/branch acceptance |
+| owner-timers | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js` | 22:49:35.898213 → 22:49:36.134080 | 0.236 | 0, 5 tests/pass |
+| direct-timers | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` | 22:49:36.134784 → 22:49:39.444299 | 3.310 | 0, isolated full line/function/branch acceptance |
+| license | `node --test --test-reporter=tap dist-test/test/packaging/licenseHeaders.test.js` | 22:49:39.444948 → 22:49:39.681866 | 0.237 | 0, 5 tests/pass; source SPDX gate only |
+
+All stderr streams above are empty. ESLint stdout is also empty. Relevant
+verbatim native stdout:
+
+```text
+> homebridge-basement-guardian@0.1.1 typecheck
+> tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/typescript/src.tsbuildinfo && tsc -p tsconfig.test.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/typescript/test.tsbuildinfo
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> homebridge-basement-guardian@0.1.1 build:test
+> rimraf ./dist-test && tsc -p tsconfig.test.json
+```
+
+The exact complete native TAP, including test names and durations, is in each
+`owner-*.stdout` and `commands.json`. Each owner's raw trailer reports zero
+failures, cancellations, skipped tests and TODOs. The following verbatim
+monotonic trailer illustrates the accepted current owner despite its finding:
+
+```text
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 120.521708
+```
+
+The local direct selector intentionally prints no success summary. Its complete
+stdout, for example, is:
+
+```text
+
+> homebridge-basement-guardian@0.1.1 test:coverage:direct
+> npm run --silent build:test && node scripts/test-coverage-direct.mjs src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts
+
+```
+
+The selector implementation was inspected: one-source LCOV identity and equal
+LF/LH, FNF/FNH, BRF/BRH are enforced at lines 161-190; declaration-only no-record
+acceptance is at lines 137-165. Every direct command rebuilt first and ran only
+its named owner in an isolated process. Thus executable pairs have 100% direct
+line/function/branch acceptance. No numeric runtime denominator is claimed for
+accessoryStore, and no compiled/merged count is invented. Selected checks do
+not refresh merged `coverage/direct.lcov`.
+
+## Batch accounting and continuation
+
+Round 0 opening accepted IDs after complete initial triage:
+`CR-04-PORTS-001`, `CR-04-PORTS-002`, `CR-04-PORTS-003`,
+`CR-04-PORTS-004`, `CR-04-PORTS-005`, `CR-04-PORTS-006`,
+`CR-04-PORTS-007` — **7 open (2 BLOCKER, 5 WARNING)**.
+There were no previously accepted PORTS IDs. Fixed IDs: none. Rejected accepted
+IDs: none. Reopened IDs: none. Closing initial open set is the same seven IDs.
+Candidate rejections above are not accepted-ID removals.
+
+04-01 owns IDs 001/002 (accessoryStore) and 003/004 (clock). 04-02 retains
+005/006 (monotonicClock) and 007 (timers). No partial batch is clean. Correction
+counter remains **0**; complete independent correction occurs only after the
+04-02 repair pass and includes all eight current files plus actual additions.
+No D-03 stop trigger exists in this initial review. New findings must retain
+this continuous batch and ID sequence.
+
+T-04-01 contract preservation was manually traced at current initial source;
+store compiler-contract weakness remains open. T-04-02 now has actual initial
+scope/header/native evidence, with open causes and unperformed future repairs.
+T-04-03 exact elapsed conversion protection remains open in CR-04-PORTS-006.
+T-04-04 timer forwarding/cancellation cases were reviewed and passed current
+focused execution, while its header cause remains open. T-04-SC remains bounded
+by no installs; no package or external integration was introduced.
+
+No genuine D-04 production defect is accepted; no RED JSON, evidence-only
+commit or GREEN change is authorized by test-maintenance findings alone.
+No assertion control was executed. A fixer may need separate restored control
+evidence for assertion work under the protocol. Any actual production bug must
+be reported and follow planning-evidence-before-GREEN ordering.
+
+The prior cf04e71 full gate is historical evidence only. This review ran no
+full `npm run check`, Cucumber, real-home, hardware or live vendor checks, and
+does not close RUN-01 or any later subsystem sweep. Shared ledger/windows/Git
+and phase advancement remain with the parent. All child command processes
+completed; no build, mutation, Git or helper resource remains held after the
+reviewer's terminal result.
+
+## Accepted-cause repair records (04-01)
+
+The initial review above is retained as the round-0 observation. This appended
+repair history does not replace it or run a full-batch correction. Fixer:
+`/root/phase4_ports_first/ports_store_clock_fixes`, typed gsd-code-fixer,
+fresh context, complete AGENTS and all five books read. The parent granted
+exclusive writer/build/control/Git/report ownership until terminal return.
+No helper, external adaptation, package or genuine production bug is needed.
+
+All repair checks run in the existing authorized checkout
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`,
+branch `features/code-review-sweep`, not a temporary fixer checkout. The
+persisted dispatch sentinel says `isolation: none`, plan `04-01`. Plan baseline
+and recorded audit base are `6f475a0db1698847ed7a1c7238ccb461dfdb8bda`.
+The plan-head ledger in the actual Git worktree metadata records that same
+baseline before HEAD moves. The primary `main` checkout is not modified.
+
+Native capture runner: `/private/tmp/guardian-04-ports-fix-capture.py`.
+Each `<label>.json` under `/private/tmp/guardian-04-ports-fix-native/` retains
+exact argv/cwd, UTC start/end/duration, raw exitCode, full stdout and separate
+stderr, plus before/after HEAD, branch, Git directory, every tracked/nonignored
+untracked path's byte length/SHA-256/Git blob, binary dirty diff and complete
+untracked bytes. Exact streams are also `<label>.stdout` and `.stderr`.
+This captures dirty provenance for headers as well as later test maintenance.
+Node `v26.11.1` and npm `11.20.0` were observed at `initial` and `npm-version`,
+both exit 0. No installation or runtime change occurred.
+
+The canonical `execute-mvp-tdd.md` gate was read before implementation.
+TDD_MODE is true, but these accepted causes add headers or maintain tests of
+unchanged production behavior. The gate's behavior-adding definition excludes
+this work; no fabricated regression RED or failing-code commit is introduced.
+D-04 would require planning-only evidence before any genuine bug GREEN.
+The task-1 pre-edit tracer freshly built and passed its owner (2 existing
+runtime cases) and declaration-only selector at the baseline: captures
+`tracer-before-build`, `tracer-before-owner`, `tracer-before-direct`, all exit 0.
+The following compiler-only repair removes those runtime cases by design.
+
+### CR-04-PORTS-001 repair — accessory-store headers
+
+Applied the approved SPDX/copyright/fileoverview sections and exact blank-line
+separation to both files. Kept the interface JSDoc, required `persist(): void`,
+and all runtime/test statements unchanged. Read both complete edited files.
+Current source blob: `a7ce446ff9d47ec6106d0a6f609bff1472b9677f`;
+current owner blob: `76d76106ef9805a9213d216055861c9096b4f411`.
+Initial blobs remain in the inventory above. Header sections are manually
+inspected; the source-only license gate does not establish owner conformance.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-store-header | `node_modules/.bin/fallow guard src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts --format json --quiet --explain` | 0; both exist; no configured boundary zones/rule packs |
+| cause001-build | `npm run build:test` | 0; fresh strict compiled owners |
+| cause001-owner | `node --test --test-reporter=tap dist-test/test/runtime/accessoryStore.test.js` | 0; both existing cases passed, no skips/cancellations |
+| cause001-direct | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | 0; declaration-only selector acceptance, no numeric runtime denominator |
+| cause001-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 0; kind audit, verdict pass, no introduced findings |
+
+Cause scope is exactly source, owner and this report (3 paths). Commit and
+clean pre-step/hook results are appended after the actual foreground commit.
+This is a header-only cause; CR-04-PORTS-002 remains for its separate commit.
