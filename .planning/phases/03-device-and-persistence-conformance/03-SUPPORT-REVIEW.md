@@ -5,6 +5,9 @@ Milestone: code-review-sweep. Requirement: DEV-01. Initial revision:
 4deb91efab59f0059ab270f5dfc52d56aeba3eac. This report starts the one SUPPORT
 inventory and counter retained through plans 03-05, 03-06 and 03-07.
 Current HALO/registry applied revision: 6ad32c3f112c9e9184264a498be26d1d666e6a72.
+Final reviewed code revision: d262943b0749a094c3e48488bbd952b26f103adf.
+Full SUPPORT correction round 2 is clean: all twelve accepted IDs are fixed,
+with zero open IDs. The fresh coordinator-owned combined gate remains pending.
 
 ## Independent initial review — round 0
 
@@ -19,9 +22,9 @@ It established no genuine production behavior bug, fixed-finding reopening
 or D-03 stop trigger. No build, mutation, installation, Git write or report
 write ran in that read-only review.
 
-The initial inventory is 10 open causes. Applied remedies below are pending
-full independent SUPPORT correction acceptance after 03-07. They do not
-establish a closing count. No correction round has run or been reset.
+The initial inventory contained 10 open causes. Full correction round 1
+accepted those ten fixes and found two documentation warnings. Round 2 accepted
+both new fixes. The continuous counter and complete verdicts appear below.
 
 ## Complete file and header inventory
 
@@ -40,15 +43,17 @@ The packaging gate checks source SPDX only; it does not prove test headers.
 | test/device/halo.test.ts | 1: starts with imports, all sections absent | 1–7 at 6ad32c3f: approved sections applied; 03-06 |
 | src/device/registry.ts | 1–11: MIT SPDX, no separate copyright or spacing | 1–16 at 6ad32c3f: approved sections applied; 03-06 |
 | test/device/registry.test.ts | 1: starts with imports, all sections absent | 1–7 at 6ad32c3f: approved sections applied; 03-06 |
-| src/persistence/accessoryContext.ts | 1–25: MIT SPDX, no separate copyright or spacing | Pending 03-07; unchanged |
-| test/persistence/accessoryContext.test.ts | 1: starts with imports, all sections absent | Pending 03-07; unchanged |
+| src/persistence/accessoryContext.ts | 1–25: MIT SPDX, no separate copyright or spacing | Approved sections applied at 970119b2; independently accepted at d262943b |
+| test/persistence/accessoryContext.test.ts | 1: starts with imports, all sections absent | 1–9: approved sections applied at 970119b2; independently accepted at d262943b |
 
 ## Stable findings and dispositions
 
 All IDs have requirement DEV-01 and first review round 0 by the corrected
 reviewer above. Initial locations below are qualified by 7cfedb24; current
-applied locations are qualified by 4deb91ef. Pending-owner files still have
-their original bytes. Distinct causes retain distinct IDs across later slices.
+applied event/health locations are qualified by 4deb91ef. Later entries name
+their own applied revisions. Distinct causes retain distinct IDs across slices.
+Full correction round 1 at d5c7ea6c accepted IDs 001–010. Full correction round
+2 at d262943b accepted IDs 011–012 and confirmed that 001–010 remain fixed.
 
 ### CR-03-SUPPORT-001 — WARNING — Complete headers
 
@@ -63,8 +68,9 @@ eca71a386c0d82c913d75e5144b4533547acb2ff; health source/owner applied at
 audits, clean pre-steps and normal hooks. HALO sections applied at
 72c4574b9737d9b35e37e52296223f62d52acfee; registry sections applied at
 7d79ac127dc7d8cc0062d8bf3e5bdc6689b208a7. Their bounded independent preflight
-passed at 6ad32c3f. Persistence remains unapplied; full correction acceptance
-is pending. This shared ID is not closed.
+passed at 6ad32c3f. Persistence source/owner sections applied at
+970119b2c79e4d119314a36c1dd94b7662e32af5. Full correction round 1 independently
+accepted all ten headers, and round 2 confirmed them. This shared ID is fixed.
 
 ### CR-03-SUPPORT-002 — WARNING — Backup activation cause
 
@@ -74,7 +80,7 @@ the primary pump did not cope. An activation can occur during self-test;
 the interface establishes no cause. Minimum repair describes backup start
 alone. Applied at 7b72051a49671de6a62e5bd1a3f02104ff5c60a3, only that source;
 current :35–36. Compiler/selector and hooks passed. Documentation maintenance,
-not proof of a runtime defect; final independent acceptance remains pending.
+not proof of a runtime defect. Full correction round 1 accepted this fix.
 
 ### CR-03-SUPPORT-003 — WARNING — Distinct clock examples
 
@@ -87,7 +93,7 @@ uses local 1_700_000_777_000 milliseconds and device 1_700_000_000 Unix seconds;
 source :26 and :53–54 state their units. No conversion, brand or emitter added.
 This fixture/comment repair retains the existing numeric contract. The
 event-clock audit's actual initial exit 2 and retry are preserved below.
-Final independent acceptance remains pending.
+Full correction round 1 accepted this fix.
 
 ### CR-03-SUPPORT-004 — BLOCKER — Public event union protection
 
@@ -100,7 +106,7 @@ only test/device/events.test.ts. Current :35–42 adds complete backup, self-tes
 and recovered union positives; :44–64 preserves four omission negatives and
 adds numeric local/device clock negatives. Strict compilation and declaration
 selector pass. No artificial runtime test/control or genuine bug RED was
-created. Final independent acceptance remains pending.
+created. Full correction round 1 accepted this fix.
 
 ### CR-03-SUPPORT-005 — BLOCKER — Health absence/type protection
 
@@ -113,7 +119,8 @@ Current :15,29 accepts readonly UntrustedScope[]; :39–57 adds required-clock
 omission, unsupported reason and numeric-clock negatives. Original four
 negatives, explicit undefined positives, empty list and unavailable state
 remain. Source unions/member mutability were not changed. Declaration
-selector and fresh real serviceCatalogue owner pass; final acceptance pending.
+selector and fresh real serviceCatalogue owner pass. Full correction round 1
+accepted this fix.
 
 ### CR-03-SUPPORT-006 — WARNING — Registry anonymous verdict objects
 
@@ -129,7 +136,8 @@ UnsupportedFamilyOutcome and UnknownFamilyOutcome. Applied at
 current source :23–43 at 6ad32c3f. Exact original generic, tags, fields and
 mutability remain. No default generic, readonly conversion, forced import,
 suppression or runtime change. Configured export/type/private-leak check
-has zero issues. Bounded preflight passed; full correction remains pending.
+has zero issues. Bounded preflight passed. Full correction round 1 accepted
+this fix.
 No dispatch defect or accepted behavior bug exists.
 
 ### CR-03-SUPPORT-007 — WARNING — HALO ordinary test phases
@@ -141,7 +149,7 @@ phases for the retained product-name case; coordinate with 010 rather than
 expanding the redundant identity case. Applied at
 8847f1c195d23c5af24ab8d021d2f318a925a448, only HALO owner; current :23–31
 at 6ad32c3f. Ordinary arrange/act/assert and independent product-name literal
-remain. Bounded preflight passed; full correction remains pending.
+remain. Bounded preflight passed. Full correction round 1 accepted this fix.
 
 ### CR-03-SUPPORT-008 — BLOCKER — Independent registry HALO expectation
 
@@ -152,7 +160,7 @@ A coordinated wrong constant could pass this pair. Minimum remedy uses
 literal wayneWaterHalo and the independent complete unsupported result with
 Wayne Water HALO. Applied at 6ad32c3f112c9e9184264a498be26d1d666e6a72,
 only registry owner; current :50–60. Whole Gemini binding and unknown outcomes
-remain. Bounded preflight passed; full correction remains pending. Existing
+remain. Bounded preflight passed. Full correction round 1 accepted this fix. Existing
 constants are correct, so this is assertion maintenance rather than a genuine
 production bug.
 
@@ -165,9 +173,12 @@ Keyword booleans do not establish the asserted meaning; the local-time case
 also passes prose that permits that comparison. Minimum remedy removes the
 source-reading/parser runtime scaffold, preserves meaningful compiler checks
 and strengthens required absence/type contracts as justified. Actual clock
-conversion and mutation remain in pumpRecords and its real owner. Pending
-original persistence owner 03-07. No persisted-value/recovery behavior bug
-has been established and no helper need has been confirmed.
+conversion and mutation remain in pumpRecords and its real owner. Applied at
+d5c7ea6c65ab896f502629a10fa16340d47beb3c, only the persistence owner. Current
+owner :11–104 preserves the original four negatives, has 15 negatives in total,
+and proves writable records through nine assignments. Full correction round 1
+accepted this fix. No persisted-value/recovery behavior bug or helper need
+was established.
 
 ### CR-03-SUPPORT-010 — WARNING — Redundant HALO identity runtime case
 
@@ -179,7 +190,7 @@ remove this redundant identity case without changing the production constant.
 Applied at bb6d16593a14d72ebac2dd5f6b15aed6bc12a7df, only HALO owner.
 Current :16–21 preserves the positive and both negatives; :23–31 retains
 the independent product-name case. Source constant remains :28 at 6ad32c3f.
-Bounded preflight passed; full correction remains pending.
+Bounded preflight passed. Full correction round 1 accepted this fix.
 
 ## Rejected and bounded contract candidates
 
@@ -337,12 +348,13 @@ dispatch deviation if it needs a new record.
 | Review | Opening | Fixed | Rejected accepted IDs | New | Reopened | Closing |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Independent initial round 0 | 10 | 0 | 0 | 0 | 0 | 10 |
+| Full correction round 1 at d5c7ea6c | 10 | 10 | 0 | 2 | 0 | 2 |
+| Full correction round 2 at d262943b | 2 | 2 | 0 | 0 | 0 | 0 |
 
-Applied event/health causes 002–005 and HALO/registry causes 006–008/010,
-plus their 001 header portions, await full independent acceptance. Unapplied
-009 and remaining persistence 001 portions stay with 03-07. No full correction
-or independent closing count ran
-here. Complete SUPPORT correction follows 03-07 with this original counter.
+Round 1: closing = 10 - 10 - 0 + 2 + 0 = 2. Its new IDs are 011 and 012.
+Round 2: closing = 2 - 2 - 0 + 0 + 0 = 0. Both opening IDs are fixed.
+No original accepted ID was rejected or reopened. Round 1 reduced the count,
+and round 2 closed it. Neither verdict triggers D-03. No fourth round ran.
 E-03-01/P-03-01/P-03-02 remain unresolved; DEV-01 remains pending overall.
 
 ## HALO/registry execution and bounded preflight
@@ -422,6 +434,129 @@ No genuine bug RED, source mutation, conditional evidence file, install,
 live call, new adapter/default/migration or coordinator state edit occurred.
 The coordinator owns the fresh full npm run check; isolated checks and hooks
 do not replace it or refresh merged coverage/direct.lcov.
+
+## Persistence execution and complete correction verdicts
+
+Fixers: /root/phase3_persistence/persistence_fixer and
+/root/phase3_persistence/persistence_prose_fixer, role gsd-code-fixer.
+Full correction reviewers: /root/phase3_persistence/support_correction_one
+and /root/phase3_persistence/support_correction_two, role gsd-code-reviewer.
+Each dispatch resolved the role and high effort first, omitted the empty model,
+and used fresh context. Every foreground handoff waited for its named terminal
+response. No executor read, write, build or Git operation overlapped a child.
+All resources were released before the next operation.
+
+Both reviewers read all ten complete files and every complete header. They
+read AGENTS, all requested full rulebooks, canonical decisions and current
+planning context. They inspected real pumpRecords mutations and its owner,
+platform indexed context types and persistence callbacks, and actual other
+SUPPORT consumer bodies. No helper or external adaptation was introduced.
+These observations do not complete later accessory/runtime/platform sweeps.
+
+| Cause / task | Commit | Actual paths |
+| --- | --- | --- |
+| 001 persistence / 03-07-01 | 970119b2c79e4d119314a36c1dd94b7662e32af5 | src/persistence/accessoryContext.ts; test/persistence/accessoryContext.test.ts |
+| 009 / 03-07-02 | d5c7ea6c65ab896f502629a10fa16340d47beb3c | test/persistence/accessoryContext.test.ts |
+| 011 / original 03-07-02 | 326b92418e3f33cb5d5d814de6f2a3692f5a202e | src/persistence/accessoryContext.ts |
+| 012 / original 03-07-02 | d262943b0749a094c3e48488bbd952b26f103adf | src/persistence/accessoryContext.ts |
+
+### CR-03-SUPPORT-011 — WARNING — Release and record-history prose
+
+Requirement DEV-01. First found in full correction round 1 at d5c7ea6c.
+Rules: comments “Prose,” Google style “Comments and documentation,” D-05/D-06,
+and the explicit release-record check in 03-07-02. Initial source locations at
+7cfedb24 :19–24,96–99 became :24–29,101–104 at d5c7ea6c. The prose called
+records new in this release and seeding the only historical path. Independent
+Git inspection found the same declarations in b19ea589 at version 0.1.0.
+Current version is 0.1.1. The real reducer resumes readable records and starts
+a new epoch for unreadable records. Commit 326b9241 corrects these paragraphs
+without changing declarations. Round 2 independently accepted current
+d262943b source :25–29,101–103 against pumpRecords :228–258. Status: fixed.
+This documentation cause is distinct from 009 and proves no runtime bug.
+
+### CR-03-SUPPORT-012 — WARNING — Scope of identifier privacy treatment
+
+Requirement DEV-01. First found in full correction round 1 at d5c7ea6c.
+Rules: comments “Prose,” Google style “Comments and documentation,” canonical
+D-023/D-027, the ratified STATE exception, and D-05/D-06. Initial source
+7cfedb24 :5–10 became d5c7ea6c :10–15. Categorical non-sensitivity and
+“only public artifacts” overstated the actual decision. STATE permits
+deviceId in context/runtime logs under an unconfirmed opaque-key assumption.
+D-027 excludes real identifiers from public files and committed planning
+artifacts. Commit d262943b states that existing treatment and its limit.
+Round 2 independently accepted source :10–16. Status: fixed. No new privacy
+permission or runtime disclosure was introduced.
+
+## Persistence native evidence and checked inputs
+
+All code work ran on features/code-review-sweep, Node v26.11.1, npm 11.20.0,
+Fallow 3.27.0, with synthetic offline inputs. The phase03/plan03-07 sentinel
+was read directly and retained isolation:none. The persisted plan ledger starts
+at bd096af2cd6f1cce272990375864b4133c974cd3.
+
+Before edits, six exact --type-aware --symbol-impact queries completed with
+exit 0 and complete status in tsconfig.json and tsconfig.test.json. Targets
+were PumpObservation, ActivationWatermarks and AccessoryContext. Pump types
+located one production/two test-project consumers, including pumpRecords and
+the context owner. Context located platform and its owner. Actual bodies were
+read before repair. No exported type shape, signature, alias or mutability
+changed. Guard exit 0 reported no configured zones/rule packs.
+
+Each cause has fresh build/owner/direct-selector evidence, a baseline audit
+against 7cfedb24, an exact clean SKIP=npm-check pre-step before staging, and an
+ordinary foreground commit with normal hooks. All introducing commits exited
+0. Pre-step formatters changed no bytes. The header audit initially exited 2
+on sandbox temporary-worktree creation, then its authorized retry exited
+0/verdict pass. The 011 staging attempt exited 128, then its authorized retry
+succeeded. Original attempts and retries remain preserved. No bypass, amendment,
+history rewrite or tracked deletion occurred.
+
+The native index /private/tmp/persistence-fixer-index.json held 79 captures at
+the final independent review. Later record-only checks append to it. Captures
+retain complete separate stdout/stderr, raw exits, command arguments, UTC times,
+runtime, HEAD/blob identities, exact dirty/staged diffs and untracked bytes.
+The finalprose-evidence-validation-2 record reports PROSE_EVIDENCE_OK and
+checks actual paths, ancestry and audit -> pre-step -> stage -> hook ordering.
+Preservation records and both independent reviews confirm unchanged declaration
+tokens and compiler-erased JavaScript against the recorded baseline.
+
+| Command / native record | Input / raw exit | Outcome |
+| --- | --- | --- |
+| Initial fresh build and context/pump owner, initial-build and initial-owner | bd096af2 / 0 | 33 real pump cases plus four original prose cases passed before repair |
+| npm run build:test, final-build | d5c7ea6c / 0, 19:57:46.562–49.560 UTC | Current strict compilation |
+| node --test --test-reporter=tap dist-test/test/accessories/pumpRecords.test.js, final-pump-owner | d5c7ea6c / 0, 19:57:51.406–51.670 UTC | 33 passed, zero fail/skip/cancel/todo |
+| Persistence owner, final-persistence-owner | d5c7ea6c / 0 | Zero authored runtime cases, one Node file-load sentinel |
+| Persistence isolated selector, final-direct | d5c7ea6c / 0, 19:57:52.438–56.083 UTC | Declaration-only acceptance after strict compilation |
+| Fresh final prose build, finalprose-build | d262943b / 0, 20:09:52.183–55.007 UTC | Current strict compilation |
+| Selected platform persistence cases, finalprose-platform | d262943b / 0, 20:09:55.754–56.145 UTC | Two passed, zero fail/skip/cancel/todo |
+| Complete five-pair SUPPORT selector, support-direct-final | d262943b / 0, 20:10:41.170–44.713 UTC | Fresh strict build and all five isolated pairs passed |
+
+The complete five-pair command is npm run test:coverage:direct --
+src/device/events.ts test/device/events.test.ts src/device/health.ts
+test/device/health.test.ts src/device/halo.ts test/device/halo.test.ts
+src/device/registry.ts test/device/registry.test.ts
+src/persistence/accessoryContext.ts test/persistence/accessoryContext.test.ts.
+Its full capture is /private/tmp/persistence-fixer-support-direct-final.json.
+Native unchanged HALO LCOV remains 6/6 lines, 0/0 functions, 1/1 branches.
+Registry remains 53/53 lines, 3/3 functions, 9/9 branches. Events, health and
+context have declaration-only outcomes, without invented numeric coverage.
+Selected checks do not refresh merged coverage/direct.lcov.
+
+Round 1 inspected clean d5c7ea6c and accepted initial IDs 001–010. It introduced
+011/012 as distinct pre-existing documentation causes. Round 2 inspected clean
+d262943b and accepted both while confirming the original ten remain fixed.
+Both reviewers independently inspected native indexes and Git objects, not only
+this report. At round 2 those indexes held 60 event/health, 80 HALO/registry and
+79 persistence records. All sixteen SUPPORT code-cause commits were checked
+against real paths and ancestry. No genuine behavior defect, RED/control,
+conditional seed or evidence file, speculative runtime service or migration
+was needed.
+
+The fresh combined npm run check remains pending with the coordinator after
+this terminal handoff. Earlier full gates are not reused across these test
+changes. E-03-01/P-03-01/P-03-02 and DEV-01 remain pending overall. WINDOWS
+46/47 remain OPEN/unwaived historical gaps. Historical Gemini 247/247 is not
+independently confirmed by this SUPPORT work and is not claimed here.
 
 ## Threat Flags
 
