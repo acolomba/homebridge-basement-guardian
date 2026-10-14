@@ -14,7 +14,7 @@ import type { ApiConnectivity, ApiDevice } from '../cloud/types.js';
 import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
-/** The device facts that identify one physical system and never change. */
+/** The identifying and display facts for one physical system (C-002, D-030). */
 export interface DeviceIdentity {
   /** The vendor identifier. It seeds the accessory UUID and is immutable. */
   deviceId: string;
@@ -89,8 +89,15 @@ export interface DeviceStateStoreOptions {
 
 /** Holds one immutable snapshot per device. */
 export interface DeviceStateStore {
+  /** Returns the stored snapshot, or undefined for an undiscovered device. */
   snapshot(deviceId: string): DeviceSnapshot | undefined;
+  /** Lists every device identifier currently held by the store. */
   deviceIds(): readonly string[];
+  /**
+   * Refreshes identity, reachability and device time from one REST discovery.
+   * Records local receipt time separately and replaces telemetry only while
+   * the shadow holds no ownership watermark. Preserves shadow metadata.
+   */
   applyDiscovery(device: ApiDevice): DeviceSnapshot;
   /**
    * Merges one reported patch into the stored snapshot.
@@ -102,10 +109,8 @@ export interface DeviceStateStore {
   /**
    * Drops the stored snapshot and every registered listener for `deviceId`.
    *
-   * A `deviceId` the store never held is a no-op. This is what lets a later
-   * `applyDiscovery` for the same `deviceId` start a fresh observation epoch
-   * (D-020): with no previous snapshot, `toSnapshot` takes the same
-   * `previous === undefined` branch a brand-new device takes.
+   * An unknown device is a no-op. Rediscovery starts a fresh observation epoch
+   * (D-020).
    */
   remove(deviceId: string): void;
   /**
@@ -116,40 +121,9 @@ export interface DeviceStateStore {
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
   /**
-   * Reports that the shadow is no longer the source of telemetry for one
-   * device.
-   *
-   * Clearing that device's watermark hands its telemetry back to the poll and
-   * lets the complete shadow requested after a reconnect be applied rather than
-   * refused as stale, which is what makes the reconnect refresh restore
-   * anything (SYNC-03). A caller handing back a whole fleet loops, which is
-   * what keeps a fact about one controller from being spent on its neighbours:
-   * a healthy pump released alongside a silent one has every poll overwrite the
-   * fresher readings its own live path just delivered. A `deviceId` the store
-   * does not hold changes nothing.
-   *
-   * Two conditions call for it. A connection that ended is one, and that one is
-   * genuinely fleet-wide, because the connection carried every device. A device
-   * the monitoring-trust projection reports silent, with its socket still open,
-   * is the other, and it is the one an owner meets: silence is not a
-   * disconnection, it belongs to one controller, and a poll that cannot refresh
-   * that controller's telemetry leaves a flooding pit unreported (D-13). It is
-   * therefore reachable on every poll of a silence that can last hours, which
-   * it is written to cost nothing.
-   *
-   * Ownership returns on the next document carrying an observation, through
-   * `applyReportedPatch`: with no watermark held the patch is not stale, and
-   * `nextShadowVersion` establishes the watermark again. Nothing else restores
-   * it, and a document that observed nothing does not, so REST keeps feeding
-   * telemetry until a real report arrives.
-   *
-   * It also gives up out-of-order protection for the first document after a
-   * release, which silence triggers on the same terms as a reconnect rather
-   * than on new ones. That is bounded: the connection is opened with a clean session
-   * and no replay, so no queued backlog can arrive out of order, and a document
-   * that did arrive late still carries telemetry the device genuinely sent and
-   * merges key by key, with the next heartbeat correcting it. The alternative
-   * is a silently discarded refresh, which is a false normal.
+   * Hands one device's telemetry back to polling and permits a reconnect refresh.
+   * Preserves observed values and receipt time, and notifies no listener.
+   * An unknown device is a no-op; repeated releases leave observations unchanged.
    */
   releaseShadowSource(deviceId: string): void;
 }
@@ -384,6 +358,8 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     },
 
     remove(deviceId: string): void {
+      // With no previous snapshot, rediscovery takes the new-device branch of
+      // toSnapshot and starts a fresh observation epoch (D-020).
       snapshots.delete(deviceId);
       listeners.delete(deviceId);
     },
@@ -391,6 +367,37 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     // Nobody is notified: clearing the watermark moves no telemetry key, and a
     // listener filtering on the change report would be handed a change that
     // did not happen.
+    // Clearing that device's watermark hands its telemetry back to the poll and
+    // lets the complete shadow requested after a reconnect be applied rather than
+    // refused as stale, which is what makes the reconnect refresh restore
+    // anything (SYNC-03). A caller handing back a whole fleet loops, which is
+    // what keeps a fact about one controller from being spent on its neighbours:
+    // a healthy pump released alongside a silent one has every poll overwrite the
+    // fresher readings its own live path just delivered. A `deviceId` the store
+    // does not hold changes nothing.
+    //
+    // Two conditions call for it. A connection that ended is one, and that one is
+    // genuinely fleet-wide, because the connection carried every device. A device
+    // the monitoring-trust projection reports silent, with its socket still open,
+    // is the other, and it is the one an owner meets: silence is not a
+    // disconnection, it belongs to one controller, and a poll that cannot refresh
+    // that controller's telemetry leaves a flooding pit unreported (D-13). It is
+    // therefore reachable on every poll of a silence that can last hours, which
+    // it is written to cost nothing.
+    //
+    // Ownership returns on the next document carrying a telemetry observation, through
+    // `applyReportedPatch`: with no watermark held the patch is not stale, and
+    // `nextShadowVersion` establishes the watermark again. Nothing else restores
+    // it, and a document that observed nothing does not, so REST keeps feeding
+    // telemetry until a real report arrives.
+    //
+    // It also gives up out-of-order protection for the first document after a
+    // release, which silence triggers on the same terms as a reconnect rather
+    // than on new ones. That is bounded: the connection is opened with a clean session
+    // and no replay, so no queued backlog can arrive out of order, and a document
+    // that did arrive late still carries telemetry the device genuinely sent and
+    // merges key by key, with the next heartbeat correcting it. The alternative
+    // is a silently discarded refresh, which is a false normal.
     releaseShadowSource(deviceId: string): void {
       const snapshot = snapshots.get(deviceId);
 
