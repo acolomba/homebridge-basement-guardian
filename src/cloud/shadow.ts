@@ -204,7 +204,7 @@ function toReportedPatch(document: ShadowDocument): ReportedPatch {
   return {
     data: isRecord(sections.data) ? sections.data : undefined,
     state: isRecord(sections.state) ? sections.state : undefined,
-    version: typeof document.version === 'number' ? document.version : undefined,
+    version: typeof document.version === 'number' && Number.isFinite(document.version) ? document.version : undefined,
   };
 }
 

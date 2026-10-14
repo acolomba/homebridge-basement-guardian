@@ -536,6 +536,22 @@ describe('message routing', () => {
     assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: { water_level: 3 }, state: undefined, version: undefined } }]);
   });
 
+  test('reports an overflowing document version as absent', async () => {
+    // arrange
+    const { client, transports, patches } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.message(
+      `$aws/things/${DEVICE_A}/shadow/update/accepted`,
+      Buffer.from('{"state":{"reported":{"data":{"water_level":3}}},"version":1e400}', 'utf8'),
+    );
+
+    // assert
+    assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: { water_level: 3 }, state: undefined, version: undefined } }]);
+  });
+
   test('reports a rejected shadow request at warn and produces no patch', async () => {
     // arrange
     const { client, transports, patches, logged } = harness();
