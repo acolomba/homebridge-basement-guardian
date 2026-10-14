@@ -219,14 +219,6 @@ describe('validate', () => {
   });
 });
 
-// The trustworthy scopes a caller reads off a decoded state, in the order
-// `ScopedDomainState` declares them.
-const DECODED_SCOPES = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute', 'metadata'] as const;
-
-function absentScopesOf(state: GeminiDomainState): string[] {
-  return DECODED_SCOPES.filter((scope) => state[scope] === undefined);
-}
-
 // A record whose one field answers correctly the first time it is read and
 // differently afterwards. `validate()` reads each field once, so this is the
 // broken contract a group decoder's guard exists to catch.
@@ -301,14 +293,6 @@ describe('decode', () => {
     assert.deepStrictEqual(geminiFamily.decode(snapshot), expectedState);
   });
 
-  test('SAFE-01 never reaches the level lookup for an out-of-domain water_level', () => {
-    // arrange
-    const snapshot = buildSnapshot({ ...validTelemetry(), water_level: 2 });
-
-    // act & assert
-    assert.doesNotThrow(() => geminiFamily.decode(snapshot));
-  });
-
   test('RES-01 omits the power scope for a missing ac_power while the water scope still carries its level', () => {
     // arrange
     const snapshot = buildSnapshot(telemetryWithout('ac_power'));
@@ -332,14 +316,104 @@ describe('decode', () => {
     assert.strictEqual(state.battery, undefined);
   });
 
-  for (const { scope, field, wrongValue } of [
-    { scope: 'water', field: 'water_level', wrongValue: 2 },
-    { scope: 'pump', field: 'backup_pump_running', wrongValue: 'not-a-boolean' },
-    { scope: 'power', field: 'ac_power', wrongValue: 'not-a-boolean' },
-    { scope: 'battery', field: 'battery_health', wrongValue: 64 },
-    { scope: 'fault', field: 'water_sensor_fault', wrongValue: 'not-a-boolean' },
-    { scope: 'connectivity', field: 'offline', wrongValue: 'not-a-boolean' },
-  ] satisfies readonly { scope: TrustScope; field: GeminiTelemetryField; wrongValue: unknown }[]) {
+  for (const { scope, field, wrongValue, expectedState } of [
+    {
+      scope: 'water',
+      field: 'water_level',
+      wrongValue: 2,
+      expectedState: {
+        water: undefined,
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'pump',
+      field: 'backup_pump_running',
+      wrongValue: 'not-a-boolean',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: undefined,
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'power',
+      field: 'ac_power',
+      wrongValue: 'not-a-boolean',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: undefined,
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'battery',
+      field: 'battery_health',
+      wrongValue: 64,
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: undefined,
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'fault',
+      field: 'water_sensor_fault',
+      wrongValue: 'not-a-boolean',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: undefined,
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'connectivity',
+      field: 'offline',
+      wrongValue: 'not-a-boolean',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: undefined,
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+  ] satisfies readonly { scope: TrustScope; field: GeminiTelemetryField; wrongValue: unknown; expectedState: GeminiDomainState }[]) {
     test(`RES-01 omits the ${scope} scope and no other when ${field} is invalid`, () => {
       // arrange
       const snapshot = buildSnapshot({ ...validTelemetry(), [field]: wrongValue }, validMetadata());
@@ -348,7 +422,7 @@ describe('decode', () => {
       const state = geminiFamily.decode(snapshot);
 
       // assert
-      assert.deepStrictEqual(absentScopesOf(state), [scope]);
+      assert.deepStrictEqual(state, expectedState);
     });
   }
 
@@ -357,20 +431,64 @@ describe('decode', () => {
   // wrong-typed timestamp deactivate two live pump services and two contact
   // sensors, and the field says nothing about whether a pump is running
   // (D-02, D-014).
-  for (const { scope, field } of [
-    { scope: 'alarm-mute', field: 'alarm_audio_muted' },
-    { scope: 'self-test', field: 'test_running' },
-    { scope: 'self-test', field: 'test_timestamp' },
-  ] satisfies readonly { scope: TrustScope; field: GeminiTelemetryField }[]) {
+  for (const { scope, field, expectedState } of [
+    {
+      scope: 'alarm-mute',
+      field: 'alarm_audio_muted',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': undefined,
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'self-test',
+      field: 'test_running',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': undefined,
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+    {
+      scope: 'self-test',
+      field: 'test_timestamp',
+      expectedState: {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': undefined,
+        'alarm-mute': { muted: false },
+        metadata: { mcuFirmwareVersion: '1.2.3', wifiFirmwareVersion: '4.5.6', mcuTargetVersion: '1.3.0', wifiSignalDbm: -60 },
+      },
+    },
+  ] satisfies readonly { scope: TrustScope; field: GeminiTelemetryField; expectedState: GeminiDomainState }[]) {
     test(`D-02 omits the ${scope} scope and no other when the control field ${field} is invalid`, () => {
       // arrange
       const snapshot = buildSnapshot({ ...validTelemetry(), [field]: 'not-the-declared-type' }, validMetadata());
 
       // act
+      const validation = geminiFamily.validate(snapshot);
       const state = geminiFamily.decode(snapshot);
 
       // assert
-      assert.deepStrictEqual(absentScopesOf(state), [scope]);
+      assert.deepStrictEqual(state, expectedState);
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'wrong-type', scope }] });
     });
   }
 
@@ -394,7 +512,17 @@ describe('decode', () => {
       const state = geminiFamily.decode(snapshot);
 
       // assert
-      assert.deepStrictEqual(absentScopesOf(state), ['metadata']);
+      assert.deepStrictEqual(state, {
+        water: { levelCode: 1, levelPercent: 20, flooded: false },
+        pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
+        power: { mainsPresent: true },
+        battery: { charging: false, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
+        fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
+        connectivity: { reportedOffline: false },
+        'self-test': { running: false, testedAt: undefined },
+        'alarm-mute': { muted: false },
+        metadata: undefined,
+      });
     });
   }
 
