@@ -188,16 +188,16 @@ test('forwards the connect notification to the registered handler', () => {
 test('forwards the message notification with its topic and payload', () => {
   // arrange
   const { transport, handlers } = harness();
-  const observed: string[] = [];
+  const messages: { topic: string; payload: Buffer }[] = [];
 
   // act
   transport.onMessage((topic: string, payload: Buffer) => {
-    observed.push(`${topic} ${payload.toString('utf8')}`);
+    messages.push({ topic, payload });
   });
-  handlers.message?.('topic-a', Buffer.from('body-a', 'utf8'));
+  handlers.message?.('topic-a', Buffer.from([0x00, 0xff, 0x80, 0x41]));
 
   // assert
-  assert.deepStrictEqual(observed, ['topic-a body-a']);
+  assert.deepStrictEqual(messages, [{ topic: 'topic-a', payload: Buffer.from([0x00, 0xff, 0x80, 0x41]) }]);
 });
 
 test('forwards the error notification with its error', () => {
