@@ -446,3 +446,49 @@ inspected; the source-only license gate does not establish owner conformance.
 Cause scope is exactly source, owner and this report (3 paths). Commit and
 clean pre-step/hook results are appended after the actual foreground commit.
 This is a header-only cause; CR-04-PORTS-002 remains for its separate commit.
+
+CR-04-PORTS-001 committed as
+`227c799cebde0e77be9a85c605348ad00add1a69`, exactly the three paths above.
+`cause001-prestep` ran the exact required
+`SKIP=npm-check pre-commit run --files src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`
+and returned 0, clean on its first attempt, before staging. `cause001-commit`
+retains the guarded cwd/toplevel/feature-branch assertion, exact named `git add`
+and normal foreground commit, raw exit 0 and both hook-stage streams.
+The pre-commit stage reports `npm run check:commit ... Passed`; the subsequent
+commit-message stage correctly has no matching build files. No bypass was used.
+
+### CR-04-PORTS-002 repair — declaration compiler contracts
+
+Removed both runtime recorder/export-enumeration cases and their unused
+runtime imports. The type-only owner now supplies `satisfies` positives for a
+void-compatible operation, including a value-returning function that TypeScript
+validly permits in a void slot. Described `@ts-expect-error` negatives pin a
+missing operation and a non-callable flag. The compiler rejects an unused
+negative directive if that invalid shape becomes assignable. There is no
+runtime wrapper, call, key enumeration, test export, or fabricated numeric
+coverage denominator. No production code or public API changed.
+
+Read the whole edited owner. Structural caller reads included the full platform
+and pumpRecords files: platform constructs a closure bound to one owned
+accessory; pumpRecords persists only a changed observation. Their existing
+implementation and ownership remain intact. The health compiler owner supplied
+the declaration-only analogy. No name/signature/mutability/visibility change
+or private-alias deletion was chosen, so conditional two-project impact or
+deletion probes were not needed. No runtime assertion control applies to this
+compiler-only owner; compiler contract checks replace the literal self-test.
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-store-contract | `node_modules/.bin/fallow guard test/runtime/accessoryStore.test.ts --format json --quiet --explain` | 0; no configured boundary zones/rule packs |
+| cause002-typecheck | `npm run typecheck` | 0; both strict compiler projects, positive/negative contracts accepted |
+| cause002-build | `npm run build:test` | 0; freshly compiled owner |
+| cause002-owner | `node --test --test-reporter=tap dist-test/test/runtime/accessoryStore.test.js` | 0; zero declared runtime cases, Node reports one passing file subtest; no skips/cancellations |
+| cause002-direct | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | 0; honest declaration-only selector acceptance |
+| cause002-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 2; sandbox could not create temporary base worktree; retained as failed attempt |
+| cause002-audit-retry | same exact audit with authorized Git-metadata access | 0; kind audit, verdict pass, zero introduced findings |
+
+The retry warns that base-snapshot TypeScript cache entrypoints outside its
+temporary project root are skipped; this is retained in separate stderr.
+The failed sandbox attempt does not count as passing evidence. Cause scope is
+owner and report (2 paths). The required clean pre-step and foreground commit
+result will be appended after execution. PORTS correction counter remains 0.
