@@ -219,13 +219,13 @@ describe('applyDiscovery', () => {
 
   test('copies the vendor record, so a later change to it cannot reach stored state', () => {
     // arrange
-    const data: Record<string, unknown> = { water_level: 1 };
-    const device: ApiDevice = { ...geminiDevice(), data };
+    const vendorTelemetry: Record<string, unknown> = { water_level: 1 };
+    const device: ApiDevice = { ...geminiDevice(), data: vendorTelemetry };
     const store = createDeviceStateStore(fixedStoreOptions());
 
     // act
     const snapshot = store.applyDiscovery(device);
-    data.water_level = 31;
+    vendorTelemetry.water_level = 31;
 
     // assert
     assert.deepStrictEqual(snapshot.data, { water_level: 1 });
