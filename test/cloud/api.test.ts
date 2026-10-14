@@ -106,10 +106,11 @@ function apiOptions(overrides: Partial<CloudApiOptions> = {}): CloudApiOptions {
 
 // Mimics fetch's abort behavior: a request settles only when its signal aborts.
 function stubHangingFetch(): HttpFetch {
-  return (_input, init) => {
-    const { signal } = init ?? {};
+  return (...request) => {
+    const { signal } = request[1] ?? {};
 
-    return new Promise<Response>((_resolve, reject) => {
+    return new Promise<Response>((...settlement) => {
+      const reject = settlement[1];
       const abort = (): void => {
         const reason: unknown = signal?.reason;
         assert.ok(reason instanceof Error);
@@ -152,8 +153,8 @@ function stubDeadlines(t: TestContext): { requested: number[]; expire: () => voi
 function stubSignalRecordingFetch(): { httpFetch: HttpFetch; requestSignals: (AbortSignal | null | undefined)[] } {
   const requestSignals: (AbortSignal | null | undefined)[] = [];
 
-  const httpFetch: HttpFetch = (_input, init) => {
-    requestSignals.push(init?.signal);
+  const httpFetch: HttpFetch = (...request) => {
+    requestSignals.push(request[1]?.signal);
 
     return Promise.resolve(new Response(JSON.stringify(deviceListBody([])), { status: 200 }));
   };
