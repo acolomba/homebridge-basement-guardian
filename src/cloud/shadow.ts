@@ -104,11 +104,8 @@ export interface ShadowClient {
 
 // One connection's own state.
 //
-// These were once plain variables shared by every connection the client had
-// ever opened, which let a connection the client had already replaced rewrite
-// the live one's health and start its own retry chain. Each connection now
-// carries its own record, and identity decides whether a notification is worth
-// listening to at all (SYNC-04).
+// Each connection owns its health and release state. Only notifications from
+// the current connection may change live health or start a retry (SYNC-04).
 interface ShadowConnection {
   transport: MqttTransport;
   /** The socket opened, which tells a refused handshake from a routine close. */
