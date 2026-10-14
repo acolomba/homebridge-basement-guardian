@@ -467,7 +467,21 @@ test('deadlines a command with the command deadline rather than the request time
 
 test('aborts an in-flight device request when the root signal aborts', async () => {
   // arrange
-  const httpFetch = stubHangingFetch();
+  const exchanges: unknown[] = [];
+  const request = stubHangingFetch();
+  const httpFetch: HttpFetch = (input, init) => {
+    exchanges.push({ method: init?.method, url: input.toString(), headers: Object.fromEntries(new Headers(init?.headers)), body: init?.body });
+    init?.signal?.addEventListener(
+      'abort',
+      () => {
+        exchanges.push('root cancelled');
+      },
+      { once: true },
+    );
+
+    return request(input, init);
+  };
+
   const rootController = new AbortController();
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
@@ -485,6 +499,15 @@ test('aborts an in-flight device request when the root signal aborts', async () 
 
     return true;
   });
+  assert.deepStrictEqual(exchanges, [
+    {
+      method: 'GET',
+      url: 'https://api.example.test/devices',
+      headers: { authorization: 'Bearer id-token-1', 'user-agent': 'homebridge-basement-guardian' },
+      body: undefined,
+    },
+    'root cancelled',
+  ]);
 });
 
 test('aborts a device request on its own deadline while the root signal stays open', async (t) => {
@@ -495,7 +518,21 @@ test('aborts a device request on its own deadline while the root signal stays op
   // and the request never settles. The command case below already owns its deadline
   // this way.
   const deadlines = stubDeadlines(t);
-  const httpFetch = stubHangingFetch();
+  const exchanges: unknown[] = [];
+  const request = stubHangingFetch();
+  const httpFetch: HttpFetch = (input, init) => {
+    exchanges.push({ method: init?.method, url: input.toString(), headers: Object.fromEntries(new Headers(init?.headers)), body: init?.body });
+    init?.signal?.addEventListener(
+      'abort',
+      () => {
+        exchanges.push('read timed out');
+      },
+      { once: true },
+    );
+
+    return request(input, init);
+  };
+
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
   const rootController = new AbortController();
 
@@ -512,12 +549,35 @@ test('aborts a device request on its own deadline while the root signal stays op
     return true;
   });
   assert.strictEqual(rootController.signal.aborted, false);
+  assert.deepStrictEqual(exchanges, [
+    {
+      method: 'GET',
+      url: 'https://api.example.test/devices',
+      headers: { authorization: 'Bearer id-token-1', 'user-agent': 'homebridge-basement-guardian' },
+      body: undefined,
+    },
+    'read timed out',
+  ]);
 });
 
 test('aborts a command on its own deadline while the root signal stays open', async (t) => {
   // arrange
   const deadlines = stubDeadlines(t);
-  const httpFetch = stubHangingFetch();
+  const exchanges: unknown[] = [];
+  const request = stubHangingFetch();
+  const httpFetch: HttpFetch = (input, init) => {
+    exchanges.push({ method: init?.method, url: input.toString(), headers: Object.fromEntries(new Headers(init?.headers)), body: init?.body });
+    init?.signal?.addEventListener(
+      'abort',
+      () => {
+        exchanges.push('command timed out');
+      },
+      { once: true },
+    );
+
+    return request(input, init);
+  };
+
   const rootController = new AbortController();
   const cloudApi = createCloudApi(apiOptions({ httpFetch }));
 
@@ -534,6 +594,20 @@ test('aborts a command on its own deadline while the root signal stays open', as
     return true;
   });
   assert.strictEqual(rootController.signal.aborted, false);
+  assert.deepStrictEqual(exchanges, [
+    {
+      method: 'PUT',
+      url: 'https://api.example.test/devices/account-1_serial-1/data',
+      headers: {
+        authorization: 'Bearer id-token-1',
+        'user-agent': 'homebridge-basement-guardian',
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      body: '{"desiredData":{"test_running":true}}',
+    },
+    'command timed out',
+  ]);
 });
 
 test('refuses a device response whose body is not JSON at all', async () => {
