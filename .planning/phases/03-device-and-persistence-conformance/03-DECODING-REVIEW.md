@@ -2,7 +2,8 @@
 
 Milestone: code-review-sweep. Requirement: DEV-01. Batch baseline:
 55627f52d3f9ce5e94e484af268b4555c0d15c7b. One inventory and correction counter
-span 03-02 through 03-04. Initial triage is round 0; no correction round has run.
+span 03-02 through 03-04. Initial triage is round 0. The current correction
+verdict and remaining owner handoff are recorded below.
 
 ## Initial Independent Review
 
@@ -21,6 +22,10 @@ production behavior defect is confirmed. No fixed STATE finding or SC-03
 reopening was observed. All locations below refer to the baseline revision.
 
 ## Stable Finding Inventory
+
+This table preserves the original twelve-ID initial inventory and its initial
+statuses. Current independent dispositions, including later initial additions,
+are recorded in the correction-round section below.
 
 | ID (CR-03-DECODING-) | Severity | Initial location | Exact rule and cause | Disposition and owner |
 | --- | --- | --- | --- | --- |
@@ -97,8 +102,10 @@ this is not a policy-compliance measurement.
 | Review | Opening | Fixed | Rejected accepted IDs | New | Reopened | Closing |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Initial round 0 | 12 | 0 | 0 | 0 | 0 | 12 |
+| Later initial clarification | 12 | 0 | 0 | 2 | 0 | 14 |
+| Correction round 1 | 14 | 14 | 0 | 1 | 0 | 1 |
 
-The complete independent correction review occurs after 03-04's initial repairs.
+The complete independent correction review follows 03-04's initial repairs.
 Tracer checks, candidate clarifications and ordinary checks are not rounds.
 D-03 stops all work before another edit/build/commit/dispatch if an open round
 does not reduce, a fixed finding reopens, or round four is reached even clean.
@@ -411,3 +418,200 @@ closing count. No fixed finding reopened or nonreducing/fourth correction
 condition occurred. The coordinator still owns npm run check on the combined
 wave, shared records, process-ledger dispositions and phase advancement.
 DEV-01 remains pending; E-03-01, P-03-01 and P-03-02 remain unresolved judgments.
+
+## Water Execution Evidence
+
+Water execution began from 2ff2d366cd8d853edd39b577ed161ef9c1e84071 and its code
+finished at 93a425d4dd41ef062351ef9f8d0107ed75626e52. The existing feature
+checkout and directly read isolation-none sentinel were retained. Typed fixer
+/root/phase3_water/water_cause_fixer read the complete owning files and project
+rulebooks. GSD_RUNTIME=codex resolve-model returned effort high with an omitted
+model ID; configured skills were loaded. Task, build and Git handoffs were serial.
+
+| Cause | Actual commit | Actual paths | Outcome at 93a425d4 |
+| --- | --- | --- | --- |
+| 001 water | 5b4ada4c40f2004ce684700eebbbfbe303a11922 | src/device/waterLevel.ts; test/device/waterLevel.test.ts | Separate original MIT headers; source 1-22 and owner 1-9 |
+| 010 water | 7b8a83cf2cae0db41ae392ede8b6fb250c3e2865 | test/device/waterLevel.test.ts | Separate ordinary AAA phases; only throwing expressions combine act/assert |
+| 013 | 4aeaef9bec74e924dbe5e305201530f2f2114e5d | test/device/waterLevel.test.ts | Six illegal-code cases assert native TypeError class at 38-45 |
+| 014 | 93a425d4dd41ef062351ef9f8d0107ed75626e52 | test/device/waterLevel.test.ts | Complete independently literal entries at 73-88 |
+
+Each cause passed Fallow audit against recorded DECODING baseline 55627f52,
+exact-file SKIP=npm-check pre-commit run --files, and ordinary foreground
+git commit with enabled hooks. All successful raw exits were 0. Actual objects
+match the paths above and delete no tracked file. Clean pre-step end times
+precede commit launches: 18:11:45.331779Z < 18:12:00.294307Z;
+18:13:06.255042Z < 18:13:08.925705Z; 18:18:16.706476Z < 18:18:18.520302Z;
+18:18:58.408277Z < 18:19:03.529505Z. No source implementation changed.
+
+The initial ledger write was denied by filesystem permissions before any
+commit; its authorized retry persisted the original HEAD. The first Python
+invocation was unavailable, exit 127; python3 succeeded. The first 001 audit
+exited 2 because its temporary baseline worktree was unavailable. Its authorized
+retry exited 0/verdict pass. These attempts remain distinct from passing evidence.
+Native audit captures are /tmp/water-001-audit-sandbox.json and
+/tmp/water-001-audit.json. No hook bypass, history rewrite or wrapper commit ran.
+
+### Independently accepted initial additions
+
+Before changing either assertion candidate, typed reviewer
+/root/phase3_water/decoding_reviewer performed a read-only initial clarification
+at 7b8a83cf2cae0db41ae392ede8b6fb250c3e2865. It read complete water and Gemini
+files, rules, actual guard consumers and native records. This was not a correction
+round. It independently accepted two WARNING causes, both present at baseline:
+
+| ID | Initial revision-qualified location | Exact rule | Accepted cause and bound |
+| --- | --- | --- | --- |
+| CR-03-DECODING-013 | 55627f52:water owner 25-31; 7b8a83c:44-52, substring at 48 | Unit writer Assertions:93; reviewer Assertions:48 | Message-substring form is forbidden. Native TypeError already supplies the complete error contract; retain all six cases without adding an error type or field. |
+| CR-03-DECODING-014 | 55627f52:water owner 54-65; 7b8a83c:81-102 | Unit writer Assertions:92; reviewer Assertions:47; 03-04 PLAN:94 | Whole map entries must be compared directly. Existing ordered keys and values jointly pin membership and associations; no weak-protection or production-defect claim is accepted. |
+
+Original IDs 001-012 remain unchanged. The actual opening inventory becomes
+14 = 2 BLOCKER + 12 WARNING. The counter stays round 0 until the first complete
+correction below. One redundant map-values case was removed after the complete
+entries comparison replaced it; no skipped target or weakened observation remains.
+No mutation control was necessary for this assertion-form repair. The preceding
+checks already discriminated map contents, so no new protection defect was claimed.
+
+### Native checks and preserved behavior
+
+All commands used Node v26.11.1 and npm 11.20.0 with installed dependencies and
+synthetic offline inputs. /tmp/water-final-handoff.json indexes 48 native captures,
+including complete stdout, separate stderr, command, cwd, raw exit, UTC start/end,
+revision, exact dirty diff and untracked contents. Current final captures have
+empty dirty diffs and no untracked executable inputs.
+
+- Fresh npm run build:test and node --test --test-reporter=tap
+  dist-test/test/device/waterLevel.test.js dist-test/test/device/gemini.test.js
+  passed initially and again after the header commit before expansion: 110/110,
+  water 22 plus Gemini 88, zero fail/skip/cancel/todo. Post-header feedback and
+  the independent full decoder probe preceded the AAA expansion.
+- Final npm run build:test exited 0, ending 18:20:10.714373Z at 93a425d4.
+  The following combined native owners exited 0, ending 18:20:11.361229Z:
+  109/109, water 21 plus Gemini 88, zero fail/skip/cancel/todo.
+  Captures: /tmp/water-final-build.json and /tmp/water-final-owners.json.
+- node --test --test-reporter=tap /tmp/water-tracer.mjs passed 2/2 initially,
+  after the header before expansion, and finally at 93a425d4. Both temporary
+  cases call the actual compiled Gemini adapter and independently compare all
+  nine decoded groups and complete validation verdicts. Legal 31 returns water
+  { levelCode: 31, levelPercent: 100, flooded: true }; illegal 2 returns water
+  undefined while every healthy group retains the independent expected literal.
+  No production output constructs the expectations. Final native record is
+  /tmp/water-final-tracer.json; the probe source remains /tmp/water-tracer.mjs.
+- npm run test:coverage:direct -- src/device/waterLevel.ts
+  test/device/waterLevel.test.ts exited 0 at 18:19:59.458474Z.
+  The family pair command exited 0 at 18:20:03.568722Z and the Gemini pair
+  command exited 0 at 18:20:07.543217Z. Records are
+  /tmp/water-final-water-selector.json, /tmp/water-final-family-selector.json
+  and /tmp/water-final-gemini-selector.json. Family is declaration-only after
+  strict compilation; no numerical runtime coverage is claimed for it.
+- node --test --experimental-test-coverage
+  --test-coverage-include=dist-test/src/device/waterLevel.js
+  --test-reporter=tap --test-reporter-destination=stdout --test-reporter=lcov
+  --test-reporter-destination=/tmp/water-final-native.lcov
+  dist-test/test/device/waterLevel.test.js exited 0 at 18:20:17.370753Z.
+  Native water owner passes 21/21 with 100% lines/functions/branches.
+  The one actual LCOV record names compiled dist-test/src/device/waterLevel.js:
+  lines 62/62, functions 2/2, branches 4/4. These are compiled JavaScript counts,
+  not fabricated TypeScript counts. Capture: /tmp/water-final-native.json.
+- /tmp/water-final-preservation.json records unchanged production tokens and
+  installed TypeScript compiler output with comments removed versus 55627f52.
+  Emitted SHA256 is 96ef7df40af7331575f30af05a82b375d1d9821d6d82202e2bbd28d54d5d2306.
+  All six literal mappings, threshold 31, guarded lookup and provisional limits
+  remain unchanged. Only water code 1 has existing hardware-validation evidence.
+
+Guard exited 0 before edits and reports no configured architecture zones/rule
+packs, rather than measured policy compliance. Header and test-form changes
+alter no exported symbol, function body, type or signature; no production
+symbol refactor, export deletion or external adaptation occurred in this slice.
+No genuine behavior defect was accepted and no 03-WATER-RED-EVIDENCE.json exists.
+Current numeric candidates and hardware/release gates remain outside this repair.
+The full combined npm run check belongs to the coordinator after handoff.
+
+## Independent Full Correction Review — Round 1
+
+Typed reviewer /root/phase3_water/decoding_reviewer read all seven complete files
+at clean 93a425d4dd41ef062351ef9f8d0107ed75626e52: family, Gemini and waterLevel
+sources and owners, plus geminiSeeds. It read complete applicable rulebooks,
+AGENTS, context/protocol, current report, prior summaries, canonical decisions,
+actual consumers, Git objects and native capture evidence. It made no source,
+test, compiled-output, index, Git or planning mutation and ran no build.
+
+| ID | Independent disposition at 93a425d4 | Current evidence |
+| --- | --- | --- |
+| 001 | Fixed | All six source/owner headers and actual helper conform |
+| 002 | Fixed | Family 37-39; Gemini source 117-120,198-200; owner 51-52,164; actual firmware/safety consumers |
+| 003 | Fixed | Family capability/command descriptions 212-215 |
+| 004 | Fixed | Family documented public variants 44-53 and exact discriminated union 64 |
+| 005 | Fixed in code | Gemini alias inlined 120,349; missing pre-edit trace remains a process gap |
+| 006 | Fixed | Gemini actual scope/guard explanation 228-230 |
+| 007 | Fixed | Gemini owner whole independent invalid results 303-509; test_timestamp row/verdict 449-477 |
+| 008 | Fixed | Separate complete recent/ancient expected literals 575-607 |
+| 009 | Fixed | Four fresh documented helper factories 17-65; independent owner expectations |
+| 010 | Fixed | Ordinary Gemini/water cases have separate AAA; throws alone combine phases |
+| 011 | Fixed | Narrow copying Proxy 194-215; four public guard cases 610-640 |
+| 012 | Fixed | Helper telemetry parameter 55; canonical data remains 59 |
+| 013 | Fixed | Water TypeError class cases 38-45 |
+| 014 | Fixed | Water complete independent entries 73-88 |
+
+Every row addresses DEV-01. Opening 14 - fixed 14 - rejected 0 + new 1 + reopened
+0 = closing 1. Open ID is CR-03-DECODING-015. This is correction round 1; all
+initial and clarification history survives. No accepted fix or SC-03 reopened.
+The round reduces 14 to 1 and is below four, so D-03 permits the bounded owner
+return. DECODING is not closed.
+
+### New finding and exact owner return
+
+CR-03-DECODING-015 is WARNING, DEV-01, comments policy line 8: comments describe
+what the code does. At 93a425d4:test/device/family.test.ts:85-96, the comment says
+only the lost-link scope is absent and the rest keep publishing. The literal
+instead has eight undefined groups and only connectivity populated. The same
+mismatch exists at 55627f52:owner:75-86. This is a factual documentation defect,
+not a runtime or assertion defect.
+
+Return serially to original family task 03-02-02. Required code path is only
+test/device/family.test.ts. Replace the comment with an accurate description,
+such as "Connectivity can remain available while every other group is absent."
+Keep the complete literal and compiler contracts unchanged. Record-only updates
+belong to the owned report/coordinator. No production change, genuine RED or
+assertion control is justified. The water task does not edit this family file.
+After the bounded repair, the next independent full batch review is round 2,
+opening 1; the counter never resets.
+
+### Header, native and provenance inspection
+
+Complete approved MIT headers were inspected at source family 1-18, Gemini
+1-20 and waterLevel 1-22; all three owners and geminiSeeds 1-9. SPDX is first;
+correct copyright and overview blocks are separate with required blank lines.
+The reviewer inspected public export descriptions, required undefined shape,
+compiler negatives, seed freshness, guarded lookup and official commands.
+
+It independently accepted current final three selectors, fresh 109/109 owners,
+2/2 complete real probes and water native 62/62,2/2,4/4 counts. Gemini's retained
+restored owner has native 100% lines/functions/branches and its current isolated
+selector passes. The earlier 247/247 Gemini line count in this report remains
+historically reported, not independently confirmed: no matching raw LCOV was
+retained or located. The older merged source-mapped artifact has 248/248 lines,
+30/30 functions and 85/85 branches. These are distinct representations; neither
+is substituted for the current isolated verdict or a current whole-tree gate.
+
+The reviewer inspected all 18 introducing family/Gemini/water commits, actual
+paths and ancestry, passing audits and clean pre-steps before normal commits.
+Gemini wrong-scope validation and healthy-primary inversion controls each
+executed the intended assertion and failed ERR_ASSERTION with exit 1. The
+earlier decode TypeError-before-assert attempt stays unsuccessful. Saved bytes
+match actual source blobs; exact restoration and rebuilt GREEN are confirmed.
+STATE's whole/frozen/canonical-refusal SC-03 cases remain intact; its files have
+not changed since the closing STATE review.
+
+After live help, Fallow orientation used review --base 55627f52 --brief
+--format json --quiet, raw exit 0 and reported verdict pass. Removed-test
+pointers match the documented redundant cases. Orientation is not a gate.
+
+WINDOWS 46 (STATE pre-step ordering) and 47 (Gemini missing alias-specific
+pre-edit trace) remain explicitly unwaived process gaps. Later checks do not
+establish earlier compliance. Sandbox failures, private-interface audit failure,
+formatter retries and the failed Gemini import-hook attempt remain preserved.
+No code finding is invented from those process gaps.
+
+The prior coordinator full gate at a54cba5 predates the water test changes and
+cannot be reused for this tree. A fresh coordinator npm run check follows
+remaining repairs. DEV-01 and E-03-01/P-03-01/P-03-02 remain pending.
