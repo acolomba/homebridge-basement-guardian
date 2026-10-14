@@ -121,11 +121,11 @@ function telemetryWithout(field: GeminiTelemetryField): Record<string, unknown> 
   return Object.fromEntries(Object.entries(validTelemetry()).filter(([name]) => name !== field));
 }
 
-function buildSnapshot(data: Record<string, unknown>, metadata: Record<string, unknown> = {}): DeviceSnapshot {
+function buildSnapshot(telemetry: Record<string, unknown>, metadata: Record<string, unknown> = {}): DeviceSnapshot {
   return {
     identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
     connectivity: { connected: true, timestamp: RECEIVED_AT },
-    data,
+    data: telemetry,
     metadata,
     shadowVersion: undefined,
     deviceTimestamp: RECEIVED_AT,
