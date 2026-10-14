@@ -678,3 +678,55 @@ source/owner changes are committed. No SUMMARY, shared state, ledger, validation
 seal, requirement, ROADMAP or WINDOWS file was modified. All command processes
 have completed, and writer/build/control/Git/report resources are released at
 the fixer's terminal response.
+
+## Accepted-cause repair records (04-02)
+
+Fixer: `/root/phase4_ports_finish/ports_monotonic_timer_fixes`, typed
+gsd-code-fixer with fresh context. Complete AGENTS and all five rulebooks were
+read, with the owning plan, context, research, patterns, protocol, initial
+report and preceding summary. Existing checkout and branch remain authorized;
+the persisted sentinel says phase 04, plan 04-02, isolation none. Baseline
+`8420c63b3dab421a1c002197c9e2bb15715097af` was persisted in the actual Git
+directory as `gsd-plan-head-before-04-02` before the first cause commit.
+
+All commands run in the existing feature checkout, not a temporary worktree.
+Native runner `/private/tmp/guardian-04-ports-fix-capture.py` was read before
+reuse. Records under `/private/tmp/guardian-04-ports-fix-native/<label>.json`
+retain complete argv, stdout/stderr, raw exit, UTC times, revision, branch,
+path/blob/SHA-256 manifest, binary dirty diff and complete untracked bytes.
+Separate `.stdout` and `.stderr` retain exact streams. `cause005-initial` and
+`cause005-npm` observed Node v26.11.1 and npm 11.20.0, exit 0. Two initial shell
+probes used unavailable `python` and returned 127 before work; `python3` is the
+available capture runtime. No runtime/package change or installation occurred.
+
+The canonical execute-mvp-tdd gate was read. Headers and assertion maintenance
+on correct production add no product behavior. No genuine bug RED is claimed.
+The accepted causes preserve every public signature, member, visibility and
+mutability; no alias is removed. Conditional exact two-project contract-change
+traces are therefore not needed. Actual monitoring-health consumers and platform
+composition were read before edits, with auth/shadow partial analogs and timer
+handle/cancellation consumers. No later-subsystem sweep is claimed.
+
+### CR-04-PORTS-005 repair — monotonic-clock headers
+
+Added approved SPDX, separate copyright and purpose fileoverview sections with
+the prescribed blank lines to both files. Re-read both full edited files.
+The public elapsed-time documentation and all source/test statements remain
+unchanged, including bigint division before Number and the distinction between
+the historical Linux observation and the cited, unobserved suspend limit.
+Cause scope is source, owner and this report (3 paths).
+
+| Capture label | Exact command | Raw exit and observation |
+| --- | --- | --- |
+| guard-monotonic-header | `node_modules/.bin/fallow guard src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts --format json --quiet --explain` | 0; no configured boundary zones/rule packs |
+| cause005-build | `npm run build:test` | 0; fresh strict compiled owner |
+| cause005-owner | `node --test --test-reporter=tap dist-test/test/runtime/monotonicClock.test.js` | 0; 3 tests pass, 0 fail/skip/cancel/todo |
+| cause005-direct | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | 0; isolated 100% lines/functions/branches |
+| cause005-audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain` | 2; sandbox temporary base-worktree creation failure, retained |
+| cause005-audit-retry | same exact audit with authorized external Git metadata access | 0; kind audit, verdict pass |
+
+The retry's stderr retains the base-snapshot TypeScript-cache-entrypoint
+warning. The failed attempt is not passing evidence. Header inspection is
+manual for source and owner; the packaging gate covers only source SPDX.
+Clean pre-step and actual normal commit proof follow execution. The remaining
+assertion repair remains separate; correction counter is still 0.
