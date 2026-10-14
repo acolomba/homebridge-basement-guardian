@@ -902,3 +902,75 @@ No runtime RED, reopened source finding, extra correction round, history
 rewrite or implied full workflow compliance is invented for this deviation.
 
 Round 1 ends with one open WARNING, CR-03-STATE-011. No global stop applies.
+
+
+## CR-03-STATE-011 applied repair, awaiting round 2
+
+The original STATE correction counter is retained. Independent round 1 remains
+opening 10, fixed 10, rejected 0, new 1, reopened 0, closing 1. Its only
+open ID is CR-03-STATE-011. This repair record does not constitute round 2
+or independently close that ID. D-03 did not trigger a global stop.
+
+The reviewer-authored round-one report was committed before the owner edit:
+`86aff69e860baa581ede8397f0bd8f5a59f266ee`, report path only.
+Its recorded-base Fallow audit exited 0 with verdict pass. The exact report
+pre-step exited 0 at 16:41:55.194161Z, before staging/commit.
+The ordinary enabled-hook commit exited 0 at 16:42:10.881108Z.
+Captures are `/tmp/state-011-round1-report-audit.json`,
+`/tmp/state-011-round1-report-pre.json` and
+`/tmp/state-011-round1-report-commit.json`.
+
+Fixer reread the complete source, owner, seed and applicable rulebooks.
+The actual local record body, Object.assign members, storeOptions,
+fixedStoreOptions and their owner calls were traced. The owner guard ran
+before editing, exit 0; no configured boundary or policy rules exist.
+
+Cause commit: `90dac3919a7dc190ac29defc93b53d6ccd91379d`.
+Actual path: `test/device/state.test.ts` only, two additions/two deletions.
+At owner 41-43, the local const arrow becomes
+`function record(message: string): void`; messages.push and every Logging
+member remain exact. No production source, seed, API/type, test assertion,
+negative compiler contract or safety behavior changes. No test/control was
+added for this declaration-form repair, and no genuine bug RED is claimed.
+All original ten repairs and SC-03 assertions remain.
+
+Fresh checks used the exact owner diff above on
+`86aff69e860baa581ede8397f0bd8f5a59f266ee` before the cause commit.
+They ran serially in the existing feature checkout, isolation none, on Node
+v26.11.1/npm 11.20.0:
+
+| Command/scope | UTC end | Raw exit | Native result |
+| --- | --- | ---: | --- |
+| npm run build:test | 16:42:46.365166Z | 0 | Strict test compilation passes |
+| node --test --test-reporter=tap dist-test/test/device/state.test.js | 16:42:46.659097Z | 0 | 52/52, zero fail/skip/cancel/todo |
+| npm run test:coverage:direct -- src/device/state.ts test/device/state.test.ts | 16:42:50.057282Z | 0 | Isolated state pair passes |
+| Native source-only coverage with TAP/LCOV reporters | 16:42:50.387715Z | 0 | One LCOV record; lines 264/264, functions 23/23, branches 61/61 |
+
+Exact command arrays, complete stdout/stderr, timestamps and exits are in
+`/tmp/state-011-build.json`, `/tmp/state-011-owner.json`,
+`/tmp/state-011-direct.json` and `/tmp/state-011-native.json`.
+Native outputs are `/tmp/state-011-native.tap` and
+`/tmp/state-011-native.lcov`. The 52 runtime cases retain both module-level
+negative compile checks. These are focused checks; full npm run check remains
+coordinator-owned and was not run here.
+
+Before the cause commit, the exact Fallow audit against
+`aa826a50a0afeda9a95ab05d38240219bfcb5595` exited 0, verdict pass,
+zero introduced findings. The exact pre-step
+`SKIP=npm-check pre-commit run --files test/device/state.test.ts`
+exited 0 at 16:43:13.426219Z before staging and ordinary commit.
+The commit started 16:43:25.039603Z and ended 16:43:38.902686Z, exit 0,
+with all applicable normal hooks, including check:commit, passing.
+Captures: `/tmp/state-011-guard.json`, `/tmp/state-011-audit.json`,
+`/tmp/state-011-pre.json` and `/tmp/state-011-commit.json`.
+No failed hook, formatter change, ordering deviation or Git retry occurred
+in this correction pass.
+
+Owner SHA-256:
+`1f389ce978f1192fa614edf53ae404b6c39cd722c3f59bf38fdd3d534554008d`.
+Production and seed diffs against 86aff69e were empty; their SHA-256 values
+remain `fa30d75b41f52a5914f0debe76843190ec7d428cd760ccdaf42584160bbbfbeb`
+and `5137654a777ab56cc23fcee351defd63dff7ce53e960b84edf31b784f7aae57e`.
+The cause commit deletes no tracked file. The existing CR-008 process
+deviation remains disclosed and is not retroactively declared compliant.
+Full independent round 2 is the next step.
