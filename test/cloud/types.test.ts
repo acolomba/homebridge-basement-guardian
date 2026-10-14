@@ -134,13 +134,13 @@ const malformedCredentialResponses: { description: string; response: unknown }[]
   { description: 'a record whose expiration is a number', response: withCredentials({ Expiration: 1_767_225_600_000 }) },
 ];
 
-const malformedCommandResults: { description: string; result: unknown }[] = [
-  { description: 'a null value', result: null },
-  { description: 'a string', result: 'true' },
-  { description: 'an array', result: [{ success: true }] },
-  { description: 'an empty record', result: {} },
-  { description: 'a record whose success flag is a string', result: { success: 'true' } },
-  { description: 'a record whose success flag is a number', result: { success: 1 } },
+const malformedCommandResults: { description: string; commandAnswer: unknown }[] = [
+  { description: 'a null value', commandAnswer: null },
+  { description: 'a string', commandAnswer: 'true' },
+  { description: 'an array', commandAnswer: [{ success: true }] },
+  { description: 'an empty record', commandAnswer: {} },
+  { description: 'a record whose success flag is a string', commandAnswer: { success: 'true' } },
+  { description: 'a record whose success flag is a number', commandAnswer: { success: 1 } },
 ];
 
 describe('isRecord', () => {
@@ -424,10 +424,10 @@ describe('isCommandResult', () => {
     assert.strictEqual(commandAccepted, true);
   });
 
-  for (const { description, result } of malformedCommandResults) {
+  for (const { description, commandAnswer } of malformedCommandResults) {
     test(`rejects ${description}`, () => {
       // arrange
-      const command = result;
+      const command = commandAnswer;
 
       // act
       const commandAccepted = isCommandResult(command);
