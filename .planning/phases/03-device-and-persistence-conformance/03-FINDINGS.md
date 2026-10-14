@@ -1,6 +1,6 @@
 # Phase 03 device and persistence findings ledger
 
-Milestone: code-review-sweep. Requirement: DEV-01. Status: AGGREGATE AUDIT IN PROGRESS.
+Milestone: code-review-sweep. Requirement: DEV-01. Status: AUTOMATED AUDIT READY.
 Planning baseline observed on features/code-review-sweep at
 0a9f993072de5a0e95da643bdf437b67feaca53e. No Phase 03 source/test repair,
 build, native test, mutation control, independent execution review or Git
@@ -42,9 +42,10 @@ to the separate inventory below and do not silently change this core count.
 
 ## Conditional extension inventory
 
-These are possible remedy paths, not existing files or completed reviews.
-Create fresh seeds only for a confirmed rule violation; every actual helper
-joins full-file review, complete header inspection and broad staged selection.
+The initial plan reserved three possible helper paths. Two were created for
+confirmed causes and received complete independent reviews and headers.
+Persistence required no helper. The actual inventory is 18 core files plus two
+helpers, with no external consumer edit.
 
 | Conditional path | Owner | Current status |
 | --- | --- | --- |
@@ -156,8 +157,7 @@ surfaces only the genuinely required evidence-backed judgments.
 ## Threat Flags
 
 None -- no security-relevant surface outside the plan's <threat_model> was
-introduced by this planning-only record. Execution must update this field
-from actual reviewed changes.
+introduced. The aggregate changes only review and validation records.
 
 ## Historical executed slices
 
@@ -496,3 +496,161 @@ The report-only closure commit is cf56276d664a91170c25f7210d49c246d885dd44.
 Actual objects, paths and ancestry were inspected. This is a conformance
 finding, not a genuine production bug. 03-SEAL-AUDIT.json stores the tracer.
 The whole aggregate audit and parent phase verification remain pending.
+
+## Current aggregate evidence — 03-08-02
+
+Checked input: 629cfc4a35527c7faf098e0f9937c29775332c17, Node v26.11.1,
+npm 11.20.0. The current tracked inventory is exactly the 18 core paths above
+and stateSeeds/geminiSeeds. Each current blob equals its final full-review
+revision: STATE ade72e10, DECODING e8b99aa3, SUPPORT d262943b. Complete
+SPDX/copyright/overview sections were independently inspected for all 20 files.
+The fresh license owner also passed 5/5, with zero skips or cancellations.
+
+The actual nonplanning Git diff from aa826a50 contains exactly those 20 paths.
+All 47 source/test/helper introducing commits have actual path/ancestry records,
+at most five paths each, and no tracked deletion. No external consumer changed.
+The source-audit document remains planning history, with its later family
+amendment. The registry amendment is separately explicit in 03-06-PLAN.md,
+75f02e9 and the SUPPORT report. No hidden path or new subsystem review follows.
+
+### Current stable finding index
+
+Every row addresses DEV-01 and is independently fixed. Rules, initial/current
+revision-qualified locations, native commands, actual paths and fuller rationale
+remain in the named complete batch reports. The location below uses that batch's
+final review revision. Nine BLOCKER and 29 WARNING causes total 38 accepted IDs.
+Rejected seed candidates never enter that accepted-ID total.
+
+| ID | Severity | Rule / cause | Current location at final review | Actual repair commit(s) |
+| --- | --- | --- | --- | --- |
+| CR-03-STATE-001 | BLOCKER | Unit Assertions: whole returned/canonical snapshots | ade72e10: owner 350–391,568–599,726–747,996–1033,1051–1070 | ca8b3dd,169e4ed |
+| CR-03-STATE-002 | BLOCKER | Unit Assertions/Test doubles: whole callback envelopes | ade72e10: owner 32–36,66–69,766–832,875–897,913–979 | 3e4ba69 |
+| CR-03-STATE-003 | BLOCKER | Unit discrimination/Time: later receipt-clock fixture | ade72e10: owner 645–672 | f78999a |
+| CR-03-STATE-004 | WARNING | D-01/Files and modules: source header | ade72e10: source 1–15 | 5808523 |
+| CR-03-STATE-005 | WARNING | Comments and documentation: public contract and identity | ade72e10: source 17–24,92–128,360–400 | 72417ab |
+| CR-03-STATE-006 | WARNING | Unit Naming values: role-specific telemetry local | ade72e10: owner 214–226 | b3e792c |
+| CR-03-STATE-007 | WARNING | Comments: obsolete implementation narration | ade72e10: owner 455–458 | 1de1a61 |
+| CR-03-STATE-008 | WARNING | Unit Test data/organization: fresh concern seeds | ade72e10: helper 14–29, owner 16 and calls | 18e8b83; WINDOWS46 remains open |
+| CR-03-STATE-009 | WARNING | Unit Case structure: separate ordinary AAA | ade72e10: owner 1108–1131 | df9d37d |
+| CR-03-STATE-010 | WARNING | Unit Patterns: compiler contracts at module scope | ade72e10: owner 83–97 | b05e58f |
+| CR-03-STATE-011 | WARNING | Google Functions: named logger declaration | ade72e10: owner 40–55 | 90dac39 |
+| CR-03-DECODING-001 | WARNING | D-01/Files and modules: all six headers | e8b99aa3: six source/owner headers | 93284c7,305ed86,5b4ada4 |
+| CR-03-DECODING-002 | WARNING | Comments: actual metadata firmware use | e8b99aa3: family 37–39; Gemini 117–120,198–200; owner 51–52,164 | 7cbeed2,9ec326b |
+| CR-03-DECODING-003 | WARNING | Comments and documentation: public methods | e8b99aa3: family 212–215 | 3064645 |
+| CR-03-DECODING-004 | WARNING | Google Types: named public verdict interfaces | e8b99aa3: family 44–53,64 | 29ddff5; bounded plan amendment |
+| CR-03-DECODING-005 | WARNING | Google Types: unnecessary undefined scope alias | e8b99aa3: Gemini 120,349 | a63a9eb; WINDOWS47 remains open |
+| CR-03-DECODING-006 | WARNING | Comments: actual per-scope decoder guard | e8b99aa3: Gemini 228–230 | 5555069 |
+| CR-03-DECODING-007 | BLOCKER | Unit Assertions: independent whole invalid-scope states | e8b99aa3: Gemini owner 303–509,449–477 | b87c55a |
+| CR-03-DECODING-008 | BLOCKER | Unit Assertions: independent age-invariant expectations | e8b99aa3: Gemini owner 575–607 | 50b5d83 |
+| CR-03-DECODING-009 | WARNING | Unit Test data: fresh concern factories | e8b99aa3: geminiSeeds 17–65 and owner calls | 294f1c9 |
+| CR-03-DECODING-010 | WARNING | Unit Case structure: separate ordinary AAA | e8b99aa3: Gemini/water owners | cd975d2,7b8a83c |
+| CR-03-DECODING-011 | WARNING | Google Quick scan/Classes: accessor fixture | e8b99aa3: Gemini owner 194–215,610–640 | e944df8 |
+| CR-03-DECODING-012 | WARNING | Unit Naming: telemetry parameter | e8b99aa3: geminiSeeds 55,59 | 35956f1 |
+| CR-03-DECODING-013 | WARNING | Unit Assertions: native TypeError contract | e8b99aa3: water owner 38–45 | 4aeaef9 |
+| CR-03-DECODING-014 | WARNING | Unit Assertions: complete independent map entries | e8b99aa3: water owner 73–88 | 93a425d |
+| CR-03-DECODING-015 | WARNING | Comments: accurate positive compiler fixture | e8b99aa3: family owner 85–97 | 1e8b074 |
+| CR-03-SUPPORT-001 | WARNING | D-01/Files and modules: ten complete headers | d262943b: all ten headers | eca71a3,9562388,72c4574,7d79ac1,970119b |
+| CR-03-SUPPORT-002 | WARNING | C-001/D-010/Comments: no inferred backup cause | d262943b: events 35–36 | 7b72051 |
+| CR-03-SUPPORT-003 | WARNING | D-05/Unit Test data: distinct timestamp units | d262943b: events 26,53–54; owner 21–22 | 2c8f0ac |
+| CR-03-SUPPORT-004 | BLOCKER | Unit Patterns/discrimination: complete event union | d262943b: events owner 35–64 | a41e481 |
+| CR-03-SUPPORT-005 | BLOCKER | Unit Patterns/discrimination: health absence and readonly list | d262943b: health owner 15,29,39–57 | 4deb91e |
+| CR-03-SUPPORT-006 | WARNING | Google Types: named public registry verdicts | d262943b: registry 23–43 | 75f02e9; bounded plan amendment |
+| CR-03-SUPPORT-007 | WARNING | Unit Case structure: HALO ordinary AAA | d262943b: HALO owner 23–31 | 8847f1c |
+| CR-03-SUPPORT-008 | BLOCKER | Unit Assertions: independent complete unsupported result | d262943b: registry owner 50–60 | 6ad32c3 |
+| CR-03-SUPPORT-009 | BLOCKER | Unit Production design/Type-only: remove private prose scaffold | d262943b: context owner 11–104 | d5c7ea6 |
+| CR-03-SUPPORT-010 | WARNING | Unit Patterns: compiler-enforced identity case | d262943b: HALO owner 16–31 | bb6d165 |
+| CR-03-SUPPORT-011 | WARNING | Comments/D-05/D-06: record resumption and recovery prose | d262943b: context 25–29,101–103 | 326b924 |
+| CR-03-SUPPORT-012 | WARNING | Comments/D-023/D-027: scoped identifier treatment | d262943b: context 10–16 | d262943 |
+
+Current independent rounds remain STATE 10→1→0, DECODING 14→1→0 after
+two initial clarifications, and SUPPORT 10→2→0. Their new causes were
+STATE011, DECODING015 and SUPPORT011/012. Reopened IDs: zero. No round
+stalled with open findings, and no fourth round ran. This aggregate audit
+does not add a whole-source correction round or reset a counter.
+
+### Actual defect and control audit
+
+All complete reports classify the accepted causes as conformance, assertion
+maintenance or compiler-contract work. Current and all-history Git inventories
+contain no Phase 03 RED path. The nine production modules emit identical
+comment-free JavaScript against aa826a50 under the installed compiler.
+Thus this phase accepted zero genuine production defects, with zero actual
+RED/nested-history records requiring classification. No historical failure was
+recreated, and no source/evidence/fix ancestry was invented for a control.
+
+All five successful control captures retain native exit 1 and their intended
+ERR_ASSERTION: three STATE controls and two Gemini controls. The initial
+Gemini decode experiment retains its TypeError-before-assert exit 1 and proves
+no assertion discrimination. Exact saved STATE and both Gemini source copies
+match their real Git blobs; restored builds/owners and current owners pass.
+Commands, patches, full native streams and exact restoration histories remain
+in the reports and /private/tmp/guardian-phase3-seal-inspection-facts.json.
+
+WINDOWS 46/47 remain OPEN and unwaived. Missing historical pre-step ordering
+and the alias-specific pre-edit trace cannot be reconstructed by a later pass.
+They are separate from the 38 closed code findings. All sandbox, formatter,
+import-hook, private-interface and temporary proof-harness attempts remain
+disclosed in the chronological reports. None becomes a clean earlier attempt.
+
+### Current exact-input checks
+
+Fresh build plus license owner: exit 0, 5/5. Fresh nine-pair selector: exit 0.
+Each source runs in its own process. Family/events/health/context retain
+meaningful compiler contracts and declaration-only acceptance, with zero
+authored runtime cases. Node file-load sentinels add no behavioral proof.
+
+| Runtime pair | Native compiled lines | Functions | Branches | Cases |
+| --- | --- | --- | --- | --- |
+| STATE | 264/264 | 23/23 | 61/61 | 52 |
+| Gemini | 273/273 | 30/30 | 85/85 | 88 |
+| Water | 62/62 | 2/2 | 4/4 | 21 |
+| HALO | 6/6 | 0/0 | 1/1 | 1 |
+| Registry | 53/53 | 3/3 | 9/9 | 8 |
+
+All nonempty denominators reach 100%. Fresh source-only native records are
+/private/tmp/guardian-phase3-seal-native-<name>.json and matching LCOV files.
+Current Gemini merged TypeScript LCOV has 248/248 lines, 30/30 functions and
+85/85 branches. Historical 247/247 remains independently unconfirmed because
+its raw native LCOV was not retained. Neither current representation replaces
+that historical claim.
+
+Fresh npm run check at clean 629cfc4a ran 20:26:42.951916–20:27:18.476401 UTC,
+exit 0, Node v26.11.1: six static checks, unpaired tests, 104 Cucumber scenarios,
+1,156 steps, 43 isolated pairs and refreshed merged LCOV. Exact command, runtime,
+times, clean diff/untracked inputs and native stdout/stderr are in
+/private/tmp/guardian-phase3-seal-full-gate.json. The earlier c5a1a276 comparison
+showed only state.json updated_at outside executable inputs; this fresh result
+replaces reliance on that qualified reuse. Later assigned planning records are
+outside executable hook inputs and excluded by .prettierignore. Their exact
+diff/untracked bytes remain in final native captures.
+
+### Parent judgment handoff
+
+| Item | Concrete judgment still needed | Evidence and retained limit |
+| --- | --- | --- |
+| E-03-01 | Accept the complete reviewed-file and concrete-test boundary while retaining the taxonomy assumption? | 20 reviewed/header-inspected files and actual tests. Category remains unclassified/unresolved; no exhaustive taxonomy claim. |
+| P-03-01 | Confirm that this bounded conformance work preserves absent/untrustworthy telemetry without guessed normal conditions? | Unchanged nine emitted source outputs, independent whole invalid-scope/canonical results and offline gates. Provisional water/battery meanings and the opaque-key assumption remain. No vendor/hardware proof. |
+| P-03-02 | Confirm the stated completion boundary and disclosed limits? | 18 core+2 helpers, 38 closed findings, zero genuine bugs, five successful controls, one unsuccessful control and fresh full gate. WINDOWS46/47 remain open/unwaived, historical247 unconfirmed. Later subsystem/security/phase/hardware/release gates remain outside this audit. |
+
+No actual Phase 03 answers exist yet. Equality remains edge 1 = 0 lifted +
+1 flagged assumption; prohibitions 2 = 2 authored + 0 silently omitted.
+The existing serializer supplied the two descriptorless unresolved items.
+This audit creates no second serializer or deterministic enforcement pass.
+DEV-01 remains pending. Parent owns independent security/phase/Nyquist work,
+actual human judgments, requirements.ready-ids and shared advancement.
+
+### Independent aggregate acceptance
+
+Fresh typed gsd-code-reviewer
+/root/phase3_seal_audit/seal_evidence_reviewer returned terminal PASS after a
+read-only artifact/native/Git evidence audit. It independently read the full
+three reports, seven summaries, rulebooks and current aggregate records.
+All20 current reviewed blobs/headers,47 introducing commit budgets,38 IDs,
+native controls/restoration/current LCOV and full gate matched actual evidence.
+Its exact reviewed dirty diff matched the complete 90,285-byte native capture.
+
+The reviewer requested no artifact correction and found no D-03 stop. It ran
+no build, mutation, write or Git/index operation. This bounded aggregate audit
+adds no whole-source correction round and resets no counter. All resources
+were released through its named terminal response before coordinator edits.
+Actual human judgments and independent parent gates remain pending.
