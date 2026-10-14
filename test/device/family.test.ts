@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks family contracts through valid shapes and compiler errors.
+ */
+
 import type {
   AlarmMuteState,
   BatteryState,
