@@ -38,9 +38,9 @@ interface Notification {
 // Logging is a callable interface with seven members, so the stub is a function
 // that carries them rather than an object literal.
 function createRecordingLog(messages: string[]): Logging {
-  const record = (message: string): void => {
+  function record(message: string): void {
     messages.push(message);
-  };
+  }
 
   return Object.assign(record, {
     prefix: 'basement guardian',
