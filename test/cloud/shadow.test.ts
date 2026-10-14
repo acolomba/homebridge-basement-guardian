@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests reported shadow routing and connection lifecycle offline.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
-// Nothing here logs a topic, a device identifier, a URL, or a payload. The
-// signed URL carries the credential scope, the session token, and the
-// signature, and the device identifier embeds the account identifier (AUTH-02).
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Routes reported shadows and manages their connection lifecycle.
+ * Diagnostics exclude topics, identifiers, URLs and payloads (AUTH-02).
+ */
 
 import { presignIotWebsocketUrl } from './sigv4.js';
 import { isRecord } from './types.js';
