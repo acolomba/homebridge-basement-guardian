@@ -16,8 +16,13 @@ import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestErr
 const THIRTY_MINUTES_MS = 1_800_000;
 
 test('a cloud request failure carries the HTTP status and the route label', () => {
+  // arrange
+  const message = 'GET /devices failed with HTTP 403.';
+  const status = 403;
+  const route = 'GET /devices';
+
   // act
-  const requestFailure = new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices');
+  const requestFailure = new CloudRequestError(message, status, route);
 
   // assert
   assert.ok(requestFailure instanceof Error);
@@ -39,8 +44,13 @@ test('a cloud request failure carries the HTTP status and the route label', () =
 });
 
 test('a cloud request failure labels the route without naming a URL', () => {
+  // arrange
+  const message = 'GET /devices failed with HTTP 500.';
+  const status = 500;
+  const route = 'GET /devices';
+
   // act
-  const requestFailure = new CloudRequestError('GET /devices failed with HTTP 500.', 500, 'GET /devices');
+  const requestFailure = new CloudRequestError(message, status, route);
 
   // assert
   assert.ok(requestFailure instanceof CloudRequestError);
@@ -51,8 +61,12 @@ test('a cloud request failure labels the route without naming a URL', () => {
 });
 
 test('an authentication rejection carries the parsed vendor error code', () => {
+  // arrange
+  const message = 'the vendor rejected the account credentials with HTTP 403 (invalid_grant).';
+  const reason = 'invalid_grant';
+
   // act
-  const rejection = new AuthRejectedError('the vendor rejected the account credentials with HTTP 403 (invalid_grant).', 'invalid_grant');
+  const rejection = new AuthRejectedError(message, reason);
 
   // assert
   assert.ok(rejection instanceof Error);
@@ -74,8 +88,12 @@ test('an authentication rejection carries the parsed vendor error code', () => {
 });
 
 test('an authentication throttling response carries the interval to wait before trying again', () => {
+  // arrange
+  const message = 'the vendor authentication service answered HTTP 429 (too_many_attempts).';
+  const retryAfterMs = THIRTY_MINUTES_MS;
+
   // act
-  const throttling = new AuthThrottledError('the vendor authentication service answered HTTP 429 (too_many_attempts).', THIRTY_MINUTES_MS);
+  const throttling = new AuthThrottledError(message, retryAfterMs);
 
   // assert
   assert.ok(throttling instanceof Error);
@@ -97,8 +115,12 @@ test('an authentication throttling response carries the interval to wait before 
 });
 
 test('a halted authentication carries the vendor error code that stopped it', () => {
+  // arrange
+  const message = 'authentication stopped after the vendor refused the account credentials.';
+  const reason = 'invalid_grant';
+
   // act
-  const halt = new AuthHaltedError('authentication stopped after the vendor refused the account credentials.', 'invalid_grant');
+  const halt = new AuthHaltedError(message, reason);
 
   // assert
   assert.ok(halt instanceof Error);
