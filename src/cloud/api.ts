@@ -95,12 +95,13 @@ function unreadable(route: string, status: number): CloudRequestError {
 // allowed to escape, both because its own message quotes the first bytes of
 // that page and because a caller branching on the vendor error class would
 // otherwise fall through on it (WR-02).
-async function readBody(response: Response, route: string): Promise<unknown> {
+async function readBody(response: Response, route: string, signal: AbortSignal): Promise<unknown> {
   try {
     const body: unknown = await response.json();
 
     return body;
   } catch {
+    signal.throwIfAborted();
     throw unreadable(route, response.status);
   }
 }
@@ -108,7 +109,7 @@ async function readBody(response: Response, route: string): Promise<unknown> {
 // The status and the shape are checked in one place, so no operation can return
 // a body it did not verify. No failure carries a URL, a header value, or the
 // body itself.
-async function narrow<T>(call: VendorCall<T>, response: Response): Promise<T> {
+async function narrow<T>(call: VendorCall<T>, response: Response, signal: AbortSignal): Promise<T> {
   if (!response.ok) {
     // An error response's body is never read, so it is cancelled instead: an unconsumed body
     // otherwise leaves the underlying stream open until the connection's own teardown reaps it.
@@ -117,7 +118,7 @@ async function narrow<T>(call: VendorCall<T>, response: Response): Promise<T> {
     throw new CloudRequestError(`${call.route} failed with HTTP ${String(response.status)}.`, response.status, call.route);
   }
 
-  const body = await readBody(response, call.route);
+  const body = await readBody(response, call.route, signal);
 
   if (!call.accepts(body)) {
     throw unreadable(call.route, response.status);
@@ -161,7 +162,7 @@ async function send<T>(options: CloudApiOptions, call: VendorCall<T>, signal: Ab
   const idToken = await options.auth.idToken(deadline);
   const response = await options.httpFetch(new URL(call.path, options.baseUrl), requestInit(call.method, call.body, `Bearer ${idToken}`, deadline));
 
-  return narrow(call, response);
+  return narrow(call, response, deadline);
 }
 
 /**

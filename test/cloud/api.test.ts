@@ -791,3 +791,96 @@ test('never negotiates HTTP/2 with the vendor, even when the server offers it', 
   // assert
   assert.strictEqual(negotiatedProtocol, 'http/1.1');
 });
+
+test('preserves the command timeout reason while its response body is pending', async (t) => {
+  // arrange
+  const deadline = new AbortController();
+  const timeout = new DOMException('command deadline expired', 'TimeoutError');
+  t.mock.method(AbortSignal, 'timeout', () => deadline.signal);
+  let announceBodyReading: () => void = () => {
+    throw new Error('body reader is not initialized');
+  };
+
+  const bodyReading = new Promise<void>((resolve) => {
+    announceBodyReading = resolve;
+  });
+  const cloudApi = createCloudApi(
+    apiOptions({
+      httpFetch: (input, init) => {
+        const signal = new Request(input, init).signal;
+        const body = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            signal.addEventListener(
+              'abort',
+              () => {
+                controller.error(new DOMException('body aborted', 'AbortError'));
+              },
+              { once: true },
+            );
+            announceBodyReading();
+          },
+        });
+
+        return Promise.resolve(new Response(body, { status: 200 }));
+      },
+    }),
+  );
+
+  // act
+  const commandAnswer = cloudApi.sendCommand('account-1_serial-1', { desiredData: { test_running: true } }, new AbortController().signal);
+  await bodyReading;
+  deadline.abort(timeout);
+
+  // assert
+  await assert.rejects(commandAnswer, (error: unknown) => {
+    assert.strictEqual(error, timeout);
+
+    return true;
+  });
+});
+
+test('preserves root cancellation while a device response body is pending', async () => {
+  // arrange
+  const root = new AbortController();
+  const cancellation = new DOMException('bridge stopped', 'AbortError');
+  let announceBodyReading: () => void = () => {
+    throw new Error('body reader is not initialized');
+  };
+
+  const bodyReading = new Promise<void>((resolve) => {
+    announceBodyReading = resolve;
+  });
+  const cloudApi = createCloudApi(
+    apiOptions({
+      httpFetch: (input, init) => {
+        const signal = new Request(input, init).signal;
+        const body = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            signal.addEventListener(
+              'abort',
+              () => {
+                controller.error(new DOMException('body aborted', 'AbortError'));
+              },
+              { once: true },
+            );
+            announceBodyReading();
+          },
+        });
+
+        return Promise.resolve(new Response(body, { status: 200 }));
+      },
+    }),
+  );
+
+  // act
+  const devices = cloudApi.devices(root.signal);
+  await bodyReading;
+  root.abort(cancellation);
+
+  // assert
+  await assert.rejects(devices, (error: unknown) => {
+    assert.strictEqual(error, cancellation);
+
+    return true;
+  });
+});
