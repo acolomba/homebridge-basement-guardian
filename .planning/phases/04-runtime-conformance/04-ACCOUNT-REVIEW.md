@@ -2808,3 +2808,147 @@ implementation dispositions, pending later independent full ACCOUNT correction
 after the remaining 04-08/09 causes. No original cause or counter is reassigned.
 RUN-01 remains Pending. The 29 stable IDs, counter 0 and D-03 remain unchanged.
 WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-023: terminal final-check authentication RED checkpoint
+
+Prepared by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_023_red`, on 2026-10-15.
+This appendix records unchanged-production RED preparation only.
+Original 023 remains OPEN. Every earlier implementation disposition remains.
+The original 29 IDs and ACCOUNT correction counter **0** continue.
+There is no independent correction, closure, or partial clean verdict.
+
+### Public regression and intended failure
+
+Two fresh sibling cases in `test/runtime/accountRuntime.test.ts:829` exercise:
+
+- `halts monitoring when the final inventory check rejects account credentials`
+- `halts monitoring when the final inventory check reports halted authentication`
+
+Each case calls public `createAccountRuntime` through the existing harness.
+The first successful inventory admits one synthetic device.
+Two successful empty polls reach the out-of-band final inventory check.
+That fourth inventory request rejects with AuthRejectedError or AuthHaltedError.
+The expected answer follows the existing terminal-auth policy: unavailable path,
+unready command transport, rejected credentials, and one close before explicit stop.
+Complete canonical snapshots, exact arrival anchors and keyed trust remain present.
+Advancing 3600000 ms must leave the full terminal state and report history unchanged.
+No later poll, credential refresh, shadow creation, removal or command is permitted.
+
+The executed `deepStrictEqual` compares all captured public observations together.
+It independently expects both complete states, both close counts, the whole request
+history, inventory callbacks, and empty removal and command-attempt sets.
+Exact-parameter strong mocks prescribe finite requests on the actual root signal,
+inventory notifications and forbidden command/removal ports.
+Every mock has explicit owning-case verification after the public assertion.
+The contract-checked shadow and anchor adapters retain their complete bodies.
+Health histories capture the public callback values; no production expected value,
+private access, test export, shared helper edit or logger assertion is introduced.
+
+Both final named targets fail the intended AssertionError/ERR_ASSERTION with
+operator deepStrictEqual. Immediately after the final check, the actual path is
+`shadow-and-poll`; account and device still say ready=true/rejected=false.
+Their complete snapshot and exact anchor remain intact.
+The actual shadow close count is zero immediately and before explicit shutdown.
+The later clock advance records one additional inventory attempt and one
+additional credential attempt: eight operations instead of the expected six.
+Those extra attempts reach the strict ports, which reject them; runtime catches
+the errors. The additional generic failure report is ancillary to the defect.
+The immediate state and zero-close captures precede those unexpected mock calls.
+The actual test failure comes from the explicit whole-state assertion, not mock
+verification, fixture, compilation, import, setup, TypeError, skip or cancellation.
+
+The complete owner executes 155 cases: all 153 prior cases pass and only these
+two new cases fail. In particular, the existing transient final-check failure
+still retains the device and retries removal on the next successful poll.
+Original 024 remains exact. Original 025 retains every literal deadline, timer
+operation, assertion and the strictly stronger 013 verification unchanged.
+Removing only the new row block reproduces the entire pre-edit owner byte for byte.
+
+### Native evidence and preparation history
+
+All commands ran serially in the existing linked feature checkout with
+`workflow.use_worktrees=false`, Node v26.11.1 and npm 11.20.0.
+No worktree or branch was created. Native directory:
+`/private/tmp/guardian-04-account-023-red/`.
+Each command has complete separate stdout/stderr, exact argv, raw exit,
+UTC start/end, HEAD, versions and input source/owner blobs.
+
+| Native record | Actual command or scope and raw result |
+| --- | --- |
+| guard.json | Exact three owned paths before edits or formatting; exit 0, no configured boundary zones or rule packs. |
+| snapshot.json, before.json | Clean feature HEAD/index/status, complete tracked-input manifest, saved owner/report/RED bytes and all 44 production blobs; exit 0. |
+| owner-format.json, owner-format-2.json | Exact owner Prettier; exits 0. First run formats the new harness binding; second is unchanged. |
+| owner-lint.json, owner-lint-final.json | Exact uncached owner ESLint, max warnings 0; exits 0. |
+| build.json | First fresh npm run build:test; exit 0, 14:49:01.278412–14:49:04.159468 UTC. |
+| target-rejected.json | First exact AuthRejected target; exit 1 at intended immediate whole-trust assertion. Complete original patch and owner bytes retained. |
+| build-final.json | Fresh npm run build:test after combining all observations; exit 0, 14:49:49.810808–14:49:53.254149 UTC. |
+| target-rejected-final.json | Exact AuthRejected named target with native TAP; exit 1, one intended failure, zero skip/cancel/todo, 14:49:59.094810–14:49:59.417121 UTC. |
+| target-halted-final.json | Exact AuthHalted named target with native TAP; exit 1, one intended failure, zero skip/cancel/todo, 14:49:59.798652–14:50:00.102607 UTC. |
+| owner-final.json | node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js; exit 1, 155 tests, 153 pass, two intended new failures, zero skip/cancel/todo, 14:50:00.511893–14:50:00.957829 UTC. |
+| installed-gate.json | Actual on-disk pair record through installed check tdd-red-evidence CLI with GSD_RUNTIME=codex and --raw; exit 0, RED_EVIDENCE_OK. |
+| assemble.json, assembly-verification.json | Complete prior-root preservation and SAME installed classifier recursively over all ten current/archive records; exit 0, every verdict RED_EVIDENCE_OK. |
+| final-provenance-2.json, verified-inputs.json | Exact report prefix, complete saved/active patch, all prior owner bytes and original RED root, every unrelated tracked input and all 44 production blobs; exit 0. |
+
+Each named command is `node --test --test-reporter=tap`, followed by an exact
+anchored `--test-name-pattern` for its full title above and
+`dist-test/test/runtime/accountRuntime.test.js`. The command records retain
+the actual complete argv. Complete native TAP remains untouched in both JSON
+and separate stdout files. Full npm build output is separate from TAP.
+No preparation attempt is discarded. The first valid RED checked immediate
+trust; its later close/work assertions were not reached. The final preparation
+puts every captured public observation into the executed whole assertion.
+All builds, formatting and lint attempts passed; the retained test failures
+are intended RED, not disguised preparation errors.
+The first report patch matched an earlier repeated footer and inserted this
+appendix mid-report. The complete preparation report is retained separately.
+Before handoff, relocation restored every original byte as the report prefix;
+relocate-appendix.json records the successful exact comparison and correction.
+The first final-provenance capture exhausted Node's default subprocess-output
+buffer while retaining the complete dirty diff. Its raw failure is preserved.
+The corrected capture raises only that output limit; no executable input changes.
+
+### Immutable history and unchanged production
+
+Source HEAD is `49d30f93b72cada50bb2002ce14aaf4fa9822776`.
+Production account blob remains `641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+All 44 tracked production files match that commit byte for byte; the source diff
+is empty. Original owner blob is `b9df254238e42506df1c34617a3317057ce1b6c3`.
+Final active owner blob is `e87b406b12ed6453e716a2131c0bb40afa922638`.
+The complete new regression patch and compiled source/owner identities are retained.
+The entire pre-edit report remains an exact prefix, with no rewritten disposition.
+
+The pair JSON's new root contains the complete final full-owner native run.
+Its `priorEvidence[0]` is the ENTIRE previous root from immutable blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, preserving every original field,
+raw stream and recursive archive. The exact previous raw JSON is retained too.
+Three additional archives hold the preliminary target and both final named runs,
+with their respective complete patches and original/current owner identities.
+There are ten current/recursive records: six preserved records and four new ones.
+The SAME installed classifyRedEvidence accepts all ten as RED_EVIDENCE_OK.
+The full-owner output independently classifies for each new target.
+No second parser, partial history, evidence-path workaround or old-field rewrite
+supplies that result. The current installed CLI separately accepts the actual
+on-disk record; its generic GREEN message does not replace the parent evidence commit.
+
+### Terminal handoff and bounded next action
+
+Exactly three repository paths change: the owner, this report and the pair RED JSON.
+No production source, shared record, summary, plan, dependency or configuration changes.
+The full current 1328-line source, 7243-line pre-edit owner, full ACCOUNT report,
+04-08 plan, context/research/patterns/protocol/findings, canonical decisions,
+07/11 summaries, AGENTS and all five complete books were read before edits.
+Actual platform and both World factory callers, error classes, final-check probe,
+reconciliation, anchor and health boundaries were inspected.
+This local case addition changes no existing public/shared/private alias/member contract.
+No contract-change or deletion trace exception is used.
+
+The smallest proposed GREEN action is to propagate only terminal-auth errors
+from the nested final-check catch to runPoll's existing terminal act.
+Ordinary final-check errors keep their current silent return and no-removal behavior.
+This is a candidate repair only; production has not been edited or controlled.
+No direct-coverage pass, full npm run check, staging, commit, finding closure or
+correction round is claimed. The failing owner remains active and unstaged.
+The parent alone commits complete planning evidence through the required clean
+pre-step and ordinary foreground hooks BEFORE any GREEN edit or active-test commit.
+RUN-01 remains Pending. D-03 and all historical open process limits remain in force.
