@@ -308,3 +308,17 @@ commands/exits/Node/revisions/scopes, round counts, limitations, ## Threat Flags
 (including the AGENTS exact None text when appropriate), ## Check Results and
 ## Self-Check. Check existence/Git of declared outputs; no invented PASS.
 Record no requirement/phase completion; return readiness to parent.
+
+## Run-scoped fixer isolation alignment
+
+The current autonomous run explicitly reuses the existing linked feature worktree and serial coordinator lease.
+A contract fixer stopped before editing because its injected setup rule required another worktree unless workflow.use_worktrees was false.
+The dedicated-checkout role rule and the phase's forced-none sentinel were therefore inconsistent while the project flag remained true.
+The coordinator used the registered config-set command to set workflow.use_worktrees=false for the remaining autonomous execution.
+This uses the role's documented opt-out and preserves the existing feature checkout, normal hooks and serial ownership.
+No role instruction is silently overridden and no new worktree, branch or cleanup sentinel is created.
+The previous project value was true. Restore that value through config-set before the final milestone audit and handoff.
+The original full config is retained at /private/tmp/guardian-autonomous-original-config-before-isolation-alignment.json for comparison only.
+Restore only this one setting; preserve every other current key and any intervening authorized changes.
+This alignment supplies no retroactive proof about prior fixer instruction compliance and waives no historical exception.
+The stopped attempt changed no repository file. TRUST finding counts and correction counter remain unchanged.
