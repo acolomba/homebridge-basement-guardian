@@ -1,28 +1,33 @@
 ---
 phase: 04-runtime-conformance
-reviewed: 2026-10-15T02:25:29Z
+reviewed: 2026-10-15T04:09:43Z
 depth: deep
-files_reviewed: 4
+files_reviewed: 5
 files_reviewed_list:
   - src/runtime/arrivalAnchors.ts
   - test/runtime/arrivalAnchors.test.ts
   - src/runtime/monitoringHealth.ts
   - test/runtime/monitoringHealth.test.ts
+  - test/runtime/arrivalAnchorMemoryContract.ts
 findings:
-  critical: 5
-  warning: 10
+  critical: 0
+  warning: 2
   info: 0
-  total: 15
+  total: 2
 status: issues_found
-review_round: 0
-correction_counter: 0
-source_revision: 23a2511ac6deb26869db8d3c44916623a27ec997
+review_round: 1
+correction_counter: 1
+source_revision: 0ad981c393536624fa5353e42f871f6db7b1e753
 first_independent_observer: /root/phase4_trust_first/trust_initial_review
 production_bugs: 1
-applied_repairs: 8
+applied_repairs: 15
 arrival_applied_ids: [CR-04-TRUST-001, CR-04-TRUST-002, CR-04-TRUST-003, CR-04-TRUST-004, CR-04-TRUST-005, CR-04-TRUST-006, CR-04-TRUST-007, CR-04-TRUST-008]
-partially_applied_ids: [CR-04-TRUST-015]
-open_findings: 15
+partially_applied_ids: []
+open_findings: 2
+independently_fixed: 15
+cumulative_accepted: 17
+current_open_ids: [CR-04-TRUST-016, CR-04-TRUST-017]
+latest_independent_observer: /root/phase4_trust_finish/trust_correction_one
 ---
 
 # TRUST initial code review
@@ -1676,3 +1681,333 @@ returned 1 after underlying git add returned 128: external linked-worktree
 index.lock creation was denied. No file was staged by that attempt. The native
 failure is retained. A fresh exact clean pre-step precedes the routine
 authorized metadata retry; no hook bypass or content rollback is needed.
+
+## Full independent TRUST correction 1
+
+This is the first full correction, at clean source revision
+`0ad981c393536624fa5353e42f871f6db7b1e753`, branch
+`features/code-review-sweep`. The reviewer is `gsd-code-reviewer`, identity
+`/root/phase4_trust_finish/trust_correction_one`. The parent waited while the
+reviewer held the exclusive foreground review/build/report lease. The existing
+checkout and documented `workflow.use_worktrees=false` setting were retained.
+No source, owner, helper, index, branch or shared record was changed.
+
+The frontmatter records the current result. Every earlier body paragraph remains
+unchanged historical evidence, including its then-open dispositions. All fifteen
+original causes are independently fixed. Two newly observed conformance warnings
+remain. They are not new production bugs. This is not a clean batch verdict.
+
+### Current full-file and header inventory
+
+All five files were read in full, including every current test and complete
+header. The current inventory is **1,613 lines**, with no external adaptation.
+
+| Complete path | Lines read | Current blob | Header |
+| --- | ---: | --- | --- |
+| src/runtime/arrivalAnchors.ts | 1–211 | aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64 | Approved |
+| test/runtime/arrivalAnchors.test.ts | 1–359 | 20f52ff906ccbf4dbdaf4e6583d74de112592bc9 | Approved |
+| src/runtime/monitoringHealth.ts | 1–311 | 2786f5ec0d32e22bfa1301dc41aa23acd6265c53 | Approved |
+| test/runtime/monitoringHealth.test.ts | 1–629 | 09a2cda2a37697824185e8dc65d81452a7209fe9 | Approved |
+| test/runtime/arrivalAnchorMemoryContract.ts | 1–103 | ca2e045bfeac340c9e7be10bf1de13836c02cf1e | Approved |
+
+The repository root is
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+Each header has MIT SPDX first, one blank line, the separate 2026 Alessandro
+Colomba copyright JSDoc, another blank line, a purpose overview JSDoc and a blank
+line before imports. Owners and support were inspected independently of the
+source-only packaging gate. No seed helper was justified or created.
+
+### New narrative findings
+
+#### CR-04-TRUST-016 — WARNING: Arrival owner verifies an incidental logger boundary
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/arrivalAnchors.test.ts:36-54`
+
+**Also:** current owner lines 109, 130–137, 179–181 and 232–234.
+Initial and current review revision for this newly allocated ID are both
+`0ad981c393536624fa5353e42f871f6db7b1e753`.
+
+**Rule:** Unit writer, Test doubles / Not doubles: logging gets a silent stub;
+log calls are asserted only in a module whose job is logging. Unit reviewer,
+Test doubles, repeats this rule. Requirement RUN-01.
+
+**Issue:** This filesystem owner builds a recording logger and includes its
+exact diagnostic stream in storage assertions. The module's responsibility is
+arrival storage, not logging. This couples otherwise valid storage cases to
+incidental message wording and logger interactions, contrary to the explicit
+double-selection rule. Existing titles that promise debug output do not make
+the storage adapter a logging module. This predates the repairs and was missed
+by the initial review; the ID identifies the newly observed cause, not a new
+runtime regression. Current whole memory and durable-byte checks remain valid.
+
+**Fix:** Use a silent typed logger for the storage owner and retain all complete
+memory, durable-byte, restore and directory assertions. Remove incidental log
+expectations and their title clauses without changing production diagnostics.
+Before removing or changing private logger helpers, obtain the exact D-06
+evidence; unavailable private queries grant no deletion permission. If the
+coordinator requires independent diagnostic wording protection, declare a
+bounded logging concern and its proper owner before implementing it. Do not
+silently weaken any required storage observation or invent a logging exemption.
+Route this cause to original task 04-05-02, with any necessary parent amendment
+committed before source/helper changes. No production bug RED is warranted.
+
+**Disposition:** Confirmed new WARNING; open, unapplied. First independent
+observer is the correction reviewer named above. No fix commit exists.
+
+#### CR-04-TRUST-017 — WARNING: Shared contract actions and assertions cross owner phase boundaries
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/arrivalAnchors.test.ts:91-95`
+
+**Also:** current monitoring owner lines 147–151 and shared support lines
+44–103. Initial and current revision are both
+`0ad981c393536624fa5353e42f871f6db7b1e753`.
+
+**Rule:** Unit writer/reviewer, Case structure: arrange, act and assert appear
+in order. The combined marker is reserved for one throwing/rejection
+expression. Requirement RUN-01.
+
+**Issue:** The arrival owner labels construction as act, then invokes the
+contract under assert. That contract performs `record()` writes and reads,
+including replacement and before/after observations. Those operations therefore
+run after the owner has entered its assertion phase. Conversely, the monitoring
+owner invokes all contract assertions under act, then adds a separate unrelated
+missing-key assertion. The helper's internal phase comments do not make those
+outer labels describe the actual sequence. The observations discriminate their
+memory promises; the defect is the newly added case structure, not a weak
+negative control or a missing real/fake agreement.
+
+**Fix:** Keep a direct assertion contract used by both owners and the private
+negative control. Move scenario preparation and `record()` operations into a
+shared action function in this same concern file. Call it under each owner's
+act phase, capture complete observations, then pass those observations to the
+same literal assertion function under assert. The assertion function can retain
+the consumed get/record port and accept the captured before/after observation.
+The negative control records zero in act and calls that SAME direct assertion
+function within `assert.throws()` in its combined phase, checking the existing
+independent class/actual/expected/operator fields. Keep the typed participant
+inventory, five fresh cases for each participant and all independent expected
+values. This requires no registration-only harness, new support path,
+production API or change to preserved private fake declarations. Obtain exact
+current helper-consumer evidence before changing its signature. Route the
+cause to original task 04-06-03 and amend its action detail before an incompatible
+contract edit; do not reset the TRUST counter.
+
+**Disposition:** Confirmed new WARNING; open, unapplied. First independent
+observer is the correction reviewer named above. No fix commit exists.
+
+### Original finding reconciliation at the current revision
+
+The table gives current revision-qualified locations through the common
+`0ad981c393536624fa5353e42f871f6db7b1e753` source revision. Original rules,
+initial locations and first observer remain in the unchanged initial report.
+
+| Stable ID | Current inspected location | Independent disposition / actual repair |
+| --- | --- | --- |
+| 001 | Arrival source 1–27; owner 1–10 | Fixed; exact headers, d21c9ba |
+| 002 | Arrival source 87–92; owner 141–157 and 112–138 | Fixed; finite predicate and both active overflow cases, evidence 4544c71 before 06ef961; owner comment 578b8b3 |
+| 003 | Arrival owner 129–138 and 204–212 | Fixed; literal filename and complete independently expected bytes, 99cd24b |
+| 004 | Arrival owner 219–235 | Fixed; both memory anchors survive failed rename, 5566339 |
+| 005 | Arrival source 48–55 and 200–209; owner 238–359 | Fixed; optional trusted supplier and default retained; amendment 42fea06 before 02ba885 |
+| 006 | Arrival source 10–16, 65–73 and 170–171 | Fixed; actual restore/admission/arrival narrative, 0e46020 |
+| 007 | Arrival source 18–21 and 148–150 | Fixed; scoped permission and unconfirmed opaque-key premise, d4454b2 |
+| 008 | Arrival owner 197–203 | Fixed; forget and fresh restore precede assertions, 05e495f |
+| 009 | Monitoring source 1–25; owner 1–10 | Fixed; exact complete headers, 6d4b84a |
+| 010 | Monitoring owner 364–383 | Fixed; before-failure and literal original 1796000-ms deadline, a4b018f |
+| 011 | Monitoring owner 200–248, 251–268, 349–361, 433–482 and 619–629 | Fixed; complete account/list and distinct-device observations, 8bb9880 |
+| 012 | Shared support 18–103; arrival owner 77–97; monitoring owner 142–187 | Fixed for consumed-memory agreement; real/fake inventory and discriminating negative control, 0ad981c |
+| 013 | Monitoring owner 189–198 | Fixed; independent threshold object with separate phases, 391cafe |
+| 014 | Monitoring source 58–66, 195–204 and 220–233; owner 553–555 | Fixed; current maximum-clock/account/device explanation, a4246b9 |
+| 015 | Arrival source 65–71; monitoring source 160–166 | Fixed; public method descriptions use Returns, 0e46020 and a4246b9 |
+
+All table IDs use prefix `CR-04-TRUST-`. Fixed means independently confirmed in
+this full correction, not merely applied. Findings 016/017 are distinct causes;
+neither renames a prior finding or reopens a previously independently fixed ID.
+
+### Complete manual rule coverage and actual callers
+
+The review loaded complete AGENTS, all five required TypeScript/verification
+books, 04-05 and amended 04-06 plans, CONTEXT, RESEARCH, PATTERNS,
+REVIEW-PROTOCOL, the full continuing report, 04-05 SUMMARY, FINDINGS, STATE,
+REQUIREMENTS and canonical intel decisions. The review applies the rulebooks to
+the full current files, not only to seeded candidates or repair diffs.
+
+| Manual area | Current judgment |
+| --- | --- |
+| Files, modules and headers | All five exact headers inspected; named exports and relative .js imports preserved; type-only imports remain type-only. |
+| Variables, literals, functions and control flow | Case state is fresh; no shared mutable module state, unsafe spread, missing await, fallthrough or unhandled operation promise was proven. |
+| Errors and storage ownership | Supplier errors remain inside persist's catch; exclusive create precedes owned rename cleanup. Errors do not expose supplied paths or raw data. |
+| Types and actual mutation | Required dependencies and boolean trust facts remain required. get's undefined result is not an optional object field. The readonly property rule is under Classes; factory maps and observation interfaces do not justify a public readonly conversion. |
+| Documentation and public methods | All public methods have the required third-person verb form. Present comments retain clock/admission/restoration semantics and scoped privacy limits, with no release-history claim or planning-process narration. |
+| Case structure and naming | Original AAA causes are fixed. New shared-contract phase placement is 017. Names otherwise identify roles and observations. |
+| Assertions and independent expectations | Complete file bytes, two-device readbacks, failed-write memory, literal silence boundaries, account facts, clock jumps and recovery use independent expected values. No serializer or harness computes expected answers. |
+| Doubles and shared contracts | Existing stateful monitoring participant passes the actual memory contract; the stateless absent-anchor stub remains distinct. Logger use is 016. |
+| Hermeticity and public design | Temporary storage is per case with registered cleanup. Clocks are injected; no sleeps, credentials, live fallback, private accessor, test-only production hook or construction I/O was added. |
+| Pairing and coverage | Both actual mirrored owners pass alone at 100% direct lines/functions/branches. No coverage exclusion, declaration exception or fabricated denominator. |
+
+Actual callers were re-read: account runtime composition 330–335 and 1232–1282;
+discovery admission and removal 393–524; account/per-device projections and
+persist 585–667; routed arrivals 825–870; awaited restore 1118–1132. The account
+owner's structural anchor participant at 407–442 and real-store composition
+around 2936 were read. Platform 387–403 retains missing-device refusal, and
+accessory 943–978 stores and compares all trust members. Clock and monotonic
+ports retain separate units. These are bounded caller reads, not a completed
+ACCOUNT, platform or accessory sweep.
+
+No actual TRUST required-present-undefined or readonly defect was found; the
+S-04-03/04 rejections remain supported by these shapes and mutation sites.
+No reusable seed-data cause was found. S-04-07 remains resolved as 006; the
+separate ACCOUNT privacy candidate remains outside this batch's closure.
+
+### Shared contract scope and preserved declarations
+
+Both owners call the same direct function with the actual consumed
+`Pick<ArrivalAnchors, 'get' | 'record'>` port. All five cases run against fresh
+real and fresh monitoring participants. Real construction uses a real case-owned
+temporary location and silent logger, with no construction or memory-contract
+disk I/O. The typed inventory names the actual two owners and factories.
+
+The private zero-losing participant fails that SAME contract. The passing
+negative-control case checks AssertionError and literal complete fields:
+actual `{ anchor: undefined, otherAnchor: undefined }`, expected
+`{ anchor: 0, otherAnchor: undefined }`, operator `deepStrictEqual`.
+There is no registration-only failure, skipped test or genuine bug RED claim.
+
+Primitive keys/numbers have no mutable alias to clone. Ordering, deletion and
+disk/JSON validation are not operations of this consumed boundary. Real durable
+validation remains in the real owner; no fake full-disk equivalence is claimed.
+This scope fixes 012 while 017 separately addresses its case layout.
+
+An independent TypeScript-parser comparison against `a4246b9` confirms exact
+names, signatures and entire declaration bodies for RecordingAnchors including
+stored, recordingAnchors, healthWithAMessageAtStart,
+healthWithTwoAdmittedDevices and anchorsThatStoreNothing. The native temporaryPath
+helper also exactly matches `42fea06`. Unavailable private impact results remain
+unmet deletion evidence; no neighboring export query replaces them.
+
+### Genuine overflow history and restored controls
+
+The current arrival RED JSON still has immutable blob
+`cac1f810efb536ba384c05bca9396604ccd72d6c`, exactly matching actual evidence
+commit `4544c71`. The installed current-record CLI returned 0 /
+RED_EVIDENCE_OK. The SAME installed classifyRedEvidence function was invoked
+for each target in the current record and recursively in priorEvidence[0].
+All four classifications return RED_EVIDENCE_OK with 9 tests, 7 pass and 2
+intended failures; no replacement parser or untracked evidence-path workaround.
+
+Both complete native TAP streams show the two active overflow cases reaching
+deepStrictEqual / ERR_ASSERTION with Infinity or -Infinity beside the finite
+neighbor. The first pre-format record remains complete. Production blob
+`0b04d48709406f65da2457524e6f5226ed12cc4d` is unchanged from source `23a2511`
+through evidence `4544c71`. Actual Git paths are exactly report plus RED JSON
+for evidence; the active failing owner was not committed there. Actual ancestry
+is source -> evidence -> GREEN `06ef961`.
+
+The final saved regressionPatch exactly equals the complete source-to-GREEN
+owner diff. GREEN owner blob matches the captured final RED owner blob, and
+the complete formatted regression block remains byte-identical and active in
+the current owner. Only the earlier archived assertion layout differs; later
+header, comment and unrelated case repairs do not replace those regressions.
+No monitoring production defect or monitoring RED record was invented.
+
+All four separate maintenance histories were independently checked against
+their actual raw native records, complete intended TAP failures and saved
+source/restoration identities:
+
+| Cause | Intended wrong behavior and failure | Restored evidence |
+| --- | --- | --- |
+| 003 | Filename drift; intended literal filename assertion, raw 1 | Exact saved/restored blob 4dbeedb3eda6a5d26595fdc0419b705d02fb9cee; fresh build, 9/9 owner and isolated direct 0 |
+| 004 | Clear memory after write failure; both complete anchor observations fail, raw 1 | Same exact saved/restored source blob; fresh build, 9/9 owner and isolated direct 0 |
+| 005 | wx becomes w; occupied-file directory assertion fails before any missing-file read, raw 1 | Exact saved/restored blob aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64; fresh build, 141/141 combined owner and isolated arrival direct 0 |
+| 010 | Failed poll resets both stamps; original literal 1796000-ms deadline list fails, raw 1 | Exact saved/restored blob 208ad1d3f5d3b82a9da1c9a8362a505b05548428; fresh build, 32/32 owner and isolated direct 0 |
+
+Every control passed its typecheck, lint and fresh build before the intended
+assertion failure. Each failed target has one active test, zero skip/cancel and
+empty stderr. No ENOENT, fixture, compilation or import failure supplied a
+control result. Saved whole source hashes equal the recorded restored snapshot
+blobs. These histories are assertion controls, not genuine bug RED records.
+No control mutation entered the actual source commits.
+
+Historical audit/format/draft/private-query/sandbox failures remain failures.
+The audit manifest retains 918 files from the initial review, RED, GREEN,
+arrival handoff, monitoring repairs and memory-contract native directories.
+It retains 19 top-level nonzero native records, including intended RED/controls
+and unsuccessful tooling attempts. Absence of configured Fallow rule packs is
+not evidence that an architecture or policy detector measured a boundary.
+
+The actual new support commit is `0ad981c`, exactly support, both owners and
+report. Its retained ordinary hook stream reports check:commit passed; its
+shared-support selector includes all 43 pairs. The failed stage attempt remains
+retained, followed by the clean repeated pre-step and successful authorized
+metadata retry. This is incremental hook evidence, not a full combined gate.
+
+### Fresh current verification and limits
+
+Native evidence is `/private/tmp/guardian-04-trust-correction1/`. Every command
+record retains full argv, repository-root cwd, UTC start/end, raw child exit,
+Node/npm, before/after HEAD, exact relevant blobs, full tracked/staged diffs
+and complete untracked bytes. Complete stdout and stderr remain separate.
+Recorder and audits are retained as `/private/tmp/guardian-trust-correction-record.py`,
+`guardian-trust-correction-audit.cjs` and `guardian-trust-controls-audit.py`.
+
+All checks ran serially in the existing checkout at the reviewed HEAD on Node
+**v26.11.1**, npm **11.20.0**, with clean tracked/index inputs and no untracked
+executable. This report is the only subsequent repository change.
+
+| Native record | Actual command / scope | Raw result / UTC on 2026-10-15 |
+| --- | --- | --- |
+| typecheck | npm run typecheck; both strict projects | 0; 04:05:53.706–04:05:56.606 |
+| lint | Complete five-file ESLint, --max-warnings=0 | 0; 04:05:59.689–04:06:03.807 |
+| format | Complete five-file Prettier check | 0; 04:06:11.006–04:06:11.278 |
+| build | npm run build:test | 0; 04:06:11.828–04:06:14.473 |
+| owners | node --test --test-reporter=tap with both complete compiled owners | 0; 56 pass, 18 arrival + 38 monitoring; zero fail/cancel/skip/todo; 04:06:15.027–04:06:15.345 |
+| arrival-direct | npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts | 0; isolated 100% lines/functions/branches; 04:06:21.134–04:06:24.591 |
+| monitoring-direct | npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts | 0; isolated 100% lines/functions/branches; 04:06:25.133–04:06:28.486 |
+| red-cli | Installed check tdd-red-evidence on the current on-disk arrival record | 0 / RED_EVIDENCE_OK; 04:06:29.021–04:06:29.264 |
+| provenance | node /private/tmp/guardian-trust-correction-audit.cjs | 0 / TRUST_CORRECTION_PROVENANCE_OK; 04:07:58.248–04:07:58.811 |
+| controls-audit | python3 /private/tmp/guardian-trust-controls-audit.py | 0 / FOUR_CONTROL_HISTORIES_OK; 04:08:56.220–04:08:56.295 |
+| report-guard | Installed Fallow guard on this report before editing | 0; no configured zones/rule packs; 04:09:43.138–04:09:43.302 |
+
+Direct selectors rebuild and enforce complete isolated executable LCOV; their
+temporary reports are deleted normally. No compiled/source-map denominator,
+merged all-pair refresh or declaration acceptance is inferred. The two manual
+warnings are not reported as compiler, lint, coverage or test failures.
+
+Parent wave-five `41e6f130` evidence remains historical. Subsequent source,
+support and config JSON changes, including `42003d3`, defeat literal unchanged
+input reuse. The parent still owes a fresh full wave-six npm run check after
+the remaining repairs and independent correction. No current Cucumber/full-gate
+or phase completion claim follows from these focused checks.
+
+### Continuous sets, count arithmetic and D-03 decision
+
+| Set | Exact IDs | Count |
+| --- | --- | ---: |
+| Opening | CR-04-TRUST-001 through CR-04-TRUST-015 | 15 |
+| Independently fixed this round | CR-04-TRUST-001 through CR-04-TRUST-015 | 15 |
+| Rejected accepted IDs | None | 0 |
+| New accepted | CR-04-TRUST-016, CR-04-TRUST-017 | 2 |
+| Reopened fixed IDs | None | 0 |
+| Closing open | CR-04-TRUST-016, CR-04-TRUST-017 | 2 |
+
+Arithmetic is **15 - 15 - 0 + 2 + 0 = 2**. The continuous correction counter
+advances **0 -> 1**. The cumulative accepted set is 001–017: 5 BLOCKER and
+12 WARNING historically; the current open set contains **0 BLOCKER and 2 WARNING**.
+No accepted ID was renamed or rejected, and no previously fixed ID recurred.
+
+D-03 was evaluated before writing this correction appendix: closing 2 is less
+than opening 15, no fixed finding reopened, and the counter is 1 rather than 4.
+**Global stop is not triggered.** Return 016 to 04-05-02 and 017 to amended
+04-06-03, then perform another full five-file correction retaining counter 1.
+Do not reset the counter or move the causes to the later seal task.
+
+High **T-04-21** remains in the actual inventory alongside T-04-01 through
+T-04-20 and reserved T-04-SC. Its trusted supplier/exclusive-create boundary
+has current owner and restored-control evidence. T-04-09/10/11/12 retain their
+storage, scoped privacy, clock and per-device trust boundaries. The later
+security/seal audit still owns their complete final judgment. WINDOWS 46/47
+remain OPEN/unwaived. RUN-01, full-wave verification and phase completion remain
+Pending. No package, live/private/vendor/hardware input, migration, new privacy
+permission or release action occurred.
+
+_Correction 1 reviewer: gsd-code-reviewer; source 0ad981c; 15 fixed, 2 new
+warnings, 2 open; counter 1; no D-03 stop. Report only, uncommitted._
