@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 10
+open_count: 12
 waived_count: 19
 fixed_count: 21
-total_count: 50
-last_updated: 2026-10-15T14:39:42.174Z
+total_count: 52
+last_updated: 2026-10-15T18:09:14.878Z
 ---
 
 # Broken Windows Ledger
@@ -65,6 +65,8 @@ last_updated: 2026-10-15T14:39:42.174Z
 | 48 | 4 | deviation | .planning/phases/04-runtime-conformance/04-11-SUMMARY.md |  | [code-review-sweep] The 04-11 executor first wrote its execution summary before running that exact path through Fallow guard. The subsequent guard passed before further edits but supplies no retroactive pre-edit evidence. Task-level code guards and checks remain valid. Disclosed at ac52e22; native /private/tmp/guardian-04-11-closeout/summary-guard.json. Keep this process gap open and unwaived. | open |  | 2026-10-15T13:12:31.652Z |  |
 | 49 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-013 fixer began formatter/build work before collecting the terminal result of ESLint --fix session 47163, active 2026-10-15T14:25:37.372Z to terminal collection at 14:25:48.809Z. Intermediate native streams remain under /private/tmp/guardian-04-account-013/. Later serial build, owner, direct, lint and restored controls pass on final inputs but do not repair historical ordering. Recorded in 04-07-SUMMARY and ACCOUNT report; leave open and unwaived. | open |  | 2026-10-15T14:39:42.000Z |  |
 | 50 | 4 | deviation | .planning/phases/04-runtime-conformance/04-07-SUMMARY.md |  | [code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived. | open |  | 2026-10-15T14:39:42.174Z |  |
+| 51 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-022 preparation did not separately capture the initial formatter and lint-fixer input bytes. Exact edits and output patches remain, and both genuine native RED runs used identical fully captured final inputs before evidence commit 5987504. Subsequent passing checks do not reconstruct missing preparation bytes. Report and 04-12 summary disclose the gap; leave open and unwaived. | open |  | 2026-10-15T18:09:14.690Z |  |
+| 52 | 4 | deviation | .planning/phases/04-runtime-conformance/04-12-SUMMARY.md |  | [code-review-sweep] The 04-12 summary exact-path Fallow guard preceded its first write, but explicit canonical-root containment was captured only during self-check after creation. The absolute path was correct; the later passing containment check supplies no historical pre-write proof. Summary 9825036 and native /private/tmp/guardian-04-12-closeout/ disclose this process gap. Leave open and unwaived. | open |  | 2026-10-15T18:09:14.878Z |  |
 
 ````json
 [
@@ -670,6 +672,32 @@ last_updated: 2026-10-15T14:39:42.174Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-15T14:39:42.174Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 51,
+    "kind": "deviation",
+    "phase": "4",
+    "file": "test/runtime/accountRuntime.test.ts",
+    "line": null,
+    "description": "[code-review-sweep] ACCOUNT-022 preparation did not separately capture the initial formatter and lint-fixer input bytes. Exact edits and output patches remain, and both genuine native RED runs used identical fully captured final inputs before evidence commit 5987504. Subsequent passing checks do not reconstruct missing preparation bytes. Report and 04-12 summary disclose the gap; leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:09:14.690Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 52,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-12-SUMMARY.md",
+    "line": null,
+    "description": "[code-review-sweep] The 04-12 summary exact-path Fallow guard preceded its first write, but explicit canonical-root containment was captured only during self-check after creation. The absolute path was correct; the later passing containment check supplies no historical pre-write proof. Summary 9825036 and native /private/tmp/guardian-04-12-closeout/ disclose this process gap. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:09:14.878Z",
     "resolved_at": null,
     "milestone": null
   }

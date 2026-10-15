@@ -161,7 +161,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 04-07-PLAN.md
 
 **Wave 9** *(cached-identity dependency before trust-plan continuation)*
-- [ ] 04-12-PLAN.md
+- [x] 04-12-PLAN.md
 
 **Wave 10** *(blocked on Wave 9 completion)*
 - [ ] 04-08-PLAN.md
@@ -242,7 +242,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
-| 4. Runtime Conformance | code-review-sweep | 8/12 | In Progress | - |
+| 4. Runtime Conformance | code-review-sweep | 9/12 | In Progress | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |

@@ -1,10 +1,10 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through completed 04-07 and inserted 04-11: PORTS is independently clean at correction round 3.
+Current through completed 04-07 and inserted 04-11/04-12: PORTS is independently clean at correction round 3.
 POLICIES and TRUST are independently clean at correction round 2.
 Wave eight lifecycle and wave seven adapter contracts passed. ACCOUNT has full initial review and partial repairs.
-Three genuine production bugs have evidence-first GREEN; full ACCOUNT correction remains pending.
+Seven genuine production bugs have evidence-first GREEN; full ACCOUNT correction remains pending.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
@@ -41,6 +41,10 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | ACCOUNT | test/runtime/accountRuntime.test.ts | core | e6f49a5; full3365lines/header | Pending; counter0 | Applied604d072; correction pending |
 | ACCOUNT | test/runtime/accountShadowContract.ts | Actual helper; 04-11-02 | Added4fc498c; full review pending | Pending ACCOUNT | Applied; full review pending |
 | ACCOUNT | test/cloud/shadow.test.ts | Adapted owner; 04-11-02 | Prior cloud review historical | Pending ACCOUNT | Preserve; current full review pending |
+| ACCOUNT | src/accessories/reconciliation.ts | Bounded dependency; 04-08-03 | Header e914a62; contract 020498a | Pending ACCOUNT | Applied; correction pending |
+| ACCOUNT | test/accessories/reconciliation.test.ts | Bounded dependency owner; 04-08-03 | Header e914a62; five additive cases 020498a | Pending ACCOUNT | Applied; correction pending |
+| ACCOUNT | src/platform.ts | Bounded identity handoff; 04-12-02 | Integration 6c82ec9; full review pending | Pending ACCOUNT | Applied b7bae4a; correction pending |
+| ACCOUNT | test/platform.test.ts | True-owner regression; 04-12-02 | RED 9f7649e; GREEN 6c82ec9; full review pending | Pending ACCOUNT | Existing conforming header preserved; correction pending |
 
 Initial helper inventory is empty. Add every actual helper and every narrowly
 required external adaptation as its own exact row before edits, with owning
@@ -54,7 +58,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 2; clean at9782919 | None; 0; all17 fixed |
-| ACCOUNT | 04-07/11/08/09 | 04-ACCOUNT-REVIEW.md | 29 accepted ate6f49a5 | Counter0; partial repairs | All29 pending independent correction |
+| ACCOUNT | 04-07/11/12/08/09 | 04-ACCOUNT-REVIEW.md | 29 accepted ate6f49a5 | Counter0; partial repairs | All29 pending independent correction |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
 independent full correction. No-progress with open findings, a reopened fix, or
@@ -561,3 +565,43 @@ Plan 08 retains 018–023 and 026. Plan 09 retains 004–005, 009–011, 014, 01
 ACCOUNT still has its original 29 IDs, counter 0 and no independent correction or partial clean verdict.
 RUN-01 remains Pending. All actual helpers and adapted complete owners join later correction and seal scope.
 Restore only workflow.use_worktrees=true before final milestone audit and handoff.
+
+
+## Coordinator wave 9 cached-identity dependency completion
+
+Full npm run check returned 0 at clean 9825036531dd931bd67968316cd88d6a79fa9bd9.
+Node v26.11.1; UTC 2026-10-15T18:08:02.393802+00:00 to 18:08:37.983243+00:00.
+Six static checks, 104 Cucumber scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata: /private/tmp/guardian-phase4-wave9-cached-identities-gate.json.
+Output: /private/tmp/guardian-phase4-wave9-cached-identities-full-check.log.
+Generic 04-12 summary verification passed; schema drift found none; codebase drift skipped absent STRUCTURE.md.
+
+The pre-code bounded declaration is 3f4f1c3. Original 026 uses true platform source
+3f4f1c3 -> parent evidence-only 9f7649e -> runtime dependency d7e0598 -> platform integration 6c82ec9.
+Separate source-only header b7bae4a preserved the already conforming entire platform owner.
+Summary 9825036 retains actual original gitdir ledger, four pre-summary commits and measured diff estimate, not harness token usage.
+The platform RED owner executed 64 cases, 63 passing and one intended final removal failure.
+All three prior cached-retention assertions passed on unchanged production.
+Parent independently verified the exact active patch, all 44 production sources, original owner preservation and complete recursive histories before evidence commit.
+Parent native prefix: /private/tmp/guardian-04-account-026-root-confirmed-.
+The saved active platform regression remains unchanged through GREEN.
+Final focused owners pass 166 ACCOUNT and 71 platform cases. Both isolated pairs reach 100%.
+Final native platform coverage is 504/504 lines, 22/22 functions, 57/57 branches;
+ACCOUNT is 1007/1007 lines, 58/58 functions, 193/193 branches.
+Known IDs seed reconciliation only after restoration/current ownership; launch reads validated deduplicated physical IDs without guessed measurements or identifiers.
+
+The new PLATFORM record remains blob 5a35d0831979b6c7444b598c0987bdd9d98f758b with two complete records.
+The separate ACCOUNT record remains b3f7141fc652706628ec55c5bd5c1a3e4b560319 with fourteen complete records.
+The SAME installed recursive classifier accepts both histories. Actual source/evidence/dependency/fix ancestry is preserved.
+Both complete platform files and the already adapted reconciliation pair join ACCOUNT correction and actual seal inventory.
+This does not certify the remaining root or accessories sweeps.
+
+WINDOWS 51 records the earlier 022 missing preparation-input captures; complete final genuine RED inputs remain valid.
+WINDOWS 52 records late explicit canonical-root containment capture for the 04-12 summary.
+Its exact Fallow guard preceded creation, but later containment cannot supply historical pre-write proof.
+Both remain OPEN and unwaived alongside WINDOWS 46-50; no passing check erases those limitations.
+
+Plan 12 is complete out of numerical order; current plan remains 08 until its own closeout and parent gate.
+Original 29 ACCOUNT IDs and counter 0 continue; no independent correction or partial clean verdict is claimed.
+Plan 09 still owns the remaining initial causes and full current ACCOUNT correction.
+RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit/handoff.
