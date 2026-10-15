@@ -8130,9 +8130,19 @@ describe('commands', () => {
 
     // act
     const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: true });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
     verify(commands);
   });
@@ -8151,9 +8161,20 @@ describe('commands', () => {
     await runtime.start();
 
     // act
-    await runtime.commands.send(DEVICE_ID, 'alarm-mute', true);
+    const outcome = await runtime.commands.send(DEVICE_ID, 'alarm-mute', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
+    assert.deepStrictEqual(outcome, { accepted: true });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { alarm_audio_muted: true }, aborted: false }]);
     verify(commands);
   });
@@ -8173,9 +8194,20 @@ describe('commands', () => {
 
     // act
     const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
     assert.strictEqual(commandRequests.length, 1);
     verify(commands);
   });
@@ -8190,14 +8222,25 @@ describe('commands', () => {
         It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
       ),
     ).thenResolve({ success: false });
-    const { runtime } = harness(t, { command: commands });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
     const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
     verify(commands);
   });
 
@@ -8218,9 +8261,20 @@ describe('commands', () => {
 
     // act
     const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'timed-out' });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
     assert.strictEqual(commandRequests.length, 1);
     verify(commands);
   });
@@ -8233,9 +8287,19 @@ describe('commands', () => {
 
     // act
     const outcome = await runtime.commands.send(OTHER_DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -8251,9 +8315,19 @@ describe('commands', () => {
 
     // act
     const outcome = await runtime.commands.send(DEVICE_ID, 'self-test', true);
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterHalo', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });

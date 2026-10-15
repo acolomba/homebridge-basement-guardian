@@ -5195,3 +5195,143 @@ RUN-01 stays Pending. WINDOWS 46–53 stay OPEN and unwaived.
 Remaining ACCOUNT causes and full independent correction belong to the parent;
 no correction increment, reopening, closure or phase completion is claimed.
 No security-relevant surface outside the existing threat model changes.
+
+## CR-04-ACCOUNT-010: Complete command outcomes and reported authority
+
+### Scope, current cause and caller contract
+
+Original CR-04-ACCOUNT-010 remains an assertion-maintenance cause under 04-09-01.
+Its governing rules require complete public results and independently expected
+state before interactions, plus D-037 reported-only canonical authority.
+The original location is R:test/runtime/accountRuntime.test.ts:2976-3040;
+the current seven cases begin at test/runtime/accountRuntime.test.ts:8117.
+This appendix records only this cause. The original 29 findings, initial
+18 BLOCKER / 11 WARNING counts, correction counter 0 and RUN-01 Pending remain.
+
+Earlier 012 covers silent failure ports and logger behavior. Earlier 013 already
+strengthens exact command mocks, root-signal matchers and explicit verification.
+Those changes leave mute's discarded outcome and post-command canonical state
+unobserved. Current production returns the correct outcome and makes no
+optimistic canonical write. No production defect or genuine RED is claimed.
+
+The complete current source, owner and report were read before edits, using
+bounded contiguous reads to fill actual output truncation gaps. The complete
+AGENTS/bootstrap, all five TypeScript/testing/local-verification books, 04-09
+plan, protocol, context, research, patterns, findings, canonical decisions,
+applicable state and prior 07/08/11/12 summaries were loaded.
+Actual commandPort, family, registry, Gemini, cloud API, controls and platform
+contracts and callers were inspected. Controls consume CommandPort.send's
+whole result; platform composition passes the runtime port through discovery
+and accessory binding. The tests call that public port, resolve the real store
+identity and registry family, generate the actual Gemini body, and observe the
+injected CloudApi.sendCommand port. They retain exact device, body and signal
+matching. No command API, eligibility, wire capability, deadline or retry changes.
+
+Seven existing cases now capture the post-command canonical snapshot in ACT.
+Each ASSERT section first checks the complete accepted/vendor-error/timed-out
+result, then a complete literal unchanged snapshot, then exact request
+interactions and strict verify. The mute case now captures and checks its result.
+The literal snapshots independently include identity, connectivity, data,
+metadata, shadowVersion, deviceTimestamp and receivedAt. The unsupported-family
+case expects its actual Halo identity; the unknown-device refusal observes the
+known device's unchanged state. Both local refusals retain an empty request set.
+Rejected, refused and timed-out dispatched commands now check the exact one-body
+request. Existing one-attempt assertions for route failure and timeout remain.
+No requested field becomes reported data after acceptance or refusal.
+
+The eighth command case belongs to original 009 and remains byte-exact.
+Its cancellation promise is not corrected or closed by this cause.
+No helper, fixture, seed, production API or private alias is changed or deleted.
+
+### Separate assertion-maintenance controls and exact restoration
+
+Both controls temporarily change only src/runtime/accountRuntime.ts, separately.
+Each starts with an exact-path Fallow guard and fresh npm run build:test.
+Each retains complete source/owner bytes, input manifests, full patches, raw TAP,
+argv, actual UTC times, Node/npm and separate streams in the native directory.
+These are diagnostic assertion-maintenance controls, not genuine production RED.
+No control or failing test enters Git or immutable RED history.
+
+| Native record | Intended observation and actual terminal result |
+| --- | --- |
+| outcome-control-build | Build exit 0, 18:59:29.825844-18:59:32.812681 UTC. Control source 1081b94fb6a0fbf199f1dc9921df33a2bc66d452 returns vendor-error only for accepted mute. |
+| outcome-control-target | Exact anchored alarm-mute case, exit 1, 18:59:33.498586-18:59:33.793868 UTC. One intended deepStrictEqual failure: actual complete refusal versus expected accepted true. |
+| outcome-restore, outcome-restored-build, outcome-restored-target | Exact source checkout and byte comparison; fresh build and all eight command cases exit 0 before the second control. |
+| canonical-control-build | Build exit 0, 18:59:58.048110-19:00:00.942496 UTC. Control source 94e2cd618fb17aaea8a88abd9d3c38cdeb8a9bbc applies accepted desiredData as a reported patch. |
+| canonical-control-target | Exact anchored self-test case, exit 1, 19:00:01.561419-19:00:01.856075 UTC. Accepted result passes; complete snapshot fails on added test_running true. |
+| canonical-control-mute-target | Exact anchored mute case, exit 1, 19:00:15.397503-19:00:15.690122 UTC. Accepted result passes; complete snapshot fails on added alarm_audio_muted true. |
+| canonical-restore, source-restoration | Exact source checkout, then byte comparison exit 0 at 19:00:19.381360 UTC. Production is restored before all subsequent GREEN checks. |
+
+Every named control executes one intended case, with no skip/cancel/todo or
+setup/mock failure. The control owner is 8275d7808132f16249bc2ef3b193590226a53e52.
+The first five strengthened cases remain byte-identical in the final seven-case
+owner; only the two local-refusal snapshot checks were subsequently added.
+The final complete source is c87b9330ad2589e7941c11aba90f2079c67dbc30,
+byte-identical to the initial source. The final owner is
+0768003087142d7c3d744412f030262f47ede840, from initial
+cc26ce420e8013a2d4beb645dfff0928eae1c639.
+
+### Final-input verification and preservation
+
+All checks run serially in the existing linked features/code-review-sweep
+checkout, with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No new checkout or recovery sentinel is created. The persisted 04/04-09 sentinel
+still records isolation none. The Git-dir plan-head ledger directly retains
+8a700ac4b3594bf0c16af0a5e3ce35223ef3f574. The parent's initial checkpoint retains
+SHA-256 aef5e272b16ba900cae197a46420256be5bb9f530c77061d8fe14f979627af53.
+
+Native directory: /private/tmp/guardian-04-account-010/.
+Every subprocess record retains exact argv/cwd, raw exit, UTC start/end,
+before/after HEAD, Node/npm, complete separate streams and before/after input
+manifests. The initial snapshot saves all 702 complete input files; each later
+snapshot saves complete source/owner/report bytes, all input hashes/modes and
+complete dirty/staged patches. No yielded mutation is left uncollected.
+
+| Final-input native record | Actual terminal result |
+| --- | --- |
+| build-final-seven | npm run build:test, exit 0, 19:01:12.759218-19:01:16.129082 UTC. |
+| targets-final-seven | Native TAP with command-suite selector, exit 0; all eight command cases pass, no fail/cancel/skip/todo. |
+| owner-final-seven | Full compiled owner, exit 0, 19:01:17.739223-19:01:18.289049 UTC; 166 pass, no fail/cancel/skip/todo. |
+| direct-final-seven | Exact npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts, fresh build, exit 0. |
+| native-coverage-final-seven | Exact compiled source include, full owner and native LCOV, exit 0; 1003/1003 lines, 58/58 functions and 193/193 branches. |
+| lint-final-seven | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0. |
+| account-evidence, platform-evidence | Current installed on-disk RED CLI, exit 0 and RED_EVIDENCE_OK for both immutable files. |
+| preservation | Installed TypeScript AST comparison, complete input preservation and SAME recursive classifier, exit 0, 19:03:41.993746-19:03:42.721489 UTC. |
+| audit | Recorded-base Fallow audit, exit 0, verdict pass; zero introduced issues. |
+
+The preservation proof compares all 149 authored test declarations, preserves
+all original assertions and verify calls in order within the seven changed
+cases, and proves the remaining 142 cases and all text outside those seven
+calls byte-exact. Both complete headers, imports and every test title remain.
+Thus 023/021/022 real-shadow rows and order, exact 024, every literal 025 deadline
+and stronger 013 verification, 018 frozen/refused state, 019 checkpoints, 020
+anchors, active 026, fixtures, contracts and earlier negative controls remain.
+Every one of the 700 input paths outside owner/report retains its saved hash
+and mode. The complete 352549-byte report prefix remains exact before append.
+
+ACCOUNT RED remains b3f7141fc652706628ec55c5bd5c1a3e4b560319; PLATFORM RED remains
+5a35d0831979b6c7444b598c0987bdd9d98f758b. The SAME installed classifyRedEvidence
+accepts all 14 ACCOUNT and 2 PLATFORM recursive records as RED_EVIDENCE_OK;
+each sourceCommit:path resolves to its original sourceBlob. Native output,
+historical limits and archived semantics remain intact. No second parser or
+new evidence record is introduced. Earlier first-five and final-seven attempts
+are separately retained; only final-seven records support final owner claims.
+Selected LCOV does not refresh merged all-pair LCOV.
+
+### Atomic closeout and remaining work
+
+Only test/runtime/accountRuntime.test.ts and this report append enter the cause
+commit, titled test: protect command outcomes and reported state.
+After this append, the recorded-base audit and preservation proof repeat.
+The exact required SKIP=npm-check pre-commit run --files invocation covers both
+final paths before staging; any formatter/report change requires another clean
+terminal pre-step. Plain foreground git commit runs all ordinary hooks.
+The final-audit, final-preservation, pre-step, commit streams and terminal Git
+records retain actual results and the resulting commit hash. No wrapper commit,
+hook bypass, amend, manual stash, rebase or history rewrite is used.
+
+This cause strengthens T-04-17's existing command outcome and reported-authority
+observations. No new security-relevant surface or product meaning is introduced.
+No full npm run check, full-gate reuse, full correction, reopening, closure or
+phase completion is claimed; the parent owns the remaining work and full gate.
+RUN-01 stays Pending. WINDOWS 46-53 stay OPEN and unwaived.
