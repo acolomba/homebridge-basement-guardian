@@ -5496,3 +5496,124 @@ No security-relevant surface outside the existing threat model changes.
 RUN-01 stays Pending. WINDOWS 46-53 stay OPEN and unwaived. Remaining causes,
 full ACCOUNT correction, full gates and shared-state advancement stay with the
 parent. No new policy, correction count, fixed-ID reopening or closure is claimed.
+
+## CR-04-ACCOUNT-011: construction title and existing observation overlap
+
+**Requirement:** RUN-01. **Original severity:** BLOCKER.
+**Rule:** unit writer/reviewer, central title-discrimination rule and Assertions.
+**Owning task:** 04-09-01.
+**Disposition:** applied through original 013 overlap, pending independent full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_011_construction_scope.
+**Current revision:** fa8a21f298aef15e659344aa723a756934affa4c.
+The original location remains R:test/runtime/accountRuntime.test.ts:3087-3118.
+The current case occupies test/runtime/accountRuntime.test.ts:8554-8583.
+All original 29 IDs, initial 18 BLOCKER/11 WARNING counts and correction counter 0 remain.
+This disposition records existing implementation overlap. It supplies no independent correction or finding closure.
+
+### Existing accepted remedy and actual case
+
+Original 011 permits a narrow title plus source/design review of the construction prohibition.
+Original 013 implemented that remedy at 95a99345e6f0e680c06ed322a1be7a5da82ff838.
+Its actual owner diff replaces the broad connection/file/timer title with
+`builds every collaborator without requesting HTTP or opening a socket`.
+It replaces the fetch replacement/count and socket counter with exact-parameter strong mocks.
+Neither mock allows a call. The case asserts the public unavailable monitoring path, then explicitly verifies both mocks.
+The current complete case retains those observations through fa8a21f.
+The 013 appendix and 07 summary already disclose this narrower promise.
+
+The case calls only exported createAccountRuntimeFromConfig and reads the public monitoringPath.
+Its temporary directory belongs to case setup and cleanup.
+The title claims neither file-read nor timer observation.
+No missing current assertion requires another owner edit or duplicate scenario.
+This preserves the accepted original finding and its implementation history without a rejection or replacement ID.
+
+### Current construction design and actual callers
+
+Source/design inspection retains the writer rule: construction opens no connection, reads no file and starts no timer.
+The complete current source was read, including both factory bodies and every returned operation.
+The composed adapter constructors and actual platform/World caller bodies were inspected.
+The relevant current boundaries are:
+
+| Boundary | Current source evidence |
+| --- | --- |
+| Composition | accountRuntime.ts:1290-1341 creates auth, API, state, failure-log, anchors and the runtime. Its shadow factory remains a deferred callback. |
+| Runtime | accountRuntime.ts:342 creates the root, two retry policies, reconciliation, health and local state. It defines operations without invoking launch or background loops. |
+| Authentication | auth.ts:521 initializes local state and returns idToken. currentToken calls readCachedToken at line 566 only through that operation. |
+| Anchor storage | arrivalAnchors.ts:169 creates the map. restore reads storage at line 186 onward, and persist owns writes. |
+| Other composed factories | api.ts:186 returns request methods. state.ts:324, failureLog.ts:62, monitoringHealth.ts:235 and reconciliation.ts:77 initialize maps or local state. |
+| Retry scheduling | retryPolicy.ts:49 defines the policy. schedule invokes waitThenRun, which owns timers.setTimeout. Construction invokes neither. |
+| Shadow transport | The deferred runtime callback creates the client only during credential work. shadow.ts:217 initializes state, and its start at line 461 invokes openConnection. |
+| Lifecycle | accountRuntime.ts:1168 starts anchor restoration before launch. Background polling and credential loops start through launch, after the existing ownership guards. |
+| Platform caller | platform.ts:591 constructs the runtime. Its launch callback at lines 617-629 calls start with validated known physical IDs. |
+| Other callers | features/support/world.ts:648 constructs and line 704 starts. realWorld.ts:298 constructs through its existing createRuntime operation. |
+
+This is bounded static design evidence. It adds no automated file-read or timer claim to the construction case.
+All existing source, owner, adapter, helper, case, assertion and header bytes remain unchanged.
+No contract, private member, alias, public shape, dependency or configuration changes.
+D-06 contract-change queries are not triggered by this report-only disposition.
+Canonical reported authority, single-attempt commands and current root/lifecycle ownership remain exact.
+
+### Verification location, unchanged inputs and native records
+
+The full 1341-line source, 9010-line owner and 5498-line preceding report were read through bounded contiguous ranges.
+Complete AGENTS/bootstrap and all five project books were loaded, including the unit reviewer.
+Current 09 plan, protocol, CONTEXT, RESEARCH, PATTERNS, FINDINGS, canonical decisions and applicable STATE were read.
+Prior 07/08/11/12 summaries and actual adapter constructors/callers supplied the overlap and design context.
+This scoped cause disposition supplies no independent full-owner correction judgment.
+
+All current checks run in the existing linked features/code-review-sweep checkout with workflow.use_worktrees=false.
+The persisted 04/04-09 isolation sentinel reads none. No additional checkout or recovery sentinel is created.
+Fresh resolver records select an omitted model, high effort and opus tier. Execution resolution confirms high effective effort.
+Native records remain under /private/tmp/guardian-04-account-011/.
+Each subprocess retains exact argv/cwd, raw exit, actual UTC start/end, Node/npm and separate complete stdout/stderr.
+Before/after snapshots retain all 702 input identities and modes, complete owned bytes, dirty/index patches and compiled copies.
+
+The same-session focused evidence belongs to the final 009 candidate committed as fa8a21f.
+The exact comparator is `git diff fa8a21f298aef15e659344aa723a756934affa4c -- . ':(exclude,glob).planning/**/*.md'`.
+Its output is empty, and no untracked executable input exists.
+Every non-planning-Markdown input in each reused command manifest matches current bytes and mode.
+The current Node v26.11.1 and npm 11.20.0 match those records.
+Complete argv, versions, UTC, raw exits and input identities remain in /private/tmp/guardian-04-account-009/:
+
+| Reused native record | Actual scope and result |
+| --- | --- |
+| build-restored | npm run build:test, exit 0, 19:12:43.118725-19:12:46.138960 UTC |
+| owner-final | Full compiled native TAP owner, exit 0, 19:12:54.536343-19:12:54.977162 UTC. All 167 tests pass, with zero fail/cancel/skip/todo. |
+| direct-final | Exact account source/owner test:coverage:direct selector with fresh build, exit 0, 19:12:55.548853-19:12:59.433634 UTC |
+| native-coverage-final | Full owner with exact-source include and all three 100% thresholds, exit 0. Native LCOV records 1003/1003 lines, 58/58 functions and 193/193 branches. |
+| lint-final | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| commit | Normal foreground commit and ordinary hooks, exit 0, producing fa8a21f at 19:18:05.703570 UTC |
+
+Current reuse-before and preservation-before records exit 0.
+They preserve all 701 inputs outside this report and its complete 373579-byte prefix.
+The current installed RED CLI accepts both actual unchanged files with exit 0 and RED_EVIDENCE_OK.
+The SAME installed classifyRedEvidence recursively accepts all fourteen ACCOUNT and two PLATFORM records.
+Every recorded sourceCommit:path resolves to its original sourceBlob.
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+PLATFORM evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b.
+The original plan ledger and parent initial-ledger-checkpoint.json remain exact.
+The source remains c87b9330ad2589e7941c11aba90f2079c67dbc30.
+The complete owner remains 169775e1c3bc0c457f2ae02eca45567e229835fe.
+
+No new native test, control, genuine RED, production repair or full npm run check is claimed.
+Selected coverage does not refresh merged all-pair LCOV. The parent owns the required combined gate.
+The earlier e2b884e full gate predates later TypeScript changes and supplies no current full-gate reuse here.
+
+### Atomic report-only closeout and remaining work
+
+Only this report append enters the commit, titled `docs: record construction test scope overlap`.
+The recorded-base Fallow audit uses the actual 09 base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574.
+The audit exits 0 with verdict pass and zero issues at 19:23:32.850818 UTC.
+The exact one-path pre-step exits 0, clean without formatter changes, at 19:23:40.059064 UTC.
+Final audit, preservation and pre-step repeat after this result entry before staging.
+The exact required SKIP=npm-check pre-commit run --files covers this final path before staging.
+Report or formatter changes require another clean terminal pre-step.
+Plain foreground git commit runs ordinary hooks with SKIP absent.
+Final audit, preservation, pre-step, hook streams and actual Git objects establish the terminal result.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+Original 011 retains applied-overlap status pending independent full ACCOUNT correction.
+RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
+No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
+No security-relevant surface outside the existing threat model changes.
+The parent retains remaining causes, full correction, combined gates and shared-state advancement.
