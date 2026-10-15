@@ -162,7 +162,7 @@ for (const { failures, degraded } of [
     }
 
     // assert
-    assert.strictEqual(health.trustNow().restDegraded, degraded);
+    assert.deepStrictEqual(health.trustNow(), { restDegraded: degraded });
   });
 }
 
@@ -178,7 +178,7 @@ test('clears the polling degradation on the first successful poll after three fa
   health.recordRestSuccess();
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, false);
+  assert.deepStrictEqual(health.trustNow(), { restDegraded: false });
 });
 
 test('starts a fresh run after a success, so one later failure does not degrade again', () => {
@@ -193,7 +193,7 @@ test('starts a fresh run after a success, so one later failure does not degrade 
   health.recordRestFailure();
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, false);
+  assert.deepStrictEqual(health.trustNow(), { restDegraded: false });
 });
 
 for (const { elapsedMs, silent } of [
@@ -212,7 +212,7 @@ for (const { elapsedMs, silent } of [
     moveTo(START_TIME + elapsedMs);
 
     // assert
-    assert.strictEqual(health.silentDevices().includes(DEVICE_ID), silent);
+    assert.deepStrictEqual(health.silentDevices(), silent ? [DEVICE_ID] : []);
   });
 }
 
@@ -306,7 +306,7 @@ test('leaves the polling path degraded when a shadow message arrives, because a 
   health.recordShadowMessage(DEVICE_ID);
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, true);
+  assert.deepStrictEqual({ account: health.trustNow(), silent: health.silentDevices() }, { account: { restDegraded: true }, silent: [] });
 });
 
 test('leaves the silence window where it was when a poll fails, because a failed request observed no message', () => {
@@ -382,15 +382,26 @@ test('names only the pump that stopped speaking when the pump beside it is still
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
   const health = healthWithTwoAdmittedDevices(clock, monotonic);
+  health.recordRestFailure();
+  health.recordRestFailure();
   health.recordShadowMessage(DEVICE_ID);
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+  const whileOneIsQuiet = { account: health.trustNow(), silent: health.silentDevices() };
+  health.recordShadowMessage(OTHER_DEVICE_ID);
+  const afterNeighbourSpeaks = { account: health.trustNow(), silent: health.silentDevices() };
 
   // assert
-  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+  assert.deepStrictEqual(
+    { whileOneIsQuiet, afterNeighbourSpeaks },
+    {
+      whileOneIsQuiet: { account: { restDegraded: true }, silent: [DEVICE_ID] },
+      afterNeighbourSpeaks: { account: { restDegraded: true }, silent: [DEVICE_ID] },
+    },
+  );
 });
 
 // The recovery, read on the same account the case above reads the withdrawal
@@ -404,13 +415,19 @@ test('stops naming the quiet pump the moment it speaks, while the pump beside it
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
-  const whileOneIsQuiet = health.silentDevices();
+  const whileOneIsQuiet = { account: health.trustNow(), silent: health.silentDevices() };
 
   // act
   health.recordShadowMessage(DEVICE_ID);
 
   // assert
-  assert.deepStrictEqual({ whileOneIsQuiet, afterItSpeaks: health.silentDevices() }, { whileOneIsQuiet: [DEVICE_ID], afterItSpeaks: [] });
+  assert.deepStrictEqual(
+    { whileOneIsQuiet, afterItSpeaks: { account: health.trustNow(), silent: health.silentDevices() } },
+    {
+      whileOneIsQuiet: { account: { restDegraded: false }, silent: [DEVICE_ID] },
+      afterItSpeaks: { account: { restDegraded: false }, silent: [] },
+    },
+  );
 });
 
 // Nothing is watched before discovery admits it, so a projection told about no
@@ -557,5 +574,5 @@ test('answers the one account-wide fact and nothing about silence or the command
   const trust = health.trustNow();
 
   // assert
-  assert.deepStrictEqual(Object.keys(trust), ['restDegraded']);
+  assert.deepStrictEqual(trust, { restDegraded: false });
 });

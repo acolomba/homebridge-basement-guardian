@@ -1380,3 +1380,35 @@ zero fail/cancel/skip/todo. Restored direct ran 03:41:15.829433Z–03:41:19.1739
 100% lines/functions/branches. No control mutation enters Git; the private
 fixture declarations remain unchanged. The source stays at the 009 header blob.
 All 15 findings remain formally open, independently fixed 0, counter 0.
+
+## 010 commit and 011 complete public answers
+
+010 committed normally as `a4b018fd2221a618a1256ed47a78f83d43f2006a`, exactly
+owner/report. Recorded-base audit returned 0 / pass. The exact clean pre-step
+preceded stage and the ordinary commit's pre-commit npm-check passed.
+
+011 changes only owner/report; that is its rollback inventory. The exact
+two-path guard returned 0 before edits. Every boundary row now compares the
+whole silent-device list against independently specified empty/single-device
+answers. Polling rows and recovery cases compare complete TransportTrust
+objects; the final case compares the complete verdict instead of its keys.
+The shadow-message/REST-degradation case observes both complete public outputs.
+
+Two existing distinct-device cases now observe the whole account object and
+whole silence list before/after actual public message operations. With REST
+degraded, a message from the reporting neighbour leaves only the quiet device
+listed and leaves `{ restDegraded: true }` unchanged. With REST healthy, the
+quiet device's own message removes it while the neighbour stays absent and
+the whole account verdict remains false. Literal independent expected objects
+retain different device outcomes; no production/harness serializer, synthetic
+MonitoringTrust projection or new public API supplies an answer. This module's
+actual device output is the complete list; runtime fan-out remains owned by
+the actual account/platform/accessory callers read before repairs.
+
+All `011-*` ordinary verification records returned 0: both strict projects,
+complete-pair lint/format, fresh build, native full owner (**32 passing**, zero
+fail/cancel/skip/todo) and isolated **100% lines/functions/branches**. Native
+owner interval: 2026-10-15T03:42:28.836291Z–03:42:29.081747Z; direct interval:
+03:42:29.495379Z–03:42:32.930267Z. No source statement changed, no new bug or
+RED record was invented, and private fixture/helper declarations remain intact.
+All 15 accepted IDs remain formally open, independently fixed 0, counter 0.
