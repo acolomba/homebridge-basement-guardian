@@ -1362,3 +1362,440 @@ retain their actual native streams under this root. Only the owner and this
 report enter the commit. The parent owns the combined full gate and the first
 independent full six-file correction. No full-project pass, zero-open result
 or partial-clean POLICIES verdict is issued.
+
+## Independent full correction round 1
+
+**Reviewer:** `policies_full_correction_one`, typed `gsd-code-reviewer`, under
+`/root/phase4_policies_finish/policies_full_correction_one`.
+**Current reviewed revision C:** `af2a8e1bda121d0804c50e37c0b7d6e8f2083906`.
+**Date:** 2026-10-15 UTC. **Depth:** deep.
+
+Every line and complete header of all six original files was independently
+read, including all local helpers, actual callers and public signatures.
+Current source/owner scope totals 1,025 lines. Actual Git and native evidence
+were inspected. All preceding initial and repair history remains verbatim;
+this appended section supplies the current independent judgment.
+
+```yaml
+revision: af2a8e1bda121d0804c50e37c0b7d6e8f2083906
+review_round: 1
+correction_round: 1
+depth: deep
+files_reviewed: 6
+files_reviewed_list:
+  - src/runtime/commandPort.ts
+  - test/runtime/commandPort.test.ts
+  - src/runtime/failureLog.ts
+  - test/runtime/failureLog.test.ts
+  - src/runtime/retryPolicy.ts
+  - test/runtime/retryPolicy.test.ts
+findings:
+  critical: 1
+  warning: 0
+  info: 0
+  total: 1
+status: issues_found
+genuine_production_bugs: 0
+d03_stop: false
+```
+
+### Exact arithmetic and immediate D-03 assessment
+
+All suffixes in this table have the stable prefix `CR-04-POLICIES-`.
+Applied repairs had not been independently closed before this round.
+
+| Set | Exact suffix set | Count | BLOCKER / WARNING |
+| --- | --- | ---: | --- |
+| Opening | {001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012} | 12 | 2 / 10 |
+| Fixed | {001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012} | 12 | 2 / 10 |
+| Rejected accepted IDs | {} | 0 | 0 / 0 |
+| New | {013} | 1 | 1 / 0 |
+| Reopened | {} | 0 | 0 / 0 |
+| Closing | {013} | 1 | 1 / 0 |
+
+`closing = opening - fixed - rejected + new + reopened = 12 - 12 - 0 + 1 + 0 = 1`.
+Cumulative accepted inventory: 13 unique IDs, comprising 3 BLOCKER and 10
+WARNING. Twelve are fixed; **one BLOCKER remains open**, with zero open
+warnings. The continuous correction counter advances **0 to 1**. Tracer checks
+are not counted as corrections, and no counter resets.
+
+D-03 evaluated immediately at the verdict: closing 1 is below opening 12;
+no previously fixed ID reopens; this is round 1, below round 4. **No global
+stop is triggered.** POLICIES remains unclosed. The next cause returns to
+04-04-01, followed by another full six-file correction retaining counter 1.
+PORTS' earlier maintainer response supplies no POLICIES permission and was
+not used. This report authorizes no source repair by this reviewer.
+
+### Narrative Findings (AI reviewer): remaining BLOCKER
+
+#### CR-04-POLICIES-013: The owner bypasses the exported production backoff ceiling
+
+**Classification:** BLOCKER. **Requirement:** RUN-01.
+**Initial/current location:**
+C:`test/runtime/retryPolicy.test.ts:17,44–45,78–109`;
+associated export C:`src/runtime/retryPolicy.ts:18–19`, actual consumer
+C:`src/runtime/accountRuntime.ts:1269`. Paths resolve under the absolute root
+recorded in the initial report.
+**First observer/triager:** `policies_full_correction_one`, this round.
+**Disposition:** accepted/open; no repair or evidence-only commit exists.
+
+**Rule:** `skills/typescript-unit-testing/SKILL.md`, Pairing and coverage:
+the mirrored owner owns its source module's exported behavior; Assertions:
+expected values remain independent. Also
+`skills/typescript-unit-testing-review/SKILL.md`, central discrimination rule
+and Classifying findings/BLOCKER for a wrong implementation that passes the
+case. Compiler, lint and execution coverage do not pin this numeric value;
+the prohibition on gate-redundant tests does not make its observation redundant.
+
+**Issue:** The owner imports only `createRetryPolicy`. Every case constructs
+the policy through `policyOptions`, which supplies its own literal
+`maxDelayMs: 30_000`. It never reads or asserts exported `MAX_BACKOFF_MS`.
+Account composition instead supplies `MAX_BACKOFF_MS`. Changing only that
+export to 60,000, for example, changes the production ceiling while all 26
+direct retry cases keep testing the owner's 30,000 input. The pair can retain
+100% execution coverage while missing the regression. This follows from the
+full source and actual call graph. No source mutation or observed RED is claimed.
+
+**Fix:** Import `MAX_BACKOFF_MS` into this owner and supply it as the
+`policyOptions` ceiling, retaining the independently authored 30,000 expected
+values in the delay and scheduled-cap rows. Alternatively, add a proper AAA
+assertion of the exported numeric contract against an independent literal.
+Do not derive expected cap values from the export or change production's
+policy. Preserve every deadline, held-callback, reset, abort and rejection
+observation and full header. Rebuild, run the full owner and isolated direct
+pair, then obtain another full correction. No helper or external adaptation
+is required.
+
+This is distinct from 008: its repaired cases now discriminate scheduled
+cap behavior for supplied options; 013 concerns the exported value used to
+construct those options in production. None of 008's observations regressed.
+No previously fixed cause is renamed or reopened. The production value is
+currently correct; this is test reliability, not a genuine production defect
+or BUG-01 history.
+
+### Full files, complete headers and exact inputs
+
+Both LICENSE and NOTICE classify these six files as original MIT work.
+Every complete source/owner header has first-line SPDX, the separate 2026
+Alessandro Colomba copyright JSDoc, separate purpose @fileoverview, and the
+required blank lines. The retry source keeps its justified timer-import note
+after the overview. Source-only packaging checks did not replace owner reads.
+
+| Fully reviewed path | All current lines | C Git blob | Complete header |
+| --- | ---: | --- | --- |
+| src/runtime/commandPort.ts | 1–48 | e0189cf9040830a85c4aa447d8a763156c40acbe | Approved; complete overview/import boundary |
+| test/runtime/commandPort.test.ts | 1–40 | bc9395128c5467d2c09bb6069eda9107a4886113 | Approved; all declaration comments/negatives |
+| src/runtime/failureLog.ts | 1–95 | 4d724a609b5da08f31b7978396fd4d240c93fe70 | Approved; all API comments |
+| test/runtime/failureLog.test.ts | 1–327 | b2a366267264b4fafb821a8d1c779c047e02019d | Approved; all four suites/helpers |
+| src/runtime/retryPolicy.ts | 1–101 | 2c57c73e97be282acfdff61b439bfd86333d5b48 | Approved; timer note/import retained |
+| test/runtime/retryPolicy.test.ts | 1–414 | d01dff6456bc4d69c4de162fcb43404e2a7763e4 | Approved; all 26 cases/rows/helpers |
+
+Native `018-correction-evidence-audit` retains complete per-file SHA-256,
+byte counts and blobs. Every captured command has before/after complete six
+file bytes, HEAD/runtime, exact working/staged diffs and nonignored untracked
+bytes. C was clean throughout executable checks. The actual R-to-C Git
+inventory has these six source/owner changes plus coordinator/planning records,
+with no separate helper, external source adaptation, deleted file or package
+change. All local helpers are included above. No .codexignore exists; these
+six tracked inputs are not ignored. Generated and installed files inspected
+for execution/tool documentation are not counted as new production inventory.
+
+Complete AGENTS and all five complete style, comment, unit writer, unit
+reviewer and local-verification books were read, not only injection subsets.
+The bootstrap, local skill inventory, GSD review skill, Fallow pointer and
+full installed Fallow skill were read. Both full owning plans, full CONTEXT,
+RESEARCH, PATTERNS, REVIEW-PROTOCOL, existing report, 04-03 SUMMARY, FINDINGS
+and REQUIREMENTS were read, with applicable STATE and locked decisions.
+No new external behavior question required a documentation lookup.
+
+### Independent dispositions of original findings
+
+Initial R-qualified locations and first observers remain in the opening
+ledger. The table supplies current C-qualified locations, exact rule, real
+repair and independent outcome. All rows contribute RUN-01; headers also
+contribute PROC-03. Pair abbreviations mean the exact source and mirrored
+owner in the inventory above.
+
+| Stable suffix / severity | Exact rule | Current C location | Real repair commit | Independent outcome |
+| --- | --- | --- | --- | --- |
+| 001 / WARNING | D-01; style/Files and modules | commandPort source 1–19; owner 1–11 | 8052f8078e36e9aaa6d64a5e0c0ffaef3b676140 | Fixed; both complete headers |
+| 002 / WARNING | style/Types; D-06 public constituents | src/runtime/commandPort.ts:24–36; owner:19–38 | c0f80628eb07856315de29db0d45bf76a2a37e0c | Fixed; public variants, exact mutable required shapes and strict contracts |
+| 003 / WARNING | D-01; style/Files and modules | failureLog source 1–12; owner 1–18 | bd335c213ceb1671c490c822a6513aceb6eb2fa9 | Fixed; both complete headers |
+| 004 / BLOCKER | unit Assertions; independent whole stream | test/runtime/failureLog.test.ts:157–202 | 5f07760a4bcc48195198818292c90ef0654608d2 | Fixed; complete independent 120-entry stream; audited restored control |
+| 005 / WARNING | unit Naming values | test/runtime/failureLog.test.ts:29–37 | da5269fac68cdb76e915b7226eeca3f9b8cb29af | Fixed; fresh wallTimeMs state |
+| 006 / WARNING | unit Case structure/AAA | test/runtime/failureLog.test.ts:65–74 | ed06aa029c3211cfec732ae84db058e53e43a38f | Fixed; separate constant act and assert |
+| 007 / WARNING | D-01; style/Files and modules | retryPolicy source 1–16; owner 1–20 | 80c93ad8863fe57b57eb730670452d07f6002d77 | Fixed; both complete headers and timer note |
+| 008 / BLOCKER | unit discrimination, Assertions, Patterns/Time | test/runtime/retryPolicy.test.ts:78–274 | 41268e3d81c243e5e92e693a9e98f0160b939dc8 | Fixed; supplied-cap deadlines, reset, held resolution/rejection and duplicate exclusion |
+| 009 / WARNING | unit Case structure/AAA; truthful title | test/runtime/retryPolicy.test.ts:276–287 | 01164c48bb4136c6fe64a61bd30d115561d083b1 | Fixed; reset/read finish before whole assertion |
+| 010 / WARNING | unit Test doubles/logging | test/runtime/retryPolicy.test.ts:22–45,355–414 | ddffc2c882b1951a538643ec1713c2fad1e45fab | Fixed; typed silent logger; callback start/settlement and subsequent work |
+| 011 / WARNING | style/Functions | test/runtime/retryPolicy.test.ts:25–28 | ddffc2c882b1951a538643ec1713c2fad1e45fab | Fixed by same minimum repair; named write declaration |
+| 012 / WARNING | unit Test doubles/mock choice/verification | test/runtime/retryPolicy.test.ts:290–374 | af2a8e1bda121d0804c50e37c0b7d6e8f2083906 | Fixed; exact case-owned strong-mock callbacks and explicit verify after public observations |
+
+Actual Git objects prove all eleven repair commits are ancestors of C, at
+most three concrete paths per cause, with no deletions. Ten IDs have singleton
+commits and 010/011 share their prescribed repair. Native clean pre-step and
+normal commit streams were reopened and indexed by 019-repair-hook-provenance.
+Every commit reports passing check:commit and secret hooks; the later
+commit-message hook's no-files skip is distinct from the successful pre-commit
+run. 008's failed formatter pre-step remains exit 1, followed by post-format
+checks and a repeated clean pre-step. This reviewer stages or commits nothing.
+
+### Exact private-query limits and compatible fallback
+
+The eight actual 010 probes separately target recordingLog and nested
+recordingLog.write, using exact impact and trace in both compiler projects.
+The four 012 probes target countedWork. All twelve raw exits are 2, with
+private-target-not-found/unknown-symbol results. Actual argv, UTC and separate
+stdout/stderr were reopened and indexed in 018-correction-evidence-audit.
+These results establish neither complete semantic consumers nor deletion
+permission; no public-neighbor result substitutes for them.
+
+The fallback is compatible with all current calls. The helper signatures
+`recordingLog(recorded: string[]): Logging`, nested
+`write(message: string): void`, and
+`policyOptions(signal: AbortSignal, recorded: string[] = []): RetryPolicyOptions`
+remain unchanged, including the callable Logging shape. No logger observation
+relies on recording; explicit void expressions discard its unused inputs.
+The named write declaration fixes 011. countedWork retains its exact body,
+return signature and three live callers. Its fresh observation accompanies
+strict callback expectations and final verify rather than replacing them.
+The wrapper records its start before awaiting the strict callback, so guarded
+production cannot conceal an aborted callback's invocation by swallowing the
+mock error. Nothing is deleted or renamed. No forced-deletion exemption or
+complete private trace is claimed.
+
+Installed strong-mock's final verify also rejects recorded unexpected calls
+even if their immediate exceptions were caught. Its actual implementation was
+read. Empty-expectation duplicate/abort mocks remain effective alongside the
+public timelines.
+
+### Actual consumers and D-05/D-06 preservation
+
+All six 002 pre-edit exact impacts at 8052f80 were reopened: one project per
+command, strict completeness, raw exit 0, complete status/identity, expected
+selected_project. Outcome named consumers are 1/3, failure 2/3 and port 4/9.
+These counts are named imports, not all inferred or structural consumers.
+Current actual bodies were read separately:
+
+- accountRuntime:128–214,243–262,330–333,1088–1103,1179–1282 carries public
+  options/factories, family-built command bodies, exact outcomes and root
+  signal. It retains one command attempt, without an automatic retry.
+- controls:529–570 awaits the inferred commands.send result and narrows false
+  acceptance before mandatory failure. Platform:566–599 and the accessory
+  options/binder retain the port. Relevant controls/platform/accessory owner
+  literals and synthetic World context construction were read. No forced
+  import or compatibility adaptation is required; later subsystem conformance
+  is not implied.
+- accountRuntime:330–333,761–762,904–927,1269–1273 creates two independent
+  policies over the shared root and uses a separate next-delay loop.
+  shadow:298–304,352–374 schedules owned reopen work and resets after successful
+  subscription. Root abort remains distinct from terminal authentication halt;
+  no arbitrary running-callback teardown is promised.
+- Failure/success/forget paths at accountRuntime:490–524,653–655,720,747–754,
+  762–793,899,952–960,1042 and composition:1273 preserve per-kind state,
+  fixed reasons and injected wall time. Platform supplies systemClock; elapsed
+  silence remains a distinct monotonic domain.
+
+FailureLog from its first import and retryPolicy from its timer-import note
+are byte-identical to R. Command changes are bounded public variants and
+headers: exact true/false, mandatory failure, closed vocabulary, mutable
+outcomes/options and readonly retry getters remain. Public variants are used
+transitively; private-type-leaks remains error. No last-valid value, canonical
+telemetry, device identity, persistence, clock domain or product meaning changes.
+Scoped privacy keeps its unconfirmed opaque-key premise; no new permission,
+migration or guessed normal follows.
+
+S-04-02 remains fixed as 002. S-04-03/04 retain their exact initial rejection
+reasons for these public contracts. S-04-05's 004/008 are fixed; 013 is the
+distinct public-export gap. Other batch seeds retain their owners.
+Every comment/title, import/export, function, error path, row and assertion
+was considered under all five books. No additional security, style, comment,
+API or owner defect was confirmed. The timer object import remains justified;
+all type negatives are meaningful; state is fresh, tests are offline, timers
+are context-owned and event-loop settling is awaited. No private access,
+test hook, real elapsed sleep, module replacement, coverage exception or
+skip/only/todo is introduced. Coverage does not settle 013's value observation.
+
+### Separate controls and D-04 audit
+
+Actual native intended failures, complete expected/actual values, exact argv
+and raw exits were reopened. These are fixer controls on correct production,
+not genuine bugs or RED histories. No new mutation experiment was run.
+
+| Cause / original native folder | Independent failure judgment | Restoration and rebuilt GREEN |
+| --- | --- | --- |
+| 004 / 014-control-hour | Exit 1; named deepStrictEqual fails; all 120 expected/actual entries checked, retaining four warning positions while corrupting all 116 debug reasons | 015-source-restoration; failure source blob 4d724a609b5da08f31b7978396fd4d240c93fe70; build 016 and owner 017 exit 0 |
+| 008 / 017-fixed500-control | Exit 1; named second attempt completes early at 999 ms | 018-restore-fixed500; exact retry blob below |
+| 008 / 022-early-control | Exit 1; two named first/second deadline failures at 499/999 ms | 023-restore-early; exact retry blob below |
+| 008 / 027-pending-control | Exit 1; both resolution/rejection timelines fail with premature pending false and another admitted attempt | 028-restore-pending; restored build 029 and full owner 030 exit 0 |
+| 010 / 023-control-owner | Exit 1; intended rejection timeline fails with zero callback starts/settlements | 024-restoration; restored build 025 and full owner 026 exit 0 |
+| 012 / 020-control-owner | Exit 1; intended abort assertion observes runs 1 rather than 0 before verify | 021-restoration; restored build 022 and full owner 023 exit 0 |
+
+All failures are ERR_ASSERTION/deepStrictEqual with zero cancelled/skipped/todo.
+Both 008 multi-target streams contain **two** failed tests, as actual TAP
+states; their terse prior semantics output is not used to recount each as one.
+Original control typecheck/lint/build records remain retained. The current
+audit compares each exact restored source snapshot with current bytes and Git.
+All retry restorations match blob 2c57c73e97be282acfdff61b439bfd86333d5b48,
+SHA-256 4061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e.
+The logging source SHA-256 is
+48d4747fd23f61913e6f353f4de04729418848a90585bc9749c1e16cbaf24b79.
+No control entered Git. No production bug, RED JSON, active regression RED,
+classifier success or evidence-before-GREEN history is invented.
+
+### Current checks, raw provenance and limitations
+
+Native root: `/private/tmp/guardian-04-policies-finish-native/`.
+All new commands ran at the absolute repository root on features/code-review-sweep,
+C, Node v26.11.1, npm 11.20.0. Each numbered folder has command.json with
+exact argv/cwd/UTC/raw exit, untouched stdout.raw/stderr.raw, and before/after
+HEAD/version/blob/SHA-256, exact diffs and complete file/untracked snapshots.
+
+| Native record | Exact command or scope | UTC on 2026-10-15 | Raw result |
+| --- | --- | --- | --- |
+| 005-correction-static | npm run check:static | 01:50:51.512773–01:50:55.605435 | 0; all six static checks pass |
+| 007-command-direct | npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts | 01:51:30.526117–01:51:35.170178 | 0; fresh strict build; declaration-only selector acceptance |
+| 008-failure-direct | npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts | 01:51:36.419914–01:51:40.596855 | 0; fresh build and isolated requirements |
+| 009-retry-direct | npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts | 01:51:48.279388–01:51:52.582730 | 0; fresh build and isolated requirements |
+| 013-policies-owners | node --test --test-reporter=tap dist-test/test/runtime/commandPort.test.js dist-test/test/runtime/failureLog.test.js dist-test/test/runtime/retryPolicy.test.js | 01:52:11.479842–01:52:12.469577 | 0; 42 native records, four suites; zero failed/cancelled/skipped/todo |
+| 014-fallow-review | node_modules/.bin/fallow review --base e25e26e6232ed99411b7463a7f9839c5eb837ec0 --brief --format json --quiet --explain | 01:52:22.097522–01:52:24.343856 | 0; orientation verdict pass, zero dead-code/complexity/duplication findings |
+| 015-report-guard | node_modules/.bin/fallow guard .planning/phases/04-runtime-conformance/04-POLICIES-REVIEW.md --format json --quiet --explain | 01:52:23.264052–01:52:24.192215 | 0; no configured zones/rule packs |
+| 016-failure-native-coverage | Exact node:test/TAP/LCOV argv in command.json; failureLog include and its owner alone | 01:53:49.808829–01:53:50.813052 | 0; 15 cases; compiled LH/LF 45/45, FNH/FNF 4/4, BRH/BRF 9/9 |
+| 017-retry-native-coverage | Exact node:test/TAP/LCOV argv in command.json; retryPolicy include and its owner alone | 01:53:56.946589–01:53:57.989149 | 0; 26 cases; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15 |
+| 018-correction-evidence-audit | python3 /private/tmp/guardian-04-policies-correction-audit.py | 01:54:36.844295–01:54:37.887173 | 0; manifest, actual Git/ancestry, control semantics/restoration, unavailable probes and 013 static cause |
+| 019-repair-hook-provenance | Read-only Python native metadata/stream index; exact argv/UTC in command.json | Actual timestamps retained | 0; original pre-step/commit streams and hashes indexed |
+
+The 42 native records comprise 15 logging cases, 26 retry cases and the
+declaration file's native success record. CommandPort authors **zero runtime
+cases**, with no numerical coverage claimed. Fresh compiled LCOV files are
+correction-failureLog.lcov and correction-retryPolicy.lcov in the native root.
+Selected runs do not refresh merged all-pair LCOV. The parent's preceding
+renewed 001–004 tracer/build/owner/direct captures at C remain intact; fresh
+correction checks above avoid reliance on older changed source/test inputs.
+
+The Fallow brief is orientation, never a correctness gate. Its loader-default
+signal is assessed against the actual unchanged entrypoint exception; three
+added @ts-expect-error signals are meaningful allowed declaration negatives.
+Unconfigured boundary detectors are not measured passes. Historical failed
+sandbox, formatting and draft-compiler attempts remain retained. This review's
+initial guessed restoration-folder reads and append-anchor check failed
+without source changes; actual folder discovery/audit and the corrected append
+preserve those limits. Read/tool errors are not source findings or intended RED.
+
+No full npm run check was run or reused by this reviewer. The wave-three gate
+predates retry owner edits and cannot certify C. The parent owns the current
+wave-four combined gate, later phase verification and final full gate.
+WINDOWS46/47 stay OPEN/unwaived, with earlier hook/Gemini limits unchanged.
+No later-subsystem, live vendor, hardware, private-account, install, release,
+human-judgment or RUN-01 completion is claimed.
+
+Only this report receives a repository write, as an append. The audit script
+and native outputs live under /private/tmp. Source, helpers, staged state,
+commits and shared coordinator records are unchanged. All reviewer/build/read
+resources are released at terminal return.
+
+**Terminal verdict:** full six-file correction round **1**; original
+**001–012 fixed**; new/open **CR-04-POLICIES-013 (BLOCKER)**; **1 open**;
+rejected/reopened sets empty; **D-03 stop false**. POLICIES remains unclosed
+and RUN-01 remains Pending.
+
+## Repair evidence: CR-04-POLICIES-013
+
+Applied by `policies_fix_013` (`gsd-code-fixer`), original bounded task
+04-04-01, under `/root/phase4_policies_finish/policies_fix_013`.
+Disposition: **applied, pending independent full correction round 2**.
+The complete preceding report, including correction round 1, remains verbatim.
+That terminal review fixed 001–012 and added only 013: opening 12 minus fixed
+12 plus new 1 equals closing 1, with no rejection or reopened finding.
+Its D-03 assessment remains reducing, correction counter **1**, stop **false**.
+This repair does not reset the counter or independently close 013. The next
+full six-file correction retains opening `{CR-04-POLICIES-013}`, count **1**
+(one BLOCKER, zero WARNING). Production bugs remain **0**; RUN-01 stays Pending.
+
+The owner imports existing `MAX_BACKOFF_MS` and supplies it as the tested
+policy's `maxDelayMs`. Expected delay rows and scheduled deadline observations
+retain independent `30_000` literals. An exact comparison confirms these two
+replacements are the entire owner change. Every 001–012 repair, full header,
+case, expectation, helper name/signature/body and callback verification remains
+intact. No production behavior, API, helper file, package or external consumer
+changes. The existing recordingLog/countedWork private-query exit-2 limits and
+contract-preserving fallbacks remain as recorded above; nothing is deleted.
+
+Initial/current finding location is correction revision
+`af2a8e1bda121d0804c50e37c0b7d6e8f2083906` (C), owner lines 17 and 44–45.
+Those same locations hold the two-line repair at C plus the retained diff.
+The terminal ordinary commit identifies the committed revision; this appendix
+does not claim its own future hash.
+
+### Exact production consumers and separate assertion control
+
+Fresh installed Fallow exact impacts targeted
+`src/runtime/retryPolicy.ts:MAX_BACKOFF_MS` BEFORE edits, separately using one
+`--type-aware-project tsconfig.json` and one `tsconfig.test.json`, each with
+`--type-aware-require complete --format json --quiet --explain`.
+Both exit 0 with complete status/identity and the expected selected project.
+Production identifies accountRuntime; the test project additionally identifies
+its owner. Actual composition at accountRuntime:1269, shared-root policy
+creation, separate next-delay loop, shadow schedule/reset and relevant owners
+were read. Named consumer counts are 1 and 2, not an exhaustive structural-use
+claim. No signature/type/member/private-alias change or removal is needed.
+
+Plausible wrong behavior: exported ceiling changes to `30_001` while the
+owner's independent promise remains 30,000 milliseconds. Compiler, lint and
+execution coverage do not pin the number. The temporary control changes ONLY
+that exported numeric initializer. Both compiler projects and focused uncached
+lint pass before the fresh control build. Native named target
+`completes scheduled attempt 7 only at its 30000 ms deadline` executes and
+fails its intended whole-state `deepStrictEqual`, raw exit **1**. At the exact
+deadline actual completion is 6 and pending true; expected completion is 7
+and pending false. TAP records one failure, zero cancelled/skipped/todo,
+`ERR_ASSERTION`; no setup/import/filter error supplies this evidence.
+
+Exact source restoration matches saved pre-edit bytes and HEAD, Git blob
+`2c57c73e97be282acfdff61b439bfd86333d5b48`, SHA-256
+`4061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e`.
+Fresh restored build and all 26 owner tests pass. No control enters Git.
+This is assertion maintenance on correct production, not genuine RED history;
+no RED JSON or evidence-before-GREEN production repair is claimed.
+
+### Native verification and limits
+
+All checks ran in the existing main checkout at the absolute root above,
+features/code-review-sweep, C, Node v26.11.1 and npm 11.20.0. No worktree was
+created. The directly read sentinel remains phase 04, plan 04-04, isolation
+`none`; Git metadata ledger `gsd-plan-head-before-04-04` retains
+`ca0ebbc3f020bd6ad0bbcaf3be5dcd1ee0341950`. Complete AGENTS, all five books,
+current source/owner/report, owning plan, CONTEXT, REVIEW-PROTOCOL, PATTERNS,
+installed Fallow skill and live help were read before the repair/control.
+
+Native root: `/private/tmp/guardian-04-policies-fix-native/013/`. Each numbered
+folder retains exact argv/cwd/UTC start/end/raw exit in command.json, untouched
+stdout.raw/stderr.raw, and before/after HEAD/runtime/blob/SHA-256, exact dirty
+and staged diffs, full owned bytes and nonignored untracked bytes. The initially
+dirty correction-round-1 report is retained in full and joins this cause commit.
+Initial interactive context reads precede the recorder; complete caller and
+isolation/ledger reads are also retained in 008–009. An initial read-only broad
+temporary-directory search encountered a denied daemon directory; it changed
+nothing and supplies no assertion evidence.
+
+| Native folder / command scope | Actual result |
+| --- | --- |
+| 001–004 live Fallow help; 005 exact three-path guard | Exit 0 each; boundaries and rule packs unconfigured |
+| 006–007 exact pre-edit MAX_BACKOFF_MS impacts | Exit 0 each; selected projects independently complete |
+| 008 callers; 009 assigned-input assertions; 010 reread | Exit 0 each; correct HEAD/branch, only report initially dirty, two-line repair |
+| 011 control typecheck; 012 uncached ESLint; 013 build:test | Exit 0 each before intended native failure |
+| 014 named cap-deadline control | Exit 1; one intended deepStrictEqual failure, full native TAP retained |
+| 015 exact restoration and native failure assessment | Exit 0; saved bytes/blob/SHA-256 and HEAD match |
+| 016 restored build:test; 017 full native owner | Exit 0 each; 26 pass, zero fail/cancel/skip/todo |
+| 018 test:coverage:direct, exact retry source/owner | Exit 0; isolated direct requirements pass |
+| 019 isolated native coverage; retryPolicy.lcov | Exit 0; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15, all 100% |
+| 020 recorded-base Fallow audit, JSON/quiet/explain | Exit 0; verdict pass; zero dead-code/complexity/duplication findings |
+
+Audit base remains R, `e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+Selected runs do not refresh merged all-pair LCOV. Exact scope/history checks,
+the clean required two-path pre-step BEFORE individual staging, ordinary
+foreground commit with normal hooks, and terminal committed-path/hash/deletion/
+clean-tree checks retain actual native streams under this root. Only the owner
+and this existing report enter the cause commit. The parent owns the current
+combined full gate and fresh full six-file correction round 2. No full-project
+pass, zero-open review or POLICIES closure is issued by this fixer.

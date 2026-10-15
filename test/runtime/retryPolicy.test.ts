@@ -14,7 +14,7 @@ import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { mock, verify, when } from 'strong-mock';
 
-import { createRetryPolicy } from '../../src/runtime/retryPolicy.js';
+import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
 import type { RetryPolicy, RetryPolicyOptions } from '../../src/runtime/retryPolicy.js';
 import type { LogLevel, Logging } from 'homebridge';
@@ -42,7 +42,7 @@ function recordingLog(recorded: string[]): Logging {
 }
 
 function policyOptions(signal: AbortSignal, recorded: string[] = []): RetryPolicyOptions {
-  return { signal, maxDelayMs: 30_000, log: recordingLog(recorded) };
+  return { signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog(recorded) };
 }
 
 // The fake timers cover setTimeout only, so this real event-loop turn drains
