@@ -3202,3 +3202,102 @@ owner stays unstaged. The classifier's generic GREEN message does not satisfy
 that ordering. No staging, commit, source control, direct-coverage pass, full
 npm run check, finding closure or correction round occurred in this preparation.
 RUN-01 remains Pending. D-03 and all historical open process limits remain.
+
+## Original 021 dependency: reconciliation headers only
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_021_reconciliation_headers`, on 2026-10-15.
+Disposition: **header dependency implemented; original 021 remains OPEN**.
+The entire earlier report remains an exact byte prefix.
+All 29 original IDs and ACCOUNT correction counter **0** continue.
+This cause supplies no correction round, independent closure or clean verdict.
+
+### Header scope and inspected callers
+
+Pre-edit HEAD is declaration 169dbfdc9938b9084637151cbd08bfaaae5b56e9.
+Task 04-08-03 follows planning-only 021 evidence ce3305e.
+This slice changes exactly reconciliation source, its mirrored owner and this report.
+The committed owning plan declaration is the fourth cause path.
+Targeted presence and runtime integration remain separate functional work.
+
+Both complete headers now have SPDX MIT first, one blank line, separate
+Copyright (c) 2026 Alessandro Colomba JSDoc, one blank line, separate purpose
+@fileoverview JSDoc, one blank line, then imports.
+The source retains its ENTIRE original overview: trustworthy empty inventories,
+caller-owned validation, absence counting and physical deviceId identity.
+The owner overview states its absence-confirmation and tracking-removal purpose.
+MIT classification remains; no template attribution is removed.
+Both complete files were read before editing and both full headers inspected.
+Every byte from first import through EOF remains unchanged in both files.
+No function, signature, contract, test operation, assertion or runtime behavior changes.
+
+Complete AGENTS, bootstrap and all five complete project books were loaded.
+The amended 04-08 including dependency/tail, newest full protocol, CONTEXT,
+RESEARCH, PATTERNS, FINDINGS, full ACCOUNT report, 04-07/11 summaries and canonical
+decisions were read, with applicable locked state, privacy and license boundaries.
+Lexical consumers are the mirrored owner and account runtime.
+Actual owner factory/observe/forget callers and runtime caller bodies were inspected.
+The runtime creates reconciliation once; applyDevices observes regular inventories,
+forgets final-check reappearances and forgets successful removals.
+The known reappearance defect remains. No public/shared/private shape changes,
+so D-06 contract-change impacts are not triggered by these headers.
+The later functional cause still requires fresh complete exact impacts separately
+for both compiler projects before edits. This does not certify the accessories sweep.
+
+### Verification location and native evidence
+
+All checks ran serially in the existing linked features/code-review-sweep checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No new checkout, branch, recovery sentinel, dependency or repository helper was created.
+Native directory: `/private/tmp/guardian-04-account-021-reconciliation-headers/`.
+Every command retains exact argv, raw exit, real UTC start/end, HEAD, input blobs
+and complete separate stdout/stderr. Complete pre-edit files, tracked manifest
+and exact initial/current diffs support byte comparisons.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json | Exact branch/HEAD/empty index and active-owner-only initial diff; exact three-path Fallow guard before edits or formatting; exit 0, no configured zones/rule packs. |
+| header-provenance.json | Both complete bodies from first import exact, prior report prefix exact and every other tracked input unchanged; exit 0. |
+| build.json | Fresh npm run build:test; exit 0, 15:26:57.507272–15:27:01.242686 UTC. |
+| owner.json | node --test --test-reporter=tap dist-test/test/accessories/reconciliation.test.js; exit 0, 9 pass, zero fail/cancel/skip/todo. |
+| direct.json | Exact npm run test:coverage:direct reconciliation source/owner selector including fresh build; exit 0. |
+| native-coverage.json | Full owner, exact-source include and all three 100% thresholds; exit 0, native compiled 50/50 lines, 5/5 functions, 11/11 branches. Complete reconciliation.lcov retained. |
+| lint.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| audit.json | Fallow audit against real ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass, zero introduced issues. |
+| pre-step-1.json | Exact three-path SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 15:27:59.471857–15:28:02.262985 UTC. Repeated after this appendix before staging. |
+
+All focused checks passed first attempts. The audit cache-entry warning remains retained.
+The first report patch failed to match its context before changing any bytes;
+the corrected append preserves the complete previous report prefix.
+This preparation failure is not a test result or passing gate.
+Selected direct runs do not refresh merged all-pair source-mapped LCOV.
+No account-owner GREEN, full npm run check or source control is claimed here.
+The parent owns combined wave and phase gates.
+
+Source header blob changes from 03de159a000e30ad0cf65cbc65d353f7613d925e
+to 7761f91181950c8047a61319558400e633a89150.
+Owner header blob changes from 2c9fc71103028610492c8d87fc0143efb28143af
+to a2c4a35703ef66305998f7c547ef7722775a6797.
+Account production remains 35411e8afb0f4b902684507cf31ad9da9cce0b53.
+Active failing account owner remains 5ff214b9d474fde7da84a26844663e34d5cd4aef;
+its entire pre-existing patch stays byte-exact and unstaged through this dependency.
+RED JSON remains 822f393d3a0f37667cb8024e314a8ddd7ca7e993, preserving all twelve
+complete recursive records and every prior native-history byte unchanged.
+No archived record, active regression or earlier disposition is rewritten.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and both headers is titled
+`fix: complete reconciliation file headers`.
+Its actual hash and exact paths follow from Git and retained terminal native records.
+The exact three-file clean pre-step repeats after this report content before staging.
+Only these three owned paths are staged; the ordinary foreground commit runs hooks.
+Native branch/HEAD/index, staging, commit and postcommit records establish the result.
+No manual stash, hook bypass, amend, rebase, wrapper or history rewrite is used.
+
+Original 021 still needs its targeted presence dependency and runtime repair.
+T-04-16 retains existing inventory/removal boundaries; no new policy follows.
+No security-relevant surface outside the existing threat model is introduced.
+RUN-01 remains Pending. D-03, original IDs/counter and historical open limits remain.
+Plans, shared records, summaries, configuration and unrelated code stay unchanged.
+The parent retains full-gate and final worktree-setting restoration obligations.
