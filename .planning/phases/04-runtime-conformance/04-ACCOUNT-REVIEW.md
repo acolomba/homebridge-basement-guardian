@@ -5755,3 +5755,132 @@ This preserves the existing command/composition threat boundary without new secu
 RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
 No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
 The parent retains remaining causes, full correction, combined gates and shared-state advancement.
+
+## CR-04-ACCOUNT-016: separate actions, captures and assertions
+
+**Requirement:** RUN-01. **Original severity:** WARNING.
+**Rule:** unit writer/reviewer, Case structure: ordered arrange/act/assert;
+the combined marker permits only one throwing or rejection expression.
+**Owning task:** 04-09-02. **Disposition:** applied, pending independent full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_016_case_phases.
+**Pre-edit HEAD:** fbc4c02381aa53a57219b2cd41236e8e572af653.
+Original locations remain R:test/runtime/accountRuntime.test.ts:1623-1624,
+2631-2645, 2664-2683, 3331-3338, with wrappers at 1486-1490 and 3234-3238.
+The original 29 IDs, initial 18 BLOCKER/11 WARNING counts and correction counter 0 remain.
+This structural repair supplies no independent correction, reopening or clean verdict.
+
+### Existing overlap and eight remaining cases
+
+Original 012 already captures the failed-final-check and refused-removal checkpoints before ASSERT.
+Original 013 preserves those captures while adding explicit owning-case strict verification.
+Original 020 adds complete ordered removal observations before its assertions.
+Those removal cases already have one arrange/act/assert sequence and remain byte-exact here.
+The existing 018, 009 and 010 cases also separate their actions and public captures correctly.
+No duplicate repair, split scenario or new test is needed for those overlaps.
+
+Eight current cases still carried an invalid combined marker:
+
+| Current owner case location | Remaining structural repair |
+| --- | --- |
+| 4214, 4234, 4254, 5209 | Start each stop operation and await its promise in ACT; retain doesNotReject on that same promise in ASSERT |
+| 4309 | Start and await runtime.start, then settle in ACT; retain its no-rejection assertion afterward |
+| 4590 | Capture the ordinary monitoringPath read in ACT and compare it in ASSERT |
+| 8877 | Tick and finish settling in ACT; retain the no-rejection assertion on the settling promise afterward |
+| 8980 | Finish both tick/settle sequences and capture the device-request count in ACT; retain no-rejection and literal count 4 assertions afterward |
+
+Awaited operations retain the existing no-throw promise: a synchronous throw or
+rejected operation still fails its case. Every original assertion method and
+expected literal remains in its original order. Only the observed argument
+changes from an action callback or inline read to its captured promise/value.
+There is no multi-operation assertion callback or return to ACT after ASSERT.
+All 151 authored declarations now have exactly one ordered phase sequence.
+Generated rows still execute 168 cases; no title or row changes.
+
+The full 1341-line source, 9120-line pre-edit owner and 5757-line report were read.
+Bounded follow-up reads filled actual truncated-output gaps.
+Complete AGENTS/bootstrap, all five project books, current 09 plan, protocol,
+CONTEXT, RESEARCH, PATTERNS, FINDINGS, canonical decisions, applicable STATE
+and prior 07/08/11/12 summaries were loaded before repository edits.
+Actual case callers are native test registration and their local harness.
+The complete harness, settle, fakeShadow, anchor fixture and composition bodies
+were traced through public start/stop, credential work, polling and callbacks.
+Platform and both World composition/lifecycle callers retain their contracts.
+No helper, source, seed, public/shared/private name, signature, member, alias,
+visibility or mutability changes or deletion triggers D-06 impact requirements.
+Both complete headers, imports and all existing contracts remain exact.
+
+### Fresh native checks and verification location
+
+All checks run serially in the existing linked features/code-review-sweep checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+Fresh model/execution resolution selects an omitted model, high effective effort and opus tier.
+The persisted phase 04/plan 04-09 sentinel remains isolation none.
+No new checkout, branch or recovery sentinel is created.
+Native directory: /private/tmp/guardian-04-account-016/.
+Each subprocess record retains exact argv/cwd, actual UTC start/end, raw exit,
+Node/npm, HEAD, all 702 input identities/modes, complete dirty/index patches,
+owned source/owner/report copies, compiled copies and complete separate streams.
+The initial snapshot also saves all complete input files and literal symlink targets.
+Every process reaches terminal completion before dependent edits or builds.
+
+| Native record | Actual terminal result |
+| --- | --- |
+| preedit-guard, guard-report | Exact two authorized paths before edits/formatting, exit 0; no configured zones or rule packs |
+| format | Exact owner Prettier, exit 0; unchanged |
+| build | npm run build:test, exit 0, 19:41:53.744078-19:41:56.670161 UTC |
+| owner | Full compiled native TAP, exit 0, 19:42:05.939785-19:42:06.371511 UTC; 168 pass, zero fail/cancel/skip/todo |
+| direct | Exact npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts with fresh build, exit 0 |
+| native-coverage | Full owner, exact compiled-source include and all three 100% thresholds, exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; accountRuntime.lcov retained |
+| lint | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| account-evidence, platform-evidence | Current installed on-disk RED CLI, exit 0 and RED_EVIDENCE_OK for both immutable files |
+| preservation | Full case/phase/assertion-order and unrelated-input comparison, SAME installed recursive classifier over all sixteen records, exit 0 |
+| audit | Fallow audit --base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574 --format json --quiet --explain, exit 0, verdict pass; zero introduced issues |
+
+All executable checks pass on the sole candidate; the formatter changes nothing.
+No temporary control is needed for the phase-only change, and none is run.
+No genuine production bug, new RED record or full npm run check is claimed.
+The parent owns the combined gate. Selected LCOV does not refresh merged all-pair LCOV.
+One read-only resolver search used an unmatched shell glob; its tool failure
+changed no input and supplies no test result. Oversized read outputs received
+bounded follow-up reads. No unsuccessful executable verification is hidden.
+
+### Exact preservation and atomic closeout
+
+preservation-proof.json retains complete saved/current changed cases and their
+assertion sequences. All expected arguments and assertion methods match in order.
+The other 143 complete cases and all owner text outside the eight cases are byte-exact.
+Replacing only those eight bodies with their originals reproduces the entire old owner.
+No case, assertion, literal expectation, explicit verification or public observation is removed.
+Source remains c87b9330ad2589e7941c11aba90f2079c67dbc30.
+Owner changes from 04481f0b4f91a2c63a03bc46e9f13f981e45f598
+to 7a89b75213e76a1130bf9274c7ae92b8dc2c4f8a.
+The complete 393906-byte previous report remains an exact prefix before this append.
+All 700 inputs outside owner/report retain their saved hashes and modes.
+
+Original 024, every literal 025 deadline and stronger 013 verification, both 023
+rows, 021 callback/neighbor proof, 022 real-shadow/order cases, 018 frozen/refused
+readbacks, 019 checkpoints, 020 anchors, 026 fixture/contracts and all negative
+controls remain byte-exact. Original 009's actual pending/refused command and
+010's complete outcomes/canonical observations remain byte-exact. Original 029's
+literal four/five-ms floor case and the complete retained lead case remain exact.
+ACCOUNT RED remains b3f7141fc652706628ec55c5bd5c1a3e4b560319, with fourteen records.
+PLATFORM RED remains 5a35d0831979b6c7444b598c0987bdd9d98f758b, with two records.
+The SAME installed classifyRedEvidence accepts all sixteen recursively;
+each sourceCommit:path resolves to its original sourceBlob. Raw histories remain exact.
+No second parser, replacement history or historical waiver is introduced.
+The original 09 plan ledger and parent's initial-ledger-checkpoint.json remain exact.
+
+Only test/runtime/accountRuntime.test.ts and this append enter the cause commit,
+titled test: separate account runtime case phases.
+Recorded-base audit and preservation repeat after this append.
+The exact required SKIP=npm-check pre-commit run --files covers both FINAL paths
+before staging; any report or formatter change requires another clean terminal pre-step.
+Plain foreground git commit runs all ordinary hooks with SKIP absent.
+Final audit, preservation, pre-step, hook streams and actual Git objects establish completion.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+Original 016 is applied pending full independent ACCOUNT correction.
+RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
+No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
+No security-relevant surface outside the existing threat model changes.
+The parent retains remaining causes, full correction, combined gates and shared-state advancement.

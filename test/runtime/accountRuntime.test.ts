@@ -4221,8 +4221,12 @@ describe('stop', () => {
     await runtime.start();
     await settle();
 
-    // act & assert
-    await assert.doesNotReject(() => runtime.stop());
+    // act
+    const stopping = runtime.stop();
+    await stopping;
+
+    // assert
+    await assert.doesNotReject(stopping);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -4237,8 +4241,12 @@ describe('stop', () => {
     await runtime.start();
     await settle();
 
-    // act & assert
-    await assert.doesNotReject(() => runtime.stop());
+    // act
+    const stopping = runtime.stop();
+    await stopping;
+
+    // assert
+    await assert.doesNotReject(stopping);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -4248,8 +4256,12 @@ describe('stop', () => {
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, commandRequests } = harness(t, { command: commands });
 
-    // act & assert
-    await assert.doesNotReject(() => runtime.stop());
+    // act
+    const stopping = runtime.stop();
+    await stopping;
+
+    // assert
+    await assert.doesNotReject(stopping);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -4305,11 +4317,13 @@ describe('stop', () => {
     });
     stopped.runtime = runtime;
 
-    // act & assert
-    await assert.doesNotReject(async () => {
-      await runtime.start();
-      await settle();
-    });
+    // act
+    const starting = runtime.start();
+    await starting;
+    await settle();
+
+    // assert
+    await assert.doesNotReject(starting);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -4578,8 +4592,11 @@ describe('the degraded monitoring path', () => {
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, commandRequests } = harness(t, { command: commands });
 
-    // act & assert
-    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    // act
+    const path = runtime.monitoringPath;
+
+    // assert
+    assert.strictEqual(path, 'unavailable');
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -5196,8 +5213,12 @@ describe('the degraded monitoring path', () => {
     await runtime.start();
     await settle();
 
-    // act & assert
-    await assert.doesNotReject(() => runtime.stop());
+    // act
+    const stopping = runtime.stop();
+    await stopping;
+
+    // assert
+    await assert.doesNotReject(stopping);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
@@ -8885,11 +8906,13 @@ describe('createAccountRuntimeFromConfig', () => {
     await runtime.start();
     await settle();
 
-    // act & assert
-    await assert.doesNotReject(async () => {
-      t.mock.timers.tick(POLL_INTERVAL_MS);
-      await settle();
-    });
+    // act
+    t.mock.timers.tick(POLL_INTERVAL_MS);
+    const polling = settle();
+    await polling;
+
+    // assert
+    await assert.doesNotReject(polling);
   });
 
   test('reports the monitoring trust to the listener the caller supplies', async (t) => {
@@ -9048,14 +9071,17 @@ describe('createAccountRuntimeFromConfig', () => {
     await runtime.start();
     await settle();
 
-    // act & assert
-    await assert.doesNotReject(async () => {
-      t.mock.timers.tick(POLL_INTERVAL_MS);
-      await settle();
-      t.mock.timers.tick(POLL_INTERVAL_MS);
-      await settle();
-    });
-    assert.strictEqual(requests.filter((request) => request.url.endsWith('/devices')).length, 4);
+    // act
+    t.mock.timers.tick(POLL_INTERVAL_MS);
+    await settle();
+    t.mock.timers.tick(POLL_INTERVAL_MS);
+    const polling = settle();
+    await polling;
+    const devicesCalls = requests.filter((request) => request.url.endsWith('/devices')).length;
+
+    // assert
+    await assert.doesNotReject(polling);
+    assert.strictEqual(devicesCalls, 4);
     verify(httpFetch);
   });
 });
