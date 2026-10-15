@@ -1,9 +1,9 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-06: PORTS is independently clean at correction round 3.
+Current through completed 04-07 and inserted 04-11: PORTS is independently clean at correction round 3.
 POLICIES and TRUST are independently clean at correction round 2.
-Wave seven adapter contracts passed. ACCOUNT has full initial review and partial repairs.
+Wave eight lifecycle and wave seven adapter contracts passed. ACCOUNT has full initial review and partial repairs.
 Three genuine production bugs have evidence-first GREEN; full ACCOUNT correction remains pending.
 The parent coordinator alone consolidates actual reports into this ledger.
 
@@ -527,3 +527,37 @@ The parent recorded WINDOWS 48 through the owning CLI; it remains OPEN and unwai
 WINDOWS 46/47 also remain OPEN and unwaived. All historical capture limits remain.
 RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit and handoff.
 The parent owes another full gate after completed plan 07. No partial ACCOUNT clean verdict or later-phase acceptance is inferred.
+
+## Coordinator wave 8 lifecycle completion
+
+Full npm run check returned 0 at clean 9cfa7ce5b7c74ea4e927c2cc14376dd1e8a88386.
+Node v26.11.1; UTC interval 2026-10-15T14:38:34.017306+00:00 to 2026-10-15T14:39:10.348973+00:00.
+Six static checks, 104 Cucumber scenarios, 1156 steps and all 43 isolated pairs passed.
+Metadata: /private/tmp/guardian-phase4-wave8-lifecycle-gate.json.
+Output: /private/tmp/guardian-phase4-wave8-lifecycle-full-check.log.
+Generic 04-07 summary passed; schema drift found none; codebase drift skipped because STRUCTURE.md is absent.
+
+All thirteen original 07 causes are implemented; 015 belongs to completed delegated 04-11.
+The six resumed repairs are 002 at 3d193f1, 003 at 128c005, 027 at d6e4ee6, 028 at d4c8e5b, 012 at 0b86403 and 013 at 95a9934.
+The summary retains the exact twelve owned implementation commits and distinguishes evidence, delegated and coordinator commits.
+Comment changes preserve emitted statements; exact identity, anchor, timing, command-absence, registration and FailureLog controls failed intended assertions before exact restoration and rebuilt GREEN.
+Silent Logging and complete prescribed interactions replace incidental logger assertions and ad hoc mocks.
+Final focused owner: 153 pass, no fail/cancel/skip/todo; isolated native 995/995 lines, 57/57 functions, 181/181 branches.
+The earlier 012 result was 180/180 branches. Both actual denominators remain; no retrospective substitution is claimed.
+
+Original 024 remains exact. Active 025 retains all original timer operations and literal behavioral assertions, with stronger exact-root credentials expectations and explicit verification.
+The report retains saved and current full bodies and their comparison; this additive change does not rewrite the committed RED records.
+The complete six-record RED file remains blob 849b2e725bc19a4742e962910cce05f804a6a4c1, accepted recursively by the SAME installed classifier.
+Local logger-only functions orphaned by 012 were removed under AGENTS after lexical caller and rule-scope review.
+That cleanup grants no private alias/member or shared-contract exception.
+
+WINDOWS 49 records 013's uncollected ESLint session before formatter/build work.
+WINDOWS 50 records the absent pre-first-commit plan ledger.
+Both remain OPEN and unwaived, alongside WINDOWS 46/47/48. Final passing checks do not supply missing historical process evidence.
+The 07 summary guard ran before its first write; no second summary guard-order gap occurred.
+Native final closeout: /private/tmp/guardian-04-07-closeout/final.json; per-cause evidence is mapped in the summary and ACCOUNT report.
+
+Plan 08 retains 018–023 and 026. Plan 09 retains 004–005, 009–011, 014, 016–017 and 029.
+ACCOUNT still has its original 29 IDs, counter 0 and no independent correction or partial clean verdict.
+RUN-01 remains Pending. All actual helpers and adapted complete owners join later correction and seal scope.
+Restore only workflow.use_worktrees=true before final milestone audit and handoff.

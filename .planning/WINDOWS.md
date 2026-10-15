@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 10
 waived_count: 19
 fixed_count: 21
-total_count: 48
-last_updated: 2026-10-15T13:12:31.652Z
+total_count: 50
+last_updated: 2026-10-15T14:39:42.174Z
 ---
 
 # Broken Windows Ledger
@@ -63,6 +63,8 @@ last_updated: 2026-10-15T13:12:31.652Z
 | 46 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md | 714 | [code-review-sweep] CR-03-STATE-008 commit 18e8b83757f7aa1dcf38f8b61cb17ed116e48539 began before repeating a formatter-changing pre-step. Normal all-pair hooks and later exact-byte pre-step passed; no history rewrite. The ordering deviation remains documented for phase/milestone disposition. | open |  | 2026-10-14T17:00:50.997Z |  |
 | 47 | 3 | deviation | .planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md | 375 | [code-review-sweep] CR-03-DECODING-005 private GeminiFieldScope removal at a63a9eb lacked the required alias-specific pre-edit Fallow trace. Full source reads/two local uses, four public-symbol probes and runtime/type equivalence were recorded; none substitutes for that missing trace. No retroactive compliance or history rewrite; phase/milestone disposition remains. | open |  | 2026-10-14T18:04:25.131Z |  |
 | 48 | 4 | deviation | .planning/phases/04-runtime-conformance/04-11-SUMMARY.md |  | [code-review-sweep] The 04-11 executor first wrote its execution summary before running that exact path through Fallow guard. The subsequent guard passed before further edits but supplies no retroactive pre-edit evidence. Task-level code guards and checks remain valid. Disclosed at ac52e22; native /private/tmp/guardian-04-11-closeout/summary-guard.json. Keep this process gap open and unwaived. | open |  | 2026-10-15T13:12:31.652Z |  |
+| 49 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-013 fixer began formatter/build work before collecting the terminal result of ESLint --fix session 47163, active 2026-10-15T14:25:37.372Z to terminal collection at 14:25:48.809Z. Intermediate native streams remain under /private/tmp/guardian-04-account-013/. Later serial build, owner, direct, lint and restored controls pass on final inputs but do not repair historical ordering. Recorded in 04-07-SUMMARY and ACCOUNT report; leave open and unwaived. | open |  | 2026-10-15T14:39:42.000Z |  |
+| 50 | 4 | deviation | .planning/phases/04-runtime-conformance/04-07-SUMMARY.md |  | [code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived. | open |  | 2026-10-15T14:39:42.174Z |  |
 
 ````json
 [
@@ -642,6 +644,32 @@ last_updated: 2026-10-15T13:12:31.652Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-15T13:12:31.652Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 49,
+    "kind": "deviation",
+    "phase": "4",
+    "file": "test/runtime/accountRuntime.test.ts",
+    "line": null,
+    "description": "[code-review-sweep] ACCOUNT-013 fixer began formatter/build work before collecting the terminal result of ESLint --fix session 47163, active 2026-10-15T14:25:37.372Z to terminal collection at 14:25:48.809Z. Intermediate native streams remain under /private/tmp/guardian-04-account-013/. Later serial build, owner, direct, lint and restored controls pass on final inputs but do not repair historical ordering. Recorded in 04-07-SUMMARY and ACCOUNT report; leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T14:39:42.000Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 50,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-07-SUMMARY.md",
+    "line": null,
+    "description": "[code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T14:39:42.174Z",
     "resolved_at": null,
     "milestone": null
   }
