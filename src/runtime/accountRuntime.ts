@@ -486,9 +486,8 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
     const stillPresent = new Set(freshDevices.map((device) => device.deviceId));
 
-    // Only the deviceIds actually under confirmation are re-observed here
-    // (CR-01): replaying the whole fleet through `reconciliation.observe()`
-    // let a transient omission on this extra request advance an unrelated,
+    // Only the deviceIds under confirmation are re-observed here (CR-01).
+    // A transient omission on this extra request must not advance an unrelated,
     // otherwise-healthy deviceId's absence count.
     for (const deviceId of confirmedAbsent) {
       if (stillPresent.has(deviceId)) {
@@ -640,11 +639,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // One trust struct per system the account currently holds, built from the
   // account-wide facts plus this device's own silence.
   //
-  // Neither input is new. `store.deviceIds()` is the inventory the runtime
-  // already keeps, and `health.silentDevices()` has answered per device since
-  // it began stamping arrivals per device, so nothing here tracks anything the
-  // runtime was not already tracking -- the flatten that collapsed the second
-  // list into one boolean is simply gone (D-01, D-03).
+  // `store.deviceIds()` supplies the inventory and `health.silentDevices()`
+  // supplies the silent controllers. Each system keeps its own silence answer
+  // alongside the shared account facts (D-01, D-03).
   function monitoringTrustByDevice(account: MonitoringTrust): ReadonlyMap<string, MonitoringTrust> {
     const silent = new Set(health.silentDevices());
 
@@ -820,10 +817,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // `applyDevices` owns it, because a socket that is still open says nothing
     // about a device that has stopped speaking (D-15, D-13, SYNC-03).
     //
-    // The two now differ in signature as well as in cause, and this one is
-    // fleet-wide on purpose: the connection that ended carried every device, so
-    // no device still has a live path. The silence one names its device,
-    // because silence is a fact about one controller.
+    // A disconnect releases the whole fleet: the connection carries every
+    // device, so none keeps a live path when it ends. A silence release names
+    // its device because silence is a fact about one controller.
     for (const deviceId of options.store.deviceIds()) {
       options.store.releaseShadowSource(deviceId);
     }

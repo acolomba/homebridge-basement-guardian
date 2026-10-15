@@ -2933,9 +2933,8 @@ describe('start', () => {
     verify(listener);
   });
 
-  // An install carrying no anchor invents nothing. The device is judged from its
-  // admission, exactly as it was before any anchor existed, and the run seeds an
-  // anchor for the next one (D-08).
+  // An install carrying no anchor judges the device from its admission and
+  // seeds an anchor for the next run (D-08).
   test('D-08 vouches for a pump admitted on an install carrying no stored anchor, and anchors it from its admission', async (t) => {
     // arrange
     const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
@@ -5410,10 +5409,9 @@ describe('the degraded monitoring path', () => {
     verify(listener);
   });
 
-  // The refusal an owner actually meets. A password changed at the vendor, or a block the vendor
-  // applies to the account, arrives long after the launch that succeeded. Until this branch existed
-  // it reached only the generic poll failure: no service went unreadable, and the log named device
-  // discovery, which is not what happened (CR-03, D-10, D-03).
+  // A password changed at the vendor, or a block applied to the account, can arrive after a
+  // successful launch. That refusal requires a rejected-credential trust report and an
+  // authentication-stop diagnostic (CR-03, D-10, D-03).
   //
   // Every credential case above answers the refusal on the first inventory call, which is the launch
   // path. This one answers a healthy inventory first, so it examines the path a restart never takes.
@@ -5534,8 +5532,8 @@ describe('the degraded monitoring path', () => {
     verify(commands);
   });
 
-  // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
-  // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
+  // A refused credential stops the rotation loop. An authentication-stop diagnostic names the
+  // terminal cause without promising another attempt (CR-03, D-10).
   test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {
     // arrange
     const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
@@ -6544,9 +6542,8 @@ describe('the degraded monitoring path', () => {
     verify(subscription);
   });
 
-  // D-11's matching of clearing to cause, re-asserted against the arrival report. The arrival
-  // changed which event clears the shadow cause, never which cause it clears: the successful poll
-  // in the middle here still reports the silence unresolved, and the message after it clears it.
+  // D-11 matches recovery to its cause: a successful poll leaves shadow silence unresolved,
+  // and the arriving message clears it.
   test('D-11 leaves the shadow silence for the successful poll and clears it for the message that follows', async (t) => {
     // arrange
     const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });

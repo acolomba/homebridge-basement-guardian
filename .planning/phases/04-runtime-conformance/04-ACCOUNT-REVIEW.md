@@ -4962,3 +4962,119 @@ The exact three-path SKIP=npm-check pre-commit passed cleanly with exit 0
 at 18:34:19.006 UTC, without formatter changes or staging.
 The final audit and clean pre-step repeat after this metadata addition before staging.
 Native preservation-after-metadata confirms both entire historical prefixes and all nonowned inputs.
+
+## CR-04-ACCOUNT-004: current behavior comment rationale
+
+**Requirement:** RUN-01. **Original severity:** WARNING.
+**Rule:** skills/typescript-comments/SKILL.md, forbidden narration of removed code;
+present-tense descriptions of current behavior and durable decision/finding IDs.
+**Owning task:** 04-09-02. **Disposition:** applied, pending full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_004_comments.
+**Pre-edit HEAD:** 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574.
+This is one original cause, not an independent correction or a clean verdict.
+All original 29 IDs, 18 BLOCKER/11 WARNING, and correction counter 0 remain.
+
+### Seven comment blocks and unchanged executable inputs
+
+All seven blocks cited by the original finding remain at this pre-edit revision.
+The repair changes only their removed-implementation narration:
+
+| Current candidate location | Present-tense rationale retained |
+| --- | --- |
+| src/runtime/accountRuntime.ts:489–491 | Final-check omissions cannot advance unrelated absence counters; CR-01 |
+| src/runtime/accountRuntime.ts:642–644 | Each inventoried system receives its own silence answer; D-01, D-03 |
+| src/runtime/accountRuntime.ts:820–822 | Disconnect releases fleet ownership; silence release names one controller |
+| test/runtime/accountRuntime.test.ts:2936–2937 | Missing stored anchor uses admission and seeds the next run; D-08 |
+| test/runtime/accountRuntime.test.ts:5412–5417 | Mid-run refusal requires rejected-credential trust and authentication stop; CR-03, D-10, D-03 |
+| test/runtime/accountRuntime.test.ts:5535–5536 | Rotation refusal is terminal and does not promise retry; CR-03, D-10 |
+| test/runtime/accountRuntime.test.ts:6545–6546 | Poll recovery leaves live silence unresolved; arrival clears it; D-11 |
+
+The complete source, owner and existing report bytes were read and retained
+before edits in /private/tmp/guardian-04-account-004/.
+whole-input-read-manifest.json records full byte/line counts and SHA-256 identities
+for the source, owner, report and current project/plan context inputs.
+The five complete rulebooks were loaded. Their applicable rules were inspected:
+comment rationale/current tense, surgical style scope, unchanged public test promises,
+unchanged independent assertions/doubles and fresh focused verification.
+The complete source and the seven affected owner contexts were inspected manually.
+This scoped repair supplies no full-owner independent correction judgment.
+
+Actual source callers were traced before edits: applyDevices is awaited by launch
+and runPoll; monitoringTrustByDevice feeds pushMonitoringTrust and
+reportMonitoringHealth; the disconnect handler is supplied to the current shadow
+client. The relevant launch, poll, rotation, terminal-authentication, arrival and
+reporting paths, harness wiring and affected complete test bodies were inspected.
+The platform and both feature composition callers retain their existing contracts.
+No public/private symbol, shape, signature, member, import or header changes.
+No deletion or type-impact exception is requested or inferred.
+
+Before/after full-file comparison removes only standalone // comment lines and
+finds every remaining byte equal. TypeScript comment-free emitted JavaScript is
+also byte-identical for both files. All 149 authored test call expressions,
+including their complete bodies and titles, are byte-identical; generated rows
+produce 166 native tests. Parse diagnostics are zero.
+comments-only-comparison-corrected.json retains this proof.
+An earlier standalone scanner comparison mishandled template lexical context,
+reported unequal token streams and stopped before starting the build.
+That invalid comparison remains in comments-only-comparison.json; it is not a
+source failure. Exact line-byte and TypeScript emit comparisons replace it.
+
+Source blob changes from d60a04e0d006746c79726d8ea10240e909499f00 to
+c0ee18053e9abb21a98cf228bee36e8b5fd9309c. Owner blob changes from
+d2cd76a5d4a2a90d6316463ca250e30b4cea294d to
+cc26ce420e8013a2d4beb645dfff0928eae1c639.
+All original 336805 report-prefix bytes are checked before this append and
+remain exact. The entire prefix includes every earlier finding and evidence record.
+
+### Verification location and native evidence
+
+All checks run serially in the existing linked features/code-review-sweep
+checkout, with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+The persisted 04/04-09 isolation sentinel directly reads none.
+The existing Git-dir gsd-plan-head-before-04-09 directly reads
+8a700ac4b3594bf0c16af0a5e3ce35223ef3f574; it is not reconstructed or overwritten.
+The parent's initial-ledger-checkpoint.json remains unchanged.
+
+Each named native record has exact argv, cwd, actual UTC start/end, raw child
+exit, HEAD, source/owner/report Git blobs and SHA-256 values, plus complete
+separate stdout/stderr. Native directory: /private/tmp/guardian-04-account-004/.
+
+| Record | Actual result |
+| --- | --- |
+| preedit-guard | Installed Fallow guard on all three owned paths, exit 0; no configured zones/rule packs |
+| build | npm run build:test, exit 0, 18:42:39.574–18:42:42.431 UTC |
+| owner | node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js, exit 0; 166 pass, zero fail/cancel/skip/todo |
+| direct | npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts, fresh build, exit 0 |
+| native-coverage | Exact compiled source include, 100% native thresholds and accountRuntime.lcov, exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; 166 pass |
+| lint | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| audit | Fallow audit --base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574 --format json --quiet --explain, exit 0, verdict pass, zero introduced issues |
+| account-evidence, platform-evidence | Existing current on-disk RED checker, both exit 0 / RED_EVIDENCE_OK |
+| recursive-preservation.json | SAME installed classifyRedEvidence accepts all 14 ACCOUNT plus 2 PLATFORM records; exact immutable root blobs retained |
+
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+PLATFORM evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b.
+This comment repair creates no genuine production bug or assertion control.
+All executable regressions and their complete recursive histories remain unchanged.
+Selected native coverage does not refresh merged all-pair source-map LCOV.
+The parent's earlier e2b884e full gate predates these TypeScript input changes;
+no reuse or fresh full npm run check is claimed. The parent owns the combined gate.
+
+### Atomic closeout and remaining work
+
+Only the source, its owner and this append enter the atomic cause commit titled
+docs: describe current account runtime behavior.
+After this report append, the recorded-base audit repeats and the exact
+SKIP=npm-check pre-commit run --files invocation covers all three final paths.
+A clean terminal pre-step precedes staging and a plain foreground git commit
+with ordinary hooks. Native final-audit, pre-step and foreground hook records
+establish their actual outcomes; the returned Git object supplies the real hash.
+No amend, hook bypass, wrapper commit, manual stash, rebase or history rewrite.
+
+The preserved executable bytes retain 024 ownership guards, 025 literal deadline
+cases, 013 strict interactions, both 023 rows, 021 targeted presence/callback
+order, 022 real-shadow membership, 018 frozen/refused canonical observations,
+019 checkpoints, 020 anchors, 026 active regression and platform fixture isolation.
+RUN-01 stays Pending. WINDOWS 46–53 stay OPEN and unwaived.
+All remaining ACCOUNT causes and full independent correction belong to the parent.
+No fixed-ID reopening, correction increment, full-review closure or phase completion
+is claimed. No security-relevant surface outside the existing threat model changes.
