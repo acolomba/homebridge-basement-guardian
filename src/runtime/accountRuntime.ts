@@ -346,6 +346,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic, anchors: options.anchors });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
+  let shadowDeviceIds: ReadonlySet<string> = new Set<string>();
   // The three facts the monitoring path is derived from. Holding them, rather
   // than the answer, is what keeps the derivation from depending on which
   // assignment ran last.
@@ -831,71 +832,77 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
-  // Opens the connection once there is both a credential cache to sign from and
-  // a device to subscribe for, and reports whether it was refused so the caller
-  // can decide whether a retry chain needs starting.
+  // Starts the shadow for the current physical membership when it changes,
+  // once credentials and devices exist. Reports whether the attempt was refused
+  // so the caller can decide whether a retry chain needs starting.
   async function attemptShadow(): Promise<boolean> {
     const cache = credentials;
     const deviceIds = options.store.deviceIds();
 
-    if (hasFinished() || shadow !== undefined || cache === undefined || deviceIds.length === 0) {
+    if (hasFinished() || cache === undefined || deviceIds.length === 0) {
+      return false;
+    }
+
+    if (shadow !== undefined && shadowDeviceIds.size === deviceIds.length && deviceIds.every((deviceId) => shadowDeviceIds.has(deviceId))) {
       return false;
     }
 
     try {
-      const client = options.createShadow({
-        credentials: cache,
-        retry: shadowRetry,
-        onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
-          // This callback fires for every routed message, upstream of the
-          // store's change filter, which is why it and not a snapshot listener
-          // is the arrival signal: a heartbeat carrying values identical to the
-          // last one notifies no subscriber and still proves the live path is
-          // carrying messages (D-05, D-11).
-          //
-          // The three steps are in this order deliberately. Stamping first is
-          // what makes the recomputed trust see this arrival. Applying the patch
-          // before the report is what puts the new value on the tile before the
-          // marker says the plugin vouches for it again, so there is no instant
-          // in which the accessory claims to vouch for a value it has not yet
-          // published.
-          //
-          // Reporting here is what makes the recovery arrive with the evidence
-          // rather than at the next poll tick, which the configuration lets run
-          // an hour long. The latch is what keeps it to one report per recovery:
-          // a working live path delivers a heartbeat every fifteen minutes, and
-          // a report on each one would push a trust fan-out across every
-          // accessory for no new information.
-          //
-          // No timer and no loop is introduced. The arrival is an event the
-          // shadow client already delivers, so detection stays as lazy as it was
-          // and the whole projection stays drivable from the injected clock and
-          // the injected timers -- which is the constraint the lazy evaluation
-          // was chosen for (D-05, D-11).
-          // The stamp belongs to the device the message came from. An account
-          // stamp is re-armed by whichever pump spoke last, so on a multi-pump
-          // account one heartbeat vouches for a neighbour that has stopped
-          // speaking, and that controller's silence is never noticed at all.
-          //
-          // Guarded on store membership because the shadow client stays
-          // subscribed to a removed device's topics until the connection is
-          // rebuilt, so a stray message can still arrive after removal. Left
-          // unguarded, it would resurrect the in-memory arrival stamp and the
-          // persisted anchor the removal branch already dropped for a system
-          // that has left the account (D-14).
-          if (options.store.deviceIds().includes(deviceId)) {
-            health.recordShadowMessage(deviceId);
-          }
+      const client =
+        shadow ??
+        options.createShadow({
+          credentials: cache,
+          retry: shadowRetry,
+          onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
+            // This callback fires for every routed message, upstream of the
+            // store's change filter, which is why it and not a snapshot listener
+            // is the arrival signal: a heartbeat carrying values identical to the
+            // last one notifies no subscriber and still proves the live path is
+            // carrying messages (D-05, D-11).
+            //
+            // The three steps are in this order deliberately. Stamping first is
+            // what makes the recomputed trust see this arrival. Applying the patch
+            // before the report is what puts the new value on the tile before the
+            // marker says the plugin vouches for it again, so there is no instant
+            // in which the accessory claims to vouch for a value it has not yet
+            // published.
+            //
+            // Reporting here is what makes the recovery arrive with the evidence
+            // rather than at the next poll tick, which the configuration lets run
+            // an hour long. The latch is what keeps it to one report per recovery:
+            // a working live path delivers a heartbeat every fifteen minutes, and
+            // a report on each one would push a trust fan-out across every
+            // accessory for no new information.
+            //
+            // No timer and no loop is introduced. The arrival is an event the
+            // shadow client already delivers, so detection stays as lazy as it was
+            // and the whole projection stays drivable from the injected clock and
+            // the injected timers -- which is the constraint the lazy evaluation
+            // was chosen for (D-05, D-11).
+            // The stamp belongs to the device the message came from. An account
+            // stamp is re-armed by whichever pump spoke last, so on a multi-pump
+            // account one heartbeat vouches for a neighbour that has stopped
+            // speaking, and that controller's silence is never noticed at all.
+            //
+            // Guarded on store membership because the shadow client stays
+            // subscribed to a removed device's topics until the connection is
+            // rebuilt, so a stray message can still arrive after removal. Left
+            // unguarded, it would resurrect the in-memory arrival stamp and the
+            // persisted anchor the removal branch already dropped for a system
+            // that has left the account (D-14).
+            if (options.store.deviceIds().includes(deviceId)) {
+              health.recordShadowMessage(deviceId);
+            }
 
-          options.store.applyReportedPatch(deviceId, patch);
+            options.store.applyReportedPatch(deviceId, patch);
 
-          if (reportedSilentDevices.has(deviceId)) {
-            reportMonitoringHealth();
-          }
-        },
-        onConnected: handleShadowConnected,
-        onDisconnected: handleShadowDisconnected,
-      });
+            if (reportedSilentDevices.has(deviceId)) {
+              reportMonitoringHealth();
+            }
+          },
+          onConnected: handleShadowConnected,
+          onDisconnected: handleShadowDisconnected,
+        });
       await client.start(deviceIds);
 
       // The start has already opened the socket, so a shutdown or a refusal
@@ -914,6 +921,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       }
 
       shadow = client;
+      shadowDeviceIds = new Set(deviceIds);
 
       return false;
     } catch {

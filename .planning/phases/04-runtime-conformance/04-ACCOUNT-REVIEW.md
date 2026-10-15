@@ -3714,3 +3714,145 @@ message does not establish that parent commit or authorize skipping it.
 No production control, direct-coverage pass, full npm run check, staging,
 commit, repair, closure, correction or ancillary summary occurred here.
 RUN-01 remains Pending. D-03 and all historical OPEN/unwaived limits continue.
+
+## CR-04-ACCOUNT-022: current physical shadow membership
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_022_green`, on 2026-10-15.
+Disposition: **fixed: requires human verification and independent full ACCOUNT correction**.
+The complete previous report remains an exact byte prefix.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. This is no independent correction or closure.
+
+### Minimum repair and public observations
+
+`attemptShadow` retains the physical IDs from its last successful current start.
+It compares set cardinality and membership, independently of enumeration order.
+An existing client with unchanged membership returns without starting again.
+Changed nonempty membership calls that SAME client's existing `start(deviceIds)`.
+The real shadow client replaces its owned connection, rebuilds all routes and
+requests each complete shadow through its existing public contract.
+The runtime records the new set only after start resolves and the existing
+post-await lifecycle guard passes. That guard still closes a late client.
+Credential rotation keeps the existing mutable cache and leaves membership alone.
+The existing no-device guard remains: an empty account opens no connection.
+Confirmed-removal pruning, root cancellation, terminal halt, live ingress,
+canonical watermarks, per-device silence and identity policy stay unchanged.
+
+The saved 022 regression passes without changing a single byte or assertion.
+It uses the real shadow client over an offline injected transport.
+It establishes startup readiness before discovering the second physical device.
+It observes the complete six-topic replacement and both complete-shadow gets.
+The next unchanged poll retains exactly two transports.
+Both devices' live messages produce independent complete canonical snapshots
+and exact new arrival anchors. Shutdown suppresses later ingress.
+Both account and keyed-device trust answers retain all expected fields.
+Every prescribed transport, inventory, trust, removal and command mock is verified.
+
+One additional standalone public case checks the same two physical IDs in reverse order.
+The real canonical store remains behind a typed `DeviceStateStore` port whose
+`deviceIds` enumeration reverses after startup; the later REST response reverses too.
+The whole observation independently expects both complete snapshots, exact anchors,
+the reversed public ID order and exactly one original `start([first, second])`.
+A strict lifecycle mock permits that one start and the normal close.
+The start recorder records before delegation, so a caught unexpected call remains visible.
+This protects physical membership against a positional-list comparison.
+No shared helper, public API, private accessor, test mode or source control is added.
+
+### Exact input preservation and genuine ancestry
+
+Pre-edit HEAD was evidence-only `5987504236d4292d05cb3b1c50ac4a4ce1197a9f`.
+Its parent is actual source `105521860844e2c8fc0f04ab917019e9bcf6f564`.
+Both retain account production blob `334537d18395e5f234bb346e2a993852ab80f730`.
+The evidence commit changes ONLY this report and the pair RED JSON.
+It precedes every production edit in this cause; the active failing owner was unstaged.
+Its native full-owner RED remains 157 cases, 156 pass and one intended
+ERR_ASSERTION/deepStrictEqual failure after successful real-shadow startup readiness.
+
+The pair RED retains immutable blob `b3f7141fc652706628ec55c5bd5c1a3e4b560319`.
+The installed CLI accepts the actual on-disk file as RED_EVIDENCE_OK.
+The SAME installed `classifyRedEvidence` recursively accepts all fourteen records.
+Every recorded sourceCommit/sourceBlob resolves through actual Git objects.
+The entire preceding twelve-record root remains deep-equal to immutable blob
+`822f393d3a0f37667cb8024e314a8ddd7ca7e993`; its embedded raw JSON is byte-exact.
+The root native output equals the retained complete owner.stdout byte for byte.
+All narrower preliminary timing and immediate-trust attempts retain their meaning.
+The RED preparation's missing separate pre-first-formatter/lint-fix candidate
+captures remain disclosed above. No historical capture or waiver is invented.
+
+Before the added order case, the entire GREEN owner exactly matched the saved
+active owner `6c5489e0836a084fc93650e937ef000410615d7d` and regressionPatch.
+After removing ONLY that new case, the complete final owner still matches those bytes.
+The immutable saved patch therefore differs from the current patch solely by
+the additive order case. Full saved/current owners and the exact added body
+remain side by side in implementation-final.json.
+Original 024, all literal 025 deadlines/timer assertions and stronger 013 verification,
+both terminal 023 rows, the complete two-device 021 callback/neighbor regression,
+all prior assertions, adapter contracts and negative controls remain byte-exact.
+No saved record or assertion is weakened or rewritten.
+
+### Reads, verification location and native records
+
+The complete 1332-line account source, 7839-line active owner and 3716-line report
+were read before editing through bounded contiguous ranges.
+Complete AGENTS, bootstrap, all five project books, amended 04-08 including its
+dependency and tail, current protocol, CONTEXT, RESEARCH, PATTERNS, FINDINGS,
+07/11 summaries, canonical decisions and applicable locked STATE were loaded.
+The actual real shadow source and complete owner were read, including current
+connection, start/replacement, routing, readiness, get and close behavior.
+Actual account callers were traced through openShadow, retryShadow, runPoll,
+refreshCredentials and lifecycle entrypoints; platform and both World compositions
+were inspected. Both complete approved headers and `.js` imports remain intact.
+No existing name, signature, public/shared field, mutability, visibility or
+private alias/member changes or deletion triggers D-06 contract-impact requirements.
+
+Every command ran serially in the existing linked features/code-review-sweep checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No checkout, branch, recovery sentinel, package or repository helper was created.
+Native directory: `/private/tmp/guardian-04-account-022-green/`.
+Each command retains exact argv, raw exit, real UTC start/end, HEAD, input blobs
+and complete separate stdout/stderr. Before/after bytes and full dirty diffs remain.
+The 695-file/symlink manifest comparison preserves every nonowned tracked input
+and the untracked inventory. Reconciliation and both concern helpers stay unchanged.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json | Expected feature HEAD, empty index and active-owner-only initial diff; exact three-path guard before any repository edit/formatter, exit 0, no configured zones/rule packs. |
+| evidence-gate.json, history-before-edit.json | Installed current RED CLI and SAME recursive classifier before GREEN, exit 0; all fourteen accepted, entire prior root/raw and original active patch exact. |
+| build-final.json | Fresh npm run build:test, exit 0, 16:15:15.415068–16:15:18.436479 UTC. |
+| owner-final.json | Full native TAP account owner, exit 0; 158 pass, zero fail/cancel/skip/todo, 16:15:20.161854–16:15:20.608973 UTC. |
+| direct-final.json | Exact npm run test:coverage:direct account source/owner selector, including fresh build, exit 0. |
+| native-coverage-final.json | Full owner, exact-source include and all three 100% thresholds, exit 0; native compiled 1004/1004 lines, 58/58 functions, 187/187 branches. accountRuntime-final.lcov retained. |
+| lint-final.json | Exact source/owner ESLint, max warnings 0, no cache, exit 0. |
+| implementation-final.json, history-final.json | Minimum source edits plus formatter-only callback indentation; entire prior owner exact after removing one additive case; all fourteen RED records accepted, exit 0. |
+| audit-final.json | Fallow audit against actual ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain, exit 0, verdict pass. |
+| pre-step-1.json | Exact three-path SKIP=npm-check pre-commit, exit 0, clean with no formatter change, 16:16:30.097768–16:16:32.998875 UTC. Repeated after this appendix before staging. |
+
+All executable checks passed their first candidate.
+The initial unchanged-regression owner had 157 pass and native 186/186 branches.
+The additive order observation required fresh build, full owner, direct coverage,
+native LCOV and uncached lint; all passed on the final 158-case owner.
+Both actual branch denominators remain retained; neither replaces historical results.
+All mutating tool sessions completed before the next edit/build.
+No failed native attempt, full npm run check or new assertion control is claimed.
+Selected pairs do not refresh merged all-pair source-mapped LCOV.
+The parent owns the later combined-wave and phase gates.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and both account files is titled
+`fix: reconcile live shadow membership after discovery`.
+Only source, mirrored owner and this report enter that atomic cause commit.
+The exact three-file clean pre-step repeats after the final report content,
+then authorized linked-Git staging and a normal foreground commit run hooks.
+Native staged-scope and actual postcommit objects establish the hash and paths.
+No manual stash, wrapper, amend, hook bypass, rebase or history rewrite is used.
+
+Only original 022 is implemented here, pending human verification and full correction.
+Remaining 04-08 IDs are 018, 019, 020 and 026; the 04-09 causes remain pending.
+T-04-15 retains reported ingress and physical identity within existing boundaries.
+No security-relevant surface outside the existing threat model is introduced.
+RUN-01 remains Pending. All 29 IDs, counter 0, D-03 and historical OPEN/unwaived limits continue.
+No plan, evidence JSON, shared ledger, summary, STATE, ROADMAP, REQUIREMENTS,
+WINDOWS, configuration or external subsystem path was edited.
+The parent retains shared-state, full-gate and final worktree-setting restoration duties.
