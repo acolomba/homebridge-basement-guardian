@@ -341,3 +341,20 @@ Preserve every expected observation and the structured negative-control assertio
 The existing five-path cause budget and correction counter 1 remain unchanged.
 No production or compiler configuration edit, private-fixture redesign, other trace exception or historical waiver follows.
 All other D-06 requirements and D-03 stop conditions remain in force.
+
+## Maintainer exception and bounded ACCOUNT-015 contracts
+
+The maintainer selected option 1 after clean HEAD c627c2a5290f6caeae3e961cf2284f96bb761e2a.
+This exception permits adding ACCOUNT to test/runtime/arrivalAnchorMemoryContract.ts:ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.
+Complete test-project impact and verified production-project exclusion supply the permitted evidence for this inventory change only.
+Retain the production unavailable/no-project result and raw exit 1 without relabeling it.
+Refresh exact queries and installed TypeScript membership before editing; inspect both existing owners and the new participant.
+The private fakeShadow and recordingAnchors traces remain unavailable in both projects.
+Preserve their names and signatures; no deletion or visibility exception follows.
+The earlier TRUST-017 exception remains separate and unchanged.
+The approved anchor and shadow tasks are declared in sequential same-batch plan 04-11, before continuation of 04-07.
+Each task has four implementation paths plus the 04-11 plan declaration as its fifth cause path.
+Parent protocol, roadmap and wave-scheduling records are separate coordinator metadata.
+All original ACCOUNT IDs and counter 0 remain. Later full correction covers every actual helper and adapted owner.
+The parent supplies a full combined gate after 04-11 and again after completed 04-07.
+No production API, source, compiler configuration or other trace exception is authorized by these contract tasks.
