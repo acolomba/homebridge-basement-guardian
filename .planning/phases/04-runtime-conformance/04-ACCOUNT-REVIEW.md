@@ -3072,3 +3072,133 @@ The original 29-ID ledger and counter 0 remain unchanged; RUN-01 remains Pending
 D-03 and all historical OPEN/unwaived process limits remain in force.
 No shared ledger, summary, STATE, ROADMAP, REQUIREMENTS, WINDOWS or configuration was edited.
 The parent retains its full-gate and final worktree-setting restoration obligations.
+
+## CR-04-ACCOUNT-021: final-check reappearance RED checkpoint
+
+Prepared by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_021_red`, on 2026-10-15.
+This appendix records unchanged-production RED preparation only.
+Original 021 remains OPEN. All earlier implementation dispositions remain.
+The original 29 IDs, 18 BLOCKER/11 WARNING initial counts and ACCOUNT
+correction counter **0** continue. No correction review or closure occurred.
+
+### Public regression and intended failure
+
+The new standalone case at `test/runtime/accountRuntime.test.ts:829` is
+`removes a reappeared device only after two later healthy omissions and a final check`.
+It uses public `createAccountRuntime` through the existing fresh harness.
+Every existing case, assertion, contract and negative control remains unchanged.
+Removing only this insertion reproduces the complete pre-edit owner byte for byte.
+This includes both active 023 rows, exact original 024, and every literal timer
+operation/deadline/assertion plus the stronger 013 verification in active 025.
+
+The case admits two synthetic physical devices. Two healthy regular inventories
+omit the first device but retain its neighbor. The out-of-band final fetch then
+contains the first device and omits the neighbor. The next regular inventory is
+empty: it supplies the first later omission of the reappeared device and the
+neighbor's first regular omission. Both devices must remain. The following
+regular inventory contains the neighbor and omits the first device again.
+That second later omission must trigger another final fetch and exact-device removal.
+The final-check response is never replayed as a regular inventory observation.
+
+The first executed `deepStrictEqual` passes: both complete canonical snapshots,
+physical ID order, exact anchors and whole account/keyed trust remain correct
+after reappearance and after the first later omission. The second executed
+`deepStrictEqual` fails with AssertionError/ERR_ASSERTION at the intended boundary.
+Actual state still contains both devices, snapshots, anchors and trust entries.
+Removal and callback-state arrays are empty. Only six inventory requests occur;
+the expected final check would be the seventh. No setup, compiler, import,
+TypeError, mock-verification, filter, skip or cancellation supplies this RED.
+
+Independent expected values also require the removal callback to see both
+complete snapshots and anchors before pruning. Afterward, only the neighbor
+may remain, with its complete snapshot received at START_TIME + 4000 and its
+original exact anchor. Callback capture includes the complete request history.
+Exact-parameter strong mocks prescribe finite root-signal requests, exact
+inventory callbacks and the one physical removal. A command port permits no call.
+Each mock has explicit verification at the case's end, after public assertions.
+Current production never reaches the expected removal callback; the whole-state
+assertion detects that absence before verification. Logging stays silent.
+
+### Native attempts, location and immutable history
+
+All commands completed serially in the existing linked feature checkout with
+`workflow.use_worktrees=false`, Node v26.11.1 and npm 11.20.0.
+Native directory: `/private/tmp/guardian-04-account-021-red/`.
+Every command record retains complete separate stdout/stderr, exact argv,
+raw exit, real UTC start/end, source HEAD, full production manifest, source/owner
+blobs and complete source/owner bytes. Preparation captures retain their actual
+patches, including the initial pre-format candidate. Build output is separate from TAP.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, saved before files | Clean c18541a feature HEAD, empty index/status, 44 production and 698 tracked input identities, complete owner/report/prior raw JSON. |
+| guard.json | Exact three owned paths before any edit or formatter; exit 0, no configured zones/rule packs. |
+| owner-format.json | Exact owner Prettier; exit 0, formats only the new case. |
+| owner-lint.json | Exact uncached owner ESLint, max warnings 0; exit 0. |
+| build.json | Fresh npm run build:test; exit 0, 15:13:57.651893–15:14:00.965606 UTC. |
+| target.json | Native TAP exact anchored title above; exit 1, one intended assertion failure, zero skip/cancel/todo, 15:14:04.196529–15:14:04.541730 UTC. |
+| owner.json | node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js; exit 1, 156 cases, 155 pass, only the new case fails; zero skip/cancel/todo, 15:14:14.523939–15:14:14.985607 UTC. |
+| assemble.json, classifications.json | Complete old-root preservation and SAME installed classifier recursively over all twelve records; exit 0, every verdict RED_EVIDENCE_OK. |
+| installed-gate.json | Installed check tdd-red-evidence CLI on actual on-disk pair with GSD_RUNTIME=codex and --raw; exit 0, RED_EVIDENCE_OK. |
+| finalize.json, semantic-assessments.json | Independent semantics and actual source-commit/blob check for every current/archive record; exit 0. |
+
+The named command uses `node --test --test-reporter=tap`, exact anchored
+`--test-name-pattern` for the full title above, and the compiled owner path.
+Complete TAP is untouched in JSON and separate stdout files, including Node's
+own diagnostic formatting. Both native attempts reached the same intended assertion.
+No unsuccessful preparation or native attempt was dropped or relabeled.
+
+The pair RED root contains the complete final full-owner run.
+Its `priorEvidence[0]` is the ENTIRE previous ten-record root, deep-equal to
+blob `3358f0816f73c4e18ca1d40207d013a9d3c0a9bc`. Its exact raw JSON is retained too.
+The other archive is this case's complete named run. Total recursive records:
+**12 = 10 preserved + 2 new**. Every record retains complete native output,
+patch, expected/actual, semantic assessment and actual source/test provenance.
+The SAME installed `classifyRedEvidence` accepts all twelve as RED_EVIDENCE_OK.
+Independent review retains the preliminary 025 timing failures as timing attempts,
+and the preliminary 023 immediate-trust failure as that narrower attempt.
+Neither becomes a later assertion or native timer-clamp proof.
+No second parser, partial history or alternative evidence-path gate is used.
+
+Source HEAD remains `c18541aa4af394cd4594d486e767b3a030fd79af`.
+Production account blob remains `35411e8afb0f4b902684507cf31ad9da9cce0b53`.
+All 44 production files match that HEAD byte for byte; the source diff is empty.
+Original owner is `e87b406b12ed6453e716a2131c0bb40afa922638`.
+Active owner is `5ff214b9d474fde7da84a26844663e34d5cd4aef`.
+The saved root regressionPatch equals the entire current owner diff exactly.
+The complete preceding report remains an exact byte prefix.
+
+### Terminal checkpoint and required bounded amendment
+
+Exactly three authorized paths change: owner, this report and pair RED JSON.
+No source, reconciliation, platform, feature, helper, summary or shared record changes.
+The full current account source/owner and reconciliation source/owner were read,
+with actual platform/World callbacks, complete AGENTS and all five project books.
+The owning 08 plan, protocol, context, research, patterns, findings, full ACCOUNT
+report, 07/11 summaries and canonical decisions were loaded before edits.
+This local case addition changes no existing shared/public/private-member contract.
+
+The minimum proposed GREEN repair needs a targeted presence-reset operation,
+such as `Reconciliation.present(deviceId: string): void`, that sets only the
+named device's absence count to zero and retains its tracking. Runtime would
+call it only for a confirmed candidate found present in the final fetch.
+`forget` keeps its successful-removal semantics. Calling full `observe` on the
+final response would advance unrelated omissions and is outside this contract.
+This is a proposal only; no reconciliation or runtime production edit occurred.
+
+Before external edits, the parent must declare a serial dependency task in 04-08
+for `src/accessories/reconciliation.ts`, its mirrored owner, this ACCOUNT report
+and the 04-08 plan amendment. That four-path task adds the targeted contract and
+public tests. Refresh exact Reconciliation and createReconciliation impacts
+independently in both compiler projects, require complete evidence and inspect
+actual structural callers before editing. Then the existing runtime task can
+change account source/owner/report/RED within four paths. The plan amendment
+and evidence commit remain parent responsibilities; no extra path is implied.
+
+The parent alone commits complete planning evidence after the clean required
+pre-step and ordinary foreground hooks BEFORE any GREEN edit. The active failing
+owner stays unstaged. The classifier's generic GREEN message does not satisfy
+that ordering. No staging, commit, source control, direct-coverage pass, full
+npm run check, finding closure or correction round occurred in this preparation.
+RUN-01 remains Pending. D-03 and all historical open process limits remain.
