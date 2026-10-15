@@ -49,6 +49,8 @@ export interface ArrivalAnchorsOptions {
   /** The Homebridge storage directory; the anchor file lives there and nowhere else. */
   storagePath: string;
   log: Logging;
+  /** Trusted adapter dependency supplying a complete temporary path; uses native naming when absent. */
+  temporaryPath?: (target: string) => string;
 }
 
 /**
@@ -197,7 +199,7 @@ export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnc
       const target = anchorPath(options);
 
       try {
-        await storeAnchors(temporaryPath(target), target, JSON.stringify(Object.fromEntries(anchors)));
+        await storeAnchors((options.temporaryPath ?? temporaryPath)(target), target, JSON.stringify(Object.fromEntries(anchors)));
       } catch {
         // A stale anchor is the safe direction -- the clamp can only ever report
         // silence sooner, never later -- so a write that did not land costs

@@ -14,6 +14,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { ARRIVAL_ANCHOR_FILENAME, createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
@@ -206,5 +208,128 @@ test('D-07 keeps serving at debug level and orphans no temporary file when the a
   assert.deepStrictEqual(
     { anchor: anchors.get(DEVICE_ID), otherAnchor: anchors.get(OTHER_DEVICE_ID), entries: await readdir(storagePath), recorded },
     { anchor: ANCHOR, otherAnchor: OTHER_ANCHOR, entries: [ARRIVAL_ANCHOR_FILENAME], recorded: [NOT_WRITTEN_LINE] },
+  );
+});
+
+test('persists and restores complete anchors using the supplied temporary path', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'arrival-write.tmp'));
+  const writer = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  writer.record(DEVICE_ID, ANCHOR);
+  writer.record(OTHER_DEVICE_ID, 0);
+
+  // act
+  await writer.persist();
+  const reader = storeOver(storagePath, []);
+  await reader.restore();
+
+  // assert
+  assert.deepStrictEqual(
+    {
+      contents: await readFile(join(storagePath, '.basement-guardian-arrivals.json'), 'utf8'),
+      anchor: reader.get(DEVICE_ID),
+      otherAnchor: reader.get(OTHER_DEVICE_ID),
+      entries: await readdir(storagePath),
+    },
+    {
+      contents: '{"placeholder-device":1700000000000,"placeholder-other-device":0}',
+      anchor: ANCHOR,
+      otherAnchor: 0,
+      entries: ['.basement-guardian-arrivals.json'],
+    },
+  );
+  verify(temporaryPath);
+});
+
+test('preserves an occupied temporary file and prior durable anchors after exclusive creation fails', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  await writeFile(join(storagePath, 'occupied.tmp'), 'another writer');
+  await writeFile(join(storagePath, '.basement-guardian-arrivals.json'), '{"placeholder-device":0}');
+  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'occupied.tmp'));
+  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  anchors.record(DEVICE_ID, ANCHOR);
+  anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
+
+  // act
+  await anchors.persist();
+
+  // assert
+  assert.deepStrictEqual(await readdir(storagePath), ['.basement-guardian-arrivals.json', 'occupied.tmp']);
+  assert.deepStrictEqual(
+    {
+      temporary: await readFile(join(storagePath, 'occupied.tmp'), 'utf8'),
+      durable: await readFile(join(storagePath, '.basement-guardian-arrivals.json'), 'utf8'),
+      anchor: anchors.get(DEVICE_ID),
+      otherAnchor: anchors.get(OTHER_DEVICE_ID),
+    },
+    { temporary: 'another writer', durable: '{"placeholder-device":0}', anchor: ANCHOR, otherAnchor: OTHER_ANCHOR },
+  );
+  verify(temporaryPath);
+});
+
+test('removes its supplied temporary file after rename fails and retains memory and the target', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  await mkdir(join(storagePath, '.basement-guardian-arrivals.json'));
+  await writeFile(join(storagePath, '.basement-guardian-arrivals.json', 'retained'), 'target contents');
+  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'owned.tmp'));
+  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  anchors.record(DEVICE_ID, ANCHOR);
+  anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
+
+  // act
+  await anchors.persist();
+
+  // assert
+  assert.deepStrictEqual(
+    {
+      anchor: anchors.get(DEVICE_ID),
+      otherAnchor: anchors.get(OTHER_DEVICE_ID),
+      entries: await readdir(storagePath),
+      targetEntries: await readdir(join(storagePath, '.basement-guardian-arrivals.json')),
+      retained: await readFile(join(storagePath, '.basement-guardian-arrivals.json', 'retained'), 'utf8'),
+    },
+    {
+      anchor: ANCHOR,
+      otherAnchor: OTHER_ANCHOR,
+      entries: ['.basement-guardian-arrivals.json'],
+      targetEntries: ['retained'],
+      retained: 'target contents',
+    },
+  );
+  verify(temporaryPath);
+});
+
+test('retains memory and durable bytes when the temporary path supplier throws', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  await writeFile(join(storagePath, '.basement-guardian-arrivals.json'), '{"placeholder-device":0}');
+  const anchors = createArrivalAnchors({
+    storagePath,
+    log: recordingLog([]),
+    temporaryPath: () => {
+      throw new Error('temporary path unavailable');
+    },
+  });
+  anchors.record(DEVICE_ID, ANCHOR);
+  anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
+
+  // act
+  await anchors.persist();
+
+  // assert
+  assert.deepStrictEqual(
+    {
+      anchor: anchors.get(DEVICE_ID),
+      otherAnchor: anchors.get(OTHER_DEVICE_ID),
+      contents: await readFile(join(storagePath, '.basement-guardian-arrivals.json'), 'utf8'),
+      entries: await readdir(storagePath),
+    },
+    { anchor: ANCHOR, otherAnchor: OTHER_ANCHOR, contents: '{"placeholder-device":0}', entries: ['.basement-guardian-arrivals.json'] },
   );
 });

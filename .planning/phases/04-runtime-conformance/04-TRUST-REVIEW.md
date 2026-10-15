@@ -1094,3 +1094,132 @@ shared records, package/live/private inputs and full-gate ownership remain
 unchanged. This report-only closeout is committed separately after its own
 audit and clean pre-step; its actual commit identity belongs in the parent's
 subsequent metadata, not in a predicted self-reference.
+
+## 005 compatible temporary-path dependency and ownership evidence
+
+The committed bounded amendment is `42fea06`. Fixer
+`/root/phase4_trust_first/arrival_dependency` read its complete 04-05 plan,
+AGENTS, all five required rulebooks, CONTEXT, REVIEW-PROTOCOL, PATTERNS,
+this report, the complete arrival source/owner and actual account composition
+and owner calls. The parent granted the exclusive foreground writer/build/
+control/Git lease. All checks below ran in the **main checkout**, isolation
+**none**, on Node **v26.11.1** and npm **11.20.0**. The dispatch sentinel
+names 04-05 with isolation none; the batch marker remains
+`23a2511ac6deb26869db8d3c44916623a27ec997`.
+
+Before editing, fresh live Fallow help and four exact impact queries ran at
+`42fea06`, each with one `--type-aware-project`, `--type-aware-require complete`
+and `--format json --quiet --explain`. Records are
+`dependency-impact-{production,test}-{options,factory}` in
+`/private/tmp/guardian-04-arrival-handoff/`. All four returned raw 0,
+status/completeness complete, with distinct production/test project identities.
+Options have no named consumers, but remain public in the factory signature.
+The production factory query identifies `src/runtime/accountRuntime.ts`;
+the test project additionally identifies both arrival/account owners.
+Actual structural calls at account source line 1280, account owner line 2936
+and arrival owner storeOver were read. They omit the new optional member and
+need no adaptation. Earlier private temporaryPath queries remain unavailable;
+that missing exact trace grants no deletion permission.
+
+The touched-file rollback list is exactly source, owner and this report.
+The exact three-path Fallow guard returned 0 before editing. The only source
+changes add documented `ArrivalAnchorsOptions.temporaryPath?: (target: string)
+=> string` and select `(options.temporaryPath ?? temporaryPath)(target)`
+inside the existing persist catch boundary. This is a trusted adapter
+dependency. It is neither user configuration nor a test mode. The private
+helper's name, signature, complete body and call-time process/random reads
+are unchanged, confirmed by exact source comparison with `42fea06`.
+No factory signature, existing caller, required option, export, helper file,
+mode, retry, storage format, key or privacy permission changes.
+
+Four new independent owner cases use real per-case mkdtemp with registered
+cleanup. Successful injection checks complete literal durable JSON bytes,
+both restored observations including zero, and whole directory entries.
+The occupied-path case checks the whole directory before reading temporary
+bytes, then complete occupied bytes, prior durable bytes and both memory
+anchors. This distinguishes unowned occupied files from owned writes.
+The failed-rename case checks owned-temp cleanup, both memory anchors,
+whole root/target directory entries and complete retained target-child bytes.
+The throwing-supplier case proves persist absorbs the error and preserves
+both memory anchors, complete durable bytes and directory entries.
+Three case-owned strong-mock functions prescribe the exact literal durable
+target and full temporary path with exactParams; every verify follows public
+state assertions. The error-only supplier is a plain throwing stub.
+Existing omitted-option cases still execute native temporary naming.
+
+### 005 separate overwrite maintenance control
+
+The plausible wrong behavior uses `flag: 'w'`, allowing a supplied occupied
+temporary path to be overwritten and renamed away. Typecheck, lint and exercised
+coverage do not establish exclusive-create ownership. This is a maintenance
+control for accepted finding 005, not a new genuine production bug or RED history.
+
+The saved complete source is
+`/private/tmp/guardian-dependency-control-original.ts`; the exact mutation patch
+is `/private/tmp/guardian-dependency-control.patch`. The control changes only
+`wx` to `w`. Control typecheck, focused ESLint and fresh build:test returned 0.
+The exact named native TAP command in `dependency-control-owner` ran
+2026-10-15T03:05:19.975991Z–03:05:20.435243Z, raw **1**, with one test and
+one intended `deepStrictEqual` / `ERR_ASSERTION` failure: the occupied file
+vanished from the whole directory observation. That assertion executes before
+any attempt to read the now-missing temporary file. There is no ENOENT,
+compile, import, fixture or setup failure. The full original TAP and separate
+empty stderr remain retained. Control source blob:
+`b190f21855d463c16ee94f7a77329c56c7c8dd19`.
+
+Exact saved source bytes were restored and equality verified in
+`dependency-control-restore`. Restored source SHA-256:
+`349e5bcc3ed093eec8bfed95ab0e56b9b5a143d323640e6b7b5101b9fad09698`;
+source blob `aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64`.
+The checked owner blob is `2fe109239b192a86d93b061c3f6ba80dfffdb669`.
+A fresh rebuild, both complete owners and isolated arrival direct check passed
+after restoration. No mutation enters Git. Immutable 002 RED JSON blob
+`cac1f810efb536ba384c05bca9396604ccd72d6c` matches `42fea06`, and actual
+evidence-only `4544c71` remains an ancestor. No RED record was rewritten.
+
+### 005 focused verification and new threat mitigation
+
+Every `dependency-*` JSON records exact native argv/cwd, UTC start/end,
+raw exit, Node, before/after HEAD, source/owner blobs, full tracked/staged
+diffs and all untracked bytes. Separate stdout/stderr files retain full streams.
+Ordinary current-input checks returned raw **0**:
+
+- `npm run typecheck` checks both strict projects.
+- Focused complete-pair ESLint and Prettier pass; both full headers retain
+  SPDX, separate copyright, overview and required section spacing.
+- Fresh `npm run build:test` precedes the native command covering both
+  `dist-test/test/runtime/arrivalAnchors.test.js` and
+  `dist-test/test/runtime/accountRuntime.test.js`.
+- Both native owners pass **141 tests**, including **13 arrival tests**,
+  with zero failures/cancelled/skipped/todo. Restored owner interval:
+  2026-10-15T03:05:30.197853Z–03:05:30.749040Z.
+- Arrival isolated direct coverage passes **100% lines/functions/branches**,
+  including supplied, omitted and supplier-error paths. The restored direct
+  interval is 03:05:30.911136Z–03:05:34.556246Z.
+- Actual production consumer accountRuntime also passes its isolated direct
+  pair; `dependency-account-direct` ran 03:05:01.088415Z–03:05:04.868065Z.
+  The later control restores exactly those same source/test bytes.
+- `dependency-provenance` confirms unchanged private helper, RED bytes,
+  source/evidence ancestry, nonprotected branch and preserved real batch base.
+- `dependency-audit` uses recorded base
+  `23a2511ac6deb26869db8d3c44916623a27ec997`, returns raw **0** and verdict
+  **pass**, with no new findings. Its retained stderr warns that two generated
+  tsbuildinfo package entries lie outside the project-root entrypoint scope.
+  Configured architecture boundaries and rule packs remain absent; zero
+  violations do not claim those detectors measured a policy.
+
+The newly declared **high T-04-21** extends the initial twenty-threat inventory.
+Its boundary is trusted temporary-path supplier to filesystem ownership.
+Mitigation is retained exclusive creation, cleanup only after successful owned
+creation, catch-scoped supplier failures, and the independent whole-byte/state/
+directory observations plus restored overwrite control above. T-04-09/10
+storage/restart/privacy contracts remain preserved. This is focused mitigation
+evidence, not a full security certification or combined-wave gate.
+
+Finding 005 is applied pending its normal three-path cause commit and full
+independent correction. No new bug was discovered. Arrival causes
+001–008 and arrival 015 now have applied repairs; monitoring causes and the
+monitoring portion of 015 remain with 04-06. All original **15** accepted IDs
+remain open, independently fixed **0**, correction counter **0**. RUN-01,
+shared records and full-gate ownership stay unchanged. No partial clean verdict
+or correction reset follows from these owner checks.
