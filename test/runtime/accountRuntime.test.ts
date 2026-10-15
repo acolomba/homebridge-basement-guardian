@@ -3056,6 +3056,66 @@ describe('credential rotation', () => {
   });
 });
 
+test('preserves whole canonical state through accepted, superseded and observation-free shadow callbacks', async (t) => {
+  // arrange
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  const { runtime, store, shadows, advance, commandRequests } = harness(t, { command: commands });
+  const expectedAccepted: DeviceSnapshot = {
+    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: DEVICE_TIME },
+    data: { water_level: 3, primary_pump_running: false, ac_power: true, readings: { depth: 3 } },
+    metadata: { firmware: { version: 'v9' } },
+    shadowVersion: 7,
+    deviceTimestamp: DEVICE_TIME,
+    receivedAt: START_TIME + 123,
+  };
+  const expectedMetadata: DeviceSnapshot = {
+    ...expectedAccepted,
+    metadata: { firmware: { version: 'v9' }, radio: { signal: -54 } },
+    shadowVersion: 9,
+    receivedAt: START_TIME + 246,
+  };
+
+  // act
+  await runtime.start();
+  await settle();
+  await advance(123);
+  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, {
+    data: { water_level: 3, readings: { depth: 3 } },
+    state: { firmware: { version: 'v9' } },
+    version: 7,
+  });
+  const afterAccepted = store.snapshot(DEVICE_ID);
+  await advance(123);
+  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: { radio: { signal: -54 } }, version: 9 });
+  const afterMetadata = store.snapshot(DEVICE_ID);
+  await advance(123);
+  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 0 }, state: { firmware: 'superseded' }, version: 8 });
+  const afterRefused = store.snapshot(DEVICE_ID);
+  await advance(123);
+  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 10 });
+  const afterEmpty = store.snapshot(DEVICE_ID);
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(afterAccepted, expectedAccepted);
+  assert.deepStrictEqual(afterMetadata, expectedMetadata);
+  assert.deepStrictEqual(afterRefused, expectedMetadata);
+  assert.deepStrictEqual(afterEmpty, { ...expectedMetadata, shadowVersion: 10 });
+  assert.deepStrictEqual(store.snapshot(DEVICE_ID), { ...expectedMetadata, shadowVersion: 10 });
+  assert.strictEqual(afterRefused, afterMetadata);
+  assert.strictEqual(Object.isFrozen(afterEmpty), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.identity), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.connectivity), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.data), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.data.readings), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.metadata), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.metadata.firmware), true);
+  assert.strictEqual(Object.isFrozen(afterEmpty.metadata.radio), true);
+  assert.deepStrictEqual(commandRequests, []);
+  verify(commands);
+});
+
 describe('the poll backstop', () => {
   test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
     // arrange
@@ -3071,6 +3131,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 3 },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 900_000,
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 3 });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3094,6 +3163,24 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(beforePoll, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), beforePoll);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3116,6 +3203,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.connectivity, { connected: true, timestamp: DEVICE_TIME });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3241,6 +3337,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 2, primary_pump_running: false, ac_power: true },
+      metadata: { firmware: 'v9' },
+      shadowVersion: 7,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 900_000,
+    });
     assert.deepStrictEqual(
       { data: store.snapshot(DEVICE_ID)?.data, metadata: store.snapshot(DEVICE_ID)?.metadata, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
       { data: { water_level: 2, primary_pump_running: false, ac_power: true }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
@@ -3277,6 +3382,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 31, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 1_800_000,
+    });
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3313,6 +3427,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 31, primary_pump_running: false, ac_power: true },
+      metadata: { mcu_firmware_version: '1.4.2' },
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 2_700_000,
+    });
     assert.deepStrictEqual(
       {
         waterLevel: store.snapshot(DEVICE_ID)?.data.water_level,
@@ -3345,6 +3468,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: true, ac_power: true },
+      metadata: {},
+      shadowVersion: 5,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 900_000,
+    });
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3378,6 +3510,15 @@ describe('the poll backstop', () => {
     await advance(FAST_POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: true, ac_power: true },
+      metadata: {},
+      shadowVersion: 5,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 3_000,
+    });
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3407,6 +3548,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: true, ac_power: true },
+      metadata: {},
+      shadowVersion: 6,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 2_700_000,
+    });
     assert.deepStrictEqual(
       { pumpRunning: store.snapshot(DEVICE_ID)?.data.primary_pump_running, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
       { pumpRunning: true, shadowVersion: 6 },
@@ -3431,6 +3581,15 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 4 },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 900_000,
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 4 });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -3463,6 +3622,29 @@ describe('the poll backstop', () => {
     await advance(POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(
+      [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+      [
+        {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 7, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME + 1_800_000,
+        },
+        {
+          identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 3, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: 7,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME + 1_800_000,
+        },
+      ],
+    );
     assert.deepStrictEqual(
       {
         quiet: store.snapshot(DEVICE_ID)?.data.water_level,
@@ -3497,6 +3679,29 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(
+      [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+      [
+        {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 7, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME + 900_000,
+        },
+        {
+          identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 7, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME + 900_000,
+        },
+      ],
+    );
+    assert.deepStrictEqual(
       { first: store.snapshot(DEVICE_ID)?.data.water_level, second: store.snapshot(OTHER_DEVICE_ID)?.data.water_level },
       { first: 7, second: 7 },
     );
@@ -3519,6 +3724,15 @@ describe('the poll backstop', () => {
     shadows[0]?.options.onReportedPatch(DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 1 });
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 5, ac_power: true },
+      metadata: {},
+      shadowVersion: 1,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 900_000,
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 5, ac_power: true });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
@@ -4474,15 +4688,31 @@ describe('the degraded monitoring path', () => {
     test(`SYNC-03 hands telemetry back to the poll when the connection reports ${reason}`, async (t) => {
       // arrange
       const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-      const { runtime, shadows, store, commandRequests } = harness(t, { command: commands });
+      const { runtime, shadows, store, advance, commandRequests } = harness(t, { command: commands });
       await runtime.start();
       await settle();
-      store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 90 });
+      await advance(123);
+      store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: { firmware: 'v9' }, version: 90 });
 
       // act
       shadows[0]?.options.onDisconnected(reason);
+      const snapshot = store.snapshot(DEVICE_ID);
 
       // assert
+      assert.deepStrictEqual(snapshot, {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 7, primary_pump_running: false, ac_power: true },
+        metadata: { firmware: 'v9' },
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME + 123,
+      });
+      assert.strictEqual(Object.isFrozen(snapshot), true);
+      assert.strictEqual(Object.isFrozen(snapshot.identity), true);
+      assert.strictEqual(Object.isFrozen(snapshot.connectivity), true);
+      assert.strictEqual(Object.isFrozen(snapshot.data), true);
+      assert.strictEqual(Object.isFrozen(snapshot.metadata), true);
       assert.strictEqual(store.snapshot(DEVICE_ID)?.shadowVersion, undefined);
       assert.deepStrictEqual(commandRequests, []);
       verify(commands);
@@ -5839,6 +6069,15 @@ describe('the degraded monitoring path', () => {
     await runtime.stop();
 
     // assert
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 1_796_000,
+    });
     assert.deepStrictEqual(
       { pushed: devicesBeforeStop.at(-1)?.get(DEVICE_ID) },
       {

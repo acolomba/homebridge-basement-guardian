@@ -3856,3 +3856,152 @@ RUN-01 remains Pending. All 29 IDs, counter 0, D-03 and historical OPEN/unwaived
 No plan, evidence JSON, shared ledger, summary, STATE, ROADMAP, REQUIREMENTS,
 WINDOWS, configuration or external subsystem path was edited.
 The parent retains shared-state, full-gate and final worktree-setting restoration duties.
+
+## CR-04-ACCOUNT-018: complete retained canonical observations
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_018_snapshots`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete preceding report remains an exact byte prefix.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. This is assertion maintenance, with no
+production bug, correction round, independent closure or partial clean verdict.
+
+### Missing observations and narrow changes
+
+Fifteen existing authored cases gain complete independent canonical expectations.
+Thirteen cover polling, rejected polling, shadow ownership, silence handover,
+metadata-only ingress, live recovery and the two-device handover boundaries.
+The failed-poll case independently pins its present baseline and final readback;
+its original before/after comparison remains as an additional assertion.
+The unchanged-heartbeat case now pins its complete canonical readback as well
+as its existing trust and no-subscriber-notification promises.
+
+The four generated disconnect reasons share one strengthened authored case.
+Each now requires a present snapshot containing exact identity, connectivity,
+retained telemetry, metadata, absent watermark, device timestamp and receipt.
+The setup supplies nonempty metadata and a receipt 123 ms after admission.
+The device timestamp remains distinct from local receipt and elapsed time.
+The complete snapshot and its identity, connectivity, data and metadata must
+remain frozen. The original optional watermark assertion remains unchanged.
+
+One new standalone case drives the public reported-patch callback through
+accepted telemetry at version 7, metadata-only version 9, refused telemetry
+and metadata at version 8, and an observation-free version 10.
+Independent whole expectations require omitted values to remain, metadata to
+merge separately, the watermark to order messages, and receipt time to advance
+only for an observation. Refused input preserves the canonical readback and
+the exact preceding snapshot reference. An observation-free callback advances
+the existing watermark while retaining the last receipt and device timestamp.
+The final whole readback and nested telemetry/metadata records remain frozen.
+These assertions preserve opaque canonical values; they add no family decoding,
+normalization, invalid-field policy or desired-state authority.
+
+All original assertions remain in their original cases and order.
+Of 142 pre-edit authored declarations, 127 remain byte-exact and 15 gain the
+bounded observations above. The new case produces 143 authored declarations
+and 159 executed tests. Original 024, stronger 025 with every literal deadline,
+both terminal 023 rows, the full 021 callback/neighbor case, real-shadow 022,
+its additive order case, contracts and negative controls remain byte-exact.
+Earlier 012 removal expectations already cover their canonical baseline;
+this cause changes neither those cases nor original 019/020's remaining scope.
+No expected answer comes from production computation or a harness projection.
+
+### Separate assertion maintenance control and restoration
+
+The plausible wrong behavior deletes canonical devices on disconnection
+instead of releasing only their ownership watermark. The old optional
+undefined-watermark assertion accepts that destruction. Compilation and direct
+coverage do not establish retained state.
+
+The temporary control replaces only the disconnect loop's
+`options.store.releaseShadowSource(deviceId)` with `options.store.remove(deviceId)`.
+Its fresh build exits 0. The exact named target is
+`the degraded monitoring path SYNC-03 hands telemetry back to the poll when the connection reports transport-closed`.
+Native TAP executes one test and fails its intended new deepStrictEqual:
+actual is undefined; expected is the complete retained snapshot, including
+firmware v9 and receipt 1787918400123. ERR_ASSERTION/AssertionError and the
+deepStrictEqual operator identify the failure. There are zero skips,
+cancellations or todos. No setup, import, TypeError or mock refusal supplies it.
+
+The source is restored through Git and compared byte for byte with the saved
+full source. Before/restored blob is ec7a77182bb5b222c5fe945abe3b4c67912d5781;
+control blob is 9e36f56457daca0b6fb82445565eb1bc8da88d83.
+The complete source diff is empty. Fresh restored build, named targets and full
+owner pass. The final disconnect case and complete helper prefix remain exact
+to the control's inputs. Later literal-only expected flood values affect other
+cases; their final full-owner, direct, LCOV and uncached lint checks repeat.
+No control mutation enters Git or the genuine RED history.
+
+### Reads, verification location and native evidence
+
+Pre-edit HEAD is 30f944c6dc89a91fd21d0875bfbec69b30a45358, on features/code-review-sweep,
+with clean tree and empty index. Complete AGENTS, bootstrap, all five project
+books, amended 04-08 including task 03/tail, current protocol, CONTEXT, RESEARCH,
+PATTERNS, FINDINGS, full ACCOUNT report, 07/11 summaries and canonical decisions
+were loaded before edits, with applicable locked STATE boundaries.
+The full 1340-line account source, 7948-line owner and canonical state source
+and owner were read through bounded contiguous ranges.
+Actual callers were traced through harness/factories, poll/applyDevices,
+disconnect release and reported callbacks, plus platform and World store users.
+Both complete approved headers and .js imports remain intact.
+No public/shared/private alias/member shape, signature or visibility changes;
+no contract-change impact exception is needed.
+
+All commands completed serially in the existing linked feature checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No checkout, branch, recovery sentinel, repository helper or package was created.
+Native directory: `/private/tmp/guardian-04-account-018/`.
+Every recorded command retains exact argv, raw exit, UTC start/end, HEAD,
+Node/npm, separate complete stdout/stderr, full before/after tracked manifests,
+owned file bytes, untracked inventory and dirty diffs. The initial manifest
+covers 698 tracked file/symlink inputs. All nonowned tracked bytes remain exact.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json, guard-literal-expectations.json, guard-report.json | Clean initial snapshot; exact three-path guards before edits/formatter, exit 0, no configured zones/rule packs. |
+| build-baseline.json, target-baseline.json, owner-baseline.json, lint-baseline.json | Fresh strengthened candidate build, both named targets, full 159-test owner and uncached lint, exit 0. |
+| build-control.json, target-control.json | Temporary build 0; intended named whole-present-snapshot failure 1, 16:25:19.127234–16:25:19.437774 UTC. |
+| restore-source.json, restoration-and-history.json, build-restored.json, target-restored.json | Exact full source restoration, same installed recursive history check, fresh build and both named targets GREEN, exit 0. |
+| build-final.json | Fresh npm run build:test after independent literal expectations, exit 0, 16:27:32.547291–16:27:35.621986 UTC. |
+| owner-final-literals.json | Full native TAP owner, exit 0; 159 pass, zero fail/cancel/skip/todo, 16:27:36.232820–16:27:36.696018 UTC. |
+| direct-final-literals.json | Exact npm run test:coverage:direct account source/owner selector with fresh build, exit 0. |
+| native-coverage-final-literals.json | Full owner, exact-source include and all three 100% thresholds, exit 0; 1004/1004 native compiled lines, 58/58 functions, 188/188 branches. accountRuntime-final.lcov retained. |
+| lint-final-literals.json | Exact source/owner ESLint, max warnings 0, no cache, exit 0. |
+| evidence-gate.json, history-final.json, provenance.json | Current installed RED CLI and SAME recursively invoked classifier, exit 0; all fourteen records accepted, prior root/raw exact, complete saved/current case comparison preserves every original assertion. |
+| audit.json | Fallow audit against real ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain, exit 0, verdict pass. Authorized temporary linked-Git access used directly. |
+| pre-step-1.json | Exact two-file SKIP=npm-check pre-commit, exit 0, clean with no formatter change, 16:28:20.860504–16:28:23.713255 UTC. Repetition follows this final report before staging. |
+
+All executable checks passed; the only intentional native failure is the
+separately labeled maintenance control. Formatting completed before the next
+build; every yielded command reached terminal completion before later mutation.
+Selected coverage does not refresh merged all-pair source-mapped LCOV.
+No full npm run check runs here; the parent owns combined-wave and phase gates.
+
+### Immutable history, commit and remaining scope
+
+The genuine RED JSON remains b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+Its complete fourteen-record history, root native TAP, preceding twelve-record
+root/raw JSON and every sourceCommit/sourceBlob remain exact and valid.
+The saved 022 regression patch and active text remain exact; current differences
+are only the previously additive order case and these bounded 018 additions.
+Complete saved/current case bodies and diffs remain side by side in provenance.json.
+Final owner blob is e16de10ab64ea9fb2ffee53be7a6193d40c48f93.
+
+The atomic commit introducing this appendix is titled
+`test: protect complete account snapshots during handover`.
+Only test/runtime/accountRuntime.test.ts and this report are staged.
+The exact two-file clean pre-step repeats after this final content before staging.
+Authorized linked-Git staging and a plain foreground commit run normal hooks.
+Actual native terminal records and postcommit Git objects establish completion,
+hash, exact two paths, no deletion and clean tree/index. No wrapper, manual stash,
+amend, hook bypass, rebase or history rewrite is used.
+
+Only original 018 is implemented here, pending full independent ACCOUNT correction.
+Remaining 04-08 causes are 019, 020 and 026; the declared 04-09 work remains.
+T-04-15 preserves complete canonical ingress and physical identity observations.
+No security-relevant surface outside the existing threat model is introduced.
+RUN-01 remains Pending. Original IDs, counter 0, D-03 and historical OPEN/unwaived
+limits continue. No evidence, plan, helper, external subsystem, summary, config,
+STATE, ROADMAP, REQUIREMENTS, WINDOWS or central FINDINGS path changes.
+The parent retains its full-gate, shared-state and final worktree-setting restoration duties.
