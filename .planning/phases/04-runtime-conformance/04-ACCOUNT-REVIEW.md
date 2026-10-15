@@ -3434,3 +3434,126 @@ inventory/removal boundary. No new removal, trust or privacy policy follows.
 No security-relevant surface outside the existing threat model is introduced.
 D-03 and all historical OPEN/unwaived limits remain in force.
 The parent retains full-gate and final worktree-setting restoration obligations.
+
+## CR-04-ACCOUNT-021: targeted runtime reappearance integration
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_021_runtime_green`, on 2026-10-15.
+Disposition: **fixed: requires human verification and independent full ACCOUNT correction**.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and correction counter **0** continue.
+This appendix preserves every earlier report byte and supplies no independent correction or closure.
+
+### Minimum runtime change and unchanged owner
+
+The final-check reappearance branch at `src/runtime/accountRuntime.ts:495`
+calls `reconciliation.present(deviceId)` for that confirmed candidate only.
+Its comment describes the retained eligibility and zero absence count.
+Successful removal still calls `forget` after the removal callback succeeds.
+The final response never passes through full-inventory `observe`.
+No other runtime statement changes.
+The existing lifecycle guards, transient-error handling, terminal-auth propagation,
+callback-before-prune order, trust and arrival-anchor ownership remain unchanged.
+No new tracking, removal, identity, telemetry, privacy or retry policy follows.
+
+The entire active owner remains byte-identical to the RED checkpoint:
+`5ff214b9d474fde7da84a26844663e34d5cd4aef`.
+The regression retains both complete retained-state observations and the complete post-removal observation.
+Independent expectations retain exact physical IDs, snapshots, anchors, account trust and keyed device trust.
+The callback observes both devices before pruning.
+The extra final response cannot advance the neighbor's absence count.
+Every exact root-signal request, inventory callback, removal and forbidden command expectation remains.
+All original assertions, both terminal 023 rows, original 024 and stronger 025 verification remain exact.
+Adapter contracts and negative controls also remain unchanged.
+
+Pre-edit HEAD was `020498a3e2b8d903a0ec9fcc230689927c263592` on `features/code-review-sweep`.
+The index was empty and only the active regression owner was unstaged.
+The cause changes exactly account source, its mirrored owner and this report.
+No reconciliation, plan, RED JSON, helper, configuration or shared record changes.
+The documented worktree opt-out remains false, with no new checkout or branch.
+
+Complete account source (1332 lines), owner (7532 lines), reconciliation source/owner
+and the prior 3436-line ACCOUNT report were read before the runtime edit.
+The bootstrap, AGENTS, all five project books, amended 04-08 including dependency/tail,
+protocol, CONTEXT, RESEARCH, PATTERNS, FINDINGS, 07/11 summaries and canonical decisions were loaded.
+Actual callers were traced through launch/runPoll to applyDevices and reconciliation.
+Platform and both World composition/removal callbacks were inspected.
+All four complete source/owner headers retain the approved form and `.js` imports.
+No public/shared/private name, signature, field, visibility or mutability changes in this integration.
+The dependency's four exact pre-edit impacts remain complete in both compiler projects at e914a62.
+No new trace exception or broader accessories-sweep claim follows.
+Both reconciliation files join the later full ACCOUNT correction and seal inventory.
+
+### Immutable evidence and actual ancestry
+
+The actual chain is source `c18541aa4af394cd4594d486e767b3a030fd79af`,
+planning-only evidence `ce3305e8ce53f92e5e4e24a12e1694e95ced4489`,
+declaration `169dbfdc9938b9084637151cbd08bfaaae5b56e9`,
+headers `e914a627fd23c98bd6f701fab8547d13a56365f2`,
+then dependency `020498a3e2b8d903a0ec9fcc230689927c263592`, before this runtime repair.
+Every predecessor retains account source blob `35411e8afb0f4b902684507cf31ad9da9cce0b53`.
+The new account source blob is `334537d18395e5f234bb346e2a993852ab80f730`.
+The evidence commit contains only planning report and RED JSON paths.
+Its genuine RED remains 156 cases, 155 pass and one intended complete-state assertion failure.
+
+RED JSON retains immutable blob `822f393d3a0f37667cb8024e314a8ddd7ca7e993`.
+The current installed CLI accepts the actual file.
+The SAME installed `classifyRedEvidence` recursively accepts all twelve complete records as `RED_EVIDENCE_OK`.
+Every recorded sourceCommit/sourceBlob pair resolves through actual Git objects.
+The entire previous ten-record root remains deep-equal to blob `3358f0816f73c4e18ca1d40207d013a9d3c0a9bc`.
+Its saved raw JSON also equals that immutable Git blob byte for byte.
+The saved regressionPatch equals the complete active owner diff against c18541a exactly.
+There is no formatter difference, rewritten history, second parser or evidence-path workaround.
+Earlier preliminary timing and immediate-trust attempts retain their original narrower meaning.
+
+### Current native checks and verification location
+
+All builds, owners and coverage commands completed serially in the existing linked checkout.
+Node v26.11.1 and npm 11.20.0 are recorded for every command.
+Native directory: `/private/tmp/guardian-04-account-021-runtime-green/`.
+Each command retains exact argv, raw exit, real UTC start/end, HEAD, input blobs and separate complete stdout/stderr.
+The before/after manifest covers all 698 tracked inputs and the untracked set.
+Saved full files and dirty diffs support exact owner, source, report-prefix and unrelated-input comparisons.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json | Exact branch/HEAD/empty index and active-owner-only initial diff. Exact three-path guard before repository edits, exit 0, no configured zones/rule packs. |
+| evidence-gate.json, history-before-edit.json | Current installed CLI and SAME recursive classifier before GREEN, exit 0. All twelve accepted, prior raw root and active patch exact, actual evidence-first ancestry verified. |
+| build.json | Fresh npm run build:test, exit 0, 15:50:19.690621–15:50:23.022857 UTC. |
+| owner-account.json | Full native TAP account owner, exit 0, 156 pass, zero fail/cancel/skip/todo, 15:50:38.938703–15:50:39.427520 UTC. |
+| owner-reconciliation.json | Full native TAP reconciliation owner, exit 0, 14 pass, zero fail/cancel/skip/todo. |
+| direct-account.json, direct-reconciliation.json | Each exact npm run test:coverage:direct source/owner selector with fresh build, exit 0. |
+| coverage-account.json | Full account owner, exact-source include and all three 100% thresholds, exit 0. Native compiled 998/998 lines, 57/57 functions, 183/183 branches. accountRuntime.lcov retained. |
+| coverage-reconciliation.json | Full reconciliation owner, exact-source include and all three 100% thresholds, exit 0. Native compiled 53/53 lines, 6/6 functions, 12/12 branches. reconciliation.lcov retained. |
+| lint.json | Exact current account and reconciliation pairs, uncached ESLint, max warnings 0, exit 0. |
+| audit.json | Fallow audit against real initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain, exit 0, verdict pass, zero introduced issues. |
+| pre-step.json | Exact three-file SKIP=npm-check pre-commit, exit 0, clean with no formatter change, 15:53:01.541678–15:53:04.837601 UTC. Repeated after this record update before staging. |
+
+All executable checks passed their first attempt without an owner expectation change.
+The first report patch matched a repeated footer and inserted this appendix before the last existing dependency record.
+The report-prefix assertion caught that placement, with raw exit 1 retained in report-prefix-attempt.json.
+The appendix moved to EOF, and report-prefix-restored.json verifies every original report byte as the exact prefix.
+An initial relocation patch format failed before edits. Its corrected application succeeded.
+These report preparation attempts supply no test result or historical waiver.
+Native coverage denominators describe these current compiled inputs.
+They do not replace earlier 184-branch evidence or merged source-mapped all-pair LCOV.
+Selected direct runs do not refresh that merged artifact.
+No full npm run check ran here. The parent owns the later combined-wave and phase gates.
+No temporary source mutation control, new regression history, package install, live vendor or hardware run occurred.
+
+### Atomic commit and remaining work
+
+The commit introducing this appendix and both account paths is titled
+`fix: retain absence eligibility after final-check reappearance`.
+The exact three-file clean `SKIP=npm-check pre-commit run --files` precedes staging.
+Report or formatter changes require another clean pre-step before staging.
+Native branch/HEAD/index assertions, authorized linked-Git staging and normal foreground hooks retain their terminal results.
+Actual postcommit Git objects establish the hash, exact three paths, no deletion and clean index/tree.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+Only original 021 is implemented here, pending human verification and independent full correction after the complete repair pass.
+Remaining 04-08 IDs are 018, 019, 020, 022 and 026.
+The declared 04-09 causes remain pending.
+T-04-16 retains targeted identity, neighbor isolation and callback-before-prune within the existing removal boundary.
+No security-relevant surface outside the existing threat model is introduced.
+RUN-01 remains Pending. Original IDs, counter 0, D-03 and all historical OPEN/unwaived limits remain.
+The parent retains its full-gate, shared-state and final worktree-setting restoration obligations.

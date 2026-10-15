@@ -826,6 +826,186 @@ for (const { contractCase, createAnchors, rejectedObservation, expectedObservati
   });
 }
 
+test('removes a reappeared device only after two later healthy omissions and a final check', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+  when(() => {
+    removals(DEVICE_ID);
+  }).thenReturn(undefined);
+  when(() => {
+    inventoryListener([DEVICE_ID, OTHER_DEVICE_ID]);
+  }).thenReturn(undefined);
+  when(() => {
+    inventoryListener([OTHER_DEVICE_ID]);
+  })
+    .thenReturn(undefined)
+    .times(2);
+  when(() => {
+    inventoryListener([]);
+  }).thenReturn(undefined);
+  when(() => {
+    inventoryListener([OTHER_DEVICE_ID]);
+  }).thenReturn(undefined);
+  const removalStates: unknown[] = [];
+  // The public retry factory receives the root signal before start.
+  let rootSignal!: AbortSignal;
+  const { runtime, store, anchors, calls, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
+    t,
+    { pollIntervalMs: 1_000, command: commands },
+    undefined,
+    {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onTrustworthyInventory: inventoryListener,
+      onDeviceRemoved: (deviceId) => {
+        removals(deviceId);
+        removalStates.push({
+          deviceId,
+          deviceIds: store.deviceIds(),
+          snapshots: store.deviceIds().map((id) => store.snapshot(id)),
+          anchors: [...anchors.stored],
+          account: monitoringHealth.at(-1),
+          byDevice: monitoringByDevice.at(-1),
+          calls: [...calls],
+        });
+      },
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice(), otherGeminiDevice()]);
+  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+  const expectedSnapshot: DeviceSnapshot = {
+    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+    data: { water_level: 1, primary_pump_running: false, ac_power: true },
+    metadata: {},
+    shadowVersion: undefined,
+    deviceTimestamp: 1_700_000_000_000,
+    receivedAt: START_TIME,
+  };
+  const expectedOtherSnapshot: DeviceSnapshot = {
+    identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+    data: { water_level: 1, primary_pump_running: false, ac_power: true },
+    metadata: {},
+    shadowVersion: undefined,
+    deviceTimestamp: 1_700_000_000_000,
+    receivedAt: START_TIME + 2_000,
+  };
+  const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+  const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+  const expectedRetainedState = {
+    path: 'shadow-and-poll',
+    deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+    snapshots: [expectedSnapshot, expectedOtherSnapshot],
+    anchors: [
+      [DEVICE_ID, START_TIME],
+      [OTHER_DEVICE_ID, START_TIME],
+    ],
+    account: healthyAccount,
+    byDevice: new Map([
+      [DEVICE_ID, healthyDevice],
+      [OTHER_DEVICE_ID, healthyDevice],
+    ]),
+    removed: [],
+  };
+
+  // act
+  await runtime.start();
+  await settle();
+  await advance(1_000);
+  await advance(1_000);
+  const afterReappearance = {
+    path: runtime.monitoringPath,
+    deviceIds: store.deviceIds(),
+    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+    anchors: [...anchors.stored],
+    account: monitoringHealth.at(-1),
+    byDevice: monitoringByDevice.at(-1),
+    removed: [...removed],
+  };
+  await advance(1_000);
+  const afterFirstLaterOmission = {
+    path: runtime.monitoringPath,
+    deviceIds: store.deviceIds(),
+    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+    anchors: [...anchors.stored],
+    account: monitoringHealth.at(-1),
+    byDevice: monitoringByDevice.at(-1),
+    removed: [...removed],
+  };
+  await advance(1_000);
+  const afterSecondLaterOmission = {
+    path: runtime.monitoringPath,
+    deviceIds: store.deviceIds(),
+    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+    anchors: [...anchors.stored],
+    account: monitoringHealth.at(-1),
+    byDevice: monitoringByDevice.at(-1),
+    removed: [...removed],
+  };
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(
+    { afterReappearance, afterFirstLaterOmission },
+    {
+      afterReappearance: expectedRetainedState,
+      afterFirstLaterOmission: expectedRetainedState,
+    },
+  );
+  assert.deepStrictEqual(
+    { afterSecondLaterOmission, removalStates, calls, trustworthyInventories, commandRequests },
+    {
+      afterSecondLaterOmission: {
+        path: 'shadow-and-poll',
+        deviceIds: [OTHER_DEVICE_ID],
+        snapshots: [{ ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
+        anchors: [[OTHER_DEVICE_ID, START_TIME]],
+        account: healthyAccount,
+        byDevice: new Map([[OTHER_DEVICE_ID, healthyDevice]]),
+        removed: [DEVICE_ID],
+      },
+      removalStates: [
+        {
+          deviceId: DEVICE_ID,
+          deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+          snapshots: [expectedSnapshot, { ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
+          anchors: [
+            [DEVICE_ID, START_TIME],
+            [OTHER_DEVICE_ID, START_TIME],
+          ],
+          account: healthyAccount,
+          byDevice: new Map([
+            [DEVICE_ID, healthyDevice],
+            [OTHER_DEVICE_ID, healthyDevice],
+          ]),
+          calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+        },
+      ],
+      calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+      trustworthyInventories: [[DEVICE_ID, OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [], [OTHER_DEVICE_ID]],
+      commandRequests: [],
+    },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+  verify(inventoryListener);
+});
+
 for (const { title, terminalError } of [
   {
     title: 'rejects account credentials',

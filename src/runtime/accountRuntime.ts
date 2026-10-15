@@ -490,9 +490,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // otherwise-healthy deviceId's absence count.
     for (const deviceId of confirmedAbsent) {
       if (stillPresent.has(deviceId)) {
-        // Reappeared since the confirming poll: forget it so a future absence
-        // starts a fresh epoch.
-        reconciliation.forget(deviceId);
+        // Reappearance resets this device's absence count while keeping it
+        // eligible for confirmation by later regular inventories.
+        reconciliation.present(deviceId);
 
         continue;
       }
