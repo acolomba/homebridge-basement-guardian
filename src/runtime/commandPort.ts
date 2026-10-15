@@ -21,8 +21,19 @@ import type { DeviceCapability } from '../device/family.js';
 /** Why a command did not take effect, in the vocabulary the HomeKit tier maps to a HAP status. */
 export type CommandFailure = 'vendor-error' | 'timed-out';
 
+/** A command attempt the vendor accepted. */
+export interface AcceptedCommandOutcome {
+  accepted: true;
+}
+
+/** A command attempt that failed with a cause the HomeKit tier can report. */
+export interface RefusedCommandOutcome {
+  accepted: false;
+  failure: CommandFailure;
+}
+
 /** What one command attempt answered. */
-export type CommandOutcome = { accepted: true } | { accepted: false; failure: CommandFailure };
+export type CommandOutcome = AcceptedCommandOutcome | RefusedCommandOutcome;
 
 /** The command surface a HomeKit control reaches the vendor through. */
 export interface CommandPort {

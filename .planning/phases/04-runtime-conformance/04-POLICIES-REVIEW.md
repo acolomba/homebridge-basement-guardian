@@ -514,3 +514,77 @@ native outputs under this same evidence root. Their actual terminal exits and
 commit hash are returned to the owning executor. The parent owns the later
 combined full gate and independent full six-file correction; no full-project
 pass or partial-clean POLICIES verdict is asserted here.
+
+## Repair evidence: CR-04-POLICIES-002
+
+Applied by `policies_fix_002` (`gsd-code-fixer`), task 04-03-01, under
+`/root/phase4_policies_first/policies_fix_002`. Disposition: **applied, pending
+independent full correction**. Initial review and the 001 appendix remain intact.
+The opening set remains 001–012, open count **12**, correction counter **0**,
+and production bugs **0**. This cause does not issue a clean batch verdict.
+
+The source declares documented public `AcceptedCommandOutcome` and
+`RefusedCommandOutcome` interfaces. Existing exported `CommandOutcome` uses
+their union, so both constituents serve the existing public contract transitively.
+The exact mutable true/false discriminants, required mutable failure field,
+vendor-error/timed-out vocabulary and `CommandPort.send` signature remain intact.
+No private alias was deleted, no consumer was changed, and no forced import or
+suppression was added. `.fallowrc.json` retains private-type-leaks at error.
+The registry's public variants supplied the declaration pattern; the health
+owner supplied the compiler-contract pattern without transferring their meanings.
+
+All original command-owner positives and negatives remain. Three added compiler
+negatives reject an absent accepted field, a string accepted field and an invalid
+failure within a refusal. No runtime wrapper, helper, new package, source control
+mutation or genuine RED evidence was introduced. This is the accepted interface
+conformance warning, not an observed production defect.
+
+Initial location remains R:src/runtime/commandPort.ts:19–20. Actual pre-edit HEAD
+is `8052f8078e36e9aaa6d64a5e0c0ffaef3b676140`; the inline union was at line 25.
+Current locations at that HEAD plus the retained exact dirty diff are
+src/runtime/commandPort.ts:24–36 and test/runtime/commandPort.test.ts:29–34.
+The ordinary cause commit identifies their committed revision through terminal
+native evidence; no self-referential commit hash is claimed in this appendix.
+
+All six fresh exact-symbol impacts ran BEFORE editing, each with one
+`--type-aware-project`, `--type-aware-require complete --format json --quiet
+--explain`. Each raw envelope has status complete, identity completeness complete,
+the expected selected_project, and no omitted evidence field. CommandOutcome has
+1/3 direct consumers, CommandFailure 2/3 and CommandPort 4/9 for production/test
+projects respectively. These counts describe named consumers only.
+
+Actual `commands.send` production and inferred consumers were read separately:
+accountRuntime.ts:1088–1103 returns the existing union; controls.ts:563–566 narrows
+the inferred result before reading failure. Both public runtime factories and
+their parameters/return signatures were inspected. Platform discovery context
+passes runtime.commands through the accessory options into createControlBinder.
+The controls, platform and accessory owner stand-ins plus synthetic World retain
+structural use. No required external compatibility edit was found.
+
+All checks ran in the existing checkout at the absolute root recorded above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. The existing
+Git metadata ledger `gsd-plan-head-before-04-03` was read and matches R.
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/002/`.
+Numbered folders retain exact argv/cwd/UTC/raw exits, separate untouched
+stdout.raw/stderr.raw, and before/after HEAD/runtime/blob/SHA-256 manifests,
+exact dirty/staged diffs, owned bytes and untracked bytes. Initial interactive
+reads preceded the recorder; complete books/context were also captured in 017.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live Fallow help / 001–004 | Exit 0; installed version-matched skill read before commands |
+| Exact three-path guard / 005 | Exit 0; no configured boundary zones or rule packs |
+| Six exact pre-edit impacts / 006–011; verification / 013 | Exit 0 each; both selected compiler projects complete at pre-edit HEAD |
+| Actual consumer reads / 012, 016; source/analog/config reads / 015 | Exit 0; named, inferred, structural and public-signature evidence retained |
+| Existing baseline / 014 | Exit 0; recorded R preserved |
+| Modified pair reread / 018 | Exit 0; surrounding code and diff check intact |
+| `npm run build:test` / 019 | Exit 0; strict test project compiles with all negatives active |
+| `node --test --test-reporter=tap dist-test/test/runtime/commandPort.test.js` / 020 | Exit 0; native file success, zero authored runtime cases; no failure/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts` / 021 | Exit 0; declaration-only selector acceptance; no coverage percentage claimed |
+| Fallow audit against R, JSON/quiet/explain / 022, 023 | Sandbox attempt exit 2 creating temporary base snapshot; authorized retry exit 0, verdict pass, zero unused types/exports/private leaks |
+
+The required exact three-path clean pre-step and ordinary foreground commit
+retain their native streams and terminal commit hash under this evidence root.
+The audit notes two skipped TypeScript cache entry points; architecture zones
+and rule packs are unconfigured. Focused evidence does not supply the parent's
+combined full gate or independent full six-file correction. RUN-01 stays Pending.
