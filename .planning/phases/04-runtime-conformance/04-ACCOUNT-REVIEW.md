@@ -5078,3 +5078,120 @@ RUN-01 stays Pending. WINDOWS 46–53 stay OPEN and unwaived.
 All remaining ACCOUNT causes and full independent correction belong to the parent.
 No fixed-ID reopening, correction increment, full-review closure or phase completion
 is claimed. No security-relevant surface outside the existing threat model changes.
+
+## CR-04-ACCOUNT-005: explicit registration helper function type
+
+**Requirement:** RUN-01. **Original severity:** WARNING.
+**Rule:** skills/typescript-google-style-review/SKILL.md, Functions: a named
+function uses a declaration, or a const arrow has an explicit function type.
+**Owning task:** 04-09-01. **Disposition:** applied, pending independent correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_005_declaration.
+**Pre-edit HEAD:** 92ed72f01b62bb2eb69c5e174f94a0f4fe0b32ce.
+This repairs only original 005. All original 29 IDs, 18 BLOCKER/11 WARNING,
+and correction counter 0 remain. This is not a clean full ACCOUNT review.
+
+### Minimum declaration conformance and caller preservation
+
+At the current source location, src/runtime/accountRuntime.ts:1294, the helper
+has parameter and return annotations but no explicit function type on its binding.
+The one-line repair puts the same callable type on the const binding:
+`(secret: string, role?: SecretRole) => void`.
+The arrow parameters receive those same types from the binding.
+The const binding, helper name, optional role, void result and complete body stay
+the same. Its closure still calls deps.log.registerSecret(secret, role).
+No symbol is renamed, deleted, exported, reassigned or made public.
+No public shape, visibility, mutability, alias or consumer signature changes.
+
+The complete source, owner, existing report and required context bytes were read
+and retained before editing in /private/tmp/guardian-04-account-005/.
+whole-input-read-manifest.json records their byte counts, line counts and hashes;
+before-input-manifest.json records all tracked and nonignored untracked inputs.
+The complete five rulebooks and configured fixer skills were loaded.
+Manual inspection covered the complete source and the relevant complete owner
+composition/registration cases and actual authentication/logger implementations.
+This scoped repair supplies no independent full-owner correction judgment.
+
+The helper is supplied unchanged to createAuthClient and createAccountRuntime.
+The auth client's idToken operation calls it with the bearer token and no role.
+refreshCredentials calls the runtime port with the access key, secret access key
+and session token, in that order, before cache replacement or first shadow use.
+The unchanged delegate retains method-call receiver binding and both arguments.
+Existing complete composition cases cover bearer/AWS registration and its order.
+
+Fresh exact private-symbol queries were run separately for tsconfig.json and
+tsconfig.test.json before editing, with require-complete, JSON and explain flags.
+Both exit 2: export or class method registerSecret not found.
+These remain unsupported results, not complete consumer traces or deletion proof.
+No exception or public-neighbor trace is used. No contract change is attempted.
+The installed TypeScript checker independently compares the before/after helper
+types in both projects: both retain
+`(secret: string, role?: SecretRole | undefined) => void`, const binding and body.
+That comparison does not relabel either unsupported Fallow query as complete.
+
+The full source differs by exactly the one intended type-annotation line.
+Its TypeScript-emitted JavaScript is byte-identical before and after the repair.
+All 371108 owner bytes, including every one of the 149 authored test calls,
+remain exact. Generated rows still execute as 166 native tests.
+Both complete headers, imports, test titles, assertions and helpers stay exact.
+Source blob changes from c0ee18053e9abb21a98cf228bee36e8b5fd9309c to
+c87b9330ad2589e7941c11aba90f2079c67dbc30.
+Owner blob remains cc26ce420e8013a2d4beb645dfff0928eae1c639.
+All 344691 existing report-prefix bytes were checked exact before this append.
+
+### Verification location and native evidence
+
+All checks run serially in the existing linked features/code-review-sweep
+checkout, with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No isolated fixer worktree is created. The persisted 04/04-09 sentinel reads none.
+The existing Git-dir gsd-plan-head-before-04-09 directly reads
+8a700ac4b3594bf0c16af0a5e3ce35223ef3f574 and remains unchanged.
+The parent's initial-ledger-checkpoint.json is preserved byte-for-byte.
+
+Each native record in /private/tmp/guardian-04-account-005/ retains exact argv,
+cwd, actual UTC start/end, raw child exit, before/after HEAD, Node/npm versions,
+source/owner/report blobs and SHA-256 values, and complete separate stdout/stderr.
+
+| Native record | Actual result |
+| --- | --- |
+| preedit-guard | Installed Fallow guard on both exact owned paths, exit 0; no configured zones or rule packs |
+| impact-production, impact-test | Exact private target, separate compiler projects, exit 2 each; unsupported, retained without a pass claim |
+| build | npm run build:test, exit 0, 18:49:24.764–18:49:28.011 UTC |
+| owner | Complete compiled owner, TAP, exit 0; 166 pass, zero fail/cancel/skip/todo |
+| direct | npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts, fresh build, exit 0 |
+| native-coverage | Exact compiled source include and native LCOV, exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; all 166 cases pass |
+| lint | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| audit | Fallow audit --base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574 --format json --quiet --explain, exit 0, verdict pass; zero introduced issues |
+| account-evidence, platform-evidence | Current installed on-disk RED checker, exit 0 and RED_EVIDENCE_OK for both |
+| preservation | Exact one-line type-only diff, identical emitted JavaScript, both unchanged checker signatures, whole-owner preservation and SAME installed classifier over all 14 ACCOUNT plus 2 PLATFORM records; exit 0 |
+
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+PLATFORM evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b.
+Every archived record retains its complete native output and original source
+commit/blob identity. The SAME installed classifyRedEvidence accepts each as
+RED_EVIDENCE_OK. Preliminary timing/setup attempts retain their historical limits.
+This declaration cause adds no genuine production defect, regression or control.
+The exact whole owner preserves 024, every literal 025 deadline and stronger
+013 verification, 023 rows, 021 presence, 022 membership, 018 canonical values,
+019 checkpoints, 020 anchors and 026 active regression without assertion changes.
+Canonical reported-only authority, clocks, watermarks, identity, privacy,
+root lifecycle and one potentially delivered command attempt retain identical
+executable JavaScript. Selected LCOV does not refresh merged all-pair LCOV.
+No fresh full npm run check or full-gate reuse is claimed; the parent owns it.
+
+### Atomic closeout and remaining work
+
+Only src/runtime/accountRuntime.ts and this report append enter the cause commit,
+titled refactor: type the account secret registration helper.
+After the append, the recorded-base audit repeats and the exact required
+SKIP=npm-check pre-commit run --files invocation covers these two final paths.
+A clean terminal pre-step must precede staging and plain foreground git commit
+with all ordinary hooks. final-audit, pre-step, commit streams and terminal
+manifest/Git records retain the actual results and resulting commit hash.
+Any formatter change requires another clean pre-step before staging.
+No wrapper commit, hook bypass, amend, manual stash, rebase or history rewrite.
+
+The report prefix and every input outside the two owned paths remain exact.
+RUN-01 stays Pending. WINDOWS 46–53 stay OPEN and unwaived.
+Remaining ACCOUNT causes and full independent correction belong to the parent;
+no correction increment, reopening, closure or phase completion is claimed.
+No security-relevant surface outside the existing threat model changes.

@@ -1291,7 +1291,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
   // The auth client registers one value that must be kept for the life of the
   // process, so it calls this with no role and keeps its own single-argument
   // signature.
-  const registerSecret = (secret: string, role?: SecretRole): void => {
+  const registerSecret: (secret: string, role?: SecretRole) => void = (secret, role) => {
     deps.log.registerSecret(secret, role);
   };
 
