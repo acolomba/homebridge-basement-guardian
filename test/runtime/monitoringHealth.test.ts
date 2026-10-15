@@ -503,8 +503,7 @@ test('holds a pump silent across a restart, when the stored anchor is older than
 
 // An install carrying no anchor invents nothing: the absence is not read as
 // a recent arrival, and it is not read as silence either. The device is judged
-// from its admission, on the forward-only term alone, exactly as it was before
-// any anchor existed.
+// from its admission, on the forward-only term alone.
 test('rests on the forward-only term alone when the store holds no anchor, rather than reading the absence as a recent arrival', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();

@@ -1434,3 +1434,68 @@ skip/todo. Direct ran 03:43:37.444031Z–03:43:40.875445Z and enforced **100%
 lines/functions/branches**. All checks ran in the main checkout on the recorded
 Node/npm. This is focused evidence, not a combined-wave gate. All original
 15 accepted IDs stay formally open, independently fixed 0, counter 0.
+
+## 013 commit and 014 / monitoring 015 present behavior documentation
+
+013 committed normally as `391cafeaf7411e50f65cf5ac83762c9fce005cec`, exactly
+owner/report. Recorded-base audit, exact clean pre-step before staging and
+ordinary pre-commit npm-check all passed.
+
+014 and monitoring 015 share the minimum present-behavior documentation cause
+across source/owner/report, the exact touched-file rollback inventory. The
+three-path guard returned 0 before edits. Current comments describe account
+polling facts, per-controller silence, the maximum wall/elapsed duration,
+omitted absent-anchor wall term, admission seeding and restored-anchor retention.
+The absent-anchor owner comment describes the current forward-only observation.
+Both public method descriptions begin with “Returns”. No implementation history
+or new deadline, recovery rule, watermark policy, migration or device meaning
+is introduced. Full headers and modified sections were inspected separately.
+
+All `014-015-*` ordinary checks returned 0: strict typecheck, complete-pair
+ESLint/Prettier, fresh build, whole native owner and isolated direct selector.
+The owner ran 2026-10-15T03:44:54.132888Z–03:44:54.373697Z: **32 pass**, zero
+fail/cancel/skip/todo. Direct ran 03:44:54.788809Z–03:44:58.086726Z, enforcing
+**100% lines/functions/branches** with no declaration exception. These checks
+ran in the main checkout, Node **v26.11.1**, npm **11.20.0**.
+
+`014-015-identity` returned 0 / `MONITORING_IDENTITY_OK`. A compiler-printer
+comparison with comments removed establishes identical production statements
+AND types against entry revision `86ed892`. Exact parsed declaration text also
+matches for RecordingAnchors (including stored), recordingAnchors,
+healthWithAMessageAtStart and healthWithTwoAdmittedDevices: names, signatures,
+and full bodies remain unchanged. Both complete headers match the approved
+section form. The original report is preserved as an exact byte prefix, arrival
+RED JSON is unchanged, all other tracked inputs match entry revision, and no
+untracked executable exists. Final source blob:
+`2786f5ec0d32e22bfa1301dc41aa23acd6265c53`; owner blob:
+`266f712c2a622070087ec89a29b3afcd19a1f97b`.
+
+### Ordinary monitoring pass inventory and limits
+
+| Accepted cause | Applied repair / actual normal commit |
+| --- | --- |
+| 009 headers | `6d4b84ab73fb65c56528681e2b8dbf55a382b598` |
+| 010 original failed-poll deadline | `a4b018fd2221a618a1256ed47a78f83d43f2006a` |
+| 011 whole public observations | `8bb98803bc01cf70214da6012416ad0feed81774` |
+| 013 threshold phases | `391cafeaf7411e50f65cf5ac83762c9fce005cec` |
+| 014 and monitoring 015 documentation | Applied; normal three-path commit follows these checks |
+
+Every cause's native directory records typecheck/lint/format/build/owner/direct,
+recorded-base audit, clean exact-file pre-step, asserted stage and ordinary
+foreground commit. Exact root, nonprotected features branch and original plan
+baseline are asserted before Git operations. No formatter changed a source or
+owner during these pre-steps. Native command failures remain failures; 009's
+retained sandbox audit retry and the intended 010 maintenance failure are
+explicitly distinguished above. No mutation enters Git.
+
+Original observations and immutable arrival RED history remain intact. Existing
+arrival repairs plus this ordinary monitoring pass cover **14 applied IDs**
+pending independent review; 012 remains for the declared consumed-memory
+contract task. All original **15** remain formally open, independently fixed
+**0**, correction counter **0**. No independent correction ran, no D-03 stop
+was triggered or reset, and no new cause, RED file or Seeds helper was invented.
+The future full review must include both complete original pairs, every actual
+contract addition, and optional trusted supplier threat **T-04-21**. The current
+clock/anchor, account/device and narrow-trust behavior remains unchanged under
+T-04-11/12. Parent-owned full wave-six gate, shared records and RUN-01 remain
+pending. No live/private/vendor/hardware/package/release action is claimed.
