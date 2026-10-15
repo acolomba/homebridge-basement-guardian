@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 12
+open_count: 13
 waived_count: 19
 fixed_count: 21
-total_count: 52
-last_updated: 2026-10-15T18:09:14.878Z
+total_count: 53
+last_updated: 2026-10-15T18:16:50.338Z
 ---
 
 # Broken Windows Ledger
@@ -67,6 +67,7 @@ last_updated: 2026-10-15T18:09:14.878Z
 | 50 | 4 | deviation | .planning/phases/04-runtime-conformance/04-07-SUMMARY.md |  | [code-review-sweep] Required gitdir gsd-plan-head-before-04-07 ledger is absent after plan execution. No contemporaneous pre-first-commit ledger can be proved; nothing was reconstructed. Summary uses documented e6f49a5 baseline and explicit actual 12 implementation commits separately from the 19-commit interposed interval. Native /private/tmp/guardian-04-07-closeout/measurement.json and summary disclose this limit. Actual Git and RED ancestry remain independently checked; leave missing process evidence open and unwaived. | open |  | 2026-10-15T14:39:42.174Z |  |
 | 51 | 4 | deviation | test/runtime/accountRuntime.test.ts |  | [code-review-sweep] ACCOUNT-022 preparation did not separately capture the initial formatter and lint-fixer input bytes. Exact edits and output patches remain, and both genuine native RED runs used identical fully captured final inputs before evidence commit 5987504. Subsequent passing checks do not reconstruct missing preparation bytes. Report and 04-12 summary disclose the gap; leave open and unwaived. | open |  | 2026-10-15T18:09:14.690Z |  |
 | 52 | 4 | deviation | .planning/phases/04-runtime-conformance/04-12-SUMMARY.md |  | [code-review-sweep] The 04-12 summary exact-path Fallow guard preceded its first write, but explicit canonical-root containment was captured only during self-check after creation. The absolute path was correct; the later passing containment check supplies no historical pre-write proof. Summary 9825036 and native /private/tmp/guardian-04-12-closeout/ disclose this process gap. Leave open and unwaived. | open |  | 2026-10-15T18:09:14.878Z |  |
+| 53 | 4 | deviation | .planning/state.json |  | [code-review-sweep] Parent state.advance-plan at 2026-10-15T18:15:57Z updated its generated state.json alongside STATE.md. The pre-command guard and first metadata commit/prestep listed STATE.md, ROADMAP and FINDINGS but omitted the generated JSON path. The JSON remained unstaged; later exact guard/checks/normal commit cannot supply pre-mutation proof. Record the omission openly, retain generated state, rerun full gate for JSON inputs, and leave this process gap open and unwaived. | open |  | 2026-10-15T18:16:50.338Z |  |
 
 ````json
 [
@@ -698,6 +699,19 @@ last_updated: 2026-10-15T18:09:14.878Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-15T18:09:14.878Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 53,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/state.json",
+    "line": null,
+    "description": "[code-review-sweep] Parent state.advance-plan at 2026-10-15T18:15:57Z updated its generated state.json alongside STATE.md. The pre-command guard and first metadata commit/prestep listed STATE.md, ROADMAP and FINDINGS but omitted the generated JSON path. The JSON remained unstaged; later exact guard/checks/normal commit cannot supply pre-mutation proof. Record the omission openly, retain generated state, rerun full gate for JSON inputs, and leave this process gap open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-15T18:16:50.338Z",
     "resolved_at": null,
     "milestone": null
   }
