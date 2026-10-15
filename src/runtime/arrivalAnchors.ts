@@ -80,10 +80,10 @@ function anchorPath(options: ArrivalAnchorsOptions): string {
 
 // The anchor file is untrusted input like any other stored JSON, so it is
 // narrowed by a hand-written predicate rather than assumed. Each entry is
-// checked with `typeof` and never for truthiness: a zero anchor is a legal
-// value, and `JSON.stringify` turns a non-finite number into `null`.
+// checked for a finite number, never for truthiness: a zero anchor is legal,
+// and an overflow JSON number can parse as infinity.
 function isAnchorFile(value: unknown): value is Record<string, number> {
-  return isRecord(value) && Object.values(value).every((anchor) => typeof anchor === 'number');
+  return isRecord(value) && Object.values(value).every((anchor) => typeof anchor === 'number' && Number.isFinite(anchor));
 }
 
 async function parseAnchorFile(path: string): Promise<unknown> {

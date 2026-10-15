@@ -680,3 +680,81 @@ for both attempts are retained at
 `/private/tmp/guardian-04-arrival-handoff/audit.json` and
 `/private/tmp/guardian-04-arrival-handoff/audit-authorized.json`.
 The failed attempt remains a disclosed process limitation, not a pass.
+
+## CR-04-TRUST-002: Minimum GREEN repair, pending independent correction
+
+The fixer `gsd-code-fixer`, identity
+`/root/phase4_trust_first/arrival_green`, read complete AGENTS, all five
+TypeScript/verification books, 04-05, CONTEXT, REVIEW-PROTOCOL, this complete
+report, the complete arrival source/owner and the actual validator callers.
+The parent retained the exclusive serial foreground lease. This repair ran in
+the existing `features/code-review-sweep` checkout with isolation `none`.
+No additional worktree was created.
+
+Before the production edit, independent native Git checks established:
+
+- RED source commit `23a2511ac6deb26869db8d3c44916623a27ec997` is an ancestor
+  of actual evidence commit `4544c71c75e441751a143160b50b1dc8ebdc62b1`.
+- That evidence commit changes exactly this report and
+  `04-ARRIVAL-ANCHORS-RED-EVIDENCE.json`. Production and the committed owner
+  are absent from its changed paths. The original production blob
+  `0b04d48709406f65da2457524e6f5226ed12cc4d` matches the RED source commit,
+  evidence commit and working production before GREEN.
+- The complete active owner diff equals the current saved `regressionPatch`.
+  The owner blob is `b474f4aba3ed887057465918187e158f8e766eea`.
+- The installed CLI again accepts the current on-disk record with raw exit 0,
+  `RED_EVIDENCE_OK`, `passed: true`, `block: false`.
+  The same installed `classifyRedEvidence` accepts both named targets in the
+  current record and its single recursive `priorEvidence[0]` record.
+  Each native TAP has nine active tests, seven passes and two intended
+  `deepStrictEqual` failures with `ERR_ASSERTION`. The positive and negative
+  failures expose Infinity/-Infinity plus the finite neighbor. The archived
+  record has no further prior records. All retained history remains unchanged.
+
+The exact-path Fallow guard returned 0 before editing, with no configured
+boundary restrictions. The only production change requires
+`typeof anchor === 'number' && Number.isFinite(anchor)` in `isAnchorFile`.
+Its adjacent comment describes finite-number validation and legal zero.
+The fixer re-read the affected section and inspected the complete source diff.
+Filename, map/key format, wall milliseconds, whole-file rejection, diagnostic
+policy, write/rename ownership, cleanup and file mode are preserved.
+There is no header repair, other narrative repair, new seam, helper or package.
+
+Native GREEN evidence is retained under
+`/private/tmp/guardian-04-arrival-green-native/`. Each named JSON records exact
+argv/cwd, UTC start/end, raw child exit/signal, Node/npm, HEAD, source/owner
+blobs, full before/after tracked and staged diffs and all untracked bytes.
+Separate `.stdout` and `.stderr` files retain untouched command streams.
+The recorder and provenance program are retained in `/private/tmp/`.
+All commands ran from the repository root in the existing checkout, on
+Node **v26.11.1**, npm **11.20.0**, HEAD
+`4544c71c75e441751a143160b50b1dc8ebdc62b1`.
+
+| Native record | Exact command / scope | UTC start → end (2026-10-15) | Raw exit / outcome |
+| --- | --- | --- | --- |
+| typecheck | `npm run typecheck` | 02:41:07.357 → 02:41:10.472 | 0; both strict compiler projects |
+| lint | `node_modules/.bin/eslint src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts --max-warnings=0` | 02:41:11.326 → 02:41:15.502 | 0; focused pair |
+| build | `npm run build:test` | 02:41:15.958 → 02:41:18.682 | 0; fresh compiled owner |
+| owner-green | `node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js` | 02:41:22.060 → 02:41:22.309 | 0; 9 pass, 0 fail/cancel/skip/todo |
+| direct-green | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | 02:41:26.092 → 02:41:29.589 | 0; isolated executable pair, 100% lines/functions/branches |
+| format | `node_modules/.bin/prettier --check src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | 02:41:34.032 → 02:41:34.257 | 0; no formatter changes |
+
+The direct selector rebuilt before its isolated run and enforced complete
+matching LCOV; it did not use declaration acceptance or coverage exceptions.
+Its temporary LCOV is deleted by the selector, so no raw denominators are
+invented here. These focused checks do not refresh merged all-pair coverage or
+prove the required later combined-wave/phase gate.
+
+The GREEN source blob is `1e5db2f2a2901639a63075cd73848936974e2df5`.
+The active owner remains `b474f4aba3ed887057465918187e158f8e766eea`:
+there are **no formatter/lint or semantic differences** from the current saved
+regression patch. The earlier formatter-only change remains disclosed in the
+unchanged archived RED history above. Both intended regressions remain active.
+
+**Disposition:** 002 repair applied, pending the parent's normal commit and
+independent full-batch correction. No fix commit exists at this handoff.
+No file was staged or committed by this fixer; no source mutation control ran.
+All original **15** accepted TRUST IDs remain open, with **0** independently
+fixed and correction counter **0**. The full correction still belongs after
+the complete repair pass over all four originals and actual additions in
+04-06. Other accepted causes, shared records and RUN-01 remain unchanged.

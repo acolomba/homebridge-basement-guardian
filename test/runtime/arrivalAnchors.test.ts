@@ -96,6 +96,24 @@ test('D-07 reads back every anchor it wrote, including one whose value is zero',
   );
 });
 
+for (const { timestamp, text } of [
+  { timestamp: '1e309', text: '{"placeholder-device":1e309,"placeholder-other-device":1700000000000}' },
+  { timestamp: '-1e309', text: '{"placeholder-device":-1e309,"placeholder-other-device":1700000000000}' },
+]) {
+  test(`rejects the whole stored anchor file when a timestamp is ${timestamp}`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    await writeAnchorText(storagePath, text);
+    const anchors = storeOver(storagePath, []);
+
+    // act
+    await anchors.restore();
+
+    // assert
+    assert.deepStrictEqual({ anchor: anchors.get(DEVICE_ID), otherAnchor: anchors.get(OTHER_DEVICE_ID) }, { anchor: undefined, otherAnchor: undefined });
+  });
+}
+
 for (const { shape, text } of [
   { shape: 'is not JSON at all', text: 'not json' },
   { shape: 'is JSON but not an object', text: '[1, 2]' },
