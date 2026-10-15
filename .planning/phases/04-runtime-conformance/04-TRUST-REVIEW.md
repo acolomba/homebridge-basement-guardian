@@ -902,3 +902,34 @@ The exact guard passed before editing. Checks/commit use `conformance-008-*`
 records in the same native directory with the complete provenance contract.
 008 is applied pending normal commit and full independent correction;
 all original 15 IDs stay open with correction counter 0.
+
+## 008 normal commit and 006 current restart narrative
+
+008 committed normally as `05e495f`, exactly owner/report. Its typecheck,
+focused ESLint, fresh build, 9-test native owner, isolated 100% direct pair,
+recorded-base audit, exact clean pre-step and ordinary hook all returned 0.
+
+006 changes only source comments and this report. The source overview,
+get/record documentation and factory map comment now distinguish restore,
+admission-only absent-anchor seeding and actual shadow arrivals. The same get
+description begins with "Returns", covering the arrival part of 015 through
+the minimum overlapping line. Monitoring's part of 015 remains pending.
+No signature, value, algorithm, migration or trust policy changes.
+
+Before editing, the fixer re-read actual accountRuntime restoration before
+launch, discovery admission and routed-arrival bodies, plus monitoringHealth's
+admitDevice and recordShadowMessage bodies. Admission retains any restored
+wall value and seeds only undefined; actual messages record the current wall
+clock. No fresh immediate-silence rule follows from these descriptions.
+
+Native `conformance-006-history`, `-blame`, `-history-parent` and
+`-history-package` records all returned 0 and preserve exact Git evidence.
+Blame attributes the old release prose to
+`b19ea5890a3fe6b2168a5965271d564cfa0fd8d9`, whose parent has no arrival source.
+That initial release already includes the store and package version 0.1.0;
+the current package is 0.1.1. This confirms S-04-07's stale narrative without
+inventing a migration. The exact guard passed before the comment-only change.
+Native checks use `conformance-006-*`, with all actual revisions, blobs,
+intervals, raw streams and exact input diffs retained in the main checkout.
+006 and the arrival part of 015 are applied pending normal commit and full
+independent correction. All original 15 IDs stay open, counter 0.
