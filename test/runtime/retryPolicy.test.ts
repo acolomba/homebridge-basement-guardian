@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests retry delays, pending work, reset and shutdown cancellation.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';

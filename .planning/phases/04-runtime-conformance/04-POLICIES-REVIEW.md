@@ -863,3 +863,66 @@ path/hash/clean-state checks retain their actual native results under this
 evidence root. Isolated checks do not refresh merged all-pair LCOV. The parent
 owns the combined full gate and independent full six-file correction. No
 full-project pass or partial-clean POLICIES verdict is issued.
+
+## Repair evidence: CR-04-POLICIES-007
+
+Applied by `policies_fix_007` (`gsd-code-fixer`), task 04-04-01, under
+`/root/phase4_policies_finish/policies_fix_007`. Disposition: **applied, pending
+independent full correction**. The initial report and all previous repair
+appendices remain verbatim. Repairs 001–007 are applied pending that review;
+retry causes 008–012 retain their separate scope. The opening set remains
+001–012, open count **12** (2 BLOCKER, 10 WARNING), correction counter **0**,
+and production bugs **0**. No ID is independently closed. RUN-01 stays Pending.
+
+Both retry files now have first-line MIT SPDX, a separate
+`Copyright (c) 2026 Alessandro Colomba` JSDoc, a separate concise purpose
+`@fileoverview` JSDoc, and one blank line between sections. The existing timer
+import explanation remains beside its module-object default import, after the
+blank line following the overview. The owner has one blank line before imports.
+Exact byte comparison confirms the source suffix starting at the timer note
+and the entire original owner starting at its first import are unchanged.
+No function, name, signature, assertion, helper, package or consumer changed.
+No production bug, RED JSON or assertion control applies to this header cause.
+
+Initial locations remain R:src/runtime/retryPolicy.ts:1–7 and
+R:test/runtime/retryPolicy.test.ts:1–8. Actual pre-edit HEAD is
+`ca0ebbc3f020bd6ad0bbcaf3be5dcd1ee0341950`. Current header locations at that
+HEAD plus the exact retained dirty diff are src/runtime/retryPolicy.ts:1–16
+and test/runtime/retryPolicy.test.ts:1–18. The terminal ordinary commit supplies
+the committed revision without a self-referential hash in this appendix.
+
+All checks ran in the existing checkout at the absolute repository root above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. The directly
+read persisted sentinel records phase 04, plan 04-04, isolation `none`.
+The Git metadata ledger `gsd-plan-head-before-04-04` was persisted before the
+first commit and records the actual pre-edit HEAD above. The recorded batch
+audit base remains R, `e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+Complete AGENTS, all five books, full source, owner, existing report, owning
+plan, CONTEXT, REVIEW-PROTOCOL and PATTERNS were read before editing. Actual
+retry composition and shadow schedule callers were inspected. No contract or
+private alias changed, so exact-symbol impacts were not required. The complete
+installed Fallow skill and live help preceded the exact three-path guard.
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/007/`.
+Each numbered command folder retains exact argv/cwd/UTC start/end/raw exit
+in `command.json`, separate untouched `stdout.raw` and `stderr.raw`, and
+before/after manifests with HEAD, runtime versions, Git blobs/SHA-256,
+exact dirty/staged diffs, owned bytes and untracked bytes.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live installed Fallow help / 001–003; exact three-path guard / 004 | Exit 0 each; architecture zones and rule packs are unconfigured |
+| Root/branch/HEAD/sentinel assertions and baseline persistence / 005 | Exit 0; authorized external Git metadata write, clean assigned checkout |
+| Header diff reread / 006; exact nonheader/history comparison / 013 | Exit 0; both approved headers present and all existing nonheader/history bytes preserved |
+| `npm run build:test` / 007 | Exit 0; fresh strict test build |
+| `node --test --test-reporter=tap dist-test/test/runtime/retryPolicy.test.js` / 008 | Exit 0; 15 tests, zero fail/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` / 009 | Exit 0; isolated direct requirements pass |
+| Isolated native coverage / 010; `retryPolicy.lcov` | Exit 0; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15, all 100% |
+| Recorded-base Fallow audit, JSON/quiet/explain / 011, 012 | Sandbox attempt exit 2 creating baseline snapshot; authorized retry exit 0, verdict pass, zero dead-code/complexity/duplication findings |
+
+The audit reports two skipped TypeScript cache entry points. Selected checks
+do not refresh merged all-pair LCOV. The exact three-path clean pre-step,
+ordinary foreground commit, raw hook output and terminal path/hash/clean-state
+checks remain under this evidence root. The parent owns the combined full gate
+and independent full six-file correction. No full-project pass or partial-clean
+POLICIES verdict is issued.
