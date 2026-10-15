@@ -2081,3 +2081,114 @@ Only original 002 is implemented here. Original 003, 012, 013, 027 and 028
 remain for 04-07, with later owning causes and full ACCOUNT correction still pending.
 RUN-01 remains Pending. D-03 stays in force.
 WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-003: current lifecycle and factory boundaries
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_003_lifecycle_comments`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every earlier appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This repair supplies no correction round or partial clean verdict.
+
+The `createAccountRuntime` JSDoc at `src/runtime/accountRuntime.ts:327`
+describes the root signal's shutdown cancellation of runtime waits and requests.
+It separately describes explicit closure of the recorded shadow client.
+It also identifies the post-start ownership check that closes a client whose
+start resolves after shutdown or terminal authentication halt.
+The factory remains inert until start; no universal transport teardown is claimed.
+The harness comment at `test/runtime/accountRuntime.test.ts:557` identifies
+the scripted throw as the deliberate runtime factory-error path.
+It states that the real factory is inert, start opens the transport, and
+broker failures arrive through connection callbacks.
+The scripted error text, factory body and every other executable statement stay unchanged.
+
+These statements follow the actual current source boundaries:
+runtime `waitFor` passes `root.signal` to its bounded waits;
+inventory, credential and command requests receive the same root signal;
+`stop` aborts the root and awaits `closeQuietly(shadow)`;
+`attemptShadow` awaits start, checks `hasFinished`, and closes an unrecorded late client.
+Terminal authentication halt retains its distinct explicit-close behavior.
+In `src/cloud/shadow.ts`, construction initializes closures and returns methods.
+Its `start` calls `openConnection`, which constructs the transport and attaches
+connect/error/close callbacks. Those callbacks classify broker/transport failures.
+Its `close` sets closing before memoizing the transport ending.
+The applicable rules are style Comments and documentation, comments policy
+factual what/why, and D-05 bounded lifecycle preservation.
+No API, signature, alias, field, visibility, private contract or policy changes.
+
+Pre-edit HEAD was `3d193f1333c6039e68cd539df133ac6e88da2507` on
+`features/code-review-sweep`, with clean status and empty index.
+Before editing, the fixer read complete AGENTS and all five complete project books,
+the amended 04-07 plan, 04-11-SUMMARY, newest protocol and this full report.
+No 04-07-SUMMARY exists yet; the amended plan supplies the current owning scope.
+The complete 1326-line account source, 4000-line owner and real shadow source were read.
+Actual composition/start/stop callers in platform and both Worlds were inspected.
+The exact three-path Fallow guard ran before any repository edit.
+Contract-change impact queries are not triggered by these two comment edits.
+Original 004's historical narration and all other causes remain outside this repair.
+
+### Verification location and native evidence
+
+All checks ran in the existing linked feature checkout with
+`workflow.use_worktrees=false`. No checkout, branch or recovery sentinel was created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3 and Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-003/`.
+Every check retains exact executable/argv, cwd, pre-command HEAD, versions,
+input blobs, UTC start/end, raw child exit and complete separate stdout/stderr.
+`before.json` saves 694 tracked input identities, empty diff/index/untracked set,
+and complete source/owner/report before bytes for exact comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard.json | Exact three authorized paths before edits; exit 0, no configured boundary zones or rule packs. |
+| build.json | Fresh `npm run build:test`; exit 0, 13:24:29.026–13:24:31.927 UTC. |
+| owner.json | Full compiled owner with native TAP; exit 0, 151 pass, zero fail/cancel/skip/todo. |
+| direct.json | Exact isolated source/owner selector with fresh build; exit 0. |
+| native-coverage.json | Complete owner, exact-source include, all three 100% thresholds; exit 0, 995/995 native compiled lines, 57/57 functions, 181/181 branches. Full argv and LCOV retained. |
+| lint.json | Exact two TypeScript files, no cache, max warnings 0; exit 0. |
+| statements-and-history-2.json | TypeScript parser/printer comparison with comments removed and emitted JavaScript byte comparison; exit 0. SAME installed recursive classifier accepts all six RED records. |
+| evidence-gate.json | Installed CLI on unchanged on-disk genuine RED JSON; exit 0, RED_EVIDENCE_OK. |
+| audit.json | Recorded initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, verdict pass. |
+| pre-step-1.json | Required exact three-file SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 13:26:33.654–13:26:36.239 UTC. Repeated after this report update before staging. |
+
+Source blob changes only its JSDoc, from
+`09b5896c610d0a7d6e5b5937ef867c04498fc6a5` to
+`641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+Owner blob changes only its factory comment, from
+`b89564d8e7c5fc7e569eec160360617023c32d91` to
+`19e804d678d2058bd1a70aab445e84d88cc366e7`.
+`provenance.json` retains the complete dirty diff and verifies the prior report
+prefix and every unrelated tracked input against the initial manifest.
+
+The first statements-and-history attempt exits 1 and remains retained in full.
+Its standalone scanner did not re-scan template contexts, so it treated JSDoc
+text containing backticks as tokens. No repository input changed to correct it.
+The corrected comparison uses the installed TypeScript parser and printer,
+then independently compares comment-free emitted JavaScript byte for byte.
+Both source and owner pass those comparisons; every title, assertion,
+adapter contract, pure assertion and negative control remains unchanged.
+Original 024/025 regressions remain intact. The entire six-record RED JSON
+retains blob `849b2e725bc19a4742e962910cce05f804a6a4c1`.
+This documentation cause adds no bug, regression, mutation control, helper,
+configuration, package or shared record. Selected direct coverage does not
+refresh merged all-pair source-map LCOV. The parent owns the full combined
+gate after completed 04-07; no full `npm run check` runs in this task.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and both comment edits is titled
+`fix: describe account lifecycle cancellation boundaries`.
+It contains exactly the source, mirrored owner and this report.
+Exact clean `SKIP=npm-check pre-commit run --files` precedes staging.
+Report or formatter changes require another clean pre-step before staging.
+Native pre-step, branch/HEAD/index checks, authorized linked-index staging
+and plain foreground normal commit records retain terminal results.
+The returned actual Git hash and paths establish the committed result.
+No hook bypass, amend, stash, rebase or history rewrite is authorized.
+
+Only original 003 is implemented here. Original 012, 013, 027 and 028 remain
+for 04-07, with later owning causes and full ACCOUNT correction still pending.
+Original 015 retains both implementations and the parent's passing combined gate.
+The 29 stable IDs and counter 0 remain; RUN-01 remains Pending.
+D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.

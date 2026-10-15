@@ -554,9 +554,9 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
     createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => {
       calls.push('shadow');
 
-      // The real client opens the socket while it is being built, so a broker
-      // that refuses the handshake throws out of the factory rather than
-      // rejecting later.
+      // A scripted factory failure exercises the runtime's factory-error path.
+      // The real factory is inert; start opens the transport, and broker
+      // failures arrive through connection callbacks.
       const opens = shadowOpens[Math.min(shadowAttempts, shadowOpens.length - 1)] ?? true;
       shadowAttempts += 1;
 

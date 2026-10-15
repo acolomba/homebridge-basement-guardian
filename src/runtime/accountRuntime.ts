@@ -325,10 +325,12 @@ function rotationDelayMs(expiration: string, now: number, options: AccountRuntim
 /**
  * Creates the account runtime.
  *
- * One root `AbortController` owns every wait, request, and connection, so a
- * shutdown cancels them all through one mechanism and leaves no timer holding
- * the process open (SYNC-05). Creating the runtime opens no connection, reads
- * no file, and starts no timer; only `start` does any work.
+ * One root `AbortController` signals shutdown cancellation to runtime waits
+ * and requests (SYNC-05). Shutdown also explicitly closes the recorded shadow
+ * client. If a client's start resolves after shutdown or a terminal
+ * authentication halt, the post-start ownership check closes it before
+ * recording it. Creating the runtime opens no connection, reads no file, and
+ * starts no timer; only `start` does any work.
  *
  * Both long-running activities are loops rather than self-rearming callbacks.
  * A loop keeps the next attempt scheduled no matter how the last one ended,
