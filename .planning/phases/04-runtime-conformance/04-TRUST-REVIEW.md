@@ -1,0 +1,682 @@
+---
+phase: 04-runtime-conformance
+reviewed: 2026-10-15T02:25:29Z
+depth: deep
+files_reviewed: 4
+files_reviewed_list:
+  - src/runtime/arrivalAnchors.ts
+  - test/runtime/arrivalAnchors.test.ts
+  - src/runtime/monitoringHealth.ts
+  - test/runtime/monitoringHealth.test.ts
+findings:
+  critical: 5
+  warning: 10
+  info: 0
+  total: 15
+status: issues_found
+review_round: 0
+correction_counter: 0
+source_revision: 23a2511ac6deb26869db8d3c44916623a27ec997
+first_independent_observer: /root/phase4_trust_first/trust_initial_review
+production_bugs: 1
+applied_repairs: 0
+open_findings: 15
+---
+
+# TRUST initial code review
+
+## Narrative Findings (AI reviewer)
+
+This is the complete independent ROUND 0 review, before any TRUST repair.
+The reviewer is `gsd-code-reviewer`, identity
+`/root/phase4_trust_first/trust_initial_review`. The parent retained the exclusive
+foreground lease while this review ran. No source, test, helper, Git index,
+shared ledger or requirement was changed. Only this report was created.
+
+The original four files were read in full, including every test and full header.
+The initial scope is 1,237 lines: 210 + 164 + 321 + 542. All findings below are
+open and unapplied. Current passing checks do not establish conformance.
+
+All IDs below contribute to RUN-01. Header IDs also contribute to PROC-03;
+002 contributes to BUG-01. Every finding's initial AND current revision is
+`23a2511ac6deb26869db8d3c44916623a27ec997`; its first independent observer is the
+reviewer named above. There is no evidence-only or fix commit for any ID yet.
+The source blobs below qualify every cited line and are unchanged by this review.
+
+### Critical issues
+
+#### CR-04-TRUST-002 — BLOCKER: Overflow JSON numbers are accepted as wall anchors
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:85-86`
+
+**Rule:** AGENTS safety semantics; D-05 invalid persisted input; style
+Variables, literals, and data, finite-number validation; the store's own
+whole-file rejection contract at lines 119–126.
+
+**Issue:** `JSON.parse` accepts `1e309` and produces `Infinity`. The predicate
+checks only `typeof anchor === 'number'`, so the store silently restores an
+invalid timestamp. A subsequent persist serializes that anchor as `null`.
+The next restore rejects the entire file, including valid neighboring anchors.
+The injected health projection also treats an infinite future anchor as present,
+preventing the normal absent-anchor admission seed. This is an actual input
+validation defect, independent of the assertion findings below.
+
+**Native evidence:** The fresh compiled public store restored
+`{"placeholder-device":1e309,"placeholder-other-device":1700000000000}` as
+`Infinity` and `1700000000000`, with no diagnostic. Persist wrote
+`{"placeholder-device":null,"placeholder-other-device":1700000000000}`;
+the next fresh store restored neither entry. Exact probe argv, UTC interval,
+revision, stdout, stderr and raw exit 0 are retained in `overflow.json`,
+`overflow.stdout` and `overflow.stderr` under the native directory below.
+This successful exploratory probe is NOT an intended failing owner regression
+and is NOT D-04 RED evidence.
+
+**Fix:** First add active owner cases using literal overflow JSON, including a
+finite neighbor and zero/finite acceptance controls. Observe the intended
+whole-map rejection assertion fail against this unchanged production blob.
+Commit complete planning-only D-04 evidence before GREEN. Then require
+`typeof anchor === 'number' && Number.isFinite(anchor)`. Preserve the existing
+whole-file malformed recovery, filename, numeric map format, wall units,
+write/rename ownership and safe diagnostic policy. No migration is required.
+
+**Disposition:** Confirmed production defect; open, unapplied.
+
+#### CR-04-TRUST-003 — BLOCKER: Storage tests derive the durable path from production and never pin stored bytes
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/arrivalAnchors.test.ts:59-60,79-96,128-144,155-163`
+
+**Rule:** Unit writer/reviewer Assertions: independent expected values and
+complete bytes when files are the contract; D-05 exact durable filename/format.
+
+**Issue:** Every test path is built from `ARRIVAL_ANCHOR_FILENAME`, the same
+export production uses. Changing that export to another filename leaves this
+entire owner green while installed anchors stop restoring. The success and
+forget cases only read their output through another instance of the same
+implementation. They never independently assert the actual durable file's
+complete contents. A coordinated writer/reader format drift can therefore pass.
+The compiler, lint and exercised-line coverage do not pin this durable contract.
+
+**Fix:** After public persist, read the literal
+`.basement-guardian-arrivals.json` path in the case's real temporary directory
+and compare complete bytes against independently specified JSON map bytes,
+including zero. Retain the fresh-store restore observation. Do the same after
+forget so the absence of the removed key and surviving key/value are fixed
+independently of production's reader. Use the exported filename as actual input
+or assert its actual value against the literal; do not compute the expectation
+from it. Keep all cleanup registered per case.
+
+**Disposition:** Confirmed assertion-maintenance defect; open. No production
+failure or genuine RED history is claimed. A filename-drift control is a
+separate maintenance control and must restore exact source bytes before GREEN.
+
+#### CR-04-TRUST-004 — BLOCKER: Failed-write case does not observe the memory it promises to keep serving
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/arrivalAnchors.test.ts:151-163`
+
+**Rule:** Unit writer/reviewer central discrimination question and Assertions:
+public result/state before interactions; a wrong implementation must fail the
+case named for that behavior.
+
+**Issue:** The case promises to keep serving after persist fails, but observes
+only directory entries and a log line. A catch branch that clears the in-memory
+anchors after the failed rename would still pass every assertion in this case.
+That change adds no new branch and can retain direct coverage. The module's
+important surviving public state is never read after the failure.
+
+**Fix:** Record distinguishable device anchors, force the existing rename
+failure, then assert the complete public readback of both anchors together
+with the storage observations. Retain the no-orphan observation. A restored
+negative control may clear the map in the error branch; it must fail the named
+state assertion. Do not classify that temporary control as a production bug.
+
+**Disposition:** Confirmed assertion-maintenance defect; open, unapplied.
+
+#### CR-04-TRUST-010 — BLOCKER: Failed-poll case cannot detect a restarted silence window
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/monitoringHealth.test.ts:302-312`
+
+**Rule:** Unit writer/reviewer central discrimination question and Assertions;
+D-05 REST failure supplies no shadow arrival and cannot restart its window.
+
+**Issue:** The case records a failure one millisecond before the original
+silence deadline, then immediately expects an empty list. Both correct code
+and code that resets the arrival stamps on every failed poll produce that
+answer. The assertion does not test its title, “leaves the silence window where
+it was.” A broken reset would let a failing monitoring path keep renewing trust.
+
+**Fix:** Capture the state before the failure, record the failure, advance to
+the ORIGINAL 1,796,000-ms deadline and assert the complete silent-device list
+and account verdict. Use independent literal deadlines. A separate restored
+control should reset the stamps on failure and fail the intended assertion.
+Preserve current production behavior; no genuine bug RED is warranted here.
+
+**Disposition:** Confirmed assertion-maintenance defect; open, unapplied.
+
+#### CR-04-TRUST-011 — BLOCKER: Several monitoring cases discard parts of their public answer
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/monitoringHealth.test.ts:155,171,186,205,299,541`
+
+**Rule:** Unit writer/reviewer Assertions: compare whole public values;
+membership, individual fields and key lists do not replace the promised value.
+
+**Issue:** Boundary rows observe only whether the expected ID is included.
+When `silent` is false, an erroneous list containing another device still
+passes that assertion; when true, extra IDs or duplicates are invisible.
+REST cases project away the `TransportTrust` result to one property, and the
+last case projects it to its keys, allowing the wrong value through that
+particular assertion. These cases need independent complete answers rather
+than complementary fragments distributed across other tests.
+
+**Fix:** Compare `health.silentDevices()` to `[]` or `[DEVICE_ID]` in each row.
+Compare `health.trustNow()` to the complete `{ restDegraded: ... }` object in
+REST cases and the final account-only case. Where a case promises independent
+account/device facts, observe both complete public outputs. Keep two-device
+expectations distinct and independently written. No runtime algorithm change
+is requested.
+
+**Disposition:** Confirmed assertion-maintenance defect; open, unapplied.
+
+### Warnings
+
+#### CR-04-TRUST-001 — WARNING: Arrival source and owner lack the approved header form
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:1-24`
+
+**Also:** `test/runtime/arrivalAnchors.test.ts:1` at the common review revision.
+
+**Rule:** D-01 / PROC-03; style Files and modules.
+
+**Issue:** The source has SPDX immediately followed by the overview and no
+separate copyright block. Its complete owner has none of the three sections.
+The source-only packaging gate cannot establish owner-header conformance.
+
+**Fix:** Keep MIT SPDX first, one blank line, separate
+`Copyright (c) 2026 Alessandro Colomba` JSDoc, one blank line, purpose
+`@fileoverview` JSDoc and one blank line before imports. Inspect both files.
+Keep this header-only cause separate from behavioral and narrative changes.
+
+**Disposition:** Confirmed mandatory-header defect; open, unapplied.
+
+#### CR-04-TRUST-005 — WARNING: Temporary-name randomness is a hidden dependency
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:133-134,200-201`
+
+**Rule:** Unit writer/reviewer Production design for tests: make nondeterministic
+dependencies explicit; inject the existing hidden dependency rather than add
+module replacement, a test mode or a production state reader.
+
+**Issue:** `persist()` reaches imported `randomBytes()` and process identity
+through a private helper with no injection seam. The owner cannot select an
+occupied temporary name through the public API to verify exclusive-create
+ownership. Its only write-failure case exercises rename failure instead.
+The factory's “everything ... by injection” claim is therefore incomplete.
+
+**Fix:** Expose an optional complete temporary-path supplier following the
+existing auth adapter's `createTemporaryPath` seam, while retaining the current
+real temporary-name algorithm as the default wiring. Exercise an actually
+occupied synthetic file and independently assert its complete bytes and prior
+anchor bytes survive. Do not remove randomness, change create/rename/error
+ownership or copy token permissions. Obtain exact current factory/options
+impact in both compiler projects before changing the public options contract.
+
+**Disposition:** Confirmed testability/robustness finding; open. No occupied-file
+production bug or new helper requirement is claimed.
+
+#### CR-04-TRUST-006 — WARNING: Arrival documentation records an old release and misdescribes admission seeds
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:57-68,168-169`
+
+**Rule:** Comment policy opening rule and Forbidden narration of past code;
+D-05/D-06 current restart and admission semantics. Candidate S-04-07.
+
+**Issue:** “Before this release ... no anchor” and “the only one that has ever
+existed” are historical claims in current API documentation. History places
+these exact lines in the initial-release commit, which already contains this
+same store blob; the current package is a later version. The comments also say
+an anchor is absent until restore or a device is heard, but current
+`admitDevice()` records a wall anchor when none exists, before any message.
+
+**History:** `git blame -L 56,66` attributes the lines to
+`b19ea5890a3fe6b2168a5965271d564cfa0fd8d9`, subject
+`feat: initial release of the Basement Guardian plugin (#4)`.
+That commit contains store blob `0b04d48709406f65da2457524e6f5226ed12cc4d`
+and monitoring blob `3a17ccd8e85ce9c0400e35b99bc81425bfd01029`, identical
+to this review. Its parent has no store at that path. Its package version is
+0.1.0; current package version is 0.1.1. Exact native history records are retained.
+
+**Fix:** Describe present behavior: get returns the stored wall anchor or
+undefined; discovery admission seeds only an absent anchor; restored anchors
+are retained; actual messages advance them. Preserve restore-before-launch,
+filename, payload and current admission trust. Do not infer a migration or a
+new immediate-silence rule from the archived D-08 prose.
+
+**Disposition:** S-04-07 independently accepted as a documentation defect;
+open, unapplied. Historical implementation/release claims do not authorize
+new storage policy.
+
+#### CR-04-TRUST-007 — WARNING: Arrival privacy explanation states an unqualified identifier guarantee
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:14-16,143-148`
+
+**Rule:** D-05/D-06 scoped privacy premise; canonical C-002;
+STATE Decisions, ratified deviceId treatment; truthful current documentation.
+
+**Issue:** The overview says it stores deviceIds and “no account identifier”.
+Canonical C-002 says deviceId contains the account identifier and serial.
+The permission rationale also calls deviceId non-sensitive without retaining
+STATE's explicitly unconfirmed opaque-account-key premise. Scoped permission
+to retain this identifier is not proof that it contains no account identifier.
+
+**Fix:** State the actual stored fields and the existing scoped permission,
+with its unconfirmed opaque-key premise and public-artifact sanitization limit.
+Keep current file mode and storage policy. Do not remove keys, add a migration,
+invent a new permission or claim the premise has been externally verified.
+
+**Disposition:** Confirmed narrative defect; open, unapplied. No new privacy
+vulnerability or permission change is asserted. S-04-08's account-source
+review remains with ACCOUNT; this finding is confined to the arrival source.
+
+#### CR-04-TRUST-008 — WARNING: Forget case performs restore inside its assertion phase
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/arrivalAnchors.test.ts:137-144`
+
+**Rule:** Unit writer/reviewer Case structure: arrange, act, assert in order.
+
+**Issue:** After `// assert`, the case constructs a second real store and calls
+its exported `restore()` operation. The action producing the asserted state
+is hidden inside the assertion phase.
+
+**Fix:** Move construction/restore into the act phase, then compare the
+independent whole public observations in assert. Preserve the current surviving
+neighbor and removed-device assertions.
+
+**Disposition:** Confirmed mandatory case-structure defect; open, unapplied.
+
+#### CR-04-TRUST-009 — WARNING: Monitoring source and owner lack the approved header form
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/monitoringHealth.ts:1-21`
+
+**Also:** `test/runtime/monitoringHealth.test.ts:1` at the common review revision.
+
+**Rule:** D-01 / PROC-03; style Files and modules.
+
+**Issue:** The source omits the separate copyright block and section spacing.
+Its complete owner begins with imports and has no approved header.
+
+**Fix:** Apply the exact MIT SPDX/copyright/overview form to each file, with
+the required blank lines. Keep the header repair separate from monitoring
+assertions and present-behavior documentation.
+
+**Disposition:** Confirmed mandatory-header defect; open, unapplied.
+
+#### CR-04-TRUST-012 — WARNING: The stateful arrival fake has no real-adapter contract
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/monitoringHealth.test.ts:69-91,492-504,514-522`
+
+**Rule:** Unit writer/reviewer Test doubles and Patterns, Shared adapter
+contracts: real and stateful fake participants share a discriminating contract.
+
+**Issue:** `recordingAnchors()` implements a stateful ArrivalAnchors boundary,
+including independent fake disk operations, and exposes its backing map.
+No shared real/fake contract or negative control is present. The health owner
+can therefore confirm writes only against its own local implementation while
+the real adapter's update and persistence semantics drift independently.
+Primitive values avoid an aliasing defect here; no such defect is alleged.
+
+**Fix:** Prefer eliminating the unnecessary second stateful implementation
+by constructing the real no-I/O-on-construction store with a controlled
+storage location and silent logger, and observing it through its public `get`
+operation. Health never calls persist/restore. Alternatively, introduce a
+proper declared real/fake contract in bounded authorized tasks, including a
+negative control and participant inventory; do not silently create an
+undeclared helper. Preserve the special stateless absent-anchor stub.
+Exact private/public traces precede any deletion or signature change.
+
+**Disposition:** Confirmed test-design conformance finding; open, unapplied.
+No `monitoringHealthSeeds.ts` or `arrivalAnchorsSeeds.ts` is justified by this
+finding: it is a stateful-boundary issue, not reusable seed data.
+
+#### CR-04-TRUST-013 — WARNING: Threshold test uses the restricted combined phase marker
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/test/runtime/monitoringHealth.test.ts:130-135`
+
+**Rule:** Unit writer/reviewer Case structure and writer completion checklist:
+`// act & assert` is reserved for one throwing/rejection expression.
+
+**Issue:** A normal `deepStrictEqual()` over three exported constants is marked
+`act & assert`. The mandatory convention requires separate observation and
+assertion phases for this successful value check.
+
+**Fix:** Read the actual exported threshold values in act and independently
+compare their complete object in assert, preserving the literal expected
+2 / 898000 / 2 values. The exported values are a real runtime contract; do not
+replace the test with a meaningless compiler-shape check.
+
+**Disposition:** Confirmed mandatory case-structure defect; open, unapplied.
+
+#### CR-04-TRUST-014 — WARNING: Monitoring comments narrate removed implementations
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/monitoringHealth.ts:55-61,193-208,231-235`
+
+**Also:** `test/runtime/monitoringHealth.test.ts:465-468`.
+
+**Rule:** Comment policy Forbidden narration of code that no longer exists;
+opening rule: describe current behavior and its reason, leave process history
+to Git. D-05 preserves the actual present clock/admission contract.
+
+**Issue:** The comments describe a previous flattened member, a removed
+construction seed and behavior “before any anchor existed”. The long D-08
+interpretation mixes historical design argument with the current algorithm.
+Current safety rationale does not require these removed shapes.
+
+**Fix:** State the current account/device split, continuous maximum of elapsed
+and wall durations, omitted wall term when absent, admission-only seeding of
+new devices and restored-anchor retention. Keep the rationale for avoiding a
+false normal. Do not alter the algorithm, claim a new deadline or turn the
+archived platform default into a new health admission rule.
+
+**Disposition:** Confirmed current-comment conformance defect; open, unapplied.
+
+#### CR-04-TRUST-015 — WARNING: Public method descriptions omit the required verb form
+
+**File:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/src/runtime/arrivalAnchors.ts:57-59`
+
+**Also:** `src/runtime/monitoringHealth.ts:158-164`.
+
+**Rule:** Style Comments and documentation: method descriptions begin with a
+third-person verb phrase.
+
+**Issue:** `get()` begins “When this device ...”; `silentDevices()` begins
+“Every admitted device ...”; `trustNow()` begins “The verdict ...”. These are
+public methods governed by the explicit project rule, rather than a reviewer
+preference about general prose.
+
+**Fix:** Use “Returns the stored wall anchor ...”, “Returns admitted devices
+whose live paths ...”, and “Returns the current account-wide transport
+verdict ...”, preserving the exact API and the nuance tracked in 006/014.
+
+**Disposition:** Confirmed documentation-rule defect; open, unapplied.
+
+## Complete manual review and caller analysis
+
+| Original file | Lines read | Source blob | Full header result |
+| --- | ---: | --- | --- |
+| src/runtime/arrivalAnchors.ts | 1–210 | 0b04d48709406f65da2457524e6f5226ed12cc4d | Open 001 |
+| test/runtime/arrivalAnchors.test.ts | 1–164 | 024b81b6de92e1bae41bf146160ac9d14485e73e | Open 001 |
+| src/runtime/monitoringHealth.ts | 1–321 | 3a17ccd8e85ce9c0400e35b99bc81425bfd01029 | Open 009 |
+| test/runtime/monitoringHealth.test.ts | 1–542 | a663e8b4d3f419a474f3c4e696229b3960a03c8a | Open 009 |
+
+Repository root for every relative path above is
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+Both sources are byte-identical to the initial-release revision shown in 006.
+No helper or external adaptation currently joins the inventory.
+
+The review loaded complete AGENTS, all five required rulebooks, bootstrap and
+configured reviewer-skill references, 04-05/06 plans, CONTEXT, REVIEW-PROTOCOL,
+RESEARCH, PATTERNS, FINDINGS, STATE, REQUIREMENTS and canonical intel decisions.
+It also compared archived 05.1 clock/restart/per-device decisions with actual
+source and Git history. Research candidates were not accepted on authority.
+The auth source and complete auth owner were read as bounded analog context;
+particularly finite-cache validation, full temporary-path injection, real
+per-case directories and independent file bytes. Shadow projection/timer
+excerpts and the two current clock ports supplied additional context.
+These contextual reads do not certify those other subsystems anew.
+
+The manual pass covered every non-toolchain section of the style, comments,
+unit writer and unit reviewer books: module/import form, exports/public
+signatures, literals, actual mutations, function/constructor boundaries,
+control flow, errors, types, naming, documentation, case structure, doubles,
+independent results, public state, timing, filesystem isolation and cleanup.
+It checked every test's promised observation rather than treating 100% direct
+coverage as behavioral proof. No additional injection, credential, unsafe
+deserialization or path-traversal finding was proven. JSON keys are map keys,
+not filesystem path fragments; `Object.fromEntries()` avoids assigning them
+through a prototype setter. O(n²)/memory/performance concerns were not reviewed.
+
+Actual cross-module traces/read bodies:
+
+- `accountRuntime.ts:330–335` injects the real health projection and shared
+  anchors; `393–425` admits each discovered device before applying discovery.
+- `accountRuntime.ts:463–524` calls successful removal before health/anchor
+  pruning. A refused removal retains tracking. `forgetDevice()` intentionally
+  removes only the elapsed stamp; account runtime owns persisted-key removal.
+- `accountRuntime.ts:585–667` assembles the account facts and per-device map,
+  reports narrow silence, and owns fired-and-forgotten persist calls.
+- `accountRuntime.ts:825–870` records actual routed arrivals for existing
+  devices before applying state and recovering the reported silent device.
+- `accountRuntime.ts:1118–1132` awaits restore before launch/admission.
+  `1232–1282` is the public composition factory and creates the real store.
+- `platform.ts:387–403` supplies missing-device `shadowSilent: true` while
+  retaining actual account facts. It is distinct from health's admitted-device
+  measurement. `basementGuardian.ts:943–978` compares and stores all four
+  MonitoringTrust members.
+- The account owner's `RecordingAnchors` at 407–442 is another consumer of
+  the full public store shape. It was read for signature/restore timing only;
+  ACCOUNT still owes its complete independent review.
+
+No exact current Fallow private-target or shared-contract mutation trace was
+claimed. No symbol, signature, field presence, mutability or visibility was
+changed. Before a fixer changes any such target, D-06 still requires exact
+separate-project native results and actual structural caller review. An
+unsupported private query must remain an unmet trace, not deletion proof.
+
+## Seed-candidate dispositions
+
+| Candidate | Independent TRUST disposition | Evidence / boundary |
+| --- | --- | --- |
+| S-04-03 | Rejected for these current TRUST shapes | `get(): number \| undefined` is an operation result, not an optional object property. Both options interfaces have required dependencies. Trust objects carry required booleans. No required-present-undefined field here should become optional. Public factory signatures retain their options types even without named external imports. |
+| S-04-04 | Rejected for these current TRUST shapes | The rule requiring readonly unreassigned properties is under **Classes**; these are interfaces and factory-owned mutable maps/state. Actual callers rely on `record`/`forget`/restore mutation and replace whole trust values. No class violation or evidence requiring a public readonly conversion was found. |
+| S-04-05 | Partly accepted | 003/004/010/011 identify exact missed file/state/deadline/whole-answer promises. Existing full two-device and restart assertions were preserved in the review, not assumed defective. Other batch dispositions remain theirs. |
+| S-04-07 | Accepted as 006 | Actual blame/log/tree history plus current admission/restoration/arrival call paths distinguish history from current behavior. No migration or new product policy follows. |
+| S-04-08 | ACCOUNT review still pending | Arrival's independent privacy narrative issue is 007. The existing scoped identifier permission and its unconfirmed premise are retained. |
+
+No reusable mutable seed-data violation was established. Module scalar
+identifiers/times are immutable; clock and store factories create fresh case
+state. Neither conditional seed helper is currently justified. A fixer must
+not create one speculatively or use it to hide the fake-contract issue.
+
+## Native evidence and verification limits
+
+Native directory: `/private/tmp/guardian-04-trust-initial-native/`.
+`commands.json` retains exact argv, cwd, start/end UTC, child exitCode, Node,
+HEAD and all four source/test blob identities for each command. Each numbered
+stdout/stderr file is complete and unmodified. All seven stderr files are empty.
+Every command below ran at the reviewed revision on Node **v26.11.1**.
+
+| Native record | Exact command / scope | UTC start → end | Raw exit / observed outcome |
+| --- | --- | --- | --- |
+| 0 | `npm run typecheck` | 02:21:01.028812 → 02:21:05.774975 | 0; both strict compiler projects |
+| 1 | `node_modules/.bin/eslint src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts --max-warnings=0` | 02:21:05.825726 → 02:21:12.989754 | 0; all four current originals |
+| 2 | `npm run build:test` | 02:21:13.057068 → 02:21:17.237801 | 0; fresh compiled tests |
+| 3 | `node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js` | 02:21:17.289935 → 02:21:17.668669 | 0; 7 pass, 0 fail/cancel/skip/todo |
+| 4 | `node --test --test-reporter=tap dist-test/test/runtime/monitoringHealth.test.js` | 02:21:17.727833 → 02:21:18.062164 | 0; 32 pass, 0 fail/cancel/skip/todo |
+| 5 | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | 02:21:18.114855 → 02:21:23.018449 | 0; isolated executable pair, complete lines/functions/branches |
+| 6 | `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | 02:21:23.078786 → 02:21:28.401948 | 0; isolated executable pair, complete lines/functions/branches |
+
+All times in that table are on **2026-10-15 UTC**. Each direct script performs
+its own fresh test build, runs the single owner and enforces one matching LCOV
+record with LH=LF, FNH=FNF and BRH=BRF. Both are executable pairs; no declaration
+exception was used. The successful selector deletes its temporary per-pair
+LCOV, so this review reports the enforced 100% outcome without inventing raw
+line/function/branch denominators. These selected runs do not refresh merged
+all-pair `coverage/direct.lcov` or establish a full-project gate.
+
+`overflow.json` retains the exact one-off `node --input-type=module -e ...`
+argv and its complete synthetic probe; `overflow.stdout` records the invalid
+restore/persist/second-restore sequence. It used a real temporary directory
+with `finally` cleanup and no private data. It is evidence for 002's diagnosis,
+not a failing native owner test, a control, or authorization for GREEN.
+`history.json` and five `history-N.stdout`/`.stderr` records retain exact
+blame/log/tree/diff argv, UTC, HEAD and raw exits, all 0. The old-to-current
+two-source diff is empty. Missing `.codexignore` was observed; the four tracked
+originals are not ignored. No ignored/private runtime records were reviewed.
+
+The parent's wave-four `npm run check` result is retained at
+`/private/tmp/guardian-phase4-wave4-gate.json` and
+`/private/tmp/guardian-phase4-wave4-full-check.log`: exit 0, Node v26.11.1,
+revision `9afbabefd7cc04321907669d417078611cbde82e`,
+2026-10-15T02:15:14.020912Z → 02:15:50.047695Z, six static checks,
+104 scenarios / 1156 steps, 43 direct pairs.
+
+**That full result is historical for this report's exact current-tree gate.**
+The required comparison
+`git diff 9afbabefd7cc04321907669d417078611cbde82e -- . ':(exclude,glob).planning/**/*.md'`
+is NOT empty: `.planning/state.json` changed only its `updated_at` from
+`2026-10-15T01:18:40.226Z` to `2026-10-15T02:16:27.559Z`.
+The complete diff is `reuse.diff`. `untracked-before.json` is `{}`: no untracked
+files existed before report creation. No new executable input appeared.
+Nevertheless, the literal Markdown-only reuse predicate fails; this report
+does not grant a general planning-JSON exception or claim a current full gate.
+Fresh focused checks above supply current owner/toolchain evidence. The parent
+still owns the next required complete combined-wave gate.
+
+## Genuine bug history and separate maintenance controls
+
+Only 002 is a confirmed production defect. No active owner regression, native
+intended RED, conditional RED JSON, evidence-only commit, source fix or GREEN
+bug commit has occurred in this initial review. D-04 remains wholly pending
+for that cause. Keep the exploratory probe separate from the mandatory RED
+record and preserve every actual failed attempt in future evidence.
+
+003/004/010/011 are assertion maintenance on existing production behavior.
+No source mutation control ran in this review. Proposed controls are future
+work: name the missed public behavior, obtain the intended failure, restore
+the exact original source bytes, rebuild and prove GREEN. No mutation bytes
+may enter Git. Header and comment causes are separate from both categories.
+
+## Continuous TRUST ledger and next repair boundaries
+
+| Round / set | IDs | Count |
+| --- | --- | ---: |
+| Initial opening | none | 0 |
+| Initial independently accepted | CR-04-TRUST-001 through CR-04-TRUST-015 | 15 |
+| Applied repairs | none | 0 |
+| Independently fixed | none | 0 |
+| Rejected accepted IDs | none | 0 |
+| Reopened | none | 0 |
+| Current open | CR-04-TRUST-001 through CR-04-TRUST-015 | 15 |
+
+There are **5 BLOCKER + 10 WARNING** findings. The distinct research-candidate
+rejections above do not remove accepted IDs. Round 0 arithmetic is
+`0 - 0 - 0 + 15 + 0 = 15`. The correction counter is **0**, continuous across
+04-05 and 04-06. No correction review or D-03 stop evaluation has occurred.
+The first full correction belongs after the complete repair pass over all four
+originals and every actual addition; arrival-only checks cannot close TRUST.
+
+Arrival tasks own 001–008 and the arrival part of 015. Monitoring tasks own
+009–014 and the monitoring part of 015. Keep every concrete cause task within
+five paths, including report, conditional RED record and any justified helper.
+Preserve stable IDs if minimum overlapping comment changes close more than
+one rule. The parent must retain bounded task/plan declarations before any
+external adaptation; this initial report authorizes no new undeclared path.
+
+No live vendor, hardware, real-pump profile, private account file, package
+installation, compatibility-matrix result, release permission, new privacy
+permission or persistence migration is claimed. WINDOWS 46/47 remain
+OPEN/unwaived. RUN-01 and phase completion remain Pending.
+
+_Initial reviewer: gsd-code-reviewer; correction counter 0; no source repairs._
+
+## CR-04-TRUST-002: Active unchanged-production RED preparation
+
+The fixer `/root/phase4_trust_first/arrival_red_prepare` added two active sibling
+regressions to `test/runtime/arrivalAnchors.test.ts`. Each writes literal JSON
+containing `1e309` or `-1e309` beside the finite timestamp `1700000000000`.
+Each case owns a fresh temporary directory with registered cleanup. Each asserts
+the complete two-device public observation against independently written
+`{ anchor: undefined, otherAnchor: undefined }`. No logging assertion was added.
+The existing finite/zero round-trip control remains active and passes.
+
+All preparation ran serially in the existing `features/code-review-sweep`
+checkout, with repository-root cwd:
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+The source HEAD is `23a2511ac6deb26869db8d3c44916623a27ec997`.
+Node is **v26.11.1**; npm is **11.20.0**.
+The production blob remains
+`0b04d48709406f65da2457524e6f5226ed12cc4d` before, during and after RED.
+The initial owner blob is `024b81b6de92e1bae41bf146160ac9d14485e73e`;
+the active regression owner blob is `83c5547be6b1fd65de9f73fc3cee817dc13155f7`.
+
+The exact Fallow guard covered the owner, this report and the declared RED JSON
+before edits. It exited 0 and reported no configured boundary restrictions.
+`npm run typecheck`, focused ESLint for the source and owner, and
+`npm run build:test` each exited 0 before the native owner command.
+
+`node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js`
+ran from **2026-10-15T02:32:10.432Z** to **2026-10-15T02:32:10.694Z** and
+returned raw exit **1**. It executed **9 tests: 7 pass, 2 fail, 0 cancelled,
+0 skipped, 0 todo**. Both named overflow cases reached the intended
+`deepStrictEqual` assertion and failed with `ERR_ASSERTION`. The positive case
+restored `Infinity` and the finite neighbor; the negative case restored
+`-Infinity` and the finite neighbor. This is the intended whole-file rejection
+failure, with no compilation, import, fixture or setup failure.
+
+`.planning/phases/04-runtime-conformance/04-ARRIVAL-ANCHORS-RED-EVIDENCE.json`
+retains complete untouched TAP, separate stderr, exact native argv/cwd/raw exit,
+UTC intervals, Node/npm, source/owner blobs, the complete regression patch,
+dirty tracked diff, staged diff and complete untracked report bytes at RED.
+It also retains the preparation command streams and the first native attempt.
+There was no earlier pair evidence record; `priorEvidence` is empty.
+The initial successful exploratory overflow probe remains separate.
+
+The installed `classifyRedEvidence` accepts both distinct overflow targets as
+`RED_EVIDENCE_OK`, reason `target_test_failed`, with no report errors.
+The required command
+`GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-ARRIVAL-ANCHORS-RED-EVIDENCE.json --raw`
+ran against the current on-disk record and exited **0**, with `passed: true`,
+`block: false` and `verdict: RED_EVIDENCE_OK`.
+Raw command records and separate streams are also retained in
+`/private/tmp/guardian-04-arrival-red-native/`.
+
+This is evidence preparation only. No file was staged or committed, production
+was not edited, and no GREEN or mutation control ran. The parent must commit
+only the planning evidence with normal checks before any production repair.
+The active failing owner stays outside that evidence commit. No finding closes:
+all **15** accepted TRUST IDs remain open, with correction counter **0**.
+This focused RED does not establish direct coverage or a full combined gate.
+
+### Final formatted regression capture
+
+A focused Prettier check returned 1 because the new `deepStrictEqual` call
+needed one line. Only that expression's layout changed. The first complete
+RED record remains intact in `priorEvidence[0]`, including its original patch,
+native streams and installed gate result. The formatter failure is retained
+separately and supplies no RED authority.
+
+Fresh typecheck, focused ESLint and `build:test` each returned 0 for the final
+owner. The complete native owner ran again from **2026-10-15T02:34:30.431Z**
+to **2026-10-15T02:34:30.689Z**, raw exit **1**, with the same intended
+**7 pass / 2 fail / 0 cancelled / 0 skipped / 0 todo** result.
+Its untouched TAP and separate stderr are the current evidence record.
+The final active owner blob is `b474f4aba3ed887057465918187e158f8e766eea`.
+The source HEAD and production blob remain unchanged from the first capture.
+
+The current on-disk CLI gate returned **0 / RED_EVIDENCE_OK** again.
+Both current named targets are accepted. Recursive validation uses the same
+installed `classifyRedEvidence` function and accepts the single archived
+record as `RED_EVIDENCE_OK`; that archive has no prior records.
+The final focused Prettier check and `git diff --check` pass.
+The Git index remains empty. Only the RED JSON and this report are candidates
+for the parent's evidence-only commit; the active owner stays unstaged.
+All 15 findings remain open and correction counter 0 is unchanged.
+
+### Evidence-commit handoff audit
+
+The executor independently inspected the complete active owner patch, current
+production/owner blob identities, empty staged diff and current on-disk CLI
+classification. The final owner blob is
+`b474f4aba3ed887057465918187e158f8e766eea`; production still matches
+`0b04d48709406f65da2457524e6f5226ed12cc4d`. The installed CLI again returned
+0 / `RED_EVIDENCE_OK`. This inspection supplies no GREEN authority before the
+actual evidence-only commit.
+
+The required recorded-base audit command was
+`node_modules/.bin/fallow audit --base 23a2511ac6deb26869db8d3c44916623a27ec997 --format json --quiet --explain`.
+Its sandbox attempt returned raw exit 2 because it could not create the
+temporary base worktree. The authorized filesystem retry returned raw exit 0,
+verdict pass, no findings. Complete argv, cwd, UTC intervals, Node, HEAD,
+source/owner blobs, native streams, exact dirty diff and all untracked bytes
+for both attempts are retained at
+`/private/tmp/guardian-04-arrival-handoff/audit.json` and
+`/private/tmp/guardian-04-arrival-handoff/audit-authorized.json`.
+The failed attempt remains a disclosed process limitation, not a pass.
