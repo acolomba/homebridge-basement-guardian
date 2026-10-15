@@ -313,13 +313,22 @@ test('leaves the silence window where it was when a poll fails, because a failed
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
   const health = healthWithAMessageAtStart(clock, monotonic);
-  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
+  moveTo(START_TIME + 1_795_999);
+  const beforeFailure = { silent: health.silentDevices(), account: health.trustNow() };
 
   // act
   health.recordRestFailure();
+  moveTo(START_TIME + 1_796_000);
+  const atOriginalDeadline = { silent: health.silentDevices(), account: health.trustNow() };
 
   // assert
-  assert.deepStrictEqual(health.silentDevices(), []);
+  assert.deepStrictEqual(
+    { beforeFailure, atOriginalDeadline },
+    {
+      beforeFailure: { silent: [], account: { restDegraded: false } },
+      atOriginalDeadline: { silent: [DEVICE_ID], account: { restDegraded: false } },
+    },
+  );
 });
 
 test('answers both facts together, so one degradation never reports the other', () => {

@@ -1335,3 +1335,48 @@ The initial audit interval overlapped the tail of the ordinary build, without
 changing the reviewed files or running an owner concurrently; the authorized
 audit ran after all checks. Both attempts and full streams remain retained.
 No unconfigured boundary/policy detector result is represented as measured.
+
+## 009 commit and 010 original-deadline observations
+
+009 committed normally as `6d4b84ab73fb65c56528681e2b8dbf55a382b598`, exactly
+source, owner and report. `009-prestep` was clean before `009-stage`;
+`009-commit` returned 0 with the ordinary pre-commit npm-check hook passing.
+
+010 changes only owner and report. Rollback inventory is those two paths;
+the temporary maintenance control separately touches and restores source.
+The exact guard returned 0 before editing. The failed-poll case now records
+the complete silent-device list and account verdict at literal 1,795,999 ms,
+records one REST failure, then observes both whole outputs at the independent
+literal **1,796,000-ms original deadline**. Expected values are literal objects,
+not production constants, serializers or harness answers. This preserves the
+existing one-failure account verdict and the original device silence deadline.
+
+`010-typecheck`, complete-pair lint/format, fresh build, full native owner and
+direct pair each returned 0. The owner ran **32 passing tests**, with zero
+fail/cancel/skip/todo; isolated direct coverage enforced **100% lines/functions/
+branches**. These are current main-checkout focused checks, not a full gate.
+
+### 010 separate reset-stamps maintenance control
+
+The plausible wrong behavior resets every tracked elapsed stamp and its wall
+anchor when REST fails. Type checking, lint and exercised-line coverage do
+not establish this unchanged-deadline contract. The temporary mutation is in
+`010-control.patch`; the complete original source is `010-control-original.ts`
+in the native directory. No production defect or genuine RED history is claimed.
+
+Control typecheck, focused ESLint and fresh build returned 0. The exact named
+native target in `010-control-owner` ran
+2026-10-15T03:41:04.774456Z–03:41:05.016517Z, raw **1**, one test, one intended
+`ERR_ASSERTION` / `deepStrictEqual` failure. At the original deadline the broken
+implementation returned `silent: []` instead of `['placeholder-device']`;
+both account objects remained `{ restDegraded: false }`. The assertion executed
+without compile/import/setup/fixture failure. Full untouched TAP and separate
+stderr remain retained.
+
+`010-control-restore` used git checkout and confirmed **exact saved-byte
+equality**. Fresh restored build, whole owner and isolated direct coverage then
+returned 0. The restored owner ran 03:41:15.164902Z–03:41:15.405445Z: 32 passed,
+zero fail/cancel/skip/todo. Restored direct ran 03:41:15.829433Z–03:41:19.173996Z,
+100% lines/functions/branches. No control mutation enters Git; the private
+fixture declarations remain unchanged. The source stays at the 009 header blob.
+All 15 findings remain formally open, independently fixed 0, counter 0.
