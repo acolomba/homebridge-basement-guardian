@@ -4600,3 +4600,121 @@ prior report prefix are preserved. No active platform owner run is claimed
 GREEN, and no full npm run check or independent correction is claimed.
 The parent retains platform integration, header repair, combined gates,
 shared-record updates, final configuration restoration and the full correction.
+
+## Original CR-04-ACCOUNT-026: platform integration GREEN
+
+Disposition: implemented; requires human verification and the later full
+ACCOUNT correction. This is the bounded platform integration declared in
+04-12-02. The original 29 stable finding IDs, clean counter 0 and RUN-01
+Pending remain unchanged. This appendix does not certify the whole sweep.
+
+### Actual dependency and launch handoff
+
+The real ancestry is source/declaration
+3f4f1c3c8a9a732cd7a7711debbd7cb836611362, planning-only platform evidence
+9f7649eac84f5b82106535c941763ec1554bac1d, runtime dependency
+d7e05982064fee3af178bbf7def5973b8f20bd14, then this integration.
+The dependency commit changed only the runtime source, its owner and this
+report. It supplied the backward-compatible start(knownDeviceIds = [])
+contract and seeded reconciliation after awaited anchor restoration.
+This integration does not imply a direct source-to-final transition.
+
+At didFinishLaunching, the platform reads its current accessory map.
+It narrows each cached device value with the existing isRecord guard and
+accepts only a nonempty string deviceId. A Set deduplicates those physical
+identities before runtime.start receives them. The read occurs after cached
+accessory restoration, even though runtime construction occurs earlier.
+Missing, malformed and empty IDs remain unguessed. Neither UUIDs nor
+deviceTypeId substitute for identity. No telemetry, measurements or arrival
+anchors are created by the handoff. No generic helper or public API was added.
+
+The [official platform template](https://github.com/homebridge/homebridge-plugin-template/blob/latest/src/platform.ts)
+and [DynamicPlatformPlugin callback documentation](https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html)
+agree with installed Homebridge 2.4.0. Its dist/api.d.ts lines 78–86 describe
+configureAccessory restoration; dist/server.js lines 181–184 restore the
+cache before signalling completion, and dist/api.js lines 179–181 emit
+didFinishLaunching. No relevant version difference was found. Context7 was
+unavailable, so these applicable official sources and installed files were
+used without installing packages or contacting vendor services.
+
+### Scope, current consumers and owner promises
+
+The exact three-path Fallow guard ran before edits and again before the
+report append. No boundary zones or rule packs are configured.
+All eight fresh symbol-impact queries completed at dependency HEAD, with
+one explicit project per query: BasementGuardianPlatform, AccountRuntime,
+createAccountRuntime and createAccountRuntimeFromConfig, independently in
+tsconfig.json and tsconfig.test.json. Each returned status complete,
+identity.completeness complete and no omissions. Full argv, selected project,
+configuration hash, UTC, HEAD, raw streams and exit remain in native records.
+The named and structural consumers, real caller bodies, persistence and
+reconciliation paths were read. Existing no-argument World startup callers
+remain compatible with the optional runtime argument.
+
+The saved active RED owner blob was
+eb576cb98b369df0b0d01616451c049013b31130. Its original restored-device case
+is byte-exact in GREEN, including all independent public assertions and
+literal promises: cached context and last values survive stale marking,
+two healthy absences precede a current final check, and unregistration sees
+the cached accessory before pruning. All earlier owner bytes are retained
+outside the new import and additions. The six invalid-context cases narrow
+unknown raw JSON and assert the whole retained public cache/context result.
+The additional duplicate-restoration case requires exactly one physical
+removal. Every new strict mock is verified after public assertions; there
+are no logger-output checks, private hooks or casts hiding invalid doubles.
+The original regression also proves the cache is read after construction.
+
+Only src/platform.ts, test/platform.test.ts and this append-only report
+belong to this integration cause. Both existing header byte sequences are
+preserved for the separate header cause. Runtime source remains
+d60a04e0d006746c79726d8ea10240e909499f00; its owner remains
+d2cd76a5d4a2a90d6316463ca250e30b4cea294d. Before commit, all other tracked
+inputs among 700 files/symlinks and the complete prior report prefix were
+checked byte-exact. Platform GREEN source is
+e531faef7a30b4680e6f6a652c7de675569d52e8; platform owner is
+e37697774ec89fb532f6d890d2f3df2c4536f033.
+
+### Native verification and retained attempts
+
+Checks ran in the existing linked features/code-review-sweep checkout with
+workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+Native records are under /private/tmp/guardian-04-account-026-platform-green/.
+Every formatter and hook attempt has complete input/output copies, manifests,
+blob identities, patches, argv, UTC, HEAD, exits and full raw streams.
+Each mutating process completed before the next edit or build.
+
+| Record | Actual result |
+| --- | --- |
+| format-final-2 | Exact source/owner Prettier, exit 0; no changes |
+| lint-final-2 | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| build-final-2 | Fresh npm run build:test, exit 0, 17:47:30.023834–17:47:32.839674 UTC |
+| owners-final-2 | Both full native owners, exit 0, 237 tests: 71 platform plus 166 ACCOUNT; 0 fail/cancel/skip/todo, 17:47:33.528936–17:47:33.987625 UTC |
+| direct-platform-final, direct-account-final | Each exact isolated source/owner selector with a fresh build, exit 0; 100% lines, functions and branches |
+| native-platform-final | Full native platform owner plus platform-final.lcov, exit 0; 71 pass; 498/498 lines, 22/22 functions, 57/57 branches |
+| native-account-final | Full native ACCOUNT owner plus accountRuntime-final.lcov, exit 0; 166 pass; 1007/1007 lines, 58/58 functions, 193/193 branches |
+| installed-platform, installed-account | Installed evidence CLI on both actual immutable files, exit 0; RED_EVIDENCE_OK |
+| preservation-before-report | SAME installed classifier recursively accepts all 2 platform plus 14 ACCOUNT records; sourceCommit/sourceBlob, immutable raw histories, original owner bytes, headers and all other inputs verified, exit 0 |
+| audit | Fallow audit against actual ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, exit 0, verdict pass; final pre-commit audit retained separately |
+
+All build, owner and isolated coverage attempts passed. The first lint
+attempt found a missing blank line and an unsafe JSON.parse expectation in
+the added tests. A later lint attempt found identical route stubs after the
+duplicate case was added. These were corrected without weakening assertions;
+both failed raw attempts and final clean lint remain. Formatter changes were
+limited to new test text and the added imports. No original case was rewritten.
+
+### Immutable evidence and remaining boundary
+
+The platform evidence remains exactly
+5a35d0831979b6c7444b598c0987bdd9d98f758b, with two records. ACCOUNT evidence
+remains exactly b3f7141fc652706628ec55c5bd5c1a3e4b560319, with fourteen.
+Both installed CLI checks and recursive SAME-classifier results pass.
+Stored patches, complete raw outputs and actual Git provenance remain intact.
+Original 022's missing first formatter input captures remain disclosed and
+unwaived; this integration does not reconstruct that historical gap.
+
+The separate header cause, combined full gate, shared records, final
+configuration restoration and full ACCOUNT correction remain with the parent.
+No full npm run check, independent final correction, clean run increment or
+root whole-sweep certification is claimed here. Existing D-03 stop conditions
+and all earlier unresolved limits remain in force.

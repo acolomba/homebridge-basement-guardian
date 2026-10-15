@@ -7,6 +7,7 @@ import { connect } from 'mqtt';
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
 import { httpFetch } from './cloud/httpDispatcher.js';
+import { isRecord } from './cloud/types.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -605,7 +606,17 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     // their promise: neither start nor stop rejects, so nothing floats and no
     // exception escapes into Homebridge.
     this.api.on('didFinishLaunching', () => {
-      void runtime.start();
+      const knownDeviceIds = new Set<string>();
+
+      for (const accessory of this.accessories.values()) {
+        const device: unknown = accessory.context.device;
+
+        if (isRecord(device) && typeof device.deviceId === 'string' && device.deviceId.length > 0) {
+          knownDeviceIds.add(device.deviceId);
+        }
+      }
+
+      void runtime.start([...knownDeviceIds]);
     });
 
     this.api.on('shutdown', () => {

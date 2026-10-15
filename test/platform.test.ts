@@ -24,6 +24,7 @@ import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.
 import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
+import { isRecord } from '../src/cloud/types.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
@@ -34,6 +35,7 @@ import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '
 import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
+import type { HttpFetch } from '../src/cloud/httpDispatcher.js';
 import type { ApiDevice } from '../src/cloud/types.js';
 import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
@@ -684,6 +686,303 @@ async function expectStoragePath(t: TestContext, api: API): Promise<{ user: API[
 }
 
 describe('BasementGuardianPlatform', () => {
+  test('removes a physical identity once when its cached accessory is restored twice', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const restorationApi = fakeDiscoveryApi([]);
+    const cachedAccessory = new restorationApi.platformAccessory<BasementGuardianAccessoryContext>('Cached Sump', ACCESSORY_UUID);
+    cachedAccessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const removal = mock<API['unregisterPlatformAccessories']>({ exactParams: true, name: 'single physical removal' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    when(() => api.hap)
+      .thenReturn(restorationApi.hap)
+      .times(3);
+    when(() => {
+      removal(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+    }).thenReturn(undefined);
+    const removedIds: string[] = [];
+    when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
+      removal(pluginIdentifier, platformName, accessories);
+      removedIds.push(...accessories.map((accessory) => accessory.UUID));
+    });
+    let inventories = 0;
+    let credentialsRequested = false;
+    const httpFetch: HttpFetch = (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        inventories += 1;
+
+        return Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+      }
+
+      if (url.endsWith('/credentials/aws')) {
+        credentialsRequested = true;
+
+        return Promise.resolve(new Response('{}', { status: 503 }));
+      }
+
+      return Promise.reject(new Error('no response is scripted for this route'));
+    };
+
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+    const [launch, shutdown] = listeners;
+
+    // act
+    platform.configureAccessory(cachedAccessory);
+    platform.configureAccessory(cachedAccessory);
+    launch?.();
+    await until(() => credentialsRequested, 'the first empty inventory to complete');
+    await settle();
+    const beforeConfirmation = { cachedIds: [...platform.accessories.keys()], removedIds: [...removedIds] };
+    t.mock.timers.tick(300_000);
+    await until(() => inventories >= 3, 'the confirming inventory and final check');
+    await settle();
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { beforeConfirmation, cachedIds: [...platform.accessories.keys()], removedIds, inventories, context: cachedAccessory.context },
+      {
+        beforeConfirmation: { cachedIds: [ACCESSORY_UUID], removedIds: [] },
+        cachedIds: [],
+        removedIds: [ACCESSORY_UUID],
+        inventories: 3,
+        context: { device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } },
+      },
+    );
+    verify(removal);
+    verify(user);
+    verify(api);
+  });
+
+  for (const { identity, contextJson } of [
+    { identity: 'missing device', contextJson: '{}' },
+    { identity: 'null device', contextJson: '{"device":null}' },
+    { identity: 'array device', contextJson: '{"device":[]}' },
+    { identity: 'missing deviceId', contextJson: '{"device":{"deviceTypeId":"wayneWaterGemini"}}' },
+    { identity: 'numeric deviceId', contextJson: '{"device":{"deviceId":17,"deviceTypeId":"wayneWaterGemini"}}' },
+    { identity: 'empty deviceId', contextJson: '{"device":{"deviceId":"","deviceTypeId":"wayneWaterGemini"}}' },
+  ]) {
+    test(`retains a cached accessory with ${identity} without guessing its identity`, async (t) => {
+      // arrange
+      t.mock.timers.enable({ apis: ['setTimeout'] });
+      const restorationApi = fakeDiscoveryApi([]);
+      const cachedAccessory = new restorationApi.platformAccessory('Cached Sump', ACCESSORY_UUID);
+      const context: unknown = JSON.parse(contextJson);
+
+      if (!isRecord(context)) {
+        throw new Error('the cached context must be a JSON object');
+      }
+
+      cachedAccessory.context = context;
+      const expectedContext: unknown = JSON.parse(contextJson);
+      const listeners: (() => void)[] = [];
+      const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+      const { user } = await expectStoragePath(t, api);
+      when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+      when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+      when(() => api.hap).thenReturn(restorationApi.hap);
+      let inventories = 0;
+      let credentialsRequested = false;
+      const httpFetch: HttpFetch = (input) => {
+        const url = input.toString();
+
+        if (url.endsWith('/oauth/token')) {
+          return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+        }
+
+        if (url.endsWith('/devices')) {
+          inventories += 1;
+
+          return Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+        }
+
+        credentialsRequested = true;
+
+        return Promise.resolve(new Response('{}', { status: 503 }));
+      };
+
+      const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+      const [launch, shutdown] = listeners;
+
+      // act
+      platform.configureAccessory(cachedAccessory);
+      launch?.();
+      await until(() => credentialsRequested, 'the first empty inventory to complete');
+      await settle();
+      t.mock.timers.tick(300_000);
+      await until(() => inventories >= 2, 'the second empty inventory');
+      await settle();
+      shutdown?.();
+      await settle();
+
+      // assert
+      assert.deepStrictEqual(
+        {
+          cachedIds: [...platform.accessories.keys()],
+          sameAccessory: platform.accessories.get(ACCESSORY_UUID) === cachedAccessory,
+          context: cachedAccessory.context,
+          inventories,
+        },
+        { cachedIds: [ACCESSORY_UUID], sameAccessory: true, context: expectedContext, inventories: 2 },
+      );
+      verify(user);
+      verify(api);
+    });
+  }
+
+  test('removes a restored device absent at startup only after healthy confirmations and a final inventory check', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const restorationApi = fakeDiscoveryApi([]);
+    const hap = restorationApi.hap;
+    const cachedAccessory = new restorationApi.platformAccessory<BasementGuardianAccessoryContext>('Cached Sump', ACCESSORY_UUID);
+    cachedAccessory.context = {
+      device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+      lastVendorName: 'Cached Sump',
+      primaryPump: { observationStartedAt: 1_700_000_000_000, activationCount: 4, lastActivationAt: 1_700_000_100_000 },
+    };
+    const flood = cachedAccessory.addService(hap.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
+    flood.updateCharacteristic(hap.Characteristic.LeakDetected, 1);
+    flood.updateCharacteristic(hap.Characteristic.StatusActive, true);
+    // The promise constructor assigns the resolver synchronously.
+    let completeFinalCheck!: (response: Response) => void;
+    const finalCheck = new Promise<Response>((resolve) => {
+      completeFinalCheck = resolve;
+    });
+    let inventories = 0;
+    let credentialsRequested = false;
+    const httpFetch: HttpFetch = (input) => {
+      const url = input.toString();
+
+      if (url.endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      if (url.endsWith('/devices')) {
+        inventories += 1;
+
+        return inventories === 3 ? finalCheck : Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+      }
+
+      if (url.endsWith('/credentials/aws')) {
+        credentialsRequested = true;
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              endpoint: 'broker.invalid',
+              clientId: 'client-1',
+              credentials: {
+                AccessKeyId: 'test-access-key-id',
+                SecretAccessKey: 'test-secret-access-key',
+                SessionToken: 'test-session-token',
+                Expiration: new Date(Date.now() + 3_600_000).toISOString(),
+              },
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+
+      return Promise.reject(new Error('no response is scripted for this route'));
+    };
+
+    const listeners: (() => void)[] = [];
+    const api = mock<API>({ exactParams: true, name: 'homebridge api' });
+    const removal = mock<API['unregisterPlatformAccessories']>({ exactParams: true, name: 'confirmed cached accessory removal' });
+    const { user } = await expectStoragePath(t, api);
+    when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
+    when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
+    when(() => api.hap)
+      .thenReturn(hap)
+      .times(2);
+    when(() => {
+      removal(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
+    }).thenReturn(undefined);
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+    const [launch, shutdown] = listeners;
+    const removalStates: unknown[] = [];
+    when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
+      removal(pluginIdentifier, platformName, accessories);
+      removalStates.push({
+        inventories,
+        cachedIds: [...platform.accessories.keys()],
+        sameAccessory: platform.accessories.get(ACCESSORY_UUID) === cachedAccessory,
+        removedIds: accessories.map((accessory) => accessory.UUID),
+        context: structuredClone(cachedAccessory.context),
+        flood: flood.getCharacteristic(hap.Characteristic.LeakDetected).value,
+        active: flood.getCharacteristic(hap.Characteristic.StatusActive).value,
+      });
+    });
+    const expectedCached = {
+      cachedIds: [ACCESSORY_UUID],
+      sameAccessory: true,
+      context: {
+        device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+        lastVendorName: 'Cached Sump',
+        primaryPump: { observationStartedAt: 1_700_000_000_000, activationCount: 4, lastActivationAt: 1_700_000_100_000 },
+      },
+      flood: 1,
+      active: false,
+    };
+
+    // act
+    platform.configureAccessory(cachedAccessory);
+    launch?.();
+    await until(() => credentialsRequested, 'the empty startup inventory to complete');
+    await settle();
+    const afterFirstAbsence = {
+      cachedIds: [...platform.accessories.keys()],
+      sameAccessory: platform.accessories.get(ACCESSORY_UUID) === cachedAccessory,
+      context: structuredClone(cachedAccessory.context),
+      flood: flood.getCharacteristic(hap.Characteristic.LeakDetected).value,
+      active: flood.getCharacteristic(hap.Characteristic.StatusActive).value,
+      removalStates: [...removalStates],
+    };
+    t.mock.timers.tick(299_999);
+    await settle();
+    const beforeConfirmation = { cachedIds: [...platform.accessories.keys()], removalStates: [...removalStates] };
+    t.mock.timers.tick(1);
+    await until(() => inventories >= 2, 'the second healthy empty inventory');
+    await settle();
+    const beforeFinalAnswer = {
+      cachedIds: [...platform.accessories.keys()],
+      sameAccessory: platform.accessories.get(ACCESSORY_UUID) === cachedAccessory,
+      context: structuredClone(cachedAccessory.context),
+      flood: flood.getCharacteristic(hap.Characteristic.LeakDetected).value,
+      active: flood.getCharacteristic(hap.Characteristic.StatusActive).value,
+      removalStates: [...removalStates],
+    };
+    completeFinalCheck(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+    await settle();
+    const afterFinalAnswer = { cachedIds: [...platform.accessories.keys()], removalStates: [...removalStates] };
+    shutdown?.();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(afterFirstAbsence, { ...expectedCached, removalStates: [] });
+    assert.deepStrictEqual(beforeConfirmation, { cachedIds: [ACCESSORY_UUID], removalStates: [] });
+    assert.deepStrictEqual(beforeFinalAnswer, { ...expectedCached, removalStates: [] });
+    assert.deepStrictEqual(afterFinalAnswer, {
+      cachedIds: [],
+      removalStates: [{ inventories: 3, ...expectedCached, removedIds: [ACCESSORY_UUID] }],
+    });
+    verify(removal);
+    verify(user);
+    verify(api);
+  });
+
   test('holds no accessory and calls nothing on the API once constructed', () => {
     // arrange
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
