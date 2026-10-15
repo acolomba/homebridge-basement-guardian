@@ -138,11 +138,14 @@ function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock, a
 }
 
 test('publishes the thresholds it measures against', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    { restFailures: REST_FAILURE_THRESHOLD, heartbeatMs: HEARTBEAT_INTERVAL_MS, missedHeartbeats: MISSED_HEARTBEATS_BEFORE_SILENT },
-    { restFailures: 2, heartbeatMs: 898_000, missedHeartbeats: 2 },
-  );
+  // arrange
+  const expectedThresholds = { restFailures: 2, heartbeatMs: 898_000, missedHeartbeats: 2 };
+
+  // act
+  const thresholds = { restFailures: REST_FAILURE_THRESHOLD, heartbeatMs: HEARTBEAT_INTERVAL_MS, missedHeartbeats: MISSED_HEARTBEATS_BEFORE_SILENT };
+
+  // assert
+  assert.deepStrictEqual(thresholds, expectedThresholds);
 });
 
 for (const { failures, degraded } of [

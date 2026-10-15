@@ -1412,3 +1412,25 @@ owner interval: 2026-10-15T03:42:28.836291Z–03:42:29.081747Z; direct interval:
 03:42:29.495379Z–03:42:32.930267Z. No source statement changed, no new bug or
 RED record was invented, and private fixture/helper declarations remain intact.
 All 15 accepted IDs remain formally open, independently fixed 0, counter 0.
+
+## 011 commit and 013 threshold phases
+
+011 committed normally as `8bb98803bc01cf70214da6012416ad0feed81774`, exactly
+owner/report. Its recorded-base audit returned 0 / pass, exact pre-step was
+clean before stage, and the ordinary pre-commit npm-check hook passed.
+
+013 changes only the threshold case and this report. The exact owner/report
+guard returned 0 before editing; those two paths form its rollback inventory.
+Arrange states the independently written expected object with 2 / 898000 / 2;
+act reads all three exported values into `thresholds`; assert compares the
+whole objects. The successful value observation no longer uses the combined
+throw/reject phase marker. Exported constants, API and measurement behavior
+are unchanged. The complete modified section was re-read.
+
+`013-typecheck`, complete-pair lint/format, fresh build, full native owner and
+isolated direct checks returned 0. Native owner ran
+2026-10-15T03:43:36.787835Z–03:43:37.028594Z: **32 pass**, zero fail/cancel/
+skip/todo. Direct ran 03:43:37.444031Z–03:43:40.875445Z and enforced **100%
+lines/functions/branches**. All checks ran in the main checkout on the recorded
+Node/npm. This is focused evidence, not a combined-wave gate. All original
+15 accepted IDs stay formally open, independently fixed 0, counter 0.
