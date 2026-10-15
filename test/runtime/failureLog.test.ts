@@ -153,6 +153,38 @@ describe('recordFailure', () => {
     const recorded: string[] = [];
     const { clock, advance } = movableClock();
     const failures = failureLogWith(recorded, clock);
+    const expectedReminderStream = [
+      'warn The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+      'debug The temporary credentials could not be refreshed.',
+    ];
 
     // act
     for (let elapsed = 0; elapsed < ONE_HOUR_MS; elapsed += THIRTY_SECONDS_MS) {
@@ -161,10 +193,7 @@ describe('recordFailure', () => {
     }
 
     // assert
-    assert.deepStrictEqual(
-      { warnings: recorded.filter((line) => line.startsWith('warn ')).length, reports: recorded.length },
-      { warnings: 4, reports: ONE_HOUR_MS / THIRTY_SECONDS_MS },
-    );
+    assert.deepStrictEqual(recorded, [...expectedReminderStream, ...expectedReminderStream, ...expectedReminderStream, ...expectedReminderStream]);
   });
 });
 

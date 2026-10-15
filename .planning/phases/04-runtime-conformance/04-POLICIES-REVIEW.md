@@ -661,3 +661,92 @@ The exact three-path clean pre-step, ordinary foreground commit and terminal
 path/hash/clean-state checks retain their native results under this evidence
 root. The parent owns the combined full gate and independent full six-file
 correction. No partial-clean POLICIES verdict is issued.
+
+## Repair evidence: CR-04-POLICIES-004
+
+Applied by `policies_fix_004` (`gsd-code-fixer`), task 04-03-02, under
+`/root/phase4_policies_first/policies_fix_004`. Disposition: **applied, pending
+independent full correction**. The initial report and earlier repair appendices
+remain verbatim. The opening set remains 001–012, open count **12**, correction
+counter **0**, and production bugs **0**. RUN-01 stays Pending.
+
+The hourly case compares the complete 120-entry log with an independently
+authored 30-entry literal pattern, spread four times. Each pattern contains
+one warning followed by 29 debug messages with the complete supplied reason.
+This pins warnings at entries 0, 30, 60 and 90, every other level, complete
+message text and order. Expectations use neither observed output nor production
+cadence arithmetic/constants. Other cases, clock naming (005) and the constant
+case's AAA (006) retain their original bytes.
+
+Initial location remains R:test/runtime/failureLog.test.ts:141–157. Actual
+pre-edit HEAD is `bd335c213ceb1671c490c822a6513aceb6eb2fa9`; the case starts
+at line 151. Current location at that HEAD plus the retained dirty diff is
+test/runtime/failureLog.test.ts:151–197. The terminal ordinary commit identifies
+the committed revision, without a self-referential hash in this appendix.
+
+### Separate assertion control, exact restoration and rebuilt GREEN
+
+Plausible wrong behavior: debug logging appends ` Retry pending.` to each
+reason while warning positions and counts stay correct. Type checking and lint
+cannot detect that semantic change; the old hourly summary accepts four warnings
+and 120 reports. After complete source/owner reads and actual accountRuntime
+caller tracing, the temporary control changed only `options.log.debug(reason)`
+to ``options.log.debug(`${reason} Retry pending.`)`` in failureLog.ts.
+No genuine production defect or RED history is claimed; no RED JSON was created.
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/004/`.
+Each numbered command folder retains `command.json` with exact argv, cwd,
+UTC start/end and raw exit; untouched `stdout.raw` and `stderr.raw`; before/after
+HEAD, Node/npm, source blobs/SHA-256, dirty/staged diffs and exact owned/untracked
+bytes. Initial interactive reads preceded this recorder; complete books and
+context are also retained in 001/002. All checks ran in the existing checkout
+at the absolute root above on `features/code-review-sweep`, Node v26.11.1,
+npm 11.20.0; the active isolation sentinel is `none`.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Full books/context and live caller/analog reads / 001–003, 008, 010 | Exit 0; accountRuntime failure/success/forget calls and wall-clock composition inspected; auth's fixed whole-stream assertion is an analog only |
+| Installed Fallow live help / 004–006; exact three-path guard / 007 | Exit 0 each; no architecture zones or rule packs configured |
+| Existing Git metadata baseline / 008 | Exit 0; `gsd-plan-head-before-04-03` still equals R |
+| Updated owner reread / 009 | Exit 0; exact pre-control source bytes saved in `009-reread-and-snapshot/before/file-0.raw` |
+| Control `npm run typecheck` / 011 | Exit 0; both compiler projects |
+| Control `node_modules/.bin/eslint src/runtime/failureLog.ts test/runtime/failureLog.test.ts --max-warnings=0 --no-cache` / 012 | Exit 0 |
+| Control `npm run build:test` / 013 | Exit 0; active updated owner compiled |
+| Named hourly control / 014-control-hour | Raw exit 1; intended `deepStrictEqual` executes and fails; one test, one suite, zero cancel/skip/todo |
+| Exact source restoration / 015 | Exit 0; saved bytes, SHA-256 and Git blob match, with no source diff against HEAD |
+| Restored `npm run build:test` / 016 | Exit 0; fresh rebuild after restoration |
+| Full owner `node --test --test-reporter=tap dist-test/test/runtime/failureLog.test.js` / 017 | Exit 0; 15 tests, four suites, no fail/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` / 018 | Exit 0; isolated direct requirements pass |
+| Native isolated coverage / 019; `failureLog.lcov` | Exit 0; compiled LH/LF 45/45, FNH/FNF 4/4, BRH/BRF 9/9, all 100% |
+| Recorded-base Fallow audit / 020 | Exit 0; verdict pass; zero dead-code, complexity or duplication findings |
+| Native intended-control semantics / 021 | Exit 0; complete expected/actual arrays each contain 120 entries; actual has four warnings, proving the old summary would pass |
+
+The exact named-control argv is:
+
+```text
+node --test --test-reporter=tap --test-name-pattern='D-14 warns four times over an hour of failures thirty seconds apart' dist-test/test/runtime/failureLog.test.js
+```
+
+Its complete untouched assertion diff and both 120-entry streams remain in
+`014-control-hour/stdout.raw`, with separate stderr and command/raw-exit metadata.
+The named case ran and failed on changed debug text, with `ERR_ASSERTION` and
+`deepStrictEqual`; no setup/import/filter failure supplied this evidence.
+The source blob before control and after exact restoration is
+`4d724a609b5da08f31b7978396fd4d240c93fe70`; its SHA-256 is
+`48d4747fd23f61913e6f353f4de04729418848a90585bc9749c1e16cbaf24b79`.
+No temporary control bytes enter the cause commit.
+
+Production's per-kind map, wall-time reminder cadence, recovery, silent forget
+and distinct monotonic silence domain remain unchanged. The current caller path
+uses deps.clock in createFailureLog, supplied as systemClock by platform;
+systemClock reads epoch milliseconds. Auth's last-transient-kind policy was
+not transferred. No API, consumer, private alias, helper, package or private
+input changed. Only the owner and this report are committed.
+
+The Fallow audit command uses recorded base
+`e25e26e6232ed99411b7463a7f9839c5eb837ec0` with JSON/quiet/explain flags.
+Architecture zones and rule packs remain unconfigured; isolated native coverage
+does not refresh merged all-pair LCOV. Exact two-path clean pre-step, ordinary
+foreground commit, raw hook output and terminal path/hash/source-restoration
+checks remain under this evidence root. The parent owns the combined full gate
+and independent full six-file correction. No partial-clean verdict is issued.
