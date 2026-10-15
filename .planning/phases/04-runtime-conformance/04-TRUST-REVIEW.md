@@ -933,3 +933,27 @@ Native checks use `conformance-006-*`, with all actual revisions, blobs,
 intervals, raw streams and exact input diffs retained in the main checkout.
 006 and the arrival part of 015 are applied pending normal commit and full
 independent correction. All original 15 IDs stay open, counter 0.
+
+## 006 normal commit and 007 scoped privacy premise
+
+006 committed normally as `0e46020`, exactly source/report. Both strict compiler
+projects, focused ESLint, fresh build, native 9-test owner, isolated 100% direct
+pair, recorded-base audit, clean pre-step and ordinary hooks returned 0.
+Its complete source diff contains comments only; 015 remains partially applied.
+
+007 changes only the overview privacy paragraph and write-mode explanation,
+plus this report. Canonical C-002 explicitly says deviceId includes an account
+identifier and hardware serial. STATE lines 231–233 retain the scoped local
+identifier treatment, the unconfirmed opaque-account-key premise and D-027's
+public-artifact restriction. The new text states those boundaries together.
+The prior unqualified "no account identifier" statement is removed.
+
+Current source revision is `0e46020`; revised locations are the full overview
+and comment immediately above storeAnchors. `conformance-007-canonical`
+retains the actual canonical excerpts, and the exact guard returned 0 before
+editing. All checks use `conformance-007-*` records with actual command,
+revision/blob, UTC, raw exit and full input/stream evidence in the main checkout.
+No mode argument, payload, path, storage behavior, new privacy permission or
+migration is introduced. No external validation of the opaque-key premise is
+claimed. 007 is applied pending normal commit and complete independent
+correction; all 15 original findings stay open with counter 0.

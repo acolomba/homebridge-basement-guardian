@@ -15,9 +15,10 @@
  * the wall reading from initial admission or each device's last arrival, so
  * `monitoringHealth.ts` can compare wall and elapsed silence (D-07, D-08).
  *
- * It holds vendor `deviceId`s and millisecond timestamps and nothing else: no
- * credential, no token, no email, no account identifier, and no local-network
- * value.
+ * Stores vendor `deviceId` keys and millisecond timestamps. Each device ID
+ * contains an account identifier and hardware serial (C-002). Existing local
+ * persistence permission rests on the unconfirmed premise that the account
+ * component is an opaque key. Public artifacts must sanitize device IDs.
  *
  * The store owns the map and the two disk calls, and it owns no timer and reads
  * no clock. The runtime decides when to restore and when to persist, which is
@@ -142,12 +143,9 @@ function temporaryPath(target: string): string {
 // a file another writer holds, and a rename that fails takes the fresh file with
 // it rather than stranding it in the storage directory.
 //
-// One thing is deliberately not copied from the token cache this write is
-// modelled on: its owner-only mode. That mode exists because a bearer token must
-// not be readable by every local user (AUTH-02). This file holds vendor
-// `deviceId`s and millisecond timestamps, and the `deviceId` is the value this
-// project has ruled non-sensitive, so the constant's justification does not
-// reach here and it is not carried over for the look of the thing.
+// The write uses the default file mode under the scoped deviceId persistence
+// permission. This permission rests on the unconfirmed premise that the account
+// component is an opaque key. Public artifacts must sanitize these IDs.
 async function storeAnchors(temporary: string, target: string, contents: string): Promise<void> {
   await writeFile(temporary, contents, { flag: 'wx' });
 
