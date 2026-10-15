@@ -19,7 +19,9 @@ correction_counter: 0
 source_revision: 23a2511ac6deb26869db8d3c44916623a27ec997
 first_independent_observer: /root/phase4_trust_first/trust_initial_review
 production_bugs: 1
-applied_repairs: 0
+applied_repairs: 8
+arrival_applied_ids: [CR-04-TRUST-001, CR-04-TRUST-002, CR-04-TRUST-003, CR-04-TRUST-004, CR-04-TRUST-005, CR-04-TRUST-006, CR-04-TRUST-007, CR-04-TRUST-008]
+partially_applied_ids: [CR-04-TRUST-015]
 open_findings: 15
 ---
 
@@ -1267,3 +1269,24 @@ This focused evidence does not establish a full combined-wave gate. No source
 behavior, RED history, helper, shared record or independent correction changed.
 All original **15** accepted findings remain open, independently fixed **0**,
 correction counter **0**; full TRUST correction remains pending 04-06.
+
+## 04-05 executor metadata handoff
+
+The actual optional-dependency commit is
+`02ba8853fd5dfbbbb24760f1f6b9cac1189b6924`; the same-002 owner-comment followup is
+`578b8b3e272990ef5608a72b0f437c6765a15b70`. Both ordinary hooks passed.
+The report frontmatter now distinguishes the eight fully applied arrival IDs
+from partially applied 015. All original 15 remain formally open, independently
+fixed 0 and correction counter 0; initial historical observations remain intact.
+
+The executor's native `closeout-native` check returned raw 0 /
+`ARRIVAL_CLOSEOUT_OK` on Node v26.11.1. It independently checked the actual
+12-commit Git ancestry and paths, evidence-only production equality, immutable
+RED bytes, both current and recursive archived records with four installed
+target classifications, actual clean-prestep-before-stage ordering, normal
+commit streams, three intended controls, current pair blobs and complete
+headers, unchanged private helper, unchanged account/monitoring consumers and
+all six declared realized output paths. Exact argv/cwd/UTC/revision/input
+snapshots and complete streams are in
+`/private/tmp/guardian-04-arrival-handoff/closeout-native.json`.
+This metadata check supplies no full TRUST correction or full-project gate.
