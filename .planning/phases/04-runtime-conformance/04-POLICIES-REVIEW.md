@@ -588,3 +588,76 @@ retain their native streams and terminal commit hash under this evidence root.
 The audit notes two skipped TypeScript cache entry points; architecture zones
 and rule packs are unconfigured. Focused evidence does not supply the parent's
 combined full gate or independent full six-file correction. RUN-01 stays Pending.
+
+## Repair evidence: CR-04-POLICIES-003
+
+Applied by `policies_fix_003` (`gsd-code-fixer`), task 04-03-02, under
+`/root/phase4_policies_first/policies_fix_003`. Disposition: **applied, pending
+independent full correction**. The initial report and both earlier repair
+appendices remain intact. The opening set remains 001–012, open count **12**,
+correction counter **0**, and production bugs **0**. RUN-01 stays Pending.
+
+Both failure-log files now have first-line MIT SPDX, a separate
+`Copyright (c) 2026 Alessandro Colomba` JSDoc, a separate purpose
+`@fileoverview` JSDoc, and one blank line between sections and before imports.
+The source describes independent per-kind reporting; the owner describes its
+cadence, recovery and silent-forgetting tests. All bytes from the first import
+onward are unchanged in both files. No function, name, assertion, test phase,
+public signature, private alias, helper, package or external consumer changed.
+The distinct 004/005/006 findings remain pending their own repairs. No genuine
+RED history or assertion-control mutation applies to this header cause.
+
+Initial locations remain R:src/runtime/failureLog.ts:1–3 and
+R:test/runtime/failureLog.test.ts:1–8. Actual pre-edit HEAD is
+`c0f80628eb07856315de29db0d45bf76a2a37e0c`. Current header locations at that
+HEAD plus the retained exact dirty diff are src/runtime/failureLog.ts:1–12 and
+test/runtime/failureLog.test.ts:1–18. The terminal ordinary commit supplies the
+committed revision; this appendix does not claim its own future hash.
+
+Before any failure-log edit, fresh tracer feedback reran `npm run build:test`,
+`node --test --test-reporter=tap dist-test/test/runtime/commandPort.test.js`,
+and `npm run test:coverage:direct -- src/runtime/commandPort.ts
+test/runtime/commandPort.test.ts`. All exited 0 on the pre-edit HEAD. The owner
+has zero authored runtime cases and produces the native file-success record;
+the direct result is declaration-only selector acceptance, without a coverage
+percentage. This renewed feedback precedes the consumer slice and is not a
+correction round.
+
+All checks ran in the existing checkout at the absolute repository root above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. The active
+phase/plan isolation sentinel records `none`. The existing Git metadata ledger
+`gsd-plan-head-before-04-03` was read and matches recorded base R:
+`e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/003/`.
+Each command folder retains exact argv/cwd/UTC start/end/raw exit in
+`command.json`, unaltered `stdout.raw` and `stderr.raw`, and before/after
+manifests with HEAD, Node/npm, blobs/SHA-256, exact dirty/staged diffs,
+owned bytes and untracked bytes. Initial interactive context reads preceded
+the recorder; complete books, context, report, source and owner reads are also
+retained in `011-complete-reads`.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Pre-edit tracer build / `001-tracer-build` | Exit 0; fresh strict test build |
+| Exact command-port tracer owner / `002-tracer-owner` | Exit 0; file success, zero authored runtime cases, no failure/cancel/skip/todo |
+| Exact command-port tracer selector / `003-tracer-direct` | Exit 0; declaration-only acceptance |
+| Installed Fallow live help / `004-help`–`006-audit-help` | Exit 0 each; version-matched full skill read before use |
+| Exact three-path guard / `007-guard` | Exit 0; no architecture zones or rule packs configured |
+| Existing baseline / `008-baseline` | Exit 0; R preserved |
+| Header reread / `009-reread`; exact byte comparison / `015-change-scope` | Exit 0; both nonheader suffixes and all existing report history preserved |
+| `npm run build:test` / `010-build` | Exit 0; fresh strict test build after header edits |
+| `node --test --test-reporter=tap dist-test/test/runtime/failureLog.test.js` / `012-owner` | Exit 0; 15 cases, 4 suites, no failure/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` / `013-direct` | Exit 0; isolated direct line/function/branch requirements pass |
+| Isolated native coverage / `014-native-coverage`; `failureLog.lcov` | Exit 0; compiled LH/LF 45/45, FNH/FNF 4/4, BRH/BRF 9/9, all 100% |
+| Fallow audit against R, JSON/quiet/explain / `016-audit` | Exit 0; verdict pass, zero dead-code/complexity/duplication findings |
+
+The audit reports two skipped TypeScript cache entry points; architecture zones
+and rule packs are unconfigured. The native compiled denominator above belongs
+only to this isolated owner. Selected checks do not refresh merged all-pair
+LCOV and do not establish a full-project pass.
+
+The exact three-path clean pre-step, ordinary foreground commit and terminal
+path/hash/clean-state checks retain their native results under this evidence
+root. The parent owns the combined full gate and independent full six-file
+correction. No partial-clean POLICIES verdict is issued.

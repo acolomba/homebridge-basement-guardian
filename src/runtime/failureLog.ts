@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Reports transient failures, reminders and recovery independently for each failure kind.
+ */
+
 import type { Clock } from './clock.js';
 import type { Logging } from 'homebridge';
 
