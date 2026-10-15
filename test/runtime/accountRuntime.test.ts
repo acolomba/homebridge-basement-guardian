@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { describe, test } from 'node:test';
 import timers, { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
-import { mock, verify, when } from 'strong-mock';
+import { It, mock, verify, when } from 'strong-mock';
 
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
@@ -40,11 +40,12 @@ import {
 } from './arrivalAnchorMemoryContract.js';
 
 import type { CloudApi } from '../../src/cloud/api.js';
+import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
 import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
 import type { BgConfig } from '../../src/config.js';
-import type { DeviceSnapshot, DeviceStateStore, ReportedPatch } from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore, ReportedPatch } from '../../src/device/state.js';
 import type { RedactingLogger, SecretRole } from '../../src/logging.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
@@ -464,6 +465,8 @@ function harness(
   t: TestContext,
   script: Partial<Script> = {},
   failures: FailureLog = { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+  ports: Partial<Pick<AccountRuntimeOptions, 'registerSecret' | 'onTrustworthyInventory' | 'onDeviceRemoved' | 'onMonitoringHealth' | 'createRetry'>> &
+    Partial<CloudApi> = {},
 ): Harness {
   t.mock.timers.enable({ apis: ['setTimeout'] });
 
@@ -496,12 +499,12 @@ function harness(
     devices: (signal: AbortSignal) => {
       calls.push('devices');
 
-      return nextDevices(signal);
+      return (ports.devices ?? nextDevices)(signal);
     },
     awsCredentials: (signal: AbortSignal) => {
       calls.push('credentials');
 
-      return nextCredentials(signal);
+      return (ports.awsCredentials ?? nextCredentials)(signal);
     },
     device: () => Promise.reject(new Error('the runtime must not reach the device route')),
     // Recording precedes rejection so a caught refusal cannot hide an attempt
@@ -539,18 +542,21 @@ function harness(
 
       return client;
     },
-    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() }),
+    createRetry: ports.createRetry ?? ((signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() })),
     pollIntervalMs: script.pollIntervalMs ?? POLL_INTERVAL_MS,
     rotationLeadMs: script.rotationLeadMs ?? ROTATION_LEAD_MS,
     minRotationDelayMs: script.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
     failures,
     registerSecret: (secret: string, role?: SecretRole): void => {
+      ports.registerSecret?.(secret, role);
       registrations.push(`${String(role)} ${secret}`);
     },
     onTrustworthyInventory: (deviceIds: readonly string[]): void => {
+      ports.onTrustworthyInventory?.(deviceIds);
       trustworthyInventories.push([...deviceIds]);
     },
     onDeviceRemoved: (deviceId: string): void => {
+      ports.onDeviceRemoved?.(deviceId);
       removed.push(deviceId);
 
       if (script.removalFails ?? false) {
@@ -565,6 +571,7 @@ function harness(
       store.remove(deviceId);
     },
     onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
+      ports.onMonitoringHealth?.(account, byDevice);
       monitoringHealth.push(account);
       monitoringByDevice.push(new Map(byDevice));
     },
@@ -821,11 +828,28 @@ for (const { contractCase, createAnchors, rejectedObservation, expectedObservati
 
 test('waits until a distant credential expiry using only representable native timer delays', async (t) => {
   // arrange
-  const { runtime, calls, advance } = harness(t, {
-    credentials: [() => Promise.resolve(credentialsAt(START_TIME + 4_320_000_000))],
-    rotationLeadMs: 10,
-    minRotationDelayMs: 5,
-  });
+  const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+  let rootSignal!: AbortSignal;
+
+  const { runtime, calls, advance } = harness(
+    t,
+    {
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + 4_320_000_000))],
+      rotationLeadMs: 10,
+      minRotationDelayMs: 5,
+    },
+    undefined,
+    {
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
+
   const setTimeoutSpy = t.mock.method(timers, 'setTimeout');
 
   // act
@@ -850,6 +874,7 @@ test('waits until a distant credential expiry using only representable native ti
     { afterFirstBoundedWait, afterSecondBoundedWait, beforeExpiryLead, afterExpiryLead },
     { afterFirstBoundedWait: 1, afterSecondBoundedWait: 1, beforeExpiryLead: 1, afterExpiryLead: 2 },
   );
+  verify(requests);
 });
 
 test('retains halted state when a pending final inventory check succeeds', async (t) => {
@@ -995,13 +1020,25 @@ test('retains halted state when a pending final inventory check succeeds', async
 
 test('starts no inventory work when restoration completes after shutdown', async (t) => {
   // arrange
+  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+  when(() => {
+    listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+  }).thenReturn(undefined);
+
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
   // The promise constructor assigns the resolver synchronously.
   let completeRestore!: () => void;
   const restoring = new Promise<void>((resolve) => {
     completeRestore = resolve;
   });
   const anchors = { ...recordingAnchors(), restore: () => restoring };
-  const { runtime, store, calls, monitoringHealth, commandRequests } = harness(t, { anchors });
+  const { runtime, store, calls, monitoringHealth, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
+    devices: (signal) => requests.devices(signal),
+    awsCredentials: (signal) => requests.awsCredentials(signal),
+    onMonitoringHealth: listener,
+  });
 
   // act
   const starting = runtime.start();
@@ -1010,9 +1047,12 @@ test('starts no inventory work when restoration completes after shutdown', async
   await starting;
   await settle();
 
+  const pathBeforeStop = runtime.monitoringPath;
+  const healthBeforeStop = [...monitoringHealth];
+
   // assert
   assert.deepStrictEqual(
-    { path: runtime.monitoringPath, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth },
+    { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
     {
       path: 'unavailable',
       snapshots: [],
@@ -1022,16 +1062,45 @@ test('starts no inventory work when restoration completes after shutdown', async
   );
   assert.deepStrictEqual(calls, []);
   assert.deepStrictEqual(commandRequests, []);
+  verify(commands);
+  verify(requests);
+  verify(listener);
 });
 
 test('admits no devices when the launch inventory resolves after shutdown', async (t) => {
   // arrange
+  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+  when(() => {
+    listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+  }).thenReturn(undefined);
+
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+  let rootSignal!: AbortSignal;
+
+  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
   // The promise constructor assigns the resolver synchronously.
   let completeInventory!: (devices: readonly ApiDevice[]) => void;
   const inventory = new Promise<readonly ApiDevice[]>((resolve) => {
     completeInventory = resolve;
   });
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t, { devices: [() => inventory] });
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(
+    t,
+    { devices: [() => inventory], command: commands },
+    undefined,
+    {
+      onTrustworthyInventory: inventoryListener,
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+      onMonitoringHealth: listener,
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenReturn(inventory);
 
   // act
   const starting = runtime.start();
@@ -1041,9 +1110,12 @@ test('admits no devices when the launch inventory resolves after shutdown', asyn
   await starting;
   await settle();
 
+  const pathBeforeStop = runtime.monitoringPath;
+  const healthBeforeStop = [...monitoringHealth];
+
   // assert
   assert.deepStrictEqual(
-    { path: runtime.monitoringPath, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth },
+    { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
     {
       path: 'unavailable',
       snapshots: [],
@@ -1053,11 +1125,43 @@ test('admits no devices when the launch inventory resolves after shutdown', asyn
   );
   assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [] });
   assert.deepStrictEqual(commandRequests, []);
+  verify(commands);
+  verify(inventoryListener);
+  verify(requests);
+  verify(listener);
 });
 
 test('starts no background work when shutdown follows launch admission', async (t) => {
   // arrange
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t);
+  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+  when(() => {
+    listener(
+      { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+      new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+    );
+  }).thenReturn(undefined);
+
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+  let rootSignal!: AbortSignal;
+
+  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+  when(() => {
+    inventoryListener([DEVICE_ID]);
+  }).thenReturn(undefined);
+
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t, { command: commands }, undefined, {
+    onTrustworthyInventory: inventoryListener,
+    devices: (signal) => requests.devices(signal),
+    awsCredentials: (signal) => requests.awsCredentials(signal),
+    createRetry: (signal) => {
+      rootSignal = signal;
+      return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+    },
+    onMonitoringHealth: listener,
+  });
+  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
   store.subscribe(DEVICE_ID, () => {
     queueMicrotask(() => {
       void runtime.stop();
@@ -1068,9 +1172,12 @@ test('starts no background work when shutdown follows launch admission', async (
   await runtime.start();
   await settle();
 
+  const pathBeforeStop = runtime.monitoringPath;
+  const healthBeforeStop = [...monitoringHealth];
+
   // assert
   assert.deepStrictEqual(
-    { path: runtime.monitoringPath, snapshot: store.snapshot(DEVICE_ID), anchors: [...anchors.stored], monitoringHealth },
+    { path: pathBeforeStop, snapshot: store.snapshot(DEVICE_ID), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
     {
       path: 'unavailable',
       snapshot: {
@@ -1088,6 +1195,10 @@ test('starts no background work when shutdown follows launch admission', async (
   );
   assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [[DEVICE_ID]] });
   assert.deepStrictEqual(commandRequests, []);
+  verify(commands);
+  verify(inventoryListener);
+  verify(requests);
+  verify(listener);
 });
 
 interface PendingInventory {
@@ -1129,6 +1240,36 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
 ]) {
   test(`retains halted state when a pending ${completion}`, async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    })
+      .thenReturn(undefined)
+      .times(healthyReports);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+    for (const deviceIds of expectedInventories) {
+      when(() => {
+        inventoryListener(deviceIds);
+      }).thenReturn(undefined);
+    }
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     // The promise constructor assigns both resolvers synchronously.
     let completeInventory!: (devices: readonly ApiDevice[]) => void;
     let rejectInventory!: (error: Error) => void;
@@ -1136,13 +1277,19 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
       completeInventory = resolve;
       rejectInventory = reject;
     });
-    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(t, {
-      devices: [...precedingInventories, () => inventory],
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
-      pollIntervalMs: 1_000,
-      rotationLeadMs: 10,
-      minRotationDelayMs: 5,
-    });
+    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [...precedingInventories, () => inventory],
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
+        pollIntervalMs: 1_000,
+        rotationLeadMs: 10,
+        minRotationDelayMs: 5,
+        command: commands,
+      },
+      undefined,
+      { onTrustworthyInventory: inventoryListener, onMonitoringHealth: listener },
+    );
     const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
     const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
     const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
@@ -1159,14 +1306,19 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
     finish({ resolve: completeInventory, reject: rejectInventory });
     await settle();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
       {
-        path: runtime.monitoringPath,
+        path: pathBeforeStop,
         snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
         anchors: [...anchors.stored],
-        monitoringHealth,
-        monitoringByDevice,
+        monitoringHealth: healthBeforeStop,
+        monitoringByDevice: devicesBeforeStop,
       },
       {
         path: 'unavailable',
@@ -1188,13 +1340,17 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
     );
     assert.deepStrictEqual(trustworthyInventories, expectedInventories);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(inventoryListener);
+    verify(listener);
   });
 }
 
 describe('start', () => {
   test('discovers every device and stores its canonical snapshot', async (t) => {
     // arrange
-    const { runtime, store, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, store, commandRequests } = harness(t, { command: commands });
 
     // act
     await runtime.start();
@@ -1210,11 +1366,13 @@ describe('start', () => {
       receivedAt: START_TIME,
     });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('reads canonical state from the one store it maintains', async (t) => {
     // arrange
-    const { runtime, store, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, store, commandRequests } = harness(t, { command: commands });
 
     // act
     await runtime.start();
@@ -1231,10 +1389,12 @@ describe('start', () => {
       receivedAt: START_TIME,
     });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('stores the discovered inventory and reports successful monitoring', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -1248,7 +1408,7 @@ describe('start', () => {
     when(() => {
       failures.recordSuccess('The shadow connection');
     }).thenReturn(undefined);
-    const { runtime, commandRequests } = harness(t, {}, failures);
+    const { runtime, commandRequests } = harness(t, { command: commands }, failures);
 
     // act
     await runtime.start();
@@ -1267,11 +1427,13 @@ describe('start', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   test('opens one shadow connection for every discovered device', async (t) => {
     // arrange
-    const { runtime, shadows, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, commandRequests } = harness(t, { command: commands });
 
     // act
     await runtime.start();
@@ -1280,11 +1442,18 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual({ connections: shadows.length, subscribed: shadows[0]?.subscribed }, { connections: 1, subscribed: [[DEVICE_ID]] });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('reports the discovered deviceIds to the trustworthy-inventory listener', async (t) => {
     // arrange
-    const { runtime, trustworthyInventories, commandRequests } = harness(t);
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+    when(() => {
+      inventoryListener([DEVICE_ID]);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, trustworthyInventories, commandRequests } = harness(t, { command: commands }, undefined, { onTrustworthyInventory: inventoryListener });
 
     // act
     await runtime.start();
@@ -1292,11 +1461,21 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual(trustworthyInventories, [[DEVICE_ID]]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(inventoryListener);
   });
 
   test('reports an empty list to the trustworthy-inventory listener on a valid empty response', async (t) => {
     // arrange
-    const { runtime, trustworthyInventories, commandRequests } = harness(t, { devices: [() => Promise.resolve([])] });
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+    when(() => {
+      inventoryListener([]);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, trustworthyInventories, commandRequests } = harness(t, { devices: [() => Promise.resolve([])], command: commands }, undefined, {
+      onTrustworthyInventory: inventoryListener,
+    });
 
     // act
     await runtime.start();
@@ -1304,11 +1483,25 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual(trustworthyInventories, [[]]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(inventoryListener);
   });
 
   test('AUTH-02 registers every temporary credential value under its own rotated role', async (t) => {
     // arrange
-    const { runtime, registrations, commandRequests } = harness(t);
+    const registerSecret = mock<AccountRuntimeOptions['registerSecret']>({ exactParams: true, name: 'AWS credential registration' });
+    when(() => {
+      registerSecret('test-access-key-id', 'aws-access-key-id');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-secret-access-key', 'aws-secret-access-key');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-session-token', 'aws-session-token');
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, registrations, commandRequests } = harness(t, { command: commands }, undefined, { registerSecret });
 
     // act
     await runtime.start();
@@ -1321,10 +1514,13 @@ describe('start', () => {
       'aws-session-token test-session-token',
     ]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(registerSecret);
   });
 
   test('reports the route and the status when the vendor refuses discovery', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Credential rotation');
@@ -1334,9 +1530,7 @@ describe('start', () => {
     }).thenReturn(undefined);
     const { runtime, store, commandRequests } = harness(
       t,
-      {
-        devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))],
-      },
+      { devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))], command: commands },
       failures,
     );
 
@@ -1349,10 +1543,12 @@ describe('start', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   test('reports a fixed message that repeats nothing from an unexpected discovery failure', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Credential rotation');
@@ -1362,9 +1558,7 @@ describe('start', () => {
     }).thenReturn(undefined);
     const { runtime, commandRequests } = harness(
       t,
-      {
-        devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))],
-      },
+      { devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))], command: commands },
       failures,
     );
 
@@ -1377,13 +1571,29 @@ describe('start', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   test('D-13 schedules nothing at all after the vendor refuses the account credentials', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
-    });
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))], command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'));
 
     // act
     await runtime.start();
@@ -1392,13 +1602,33 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual(calls, ['devices']);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('D-22 waits the interval a throttling response carries rather than the capped backoff', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
+        command: commands,
+      },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
 
     // act
     await runtime.start();
@@ -1412,12 +1642,32 @@ describe('start', () => {
       { afterCappedBackoff: 1, afterCarriedInterval: 2 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('D-22 waits again when the launch that follows a throttling response is throttled too', async (t) => {
     // arrange
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const throttled = (): Promise<never> => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
-    const { runtime, calls, advance, commandRequests } = harness(t, { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])] });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])], command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
+    when(() => requests.devices(rootSignal)).thenReject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
 
     // act
     await runtime.start();
@@ -1427,11 +1677,19 @@ describe('start', () => {
     // assert
     assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('performs no work when start runs after stop', async (t) => {
     // arrange
-    const { runtime, calls, commandRequests } = harness(t);
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, commandRequests } = harness(t, { command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+    });
 
     // act
     await runtime.stop();
@@ -1441,6 +1699,8 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual(calls, []);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   // The restart case, end to end. An earlier run left an anchor older than the
@@ -1454,9 +1714,33 @@ describe('start', () => {
   // first report would call it trustworthy.
   test('D-07 retains the restored anchor of a silent pump until a reported arrival', async (t) => {
     // arrange
-    const { runtime, anchors, shadows, monitoringByDevice, advance, commandRequests } = harness(t, {
-      anchors: recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]),
-    });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, anchors, shadows, monitoringByDevice, advance, commandRequests } = harness(
+      t,
+      { anchors: recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]), command: commands },
+      undefined,
+      { onMonitoringHealth: listener },
+    );
 
     // act
     await runtime.start();
@@ -1469,6 +1753,7 @@ describe('start', () => {
     };
     await advance(123);
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(afterStart, {
@@ -1485,6 +1770,8 @@ describe('start', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // An install carrying no anchor invents nothing. The device is judged from its
@@ -1492,18 +1779,37 @@ describe('start', () => {
   // anchor for the next one (D-08).
   test('D-08 vouches for a pump admitted on an install carrying no stored anchor, and anchors it from its admission', async (t) => {
     // arrange
-    const { runtime, anchors, monitoringByDevice, commandRequests } = harness(t);
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, anchors, monitoringByDevice, commandRequests } = harness(t, { command: commands }, undefined, { onMonitoringHealth: listener });
 
     // act
     await runtime.start();
     await settle();
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent, anchor: anchors.stored.get(DEVICE_ID) },
+      { silent: devicesBeforeStop.at(0)?.get(DEVICE_ID)?.shadowSilent, anchor: anchors.stored.get(DEVICE_ID) },
       { silent: false, anchor: START_TIME },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The anchors are written where the trust is reported, which is every poll
@@ -1511,7 +1817,8 @@ describe('start', () => {
   // when it completed.
   test('D-07 writes the anchors on the reporting tick', async (t) => {
     // arrange
-    const { runtime, anchors, advance, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, anchors, advance, commandRequests } = harness(t, { command: commands });
     await runtime.start();
     await settle();
     const afterTheLaunch = anchors.persists();
@@ -1522,6 +1829,7 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual({ afterTheLaunch, afterAPoll: anchors.persists() }, { afterTheLaunch: 1, afterAPoll: 2 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 });
 
@@ -1665,7 +1973,20 @@ test('registers every AWS role before shadow use and replaces the next handshake
 describe('credential rotation', () => {
   test('SYNC-04 refreshes the credentials ten minutes before the expiry the response carries', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t);
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(t, { command: commands }, undefined, {
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    });
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
     await runtime.start();
     await settle();
 
@@ -1677,15 +1998,36 @@ describe('credential rotation', () => {
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('holds the delay at the injected floor when the response already expires inside the injected lead window', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS))],
-      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
-      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
-    });
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS))],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+        command: commands,
+      },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS));
+
     await runtime.start();
     await settle();
 
@@ -1697,15 +2039,36 @@ describe('credential rotation', () => {
     // assert
     assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 1, afterFloor: 2 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-04 takes the injected lead when the expiry sits further out than the injected floor', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS))],
-      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
-      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
-    });
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS))],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+        command: commands,
+      },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS));
+
     await runtime.start();
     await settle();
 
@@ -1717,16 +2080,38 @@ describe('credential rotation', () => {
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-04 schedules the next rotation from the new expiry rather than the first one', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      credentials: [
-        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
-        () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
-      ],
-    });
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+          () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
+        ],
+        command: commands,
+      },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS));
+
     await runtime.start();
     await settle();
     await advance(ROTATION_DELAY_MS);
@@ -1742,17 +2127,41 @@ describe('credential rotation', () => {
       { beforeSecondDue: 2, afterSecondDue: 3 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-04 arms the next rotation even after a refresh that rejects', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      credentials: [
-        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
-        () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
-        () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
-      ],
-    });
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+          () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+          () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
+        ],
+        command: commands,
+      },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    when(() => requests.awsCredentials(rootSignal)).thenReject(
+      new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws'),
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS));
+
     await runtime.start();
     await settle();
     await advance(ROTATION_DELAY_MS);
@@ -1765,10 +2174,33 @@ describe('credential rotation', () => {
     // assert
     assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 2, afterFloor: 3 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('reports every failed credential refresh without changing the live monitoring path', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -1799,8 +2231,10 @@ describe('credential rotation', () => {
           () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
           () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
         ],
+        command: commands,
       },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -1810,9 +2244,13 @@ describe('credential rotation', () => {
     await advance(MIN_ROTATION_DELAY_MS);
     await advance(MIN_ROTATION_DELAY_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
@@ -1821,15 +2259,19 @@ describe('credential rotation', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('SYNC-04 replaces what the next handshake reads and leaves the live connection alone', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, advance, commandRequests } = harness(t, {
       credentials: [
         () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
         () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
       ],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -1853,16 +2295,32 @@ describe('credential rotation', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('holds the delay at the injected floor when the vendor expiry cannot be read as a date', async (t) => {
     // arrange
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const unreadable = { ...credentialsAt(START_TIME + ONE_HOUR_MS) };
     unreadable.credentials = { ...unreadable.credentials, Expiration: 'whenever' };
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      credentials: [() => Promise.resolve(unreadable)],
-      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
-    });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      { credentials: [() => Promise.resolve(unreadable)], minRotationDelayMs: SHORT_ROTATION_FLOOR_MS, command: commands },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(unreadable);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(unreadable);
+
     await runtime.start();
     await settle();
 
@@ -1872,11 +2330,14 @@ describe('credential rotation', () => {
     // assert
     assert.strictEqual(calls.filter((call) => call === 'credentials').length, 2);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-04 gives the shadow client a reconnect policy the runtime own retry has not advanced', async (t) => {
     // arrange
-    const { runtime, shadows, advance, commandRequests } = harness(t, { shadow: [false, true] });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, advance, commandRequests } = harness(t, { shadow: [false, true], command: commands });
     await runtime.start();
     await settle();
 
@@ -1886,14 +2347,17 @@ describe('credential rotation', () => {
     // assert
     assert.deepStrictEqual({ connections: shadows.length, shadowAttempt: shadows[0]?.options.retry.attempt }, { connections: 1, shadowAttempt: 0 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 });
 
 describe('the poll backstop', () => {
   test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 3 } }])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -1904,15 +2368,18 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 3 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('D-014 leaves every stored snapshot unchanged when a poll rejects', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
       ],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -1924,15 +2391,18 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), beforePoll);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('leaves connectivity alone when a poll rejects, because a failed request is not a device report', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
       ],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -1943,17 +2413,38 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.connectivity, { connected: true, timestamp: DEVICE_TIME });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('schedules the next poll after one that rejects', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      devices: [
-        () => Promise.resolve([geminiDevice()]),
-        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
-        () => Promise.resolve([geminiDevice()]),
-      ],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [
+          () => Promise.resolve([geminiDevice()]),
+          () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+          () => Promise.resolve([geminiDevice()]),
+        ],
+        command: commands,
+      },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenReject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
     await runtime.start();
     await settle();
 
@@ -1964,10 +2455,27 @@ describe('the poll backstop', () => {
     // assert
     assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-05 reports no failure when a shutdown aborts a poll that is in flight', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -1983,10 +2491,9 @@ describe('the poll backstop', () => {
     }).thenReturn(undefined);
     const { runtime, advance, commandRequests, monitoringByDevice } = harness(
       t,
-      {
-        devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)],
-      },
+      { devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)], command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -1996,9 +2503,12 @@ describe('the poll backstop', () => {
     await runtime.stop();
     await settle();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'unavailable',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
@@ -2007,12 +2517,16 @@ describe('the poll backstop', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('SYNC-02 keeps the telemetry and metadata a later poll would overwrite while the shadow owns them', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2027,6 +2541,7 @@ describe('the poll backstop', () => {
       { data: { water_level: 2, primary_pump_running: false, ac_power: true }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // The poll is the reconciliation backstop, and a shadow that has stopped
@@ -2042,9 +2557,11 @@ describe('the poll backstop', () => {
   // against a 5000 ms step deadline, so a one-poll delay hides inside it.
   test('D-13 reports the flood a poll found on a device whose live path went quiet', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2057,6 +2574,7 @@ describe('the poll backstop', () => {
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // A report of device metadata delivered no reading, so it cannot take the
@@ -2068,6 +2586,7 @@ describe('the poll backstop', () => {
   // (CR-03, SYNC-02).
   test('D-13 leaves the poll owning telemetry through a live message that reports only device metadata', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [
@@ -2076,6 +2595,7 @@ describe('the poll backstop', () => {
         () => Promise.resolve([geminiDevice()]),
         () => Promise.resolve([floodedDevice]),
       ],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2097,6 +2617,7 @@ describe('the poll backstop', () => {
       { waterLevel: PROVISIONAL_FLOOD_WATER_LEVEL_CODE, metadata: { mcu_firmware_version: '1.4.2' }, shadowVersion: undefined },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // Roughly fifteen minutes of quiet is ordinary, so one missed heartbeat is
@@ -2105,9 +2626,11 @@ describe('the poll backstop', () => {
   // it (SYNC-02, D-05).
   test('D-13 keeps a pump run the live path reported when a poll arrives inside the two-heartbeat window', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2119,6 +2642,7 @@ describe('the poll backstop', () => {
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // A REST degradation is not silence. `recordPollSuccess` runs after
@@ -2131,11 +2655,13 @@ describe('the poll backstop', () => {
   // run without the window opening under them.
   test('D-13 keeps live telemetry through a poll that recovers from a REST degradation', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failing = (): Promise<ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([stoppedPump])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2149,6 +2675,7 @@ describe('the poll backstop', () => {
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // Ownership returns through the patch path that already exists: the arriving
@@ -2158,9 +2685,11 @@ describe('the poll backstop', () => {
   // poll's older body (SYNC-03, D-13).
   test('D-13 lets the live path own telemetry again on the first message that carries an observation', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2178,12 +2707,15 @@ describe('the poll backstop', () => {
       { pumpRunning: true, shadowVersion: 6 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('D-15 lets the poll write telemetry again once the shadow connection is gone', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2196,6 +2728,7 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 4 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // The handover is a fact about one controller. A pump whose live path is
@@ -2209,8 +2742,10 @@ describe('the poll backstop', () => {
   // heartbeat old while the first is two.
   test('D-13 hands only the quiet pump back to the poll and leaves its neighbour owning its telemetry', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2233,6 +2768,7 @@ describe('the poll backstop', () => {
       { quiet: 7, quietVersion: undefined, healthy: 3, healthyVersion: 7 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // A connection that ended took every device's live path with it, so this
@@ -2240,8 +2776,10 @@ describe('the poll backstop', () => {
   // the controller that stopped speaking (D-15, SYNC-03).
   test('D-15 hands every pump back to the poll when the connection that carried them all ends', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2258,12 +2796,15 @@ describe('the poll backstop', () => {
       { first: 7, second: 7 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-03 lets a shadow document that arrives after a poll win on the keys it carries', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4, ac_power: true } }])],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2275,13 +2816,15 @@ describe('the poll backstop', () => {
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 5, ac_power: true });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 });
 
 describe('stop', () => {
   test('SYNC-05 resolves both calls and closes the connection once when stop is called twice', async (t) => {
     // arrange
-    const { runtime, shadows, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, commandRequests } = harness(t, { command: commands });
     await runtime.start();
     await settle();
 
@@ -2292,12 +2835,15 @@ describe('stop', () => {
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 resolves after a start that stopped at authentication', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2305,12 +2851,15 @@ describe('stop', () => {
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 resolves after a start that failed at discovery', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2318,20 +2867,24 @@ describe('stop', () => {
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 resolves when nothing was ever started', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { command: commands });
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 cancels a pending retry wait so the attempt it was waiting for never runs', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false] });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false], command: commands });
     await runtime.start();
     await settle();
     const attemptsBeforeStop = calls.filter((call) => call === 'shadow').length;
@@ -2346,14 +2899,16 @@ describe('stop', () => {
       { attemptsBeforeStop: 1, attemptsAfterStop: 1 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 closes a shadow connection whose start resolved only after the shutdown began', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     // The shutdown lands after the connection is open and before the runtime
     // has recorded it, which is the window where nothing would close it.
     const stopped = { runtime: undefined as AccountRuntime | undefined };
-    const { runtime, shadows, commandRequests } = harness(t, { whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    const { runtime, shadows, commandRequests } = harness(t, { whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve(), command: commands });
     stopped.runtime = runtime;
 
     // act
@@ -2363,12 +2918,18 @@ describe('stop', () => {
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 raises nothing when the connection opened during a shutdown cannot be closed', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const stopped = { runtime: undefined as AccountRuntime | undefined };
-    const { runtime, commandRequests } = harness(t, { closeFails: true, whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    const { runtime, commandRequests } = harness(t, {
+      closeFails: true,
+      whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve(),
+      command: commands,
+    });
     stopped.runtime = runtime;
 
     // act & assert
@@ -2377,13 +2938,26 @@ describe('stop', () => {
       await settle();
     });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 schedules nothing and reports no failure when a shutdown aborts the launch', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'aborted launch requests' });
+    let rootSignal!: AbortSignal;
 
-    const { runtime, calls, commandRequests } = harness(t, { devices: [hangingUntilAborted] }, failures);
+    const { runtime, calls, commandRequests } = harness(t, { command: commands }, failures, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    });
+    when(() => requests.devices(rootSignal)).thenReturn(hangingUntilAborted(rootSignal));
     const starting = runtime.start();
     await settle();
 
@@ -2398,11 +2972,14 @@ describe('stop', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(requests);
   });
 
   test('SYNC-05 reports monitoring unavailable once the runtime has stopped', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
     await settle();
     const beforeStop = runtime.monitoringPath;
@@ -2413,10 +2990,26 @@ describe('stop', () => {
     // assert
     assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'unavailable' });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 records no failure when a shutdown aborts a poll already in flight', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2432,8 +3025,9 @@ describe('stop', () => {
     }).thenReturn(undefined);
     const { runtime, advance, commandRequests, monitoringByDevice } = harness(
       t,
-      { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] },
+      { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted], command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -2443,9 +3037,12 @@ describe('stop', () => {
     await runtime.stop();
     await settle();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'unavailable',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
@@ -2454,6 +3051,8 @@ describe('stop', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // The tier that decides whether a press may leave the plugin reads this fact from the runtime, and
@@ -2467,17 +3066,33 @@ describe('stop', () => {
   // condition that is over the moment the process ends (D-014, D-01).
   test('RES-04 pushes an unready command transport, and withdraws no scope, when the runtime stops', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, commandRequests } = harness(t);
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringHealth, commandRequests } = harness(t, { command: commands }, undefined, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
     const beforeStop = [...monitoringHealth];
 
     // act
     await runtime.stop();
+    const healthBeforeStop = [...monitoringHealth];
 
     // assert
     assert.deepStrictEqual(
-      { beforeStop, afterStop: monitoringHealth },
+      { beforeStop, afterStop: healthBeforeStop },
       {
         beforeStop: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false }],
         afterStop: [
@@ -2487,11 +3102,28 @@ describe('stop', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   test('SYNC-05 pushes once when a shutdown runs twice, because the second call returns before anything else', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, commandRequests } = harness(t);
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringHealth, commandRequests } = harness(t, { command: commands }, undefined, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
     const beforeStop = monitoringHealth.length;
@@ -2499,10 +3131,13 @@ describe('stop', () => {
     // act
     await runtime.stop();
     await runtime.stop();
+    const healthBeforeStop = [...monitoringHealth];
 
     // assert
-    assert.deepStrictEqual({ beforeStop, afterStop: monitoringHealth.length }, { beforeStop: 1, afterStop: 2 });
+    assert.deepStrictEqual({ beforeStop, afterStop: healthBeforeStop.length }, { beforeStop: 1, afterStop: 2 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // A runtime nothing ever started has no poll behind it, so its transport was never ready and the
@@ -2510,21 +3145,44 @@ describe('stop', () => {
   // saying so, never by inferring it from a report that did not arrive.
   test('pushes the unready transport when a runtime that never started stops', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, commandRequests } = harness(t);
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringHealth, commandRequests } = harness(t, { command: commands }, undefined, { onMonitoringHealth: listener });
 
     // act
     await runtime.stop();
+    const healthBeforeStop = [...monitoringHealth];
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [
+    assert.deepStrictEqual(healthBeforeStop, [
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
     ]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   test('SYNC-05 arms no timer that outlives it', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t);
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(t, { command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
     await runtime.start();
     await settle();
     const callsBeforeStop = calls.length;
@@ -2536,27 +3194,33 @@ describe('stop', () => {
     // assert
     assert.deepStrictEqual({ callsBeforeStop, callsAfterStop: calls.length }, { callsBeforeStop: 3, callsAfterStop: 3 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 });
 
 describe('the degraded monitoring path', () => {
   test('reports monitoring unavailable before anything has succeeded', (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { command: commands });
 
     // act & assert
     assert.strictEqual(runtime.monitoringPath, 'unavailable');
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('reports monitoring unavailable while the poll is failing and the shadow is down, and the polling-only path once a poll succeeds', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
         () => Promise.resolve([geminiDevice()]),
       ],
       shadow: [false],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -2568,29 +3232,42 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual({ whileFailing, afterRecovery: runtime.monitoringPath }, { whileFailing: 'unavailable', afterRecovery: 'poll-only' });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('D-13 reports monitoring unavailable and records the stop when the vendor refuses the account credentials', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordFailure('Authentication', STOPPED_LINE);
     }).thenReturn(undefined);
     const { runtime, commandRequests, monitoringHealth } = harness(
       t,
-      {
-        devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
-      },
+      { devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))], command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
 
     // act
     await runtime.start();
     await settle();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, monitoringHealth, stored: runtime.store.deviceIds() },
+      { path: pathBeforeStop, monitoringHealth: healthBeforeStop, stored: runtime.store.deviceIds() },
       {
         path: 'unavailable',
         monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }],
@@ -2600,29 +3277,43 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('D-13 reports monitoring unavailable and records the stop when authentication has halted', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordFailure('Authentication', STOPPED_LINE);
     }).thenReturn(undefined);
     const { runtime, commandRequests, monitoringHealth } = harness(
       t,
-      {
-        devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))],
-      },
+      { devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))], command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
 
     // act
     await runtime.start();
     await settle();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, monitoringHealth, stored: runtime.store.deviceIds() },
+      { path: pathBeforeStop, monitoringHealth: healthBeforeStop, stored: runtime.store.deviceIds() },
       {
         path: 'unavailable',
         monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }],
@@ -2632,10 +3323,13 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('D-22 recovers the combined path after a throttled answer rather than claiming the runtime stopped for good', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2656,6 +3350,7 @@ describe('the degraded monitoring path', () => {
       t,
       {
         devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
+        command: commands,
       },
       failures,
     );
@@ -2671,11 +3366,13 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
     // arrange
-    const { runtime, advance, commandRequests } = harness(t, { shadow: [false] });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, advance, commandRequests } = harness(t, { shadow: [false], command: commands });
 
     // act
     await runtime.start();
@@ -2684,10 +3381,12 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.strictEqual(runtime.monitoringPath, 'poll-only');
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('D-15 reports each failed shadow attempt while retaining polling', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2703,7 +3402,7 @@ describe('the degraded monitoring path', () => {
     })
       .thenReturn(undefined)
       .times(3);
-    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false] }, failures);
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false], command: commands }, failures);
     await runtime.start();
     await settle();
 
@@ -2717,11 +3416,25 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   test('D-15 leaves a pending retry chain to reconnect rather than attempting again from every poll', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false], pollIntervalMs: 100 });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false], pollIntervalMs: 100, command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
     await runtime.start();
     await settle();
     const attemptsBeforePoll = calls.filter((call) => call === 'shadow').length;
@@ -2735,10 +3448,27 @@ describe('the degraded monitoring path', () => {
       { attemptsBeforePoll: 1, polls: 2, attemptsAfterPoll: 1 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   test('D-15 reports a successful shadow retry and restores the combined path', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2755,16 +3485,22 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure('The shadow connection', DEGRADED_LINE);
     }).thenReturn(undefined);
-    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { shadow: [false, true] }, failures);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { shadow: [false, true], command: commands }, failures, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await settle();
 
     // act
     await advance(500);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -2773,11 +3509,14 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('reads as the combined path once the shadow connection reports itself up', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { command: commands });
 
     // act
     await runtime.start();
@@ -2786,10 +3525,26 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('falls back to the polling-only path without reporting a fault when the connection closes', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2803,16 +3558,20 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordSuccess('The shadow connection');
     }).thenReturn(undefined);
-    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, { command: commands }, failures, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
 
     // act
     shadows[0]?.options.onDisconnected('transport-closed');
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'poll-only',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -2821,10 +3580,27 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('SYNC-04 reports no fault for the daily reconnect the provider connection ceiling forces', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2840,7 +3616,7 @@ describe('the degraded monitoring path', () => {
     })
       .thenReturn(undefined)
       .times(2);
-    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, { command: commands }, failures, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
 
@@ -2848,9 +3624,13 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onDisconnected('transport-closed');
     shadows[0]?.options.onConnected();
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -2859,10 +3639,27 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('D-15 reports each connection failure while retaining the polling path', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2881,7 +3678,7 @@ describe('the degraded monitoring path', () => {
     })
       .thenReturn(undefined)
       .times(3);
-    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, { command: commands }, failures, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
 
@@ -2890,9 +3687,13 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onDisconnected('transport-error');
     shadows[0]?.options.onDisconnected('transport-error');
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'poll-only',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -2901,10 +3702,27 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('D-15 reports the degraded path when the broker refuses the subscription', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -2921,16 +3739,20 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure('The shadow connection', DEGRADED_LINE);
     }).thenReturn(undefined);
-    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, { command: commands }, failures, { onMonitoringHealth: listener });
     await runtime.start();
     await settle();
 
     // act
     shadows[0]?.options.onDisconnected('subscription-refused');
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'poll-only',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -2939,12 +3761,15 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   for (const reason of ['transport-closed', 'transport-error', 'subscription-refused', 'handshake-refused'] as const) {
     test(`SYNC-03 hands telemetry back to the poll when the connection reports ${reason}`, async (t) => {
       // arrange
-      const { runtime, shadows, store, commandRequests } = harness(t);
+      const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+      const { runtime, shadows, store, commandRequests } = harness(t, { command: commands });
       await runtime.start();
       await settle();
       store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 90 });
@@ -2955,12 +3780,14 @@ describe('the degraded monitoring path', () => {
       // assert
       assert.strictEqual(store.snapshot(DEVICE_ID)?.shadowVersion, undefined);
       assert.deepStrictEqual(commandRequests, []);
+      verify(commands);
     });
   }
 
   test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {
     // arrange
-    const { runtime, shadows, commandRequests } = harness(t);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, commandRequests } = harness(t, { command: commands });
     await runtime.start();
     await settle();
 
@@ -2970,23 +3797,28 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('SYNC-05 resolves stop when the shadow connection cannot be closed', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, { closeFails: true });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { closeFails: true, command: commands });
     await runtime.start();
     await settle();
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('opens no shadow connection while discovery has returned no device', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
+      command: commands,
     });
 
     // act
@@ -2999,28 +3831,72 @@ describe('the degraded monitoring path', () => {
       [],
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('reports the polling path degraded on the second consecutive failure and trusted again on the next success', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
-    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([geminiDevice()])],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([geminiDevice()])],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+        command: commands,
+      },
+      undefined,
+      { onMonitoringHealth: listener },
+    );
     await runtime.start();
 
     // act
     await advance(FAST_POLL_INTERVAL_MS);
     await advance(FAST_POLL_INTERVAL_MS);
     await advance(FAST_POLL_INTERVAL_MS);
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      monitoringHealth.map((trust) => trust.restDegraded),
+      healthBeforeStop.map((trust) => trust.restDegraded),
       [false, false, true, false],
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The two thresholds answer different questions, and this is the case that separates them. One
@@ -3030,24 +3906,61 @@ describe('the degraded monitoring path', () => {
   // which is the blur the per-cause status table exists to prevent (RES-04, D-07).
   test('reports the command transport unready after a single failed poll, with neither degradation field moved', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
-    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), failing, () => Promise.resolve([geminiDevice()])],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), failing, () => Promise.resolve([geminiDevice()])],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+        command: commands,
+      },
+      undefined,
+      { onMonitoringHealth: listener },
+    );
     await runtime.start();
 
     // act
     await advance(FAST_POLL_INTERVAL_MS);
     await advance(FAST_POLL_INTERVAL_MS);
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual(monitoringHealth, [
+    assert.deepStrictEqual(healthBeforeStop, [
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
     ]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The one failure this project treats as final. Nothing polls, refreshes, or connects after it, so
@@ -3059,24 +3972,53 @@ describe('the degraded monitoring path', () => {
   // absence of interest (D-10).
   test('D-13 pushes a rejected credential and an unready command transport, and never reaches the vendor again', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, calls, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
-    });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, new Map([]));
+    }).thenReturn(undefined);
+
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringHealth, calls, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))], command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+        onMonitoringHealth: listener,
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'));
 
     // act
     await runtime.start();
     await settle();
     await advance(POLL_INTERVAL_MS);
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { monitoringHealth, calls },
+      { monitoringHealth: healthBeforeStop, calls },
       {
         monitoringHealth: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true }],
         calls: ['devices'],
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
+    verify(listener);
   });
 
   // The refusal an owner actually meets. A password changed at the vendor, or a block the vendor
@@ -3088,6 +4030,27 @@ describe('the degraded monitoring path', () => {
   // path. This one answers a healthy inventory first, so it examines the path a restart never takes.
   test('D-13 pushes a rejected credential and records the authentication stop for a refusal that follows a healthy start', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3106,11 +4069,9 @@ describe('the degraded monitoring path', () => {
     }).thenReturn(undefined);
     const { runtime, monitoringHealth, advance, commandRequests, monitoringByDevice } = harness(
       t,
-      {
-        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-        pollIntervalMs: FAST_POLL_INTERVAL_MS,
-      },
+      { devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount], pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -3118,10 +4079,15 @@ describe('the degraded monitoring path', () => {
     // act
     await advance(FAST_POLL_INTERVAL_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
-    assert.deepStrictEqual(monitoringHealth.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+    assert.deepStrictEqual(healthBeforeStop.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'unavailable',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
@@ -3130,6 +4096,8 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // What makes the refusal a state rather than an act the runtime performed once. A socket left open
@@ -3140,6 +4108,7 @@ describe('the degraded monitoring path', () => {
   // not happen (D-10, D-13, SYNC-05).
   test('D-13 closes the live connection and opens no other for a refusal that follows a healthy start', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3158,10 +4127,7 @@ describe('the degraded monitoring path', () => {
     }).thenReturn(undefined);
     const { runtime, shadows, calls, advance, commandRequests } = harness(
       t,
-      {
-        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-        pollIntervalMs: FAST_POLL_INTERVAL_MS,
-      },
+      { devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount], pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands },
       failures,
     );
     await runtime.start();
@@ -3176,12 +4142,34 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
   });
 
   // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
   // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
   test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3204,8 +4192,10 @@ describe('the degraded monitoring path', () => {
         credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
         rotationLeadMs: SHORT_ROTATION_LEAD_MS,
         minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+        command: commands,
       },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -3213,10 +4203,15 @@ describe('the degraded monitoring path', () => {
     // act
     await advance(SHORT_CREDENTIAL_LIFETIME_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
-    assert.deepStrictEqual(monitoringHealth.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+    assert.deepStrictEqual(healthBeforeStop.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'unavailable',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
@@ -3225,6 +4220,8 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // The second half of the same claim, and the half a retry would make expensive: the vendor lifts a
@@ -3233,11 +4230,27 @@ describe('the degraded monitoring path', () => {
   // the refusal is about every one of them (D-13, D-10).
   test('D-13 leaves the poll, the rotation and the shadow retry chain nothing to do once a mid-run refusal has halted it', async (t) => {
     // arrange
-    const { runtime, calls, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-      shadow: [false],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount], shadow: [false], pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenReject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
     await runtime.start();
     await settle();
 
@@ -3249,6 +4262,8 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(calls, atTheRefusal);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
   });
 
   // Two loops can be in flight against a tenant that has already said no. The rotation wakes ten
@@ -3256,6 +4271,27 @@ describe('the degraded monitoring path', () => {
   // nor the accessory tier pushed twice (D-10).
   test('D-13 pushes the terminal trust once when the poll and the rotation meet the refusal together', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3280,8 +4316,10 @@ describe('the degraded monitoring path', () => {
         rotationLeadMs: SHORT_ROTATION_LEAD_MS,
         minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
         pollIntervalMs: SHORT_CREDENTIAL_LIFETIME_MS,
+        command: commands,
       },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -3289,15 +4327,21 @@ describe('the degraded monitoring path', () => {
     // act
     await advance(SHORT_CREDENTIAL_LIFETIME_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
+
     // assert
-    assert.deepStrictEqual(monitoringHealth, [
+    assert.deepStrictEqual(healthBeforeStop, [
       { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
       { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
     ]);
-    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.strictEqual(pathBeforeStop, 'unavailable');
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // Closing the connection at the halt is only half the answer, because the loop that halted is
@@ -3308,6 +4352,7 @@ describe('the degraded monitoring path', () => {
   // (D-13, D-10, SYNC-05).
   test('D-13 opens no live connection for a credential grant that lands after a refusal has halted the runtime', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     // The placeholder only gives the binding a value before the executor runs, which it does in this
     // same statement; the grant below is always the promise's own resolver.
     let grantCredentials: (response: AwsCredentialsResponse) => void = () => undefined;
@@ -3318,6 +4363,7 @@ describe('the degraded monitoring path', () => {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       credentials: [() => granted],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -3334,6 +4380,7 @@ describe('the degraded monitoring path', () => {
       'a halted runtime built a shadow client for a credential grant that landed after the refusal',
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // The other half of the same claim, one function later. The connection was already opening when the
@@ -3341,11 +4388,13 @@ describe('the degraded monitoring path', () => {
   // is left. A runtime that kept this one would be holding a socket it will never use (D-13, SYNC-05).
   test('D-13 keeps no live connection that opened while a refusal was halting the runtime', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const halting = { advance: undefined as ((ms: number) => Promise<void>) | undefined };
     const { runtime, shadows, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       whileShadowStarts: () => halting.advance?.(FAST_POLL_INTERVAL_MS) ?? Promise.resolve(),
+      command: commands,
     });
     halting.advance = advance;
 
@@ -3356,6 +4405,7 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual({ closes: shadows[0]?.closes(), clients: calls.filter((call) => call === 'shadow').length }, { closes: 1, clients: 1 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   // The shutdown's own push is the runtime telling the tier the transport has gone, so it is named
@@ -3364,10 +4414,27 @@ describe('the degraded monitoring path', () => {
   // (SYNC-05, RES-04).
   test('reports nothing for a poll a shutdown aborted', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted], pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands },
+      undefined,
+      { onMonitoringHealth: listener },
+    );
     await runtime.start();
     await advance(FAST_POLL_INTERVAL_MS);
     const beforeShutdown = [...monitoringHealth];
@@ -3375,10 +4442,11 @@ describe('the degraded monitoring path', () => {
     // act
     await runtime.stop();
     await settle();
+    const healthBeforeStop = [...monitoringHealth];
 
     // assert
     assert.deepStrictEqual(
-      { beforeShutdown, afterShutdown: monitoringHealth },
+      { beforeShutdown, afterShutdown: healthBeforeStop },
       {
         beforeShutdown: [{ restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false }],
         afterShutdown: [
@@ -3388,24 +4456,92 @@ describe('the degraded monitoring path', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
     // arrange
-    const { runtime, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, undefined, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
 
     // act
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true]);
+    assert.deepStrictEqual(silenceOf(devicesBeforeStop), [false, false, true]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   test('reports live-device silence on every silent poll', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3426,7 +4562,9 @@ describe('the degraded monitoring path', () => {
     })
       .thenReturn(undefined)
       .times(3);
-    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands }, failures, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -3434,9 +4572,13 @@ describe('the degraded monitoring path', () => {
     await advance(FAST_POLL_INTERVAL_MS);
     await advance(FAST_POLL_INTERVAL_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
@@ -3445,10 +4587,45 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('reports live-device recovery on the arriving message and subsequent poll', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3469,7 +4646,12 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
     }).thenReturn(undefined);
-    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
+    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      { pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands },
+      failures,
+      { onMonitoringHealth: listener },
+    );
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -3477,9 +4659,13 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
     await advance(FAST_POLL_INTERVAL_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -3488,6 +4674,8 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // The scoped permission allows vendor deviceId in local logs, accessory context and persisted
@@ -3497,6 +4685,27 @@ describe('the degraded monitoring path', () => {
   // (AUTH-02, D-027, D-14).
   test('reports the exact device-scoped cause when live reporting falls silent', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3515,15 +4724,21 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
     }).thenReturn(undefined);
-    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS, command: commands }, failures, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
 
     // act
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
@@ -3532,21 +4747,56 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, undefined, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await advance(HEARTBEAT_MS);
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
     await advance(HEARTBEAT_MS);
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, false]);
+    assert.deepStrictEqual(silenceOf(devicesBeforeStop), [false, false, false]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The recovery an owner waits on. Both arrival cases above advance the clock after the message,
@@ -3556,7 +4806,59 @@ describe('the degraded monitoring path', () => {
   // the recorded call list says no request left the plugin in between (CR-02, D-11).
   test('RES-03 restores the trust on the message that proves the live path is carrying, with no clock movement and no poll', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, calls, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringByDevice, calls, advance, commandRequests } = harness(
+      t,
+      { pollIntervalMs: HEARTBEAT_MS, command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+        onMonitoringHealth: listener,
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3564,10 +4866,12 @@ describe('the degraded monitoring path', () => {
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { pushes: monitoringByDevice.map((byDevice) => byDevice.get(DEVICE_ID)), calls },
+      { pushes: devicesBeforeStop.map((byDevice) => byDevice.get(DEVICE_ID)), calls },
       {
         pushes: [
           { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
@@ -3579,6 +4883,9 @@ describe('the degraded monitoring path', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
+    verify(listener);
   });
 
   // The guard the report is made through. A healthy live path delivers a heartbeat roughly every
@@ -3587,7 +4894,42 @@ describe('the degraded monitoring path', () => {
   // second message, so it reports nothing (D-05).
   test('reports once per recovery rather than once per message when two messages arrive together', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringHealth, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, undefined, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3597,20 +4939,41 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
     const afterFirstMessage = monitoringHealth.length;
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { atSilence, afterFirstMessage, afterSecondMessage: monitoringHealth.length },
+      { atSilence, afterFirstMessage, afterSecondMessage: healthBeforeStop.length },
       { atSilence: 3, afterFirstMessage: 4, afterSecondMessage: 4 },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The same guard on the ordinary case: a live path that is working. It costs one push per poll
   // and none per heartbeat, because a message that resolved nothing is not news (D-05).
   test('reports nothing when a message arrives on a live path it never reported silent', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringHealth, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, undefined, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await settle();
     const afterLaunch = monitoringHealth.length;
@@ -3618,16 +4981,53 @@ describe('the degraded monitoring path', () => {
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const healthBeforeStop = [...monitoringHealth];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual({ afterLaunch, afterTwoMessages: monitoringHealth.length }, { afterLaunch: 1, afterTwoMessages: 1 });
+    assert.deepStrictEqual({ afterLaunch, afterTwoMessages: healthBeforeStop.length }, { afterLaunch: 1, afterTwoMessages: 1 });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // The diagnostic half of the same recovery. The owner is told the live connection came back once,
   // at the message that proves it, with the clock standing still (D-03).
   test('reports live-device recovery once at the arriving message without clock movement', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3648,7 +5048,9 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
     }).thenReturn(undefined);
-    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: HEARTBEAT_MS }, failures);
+    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, failures, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3657,9 +5059,13 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
@@ -3668,6 +5074,8 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // Why the report is driven from the arrival callback and not from a snapshot listener. The
@@ -3675,27 +5083,67 @@ describe('the degraded monitoring path', () => {
   // subscriber at all, and it is still direct evidence that the live path is carrying (D-05, D-11).
   test('clears the silence on a heartbeat carrying the values the store already holds, which notifies no subscriber', async (t) => {
     // arrange
-    const { runtime, store, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, store, shadows, monitoringByDevice, advance, commandRequests } = harness(
+      t,
+      { pollIntervalMs: HEARTBEAT_MS, command: commands },
+      undefined,
+      { onMonitoringHealth: listener },
+    );
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
-    let notifications = 0;
-    store.subscribe(DEVICE_ID, () => {
-      notifications += 1;
-    });
+    const subscription = mock<DeviceSnapshotListener>({ exactParams: true, name: 'unchanged snapshot listener' });
+    store.subscribe(DEVICE_ID, subscription);
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { notifications, pushed: monitoringByDevice.at(-1)?.get(DEVICE_ID) },
+      { pushed: devicesBeforeStop.at(-1)?.get(DEVICE_ID) },
       {
-        notifications: 0,
         pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
+    verify(subscription);
   });
 
   // D-11's matching of clearing to cause, re-asserted against the arrival report. The arrival
@@ -3703,7 +5151,48 @@ describe('the degraded monitoring path', () => {
   // in the middle here still reports the silence unresolved, and the message after it clears it.
   test('D-11 leaves the shadow silence for the successful poll and clears it for the message that follows', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS, command: commands }, undefined, {
+      onMonitoringHealth: listener,
+    });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3711,10 +5200,14 @@ describe('the degraded monitoring path', () => {
     // act
     await advance(HEARTBEAT_MS);
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true, true, false]);
+    assert.deepStrictEqual(silenceOf(devicesBeforeStop), [false, false, true, true, false]);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(listener);
   });
 
   // D-14. What the recovery latch being a set rather than a flag buys, stated as the two ways a flag
@@ -3731,6 +5224,54 @@ describe('the degraded monitoring path', () => {
   // this case.
   test('D-14 lets a quiet pump recover on its own message while its heartbeating neighbour neither reports nor is reported for', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3758,11 +5299,9 @@ describe('the degraded monitoring path', () => {
     }).thenReturn(undefined);
     const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(
       t,
-      {
-        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
-        pollIntervalMs: HEARTBEAT_MS,
-      },
+      { devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])], pollIntervalMs: HEARTBEAT_MS, command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await advance(HEARTBEAT_MS);
@@ -3776,17 +5315,21 @@ describe('the degraded monitoring path', () => {
     const afterNeighbourHeartbeat = monitoringByDevice.length;
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
       {
         afterNeighbourHeartbeat,
-        afterFrontPumpSpoke: monitoringByDevice.length,
-        finalSilence: [monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent, monitoringByDevice.at(-1)?.get(OTHER_DEVICE_ID)?.shadowSilent],
+        afterFrontPumpSpoke: devicesBeforeStop.length,
+        finalSilence: [devicesBeforeStop.at(-1)?.get(DEVICE_ID)?.shadowSilent, devicesBeforeStop.at(-1)?.get(OTHER_DEVICE_ID)?.shadowSilent],
       },
       { afterNeighbourHeartbeat: atFrontPumpSilence, afterFrontPumpSpoke: atFrontPumpSilence + 1, finalSilence: [false, false] },
     );
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([
@@ -3798,12 +5341,62 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   // Each pump's failure kind identifies that controller independently.
   // Recorded limit (D-10): the second pump is this fixture's, not the vendor account's.
   test('D-14 reports each silent pump under its own failure kind', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -3836,11 +5429,9 @@ describe('the degraded monitoring path', () => {
     }).thenReturn(undefined);
     const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(
       t,
-      {
-        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
-        pollIntervalMs: HEARTBEAT_MS,
-      },
+      { devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])], pollIntervalMs: HEARTBEAT_MS, command: commands },
       failures,
+      { onMonitoringHealth: listener },
     );
     await runtime.start();
     await advance(HEARTBEAT_MS);
@@ -3850,9 +5441,13 @@ describe('the degraded monitoring path', () => {
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([
@@ -3864,15 +5459,19 @@ describe('the degraded monitoring path', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(listener);
   });
 
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
         () => Promise.resolve([geminiDevice()]),
       ],
+      command: commands,
     });
     await runtime.start();
     await settle();
@@ -3883,6 +5482,7 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.strictEqual(calls.filter((call) => call === 'shadow').length, 1);
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 });
 
@@ -3893,9 +5493,28 @@ describe('DEV-05 removal reconciliation', () => {
 
   test('makes no extra devices call and reports no removal while a tracked device stays present', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()])],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, removed, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()])], command: commands },
+      undefined,
+      {
+        onDeviceRemoved: removals,
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
     await runtime.start();
     await settle();
 
@@ -3905,13 +5524,36 @@ describe('DEV-05 removal reconciliation', () => {
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 2, removed: [] });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
+    verify(requests);
   });
 
   test('never reports removal for a deviceId absent once between two present observations', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([geminiDevice()])],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, removed, advance, commandRequests } = harness(
+      t,
+      { devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([geminiDevice()])], command: commands },
+      undefined,
+      {
+        onDeviceRemoved: removals,
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
     await runtime.start();
     await settle();
 
@@ -3922,13 +5564,51 @@ describe('DEV-05 removal reconciliation', () => {
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 3, removed: [] });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
+    verify(requests);
   });
 
   test('makes exactly one final-check fetch per cycle and removes every deviceId still absent from it', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+    when(() => {
+      removals(OTHER_DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [
+          () => Promise.resolve([geminiDevice(), otherGeminiDevice()]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+        ],
+        command: commands,
+      },
+      undefined,
+      {
+        onDeviceRemoved: removals,
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice(), otherGeminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+
     await runtime.start();
     await settle();
 
@@ -3942,19 +5622,47 @@ describe('DEV-05 removal reconciliation', () => {
       { devicesCalls: 4, removed: [DEVICE_ID, OTHER_DEVICE_ID].sort() },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
+    verify(requests);
   });
 
   test('does not remove a deviceId that reappears in the final-check fetch, and resets its absence count', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
-      devices: [
-        () => Promise.resolve([geminiDevice()]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([geminiDevice()]),
-        () => Promise.resolve([]),
-      ],
-    });
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, calls, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [
+          () => Promise.resolve([geminiDevice()]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([geminiDevice()]),
+          () => Promise.resolve([]),
+        ],
+        command: commands,
+      },
+      undefined,
+      {
+        onDeviceRemoved: removals,
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+
     await runtime.start();
     await settle();
 
@@ -3966,10 +5674,22 @@ describe('DEV-05 removal reconciliation', () => {
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 5, removed: [] });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
+    verify(requests);
   });
 
   test('reports no removal when the final-check fetch itself fails, and retries the check on the next successful poll', async (t) => {
     // arrange
+    const requests = mock<Pick<CloudApi, 'devices'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -4007,9 +5727,25 @@ describe('DEV-05 removal reconciliation', () => {
           () => Promise.resolve([]),
           () => Promise.resolve([]),
         ],
+        command: commands,
       },
       failures,
+      {
+        onDeviceRemoved: removals,
+        devices: (signal) => requests.devices(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
     );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+
     await runtime.start();
     await settle();
 
@@ -4028,6 +5764,9 @@ describe('DEV-05 removal reconciliation', () => {
     );
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(removals);
+    verify(requests);
   });
 
   // A removal Homebridge refuses leaves an accessory published that this plugin has already
@@ -4037,6 +5776,46 @@ describe('DEV-05 removal reconciliation', () => {
   // longer holds, nothing ever retries the removal, and nothing is said about any of it (D-014).
   test('keeps a pump whose removal was refused watched, distrusted and reported, and tries the removal again', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    })
+      .thenReturn(undefined)
+      .times(2);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -4070,8 +5849,10 @@ describe('DEV-05 removal reconciliation', () => {
         devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
         pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
         removalFails: true,
+        command: commands,
       },
       failures,
+      { onDeviceRemoved: removals, onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -4087,6 +5868,10 @@ describe('DEV-05 removal reconciliation', () => {
       silence: silenceOf(monitoringByDevice).at(-1),
     };
     await advance(TWO_MISSED_HEARTBEATS_MS);
+
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
     assert.deepStrictEqual(beforeRetry, {
@@ -4105,7 +5890,7 @@ describe('DEV-05 removal reconciliation', () => {
     });
     assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
@@ -4113,12 +5898,21 @@ describe('DEV-05 removal reconciliation', () => {
     );
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(removals);
+    verify(listener);
   });
 
   // A refused removal strands an accessory this plugin has already vouched for, so the first one
   // is said the moment it happens rather than held back by the cadence its repeats are subject to.
   test('reports a refused removal as soon as the removal is refused', async (t) => {
     // arrange
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -4145,8 +5939,10 @@ describe('DEV-05 removal reconciliation', () => {
         devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
         pollIntervalMs: FAST_POLL_INTERVAL_MS,
         removalFails: true,
+        command: commands,
       },
       failures,
+      { onDeviceRemoved: removals },
     );
     await runtime.start();
     await settle();
@@ -4175,11 +5971,21 @@ describe('DEV-05 removal reconciliation', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(removals);
   });
 
   // A refused accessory stays eligible for the next poll's removal attempt.
   test('reports each refused removal and retries the same device on every poll', async (t) => {
     // arrange
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    })
+      .thenReturn(undefined)
+      .times(4);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -4208,8 +6014,10 @@ describe('DEV-05 removal reconciliation', () => {
         devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
         pollIntervalMs: FAST_POLL_INTERVAL_MS,
         removalFails: true,
+        command: commands,
       },
       failures,
+      { onDeviceRemoved: removals },
     );
     await runtime.start();
     await settle();
@@ -4229,11 +6037,60 @@ describe('DEV-05 removal reconciliation', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(removals);
   });
 
   // Distinct failure kinds preserve the identity of both stranded accessories.
   test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
     // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+    when(() => {
+      removals(OTHER_DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
       failures.recordSuccess('Device polling');
@@ -4268,8 +6125,10 @@ describe('DEV-05 removal reconciliation', () => {
         devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
         pollIntervalMs: FAST_POLL_INTERVAL_MS,
         removalFails: true,
+        command: commands,
       },
       failures,
+      { onDeviceRemoved: removals, onMonitoringHealth: listener },
     );
     await runtime.start();
     await settle();
@@ -4278,10 +6137,14 @@ describe('DEV-05 removal reconciliation', () => {
     // act
     await advance(FAST_POLL_INTERVAL_MS);
 
+    const pathBeforeStop = runtime.monitoringPath;
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
+
     // assert
     assert.deepStrictEqual([...removed].sort(), [DEVICE_ID, OTHER_DEVICE_ID].sort());
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
         trust: new Map([
@@ -4293,11 +6156,20 @@ describe('DEV-05 removal reconciliation', () => {
 
     assert.deepStrictEqual(commandRequests, []);
     verify(failures);
+    verify(commands);
+    verify(removals);
+    verify(listener);
   });
 
   // Removal forgets both device-scoped causes before a fresh admission.
   test('forgets both reporting kinds when a removed device returns as a new admission', async (t) => {
     // arrange
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const notifications: string[][] = [];
     const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
     when(() => {
@@ -4352,8 +6224,10 @@ describe('DEV-05 removal reconciliation', () => {
           () => Promise.resolve([geminiDevice()]),
         ],
         pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+        command: commands,
       },
       reporting,
+      { onDeviceRemoved: removals },
     );
     await runtime.start();
     await settle();
@@ -4400,6 +6274,8 @@ describe('DEV-05 removal reconciliation', () => {
       ['success', `Live device reporting for ${DEVICE_ID}`],
     ]);
     verify(failures);
+    verify(commands);
+    verify(removals);
   });
 
   // The store lives for the life of the process and is written back to disk, so
@@ -4409,9 +6285,21 @@ describe('DEV-05 removal reconciliation', () => {
   // device is really gone (D-14).
   test('drops the arrival anchor of a removed pump, so the stored set cannot outgrow the account', async (t) => {
     // arrange
-    const { runtime, anchors, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
-    });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, anchors, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+        command: commands,
+      },
+      undefined,
+      { onDeviceRemoved: removals },
+    );
     await runtime.start();
     await settle();
     const whileItIsCarried = anchors.stored.has(DEVICE_ID);
@@ -4426,6 +6314,8 @@ describe('DEV-05 removal reconciliation', () => {
       { whileItIsCarried: true, afterRemoval: false, removed: [DEVICE_ID] },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
   });
 
   // The recovery latch does not need pruning here, and this is what says so. The shadow client stays
@@ -4438,10 +6328,42 @@ describe('DEV-05 removal reconciliation', () => {
   // latch that accumulated instead of being rebuilt would fail this case.
   test('reports nothing for a message from a pump the account has already removed', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
-      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
-    });
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }, new Map([]));
+    }).thenReturn(undefined);
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+    }).thenReturn(undefined);
+
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, monitoringByDevice, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+        pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+        command: commands,
+      },
+      undefined,
+      { onDeviceRemoved: removals, onMonitoringHealth: listener },
+    );
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
     await advance(TWO_MISSED_HEARTBEATS_MS);
@@ -4449,10 +6371,15 @@ describe('DEV-05 removal reconciliation', () => {
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const devicesBeforeStop = [...monitoringByDevice];
+    await runtime.stop();
 
     // assert
-    assert.deepStrictEqual({ removed, pushes: monitoringByDevice.length }, { removed: [DEVICE_ID], pushes: atRemoval });
+    assert.deepStrictEqual({ removed, pushes: devicesBeforeStop.length }, { removed: [DEVICE_ID], pushes: atRemoval });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
+    verify(listener);
   });
 
   // A stray message can still arrive after removal for the structural reason the
@@ -4462,10 +6389,22 @@ describe('DEV-05 removal reconciliation', () => {
   // (D-14).
   test('does not re-arm the arrival anchor when a stray message arrives after a pump is removed', async (t) => {
     // arrange
-    const { runtime, shadows, anchors, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
-      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
-    });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, shadows, anchors, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+        pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+        command: commands,
+      },
+      undefined,
+      { onDeviceRemoved: removals },
+    );
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
     await advance(TWO_MISSED_HEARTBEATS_MS);
@@ -4480,6 +6419,8 @@ describe('DEV-05 removal reconciliation', () => {
       { atRemoval: { removed: [DEVICE_ID], hasAnchor: false }, afterStrayMessage: false },
     );
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(removals);
   });
 });
 
@@ -4541,12 +6482,16 @@ async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntim
 }
 
 // Answers the token request, the device request, and the credentials request.
-function stubCloud(t: TestContext): { url: string; authorization: string | undefined }[] {
+function stubCloud(t: TestContext, httpFetch?: HttpFetch): { url: string; authorization: string | undefined }[] {
   const requests: { url: string; authorization: string | undefined }[] = [];
 
   t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
     const url = input.toString();
     requests.push({ url, authorization: new Headers(init?.headers).get('authorization') ?? undefined });
+
+    if (httpFetch !== undefined) {
+      return httpFetch(input, init);
+    }
 
     if (url.endsWith('/oauth/token')) {
       return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
@@ -4569,7 +6514,15 @@ function credentialRequestCount(requests: readonly { url: string }[]): number {
 describe('commands', () => {
   test('sends the family wire body for a self-test to the device the caller names', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenResolve({ success: true });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4578,11 +6531,20 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(outcome, { accepted: true });
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
+    verify(commands);
   });
 
   test('sends the family wire body for an alarm mute', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { alarm_audio_muted: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenResolve({ success: true });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4590,13 +6552,20 @@ describe('commands', () => {
 
     // assert
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { alarm_audio_muted: true }, aborted: false }]);
+    verify(commands);
   });
 
   test('reports a vendor error when the route rejects, and sends nothing further', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, {
-      command: () => Promise.reject(new CloudRequestError('PUT /devices/{deviceId}/data failed with HTTP 500.', 500, 'PUT /devices/{deviceId}/data')),
-    });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenReject(new CloudRequestError('PUT /devices/{deviceId}/data failed with HTTP 500.', 500, 'PUT /devices/{deviceId}/data'));
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4605,11 +6574,20 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
     assert.strictEqual(commandRequests.length, 1);
+    verify(commands);
   });
 
   test('reports a vendor error for a resolved body the vendor refused', async (t) => {
     // arrange
-    const { runtime } = harness(t, { command: () => Promise.resolve({ success: false }) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenResolve({ success: false });
+    const { runtime } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4617,13 +6595,22 @@ describe('commands', () => {
 
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
+    verify(commands);
   });
 
   test('reports a timeout when the deadline aborted the attempt', async (t) => {
     // arrange
     const timedOut = new Error('The operation was aborted due to timeout');
     timedOut.name = 'TimeoutError';
-    const { runtime, commandRequests } = harness(t, { command: () => Promise.reject(timedOut) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenReject(timedOut);
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4632,11 +6619,13 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'timed-out' });
     assert.strictEqual(commandRequests.length, 1);
+    verify(commands);
   });
 
   test('sends nothing for a deviceId the store never held', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
 
     // act
@@ -4645,13 +6634,15 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('sends nothing for a device whose family this version cannot drive', async (t) => {
     // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const { runtime, commandRequests } = harness(t, {
-      command: () => Promise.resolve({ success: true }),
       devices: [() => Promise.resolve([{ ...geminiDevice(), deviceTypeId: 'wayneWaterHalo' }])],
+      command: commands,
     });
     await runtime.start();
 
@@ -4661,11 +6652,20 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(outcome, { accepted: false, failure: 'vendor-error' });
     assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
 
   test('passes the root signal, so a shutdown cancels an attempt in flight', async (t) => {
     // arrange
-    const { runtime, commandRequests } = harness(t, { command: () => Promise.resolve({ success: true }) });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && signal.aborted),
+      ),
+    ).thenResolve({ success: true });
+    const { runtime, commandRequests } = harness(t, { command: commands });
     await runtime.start();
     await runtime.stop();
 
@@ -4674,6 +6674,7 @@ describe('commands', () => {
 
     // assert
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: true }]);
+    verify(commands);
   });
 });
 
@@ -4783,15 +6784,10 @@ describe('createAccountRuntimeFromConfig', () => {
     verify(registerSecret);
   });
 
-  test('builds every collaborator without opening a connection, reading a file, or starting a timer', async (t) => {
+  test('builds every collaborator without requesting HTTP or opening a socket', async (t) => {
     // arrange
-    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
-    let sockets = 0;
-    const connect: MqttConnect = () => {
-      sockets += 1;
-
-      throw new Error('no socket expected');
-    };
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'construction HTTP' });
+    const connect = mock<MqttConnect>({ exactParams: true, name: 'construction socket' });
 
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
@@ -4809,12 +6805,14 @@ describe('createAccountRuntimeFromConfig', () => {
       monotonic: { now: () => MONOTONIC_START_TIME },
       log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect,
-      httpFetch: (input, init) => globalThis.fetch(input, init),
+      httpFetch,
       createSalt: () => 'salt-1',
     });
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, requests: requestSpy.mock.callCount(), sockets }, { path: 'unavailable', requests: 0, sockets: 0 });
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    verify(httpFetch);
+    verify(connect);
   });
 
   test('AUTH-02 registers the bearer token and all temporary credential roles through composition', async (t) => {
@@ -4881,8 +6879,61 @@ describe('createAccountRuntimeFromConfig', () => {
 
   test('SYNC-04 arms the rotation on the lead and floor the caller states rather than the bundled pair', async (t) => {
     // arrange
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
+    when(() =>
+      httpFetch('https://tenant.example.test/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body:
+          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
+          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
+          ',"scope":"openid profile email"}',
+        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      }),
+    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    const requests = stubCloud(t);
+    const requests = stubCloud(t, httpFetch);
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
@@ -4922,6 +6973,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: credentialRequestCount(requests) }, { beforeDue: 1, afterDue: 2 });
+    verify(httpFetch);
   });
 
   test('uses a no-op monitoring-health listener when the caller supplies none', async (t) => {
@@ -4968,6 +7020,19 @@ describe('createAccountRuntimeFromConfig', () => {
     t.mock.timers.enable({ apis: ['setTimeout'] });
     stubCloud(t);
     const reported: MonitoringTrust[] = [];
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'composed monitoring listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
@@ -4987,7 +7052,8 @@ describe('createAccountRuntimeFromConfig', () => {
       },
       httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
-      onMonitoringHealth: (account: MonitoringTrust): void => {
+      onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
+        listener(account, byDevice);
         reported.push(account);
       },
     });
@@ -5000,31 +7066,83 @@ describe('createAccountRuntimeFromConfig', () => {
     await runtime.start();
     await settle();
 
+    const beforeStop = [...reported];
+    await runtime.stop();
+
     // assert
-    assert.deepStrictEqual(reported, [
+    assert.deepStrictEqual(beforeStop, [
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
     ]);
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    verify(listener);
   });
 
   test('DEV-05 uses a no-op removal listener when the caller supplies none', async (t) => {
     // arrange
     t.mock.timers.enable({ apis: ['setTimeout'] });
-    let deviceListCalls = 0;
-    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
-      const url = input.toString();
-
-      if (url.endsWith('/oauth/token')) {
-        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
-      }
-
-      if (url.endsWith('/devices')) {
-        deviceListCalls += 1;
-
-        return Promise.resolve(new Response(JSON.stringify(deviceListCalls === 1 ? geminiWireDeviceList() : { devices: [] }), { status: 200 }));
-      }
-
-      return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
-    });
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
+    when(() =>
+      httpFetch('https://tenant.example.test/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body:
+          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
+          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
+          ',"scope":"openid profile email"}',
+        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      }),
+    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+    const requests = stubCloud(t, httpFetch);
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
@@ -5060,14 +7178,48 @@ describe('createAccountRuntimeFromConfig', () => {
       t.mock.timers.tick(POLL_INTERVAL_MS);
       await settle();
     });
-    assert.strictEqual(deviceListCalls, 4);
+    assert.strictEqual(requests.filter((request) => request.url.endsWith('/devices')).length, 4);
+    verify(httpFetch);
   });
 });
 
 describe('the wired account', () => {
   test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
     // arrange
-    const requests = stubCloud(t);
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
+    when(() =>
+      httpFetch('https://tenant.example.test/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body:
+          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
+          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
+          ',"scope":"openid profile email"}',
+        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      }),
+    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+
+    const requests = stubCloud(t, httpFetch);
     const { runtime, store } = await endToEndRuntime(t);
 
     // act
@@ -5086,5 +7238,6 @@ describe('the wired account', () => {
         stored: [DEVICE_ID],
       },
     );
+    verify(httpFetch);
   });
 });

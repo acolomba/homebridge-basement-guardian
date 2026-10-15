@@ -2621,3 +2621,190 @@ correction remain pending. The parent owns the full combined gate after complete
 04-07; no full npm run check runs in this task. RUN-01 remains Pending.
 The 29 stable IDs, counter 0 and D-03 remain unchanged.
 WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-013: prescribed account interactions
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_013_prescribed_interactions`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every prior appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This repair supplies no correction round or partial clean verdict.
+
+### Roles and preserved promises
+
+Cases now prescribe command dispatch, credential registration, trustworthy
+inventory, confirmed removal and monitoring notifications with exact-parameter
+strong mocks. Every mock has explicit verification in its owning case after
+public state assertions. All allowed calls have definite counts and complete
+meaningful arguments. There is no anyTimes, wildcard argument, shared verification,
+cleanup verification or process-wide mock registry.
+
+The complete owner still has 138 authored declarations and 153 executed cases.
+Its 132 authored cases with mocks contain 254 independently verified handles.
+All 116 authored empty-command-attempt assertions remain exact.
+Command attempts are recorded before the injected strict command port runs.
+An unexpected call that commands.send catches therefore remains observable
+both through the whole attempt assertion and through explicit mock verification.
+Existing exact single-attempt assertions on potentially delivered failures remain.
+
+Scheduled REST cases prescribe their actual root AbortSignal and exact request
+multiplicity. The existing createRetry injection supplies that root before start;
+no private accessor or test-only production hook is added.
+The HTTP composition cases prescribe the complete method, URL, headers and body,
+with fresh Response objects for every allowed call.
+Matchers are limited to nonstructural URL and AbortSignal objects.
+They check exact URLs and signal class plus its initial abort state.
+Command cases prescribe exact physical identity, complete desired data and
+the signal's initial state. Their public outcome and existing request observations
+remain; original 009/010's additional command assertions retain their later scope.
+
+Monitoring listeners prescribe both the complete account struct and each keyed
+device map. Existing state, silence, timing and no-extra-report assertions remain.
+Cases capture their promised pre-stop state in ACT, stop in ACT when needed,
+then assert that captured state and verify all notifications, including shutdown.
+No shutdown action was added after ASSERT to satisfy cleanup expectations.
+The unchanged-snapshot subscriber uses an exact mock with no allowed call.
+The composition listener also checks its complete second argument.
+Original 019 remains subject to its later owning repair and full correction.
+
+Construction uses strict HTTP and MQTT ports with no allowed call.
+Its truthful title promises no HTTP request or socket opening, matching the
+actual observed boundaries. No file-read or timer observation is invented.
+The requestSpy replacement/count is removed from that case.
+
+Canned values and failures that only drive paths remain typed stubs.
+The contract-checked stateful shadow and arrival-anchor adapters retain their
+complete bodies, names, signatures and existing private interface shapes.
+Their state and lifecycle observations remain meaningful fake-state assertions.
+The local harness accepts optional overrides of existing public ports;
+the local HTTP stub accepts an optional injected HTTP port.
+Only those nonexported local function signatures change.
+No shared/exported signature, private alias/member shape, production API,
+configuration, helper file or dependency changes. D-06's private-alias/member
+restriction does not cover these local functions; no trace exception is claimed.
+Superseded canned command arguments and redundant literal spreads are removed.
+
+Every original FailureLog call expectation remains structurally identical.
+The exact 012 diagnostic timeline, silent logs, 015 contracts and structured
+negative controls remain. Both complete 028 ordering cases remain byte-identical,
+including their independent chronological streams and per-case verification.
+
+### Active regressions and immutable history
+
+Original 024 remains byte-identical. Original 025 retains every original
+assertion, timer observation, literal deadline and before/after count.
+Its additive verification now prescribes exactly two credential calls on the
+actual root signal and verifies that mock after the original assertions.
+Its local harness call adds the public-port override and captures that root
+through createRetry. Formatting expands that call; no timing operation changes.
+The saved original and current complete case bodies are retained side by side
+in provenance.json. This is stronger active verification, not a rewritten RED.
+
+The six-record RED JSON remains byte-identical at blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`.
+The current installed checker accepts it. The SAME installed classifyRedEvidence
+recursively accepts every root/archive record as RED_EVIDENCE_OK.
+No evidence field, archived stream or genuine source/evidence/fix ancestry changes.
+
+### Separate maintenance control
+
+The plausible wrong behavior automatically dispatches a self-test during launch
+and discards the caught refusal. Compilation and coverage cannot prove absence.
+The temporary source adds only that loop before launch records success.
+Fresh compilation passes. The exact target
+`^start discovers every device and stores its canonical snapshot$` fails its
+intended whole empty-attempt assertion after the independent canonical assertion.
+Native ERR_ASSERTION/deepStrictEqual contains one complete request:
+placeholder device account-1_serial-1, desiredData test_running=true,
+aborted=false, against expected []. One test fails, with zero skip/cancel/todo.
+This proves the strict route preserves 027's record-before-rejection discriminator.
+It is not a swallowed mock exception, setup failure or genuine production RED.
+
+Production is restored through Git and compared byte for byte with saved bytes.
+Source before/restored blob: `641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+Temporary control blob: `70e65211f7cdcc0e2edfe85cb2b4356e377fde35`.
+Fresh restored build, both named startup/025 targets and full owner pass.
+No control enters Git. The final owner blob is
+`b9df254238e42506df1c34617a3317057ce1b6c3`.
+
+### Verification location and retained attempts
+
+Pre-edit HEAD was `0b86403ffecb4eac0794c7dc98bc9e4104b08daf`, on
+features/code-review-sweep, with clean status and empty index.
+The fixer read AGENTS and all five complete TypeScript/local-verification books,
+amended 04-07, full 04-11-SUMMARY, newest protocol, the full ACCOUNT report,
+the current production/owner and actual factory/callback callers.
+Installed strong-mock 9.2.2 documentation and declarations were read before use.
+The approved source/owner headers and existing adapter contracts remain intact.
+Exact owned-path Fallow guards precede repository edits and formatter changes.
+
+Checks run in the existing linked feature checkout with
+workflow.use_worktrees=false. No additional checkout or branch is created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3, Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-013/`.
+Each record retains exact executable/argv, cwd, HEAD, input blobs, versions,
+real UTC start/end, separate complete stdout/stderr and raw child exit.
+Before bytes, failed attempts, final owner, control patch and complete dirty diff
+are retained. Provenance checks actual test inventory, interfaces, fixtures,
+original assertions, all diagnostic expectations and recursive RED history.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard*.json | Exact owned paths before edits; exit 0, no configured zones/rule packs. |
+| baseline-build.json, baseline-target.json | Fresh final-fixture build and startup/025 targets; both exit 0. |
+| control-build.json, control-target.json | Temporary-source build 0; intended named assertion failure 1, 14:27:23.897–14:27:24.194 UTC. |
+| restoration.json, build-final.json | Exact source restoration and fresh build; exit 0, build 14:27:34.072–14:27:36.974 UTC. |
+| restored-target.json, owner-final.json | Named targets and full compiled owner; exit 0, 153 pass, zero fail/cancel/skip/todo. |
+| direct-final.json | Exact source/owner test:coverage:direct selector with fresh build; exit 0. |
+| native-coverage-final.json | Isolated exact-source thresholds; exit 0, 995/995 native lines, 57/57 functions, 181/181 branches. |
+| lint-final-2.json | Exact source/owner uncached ESLint, max warnings 0; exit 0. |
+| audit.json | Original base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass. |
+| evidence-gate.json, provenance-1.json | Immutable RED checker and SAME recursive classifier; all six accepted, exit 0. |
+| pre-step-1.json | Exact two final paths with SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 14:30:28.397–14:30:31.725 UTC. Repeated after this row before staging. |
+
+Preparation failures remain visible. Build-2 found colliding local inventory
+bindings; its emitted owner failed import and is not valid test evidence.
+The owned file was restored and the corrected candidate reapplied.
+Build-4 found unused root bindings in zero-call cases.
+Build-6 found generated capture syntax; the owned file was restored and corrected.
+Build-7 found unused captures; its provisional run exposed renamed expected keys.
+Build-9 and format-1 found malformed HTTP verification insertion; restoration and
+corrected reapplication preceded the successful final build.
+Owner-10 found the legitimate second inventory request omitted from its HTTP
+expectations. The explicit exact response expectation was added.
+Earlier formatting/lint and patch-generation failures remain native/tool streams.
+None is relabeled as a passing check or genuine RED.
+
+Sequencing deviation: ESLint --fix yielded session 47163 at 14:25:37.372 UTC.
+The fixer proceeded with formatter/build before collecting its terminal exit 1
+at 14:25:48.809 UTC. Those intermediate inputs and outputs are retained.
+This violated serial mutation ownership; no historical ordering repair or waiver
+is claimed. After collecting the session, serial format-4 and lint-final passed.
+A final guarded launch expectation change then preceded baseline-build,
+control/restoration, build-final, full owner, direct coverage and lint-final-2.
+Only that final unchanged-input evidence supports this implementation.
+The parent owns the separate process-window entry after terminal return.
+
+Selected coverage does not refresh merged all-pair LCOV.
+No full npm run check runs here; the parent owns the combined gate after 04-07.
+Read-only gitdir lookup found gsd-plan-head-before-04-07 absent.
+No measurement sentinel was created or reconstructed.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix is titled
+`test: prescribe account runtime interactions explicitly`.
+Its only final paths are test/runtime/accountRuntime.test.ts and this report.
+Production is owned only for the exactly restored control.
+Exact clean SKIP=npm-check pre-commit runs on both paths before staging,
+and repeats after any report or formatter change.
+Native branch/HEAD/index assertions, authorized linked-index staging and plain
+foreground normal commit retain their real terminal results and actual hash.
+No amend, hook bypass, stash, rebase or history rewrite is used.
+
+Only original 013 is implemented here. The other 04-07 causes retain their
+implementation dispositions, pending later independent full ACCOUNT correction
+after the remaining 04-08/09 causes. No original cause or counter is reassigned.
+RUN-01 remains Pending. The 29 stable IDs, counter 0 and D-03 remain unchanged.
+WINDOWS 46/47/48 remain OPEN and unwaived.
