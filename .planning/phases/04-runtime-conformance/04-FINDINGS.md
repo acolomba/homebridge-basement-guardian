@@ -1,8 +1,8 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-01: complete PORTS initial review, four applied repairs,
-one restored assertion control and the combined-wave gate are recorded below.
+Current through 04-02: PORTS is independently clean at correction round 3.
+All nine observed findings are fixed; full wave-two verification passed.
 Other batches remain pending; no genuine production bug has been confirmed.
 The parent coordinator alone consolidates actual reports into this ledger.
 
@@ -15,14 +15,14 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
 | --- | --- | --- | --- | --- | --- |
-| PORTS | src/runtime/accessoryStore.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
-| PORTS | test/runtime/accessoryStore.test.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
-| PORTS | src/runtime/clock.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
-| PORTS | test/runtime/clock.test.ts | core | 6f475a0; full file/header | Pending | Applied; independent correction pending |
-| PORTS | src/runtime/monotonicClock.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
-| PORTS | test/runtime/monotonicClock.test.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
-| PORTS | src/runtime/timers.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
-| PORTS | test/runtime/timers.test.ts | core | 6f475a0; full file/header | Pending | Nonconformant; repair pending |
+| PORTS | src/runtime/accessoryStore.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | test/runtime/accessoryStore.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | src/runtime/clock.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | test/runtime/clock.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | src/runtime/monotonicClock.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | test/runtime/monotonicClock.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | src/runtime/timers.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
+| PORTS | test/runtime/timers.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
 | POLICIES | src/runtime/commandPort.ts | core | Pending | Pending | Pending |
 | POLICIES | test/runtime/commandPort.test.ts | core | Pending | Pending | Pending |
 | POLICIES | src/runtime/failureLog.ts | core | Pending | Pending | Pending |
@@ -45,7 +45,7 @@ No source-only license result substitutes for owner/helper header inspection.
 
 | Batch | Plans | Report | Initial review | Last correction round | Open IDs |
 | --- | --- | --- | --- | --- | --- |
-| PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 0; partial repairs only | 005/006/007; 3 |
+| PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | Pending | Not started | Unknown until review |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | Pending | Not started | Unknown until review |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
@@ -77,16 +77,35 @@ stable finding IDs where applicable. A research example is not proof of a bug.
 | ID | Requirement | Exact rule/section | Initial revision:path:line | Current revision:path:line | Severity | First reviewer | Disposition/reason | Native checks/raw exits | Source/evidence/fix commits and paths |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-Seven PORTS IDs were independently observed at 6f475a0. The complete
-04-PORTS-REVIEW.md retains each exact rule, revision-qualified initial/current
-location, severity, observer, blobs and native command mapping. Its current
-disposition table at 84f4ca8 is authoritative: 001/002/003/004 repaired pending
-full independent correction; 005/006/007 remain open. Cause commits are
-227c799, ce36088, fd53a74 and 84f4ca8 respectively. Initial 2 BLOCKERs +
-5 WARNINGs = 7; 4 applied, 0 rejected/new/reopened, 3 continuing (1 BLOCKER,
-2 WARNINGs). Counter remains 0; no full correction or clean batch is claimed.
-S-04-03/04 were rejected for PORTS only; later batches retain their obligations.
-S-04-05 accepted as CR-04-PORTS-006, with other owners still pending.
+The complete 04-PORTS-REVIEW.md retains exact rule sections, initial/current
+revision-qualified locations, severities, first observers, blobs and full native
+command mappings for every ID. Its round-3 disposition table at dd5ea2d is the
+current independent finding record, superseding the partial wave-one status.
+
+| Stable PORTS ID | Cause / severity | Initial observation | Repair | Current independent result |
+| --- | --- | --- | --- | --- |
+| CR-04-PORTS-001 | Store headers; WARNING | 6f475a0, source/owner headers | 227c799 | Fixed; dd5ea2d full pair |
+| CR-04-PORTS-002 | Declaration-only compiler contracts; BLOCKER | 6f475a0, store owner 17–42 | ce36088 | Fixed; dd5ea2d owner 11–19 |
+| CR-04-PORTS-003 | Clock headers; WARNING | 6f475a0, source/owner headers | fd53a74 | Fixed; dd5ea2d full pair |
+| CR-04-PORTS-004 | Separate wall-clock act/assert; WARNING | 6f475a0, clock owner 16–17 | 84f4ca8 | Fixed; dd5ea2d owner 23–31 |
+| CR-04-PORTS-005 | Monotonic headers; WARNING | 6f475a0, source/owner headers | 8fb80f9 | Fixed; dd5ea2d full pair |
+| CR-04-PORTS-006 | Exact millisecond assertions; BLOCKER | 6f475a0, monotonic owner 17–44 | 419cab0 | Fixed; dd5ea2d owner 23–49 |
+| CR-04-PORTS-007 | Timer headers; WARNING | 6f475a0, source/owner headers | 8177bec | Fixed; dd5ea2d full pair |
+| CR-04-PORTS-008 | Single-shot timeout protection; BLOCKER | 8177bec, timer owner | f99a637 | Fixed; dd5ea2d owner 31–47 |
+| CR-04-PORTS-009 | First-deadline observation; BLOCKER | f99a637, timer owner 31 | dd5ea2d | Fixed; dd5ea2d owner 31–47 |
+
+Header causes apply D-01 and style Files and modules. Assertion causes apply
+unit writer/reviewer independent whole-value observations and wrong-behavior
+protection; 004 applies the explicit AAA rule. All have RUN-01; header causes
+also contribute PROC-03. First reviewer for 001–007 is ports_initial_review,
+008 ports_full_correction, 009 ports_full_correction_two, each under the typed
+executor identities retained in the report. Fresh ports_full_correction_three
+confirmed all nine fixed, complete eight-file/header scope, no new/reopened IDs.
+Each repair has owner/direct/build exit 0, recorded-base audit pass, clean
+pre-step before staging and ordinary hooks pass; full mappings remain in report.
+S-04-01 is resolved by 002; S-04-03/04 were rejected for PORTS only.
+S-04-05's PORTS assertion findings are fixed; other batches remain pending.
+
 No rows are allocated before actual independent observation.
 Use CR-04-PORTS-NNN / POLICIES / TRUST / ACCOUNT per protocol.
 
@@ -103,7 +122,8 @@ and prove GREEN. No failing/skipped code commit or fabricated failure.
 
 ## Checks and threat dispositions
 
-All Phase04 rows are Pending. Record exact command, raw exit, revision/blobs,
+PORTS rows have observed current evidence below; later batches remain Pending.
+Record exact command, raw exit, revision/blobs,
 Node/runtime, scope, timings and dirty/untracked input evidence. Record each
 normal hook/clean pre-step and raw Fallow recorded-base audit. Pair evidence
 is isolated; declaration-only selectors have no invented numerical coverage.
@@ -169,3 +189,32 @@ new package, source control mutation or new process-window waiver is claimed.
 The first generic summary advisory mistook two test commands for file paths.
 Explicit real output paths corrected its selection; recheck passed all four
 checks. No runtime evidence changed. Full PORTS correction follows 04-02.
+
+## Coordinator wave 2 evidence and actual stop resolution
+
+Full `npm run check` returned 0 at clean 1993aaa0b3d468b2e78d0ccacd353b713739c4ef
+on v26.11.1, 2026-10-15T00:43:09.634130+00:00 to 2026-10-15T00:43:44.569875+00:00.
+Six static checks, 104 scenarios / 1156 steps and all 43 isolated pairs passed.
+Full native output: /private/tmp/guardian-phase4-wave2-full-check.log; metadata:
+/private/tmp/guardian-phase4-wave2-gate.json. No dependency/runtime input changed.
+
+Continuous full correction counts: round1 7−7+1=1 (new008), round2
+1−1+1=1 (new009), round3 1−1=0. Rejected/reopened sets are empty throughout.
+Round2 correctly triggered D-03; ALL work stopped and leases were released.
+The actual maintainer response `1` authorized only the bounded009 repair and
+another review retaining counter2. Round3 independently closed009 with all
+prior fixes retained, counter3. No counter reset, retroactive waiver or implied
+permission for a future round4 exists. Full native round1/2/3 records and
+controls remain under /private/tmp/guardian-04-ports-fix-native/.
+
+Separate assertion controls:006 wrong divisor fails both exact observations;
+008 repeating timeout fails the later log;009 late-first-fire and repeating
+controls each fail the intended first/later whole log. Each009 control passed
+typecheck/lint before native exit1 (4 pass/1 fail), exact source restoration,
+fresh build and GREEN5 owner cases/direct100%. These are maintenance controls
+on correct production, with no genuine bug or RED JSON. Source APIs/bodies
+remain unchanged beneath approved headers. No helper or external adaptation.
+
+Execution-record commit1993aaa follows the five source/test cause commits. Generic summary JSON passed; schema drift found none,
+codebase drift explicitly skipped absent STRUCTURE.md. RUN-01 remains Pending.
+WINDOWS46/47 remain OPEN/unwaived; this recorded D-03 decision changes neither.
