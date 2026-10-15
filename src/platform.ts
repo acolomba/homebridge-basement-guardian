@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Coordinates Homebridge lifecycle, discovery and monitoring updates.
+ */
+
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 

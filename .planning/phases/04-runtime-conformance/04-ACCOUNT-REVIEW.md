@@ -4718,3 +4718,122 @@ configuration restoration and full ACCOUNT correction remain with the parent.
 No full npm run check, independent final correction, clean run increment or
 root whole-sweep certification is claimed here. Existing D-03 stop conditions
 and all earlier unresolved limits remain in force.
+
+## Original CR-04-ACCOUNT-026: separate platform header dependency
+
+Implemented by typed gsd-code-fixer, task
+`/root/phase4_account_trust/account_026_platform_headers`, on 2026-10-15.
+This is the separate header cause declared in 04-12, after successful platform
+integration 6c82ec94abfa25af4ea50c49a926e4a7cfba5af5. Original 026 retains its
+implementation disposition pending human verification and independent full
+ACCOUNT correction. The initial 29 IDs, 18 BLOCKER/11 WARNING counts and
+correction counter 0 remain. RUN-01 remains Pending; D-03 still applies.
+
+### Actual header scope and byte preservation
+
+Only src/platform.ts and this appended report change. The already conforming
+test/platform.test.ts header and ENTIRE owner remain byte-exact. The parent
+confirmed this narrower two-path cause after actual header inspection.
+The previously committed 04-12 declaration remains the separate cause-path
+declaration. No new finding ID or correction round is introduced.
+
+The source now has SPDX MIT first, one blank line, separate Copyright (c) 2026
+Alessandro Colomba JSDoc, one blank line, separate purpose @fileoverview JSDoc,
+one blank line, then imports. The overview describes Homebridge lifecycle,
+discovery and monitoring updates. LICENSE and NOTICE already classify this
+source as original MIT work; this cause does not infer a new classification.
+The source-only packaging gate and both complete actual headers were inspected.
+
+The full 655-line source, 2683-line owner and 4720-line pre-edit report were
+read in bounded contiguous pages. Truncated broad outputs received bounded
+follow-up reads. Complete AGENTS, bootstrap and all five project books were
+loaded, with current 04-12, amended 08/09/10, protocol, CONTEXT, ROADMAP and
+applicable canonical licensing/header decisions. Actual index registration,
+World factory/callback uses, source imports and all owner uses were inspected.
+No function, API, signature, field, mutability, visibility, alias or private
+member changes; the contract-impact gate is not triggered by this header.
+
+Every byte from first import through EOF remains identical in both files.
+The entire owner remains e37697774ec89fb532f6d890d2f3df2c4536f033, including
+the active restored-cache regression, six invalid-context rows and duplicate
+identity case. Source changes only its header, from
+e531faef7a30b4680e6f6a652c7de675569d52e8 to
+b7c1103e669d7d56f0a4b4c84dde7fb9248b23f5. Runtime source and owner remain
+d60a04e0d006746c79726d8ea10240e909499f00 and
+d2cd76a5d4a2a90d6316463ca250e30b4cea294d, respectively.
+
+### Verification location and retained native evidence
+
+Checks ran serially in the existing linked features/code-review-sweep checkout,
+using workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No new checkout, branch, recovery sentinel, helper or package was introduced.
+Native directory: /private/tmp/guardian-04-account-026-platform-headers/.
+Each command retains complete input/output copies, all 700 tracked file/symlink
+identities and modes, full dirty/index patches, untracked inventory, argv,
+HEAD, UTC start/end, raw exit and separate complete stdout/stderr.
+Formatter inputs and full patches were captured before each invocation and
+outputs afterward. Every mutating process completed before the next edit/build.
+
+| Native record | Actual result |
+| --- | --- |
+| guard, guard-format, guard-report | Exact three authorized paths before source/report edits and final formatter; exit 0, no configured boundary zones or rule packs |
+| format, format-final | Exact source/owner Prettier; exit 0, unchanged |
+| build | Fresh npm run build:test; exit 0, 17:57:23.704076–17:57:26.718357 UTC |
+| owner | Full native platform TAP; exit 0, 71 pass, zero fail/cancel/skip/todo, 17:57:30.513704–17:57:30.939089 UTC |
+| direct | Exact npm run test:coverage:direct -- src/platform.ts test/platform.test.ts, including fresh build; exit 0, isolated 100% lines/functions/branches |
+| native-coverage | Full platform owner with exact-source 100% thresholds and platform.lcov; exit 0, 71 pass, 504/504 native compiled lines, 22/22 functions, 57/57 branches |
+| lint | Exact source/owner ESLint --max-warnings=0 --no-cache; exit 0 |
+| license-headers | Existing compiled packaging owner; exit 0, all five cases pass |
+| installed-platform, installed-account | Installed CLI on each actual unchanged RED JSON; exit 0, RED_EVIDENCE_OK |
+| preservation-before-report | Complete source/owner body identity, whole-owner identity, all unrelated tracked bytes/modes and full prior report prefix; exit 0. SAME installed classifier accepts all 2 platform plus 14 ACCOUNT records |
+| audit | Fallow audit --base e6f49a59671c13a20b696b7f46e38406a36aeec0 --format json --quiet --explain; exit 0, verdict pass, zero introduced issues. Authorized temporary linked-Git access used directly |
+| pre-step-1 | Exact two-file SKIP=npm-check pre-commit; exit 0, clean without formatter changes, 18:00:26.987181–18:00:29.244426 UTC. Repeated after this final report update before staging |
+
+The unchanged ACCOUNT evidence is reused from this session's integration
+records at /private/tmp/guardian-04-account-026-platform-green/:
+owners-final-2 (237 combined tests, including 166 ACCOUNT), direct-account-final
+(isolated 100%) and native-account-final (1007/1007 lines, 58/58 functions,
+193/193 branches). Their exact argv, raw exit 0, Node, UTC and input manifests
+remain in those records. Their recorded HEAD is runtime dependency d7e0598;
+the checked dirty inputs equal clean integration reference 6c82ec9 except the
+then-unappended planning report. Comparing current inputs adds only this
+source header and report. All 33 files in the ACCOUNT owner's actual relative
+import closure remain exact; that closure includes neither platform file.
+The account source/owner, dependencies, compiler inputs, runtime and tools are
+unchanged. No fresh ACCOUNT test or full npm run check is claimed here.
+The parent supplies the required combined gate after terminal 04-12.
+
+All executable checks passed. Read-only discovery had an absent NOTICE.md probe
+and an unmatched audit-output search; neither changed repository inputs or
+supplies a test result. A resolver query returned only the omitted model;
+the complete resolve-execution result separately confirms high effort.
+Selected pair checks do not refresh merged all-pair source-map LCOV.
+The native compiled denominator above includes the actual current header.
+No temporary source control is needed for this reversible header-only change.
+
+### Immutable history and normal atomic closeout
+
+Platform evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b with two
+records; ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319 with
+fourteen. Complete raw files equal their immutable Git objects. The SAME
+installed recursive classifier accepts every record; sourceCommit/sourceBlob
+identities and the saved active platform regression text remain exact.
+Actual ancestry remains declaration/source 3f4f1c3, planning-only evidence
+9f7649e, runtime dependency d7e0598, platform integration 6c82ec9, then this
+header cause. No original case, native stream or evidence history is rewritten.
+
+The atomic commit is titled `fix: complete platform source header` and contains
+exactly src/platform.ts and this report. Recorded-base Fallow audit, the exact
+two-file clean SKIP=npm-check pre-commit, branch/HEAD/index checks, authorized
+individual staging and normal foreground hooks retain their terminal results
+in the native directory. The actual postcommit Git object establishes its
+hash, two paths, no deletions and clean tree/index. No wrapper, manual stash,
+amend, hook bypass, rebase or history rewrite is used.
+
+Original 022's missing first formatter input captures remain disclosed and
+unwaived, as do WINDOWS 46–50 and other historical limits. No full ACCOUNT
+correction occurs before the remaining 09 work. No root whole-sweep verdict,
+shared record, requirement completion or summary is written by this cause.
+No security-relevant surface outside the existing threat model is introduced.
+The parent retains combined gates, summary creation, final configuration
+restoration and independent full ACCOUNT correction.
