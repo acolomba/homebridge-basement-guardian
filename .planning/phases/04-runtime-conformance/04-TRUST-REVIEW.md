@@ -787,3 +787,54 @@ no future result is claimed here. Every command runs in the main checkout.
 001 is applied pending its normal commit and full independent correction.
 All original 15 accepted IDs remain open, independently fixed 0, round 0 and
 correction counter 0. No helper, RED modification or shared record is added.
+
+## 001 normal commit and 003 durable storage assertions
+
+001 committed normally as `d21c9ba3a85af561353ac0c4b78bd677904706c1`,
+changing exactly source, owner and report. The commit ran
+2026-10-15T02:46:23.641175Z–02:46:36.972032Z, raw exit 0. Typecheck,
+focused ESLint, native owner (9 pass), isolated direct coverage (100% lines,
+functions and branches), recorded-base audit and exact clean pre-step all
+returned 0. The normal hook returned 0; its npm-check hook reported no matching
+files for this header-only change. Focused checks supply the verification.
+
+003 changes only owner and report. At source revision `d21c9ba`, the full
+round-trip case at owner lines 89–116 and forget case at 161–188 independently
+assert the exported filename before reading the literal durable path. They
+compare complete UTF-8 contents to literal JSON strings, including zero and
+the surviving forgotten-device neighbor, and retain the full fresh-store
+readback. Files are read with the same UTF-8 encoding as the real reader;
+no parsing, normalization or production serializer supplies expectations.
+Each case retains its real mkdtemp and registered cleanup. 008's separate
+phase-marker placement remains deliberately unchanged for its own cause.
+
+The checked owner blob is `1a9a01b87715384361003151dcc308bb5c8774ca`;
+production is `4dbeedb3eda6a5d26595fdc0419b705d02fb9cee`.
+Native `conformance-003-*` records retain exact input diffs/blobs and intervals.
+Typecheck, focused ESLint, build:test, full native owner (9 pass), direct pair
+(100% lines/functions/branches) and formatter returned 0 before the control.
+
+### 003 separate filename-drift maintenance control
+
+The plausible wrong behavior changes only the durable filename export to
+`.basement-guardian-arrivals-drift.json`; coordinated reader/writer drift
+previously passed. This is assertion maintenance, not genuine bug RED.
+The complete saved source is `/private/tmp/guardian-003-control-original.ts`;
+the exact mutation patch is `/private/tmp/guardian-003-control.patch`.
+Typecheck, focused ESLint and build:test each returned 0 for the control.
+The exact named round-trip native command in `conformance-003-control-owner`
+ran 2026-10-15T02:47:29.466879Z–02:47:29.887905Z, raw exit 1:
+one test, one intended `deepStrictEqual` / `ERR_ASSERTION` failure comparing
+the drifted export with the literal filename. No ENOENT/setup failure occurred.
+The mutation source blob was `92f0e20b0f591184df321a2c928df2ad38d676f3`.
+
+`git checkout -- src/runtime/arrivalAnchors.ts` restored production; the
+separate identity check compared exact saved bytes and returned 0. Fresh
+build:test, full owner (9 pass, 0 fail/cancel/skip/todo) and isolated direct
+pair (100% lines/functions/branches) returned 0 after restoration.
+Complete untouched TAP, separate stderr, versions, HEAD, all command intervals,
+mutation/restore identities and exact dirty inputs remain in the native records.
+No control bytes enter Git; the genuine RED JSON remains untouched.
+
+003 is applied pending normal commit and later complete independent correction.
+All 15 accepted IDs remain open, independently fixed 0 and counter 0.

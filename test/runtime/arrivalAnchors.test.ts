@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -100,9 +100,15 @@ test('D-07 reads back every anchor it wrote, including one whose value is zero',
   await reader.restore();
 
   // assert
+  assert.deepStrictEqual(ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-arrivals.json');
   assert.deepStrictEqual(
-    { anchor: reader.get(DEVICE_ID), otherAnchor: reader.get(OTHER_DEVICE_ID), recorded },
-    { anchor: ANCHOR, otherAnchor: 0, recorded: [] },
+    {
+      contents: await readFile(join(storagePath, '.basement-guardian-arrivals.json'), 'utf8'),
+      anchor: reader.get(DEVICE_ID),
+      otherAnchor: reader.get(OTHER_DEVICE_ID),
+      recorded,
+    },
+    { contents: '{"placeholder-device":1700000000000,"placeholder-other-device":0}', anchor: ANCHOR, otherAnchor: 0, recorded: [] },
   );
 });
 
@@ -169,7 +175,15 @@ test('D-14 drops a forgotten device from the file, so the stored set cannot outg
   // assert
   const reader = storeOver(storagePath, recorded);
   await reader.restore();
-  assert.deepStrictEqual({ anchor: reader.get(DEVICE_ID), otherAnchor: reader.get(OTHER_DEVICE_ID) }, { anchor: undefined, otherAnchor: OTHER_ANCHOR });
+  assert.deepStrictEqual(ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-arrivals.json');
+  assert.deepStrictEqual(
+    {
+      contents: await readFile(join(storagePath, '.basement-guardian-arrivals.json'), 'utf8'),
+      anchor: reader.get(DEVICE_ID),
+      otherAnchor: reader.get(OTHER_DEVICE_ID),
+    },
+    { contents: '{"placeholder-other-device":1700000898000}', anchor: undefined, otherAnchor: OTHER_ANCHOR },
+  );
 });
 
 // A write that cannot land costs nothing an owner is harmed by: the clamp makes
