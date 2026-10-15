@@ -1,17 +1,18 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-04: PORTS is independently clean at correction round 3
-and POLICIES at correction round 2. Full wave-four verification passed.
-TRUST and ACCOUNT remain pending; no production bug is confirmed.
+Current through 04-05: PORTS is independently clean at correction round 3
+and POLICIES at correction round 2. TRUST has complete initial review and
+arrival repairs; monitoring and full correction remain pending. Wave five
+passed. One genuine production bug has evidence-first GREEN.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
 
 Initial source/test baseline: 008218be4badf44455ab35906f1dfcff06089bf8.
 Exactly twenty initial core paths form ten mirrored pairs. PORTS has full initial
-review and complete-header inspection. POLICIES has complete initial review;
-TRUST and ACCOUNT remain pending. ACCOUNT initial sizes are 1,283 source
+review and complete-header inspection. POLICIES is independently clean.
+TRUST has complete initial review; ACCOUNT remains pending. ACCOUNT initial sizes are 1,283 source
 lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
@@ -30,10 +31,10 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | POLICIES | test/runtime/failureLog.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
-| TRUST | src/runtime/arrivalAnchors.ts | core | Pending | Pending | Pending |
-| TRUST | test/runtime/arrivalAnchors.test.ts | core | Pending | Pending | Pending |
-| TRUST | src/runtime/monitoringHealth.ts | core | Pending | Pending | Pending |
-| TRUST | test/runtime/monitoringHealth.test.ts | core | Pending | Pending | Pending |
+| TRUST | src/runtime/arrivalAnchors.ts | core | 23a2511; full file/header | Pending | Applied; independent correction pending |
+| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Pending | Applied; independent correction pending |
+| TRUST | src/runtime/monitoringHealth.ts | core | 23a2511; full file/header | Pending | Nonconformant; repair pending |
+| TRUST | test/runtime/monitoringHealth.test.ts | core | 23a2511; full file/header | Pending | Nonconformant; repair pending |
 | ACCOUNT | src/runtime/accountRuntime.ts | core | Pending | Pending | Pending |
 | ACCOUNT | test/runtime/accountRuntime.test.ts | core | Pending | Pending | Pending |
 
@@ -48,7 +49,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | --- | --- | --- | --- | --- | --- |
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
-| TRUST | 04-05/06 | 04-TRUST-REVIEW.md | Pending | Not started | Unknown until review |
+| TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 0; arrival repairs applied | 001–015; full correction pending |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
@@ -66,7 +67,7 @@ ACCOUNT keeps one counter across all slices and any added owning cause tasks.
 | S-04-04 | Readonly advice versus interface rule scope and actual mutation contract | Every affected cause, coordinated in 04-09-02 | Pending |
 | S-04-05 | Count/negative/single-field checks versus each complete independently expected promise | Every owner, ACCOUNT 04-07 through 04-09 | Pending |
 | S-04-06 | In-flight command-cancellation title versus actual stop/send/root-signal setup | 04-09-01 | Pending |
-| S-04-07 | Arrival absence/restart/seeding narration versus canonical shipped history | 04-05-02 | Pending |
+| S-04-07 | Arrival absence/restart/seeding narration versus canonical shipped history | 04-05-02 | Accepted CR-04-TRUST-006; present-behavior repair applied |
 | S-04-08 | Runtime identifier-privacy narration versus scoped permission and unconfirmed opaque-key premise | 04-07-02; 04-09-02 | Pending |
 
 These questions do not limit complete style/comment/writer/reviewer review.
@@ -112,7 +113,9 @@ Use CR-04-PORTS-NNN / POLICIES / TRUST / ACCOUNT per protocol.
 
 ## Genuine bug history and separate controls
 
-No Phase04 bug is accepted. Conditional pair RED files are declared by the
+CR-04-TRUST-002 is one accepted production bug, with committed evidence
+before GREEN; its chain is recorded in wave five below. Other conditional
+pair RED files are declared by the
 owning plans. For each actual bug retain the active intended failure on
 UNCHANGED production, complete native TAP/command/raw exit/target/expected/
 actual/semantic assessment/versions/times/blobs/full test patch, all recursively
@@ -123,14 +126,15 @@ and prove GREEN. No failing/skipped code commit or fabricated failure.
 
 ## Checks and threat dispositions
 
-PORTS and POLICIES have observed current evidence below; TRUST/ACCOUNT remain Pending.
+PORTS/POLICIES have current independent closure; TRUST has initial/arrival
+evidence below, while monitoring correction and ACCOUNT remain pending.
 Record exact command, raw exit, revision/blobs,
 Node/runtime, scope, timings and dirty/untracked input evidence. Record each
 normal hook/clean pre-step and raw Fallow recorded-base audit. Pair evidence
 is isolated; declaration-only selectors have no invented numerical coverage.
 The parent owns every full combined-wave and phase npm run check.
 
-T-04-01 through T-04-20 and reserved T-04-SC are planned review obligations,
+T-04-01 through T-04-20, added high T-04-21 and reserved T-04-SC are review obligations,
 not observed mitigation passes. Later added surfaces extend actual inventory.
 
 ## Unresolved probe and prohibition judgments
@@ -338,3 +342,93 @@ No runtime behavior, command shape, privacy or persistence meaning changed.
 S-04-02 is fixed; S-04-03/04 retain their POLICIES-specific rejections; S-04-05 findings 004/008/013 are fixed.
 RUN-01 remains Pending. WINDOWS46/47 remain OPEN and unwaived.
 TRUST, ACCOUNT and remaining phase gates are not preapproved.
+
+## Coordinator wave 5 evidence and TRUST handoff
+
+`npm run check` returned 0 at clean 41e6f1305d105a89690460dedb9c8031d7d91191.
+Node was v26.11.1; UTC interval: 2026-10-15T03:18:55.667887+00:00 to 2026-10-15T03:19:30.806970+00:00.
+Six static checks, 104 scenarios, 1156 steps and all 43 isolated pairs passed.
+Native output: /private/tmp/guardian-phase4-wave5-full-check.log.
+Metadata: /private/tmp/guardian-phase4-wave5-gate.json.
+Generic 04-05 summary passed. Schema drift found none; codebase drift skipped absent STRUCTURE.md.
+
+Fresh typed trust_initial_review read all four original files, complete headers and all five books at 23a2511.
+It also read actual consumers, canonical decisions and history at b19ea589.
+Initial findings: 15 accepted = 5 BLOCKER + 10 WARNING.
+The report retains every exact rule, revision-qualified location, blob, observer and native mapping.
+No helper or external code adaptation was introduced.
+
+| Stable TRUST ID | Cause / severity | Current disposition |
+| --- | --- | --- |
+| 001 | Arrival headers; WARNING | Applied d21c9ba; full correction pending |
+| 002 | Non-finite disk timestamp acceptance; BLOCKER, genuine bug | Evidence 4544c71 before GREEN 06ef961; comment followup 578b8b3 |
+| 003 | Durable filename and complete bytes; BLOCKER | Applied 99cd24b |
+| 004 | Memory after failed persist; BLOCKER | Applied 5566339 |
+| 005 | Hidden temporary-name dependency; WARNING | Bounded amendment 42fea06 before applied 02ba885 |
+| 006 | Admission/release narrative; WARNING | Applied 0e46020 |
+| 007 | Unqualified privacy premise; WARNING | Applied d4454b2 |
+| 008 | Forget-case AAA; WARNING | Applied 05e495f |
+| 009 | Monitoring headers; WARNING | Pending 04-06 |
+| 010 | Failed-poll silence window observation; BLOCKER | Pending 04-06 |
+| 011 | Whole monitoring answers; BLOCKER | Pending 04-06 |
+| 012 | Stateful arrival fake contract; WARNING | Pending 04-06 |
+| 013 | Threshold AAA; WARNING | Pending 04-06 |
+| 014 | Removed-implementation narration; WARNING | Pending 04-06 |
+| 015 | Public method descriptions lack third-person verb form; WARNING | Arrival part applied 0e46020; monitoring pending |
+
+All IDs use prefix CR-04-TRUST and contribute RUN-01; headers also PROC-03, bug 002 also BUG-01.
+Eight arrival causes are applied and 015 is partial. None is independently closed yet.
+All original 15 remain formally open, counter 0, with no rejected/reopened set or correction round.
+Full four-file correction follows 04-06; no partial clean verdict or previous stop waiver is reused.
+S-04-03/04 advice was rejected for actual factory contracts, not converted automatically.
+S-04-07 is accepted as 006. ACCOUNT's separate privacy candidate remains pending.
+
+### Actual genuine bug history
+
+Unchanged source 23a2511, production blob 0b04d48709406f65da2457524e6f5226ed12cc4d,
+ran nine active arrival cases: seven pass and two intended ERR_ASSERTION failures for positive/negative 1e309.
+Each expected whole-file rejection, including a finite neighbor; actual values were Infinity or -Infinity plus that neighbor.
+Final RED ran 2026-10-15T02:34:30.431Z to 02:34:30.689Z, raw exit 1, Node v26.11.1.
+The complete first pre-format capture remains recursively inside priorEvidence[0].
+Root independently checked the current patch, source identity, native assertion semantics and all four current/archived target classifications.
+Each returned RED_EVIDENCE_OK using the installed classifier.
+
+The actual chain is 23a2511 → planning-only evidence 4544c71 → source and active test GREEN 06ef961.
+Root committed exactly RED JSON and report after audit and a clean pre-step before staging; ordinary hooks passed.
+The active failing owner stayed unstaged and production stayed unchanged through the evidence commit.
+Evidence blob cac1f810efb536ba384c05bca9396604ccd72d6c remains unchanged.
+The minimum fix adds Number.isFinite validation with the existing whole-map rejection contract.
+Both active regressions pass; no failing code commit, skipped target or rewritten history supplied this result.
+Root native streams use /private/tmp/guardian-04-arrival-root-evidence-*.
+A guessed missing handoff/prestep.json read supplied no evidence; root ran and recorded its own exact clean pre-step.
+
+### Compatible dependency and separate controls
+
+Accepted 005 required deterministic occupied-temporary-file observation under the writer's explicit-dependency rule.
+The existing storage-path failure probe could not distinguish exclusive wx from overwriting w.
+Root inspected actual source, owner, callers and both-project impact evidence before declaring task 04-05-03.
+Record-only amendment 42fea06 preceded the optional-member edit; the plan now has three sequential tasks.
+The repair adds optional trusted ArrivalAnchorsOptions.temporaryPath with the native private helper as default.
+No existing caller changes. Exact private-helper queries remain unavailable, so its name, signature and body remain intact.
+Four refreshed public options/factory queries completed separately for both projects before editing.
+The dependency is not user configuration or a test-only accessor; default storage format and permissions remain unchanged.
+
+Three separate controls rejected filename drift, clearing memory after failure and wx-to-w overwrite behavior.
+Each failed the intended assertion after passing typecheck/lint/build; exact restoration and rebuilt GREEN followed.
+They are maintenance controls, not additional production bugs or RED histories.
+Current combined arrival/account owners pass 141 cases, including 13 arrival cases.
+Both isolated pairs pass 100% lines/functions/branches; selected runs do not supply merged coverage by themselves.
+All cause audits, clean pre-steps before staging and ordinary hooks passed.
+All unsuccessful sandbox, formatter, recorder, comparison and capacity attempts remain disclosed in report/native evidence.
+A same-agent resumed commit retained its prior clean pre-step and staged bytes after a capacity interruption.
+
+T-04-21 extends the original threat inventory: trusted temporary-path supplier to filesystem ownership, high, mitigate.
+Tests preserve occupied-file bytes and clean up only an owned temporary file; supplier errors stay inside persist's failure boundary.
+Later 04-06 correction, 04-10 seal and security audit must include this added threat.
+T-04-09/10 retain storage/restart semantics and the unconfirmed scoped identifier premise.
+Full native records are under guardian-04-trust-initial-native, guardian-04-arrival-red-native,
+guardian-04-arrival-green-native and guardian-04-arrival-handoff in /private/tmp.
+The report maps every command, raw exit, UTC, revision/blob, dirty input and commit.
+Root amendment streams use guardian-04-arrival-amendment-*.
+No helper, package, external adaptation, live vendor, hardware, private input or migration was introduced.
+WINDOWS46/47 remain OPEN and unwaived. RUN-01 remains Pending.
