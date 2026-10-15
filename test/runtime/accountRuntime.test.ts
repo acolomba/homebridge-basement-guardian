@@ -828,218 +828,243 @@ for (const { contractCase, createAnchors, rejectedObservation, expectedObservati
   });
 }
 
-test('confirms seeded physical IDs before removal without inventing device state', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded inventory requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removals' });
-  when(() => {
-    removals(DEVICE_ID);
-  }).thenReturn(undefined);
-  when(() => {
-    removals(OTHER_DEVICE_ID);
-  }).thenReturn(undefined);
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  // The promise constructor assigns the resolver synchronously.
-  let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
-  const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
-    completeFinalCheck = resolve;
+interface PendingInventory {
+  resolve: (devices: readonly ApiDevice[]) => void;
+  reject: (error: Error) => void;
+}
+
+// Wires the real authentication client, REST client, and store behind the
+// runtime, so only the network boundary is replaced. The token cache lands in
+// this case's own storage directory, which is removed when the case ends.
+async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
+  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
+
+  t.after(async () => {
+    await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   });
-  const callbackStates: unknown[] = [];
-  let rootSignal!: AbortSignal;
-  const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, trustworthyInventories, commandRequests, advance } = harness(
-    t,
-    {
-      pollIntervalMs: 1_000,
-      anchors: recordingAnchors([
+
+  const clock: Clock = { now: () => START_TIME };
+  const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME };
+  const log = silentLog();
+  const auth = createAuthClient({
+    constants: testConstants,
+    clientId: 'client-id-1',
+    email: 'account@example.test',
+    password: 'account-password',
+    storagePath,
+    requestTimeoutMs: 1_000,
+    httpFetch: (input, init) => globalThis.fetch(input, init),
+    clock,
+    createSalt: () => 'salt-1',
+    registerSecret: () => undefined,
+    log,
+  });
+  const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000, httpFetch: (input, init) => globalThis.fetch(input, init) });
+  const store = createDeviceStateStore({ clock, log });
+  const runtime = createAccountRuntime({
+    api,
+    store,
+    registry: createFamilyRegistry(),
+    createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => fakeShadow(shadowOptions).client,
+    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+    pollIntervalMs: POLL_INTERVAL_MS,
+    rotationLeadMs: ROTATION_LEAD_MS,
+    minRotationDelayMs: MIN_ROTATION_DELAY_MS,
+    failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+    registerSecret: () => undefined,
+    onTrustworthyInventory: () => undefined,
+    onDeviceRemoved: () => undefined,
+    onMonitoringHealth: () => undefined,
+    clock,
+    monotonic,
+    anchors: createArrivalAnchors({ storagePath, log }),
+    log,
+  });
+
+  // This case runs on real timers, so the poll and rotation timers must be
+  // released or they would hold the runner open.
+  t.after(async () => {
+    await runtime.stop();
+  });
+
+  return { runtime, store };
+}
+
+// Answers the token request, the device request, and the credentials request.
+function stubCloud(t: TestContext, httpFetch?: HttpFetch): { url: string; authorization: string | undefined }[] {
+  const requests: { url: string; authorization: string | undefined }[] = [];
+
+  t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
+    const url = input.toString();
+    requests.push({ url, authorization: new Headers(init?.headers).get('authorization') ?? undefined });
+
+    if (httpFetch !== undefined) {
+      return httpFetch(input, init);
+    }
+
+    if (url.endsWith('/oauth/token')) {
+      return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    }
+
+    if (url.endsWith('/credentials/aws')) {
+      return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+    }
+
+    return Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+  });
+
+  return requests;
+}
+
+function credentialRequestCount(requests: readonly { url: string }[]): number {
+  return requests.filter((request) => request.url.endsWith('/credentials/aws')).length;
+}
+
+describe('createAccountRuntime', () => {
+  test('confirms seeded physical IDs before removal without inventing device state', async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded inventory requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removals' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+    when(() => {
+      removals(OTHER_DEVICE_ID);
+    }).thenReturn(undefined);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    // The promise constructor assigns the resolver synchronously.
+    let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
+    const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
+      completeFinalCheck = resolve;
+    });
+    const callbackStates: unknown[] = [];
+    let rootSignal!: AbortSignal;
+    const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, trustworthyInventories, commandRequests, advance } = harness(
+      t,
+      {
+        pollIntervalMs: 1_000,
+        anchors: recordingAnchors([
+          [DEVICE_ID, START_TIME - 123],
+          ['previous-device', START_TIME - 456],
+        ]),
+        command: commands,
+      },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        onDeviceRemoved: (deviceId) => {
+          removals(deviceId);
+          callbackStates.push({ deviceId, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls: [...calls] });
+        },
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+    // act
+    await runtime.start([DEVICE_ID, DEVICE_ID, OTHER_DEVICE_ID]);
+    await settle();
+    const afterFirstAbsence = {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+      removed: [...removed],
+    };
+    await runtime.start(['previous-device']);
+    await advance(1_000);
+    const beforeFinalAnswer = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+    completeFinalCheck([]);
+    await settle();
+    const afterFinalAnswer = {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+      removed: [...removed],
+    };
+    await runtime.start([DEVICE_ID]);
+    await advance(1_000);
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(afterFirstAbsence, {
+      path: 'poll-only',
+      deviceIds: [],
+      snapshots: [undefined, undefined],
+      anchors: [
         [DEVICE_ID, START_TIME - 123],
         ['previous-device', START_TIME - 456],
-      ]),
-      command: commands,
-    },
-    undefined,
-    {
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      onDeviceRemoved: (deviceId) => {
-        removals(deviceId);
-        callbackStates.push({ deviceId, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls: [...calls] });
-      },
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
-
-  // act
-  await runtime.start([DEVICE_ID, DEVICE_ID, OTHER_DEVICE_ID]);
-  await settle();
-  const afterFirstAbsence = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
-    anchors: [...anchors.stored],
-    account: monitoringHealth.at(-1),
-    byDevice: monitoringByDevice.at(-1),
-    removed: [...removed],
-  };
-  await runtime.start(['previous-device']);
-  await advance(1_000);
-  const beforeFinalAnswer = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
-  completeFinalCheck([]);
-  await settle();
-  const afterFinalAnswer = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
-    anchors: [...anchors.stored],
-    account: monitoringHealth.at(-1),
-    byDevice: monitoringByDevice.at(-1),
-    removed: [...removed],
-  };
-  await runtime.start([DEVICE_ID]);
-  await advance(1_000);
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(afterFirstAbsence, {
-    path: 'poll-only',
-    deviceIds: [],
-    snapshots: [undefined, undefined],
-    anchors: [
-      [DEVICE_ID, START_TIME - 123],
-      ['previous-device', START_TIME - 456],
-    ],
-    account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
-    byDevice: new Map(),
-    removed: [],
-  });
-  assert.deepStrictEqual(beforeFinalAnswer, {
-    removed: [],
-    anchors: [
-      [DEVICE_ID, START_TIME - 123],
-      ['previous-device', START_TIME - 456],
-    ],
-    calls: ['devices', 'credentials', 'devices', 'devices'],
-  });
-  assert.deepStrictEqual(afterFinalAnswer, {
-    path: 'poll-only',
-    deviceIds: [],
-    snapshots: [undefined, undefined],
-    anchors: [['previous-device', START_TIME - 456]],
-    account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
-    byDevice: new Map(),
-    removed: [DEVICE_ID, OTHER_DEVICE_ID],
-  });
-  assert.deepStrictEqual(callbackStates, [
-    {
-      deviceId: DEVICE_ID,
-      deviceIds: [],
+      ],
+      account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+      byDevice: new Map(),
+      removed: [],
+    });
+    assert.deepStrictEqual(beforeFinalAnswer, {
+      removed: [],
       anchors: [
         [DEVICE_ID, START_TIME - 123],
         ['previous-device', START_TIME - 456],
       ],
       calls: ['devices', 'credentials', 'devices', 'devices'],
-    },
-    {
-      deviceId: OTHER_DEVICE_ID,
-      deviceIds: [],
-      anchors: [['previous-device', START_TIME - 456]],
-      calls: ['devices', 'credentials', 'devices', 'devices'],
-    },
-  ]);
-  assert.deepStrictEqual(
-    { calls, removed, trustworthyInventories, commandRequests, anchors: [...anchors.stored] },
-    {
-      calls: ['devices', 'credentials', 'devices', 'devices', 'devices'],
-      removed: [DEVICE_ID, OTHER_DEVICE_ID],
-      trustworthyInventories: [[], [], []],
-      commandRequests: [],
-      anchors: [['previous-device', START_TIME - 456]],
-    },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-});
-
-test('leaves restored anchors ineligible for removal when start receives no known IDs', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'unseeded inventory requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'unseeded device removal' });
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  let rootSignal!: AbortSignal;
-  const { runtime, store, anchors, removed, calls, trustworthyInventories, commandRequests, advance } = harness(
-    t,
-    { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
-    undefined,
-    {
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      onDeviceRemoved: removals,
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
-
-  // act
-  await runtime.start();
-  await settle();
-  await advance(1_000);
-  await advance(1_000);
-  const path = runtime.monitoringPath;
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(
-    {
-      path,
-      deviceIds: store.deviceIds(),
-      snapshot: store.snapshot(DEVICE_ID),
-      anchors: [...anchors.stored],
-      removed,
-      calls,
-      trustworthyInventories,
-      commandRequests,
-    },
-    {
+    });
+    assert.deepStrictEqual(afterFinalAnswer, {
       path: 'poll-only',
       deviceIds: [],
-      snapshot: undefined,
-      anchors: [[DEVICE_ID, START_TIME - 123]],
-      removed: [],
-      calls: ['devices', 'credentials', 'devices', 'devices'],
-      trustworthyInventories: [[], [], []],
-      commandRequests: [],
-    },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-});
+      snapshots: [undefined, undefined],
+      anchors: [['previous-device', START_TIME - 456]],
+      account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+      byDevice: new Map(),
+      removed: [DEVICE_ID, OTHER_DEVICE_ID],
+    });
+    assert.deepStrictEqual(callbackStates, [
+      {
+        deviceId: DEVICE_ID,
+        deviceIds: [],
+        anchors: [
+          [DEVICE_ID, START_TIME - 123],
+          ['previous-device', START_TIME - 456],
+        ],
+        calls: ['devices', 'credentials', 'devices', 'devices'],
+      },
+      {
+        deviceId: OTHER_DEVICE_ID,
+        deviceIds: [],
+        anchors: [['previous-device', START_TIME - 456]],
+        calls: ['devices', 'credentials', 'devices', 'devices'],
+      },
+    ]);
+    assert.deepStrictEqual(
+      { calls, removed, trustworthyInventories, commandRequests, anchors: [...anchors.stored] },
+      {
+        calls: ['devices', 'credentials', 'devices', 'devices', 'devices'],
+        removed: [DEVICE_ID, OTHER_DEVICE_ID],
+        trustworthyInventories: [[], [], []],
+        commandRequests: [],
+        anchors: [['previous-device', START_TIME - 456]],
+      },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+  });
 
-for (const { title, inventoryError } of [
-  { title: 'failed', inventoryError: new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices') },
-  { title: 'incomplete', inventoryError: new Error('the inventory envelope is incomplete') },
-]) {
-  test(`retains seeded absence confirmation across ${title} inventories`, async (t) => {
+  test('leaves restored anchors ineligible for removal when start receives no known IDs', async (t) => {
     // arrange
-    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'healthy and rejected inventory requests' });
-    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removal' });
-    when(() => {
-      removals(DEVICE_ID);
-    }).thenReturn(undefined);
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'unseeded inventory requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'unseeded device removal' });
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
     let rootSignal!: AbortSignal;
     const { runtime, store, anchors, removed, calls, trustworthyInventories, commandRequests, advance } = harness(
@@ -1056,42 +1081,39 @@ for (const { title, inventoryError } of [
         },
       },
     );
-    when(() => requests.devices(rootSignal)).thenReject(inventoryError);
     when(() => requests.devices(rootSignal)).thenResolve([]);
-    when(() => requests.devices(rootSignal)).thenReject(inventoryError);
     when(() => requests.devices(rootSignal)).thenResolve([]);
     when(() => requests.devices(rootSignal)).thenResolve([]);
     when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
 
     // act
-    await runtime.start([DEVICE_ID]);
+    await runtime.start();
     await settle();
-    const afterFailedLaunch = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
     await advance(1_000);
-    const afterFirstHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
     await advance(1_000);
-    const afterFailedPoll = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
-    await advance(1_000);
-    const afterSecondHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+    const path = runtime.monitoringPath;
     await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { afterFailedLaunch, afterFirstHealthy, afterFailedPoll, afterSecondHealthy },
       {
-        afterFailedLaunch: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
-        afterFirstHealthy: { path: 'poll-only', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
-        afterFailedPoll: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
-        afterSecondHealthy: { path: 'poll-only', removed: [DEVICE_ID], anchors: [] },
+        path,
+        deviceIds: store.deviceIds(),
+        snapshot: store.snapshot(DEVICE_ID),
+        anchors: [...anchors.stored],
+        removed,
+        calls,
+        trustworthyInventories,
+        commandRequests,
       },
-    );
-    assert.deepStrictEqual(
-      { deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), calls, trustworthyInventories, commandRequests },
       {
+        path: 'poll-only',
         deviceIds: [],
         snapshot: undefined,
-        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
-        trustworthyInventories: [[], []],
+        anchors: [[DEVICE_ID, START_TIME - 123]],
+        removed: [],
+        calls: ['devices', 'credentials', 'devices', 'devices'],
+        trustworthyInventories: [[], [], []],
         commandRequests: [],
       },
     );
@@ -1099,846 +1121,769 @@ for (const { title, inventoryError } of [
     verify(removals);
     verify(commands);
   });
-}
 
-test('retains seeded removal eligibility after a failed final check and callback refusal', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded removal confirmation requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'refused then successful removal' });
-  when(() => {
-    removals(DEVICE_ID);
-  }).thenThrow(new Error('Homebridge refused removal'));
-  when(() => {
-    removals(DEVICE_ID);
-  }).thenReturn(undefined);
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  let rootSignal!: AbortSignal;
-  const { runtime, store, anchors, removed, calls, commandRequests, advance } = harness(
-    t,
-    { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
-    undefined,
-    {
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      onDeviceRemoved: removals,
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenReject(new Error('the final inventory is unavailable'));
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
-
-  // act
-  await runtime.start([DEVICE_ID]);
-  await settle();
-  await advance(1_000);
-  const afterFailedCheck = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
-  await advance(1_000);
-  const afterRefusedCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
-  await advance(1_000);
-  const afterSuccessfulCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(
-    { afterFailedCheck, afterRefusedCallback, afterSuccessfulCallback, deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), commandRequests },
-    {
-      afterFailedCheck: { removed: [], anchors: [[DEVICE_ID, START_TIME - 123]], calls: ['devices', 'credentials', 'devices', 'devices'] },
-      afterRefusedCallback: {
-        removed: [],
-        anchors: [[DEVICE_ID, START_TIME - 123]],
-        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
-      },
-      afterSuccessfulCallback: {
-        removed: [DEVICE_ID],
-        anchors: [],
-        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
-      },
-      deviceIds: [],
-      snapshot: undefined,
-      commandRequests: [],
-    },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-});
-
-test('removes no seeded identity when a final inventory completes after shutdown', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded shutdown inventory requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  // The promise constructor assigns the resolver synchronously.
-  let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
-  const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
-    completeFinalCheck = resolve;
-  });
-  let rootSignal!: AbortSignal;
-  const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, commandRequests, advance } = harness(
-    t,
-    {
-      pollIntervalMs: 1_000,
-      anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]),
-      command: commands,
-    },
-    undefined,
-    {
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      onDeviceRemoved: removals,
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
-
-  // act
-  await runtime.start([DEVICE_ID]);
-  await settle();
-  await advance(1_000);
-  await runtime.stop();
-  completeFinalCheck([]);
-  await settle();
-  await runtime.start([OTHER_DEVICE_ID]);
-  await advance(1_000);
-
-  // assert
-  assert.deepStrictEqual(
-    {
-      path: runtime.monitoringPath,
-      deviceIds: store.deviceIds(),
-      anchors: [...anchors.stored],
-      removed,
-      calls,
-      monitoringHealth,
-      monitoringByDevice,
-      commandRequests,
-    },
-    {
-      path: 'unavailable',
-      deviceIds: [],
-      anchors: [[DEVICE_ID, START_TIME - 123]],
-      removed: [],
-      calls: ['devices', 'credentials', 'devices', 'devices'],
-      monitoringHealth: [
-        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
-        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
-      ],
-      monitoringByDevice: [new Map(), new Map()],
-      commandRequests: [],
-    },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-});
-
-test('starts no seeded inventory when anchor restoration finishes after shutdown', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'forbidden stopped inventory requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  // The promise constructor assigns the resolver synchronously.
-  let completeRestore!: () => void;
-  const restoring = new Promise<void>((resolve) => {
-    completeRestore = resolve;
-  });
-  const anchors = { ...recordingAnchors(), restore: () => restoring };
-  const { runtime, store, calls, removed, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
-    devices: (signal) => requests.devices(signal),
-    awsCredentials: (signal) => requests.awsCredentials(signal),
-    onDeviceRemoved: removals,
-  });
-
-  // act
-  const starting = runtime.start([DEVICE_ID]);
-  await runtime.start([OTHER_DEVICE_ID]);
-  await runtime.stop();
-  completeRestore();
-  await starting;
-  await settle();
-
-  // assert
-  assert.deepStrictEqual(
-    { path: runtime.monitoringPath, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls, removed, commandRequests },
-    { path: 'unavailable', deviceIds: [], anchors: [], calls: [], removed: [], commandRequests: [] },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-});
-
-test('keeps the shadow connection when the same physical devices are enumerated in another order', async (t) => {
-  // arrange
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  let elapsedMs = 0;
-  let reverseOrder = false;
-  const clock: Clock = { now: () => START_TIME + elapsedMs };
-  const log = silentLog();
-  const canonical = createDeviceStateStore({ clock, log });
-  const store: DeviceStateStore = {
-    ...canonical,
-    deviceIds: () => (reverseOrder ? [...canonical.deviceIds()].reverse() : canonical.deviceIds()),
-  };
-  const lifecycle = mock<Pick<ShadowClient, 'start' | 'close'>>({ exactParams: true, name: 'shadow membership lifecycle' });
-  when(() => lifecycle.start([DEVICE_ID, OTHER_DEVICE_ID])).thenResolve(undefined);
-  when(() => lifecycle.close()).thenResolve(undefined);
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  const starts: string[][] = [];
-  const anchors = recordingAnchors();
-  const runtime = createAccountRuntime({
-    api: {
-      devices: answering([() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([otherGeminiDevice(), geminiDevice()])]),
-      awsCredentials: () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
-      device: () => Promise.reject(new Error('no individual-device request is scripted')),
-      sendCommand: commands,
-    },
-    store,
-    registry: createFamilyRegistry(),
-    createShadow: () => ({
-      connected: false,
-      start: (deviceIds) => {
-        starts.push([...deviceIds]);
-        return lifecycle.start(deviceIds);
-      },
-      close: () => lifecycle.close(),
-    }),
-    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
-    pollIntervalMs: 1_000,
-    rotationLeadMs: ROTATION_LEAD_MS,
-    minRotationDelayMs: MIN_ROTATION_DELAY_MS,
-    failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
-    registerSecret: () => undefined,
-    onTrustworthyInventory: () => undefined,
-    onDeviceRemoved: () => undefined,
-    onMonitoringHealth: () => undefined,
-    clock,
-    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
-    anchors,
-    log,
-  });
-  t.after(async () => {
-    await runtime.stop();
-  });
-
-  // act
-  await runtime.start();
-  await settle();
-  const initialIds = runtime.store.deviceIds();
-  reverseOrder = true;
-  elapsedMs = 1_000;
-  t.mock.timers.tick(1_000);
-  await settle();
-  const afterReordering = {
-    path: runtime.monitoringPath,
-    deviceIds: runtime.store.deviceIds(),
-    snapshots: runtime.store.deviceIds().map((deviceId) => runtime.store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-  };
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(
-    { initialIds, afterReordering, starts },
-    {
-      initialIds: [DEVICE_ID, OTHER_DEVICE_ID],
-      afterReordering: {
-        path: 'poll-only',
-        deviceIds: [OTHER_DEVICE_ID, DEVICE_ID],
-        snapshots: [
-          {
-            identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-            connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-            data: { water_level: 1, primary_pump_running: false, ac_power: true },
-            metadata: {},
-            shadowVersion: undefined,
-            deviceTimestamp: 1_700_000_000_000,
-            receivedAt: START_TIME + 1_000,
-          },
-          {
-            identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-            connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-            data: { water_level: 1, primary_pump_running: false, ac_power: true },
-            metadata: {},
-            shadowVersion: undefined,
-            deviceTimestamp: 1_700_000_000_000,
-            receivedAt: START_TIME + 1_000,
-          },
-        ],
-        anchors: [
-          [DEVICE_ID, START_TIME],
-          [OTHER_DEVICE_ID, START_TIME],
-        ],
-      },
-      starts: [[DEVICE_ID, OTHER_DEVICE_ID]],
-    },
-  );
-  verify(lifecycle);
-  verify(commands);
-});
-
-test('adds a later discovered device to live shadow routing without reconnecting unchanged inventories', async (t) => {
-  // arrange
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  let elapsedMs = 0;
-  const clock: Clock = { now: () => START_TIME + elapsedMs };
-  const log = silentLog();
-  const store = createDeviceStateStore({ clock, log });
-  const anchors = recordingAnchors();
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden device removal' });
-  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'inventory notifications' });
-  const monitoringListener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring notifications' });
-  const transports: Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>[] = [];
-  const subscriptions: string[][] = [];
-  const requests: { topic: string; payload: string }[] = [];
-  const messages: ((topic: string, payload: Buffer) => void)[] = [];
-  const reports: { account: MonitoringTrust; byDevice: ReadonlyMap<string, MonitoringTrust> }[] = [];
-  const inventories: string[][] = [];
-  const runtime = createAccountRuntime({
-    api: {
-      devices: answering([() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice(), otherGeminiDevice()])]),
-      awsCredentials: () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
-      device: () => Promise.reject(new Error('no individual-device request is scripted')),
-      sendCommand: commands,
-    },
-    store,
-    registry: createFamilyRegistry(),
-    createShadow: (options) =>
-      createShadowClient({
-        ...options,
-        scheme: 'wss',
-        region: 'us-east-1',
-        clock,
-        log,
-        userAgent: 'offline-account-test',
-        connect: () => {
-          throw new Error('the injected transport opens no socket');
-        },
-        createTransport: () => {
-          const transport = mock<Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>>({ exactParams: true, name: 'shadow transport operations' });
-          const topics = [
-            '$aws/things/account-1_serial-1/shadow/get/accepted',
-            '$aws/things/account-1_serial-1/shadow/get/rejected',
-            '$aws/things/account-1_serial-1/shadow/update/accepted',
-          ];
-          if (transports.length > 0) {
-            topics.push(
-              '$aws/things/account-1_serial-2/shadow/get/accepted',
-              '$aws/things/account-1_serial-2/shadow/get/rejected',
-              '$aws/things/account-1_serial-2/shadow/update/accepted',
-            );
-          }
-
-          when(() => transport.subscribe(topics)).thenResolve(undefined);
-          when(() => transport.publish('$aws/things/account-1_serial-1/shadow/get', '')).thenResolve(undefined);
-          if (transports.length > 0) {
-            when(() => transport.publish('$aws/things/account-1_serial-2/shadow/get', '')).thenResolve(undefined);
-          }
-
-          when(() => transport.end()).thenResolve(undefined);
-          transports.push(transport);
-          return {
-            onConnect: (handler) => {
-              queueMicrotask(handler);
-            },
-            onMessage: (handler) => {
-              messages.push(handler);
-            },
-            onError: () => undefined,
-            onClose: () => undefined,
-            subscribe: (topics) => {
-              subscriptions.push([...topics]);
-              return transport.subscribe(topics);
-            },
-            publish: (topic, payload) => {
-              requests.push({ topic, payload });
-              return transport.publish(topic, payload);
-            },
-            end: () => transport.end(),
-          } satisfies MqttTransport;
-        },
-      }),
-    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
-    pollIntervalMs: 1_000,
-    rotationLeadMs: ROTATION_LEAD_MS,
-    minRotationDelayMs: MIN_ROTATION_DELAY_MS,
-    failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
-    registerSecret: () => undefined,
-    onTrustworthyInventory: (deviceIds) => {
-      inventoryListener(deviceIds);
-      inventories.push([...deviceIds]);
-    },
-    onDeviceRemoved: removals,
-    onMonitoringHealth: (account, byDevice) => {
-      monitoringListener(account, byDevice);
-      reports.push({ account, byDevice: new Map(byDevice) });
-    },
-    clock,
-    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
-    anchors,
-    log,
-  });
-  t.after(async () => {
-    await runtime.stop();
-  });
-  const expectedFirst: DeviceSnapshot = {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: 1_700_000_000_000,
-    receivedAt: START_TIME + 1_000,
-  };
-  const expectedSecond: DeviceSnapshot = {
-    identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: 1_700_000_000_000,
-    receivedAt: START_TIME + 1_000,
-  };
-  const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
-  const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
-  const expectedLiveFirst: DeviceSnapshot = {
-    ...expectedFirst,
-    data: { water_level: 3, primary_pump_running: false, ac_power: true },
-    metadata: { firmware: 'first-live' },
-    shadowVersion: 11,
-    receivedAt: START_TIME + 2_250,
-  };
-  const expectedLiveSecond: DeviceSnapshot = {
-    ...expectedSecond,
-    data: { water_level: 7, primary_pump_running: true, ac_power: true },
-    metadata: { firmware: 'second-live' },
-    shadowVersion: 12,
-    receivedAt: START_TIME + 2_250,
-  };
-  when(() => {
-    inventoryListener([DEVICE_ID]);
-  }).thenReturn(undefined);
-  when(() => {
-    inventoryListener([DEVICE_ID, OTHER_DEVICE_ID]);
-  })
-    .thenReturn(undefined)
-    .times(2);
-  when(() => {
-    monitoringListener(healthyAccount, new Map([[DEVICE_ID, healthyDevice]]));
-  }).thenReturn(undefined);
-  when(() => {
-    monitoringListener(
-      healthyAccount,
-      new Map([
-        [DEVICE_ID, healthyDevice],
-        [OTHER_DEVICE_ID, healthyDevice],
-      ]),
-    );
-  })
-    .thenReturn(undefined)
-    .times(2);
-  when(() => {
-    monitoringListener(
-      { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
-      new Map([
-        [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
-        [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
-      ]),
-    );
-  }).thenReturn(undefined);
-
-  // act
-  await runtime.start();
-  await settle();
-  const atStart = { path: runtime.monitoringPath, deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), report: reports.at(-1) };
-  elapsedMs = 1_000;
-  t.mock.timers.tick(1_000);
-  await settle();
-  const afterAdmission = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    report: reports.at(-1),
-    connections: transports.length,
-  };
-  elapsedMs = 2_000;
-  t.mock.timers.tick(1_000);
-  await settle();
-  const connectionsAfterUnchangedPoll = transports.length;
-  elapsedMs = 2_250;
-  messages.at(-1)?.(
-    '$aws/things/account-1_serial-1/shadow/update/accepted',
-    Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 3 }, state: { firmware: 'first-live' } } }, version: 11 })),
-  );
-  messages.at(-1)?.(
-    '$aws/things/account-1_serial-2/shadow/get/accepted',
-    Buffer.from(
-      JSON.stringify({ state: { reported: { data: { water_level: 7, primary_pump_running: true }, state: { firmware: 'second-live' } } }, version: 12 }),
-    ),
-  );
-  const liveState = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-    report: reports.at(-1),
-  };
-  await runtime.stop();
-  messages.at(-1)?.(
-    '$aws/things/account-1_serial-2/shadow/update/accepted',
-    Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 0 } } }, version: 13 })),
-  );
-  const afterStop = {
-    path: runtime.monitoringPath,
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-    report: reports.at(-1),
-  };
-
-  // assert
-  assert.deepStrictEqual(atStart, {
-    path: 'shadow-and-poll',
-    deviceIds: [DEVICE_ID],
-    snapshot: { ...expectedFirst, receivedAt: START_TIME },
-    report: { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
-  });
-  assert.deepStrictEqual(
-    { afterAdmission, connectionsAfterUnchangedPoll, liveState, afterStop, subscriptions, requests, inventories },
-    {
-      afterAdmission: {
-        path: 'shadow-and-poll',
-        deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
-        snapshots: [expectedFirst, expectedSecond],
-        report: {
-          account: healthyAccount,
-          byDevice: new Map([
-            [DEVICE_ID, healthyDevice],
-            [OTHER_DEVICE_ID, healthyDevice],
-          ]),
-        },
-        connections: 2,
-      },
-      connectionsAfterUnchangedPoll: 2,
-      liveState: {
-        path: 'shadow-and-poll',
-        deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
-        snapshots: [expectedLiveFirst, expectedLiveSecond],
-        anchors: [
-          [DEVICE_ID, START_TIME + 2_250],
-          [OTHER_DEVICE_ID, START_TIME + 2_250],
-        ],
-        report: {
-          account: healthyAccount,
-          byDevice: new Map([
-            [DEVICE_ID, healthyDevice],
-            [OTHER_DEVICE_ID, healthyDevice],
-          ]),
-        },
-      },
-      afterStop: {
-        path: 'unavailable',
-        snapshots: [expectedLiveFirst, expectedLiveSecond],
-        anchors: [
-          [DEVICE_ID, START_TIME + 2_250],
-          [OTHER_DEVICE_ID, START_TIME + 2_250],
-        ],
-        report: {
-          account: { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
-          byDevice: new Map([
-            [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
-            [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
-          ]),
-        },
-      },
-      subscriptions: [
-        [
-          '$aws/things/account-1_serial-1/shadow/get/accepted',
-          '$aws/things/account-1_serial-1/shadow/get/rejected',
-          '$aws/things/account-1_serial-1/shadow/update/accepted',
-        ],
-        [
-          '$aws/things/account-1_serial-1/shadow/get/accepted',
-          '$aws/things/account-1_serial-1/shadow/get/rejected',
-          '$aws/things/account-1_serial-1/shadow/update/accepted',
-          '$aws/things/account-1_serial-2/shadow/get/accepted',
-          '$aws/things/account-1_serial-2/shadow/get/rejected',
-          '$aws/things/account-1_serial-2/shadow/update/accepted',
-        ],
-      ],
-      requests: [
-        { topic: '$aws/things/account-1_serial-1/shadow/get', payload: '' },
-        { topic: '$aws/things/account-1_serial-1/shadow/get', payload: '' },
-        { topic: '$aws/things/account-1_serial-2/shadow/get', payload: '' },
-      ],
-      inventories: [[DEVICE_ID], [DEVICE_ID, OTHER_DEVICE_ID], [DEVICE_ID, OTHER_DEVICE_ID]],
-    },
-  );
-  verify(commands);
-  verify(removals);
-  verify(inventoryListener);
-  verify(monitoringListener);
-  for (const transport of transports) {
-    verify(transport);
-  }
-});
-
-test('removes a reappeared device only after two later healthy omissions and a final check', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
-  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
-  when(() => {
-    removals(DEVICE_ID);
-  }).thenReturn(undefined);
-  when(() => {
-    inventoryListener([DEVICE_ID, OTHER_DEVICE_ID]);
-  }).thenReturn(undefined);
-  when(() => {
-    inventoryListener([OTHER_DEVICE_ID]);
-  })
-    .thenReturn(undefined)
-    .times(2);
-  when(() => {
-    inventoryListener([]);
-  }).thenReturn(undefined);
-  when(() => {
-    inventoryListener([OTHER_DEVICE_ID]);
-  }).thenReturn(undefined);
-  const removalStates: unknown[] = [];
-  // The public retry factory receives the root signal before start.
-  let rootSignal!: AbortSignal;
-  const { runtime, store, anchors, calls, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
-    t,
-    { pollIntervalMs: 1_000, command: commands },
-    undefined,
-    {
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      onTrustworthyInventory: inventoryListener,
-      onDeviceRemoved: (deviceId) => {
-        removals(deviceId);
-        removalStates.push({
-          deviceId,
-          deviceIds: store.deviceIds(),
-          snapshots: store.deviceIds().map((id) => store.snapshot(id)),
-          anchors: [...anchors.stored],
-          account: monitoringHealth.at(-1),
-          byDevice: monitoringByDevice.at(-1),
-          calls: [...calls],
-        });
-      },
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice(), otherGeminiDevice()]);
-  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
-  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
-  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
-  when(() => requests.devices(rootSignal)).thenResolve([]);
-  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
-  when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
-  const expectedSnapshot: DeviceSnapshot = {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: 1_700_000_000_000,
-    receivedAt: START_TIME,
-  };
-  const expectedOtherSnapshot: DeviceSnapshot = {
-    identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: 1_700_000_000_000,
-    receivedAt: START_TIME + 2_000,
-  };
-  const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
-  const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
-  const expectedRetainedState = {
-    path: 'shadow-and-poll',
-    deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
-    snapshots: [expectedSnapshot, expectedOtherSnapshot],
-    anchors: [
-      [DEVICE_ID, START_TIME],
-      [OTHER_DEVICE_ID, START_TIME],
-    ],
-    account: healthyAccount,
-    byDevice: new Map([
-      [DEVICE_ID, healthyDevice],
-      [OTHER_DEVICE_ID, healthyDevice],
-    ]),
-    removed: [],
-  };
-
-  // act
-  await runtime.start();
-  await settle();
-  await advance(1_000);
-  await advance(1_000);
-  const afterReappearance = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-    account: monitoringHealth.at(-1),
-    byDevice: monitoringByDevice.at(-1),
-    removed: [...removed],
-  };
-  await advance(1_000);
-  const afterFirstLaterOmission = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-    account: monitoringHealth.at(-1),
-    byDevice: monitoringByDevice.at(-1),
-    removed: [...removed],
-  };
-  await advance(1_000);
-  const afterSecondLaterOmission = {
-    path: runtime.monitoringPath,
-    deviceIds: store.deviceIds(),
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [...anchors.stored],
-    account: monitoringHealth.at(-1),
-    byDevice: monitoringByDevice.at(-1),
-    removed: [...removed],
-  };
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(
-    { afterReappearance, afterFirstLaterOmission },
-    {
-      afterReappearance: expectedRetainedState,
-      afterFirstLaterOmission: expectedRetainedState,
-    },
-  );
-  assert.deepStrictEqual(
-    { afterSecondLaterOmission, removalStates, calls, trustworthyInventories, commandRequests },
-    {
-      afterSecondLaterOmission: {
-        path: 'shadow-and-poll',
-        deviceIds: [OTHER_DEVICE_ID],
-        snapshots: [{ ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
-        anchors: [[OTHER_DEVICE_ID, START_TIME]],
-        account: healthyAccount,
-        byDevice: new Map([[OTHER_DEVICE_ID, healthyDevice]]),
-        removed: [DEVICE_ID],
-      },
-      removalStates: [
+  for (const { title, inventoryError } of [
+    { title: 'failed', inventoryError: new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices') },
+    { title: 'incomplete', inventoryError: new Error('the inventory envelope is incomplete') },
+  ]) {
+    test(`retains seeded absence confirmation across ${title} inventories`, async (t) => {
+      // arrange
+      const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'healthy and rejected inventory requests' });
+      const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removal' });
+      when(() => {
+        removals(DEVICE_ID);
+      }).thenReturn(undefined);
+      const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+      let rootSignal!: AbortSignal;
+      const { runtime, store, anchors, removed, calls, trustworthyInventories, commandRequests, advance } = harness(
+        t,
+        { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
+        undefined,
         {
-          deviceId: DEVICE_ID,
-          deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
-          snapshots: [expectedSnapshot, { ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
+          devices: (signal) => requests.devices(signal),
+          awsCredentials: (signal) => requests.awsCredentials(signal),
+          onDeviceRemoved: removals,
+          createRetry: (signal) => {
+            rootSignal = signal;
+            return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+          },
+        },
+      );
+      when(() => requests.devices(rootSignal)).thenReject(inventoryError);
+      when(() => requests.devices(rootSignal)).thenResolve([]);
+      when(() => requests.devices(rootSignal)).thenReject(inventoryError);
+      when(() => requests.devices(rootSignal)).thenResolve([]);
+      when(() => requests.devices(rootSignal)).thenResolve([]);
+      when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+      // act
+      await runtime.start([DEVICE_ID]);
+      await settle();
+      const afterFailedLaunch = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+      await advance(1_000);
+      const afterFirstHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+      await advance(1_000);
+      const afterFailedPoll = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+      await advance(1_000);
+      const afterSecondHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+      await runtime.stop();
+
+      // assert
+      assert.deepStrictEqual(
+        { afterFailedLaunch, afterFirstHealthy, afterFailedPoll, afterSecondHealthy },
+        {
+          afterFailedLaunch: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+          afterFirstHealthy: { path: 'poll-only', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+          afterFailedPoll: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+          afterSecondHealthy: { path: 'poll-only', removed: [DEVICE_ID], anchors: [] },
+        },
+      );
+      assert.deepStrictEqual(
+        { deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), calls, trustworthyInventories, commandRequests },
+        {
+          deviceIds: [],
+          snapshot: undefined,
+          calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
+          trustworthyInventories: [[], []],
+          commandRequests: [],
+        },
+      );
+      verify(requests);
+      verify(removals);
+      verify(commands);
+    });
+  }
+
+  test('retains seeded removal eligibility after a failed final check and callback refusal', async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded removal confirmation requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'refused then successful removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenThrow(new Error('Homebridge refused removal'));
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    let rootSignal!: AbortSignal;
+    const { runtime, store, anchors, removed, calls, commandRequests, advance } = harness(
+      t,
+      { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        onDeviceRemoved: removals,
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReject(new Error('the final inventory is unavailable'));
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+    // act
+    await runtime.start([DEVICE_ID]);
+    await settle();
+    await advance(1_000);
+    const afterFailedCheck = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+    await advance(1_000);
+    const afterRefusedCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+    await advance(1_000);
+    const afterSuccessfulCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFailedCheck, afterRefusedCallback, afterSuccessfulCallback, deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), commandRequests },
+      {
+        afterFailedCheck: { removed: [], anchors: [[DEVICE_ID, START_TIME - 123]], calls: ['devices', 'credentials', 'devices', 'devices'] },
+        afterRefusedCallback: {
+          removed: [],
+          anchors: [[DEVICE_ID, START_TIME - 123]],
+          calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
+        },
+        afterSuccessfulCallback: {
+          removed: [DEVICE_ID],
+          anchors: [],
+          calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+        },
+        deviceIds: [],
+        snapshot: undefined,
+        commandRequests: [],
+      },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+  });
+
+  test('removes no seeded identity when a final inventory completes after shutdown', async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded shutdown inventory requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    // The promise constructor assigns the resolver synchronously.
+    let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
+    const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
+      completeFinalCheck = resolve;
+    });
+    let rootSignal!: AbortSignal;
+    const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, commandRequests, advance } = harness(
+      t,
+      {
+        pollIntervalMs: 1_000,
+        anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]),
+        command: commands,
+      },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        onDeviceRemoved: removals,
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+    // act
+    await runtime.start([DEVICE_ID]);
+    await settle();
+    await advance(1_000);
+    await runtime.stop();
+    completeFinalCheck([]);
+    await settle();
+    await runtime.start([OTHER_DEVICE_ID]);
+    await advance(1_000);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        path: runtime.monitoringPath,
+        deviceIds: store.deviceIds(),
+        anchors: [...anchors.stored],
+        removed,
+        calls,
+        monitoringHealth,
+        monitoringByDevice,
+        commandRequests,
+      },
+      {
+        path: 'unavailable',
+        deviceIds: [],
+        anchors: [[DEVICE_ID, START_TIME - 123]],
+        removed: [],
+        calls: ['devices', 'credentials', 'devices', 'devices'],
+        monitoringHealth: [
+          { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+          { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        ],
+        monitoringByDevice: [new Map(), new Map()],
+        commandRequests: [],
+      },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+  });
+
+  test('starts no seeded inventory when anchor restoration finishes after shutdown', async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'forbidden stopped inventory requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    // The promise constructor assigns the resolver synchronously.
+    let completeRestore!: () => void;
+    const restoring = new Promise<void>((resolve) => {
+      completeRestore = resolve;
+    });
+    const anchors = { ...recordingAnchors(), restore: () => restoring };
+    const { runtime, store, calls, removed, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onDeviceRemoved: removals,
+    });
+
+    // act
+    const starting = runtime.start([DEVICE_ID]);
+    await runtime.start([OTHER_DEVICE_ID]);
+    await runtime.stop();
+    completeRestore();
+    await starting;
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls, removed, commandRequests },
+      { path: 'unavailable', deviceIds: [], anchors: [], calls: [], removed: [], commandRequests: [] },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+  });
+
+  test('keeps the shadow connection when the same physical devices are enumerated in another order', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let elapsedMs = 0;
+    let reverseOrder = false;
+    const clock: Clock = { now: () => START_TIME + elapsedMs };
+    const log = silentLog();
+    const canonical = createDeviceStateStore({ clock, log });
+    const store: DeviceStateStore = {
+      ...canonical,
+      deviceIds: () => (reverseOrder ? [...canonical.deviceIds()].reverse() : canonical.deviceIds()),
+    };
+    const lifecycle = mock<Pick<ShadowClient, 'start' | 'close'>>({ exactParams: true, name: 'shadow membership lifecycle' });
+    when(() => lifecycle.start([DEVICE_ID, OTHER_DEVICE_ID])).thenResolve(undefined);
+    when(() => lifecycle.close()).thenResolve(undefined);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    const starts: string[][] = [];
+    const anchors = recordingAnchors();
+    const runtime = createAccountRuntime({
+      api: {
+        devices: answering([() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([otherGeminiDevice(), geminiDevice()])]),
+        awsCredentials: () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        device: () => Promise.reject(new Error('no individual-device request is scripted')),
+        sendCommand: commands,
+      },
+      store,
+      registry: createFamilyRegistry(),
+      createShadow: () => ({
+        connected: false,
+        start: (deviceIds) => {
+          starts.push([...deviceIds]);
+          return lifecycle.start(deviceIds);
+        },
+        close: () => lifecycle.close(),
+      }),
+      createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+      pollIntervalMs: 1_000,
+      rotationLeadMs: ROTATION_LEAD_MS,
+      minRotationDelayMs: MIN_ROTATION_DELAY_MS,
+      failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+      registerSecret: () => undefined,
+      onTrustworthyInventory: () => undefined,
+      onDeviceRemoved: () => undefined,
+      onMonitoringHealth: () => undefined,
+      clock,
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      anchors,
+      log,
+    });
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+    const initialIds = runtime.store.deviceIds();
+    reverseOrder = true;
+    elapsedMs = 1_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const afterReordering = {
+      path: runtime.monitoringPath,
+      deviceIds: runtime.store.deviceIds(),
+      snapshots: runtime.store.deviceIds().map((deviceId) => runtime.store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+    };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { initialIds, afterReordering, starts },
+      {
+        initialIds: [DEVICE_ID, OTHER_DEVICE_ID],
+        afterReordering: {
+          path: 'poll-only',
+          deviceIds: [OTHER_DEVICE_ID, DEVICE_ID],
+          snapshots: [
+            {
+              identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+              connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+              data: { water_level: 1, primary_pump_running: false, ac_power: true },
+              metadata: {},
+              shadowVersion: undefined,
+              deviceTimestamp: 1_700_000_000_000,
+              receivedAt: START_TIME + 1_000,
+            },
+            {
+              identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+              connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+              data: { water_level: 1, primary_pump_running: false, ac_power: true },
+              metadata: {},
+              shadowVersion: undefined,
+              deviceTimestamp: 1_700_000_000_000,
+              receivedAt: START_TIME + 1_000,
+            },
+          ],
           anchors: [
             [DEVICE_ID, START_TIME],
             [OTHER_DEVICE_ID, START_TIME],
           ],
-          account: healthyAccount,
-          byDevice: new Map([
-            [DEVICE_ID, healthyDevice],
-            [OTHER_DEVICE_ID, healthyDevice],
-          ]),
-          calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
         },
-      ],
-      calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
-      trustworthyInventories: [[DEVICE_ID, OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [], [OTHER_DEVICE_ID]],
-      commandRequests: [],
-    },
-  );
-  verify(requests);
-  verify(removals);
-  verify(commands);
-  verify(inventoryListener);
-});
+        starts: [[DEVICE_ID, OTHER_DEVICE_ID]],
+      },
+    );
+    verify(lifecycle);
+    verify(commands);
+  });
 
-for (const { title, terminalError } of [
-  {
-    title: 'rejects account credentials',
-    terminalError: () => new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'),
-  },
-  {
-    title: 'reports halted authentication',
-    terminalError: () => new AuthHaltedError('authentication has stopped.', 'invalid_grant'),
-  },
-]) {
-  test(`halts monitoring when the final inventory check ${title}`, async (t) => {
+  test('adds a later discovered device to live shadow routing without reconnecting unchanged inventories', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let elapsedMs = 0;
+    const clock: Clock = { now: () => START_TIME + elapsedMs };
+    const log = silentLog();
+    const store = createDeviceStateStore({ clock, log });
+    const anchors = recordingAnchors();
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden device removal' });
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'inventory notifications' });
+    const monitoringListener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring notifications' });
+    const transports: Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>[] = [];
+    const subscriptions: string[][] = [];
+    const requests: { topic: string; payload: string }[] = [];
+    const messages: ((topic: string, payload: Buffer) => void)[] = [];
+    const reports: { account: MonitoringTrust; byDevice: ReadonlyMap<string, MonitoringTrust> }[] = [];
+    const inventories: string[][] = [];
+    const runtime = createAccountRuntime({
+      api: {
+        devices: answering([() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice(), otherGeminiDevice()])]),
+        awsCredentials: () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+        device: () => Promise.reject(new Error('no individual-device request is scripted')),
+        sendCommand: commands,
+      },
+      store,
+      registry: createFamilyRegistry(),
+      createShadow: (options) =>
+        createShadowClient({
+          ...options,
+          scheme: 'wss',
+          region: 'us-east-1',
+          clock,
+          log,
+          userAgent: 'offline-account-test',
+          connect: () => {
+            throw new Error('the injected transport opens no socket');
+          },
+          createTransport: () => {
+            const transport = mock<Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>>({ exactParams: true, name: 'shadow transport operations' });
+            const topics = [
+              '$aws/things/account-1_serial-1/shadow/get/accepted',
+              '$aws/things/account-1_serial-1/shadow/get/rejected',
+              '$aws/things/account-1_serial-1/shadow/update/accepted',
+            ];
+            if (transports.length > 0) {
+              topics.push(
+                '$aws/things/account-1_serial-2/shadow/get/accepted',
+                '$aws/things/account-1_serial-2/shadow/get/rejected',
+                '$aws/things/account-1_serial-2/shadow/update/accepted',
+              );
+            }
+
+            when(() => transport.subscribe(topics)).thenResolve(undefined);
+            when(() => transport.publish('$aws/things/account-1_serial-1/shadow/get', '')).thenResolve(undefined);
+            if (transports.length > 0) {
+              when(() => transport.publish('$aws/things/account-1_serial-2/shadow/get', '')).thenResolve(undefined);
+            }
+
+            when(() => transport.end()).thenResolve(undefined);
+            transports.push(transport);
+            return {
+              onConnect: (handler) => {
+                queueMicrotask(handler);
+              },
+              onMessage: (handler) => {
+                messages.push(handler);
+              },
+              onError: () => undefined,
+              onClose: () => undefined,
+              subscribe: (topics) => {
+                subscriptions.push([...topics]);
+                return transport.subscribe(topics);
+              },
+              publish: (topic, payload) => {
+                requests.push({ topic, payload });
+                return transport.publish(topic, payload);
+              },
+              end: () => transport.end(),
+            } satisfies MqttTransport;
+          },
+        }),
+      createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+      pollIntervalMs: 1_000,
+      rotationLeadMs: ROTATION_LEAD_MS,
+      minRotationDelayMs: MIN_ROTATION_DELAY_MS,
+      failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+      registerSecret: () => undefined,
+      onTrustworthyInventory: (deviceIds) => {
+        inventoryListener(deviceIds);
+        inventories.push([...deviceIds]);
+      },
+      onDeviceRemoved: removals,
+      onMonitoringHealth: (account, byDevice) => {
+        monitoringListener(account, byDevice);
+        reports.push({ account, byDevice: new Map(byDevice) });
+      },
+      clock,
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      anchors,
+      log,
+    });
+    t.after(async () => {
+      await runtime.stop();
+    });
+    const expectedFirst: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME + 1_000,
+    };
+    const expectedSecond: DeviceSnapshot = {
+      identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME + 1_000,
+    };
+    const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+    const expectedLiveFirst: DeviceSnapshot = {
+      ...expectedFirst,
+      data: { water_level: 3, primary_pump_running: false, ac_power: true },
+      metadata: { firmware: 'first-live' },
+      shadowVersion: 11,
+      receivedAt: START_TIME + 2_250,
+    };
+    const expectedLiveSecond: DeviceSnapshot = {
+      ...expectedSecond,
+      data: { water_level: 7, primary_pump_running: true, ac_power: true },
+      metadata: { firmware: 'second-live' },
+      shadowVersion: 12,
+      receivedAt: START_TIME + 2_250,
+    };
+    when(() => {
+      inventoryListener([DEVICE_ID]);
+    }).thenReturn(undefined);
+    when(() => {
+      inventoryListener([DEVICE_ID, OTHER_DEVICE_ID]);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      monitoringListener(healthyAccount, new Map([[DEVICE_ID, healthyDevice]]));
+    }).thenReturn(undefined);
+    when(() => {
+      monitoringListener(
+        healthyAccount,
+        new Map([
+          [DEVICE_ID, healthyDevice],
+          [OTHER_DEVICE_ID, healthyDevice],
+        ]),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      monitoringListener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+
+    // act
+    await runtime.start();
+    await settle();
+    const atStart = { path: runtime.monitoringPath, deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), report: reports.at(-1) };
+    elapsedMs = 1_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const afterAdmission = {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      report: reports.at(-1),
+      connections: transports.length,
+    };
+    elapsedMs = 2_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const connectionsAfterUnchangedPoll = transports.length;
+    elapsedMs = 2_250;
+    messages.at(-1)?.(
+      '$aws/things/account-1_serial-1/shadow/update/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 3 }, state: { firmware: 'first-live' } } }, version: 11 })),
+    );
+    messages.at(-1)?.(
+      '$aws/things/account-1_serial-2/shadow/get/accepted',
+      Buffer.from(
+        JSON.stringify({ state: { reported: { data: { water_level: 7, primary_pump_running: true }, state: { firmware: 'second-live' } } }, version: 12 }),
+      ),
+    );
+    const liveState = {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      report: reports.at(-1),
+    };
+    await runtime.stop();
+    messages.at(-1)?.(
+      '$aws/things/account-1_serial-2/shadow/update/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 0 } } }, version: 13 })),
+    );
+    const afterStop = {
+      path: runtime.monitoringPath,
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      report: reports.at(-1),
+    };
+
+    // assert
+    assert.deepStrictEqual(atStart, {
+      path: 'shadow-and-poll',
+      deviceIds: [DEVICE_ID],
+      snapshot: { ...expectedFirst, receivedAt: START_TIME },
+      report: { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
+    });
+    assert.deepStrictEqual(
+      { afterAdmission, connectionsAfterUnchangedPoll, liveState, afterStop, subscriptions, requests, inventories },
+      {
+        afterAdmission: {
+          path: 'shadow-and-poll',
+          deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+          snapshots: [expectedFirst, expectedSecond],
+          report: {
+            account: healthyAccount,
+            byDevice: new Map([
+              [DEVICE_ID, healthyDevice],
+              [OTHER_DEVICE_ID, healthyDevice],
+            ]),
+          },
+          connections: 2,
+        },
+        connectionsAfterUnchangedPoll: 2,
+        liveState: {
+          path: 'shadow-and-poll',
+          deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+          snapshots: [expectedLiveFirst, expectedLiveSecond],
+          anchors: [
+            [DEVICE_ID, START_TIME + 2_250],
+            [OTHER_DEVICE_ID, START_TIME + 2_250],
+          ],
+          report: {
+            account: healthyAccount,
+            byDevice: new Map([
+              [DEVICE_ID, healthyDevice],
+              [OTHER_DEVICE_ID, healthyDevice],
+            ]),
+          },
+        },
+        afterStop: {
+          path: 'unavailable',
+          snapshots: [expectedLiveFirst, expectedLiveSecond],
+          anchors: [
+            [DEVICE_ID, START_TIME + 2_250],
+            [OTHER_DEVICE_ID, START_TIME + 2_250],
+          ],
+          report: {
+            account: { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+            byDevice: new Map([
+              [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+              [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+            ]),
+          },
+        },
+        subscriptions: [
+          [
+            '$aws/things/account-1_serial-1/shadow/get/accepted',
+            '$aws/things/account-1_serial-1/shadow/get/rejected',
+            '$aws/things/account-1_serial-1/shadow/update/accepted',
+          ],
+          [
+            '$aws/things/account-1_serial-1/shadow/get/accepted',
+            '$aws/things/account-1_serial-1/shadow/get/rejected',
+            '$aws/things/account-1_serial-1/shadow/update/accepted',
+            '$aws/things/account-1_serial-2/shadow/get/accepted',
+            '$aws/things/account-1_serial-2/shadow/get/rejected',
+            '$aws/things/account-1_serial-2/shadow/update/accepted',
+          ],
+        ],
+        requests: [
+          { topic: '$aws/things/account-1_serial-1/shadow/get', payload: '' },
+          { topic: '$aws/things/account-1_serial-1/shadow/get', payload: '' },
+          { topic: '$aws/things/account-1_serial-2/shadow/get', payload: '' },
+        ],
+        inventories: [[DEVICE_ID], [DEVICE_ID, OTHER_DEVICE_ID], [DEVICE_ID, OTHER_DEVICE_ID]],
+      },
+    );
+    verify(commands);
+    verify(removals);
+    verify(inventoryListener);
+    verify(monitoringListener);
+    for (const transport of transports) {
+      verify(transport);
+    }
+  });
+
+  test('removes a reappeared device only after two later healthy omissions and a final check', async (t) => {
     // arrange
     const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
     const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
     when(() => {
-      inventoryListener([DEVICE_ID]);
+      removals(DEVICE_ID);
     }).thenReturn(undefined);
     when(() => {
-      inventoryListener([]);
+      inventoryListener([DEVICE_ID, OTHER_DEVICE_ID]);
+    }).thenReturn(undefined);
+    when(() => {
+      inventoryListener([OTHER_DEVICE_ID]);
     })
       .thenReturn(undefined)
       .times(2);
+    when(() => {
+      inventoryListener([]);
+    }).thenReturn(undefined);
+    when(() => {
+      inventoryListener([OTHER_DEVICE_ID]);
+    }).thenReturn(undefined);
+    const removalStates: unknown[] = [];
     // The public retry factory receives the root signal before start.
     let rootSignal!: AbortSignal;
-    const { runtime, store, anchors, calls, shadows, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } =
-      harness(t, { pollIntervalMs: 1_000, command: commands }, undefined, {
+    const { runtime, store, anchors, calls, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
+      t,
+      { pollIntervalMs: 1_000, command: commands },
+      undefined,
+      {
         devices: (signal) => requests.devices(signal),
         awsCredentials: (signal) => requests.awsCredentials(signal),
-        onDeviceRemoved: removals,
         onTrustworthyInventory: inventoryListener,
+        onDeviceRemoved: (deviceId) => {
+          removals(deviceId);
+          removalStates.push({
+            deviceId,
+            deviceIds: store.deviceIds(),
+            snapshots: store.deviceIds().map((id) => store.snapshot(id)),
+            anchors: [...anchors.stored],
+            account: monitoringHealth.at(-1),
+            byDevice: monitoringByDevice.at(-1),
+            calls: [...calls],
+          });
+        },
         createRetry: (signal) => {
           rootSignal = signal;
           return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
         },
-      });
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice(), otherGeminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
     when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
     when(() => requests.devices(rootSignal)).thenResolve([]);
-    when(() => requests.devices(rootSignal)).thenResolve([]);
-    when(() => requests.devices(rootSignal)).thenReject(terminalError());
+    when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice()]);
     when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME,
+    };
+    const expectedOtherSnapshot: DeviceSnapshot = {
+      identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME + 2_000,
+    };
     const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
     const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
-    const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
-    const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
-    const expectedHaltedState = {
-      path: 'unavailable',
-      snapshots: [
-        {
-          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-          connectivity: { connected: true, timestamp: DEVICE_TIME },
-          data: { water_level: 1, primary_pump_running: false, ac_power: true },
-          metadata: {},
-          shadowVersion: undefined,
-          deviceTimestamp: DEVICE_TIME,
-          receivedAt: START_TIME,
-        },
+    const expectedRetainedState = {
+      path: 'shadow-and-poll',
+      deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+      snapshots: [expectedSnapshot, expectedOtherSnapshot],
+      anchors: [
+        [DEVICE_ID, START_TIME],
+        [OTHER_DEVICE_ID, START_TIME],
       ],
-      anchors: [[DEVICE_ID, START_TIME]],
-      monitoringHealth: [healthyAccount, healthyAccount, haltedAccount],
-      monitoringByDevice: [new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, haltedDevice]])],
+      account: healthyAccount,
+      byDevice: new Map([
+        [DEVICE_ID, healthyDevice],
+        [OTHER_DEVICE_ID, healthyDevice],
+      ]),
+      removed: [],
     };
 
     // act
@@ -1946,36 +1891,76 @@ for (const { title, terminalError } of [
     await settle();
     await advance(1_000);
     await advance(1_000);
-    const afterFinalCheck = {
+    const afterReappearance = {
       path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
       snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
       anchors: [...anchors.stored],
-      monitoringHealth: [...monitoringHealth],
-      monitoringByDevice: [...monitoringByDevice],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+      removed: [...removed],
     };
-    const closesAfterFinalCheck = shadows[0]?.closes();
-    await advance(3_600_000);
-    const afterLaterWork = {
+    await advance(1_000);
+    const afterFirstLaterOmission = {
       path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
       snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
       anchors: [...anchors.stored],
-      monitoringHealth: [...monitoringHealth],
-      monitoringByDevice: [...monitoringByDevice],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+      removed: [...removed],
     };
-    const closesBeforeStop = shadows[0]?.closes();
+    await advance(1_000);
+    const afterSecondLaterOmission = {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+      removed: [...removed],
+    };
     await runtime.stop();
 
     // assert
     assert.deepStrictEqual(
-      { afterFinalCheck, afterLaterWork, closesAfterFinalCheck, closesBeforeStop, calls, trustworthyInventories, removed, commandRequests },
+      { afterReappearance, afterFirstLaterOmission },
       {
-        afterFinalCheck: expectedHaltedState,
-        afterLaterWork: expectedHaltedState,
-        closesAfterFinalCheck: 1,
-        closesBeforeStop: 1,
-        calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices'],
-        trustworthyInventories: [[DEVICE_ID], [], []],
-        removed: [],
+        afterReappearance: expectedRetainedState,
+        afterFirstLaterOmission: expectedRetainedState,
+      },
+    );
+    assert.deepStrictEqual(
+      { afterSecondLaterOmission, removalStates, calls, trustworthyInventories, commandRequests },
+      {
+        afterSecondLaterOmission: {
+          path: 'shadow-and-poll',
+          deviceIds: [OTHER_DEVICE_ID],
+          snapshots: [{ ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
+          anchors: [[OTHER_DEVICE_ID, START_TIME]],
+          account: healthyAccount,
+          byDevice: new Map([[OTHER_DEVICE_ID, healthyDevice]]),
+          removed: [DEVICE_ID],
+        },
+        removalStates: [
+          {
+            deviceId: DEVICE_ID,
+            deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+            snapshots: [expectedSnapshot, { ...expectedOtherSnapshot, receivedAt: START_TIME + 4_000 }],
+            anchors: [
+              [DEVICE_ID, START_TIME],
+              [OTHER_DEVICE_ID, START_TIME],
+            ],
+            account: healthyAccount,
+            byDevice: new Map([
+              [DEVICE_ID, healthyDevice],
+              [OTHER_DEVICE_ID, healthyDevice],
+            ]),
+            calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+          },
+        ],
+        calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+        trustworthyInventories: [[DEVICE_ID, OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [OTHER_DEVICE_ID], [], [OTHER_DEVICE_ID]],
         commandRequests: [],
       },
     );
@@ -1984,503 +1969,54 @@ for (const { title, terminalError } of [
     verify(commands);
     verify(inventoryListener);
   });
-}
 
-test('waits until a distant credential expiry using only representable native timer delays', async (t) => {
-  // arrange
-  const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
-  let rootSignal!: AbortSignal;
-
-  const { runtime, calls, advance } = harness(
-    t,
+  for (const { title, terminalError } of [
     {
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + 4_320_000_000))],
-      rotationLeadMs: 10,
-      minRotationDelayMs: 5,
+      title: 'rejects account credentials',
+      terminalError: () => new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'),
     },
-    undefined,
     {
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
+      title: 'reports halted authentication',
+      terminalError: () => new AuthHaltedError('authentication has stopped.', 'invalid_grant'),
     },
-  );
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
-  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
-
-  const setTimeoutSpy = t.mock.method(timers, 'setTimeout');
-
-  // act
-  await runtime.start();
-  await settle();
-  await advance(2_147_483_647);
-  const afterFirstBoundedWait = calls.filter((call) => call === 'credentials').length;
-  await advance(2_147_483_647);
-  const afterSecondBoundedWait = calls.filter((call) => call === 'credentials').length;
-  await advance(25_032_695);
-  const beforeExpiryLead = calls.filter((call) => call === 'credentials').length;
-  await advance(1);
-  const afterExpiryLead = calls.filter((call) => call === 'credentials').length;
-  const unrepresentableDelays = setTimeoutSpy.mock.calls
-    .map((call) => call.arguments[0])
-    .filter((delay) => delay === undefined || !Number.isFinite(delay) || delay < 1 || delay > 2_147_483_647);
-
-  // assert
-  assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
-  assert.deepStrictEqual(unrepresentableDelays, [], 'credential expiry scheduling must keep every native timer delay within 1..2147483647 ms');
-  assert.deepStrictEqual(
-    { afterFirstBoundedWait, afterSecondBoundedWait, beforeExpiryLead, afterExpiryLead },
-    { afterFirstBoundedWait: 1, afterSecondBoundedWait: 1, beforeExpiryLead: 1, afterExpiryLead: 2 },
-  );
-  verify(requests);
-});
-
-test('retains halted state when a pending final inventory check succeeds', async (t) => {
-  // arrange
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-halt-'));
-  // Promise constructors assign both resolvers synchronously.
-  let completeInventory!: (devices: readonly ApiDevice[]) => void;
-  let announceFinalCheck!: () => void;
-  const pendingInventory = new Promise<readonly ApiDevice[]>((resolve) => {
-    completeInventory = resolve;
-  });
-  const finalCheckStarted = new Promise<void>((resolve) => {
-    announceFinalCheck = resolve;
-  });
-  interface TrustReport {
-    account: MonitoringTrust;
-    byDevice: ReadonlyMap<string, MonitoringTrust>;
-  }
-  const healthReports: TrustReport[] = [];
-  let elapsedMs = 0;
-
-  function silent(): void {
-    return undefined;
-  }
-
-  const log: Logging = Object.assign(silent, {
-    prefix: '',
-    debug: silent,
-    error: silent,
-    info: silent,
-    success: silent,
-    warn: silent,
-    log: silent,
-  });
-  const clock: Clock = { now: () => START_TIME + elapsedMs };
-  const store = createDeviceStateStore({ clock, log });
-  const removeSpy = t.mock.method(store, 'remove');
-  const anchors = createArrivalAnchors({ storagePath, log });
-  const api: CloudApi = {
-    devices: answering([
-      () => Promise.resolve([geminiDevice()]),
-      () => Promise.resolve([]),
-      () => Promise.resolve([]),
-      () => {
-        announceFinalCheck();
-
-        return pendingInventory;
-      },
-    ]),
-    awsCredentials: answering([
-      () => Promise.resolve(credentialsAt(START_TIME + 2_510)),
-      () => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant')),
-    ]),
-    device: () => Promise.reject(new Error('no single-device request is scripted')),
-    sendCommand: () => Promise.reject(new Error('no command is scripted')),
-  };
-  const runtime = createAccountRuntime({
-    api,
-    store,
-    registry: createFamilyRegistry(),
-    createShadow: () => ({ connected: false, start: () => Promise.resolve(), close: () => Promise.resolve() }),
-    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
-    pollIntervalMs: 1_000,
-    rotationLeadMs: 10,
-    minRotationDelayMs: 5,
-    failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
-    registerSecret: silent,
-    onTrustworthyInventory: silent,
-    onDeviceRemoved: (deviceId) => {
-      store.remove(deviceId);
-    },
-    onMonitoringHealth: (account, byDevice) => {
-      healthReports.push({ account, byDevice: new Map(byDevice) });
-    },
-    clock,
-    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
-    anchors,
-    log,
-  });
-  t.after(async () => {
-    await runtime.stop();
-    await rm(storagePath, { recursive: true, force: true });
-  });
-  const expectedSnapshot: DeviceSnapshot = {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: 1_700_000_000_000,
-    receivedAt: START_TIME,
-  };
-  const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
-  const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
-  const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
-  const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
-  const expectedHaltedState = {
-    path: 'unavailable',
-    snapshots: [expectedSnapshot],
-    anchors: [[DEVICE_ID, START_TIME]],
-    healthReports: [
-      { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
-      { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
-      { account: haltedAccount, byDevice: new Map([[DEVICE_ID, haltedDevice]]) },
-    ],
-  };
-
-  // act
-  await runtime.start();
-  await settle();
-  elapsedMs = 1_000;
-  t.mock.timers.tick(1_000);
-  await settle();
-  elapsedMs = 2_000;
-  t.mock.timers.tick(1_000);
-  await finalCheckStarted;
-  elapsedMs = 2_500;
-  t.mock.timers.tick(500);
-  await settle();
-  const beforeCompletion = {
-    path: runtime.monitoringPath,
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
-    healthReports: [...healthReports],
-  };
-  completeInventory([]);
-  await settle();
-  const afterCompletion = {
-    path: runtime.monitoringPath,
-    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-    anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
-    healthReports: [...healthReports],
-  };
-
-  // assert
-  assert.deepStrictEqual({ beforeCompletion, afterCompletion }, { beforeCompletion: expectedHaltedState, afterCompletion: expectedHaltedState });
-  assert.deepStrictEqual(
-    removeSpy.mock.calls.map((call) => call.arguments),
-    [],
-  );
-});
-
-test('starts no inventory work when restoration completes after shutdown', async (t) => {
-  // arrange
-  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
-  when(() => {
-    listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
-  }).thenReturn(undefined);
-
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
-
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-  // The promise constructor assigns the resolver synchronously.
-  let completeRestore!: () => void;
-  const restoring = new Promise<void>((resolve) => {
-    completeRestore = resolve;
-  });
-  const anchors = { ...recordingAnchors(), restore: () => restoring };
-  const { runtime, store, calls, monitoringHealth, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
-    devices: (signal) => requests.devices(signal),
-    awsCredentials: (signal) => requests.awsCredentials(signal),
-    onMonitoringHealth: listener,
-  });
-
-  // act
-  const starting = runtime.start();
-  await runtime.stop();
-  completeRestore();
-  await starting;
-  await settle();
-
-  const pathBeforeStop = runtime.monitoringPath;
-  const healthBeforeStop = [...monitoringHealth];
-
-  // assert
-  assert.deepStrictEqual(
-    { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
-    {
-      path: 'unavailable',
-      snapshots: [],
-      anchors: [],
-      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
-    },
-  );
-  assert.deepStrictEqual(calls, []);
-  assert.deepStrictEqual(commandRequests, []);
-  verify(commands);
-  verify(requests);
-  verify(listener);
-});
-
-test('admits no devices when the launch inventory resolves after shutdown', async (t) => {
-  // arrange
-  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
-  when(() => {
-    listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
-  }).thenReturn(undefined);
-
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
-  let rootSignal!: AbortSignal;
-
-  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
-
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-  // The promise constructor assigns the resolver synchronously.
-  let completeInventory!: (devices: readonly ApiDevice[]) => void;
-  const inventory = new Promise<readonly ApiDevice[]>((resolve) => {
-    completeInventory = resolve;
-  });
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(
-    t,
-    { devices: [() => inventory], command: commands },
-    undefined,
-    {
-      onTrustworthyInventory: inventoryListener,
-      devices: (signal) => requests.devices(signal),
-      awsCredentials: (signal) => requests.awsCredentials(signal),
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-      onMonitoringHealth: listener,
-    },
-  );
-  when(() => requests.devices(rootSignal)).thenReturn(inventory);
-
-  // act
-  const starting = runtime.start();
-  await settle();
-  await runtime.stop();
-  completeInventory([geminiDevice()]);
-  await starting;
-  await settle();
-
-  const pathBeforeStop = runtime.monitoringPath;
-  const healthBeforeStop = [...monitoringHealth];
-
-  // assert
-  assert.deepStrictEqual(
-    { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
-    {
-      path: 'unavailable',
-      snapshots: [],
-      anchors: [],
-      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
-    },
-  );
-  assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [] });
-  assert.deepStrictEqual(commandRequests, []);
-  verify(commands);
-  verify(inventoryListener);
-  verify(requests);
-  verify(listener);
-});
-
-test('starts no background work when shutdown follows launch admission', async (t) => {
-  // arrange
-  const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
-  when(() => {
-    listener(
-      { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
-      new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
-    );
-  }).thenReturn(undefined);
-
-  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
-  let rootSignal!: AbortSignal;
-
-  const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
-  when(() => {
-    inventoryListener([DEVICE_ID]);
-  }).thenReturn(undefined);
-
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t, { command: commands }, undefined, {
-    onTrustworthyInventory: inventoryListener,
-    devices: (signal) => requests.devices(signal),
-    awsCredentials: (signal) => requests.awsCredentials(signal),
-    createRetry: (signal) => {
-      rootSignal = signal;
-      return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-    },
-    onMonitoringHealth: listener,
-  });
-  when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
-
-  store.subscribe(DEVICE_ID, () => {
-    queueMicrotask(() => {
-      void runtime.stop();
-    });
-  });
-
-  // act
-  await runtime.start();
-  await settle();
-
-  const pathBeforeStop = runtime.monitoringPath;
-  const healthBeforeStop = [...monitoringHealth];
-
-  // assert
-  assert.deepStrictEqual(
-    { path: pathBeforeStop, snapshot: store.snapshot(DEVICE_ID), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
-    {
-      path: 'unavailable',
-      snapshot: {
-        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-        connectivity: { connected: true, timestamp: DEVICE_TIME },
-        data: { water_level: 1, primary_pump_running: false, ac_power: true },
-        metadata: {},
-        shadowVersion: undefined,
-        deviceTimestamp: DEVICE_TIME,
-        receivedAt: START_TIME,
-      },
-      anchors: [[DEVICE_ID, START_TIME]],
-      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
-    },
-  );
-  assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [[DEVICE_ID]] });
-  assert.deepStrictEqual(commandRequests, []);
-  verify(commands);
-  verify(inventoryListener);
-  verify(requests);
-  verify(listener);
-});
-
-interface PendingInventory {
-  resolve: (devices: readonly ApiDevice[]) => void;
-  reject: (error: Error) => void;
-}
-
-for (const { completion, finish, precedingInventories, expectedInventories, healthyReports, haltAtMs } of [
-  {
-    completion: 'regular inventory succeeds',
-    finish: (pending: PendingInventory) => {
-      pending.resolve([otherGeminiDevice()]);
-    },
-    precedingInventories: [() => Promise.resolve([geminiDevice()])],
-    expectedInventories: [[DEVICE_ID]],
-    healthyReports: 1,
-    haltAtMs: 1_500,
-  },
-  {
-    completion: 'regular inventory fails',
-    finish: (pending: PendingInventory) => {
-      pending.reject(new Error('inventory failed'));
-    },
-    precedingInventories: [() => Promise.resolve([geminiDevice()])],
-    expectedInventories: [[DEVICE_ID]],
-    healthyReports: 1,
-    haltAtMs: 1_500,
-  },
-  {
-    completion: 'final inventory check fails',
-    finish: (pending: PendingInventory) => {
-      pending.reject(new Error('inventory failed'));
-    },
-    precedingInventories: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([])],
-    expectedInventories: [[DEVICE_ID], [], []],
-    healthyReports: 2,
-    haltAtMs: 2_500,
-  },
-]) {
-  test(`retains halted state when a pending ${completion}`, async (t) => {
-    // arrange
-    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
-    when(() => {
-      listener(
-        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
-        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
-      );
-    })
-      .thenReturn(undefined)
-      .times(healthyReports);
-    when(() => {
-      listener(
-        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
-        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
-      );
-    }).thenReturn(undefined);
-    when(() => {
-      listener(
-        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
-        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
-      );
-    }).thenReturn(undefined);
-
-    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
-    for (const deviceIds of expectedInventories) {
+  ]) {
+    test(`halts monitoring when the final inventory check ${title}`, async (t) => {
+      // arrange
+      const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+      const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+      const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+      const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
       when(() => {
-        inventoryListener(deviceIds);
+        inventoryListener([DEVICE_ID]);
       }).thenReturn(undefined);
-    }
-
-    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    // The promise constructor assigns both resolvers synchronously.
-    let completeInventory!: (devices: readonly ApiDevice[]) => void;
-    let rejectInventory!: (error: Error) => void;
-    const inventory = new Promise<readonly ApiDevice[]>((resolve, reject) => {
-      completeInventory = resolve;
-      rejectInventory = reject;
-    });
-    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
-      t,
-      {
-        devices: [...precedingInventories, () => inventory],
-        credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
-        pollIntervalMs: 1_000,
-        rotationLeadMs: 10,
-        minRotationDelayMs: 5,
-        command: commands,
-      },
-      undefined,
-      { onTrustworthyInventory: inventoryListener, onMonitoringHealth: listener },
-    );
-    const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
-    const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
-    const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
-    const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
-
-    // act
-    await runtime.start();
-
-    for (let elapsedMs = 1_000; elapsedMs < haltAtMs; elapsedMs += 1_000) {
-      await advance(1_000);
-    }
-
-    await advance(500);
-    finish({ resolve: completeInventory, reject: rejectInventory });
-    await settle();
-
-    const pathBeforeStop = runtime.monitoringPath;
-    const healthBeforeStop = [...monitoringHealth];
-    const devicesBeforeStop = [...monitoringByDevice];
-    await runtime.stop();
-
-    // assert
-    assert.deepStrictEqual(
-      {
-        path: pathBeforeStop,
-        snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
-        anchors: [...anchors.stored],
-        monitoringHealth: healthBeforeStop,
-        monitoringByDevice: devicesBeforeStop,
-      },
-      {
+      when(() => {
+        inventoryListener([]);
+      })
+        .thenReturn(undefined)
+        .times(2);
+      // The public retry factory receives the root signal before start.
+      let rootSignal!: AbortSignal;
+      const { runtime, store, anchors, calls, shadows, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } =
+        harness(t, { pollIntervalMs: 1_000, command: commands }, undefined, {
+          devices: (signal) => requests.devices(signal),
+          awsCredentials: (signal) => requests.awsCredentials(signal),
+          onDeviceRemoved: removals,
+          onTrustworthyInventory: inventoryListener,
+          createRetry: (signal) => {
+            rootSignal = signal;
+            return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+          },
+        });
+      when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+      when(() => requests.devices(rootSignal)).thenResolve([]);
+      when(() => requests.devices(rootSignal)).thenResolve([]);
+      when(() => requests.devices(rootSignal)).thenReject(terminalError());
+      when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+      const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+      const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+      const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+      const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+      const expectedHaltedState = {
         path: 'unavailable',
         snapshots: [
           {
@@ -2494,19 +2030,570 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
           },
         ],
         anchors: [[DEVICE_ID, START_TIME]],
-        monitoringHealth: [...Array.from({ length: healthyReports }, () => healthyAccount), haltedAccount],
-        monitoringByDevice: [...Array.from({ length: healthyReports }, () => new Map([[DEVICE_ID, healthyDevice]])), new Map([[DEVICE_ID, haltedDevice]])],
+        monitoringHealth: [healthyAccount, healthyAccount, haltedAccount],
+        monitoringByDevice: [new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, haltedDevice]])],
+      };
+
+      // act
+      await runtime.start();
+      await settle();
+      await advance(1_000);
+      await advance(1_000);
+      const afterFinalCheck = {
+        path: runtime.monitoringPath,
+        snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+        anchors: [...anchors.stored],
+        monitoringHealth: [...monitoringHealth],
+        monitoringByDevice: [...monitoringByDevice],
+      };
+      const closesAfterFinalCheck = shadows[0]?.closes();
+      await advance(3_600_000);
+      const afterLaterWork = {
+        path: runtime.monitoringPath,
+        snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+        anchors: [...anchors.stored],
+        monitoringHealth: [...monitoringHealth],
+        monitoringByDevice: [...monitoringByDevice],
+      };
+      const closesBeforeStop = shadows[0]?.closes();
+      await runtime.stop();
+
+      // assert
+      assert.deepStrictEqual(
+        { afterFinalCheck, afterLaterWork, closesAfterFinalCheck, closesBeforeStop, calls, trustworthyInventories, removed, commandRequests },
+        {
+          afterFinalCheck: expectedHaltedState,
+          afterLaterWork: expectedHaltedState,
+          closesAfterFinalCheck: 1,
+          closesBeforeStop: 1,
+          calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices'],
+          trustworthyInventories: [[DEVICE_ID], [], []],
+          removed: [],
+          commandRequests: [],
+        },
+      );
+      verify(requests);
+      verify(removals);
+      verify(commands);
+      verify(inventoryListener);
+    });
+  }
+
+  test('waits until a distant credential expiry using only representable native timer delays', async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const { runtime, calls, advance } = harness(
+      t,
+      {
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + 4_320_000_000))],
+        rotationLeadMs: 10,
+        minRotationDelayMs: 5,
+      },
+      undefined,
+      {
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
       },
     );
-    assert.deepStrictEqual(trustworthyInventories, expectedInventories);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + 4_320_000_000));
+
+    const setTimeoutSpy = t.mock.method(timers, 'setTimeout');
+
+    // act
+    await runtime.start();
+    await settle();
+    await advance(2_147_483_647);
+    const afterFirstBoundedWait = calls.filter((call) => call === 'credentials').length;
+    await advance(2_147_483_647);
+    const afterSecondBoundedWait = calls.filter((call) => call === 'credentials').length;
+    await advance(25_032_695);
+    const beforeExpiryLead = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
+    const afterExpiryLead = calls.filter((call) => call === 'credentials').length;
+    const unrepresentableDelays = setTimeoutSpy.mock.calls
+      .map((call) => call.arguments[0])
+      .filter((delay) => delay === undefined || !Number.isFinite(delay) || delay < 1 || delay > 2_147_483_647);
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
+    assert.deepStrictEqual(unrepresentableDelays, [], 'credential expiry scheduling must keep every native timer delay within 1..2147483647 ms');
+    assert.deepStrictEqual(
+      { afterFirstBoundedWait, afterSecondBoundedWait, beforeExpiryLead, afterExpiryLead },
+      { afterFirstBoundedWait: 1, afterSecondBoundedWait: 1, beforeExpiryLead: 1, afterExpiryLead: 2 },
+    );
+    verify(requests);
+  });
+
+  test('retains halted state when a pending final inventory check succeeds', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-halt-'));
+    // Promise constructors assign both resolvers synchronously.
+    let completeInventory!: (devices: readonly ApiDevice[]) => void;
+    let announceFinalCheck!: () => void;
+    const pendingInventory = new Promise<readonly ApiDevice[]>((resolve) => {
+      completeInventory = resolve;
+    });
+    const finalCheckStarted = new Promise<void>((resolve) => {
+      announceFinalCheck = resolve;
+    });
+    interface TrustReport {
+      account: MonitoringTrust;
+      byDevice: ReadonlyMap<string, MonitoringTrust>;
+    }
+    const healthReports: TrustReport[] = [];
+    let elapsedMs = 0;
+
+    function silent(): void {
+      return undefined;
+    }
+
+    const log: Logging = Object.assign(silent, {
+      prefix: '',
+      debug: silent,
+      error: silent,
+      info: silent,
+      success: silent,
+      warn: silent,
+      log: silent,
+    });
+    const clock: Clock = { now: () => START_TIME + elapsedMs };
+    const store = createDeviceStateStore({ clock, log });
+    const removeSpy = t.mock.method(store, 'remove');
+    const anchors = createArrivalAnchors({ storagePath, log });
+    const api: CloudApi = {
+      devices: answering([
+        () => Promise.resolve([geminiDevice()]),
+        () => Promise.resolve([]),
+        () => Promise.resolve([]),
+        () => {
+          announceFinalCheck();
+
+          return pendingInventory;
+        },
+      ]),
+      awsCredentials: answering([
+        () => Promise.resolve(credentialsAt(START_TIME + 2_510)),
+        () => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant')),
+      ]),
+      device: () => Promise.reject(new Error('no single-device request is scripted')),
+      sendCommand: () => Promise.reject(new Error('no command is scripted')),
+    };
+    const runtime = createAccountRuntime({
+      api,
+      store,
+      registry: createFamilyRegistry(),
+      createShadow: () => ({ connected: false, start: () => Promise.resolve(), close: () => Promise.resolve() }),
+      createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+      pollIntervalMs: 1_000,
+      rotationLeadMs: 10,
+      minRotationDelayMs: 5,
+      failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
+      registerSecret: silent,
+      onTrustworthyInventory: silent,
+      onDeviceRemoved: (deviceId) => {
+        store.remove(deviceId);
+      },
+      onMonitoringHealth: (account, byDevice) => {
+        healthReports.push({ account, byDevice: new Map(byDevice) });
+      },
+      clock,
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      anchors,
+      log,
+    });
+    t.after(async () => {
+      await runtime.stop();
+      await rm(storagePath, { recursive: true, force: true });
+    });
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME,
+    };
+    const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+    const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+    const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+    const expectedHaltedState = {
+      path: 'unavailable',
+      snapshots: [expectedSnapshot],
+      anchors: [[DEVICE_ID, START_TIME]],
+      healthReports: [
+        { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
+        { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
+        { account: haltedAccount, byDevice: new Map([[DEVICE_ID, haltedDevice]]) },
+      ],
+    };
+
+    // act
+    await runtime.start();
+    await settle();
+    elapsedMs = 1_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    elapsedMs = 2_000;
+    t.mock.timers.tick(1_000);
+    await finalCheckStarted;
+    elapsedMs = 2_500;
+    t.mock.timers.tick(500);
+    await settle();
+    const beforeCompletion = {
+      path: runtime.monitoringPath,
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
+      healthReports: [...healthReports],
+    };
+    completeInventory([]);
+    await settle();
+    const afterCompletion = {
+      path: runtime.monitoringPath,
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
+      healthReports: [...healthReports],
+    };
+
+    // assert
+    assert.deepStrictEqual({ beforeCompletion, afterCompletion }, { beforeCompletion: expectedHaltedState, afterCompletion: expectedHaltedState });
+    assert.deepStrictEqual(
+      removeSpy.mock.calls.map((call) => call.arguments),
+      [],
+    );
+  });
+
+  test('starts no inventory work when restoration completes after shutdown', async (t) => {
+    // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+    }).thenReturn(undefined);
+
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    // The promise constructor assigns the resolver synchronously.
+    let completeRestore!: () => void;
+    const restoring = new Promise<void>((resolve) => {
+      completeRestore = resolve;
+    });
+    const anchors = { ...recordingAnchors(), restore: () => restoring };
+    const { runtime, store, calls, monitoringHealth, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onMonitoringHealth: listener,
+    });
+
+    // act
+    const starting = runtime.start();
+    await runtime.stop();
+    completeRestore();
+    await starting;
+    await settle();
+
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+
+    // assert
+    assert.deepStrictEqual(
+      { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
+      {
+        path: 'unavailable',
+        snapshots: [],
+        anchors: [],
+        monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+      },
+    );
+    assert.deepStrictEqual(calls, []);
+    assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(requests);
+    verify(listener);
+  });
+
+  test('admits no devices when the launch inventory resolves after shutdown', async (t) => {
+    // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener({ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, new Map([]));
+    }).thenReturn(undefined);
+
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    // The promise constructor assigns the resolver synchronously.
+    let completeInventory!: (devices: readonly ApiDevice[]) => void;
+    const inventory = new Promise<readonly ApiDevice[]>((resolve) => {
+      completeInventory = resolve;
+    });
+    const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(
+      t,
+      { devices: [() => inventory], command: commands },
+      undefined,
+      {
+        onTrustworthyInventory: inventoryListener,
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+        onMonitoringHealth: listener,
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReturn(inventory);
+
+    // act
+    const starting = runtime.start();
+    await settle();
+    await runtime.stop();
+    completeInventory([geminiDevice()]);
+    await starting;
+    await settle();
+
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+
+    // assert
+    assert.deepStrictEqual(
+      { path: pathBeforeStop, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
+      {
+        path: 'unavailable',
+        snapshots: [],
+        anchors: [],
+        monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+      },
+    );
+    assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [] });
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
     verify(inventoryListener);
+    verify(requests);
     verify(listener);
   });
-}
 
-describe('start', () => {
+  test('starts no background work when shutdown follows launch admission', async (t) => {
+    // arrange
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
+
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    let rootSignal!: AbortSignal;
+
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+    when(() => {
+      inventoryListener([DEVICE_ID]);
+    }).thenReturn(undefined);
+
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t, { command: commands }, undefined, {
+      onTrustworthyInventory: inventoryListener,
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+      onMonitoringHealth: listener,
+    });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+
+    store.subscribe(DEVICE_ID, () => {
+      queueMicrotask(() => {
+        void runtime.stop();
+      });
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+
+    const pathBeforeStop = runtime.monitoringPath;
+    const healthBeforeStop = [...monitoringHealth];
+
+    // assert
+    assert.deepStrictEqual(
+      { path: pathBeforeStop, snapshot: store.snapshot(DEVICE_ID), anchors: [...anchors.stored], monitoringHealth: healthBeforeStop },
+      {
+        path: 'unavailable',
+        snapshot: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 1, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME,
+        },
+        anchors: [[DEVICE_ID, START_TIME]],
+        monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+      },
+    );
+    assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [[DEVICE_ID]] });
+    assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
+    verify(inventoryListener);
+    verify(requests);
+    verify(listener);
+  });
+
+  for (const { completion, finish, precedingInventories, expectedInventories, healthyReports, haltAtMs } of [
+    {
+      completion: 'regular inventory succeeds',
+      finish: (pending: PendingInventory) => {
+        pending.resolve([otherGeminiDevice()]);
+      },
+      precedingInventories: [() => Promise.resolve([geminiDevice()])],
+      expectedInventories: [[DEVICE_ID]],
+      healthyReports: 1,
+      haltAtMs: 1_500,
+    },
+    {
+      completion: 'regular inventory fails',
+      finish: (pending: PendingInventory) => {
+        pending.reject(new Error('inventory failed'));
+      },
+      precedingInventories: [() => Promise.resolve([geminiDevice()])],
+      expectedInventories: [[DEVICE_ID]],
+      healthyReports: 1,
+      haltAtMs: 1_500,
+    },
+    {
+      completion: 'final inventory check fails',
+      finish: (pending: PendingInventory) => {
+        pending.reject(new Error('inventory failed'));
+      },
+      precedingInventories: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([])],
+      expectedInventories: [[DEVICE_ID], [], []],
+      healthyReports: 2,
+      haltAtMs: 2_500,
+    },
+  ]) {
+    test(`retains halted state when a pending ${completion}`, async (t) => {
+      // arrange
+      const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+      when(() => {
+        listener(
+          { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+          new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+        );
+      })
+        .thenReturn(undefined)
+        .times(healthyReports);
+      when(() => {
+        listener(
+          { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+          new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+        );
+      }).thenReturn(undefined);
+      when(() => {
+        listener(
+          { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+          new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
+        );
+      }).thenReturn(undefined);
+
+      const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+      for (const deviceIds of expectedInventories) {
+        when(() => {
+          inventoryListener(deviceIds);
+        }).thenReturn(undefined);
+      }
+
+      const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+      // The promise constructor assigns both resolvers synchronously.
+      let completeInventory!: (devices: readonly ApiDevice[]) => void;
+      let rejectInventory!: (error: Error) => void;
+      const inventory = new Promise<readonly ApiDevice[]>((resolve, reject) => {
+        completeInventory = resolve;
+        rejectInventory = reject;
+      });
+      const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(
+        t,
+        {
+          devices: [...precedingInventories, () => inventory],
+          credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
+          pollIntervalMs: 1_000,
+          rotationLeadMs: 10,
+          minRotationDelayMs: 5,
+          command: commands,
+        },
+        undefined,
+        { onTrustworthyInventory: inventoryListener, onMonitoringHealth: listener },
+      );
+      const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+      const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+      const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+      const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+
+      // act
+      await runtime.start();
+
+      for (let elapsedMs = 1_000; elapsedMs < haltAtMs; elapsedMs += 1_000) {
+        await advance(1_000);
+      }
+
+      await advance(500);
+      finish({ resolve: completeInventory, reject: rejectInventory });
+      await settle();
+
+      const pathBeforeStop = runtime.monitoringPath;
+      const healthBeforeStop = [...monitoringHealth];
+      const devicesBeforeStop = [...monitoringByDevice];
+      await runtime.stop();
+
+      // assert
+      assert.deepStrictEqual(
+        {
+          path: pathBeforeStop,
+          snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+          anchors: [...anchors.stored],
+          monitoringHealth: healthBeforeStop,
+          monitoringByDevice: devicesBeforeStop,
+        },
+        {
+          path: 'unavailable',
+          snapshots: [
+            {
+              identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+              connectivity: { connected: true, timestamp: DEVICE_TIME },
+              data: { water_level: 1, primary_pump_running: false, ac_power: true },
+              metadata: {},
+              shadowVersion: undefined,
+              deviceTimestamp: DEVICE_TIME,
+              receivedAt: START_TIME,
+            },
+          ],
+          anchors: [[DEVICE_ID, START_TIME]],
+          monitoringHealth: [...Array.from({ length: healthyReports }, () => healthyAccount), haltedAccount],
+          monitoringByDevice: [...Array.from({ length: healthyReports }, () => new Map([[DEVICE_ID, healthyDevice]])), new Map([[DEVICE_ID, haltedDevice]])],
+        },
+      );
+      assert.deepStrictEqual(trustworthyInventories, expectedInventories);
+      assert.deepStrictEqual(commandRequests, []);
+      verify(commands);
+      verify(inventoryListener);
+      verify(listener);
+    });
+  }
+
   test('discovers every device and stores its canonical snapshot', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
@@ -2990,146 +3077,143 @@ describe('start', () => {
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
-});
 
-test('registers every AWS role before shadow use and replaces the next handshake credentials in place', async (t) => {
-  // arrange
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  const credentialEvents: unknown[][] = [];
-  const credentialCaches: CredentialCache[] = [];
-  const registerSecret = mock<AccountRuntimeOptions['registerSecret']>({ exactParams: true, name: 'credential registration' });
-  when(() => {
-    registerSecret('test-access-key-id', 'aws-access-key-id');
-  }).thenReturn(undefined);
-  when(() => {
-    registerSecret('test-secret-access-key', 'aws-secret-access-key');
-  }).thenReturn(undefined);
-  when(() => {
-    registerSecret('test-session-token', 'aws-session-token');
-  }).thenReturn(undefined);
-  when(() => {
-    registerSecret('test-next-access-key-id', 'aws-access-key-id');
-  }).thenReturn(undefined);
-  when(() => {
-    registerSecret('test-next-secret-access-key', 'aws-secret-access-key');
-  }).thenReturn(undefined);
-  when(() => {
-    registerSecret('test-next-session-token', 'aws-session-token');
-  }).thenReturn(undefined);
-  const shadow = mock<Pick<ShadowClient, 'start' | 'close'>>({ exactParams: true, name: 'shadow lifecycle' });
-  when(() => shadow.start(['account-1_serial-1'])).thenResolve(undefined);
-  when(() => shadow.close()).thenResolve(undefined);
-  const commands = mock<Pick<CloudApi, 'sendCommand'>>({ exactParams: true, name: 'forbidden monitoring commands' });
-  let elapsedMs = 0;
+  test('registers every AWS role before shadow use and replaces the next handshake credentials in place', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const credentialEvents: unknown[][] = [];
+    const credentialCaches: CredentialCache[] = [];
+    const registerSecret = mock<AccountRuntimeOptions['registerSecret']>({ exactParams: true, name: 'credential registration' });
+    when(() => {
+      registerSecret('test-access-key-id', 'aws-access-key-id');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-secret-access-key', 'aws-secret-access-key');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-session-token', 'aws-session-token');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-next-access-key-id', 'aws-access-key-id');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-next-secret-access-key', 'aws-secret-access-key');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-next-session-token', 'aws-session-token');
+    }).thenReturn(undefined);
+    const shadow = mock<Pick<ShadowClient, 'start' | 'close'>>({ exactParams: true, name: 'shadow lifecycle' });
+    when(() => shadow.start(['account-1_serial-1'])).thenResolve(undefined);
+    when(() => shadow.close()).thenResolve(undefined);
+    const commands = mock<Pick<CloudApi, 'sendCommand'>>({ exactParams: true, name: 'forbidden monitoring commands' });
+    let elapsedMs = 0;
 
-  function silent(): void {
-    return undefined;
-  }
+    function silent(): void {
+      return undefined;
+    }
 
-  const log: Logging = Object.assign(silent, { prefix: '', debug: silent, error: silent, info: silent, success: silent, warn: silent, log: silent });
-  const clock: Clock = { now: () => START_TIME + elapsedMs };
-  const runtime = createAccountRuntime({
-    api: {
-      devices: () => Promise.resolve([geminiDevice()]),
-      device: () => Promise.reject(new Error('no single-device request is scripted')),
-      awsCredentials: answering([() => Promise.resolve(credentialsAt(START_TIME + 1_000)), () => Promise.resolve(rotatedCredentialsAt(START_TIME + 2_000))]),
-      sendCommand: (deviceId, command, signal) => commands.sendCommand(deviceId, command, signal),
-    },
-    store: createDeviceStateStore({ clock, log }),
-    registry: createFamilyRegistry(),
-    createShadow: (options) => {
-      credentialCaches.push(options.credentials);
-      credentialEvents.push(['shadow credentials', structuredClone(options.credentials.current())]);
-
-      return { connected: false, start: (deviceIds) => shadow.start(deviceIds), close: () => shadow.close() };
-    },
-    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
-    pollIntervalMs: POLL_INTERVAL_MS,
-    rotationLeadMs: 10,
-    minRotationDelayMs: 5,
-    failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
-    registerSecret: (secret, role) => {
-      registerSecret(secret, role);
-      credentialEvents.push(['register', secret, role]);
-    },
-    onTrustworthyInventory: silent,
-    onDeviceRemoved: silent,
-    onMonitoringHealth: silent,
-    clock,
-    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
-    anchors: recordingAnchors(),
-    log,
-  });
-  t.after(async () => {
-    await runtime.stop();
-  });
-
-  // act
-  await runtime.start();
-  await settle();
-  elapsedMs = 990;
-  t.mock.timers.tick(990);
-  await settle();
-  const nextHandshakeCredentials = credentialCaches[0]?.current();
-  credentialEvents.push(['next handshake credentials', structuredClone(nextHandshakeCredentials)]);
-  const runningState = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), nextHandshakeCredentials };
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(runningState, {
-    path: 'poll-only',
-    snapshot: {
-      identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
-      data: { water_level: 1, primary_pump_running: false, ac_power: true },
-      metadata: {},
-      shadowVersion: undefined,
-      deviceTimestamp: 1_700_000_000_000,
-      receivedAt: START_TIME,
-    },
-    nextHandshakeCredentials: {
-      endpoint: 'broker-two.invalid',
-      clientId: 'client-second',
-      accessKeyId: 'test-next-access-key-id',
-      secretAccessKey: 'test-next-secret-access-key',
-      sessionToken: 'test-next-session-token',
-    },
-  });
-  assert.strictEqual(runtime.monitoringPath, 'unavailable');
-  assert.deepStrictEqual(credentialEvents, [
-    ['register', 'test-access-key-id', 'aws-access-key-id'],
-    ['register', 'test-secret-access-key', 'aws-secret-access-key'],
-    ['register', 'test-session-token', 'aws-session-token'],
-    [
-      'shadow credentials',
-      {
-        endpoint: 'broker.invalid',
-        clientId: 'client-first',
-        accessKeyId: 'test-access-key-id',
-        secretAccessKey: 'test-secret-access-key',
-        sessionToken: 'test-session-token',
+    const log: Logging = Object.assign(silent, { prefix: '', debug: silent, error: silent, info: silent, success: silent, warn: silent, log: silent });
+    const clock: Clock = { now: () => START_TIME + elapsedMs };
+    const runtime = createAccountRuntime({
+      api: {
+        devices: () => Promise.resolve([geminiDevice()]),
+        device: () => Promise.reject(new Error('no single-device request is scripted')),
+        awsCredentials: answering([() => Promise.resolve(credentialsAt(START_TIME + 1_000)), () => Promise.resolve(rotatedCredentialsAt(START_TIME + 2_000))]),
+        sendCommand: (deviceId, command, signal) => commands.sendCommand(deviceId, command, signal),
       },
-    ],
-    ['register', 'test-next-access-key-id', 'aws-access-key-id'],
-    ['register', 'test-next-secret-access-key', 'aws-secret-access-key'],
-    ['register', 'test-next-session-token', 'aws-session-token'],
-    [
-      'next handshake credentials',
-      {
+      store: createDeviceStateStore({ clock, log }),
+      registry: createFamilyRegistry(),
+      createShadow: (options) => {
+        credentialCaches.push(options.credentials);
+        credentialEvents.push(['shadow credentials', structuredClone(options.credentials.current())]);
+
+        return { connected: false, start: (deviceIds) => shadow.start(deviceIds), close: () => shadow.close() };
+      },
+      createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+      pollIntervalMs: POLL_INTERVAL_MS,
+      rotationLeadMs: 10,
+      minRotationDelayMs: 5,
+      failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
+      registerSecret: (secret, role) => {
+        registerSecret(secret, role);
+        credentialEvents.push(['register', secret, role]);
+      },
+      onTrustworthyInventory: silent,
+      onDeviceRemoved: silent,
+      onMonitoringHealth: silent,
+      clock,
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      anchors: recordingAnchors(),
+      log,
+    });
+    t.after(async () => {
+      await runtime.stop();
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+    elapsedMs = 990;
+    t.mock.timers.tick(990);
+    await settle();
+    const nextHandshakeCredentials = credentialCaches[0]?.current();
+    credentialEvents.push(['next handshake credentials', structuredClone(nextHandshakeCredentials)]);
+    const runningState = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), nextHandshakeCredentials };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(runningState, {
+      path: 'poll-only',
+      snapshot: {
+        identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: 1_700_000_000_000,
+        receivedAt: START_TIME,
+      },
+      nextHandshakeCredentials: {
         endpoint: 'broker-two.invalid',
         clientId: 'client-second',
         accessKeyId: 'test-next-access-key-id',
         secretAccessKey: 'test-next-secret-access-key',
         sessionToken: 'test-next-session-token',
       },
-    ],
-  ]);
-  verify(registerSecret);
-  verify(shadow);
-  verify(commands);
-});
-
-describe('credential rotation', () => {
+    });
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual(credentialEvents, [
+      ['register', 'test-access-key-id', 'aws-access-key-id'],
+      ['register', 'test-secret-access-key', 'aws-secret-access-key'],
+      ['register', 'test-session-token', 'aws-session-token'],
+      [
+        'shadow credentials',
+        {
+          endpoint: 'broker.invalid',
+          clientId: 'client-first',
+          accessKeyId: 'test-access-key-id',
+          secretAccessKey: 'test-secret-access-key',
+          sessionToken: 'test-session-token',
+        },
+      ],
+      ['register', 'test-next-access-key-id', 'aws-access-key-id'],
+      ['register', 'test-next-secret-access-key', 'aws-secret-access-key'],
+      ['register', 'test-next-session-token', 'aws-session-token'],
+      [
+        'next handshake credentials',
+        {
+          endpoint: 'broker-two.invalid',
+          clientId: 'client-second',
+          accessKeyId: 'test-next-access-key-id',
+          secretAccessKey: 'test-next-secret-access-key',
+          sessionToken: 'test-next-session-token',
+        },
+      ],
+    ]);
+    verify(registerSecret);
+    verify(shadow);
+    verify(commands);
+  });
   test('SYNC-04 refreshes the credentials ten minutes before the expiry the response carries', async (t) => {
     // arrange
     const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
@@ -3508,69 +3592,66 @@ describe('credential rotation', () => {
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
-});
 
-test('preserves whole canonical state through accepted, superseded and observation-free shadow callbacks', async (t) => {
-  // arrange
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
-  const { runtime, store, shadows, advance, commandRequests } = harness(t, { command: commands });
-  const expectedAccepted: DeviceSnapshot = {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 3, primary_pump_running: false, ac_power: true, readings: { depth: 3 } },
-    metadata: { firmware: { version: 'v9' } },
-    shadowVersion: 7,
-    deviceTimestamp: DEVICE_TIME,
-    receivedAt: START_TIME + 123,
-  };
-  const expectedMetadata: DeviceSnapshot = {
-    ...expectedAccepted,
-    metadata: { firmware: { version: 'v9' }, radio: { signal: -54 } },
-    shadowVersion: 9,
-    receivedAt: START_TIME + 246,
-  };
+  test('preserves whole canonical state through accepted, superseded and observation-free shadow callbacks', async (t) => {
+    // arrange
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    const { runtime, store, shadows, advance, commandRequests } = harness(t, { command: commands });
+    const expectedAccepted: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 3, primary_pump_running: false, ac_power: true, readings: { depth: 3 } },
+      metadata: { firmware: { version: 'v9' } },
+      shadowVersion: 7,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 123,
+    };
+    const expectedMetadata: DeviceSnapshot = {
+      ...expectedAccepted,
+      metadata: { firmware: { version: 'v9' }, radio: { signal: -54 } },
+      shadowVersion: 9,
+      receivedAt: START_TIME + 246,
+    };
 
-  // act
-  await runtime.start();
-  await settle();
-  await advance(123);
-  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, {
-    data: { water_level: 3, readings: { depth: 3 } },
-    state: { firmware: { version: 'v9' } },
-    version: 7,
+    // act
+    await runtime.start();
+    await settle();
+    await advance(123);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, {
+      data: { water_level: 3, readings: { depth: 3 } },
+      state: { firmware: { version: 'v9' } },
+      version: 7,
+    });
+    const afterAccepted = store.snapshot(DEVICE_ID);
+    await advance(123);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: { radio: { signal: -54 } }, version: 9 });
+    const afterMetadata = store.snapshot(DEVICE_ID);
+    await advance(123);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 0 }, state: { firmware: 'superseded' }, version: 8 });
+    const afterRefused = store.snapshot(DEVICE_ID);
+    await advance(123);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 10 });
+    const afterEmpty = store.snapshot(DEVICE_ID);
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(afterAccepted, expectedAccepted);
+    assert.deepStrictEqual(afterMetadata, expectedMetadata);
+    assert.deepStrictEqual(afterRefused, expectedMetadata);
+    assert.deepStrictEqual(afterEmpty, { ...expectedMetadata, shadowVersion: 10 });
+    assert.deepStrictEqual(store.snapshot(DEVICE_ID), { ...expectedMetadata, shadowVersion: 10 });
+    assert.strictEqual(afterRefused, afterMetadata);
+    assert.strictEqual(Object.isFrozen(afterEmpty), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.identity), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.connectivity), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.data), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.data.readings), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.metadata), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.metadata.firmware), true);
+    assert.strictEqual(Object.isFrozen(afterEmpty.metadata.radio), true);
+    assert.deepStrictEqual(commandRequests, []);
+    verify(commands);
   });
-  const afterAccepted = store.snapshot(DEVICE_ID);
-  await advance(123);
-  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: { radio: { signal: -54 } }, version: 9 });
-  const afterMetadata = store.snapshot(DEVICE_ID);
-  await advance(123);
-  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 0 }, state: { firmware: 'superseded' }, version: 8 });
-  const afterRefused = store.snapshot(DEVICE_ID);
-  await advance(123);
-  shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: undefined, state: undefined, version: 10 });
-  const afterEmpty = store.snapshot(DEVICE_ID);
-  await runtime.stop();
-
-  // assert
-  assert.deepStrictEqual(afterAccepted, expectedAccepted);
-  assert.deepStrictEqual(afterMetadata, expectedMetadata);
-  assert.deepStrictEqual(afterRefused, expectedMetadata);
-  assert.deepStrictEqual(afterEmpty, { ...expectedMetadata, shadowVersion: 10 });
-  assert.deepStrictEqual(store.snapshot(DEVICE_ID), { ...expectedMetadata, shadowVersion: 10 });
-  assert.strictEqual(afterRefused, afterMetadata);
-  assert.strictEqual(Object.isFrozen(afterEmpty), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.identity), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.connectivity), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.data), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.data.readings), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.metadata), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.metadata.firmware), true);
-  assert.strictEqual(Object.isFrozen(afterEmpty.metadata.radio), true);
-  assert.deepStrictEqual(commandRequests, []);
-  verify(commands);
-});
-
-describe('the poll backstop', () => {
   test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
@@ -4191,9 +4272,7 @@ describe('the poll backstop', () => {
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
-});
 
-describe('stop', () => {
   test('SYNC-05 resolves both calls and closes the connection once when stop is called twice', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
@@ -4584,9 +4663,7 @@ describe('stop', () => {
     verify(commands);
     verify(requests);
   });
-});
 
-describe('the degraded monitoring path', () => {
   test('reports monitoring unavailable before anything has succeeded', (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
@@ -6911,9 +6988,7 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
   });
-});
 
-describe('DEV-05 removal reconciliation', () => {
   function devicesCallCount(calls: readonly string[]): number {
     return calls.filter((call) => call === 'devices').length;
   }
@@ -8047,185 +8122,95 @@ describe('DEV-05 removal reconciliation', () => {
     verify(removals);
     verify(listener);
   });
-});
 
-// Wires the real authentication client, REST client, and store behind the
-// runtime, so only the network boundary is replaced. The token cache lands in
-// this case's own storage directory, which is removed when the case ends.
-async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
-  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
+  test('cancels a pending command through the shared root signal when shutdown begins', async (t) => {
+    // arrange
+    // The promise constructors assign their resolvers synchronously.
+    let completeCommand!: (answer: CommandResult) => void;
+    let rejectCommand!: (error: Error) => void;
+    let announceDispatch!: () => void;
+    const pendingCommand = new Promise<CommandResult>((resolve, reject) => {
+      completeCommand = resolve;
+      rejectCommand = reject;
+    });
+    const dispatched = new Promise<void>((resolve) => {
+      announceDispatch = resolve;
+    });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'pending command dispatch' });
+    when(() =>
+      commands(
+        DEVICE_ID,
+        { desiredData: { test_running: true } },
+        It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      ),
+    ).thenReturn(pendingCommand);
+    // The public retry factory receives the root signal during construction.
+    let rootSignal!: AbortSignal;
+    let commandSignal: AbortSignal | undefined;
+    let commandOutcome: CommandOutcome | undefined;
+    const { runtime, commandRequests } = harness(
+      t,
+      {
+        command: (deviceId, command, signal) => {
+          commandSignal = signal;
+          signal.addEventListener(
+            'abort',
+            () => {
+              rejectCommand(new Error('the pending command was aborted'));
+            },
+            { once: true },
+          );
+          announceDispatch();
+          return commands(deviceId, command, signal);
+        },
+      },
+      undefined,
+      {
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    await runtime.start();
 
-  t.after(async () => {
-    await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
-  });
-
-  const clock: Clock = { now: () => START_TIME };
-  const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME };
-  const log = silentLog();
-  const auth = createAuthClient({
-    constants: testConstants,
-    clientId: 'client-id-1',
-    email: 'account@example.test',
-    password: 'account-password',
-    storagePath,
-    requestTimeoutMs: 1_000,
-    httpFetch: (input, init) => globalThis.fetch(input, init),
-    clock,
-    createSalt: () => 'salt-1',
-    registerSecret: () => undefined,
-    log,
-  });
-  const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000, httpFetch: (input, init) => globalThis.fetch(input, init) });
-  const store = createDeviceStateStore({ clock, log });
-  const runtime = createAccountRuntime({
-    api,
-    store,
-    registry: createFamilyRegistry(),
-    createShadow: (shadowOptions: ShadowRuntimeOptions): ShadowClient => fakeShadow(shadowOptions).client,
-    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
-    pollIntervalMs: POLL_INTERVAL_MS,
-    rotationLeadMs: ROTATION_LEAD_MS,
-    minRotationDelayMs: MIN_ROTATION_DELAY_MS,
-    failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
-    registerSecret: () => undefined,
-    onTrustworthyInventory: () => undefined,
-    onDeviceRemoved: () => undefined,
-    onMonitoringHealth: () => undefined,
-    clock,
-    monotonic,
-    anchors: createArrivalAnchors({ storagePath, log }),
-    log,
-  });
-
-  // This case runs on real timers, so the poll and rotation timers must be
-  // released or they would hold the runner open.
-  t.after(async () => {
+    // act
+    const sending = runtime.commands.send(DEVICE_ID, 'self-test', true).then((outcome) => {
+      commandOutcome = outcome;
+      return outcome;
+    });
+    await dispatched;
+    const atDispatch = { aborted: commandSignal?.aborted, outcome: commandOutcome };
     await runtime.stop();
-  });
+    await settle();
+    const atShutdown = { aborted: commandSignal?.aborted, outcome: commandOutcome };
+    // Release the owned response after capture so a missing abort fails an assertion without hanging.
+    completeCommand({ success: true });
+    const outcome = await sending;
+    const snapshot = runtime.store.snapshot(DEVICE_ID);
 
-  return { runtime, store };
-}
-
-// Answers the token request, the device request, and the credentials request.
-function stubCloud(t: TestContext, httpFetch?: HttpFetch): { url: string; authorization: string | undefined }[] {
-  const requests: { url: string; authorization: string | undefined }[] = [];
-
-  t.mock.method(globalThis, 'fetch', (input: string | URL, init?: RequestInit) => {
-    const url = input.toString();
-    requests.push({ url, authorization: new Headers(init?.headers).get('authorization') ?? undefined });
-
-    if (httpFetch !== undefined) {
-      return httpFetch(input, init);
-    }
-
-    if (url.endsWith('/oauth/token')) {
-      return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
-    }
-
-    if (url.endsWith('/credentials/aws')) {
-      return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
-    }
-
-    return Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
-  });
-
-  return requests;
-}
-
-function credentialRequestCount(requests: readonly { url: string }[]): number {
-  return requests.filter((request) => request.url.endsWith('/credentials/aws')).length;
-}
-
-test('cancels a pending command through the shared root signal when shutdown begins', async (t) => {
-  // arrange
-  // The promise constructors assign their resolvers synchronously.
-  let completeCommand!: (answer: CommandResult) => void;
-  let rejectCommand!: (error: Error) => void;
-  let announceDispatch!: () => void;
-  const pendingCommand = new Promise<CommandResult>((resolve, reject) => {
-    completeCommand = resolve;
-    rejectCommand = reject;
-  });
-  const dispatched = new Promise<void>((resolve) => {
-    announceDispatch = resolve;
-  });
-  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'pending command dispatch' });
-  when(() =>
-    commands(
-      DEVICE_ID,
-      { desiredData: { test_running: true } },
-      It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
-    ),
-  ).thenReturn(pendingCommand);
-  // The public retry factory receives the root signal during construction.
-  let rootSignal!: AbortSignal;
-  let commandSignal: AbortSignal | undefined;
-  let commandOutcome: CommandOutcome | undefined;
-  const { runtime, commandRequests } = harness(
-    t,
-    {
-      command: (deviceId, command, signal) => {
-        commandSignal = signal;
-        signal.addEventListener(
-          'abort',
-          () => {
-            rejectCommand(new Error('the pending command was aborted'));
-          },
-          { once: true },
-        );
-        announceDispatch();
-        return commands(deviceId, command, signal);
+    // assert
+    assert.deepStrictEqual(
+      { atDispatch, atShutdown, outcome },
+      {
+        atDispatch: { aborted: false, outcome: undefined },
+        atShutdown: { aborted: true, outcome: { accepted: false, failure: 'vendor-error' } },
+        outcome: { accepted: false, failure: 'vendor-error' },
       },
-    },
-    undefined,
-    {
-      createRetry: (signal) => {
-        rootSignal = signal;
-        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
-      },
-    },
-  );
-  await runtime.start();
-
-  // act
-  const sending = runtime.commands.send(DEVICE_ID, 'self-test', true).then((outcome) => {
-    commandOutcome = outcome;
-    return outcome;
+    );
+    assert.deepStrictEqual(snapshot, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.strictEqual(commandSignal, rootSignal);
+    assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
+    verify(commands);
   });
-  await dispatched;
-  const atDispatch = { aborted: commandSignal?.aborted, outcome: commandOutcome };
-  await runtime.stop();
-  await settle();
-  const atShutdown = { aborted: commandSignal?.aborted, outcome: commandOutcome };
-  // Release the owned response after capture so a missing abort fails an assertion without hanging.
-  completeCommand({ success: true });
-  const outcome = await sending;
-  const snapshot = runtime.store.snapshot(DEVICE_ID);
-
-  // assert
-  assert.deepStrictEqual(
-    { atDispatch, atShutdown, outcome },
-    {
-      atDispatch: { aborted: false, outcome: undefined },
-      atShutdown: { aborted: true, outcome: { accepted: false, failure: 'vendor-error' } },
-      outcome: { accepted: false, failure: 'vendor-error' },
-    },
-  );
-  assert.deepStrictEqual(snapshot, {
-    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-    metadata: {},
-    shadowVersion: undefined,
-    deviceTimestamp: DEVICE_TIME,
-    receivedAt: START_TIME,
-  });
-  assert.strictEqual(commandSignal, rootSignal);
-  assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
-  verify(commands);
-});
-
-describe('commands', () => {
   test('sends the family wire body for a self-test to the device the caller names', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
@@ -8463,6 +8448,63 @@ describe('commands', () => {
     // assert
     assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: true }]);
     verify(commands);
+  });
+
+  test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
+    // arrange
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
+    when(() =>
+      httpFetch('https://tenant.example.test/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body:
+          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
+          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
+          ',"scope":"openid profile email"}',
+        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      }),
+    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+
+    const requests = stubCloud(t, httpFetch);
+    const { runtime, store } = await endToEndRuntime(t);
+
+    // act
+    await runtime.start();
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      { requests, stored: store.deviceIds() },
+      {
+        requests: [
+          { url: 'https://tenant.example.test/oauth/token', authorization: undefined },
+          { url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1' },
+          { url: 'https://api.example.test/credentials/aws', authorization: 'Bearer id-token-1' },
+        ],
+        stored: [DEVICE_ID],
+      },
+    );
+    verify(httpFetch);
   });
 });
 
@@ -9082,65 +9124,6 @@ describe('createAccountRuntimeFromConfig', () => {
     // assert
     await assert.doesNotReject(polling);
     assert.strictEqual(devicesCalls, 4);
-    verify(httpFetch);
-  });
-});
-
-describe('the wired account', () => {
-  test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
-    // arrange
-    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
-    when(() =>
-      httpFetch('https://tenant.example.test/oauth/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
-        body:
-          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
-          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
-          ',"scope":"openid profile email"}',
-        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
-      }),
-    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
-    when(() =>
-      httpFetch(
-        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
-        {
-          method: 'GET',
-          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
-          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
-        },
-      ),
-    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
-    when(() =>
-      httpFetch(
-        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
-        {
-          method: 'GET',
-          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
-          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
-        },
-      ),
-    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
-
-    const requests = stubCloud(t, httpFetch);
-    const { runtime, store } = await endToEndRuntime(t);
-
-    // act
-    await runtime.start();
-    await settle();
-
-    // assert
-    assert.deepStrictEqual(
-      { requests, stored: store.deviceIds() },
-      {
-        requests: [
-          { url: 'https://tenant.example.test/oauth/token', authorization: undefined },
-          { url: 'https://api.example.test/devices', authorization: 'Bearer id-token-1' },
-          { url: 'https://api.example.test/credentials/aws', authorization: 'Bearer id-token-1' },
-        ],
-        stored: [DEVICE_ID],
-      },
-    );
     verify(httpFetch);
   });
 });

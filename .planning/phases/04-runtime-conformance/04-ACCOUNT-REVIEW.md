@@ -5884,3 +5884,181 @@ RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
 No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
 No security-relevant surface outside the existing threat model changes.
 The parent retains remaining causes, full correction, combined gates and shared-state advancement.
+
+## CR-04-ACCOUNT-017: groups name the exported runtime factories
+
+**Requirement:** RUN-01. **Original severity:** WARNING.
+**Rule:** unit writer/reviewer, Case structure: one top-level describe per
+exported entrypoint; no nested concern groups or shared mutable setup.
+**Owning task:** 04-09-02. **Disposition:** applied, pending independent full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_017_entrypoint_groups.
+**Pre-edit HEAD:** 2e669f75032573047f2b87630ac5dc4717d9aa46.
+Original locations remain R:test/runtime/accountRuntime.test.ts:623,869,1050,
+1399,1618,2538,2975,3086,3342. Current factory groups begin at owner 923 and 8511.
+The original 29 IDs, initial 18 BLOCKER/11 WARNING counts and correction counter 0 remain.
+This organization change supplies no independent correction or clean verdict.
+
+### Factory ownership and exact case preservation
+
+The nine original describe groups become exactly two top-level groups:
+createAccountRuntime owns 138 authored cases and createAccountRuntimeFromConfig
+owns eight. Five authored fixture-contract declarations remain independent;
+their generated rows exercise the existing account shadow and anchor participants.
+No describe is nested. Every stateful case still constructs fresh dependencies.
+No shared mutable setup, new scenario, helper abstraction or data refactor is added.
+
+The actual harness and endToEndRuntime call createAccountRuntime. The eight
+configuration cases call createAccountRuntimeFromConfig. AUTH-01 calls the former
+through endToEndRuntime, so it moves from after the configuration group to the end
+of the createAccountRuntime group, immediately before configuration cases.
+This is the sole change to relative case order. Order within each factory group
+and all other case order remain exact. The parent explicitly permitted this
+necessary organization choice after the initial pre-edit ordering conflict.
+
+PendingInventory, endToEndRuntime, stubCloud and credentialRequestCount move
+before the factory groups while retaining their module lexical scope, complete
+raw declarations and signatures. The existing removal-local devicesCallCount
+retains its body and signature inside the runtime factory group. Scope inspection
+finds no colliding direct declarations. No public/shared/private alias, member,
+shape, visibility or callable contract changes, so D-06 contract-change impacts
+are not triggered. No unsupported private query supplies deletion permission.
+
+Complete source 1-1341, owner 1-9146 and prior report 1-5886 were read before edits.
+Bounded follow-up reads filled actual output truncation gaps. AGENTS/bootstrap,
+all five complete books, 09 plan, protocol, CONTEXT, RESEARCH, PATTERNS, FINDINGS,
+canonical decisions, applicable STATE and prior 07/08/11/12 summaries were loaded.
+Actual platform and both World factory/lifecycle callers were inspected.
+Both complete approved headers and .js imports remain intact.
+
+The installed TypeScript parser compares every complete saved/current case.
+All 151 authored case ASTs, complete token streams, literal spellings, assertion
+payloads, verify calls and ordered AAA phases match exactly. All 35 function and
+interface declarations retain their semantics. The four relocated module-level
+declarations also retain exact raw text and module scope. Before/after full case
+order lists and all raw bodies/tokens/ASTs remain in preservation proof files.
+Only describe boundaries, indentation, declaration placement and the one permitted
+AUTH case position change. A required blank line at a flattened boundary resolves
+the sole lint error; the final formatter changes nothing.
+
+### Retained owner interruption and separate fixture follow-up
+
+The first full native owner stalls after 159 passing cases, before reporting the
+moved AUTH case. Its child receives controlled SIGTERM after about 47 seconds.
+owner.json retains raw exit 1, complete TAP/stderr and the file-level
+ERR_TEST_FAILURE/SIGTERM. No intended assertion failure, original filesystem
+error, EBUSY or cleanup trace was captured. This is an interrupted execution,
+not genuine production RED, a reopened fixed finding or a passing check.
+The same unchanged compiled owner retry with a native ten-second test bound
+passes all 168 cases in about 0.45 seconds. That retry does not erase the hazard.
+
+The first recursive cleanup remains original 024, now at owner 2213.
+Its case enables fake setTimeout at 2135 and stops the runtime before recursive
+rm, without an explicit timer reset. AUTH's unchanged endToEndRuntime cleanup
+at 843 uses maxRetries 3/retryDelay 100. AUTH itself enables no fake timers.
+Its cleanup hook is registered before its separate runtime-stop hook.
+Moving AUTH does not make it the first recursive rm under mocked timers.
+The earlier platform investigation proves Node's lazy internal/fs/rimraf can
+capture a mocked retry timer; that is a plausible existing fixture hazard here.
+The precise cause of this interruption remains unconfirmed.
+
+The concrete separate follow-up must inspect all account recursive cleanup sites,
+not depend on test ordering or one priming case:
+
+| Current cleanup owner | Current line | Existing timer/cleanup boundary |
+| --- | ---: | --- |
+| endToEndRuntime / AUTH-01 | 843 | Real-timer case; recursive retry settings 3/100 |
+| Original 024 pending final inventory | 2213 | Mocked setTimeout; stop then recursive rm |
+| Registration-before-composed-use | 8581 | Stop then recursive retry cleanup |
+| Inert construction | 8625 | Recursive retry cleanup |
+| AUTH-02 composed registration | 8672 | Recursive retry cleanup |
+| Supplied rotation lead | 8770 | Mocked setTimeout; recursive retry cleanup |
+| Supplied rotation floor | 8882 | Existing explicit reset before recursive cleanup |
+| Default monitoring listener | 8926 | Mocked setTimeout; recursive retry cleanup |
+| Supplied monitoring listener | 8981 | Mocked setTimeout; recursive retry cleanup |
+| Default removal listener | 9091 | Mocked setTimeout; recursive retry cleanup |
+
+Declare that bounded test-fixture cause separately. Reproduce an actual account
+cleanup retry under bounded native execution before choosing a repair. If the
+timer-capture cause is confirmed, reset owning timer contexts before recursive
+cleanup while preserving all operations/assertions and production. No such
+diagnostic control or fixture repair is included in 017. cleanup-assessment-proof.json
+retains exact before/current sites, the failed native run and unchanged retry.
+
+### Final formatted-input checks and verification location
+
+All commands run serially in the existing linked features/code-review-sweep
+checkout with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No isolated worktree, branch or recovery sentinel is created. The persisted
+04/04-09 isolation sentinel reads none. Fresh resolver/execution records retain
+the omitted model and high effective effort. The original 09 ledger remains
+8a700ac4b3594bf0c16af0a5e3ce35223ef3f574; the parent checkpoint remains exact.
+
+Native directory: /private/tmp/guardian-04-account-017/.
+Each subprocess retains exact argv/cwd, raw exit, real UTC start/end, Node/npm,
+HEAD, all 702 input identities/modes, full dirty/index patches, complete owned
+bytes, compiled copies and separate full stdout/stderr. Initial snapshots save
+every full tracked/nonignored input and literal symlink target. Each mutation
+finishes before another edit/build; no active process is treated as completion.
+
+| Final-input native record | Actual terminal result |
+| --- | --- |
+| final-format | Exact owner Prettier, exit 0, unchanged |
+| final-build | npm run build:test, exit 0, 19:55:24.366037-19:55:27.345286 UTC |
+| final-owner | Full native TAP owner, exit 0, 19:55:27.967758-19:55:28.430064 UTC; 168 pass, zero fail/cancel/skip/todo |
+| final-direct | Exact npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts with fresh build, exit 0 |
+| final-native-coverage | Full owner with exact compiled-source include, ten-second native test bound and all three 100% thresholds, exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; accountRuntime-final.lcov retained |
+| final-lint | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| account-evidence, platform-evidence | Current installed on-disk RED CLI, exit 0 and RED_EVIDENCE_OK for both unchanged histories |
+| preservation-before-report | All 151 token/AST/case/assertion comparisons and SAME installed classifier over all sixteen recursive records, exit 0 |
+
+The initial native owner interruption/raw 1 and unchanged retry/raw 0 remain
+separate from these final-input successes. Initial lint exits 1 for the required
+blank line at the flattened group boundary. An initial patch-format attempt
+fails before changing any repository byte; the corrected patch applies cleanly.
+The sandbox denies read-only ps; the authorized retry inspects only the actual
+owned test process tree, then controlled child termination collects native output.
+A temporary assessment output name initially overlaps its command record; the
+complete assessment is retained under the distinct proof name above. No failed
+attempt is discarded, relabeled as RED or used as a passing final result.
+
+### Active regressions, immutable histories and atomic closeout
+
+The complete 402985-byte prior report remains an exact prefix. All 700 input
+paths outside owner/report retain their saved hashes and modes. Source remains
+c87b9330ad2589e7941c11aba90f2079c67dbc30. Owner changes from
+7a89b75213e76a1130bf9274c7ae92b8dc2c4f8a to 3f2991823b157d31f41e1c2a88c3faa710f9cdc7.
+This is not a blanket owner byte-freeze claim: regrouping indents active RED
+cases and changes their suite-qualified names, while preserving their complete
+tokens and semantics. Saved historical patches and current complete bodies are
+retained together. Original 024 remains semantically exact; 025 keeps every
+literal deadline, timer operation and original assertion plus stronger 013
+verification. Both 023 rows, whole 021 callback/neighbor case, real-shadow 022
+and order case, 018 frozen/refused readbacks, 019 checkpoints, 020 anchors,
+026 fixture/contracts, 009 pending/refused command, 010 canonical observations
+and 029 literal four/five-ms floor all retain their pre-edit token streams.
+
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319, with fourteen
+records. PLATFORM remains 5a35d0831979b6c7444b598c0987bdd9d98f758b, with two.
+The SAME installed classifyRedEvidence recursively accepts all sixteen, with
+every sourceCommit:path resolving to its original sourceBlob. Complete raw
+histories, prior patches and actual evidence-first ancestry remain unchanged.
+No second parser, rewritten JSON, new genuine regression or new control is added.
+Selected native LCOV does not refresh merged all-pair source-map LCOV.
+No full npm run check, full-gate reuse or independent correction is claimed.
+
+Only test/runtime/accountRuntime.test.ts and this append enter the atomic cause
+commit, titled test: group account cases by exported factories. Recorded-base
+Fallow audit uses 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574. Preservation and audit
+repeat after this append. Exact SKIP=npm-check pre-commit run --files covers
+both final paths and must finish clean before staging; any formatter/report
+change requires clean repetition. Plain foreground git commit runs ordinary
+hooks with SKIP absent. Native terminal records and actual Git objects supply
+the resulting hash and exact paths. No wrapper, manual stash, amend, hook bypass,
+rebase or history rewrite is used.
+
+Original 017 is applied pending full independent ACCOUNT correction. The explicit
+fixture-hazard follow-up remains with the parent and receives a separate declared
+cause. RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived. No correction
+increment, fixed-ID reopening, rejection, phase completion or new security-relevant
+surface is claimed. The parent retains remaining causes, full correction, combined
+gates, shared records and the worktree-setting restoration obligation.
