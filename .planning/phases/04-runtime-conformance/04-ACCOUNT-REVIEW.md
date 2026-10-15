@@ -6216,3 +6216,123 @@ RUN-01 stays Pending; WINDOWS 46-53 remain OPEN and unwaived. The correction
 counter remains zero. No SUMMARY, shared record, full npm run check, finding
 014 work or full correction is included here. The parent retains those gates,
 remaining causes and worktree-setting restoration obligation.
+
+### 2026-10-15 — original 014 fresh concern seeds
+
+Original CR-04-ACCOUNT-014 is applied pending full independent ACCOUNT
+correction under 04-09-02. Its bounded change uses the already declared
+conditional `test/runtime/accountRuntimeSeeds.ts`. The final paths are that
+helper, `test/runtime/accountRuntime.test.ts`, and this appended report.
+No production file changed. This is test-data conformance, with no new
+production defect, production RED, control mutation, or test case.
+
+The eight owner-local builders moved with their exact signatures and bodies:
+`accountConfig`, `geminiDevice`, `otherGeminiDevice`, `bothDevicesAt`,
+`geminiWireDeviceList`, `credentialsAt`, `rotatedCredentialsAt`, and
+`heartbeatPatch`. The ninth export, `testConstants`, returns the former
+constants object's exact literal values and retains its `ProtocolConstants`
+result type. All ten former value/property uses now invoke this factory.
+Every export is consumed by the owner. These factories return fresh objects,
+arrays, nested settings, device data/connectivity, credentials, or heartbeat
+data as applicable. Helper module bindings contain only private primitives.
+Expected answers remain independently specified in the cases.
+
+The whole existing owner header remains intact. The new helper has the full
+SPDX, copyright and fileoverview header and documented typed factories.
+No generic helper layer, stateful fake, fixture mode, production export,
+private alias, member contract, or extra test data moved or changed.
+
+All required current planning, protocol, context, research, patterns,
+findings, canonical decisions, applicable state, prior summaries, production
+source, owner and actual callers were read before edits. All five complete
+comments, Google style, unit writer, unit reviewer and local verification
+books were applied. The scoped unit review preserves the existing groups,
+AAA blocks, mocks, verification, operations, assertions and cleanup order.
+This scoped check is not the pending independent full correction review.
+
+The pre-write exact three-path Fallow guard returned raw 0 at
+20:27:02.590810–20:27:02.987033 UTC and explicitly reported the conditional
+helper absent. The initial full snapshot also records its absence. Creation
+followed that guard; subsequent owner edits, formatting and this append each
+have their own preceding exact guard. Guards report no configured boundary
+zones or rule packs. Native records are in
+`/private/tmp/guardian-04-account-014/guard-*.json` with separate streams.
+
+The existing builders and constants value were owner-local, nonexported
+bindings. Their actual callers and public factory structural types were read
+before the bounded extraction. No existing shared/exported API shape or
+private alias/member deletion was changed, so no substitute or exception to
+D-06 was needed. The new helper inventory was then queried for all nine exact
+exports separately in both projects, with `--type-aware`, one
+`--type-aware-project`, `--type-aware-require complete --format json --quiet
+--explain` per invocation. All nine `tsconfig.test.json` results are raw 0,
+status complete, with this owner as the sole direct consumer. All nine
+`tsconfig.json` results are raw 1, status unavailable, omission `no-project`,
+because the production project excludes test support. These limitations are
+retained, not treated as complete proof or a waiver. Exact argv, UTC, raw
+status and streams are retained in `impact-inventory.json` and
+`impact-*.stdout`/`impact-*.stderr` in the same temporary evidence directory.
+
+Verification ran in the existing linked checkout on
+`features/code-review-sweep`, starting clean at
+`44040a96f48d58d905d53782a6a32fa5cf8d4364`, with Node v26.11.1 and npm 11.20.0.
+The documented `workflow.use_worktrees=false` opt-out was honored; no checkout,
+configuration, isolation sentinel or shared planning record was created or
+changed. Each native attempt retains input blobs, full owner/helper copies,
+compiled inputs, argv, UTC start/end, raw exit and separate stdout/stderr.
+No attempt timed out or required a signal. The substantive results are:
+
+| Check | Native result and UTC interval |
+| --- | --- |
+| First fresh build | Raw 2, 20:32:14.167471–20:32:17.325828; only the now-unused owner `ReportedPatch` import remained after moving `heartbeatPatch`. |
+| Corrected fresh build | Raw 0, 20:32:53.452689–20:32:56.881776; only that orphan import was removed under its own guard. |
+| Complete natural account owner | Raw 0, 20:33:12.387030–20:33:13.134474; 168 pass, zero fail/cancelled/skipped/todo. |
+| Exact direct source/test pair | Raw 0, 20:33:26.840960–20:33:31.216550; fresh build and isolated 100% coverage. |
+| Native exact-source coverage | Raw 0, 20:33:49.335477–20:33:50.098592; 168 pass, exact `SF:dist-test/src/runtime/accountRuntime.js`, LF/LH 1003/1003, FNF/FNH 58/58, BRF/BRH 193/193. |
+| Uncached full owner/helper ESLint | Raw 0, 20:34:02.800471–20:34:08.607280; zero warnings. |
+| Installed ACCOUNT evidence CLI | Raw 0, 20:34:09.121309–20:34:09.624031; `RED_EVIDENCE_OK`. |
+| Installed PLATFORM evidence CLI | Raw 0, 20:34:44.486976–20:34:44.927973; `RED_EVIDENCE_OK`. |
+
+Complete saved/current raw case and AST/token comparisons retain all 151
+authored cases in order, allowing only the constants factory calls. An exact
+whole-owner transformation comparison allows only the declared seed blocks,
+imports and ten constants calls; every remaining byte matches. The eight
+moved signatures/bodies match exactly after the added export modifier, and
+the constants literal AST matches its former initializer. These checks
+preserve all prior accepted repairs and every existing teardown reset,
+including the five cleanup resets and the preexisting floor reset. No seed
+meta-tests were added. The 700 other initial inputs, including all 44
+production files, retain their exact hashes and modes. The full saved report
+is an unchanged prefix of this append.
+
+ACCOUNT evidence retains blob
+`b3f7141fc652706628ec55c5bd5c1a3e4b560319`; PLATFORM evidence retains blob
+`5a35d0831979b6c7444b598c0987bdd9d98f758b`. The same installed classifier
+recursively accepts all 14 plus 2 records, and each actual
+`sourceCommit:sourceFile` resolves to its recorded source blob. No parser,
+record or history was replaced. The initial 09 ledger checkpoint retains
+SHA-256 `aef5e272b16ba900cae197a46420256be5bb9f530c77061d8fe14f979627af53`;
+the actual Git-directory plan-head ledger still contains
+`8a700ac4b3594bf0c16af0a5e3ce35223ef3f574`.
+
+This append is committed only after a clean exact
+`SKIP=npm-check pre-commit run --files` over all three final paths, followed
+by staging those paths, the recorded-base Fallow audit, and plain foreground
+`git commit` with ordinary hooks and SKIP absent. Shared test support must
+select all 43 source/test pairs in the actual staged selector and ordinary
+`check:commit`; temporary native records retain that inventory and hook
+result. The actual terminal commit record and Git object establish the hash
+and three committed paths. No wrapper commit, manual stash, amend, hook
+bypass, rebase or history rewrite is used.
+
+The first build failure remains an explicit attempt, not a production RED
+claim. Original 017's natural filesystem cause remains unconfirmed; this
+change does not reinterpret that interruption or its controlled retry.
+Original 014 remains applied pending the parent's fresh independent full
+ACCOUNT correction, including the complete new helper/header/inventory.
+The original initial review remains 29 findings, 18 blocking and 11 warning;
+the correction counter remains zero. No clean review, independently closed
+finding, reopened finding or full correction verdict is claimed here.
+RUN-01 stays Pending and WINDOWS 46-53 remain OPEN and unwaived. The parent
+retains the required combined full gate, full correction, seal and eventual
+worktree-setting restoration obligations. No SUMMARY was written here.

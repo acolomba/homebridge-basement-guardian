@@ -28,6 +28,17 @@ import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELA
 import { createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
+import {
+  accountConfig,
+  bothDevicesAt,
+  credentialsAt,
+  geminiDevice,
+  geminiWireDeviceList,
+  heartbeatPatch,
+  otherGeminiDevice,
+  rotatedCredentialsAt,
+  testConstants,
+} from './accountRuntimeSeeds.js';
 import { ACCOUNT_SHADOW_CASES, ACCOUNT_SHADOW_PARTICIPANTS, assertAccountShadowContract, exerciseAccountShadowContract } from './accountShadowContract.js';
 import {
   ARRIVAL_ANCHOR_MEMORY_CASES,
@@ -45,10 +56,8 @@ import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
 import type { MqttConnect, MqttTransport } from '../../src/cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
-import type { BgConfig } from '../../src/config.js';
-import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore, ReportedPatch } from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore } from '../../src/device/state.js';
 import type { RedactingLogger, SecretRole } from '../../src/logging.js';
-import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
@@ -140,103 +149,6 @@ const SHORT_CREDENTIAL_LIFETIME_MS = 1_000;
 // Device time and local receipt time are deliberately different, so a snapshot
 // that collapsed the two would fail the end-to-end case.
 const DEVICE_TIME = 1_700_000_000_000;
-
-function accountConfig(): BgConfig {
-  return {
-    name: 'Basement Guardian',
-    email: 'account@example.test',
-    password: 'account-password',
-    clientId: 'client-id-1',
-    pollIntervalSeconds: POLL_INTERVAL_MS / 1_000,
-    offlineConfirmationPollCount: 2,
-    ignoredFaults: [],
-  };
-}
-
-const testConstants: ProtocolConstants = {
-  apiUrl: 'https://api.example.test',
-  clientId: 'bundled-client-id',
-  auth0Url: 'https://tenant.example.test',
-  auth0Realm: 'example-realm',
-  awsRegion: 'us-east-1',
-  protocol: 'wss',
-};
-
-// The vendor deviceId reads <account-id>_<serial-number>; fixtures carry a
-// placeholder in place of the real account identifier.
-function geminiDevice(): ApiDevice {
-  return {
-    deviceId: DEVICE_ID,
-    deviceTypeId: 'wayneWaterGemini',
-    name: 'Sump System',
-    serialNumber: 'serial-1',
-    connectivity: { connected: true, timestamp: DEVICE_TIME },
-    data: { water_level: 1, primary_pump_running: false, ac_power: true },
-  };
-}
-
-// A second physical device, so a removal case can prove the final-check fetch
-// covers every pending deviceId at once rather than one call per id.
-function otherGeminiDevice(): ApiDevice {
-  return { ...geminiDevice(), deviceId: OTHER_DEVICE_ID };
-}
-
-// Both physical devices reporting the same level, which is what lets a
-// two-device case state a pump's level as either the one its own live path
-// delivered or the one the vendor's body carries, and never both.
-function bothDevicesAt(level: number): ApiDevice[] {
-  return [
-    { ...geminiDevice(), data: { ...geminiDevice().data, water_level: level } },
-    { ...otherGeminiDevice(), data: { ...otherGeminiDevice().data, water_level: level } },
-  ];
-}
-
-// The same device as the vendor sends it: the list route wraps its records under
-// a plural key and the serial number sits under `attributes`, not at the top
-// level.
-function geminiWireDeviceList(): { devices: Record<string, unknown>[] } {
-  const device = geminiDevice();
-
-  return {
-    devices: [
-      {
-        accountId: 'account-1',
-        deviceId: device.deviceId,
-        deviceTypeId: device.deviceTypeId,
-        name: device.name,
-        data: device.data,
-        attributes: { productLine: 'wayneWater', serialNumber: device.serialNumber },
-        connectivity: device.connectivity,
-      },
-    ],
-  };
-}
-
-function credentialsAt(expiresAtMs: number): AwsCredentialsResponse {
-  return {
-    endpoint: 'broker.invalid',
-    clientId: 'client-first',
-    credentials: {
-      AccessKeyId: 'test-access-key-id',
-      SecretAccessKey: 'test-secret-access-key',
-      SessionToken: 'test-session-token',
-      Expiration: new Date(expiresAtMs).toISOString(),
-    },
-  };
-}
-
-function rotatedCredentialsAt(expiresAtMs: number): AwsCredentialsResponse {
-  return {
-    endpoint: 'broker-two.invalid',
-    clientId: 'client-second',
-    credentials: {
-      AccessKeyId: 'test-next-access-key-id',
-      SecretAccessKey: 'test-next-secret-access-key',
-      SessionToken: 'test-next-session-token',
-      Expiration: new Date(expiresAtMs).toISOString(),
-    },
-  };
-}
 
 function silentLog(): Logging {
   function silent(): void {
@@ -622,12 +534,6 @@ function shadowOptionsOf(shadows: readonly ShadowRecorder[]): ShadowRuntimeOptio
   return shadow.options;
 }
 
-// One heartbeat as the shadow client routes it. Its content is beside the point:
-// arrival alone is what proves the live path is still carrying messages.
-function heartbeatPatch(): ReportedPatch {
-  return { data: { water_level: 1 }, state: undefined, version: undefined };
-}
-
 // What each push said about the one system this harness's account holds.
 //
 // The silence answer lives in the per-system map and nowhere else: the account
@@ -847,7 +753,7 @@ async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntim
   const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME };
   const log = silentLog();
   const auth = createAuthClient({
-    constants: testConstants,
+    constants: testConstants(),
     clientId: 'client-id-1',
     email: 'account@example.test',
     password: 'account-password',
@@ -859,7 +765,7 @@ async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntim
     registerSecret: () => undefined,
     log,
   });
-  const api = createCloudApi({ baseUrl: testConstants.apiUrl, auth, requestTimeoutMs: 1_000, httpFetch: (input, init) => globalThis.fetch(input, init) });
+  const api = createCloudApi({ baseUrl: testConstants().apiUrl, auth, requestTimeoutMs: 1_000, httpFetch: (input, init) => globalThis.fetch(input, init) });
   const store = createDeviceStateStore({ clock, log });
   const runtime = createAccountRuntime({
     api,
@@ -8547,7 +8453,7 @@ describe('createAccountRuntimeFromConfig', () => {
     });
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -8629,7 +8535,7 @@ describe('createAccountRuntimeFromConfig', () => {
     // act
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -8675,7 +8581,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -8774,7 +8680,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -8858,7 +8764,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const credentialRequests: number[] = [];
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME + elapsedMs },
@@ -8931,7 +8837,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -8987,7 +8893,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
@@ -9098,7 +9004,7 @@ describe('createAccountRuntimeFromConfig', () => {
 
     const runtime = createAccountRuntimeFromConfig({
       config: accountConfig(),
-      constants: testConstants,
+      constants: testConstants(),
       registry: createFamilyRegistry(),
       storagePath,
       clock: { now: () => START_TIME },
