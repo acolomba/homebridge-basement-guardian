@@ -271,16 +271,18 @@ for (const { outcome, settle } of [
   });
 }
 
-test('restores the first delay after a successful attempt resets it', () => {
+test('restores the first delay after an explicit reset', () => {
   // arrange
   const policy = createRetryPolicy(policyOptions(new AbortController().signal));
   delayAtAttempt(policy, 5);
 
   // act
   policy.reset();
+  const delayMs = policy.nextDelayMs();
+  const afterReset = { delayMs, attempt: policy.attempt };
 
   // assert
-  assert.deepStrictEqual({ delayMs: policy.nextDelayMs(), attempt: policy.attempt }, { delayMs: 500, attempt: 1 });
+  assert.deepStrictEqual(afterReset, { delayMs: 500, attempt: 1 });
 });
 
 test('runs the work once when an error and a close notification both ask for a retry', async (t) => {
