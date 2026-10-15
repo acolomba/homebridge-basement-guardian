@@ -1198,3 +1198,184 @@ The parent still owes the combined-wave full `npm run check`; focused checks
 do not complete RUN-01, which remains Pending. No SUMMARY/shared record,
 package, live vendor, hardware or private input was changed or exercised.
 Clean pre-step and actual commit evidence follow execution.
+
+CR-04-PORTS-008 committed as
+`f99a637908a693868793d1b19525ad979042ad37`, exactly the timer owner and
+continuing PORTS report. The report commit includes the pre-existing ROUND 1
+append and this cause's repair evidence; original report history is preserved.
+`cause008-prestep` ran exact `SKIP=npm-check pre-commit run --files test/runtime/timers.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md`,
+exit 0, clean before staging. `cause008-commit` retains cwd/toplevel/feature
+branch, starting HEAD, empty index and restored-production guards, exact named
+staging and ordinary foreground commit, exit 0. Normal pre-commit
+`npm run check:commit` and gitlint passed. No amend, hook bypass or failed
+commit occurred.
+
+`cause008-final-provenance` returned 0 at
+2026-10-14T23:23:12.531595–23:23:12.704973Z. It verified the exact two
+committed paths, both source/owner blobs above, no other changed paths against
+the starting HEAD, the passing check:commit hook and a clean post-commit tree.
+This final commit metadata is the only report dirt left for the parent's
+record commit. No control remains. All processes have completed; the terminal
+return releases writer/build/control/Git/report ownership. Independent full
+correction and the parent combined gate remain pending with counter 1.
+
+## Independent full PORTS correction — ROUND 2 and maintainer resolution
+
+Reviewer: `/root/phase4_ports_finish/ports_full_correction_two`, typed
+gsd-code-reviewer, fresh context. Reviewed revision:
+`f99a637908a693868793d1b19525ad979042ad37`. The parent retained the terminal
+review result and evaluated D-03 before any further action. The reviewer
+completed all eight original full files and headers, with no helper or external
+adaptation. This section records that completed result after the actual
+maintainer resolution. The reviewer did not append this report after the stop.
+Earlier counter-1 statements describe their historical handoffs. The current
+continuous correction counter is **2**.
+
+| Set | Exact stable IDs | Count |
+| --- | --- | ---: |
+| Opening | CR-04-PORTS-008 | 1 |
+| Fixed | CR-04-PORTS-008 | 1 |
+| Rejected accepted IDs | None | 0 |
+| New | CR-04-PORTS-009 | 1 |
+| Reopened | None | 0 |
+| Closing open | CR-04-PORTS-009 | 1 |
+
+Arithmetic: `1 - 1 - 0 + 1 + 0 = 1`. Opening and closing severities are each
+1 BLOCKER, 0 WARNING. IDs 001–007 remain fixed. Cause 008 independently
+distinguishes recursive timeout repetition after its repair. No fixed ID
+reopened, and no accepted ID was rejected. Cause 009 identifies the distinct
+first-deadline observation gap in the changed owner.
+
+**D-03 STOP:** ROUND 2 did not reduce the open count (1 → 1). ALL work stopped
+on the terminal result. The executor returned CHECKPOINT and released its
+leases. The reviewer made no further repository action or report append.
+No repair, build, commit or further review followed before maintainer resolution.
+The actual human maintainer then selected option **1** with response `1`.
+The parent conveyed that selection as authorization for the bounded cause-009
+repair and a complete eight-file ROUND 3 review. This permits no counter reset,
+retroactive waiver, successful seal, or override of a future stop condition.
+
+### CR-04-PORTS-009 — BLOCKER: Timeout owner loses the first deadline
+
+**Requirement:** RUN-01. **First independent observation:** ROUND 2 reviewer
+named above. **Initial/current finding location:**
+`f99a637908a693868793d1b19525ad979042ad37:test/runtime/timers.test.ts:31–44`.
+The public promise remains
+`f99a637908a693868793d1b19525ad979042ad37:src/runtime/timers.ts:26–27`.
+
+**Rule:** Unit writer central case discriminator and Assertions; unit reviewer
+central question and Classifying findings. A plausible wrong implementation
+that passes the complete owner is a test-reliability BLOCKER.
+
+**Issue:** The first case ticks 1,000 ms twice and asserts only after 2,000 ms.
+It loses the state at the first deadline. Changing only the forwarding delay
+to `delayMs * 2` violates the documented delay but passes all five cases.
+Production currently uses the correct delay. This is assertion maintenance,
+with no confirmed D-04 production defect.
+
+**Native confirmation:** `round2-timeout-late-control` used read-only in-memory
+copies of the freshly compiled source and complete owner. The source copy
+changed only `setTimeout(handler, delayMs)` to
+`setTimeout(handler, delayMs * 2)`. Raw exit 0, all five cases passed, zero
+fail/cancel/skip/todo, at 2026-10-14T23:26:19.646331–23:26:19.880175Z.
+Exact argv, input hashes, replacement, complete streams and unchanged-file
+provenance remain in that native record. No repository control was committed.
+
+ROUND 2 native evidence remains under
+`/private/tmp/guardian-04-ports-fix-native/round2-*.json`, with exact `.stdout`
+and `.stderr` streams. Records `typecheck`, `lint`, `format`, `build`, all four
+`owner-<pair>` and all four `direct-<pair>` commands returned 0. Tool identity
+and provenance are in `round2-tools-controls`. The thirteen native checks have
+identical before/after path/blob/SHA-256 manifests, binary dirty diff and
+untracked bytes. All eight repair commits were ancestors of reviewed HEAD.
+Owners had zero authored store cases (one passing native file subtest), two
+clock cases, two monotonic cases and five timer cases. Executable direct pairs
+had isolated 100% line/function/branch acceptance; store acceptance remains
+declaration-only. These passes did not resolve the deadline gap. Full eight-file
+review was complete, with no helper/adaptation or production defect reported.
+
+## CR-04-PORTS-009 repair — retain both deadline observations
+
+Fixer: `/root/phase4_ports_finish/ports_timeout_deadlines_fix`, typed
+gsd-code-fixer, fresh context under the maintainer's bounded continuation.
+Read complete AGENTS, all five rulebooks, owning plan, context, research,
+patterns, protocol, report, preceding summary and complete timer pair before
+editing. The canonical execute-mvp-tdd gate excludes this test-only maintenance
+of correct production from behavior-adding work. Configured skill injection
+does not replace the complete books.
+
+The first case now copies the complete callback log after 1,000 ms into
+`atDeadline` and after another 1,000 ms into `afterAnotherDelay`. One whole
+observation compares both with independent literal logs:
+`{ atDeadline: ['ran'], afterAnotherDelay: ['ran'] }`. Context-owned timers,
+separate AAA phases, headers, imports and the other four cases remain intact.
+The modified section and complete source/owner were re-read after restoration.
+Actual platform composition and control scheduling/cancellation callers were
+read. No name, signature, member, alias, visibility or mutability changed, so
+conditional two-project contract-change/deletion pretraces were not invoked.
+
+Final cause paths: `test/runtime/timers.test.ts` and this report. Temporary
+controls also touched the owned `src/runtime/timers.ts`, then restored its
+exact bytes. This is three total touched paths, within the five-path budget.
+No helper, source adaptation or new evidence JSON was created.
+
+### Separate controls and exact restoration
+
+Two named plausible wrong public behaviors discriminate the independent
+observations. Strict compiler and lint cannot establish either timing promise:
+
+| Control | Native intended assertion failure | Result |
+| --- | --- | --- |
+| First firing delayed to twice the supplied delay | Expected first-deadline `['ran']`, actual `[]`; second log remains `['ran']` | `cause009-late-owner`, raw exit 1, 4 pass/1 fail/0 cancel/skip/todo |
+| Timeout recursively re-arms after calling its handler | First log remains `['ran']`; expected later `['ran']`, actual `['ran', 'ran']` | `cause009-repeat-owner`, raw exit 1, 4 pass/1 fail/0 cancel/skip/todo |
+
+Both failures are `ERR_ASSERTION`/`AssertionError`/`deepStrictEqual` in the
+named first case, after successful strict typecheck, exact-file no-cache lint
+and fresh build. No import/setup/compile failure is counted. The late control
+ran at 2026-10-15T00:32:58.897576–00:32:59.145392Z; recursive control ran
+at 00:33:17.161574–00:33:17.409300Z. Complete untouched TAP and separate stderr
+are retained. After EACH control, an independent complete byte comparison with
+`git show f99a637908a693868793d1b19525ad979042ad37:src/runtime/timers.ts`
+returned 0. Restored production blob is
+`7fb32bb219bc4f20cff82e13bec518afc591b38f`. No control enters the index or Git.
+
+### Native verification and location
+
+All checks ran in the existing authorized feature checkout, not a temporary
+worktree. The persisted dispatch sentinel remains phase 04, plan 04-02,
+`isolation: none`. HEAD through focused verification is
+`f99a637908a693868793d1b19525ad979042ad37`. The existing plan-head ledger
+still records `8420c63b3dab421a1c002197c9e2bb15715097af`; it was read, never
+overwritten. Observed Node `v26.11.1`, npm `11.20.0`.
+
+The read-before-reuse capture runner retains exact argv/cwd, UTC start/end and
+duration, raw exit, full stdout and separate stderr, before/after HEAD/branch,
+all tracked/nonignored untracked path/blob/SHA-256 manifests, binary dirty diff
+and complete untracked bytes. Records and exact streams use
+`/private/tmp/guardian-04-ports-fix-native/cause009-<label>.json`, `.stdout`
+and `.stderr`. No unsuccessful attempt was discarded.
+
+| Label | Exact command / observation | Raw exit |
+| --- | --- | ---: |
+| initial | `node -e` guards HEAD/branch/index, original plan ledger and tool/blob identities | 0 |
+| guard | `node_modules/.bin/fallow guard src/runtime/timers.ts test/runtime/timers.test.ts .planning/phases/04-runtime-conformance/04-PORTS-REVIEW.md --format json --quiet --explain` | 0 |
+| late-typecheck, repeat-typecheck | `npm run typecheck`; both strict projects accept each control | 0 each |
+| late-lint, repeat-lint | `node_modules/.bin/eslint --max-warnings=0 src/runtime/timers.ts test/runtime/timers.test.ts` | 0 each |
+| late-build, repeat-build | `npm run build:test` | 0 each |
+| late-owner, repeat-owner | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js`; intended failures described above | 1 each |
+| late-restored, repeat-restored | Complete independent byte comparison with original Git source | 0 each |
+| build | `npm run build:test`; fresh restored production | 0 |
+| owner | `node --test --test-reporter=tap dist-test/test/runtime/timers.test.js`; 5 pass, zero fail/cancel/skip/todo | 0 |
+| direct | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts`; isolated 100% lines/functions/branches | 0 |
+| audit | `node_modules/.bin/fallow audit --base 6f475a0db1698847ed7a1c7238ccb461dfdb8bda --format json --quiet --explain`; kind audit, verdict pass | 0 |
+
+The rebuilt GREEN owner completed at 2026-10-15T00:33:31.119926Z and the direct
+selector at 00:33:34.950108Z. Selected checks do not refresh merged
+`coverage/direct.lcov`. No new compiled/merged denominator or full-gate result
+is claimed. This repair awaits independent complete ROUND 3 confirmation.
+The last independent open set remains `{CR-04-PORTS-009}`, 1 BLOCKER, and
+the continuous correction counter remains **2**. No clean batch is claimed.
+The parent owns the next full eight-file review and current combined-wave
+`npm run check`. RUN-01 stays Pending. WINDOWS 46/47 remain OPEN/unwaived.
+No shared state, SUMMARY, central findings, package, live vendor, hardware or
+private input was changed. Clean pre-step and actual commit evidence follow.

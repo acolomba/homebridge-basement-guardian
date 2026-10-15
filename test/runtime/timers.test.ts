@@ -38,10 +38,12 @@ test('runs a scheduled handler only once after its delay elapses', (t) => {
     runs.push('ran');
   }, 1_000);
   t.mock.timers.tick(1_000);
+  const atDeadline = [...runs];
   t.mock.timers.tick(1_000);
+  const afterAnotherDelay = [...runs];
 
   // assert
-  assert.deepStrictEqual(runs, ['ran']);
+  assert.deepStrictEqual({ atDeadline, afterAnotherDelay }, { atDeadline: ['ran'], afterAnotherDelay: ['ran'] });
 });
 
 test('runs no scheduled handler before its delay elapses', (t) => {
