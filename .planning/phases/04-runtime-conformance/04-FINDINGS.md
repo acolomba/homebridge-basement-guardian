@@ -637,3 +637,36 @@ The remaining original 09 causes are 004, 005, 009, 010, 011, 014, 016, 017 and 
 Full current ACCOUNT correction includes whole source/owner and every adapted pair/helper listed above.
 Original 29 IDs/counter 0 remain continuous; no independent ACCOUNT correction has occurred.
 RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit/handoff.
+
+
+## Post-wave fixture interruption and repaired combined gate
+
+The generated state.json timestamp changed with state.advance-plan; the parent initially omitted that generated path from the pre-command guard and first metadata commit/prestep.
+WINDOWS 53 openly records this ordering omission; subsequent exact checks and normal commit ce67f4b supply no historical pre-mutation proof.
+The JSON was retained and checked separately. WINDOWS 46-53 remain OPEN and unwaived.
+
+The required refreshed full gate at ce67f4b completed static checks and all 104/1156 Cucumber checks, then its isolated platform child stalled.
+The parent sent controlled SIGTERM after about155seconds; native full gate exit1 remains at /private/tmp/guardian-phase4-wave10-final-state-gate.json and full-check.log with interruption.json.
+This is interrupted file-level failure, not assertion-based genuine production RED.
+Twelve naturally repeated owner runs passed71/71; controlled retry reproduced case17cleanup stall after exactly16passes.
+Installed Node recursive cleanup lazily captures setTimeout; initial cleanup under mocked timers can retain an inactive mocked retry clock.
+The precise original filesystem error was not recorded, so the connection to that original interruption remains inferred.
+Native investigation: /private/tmp/guardian-04-platform-hang-investigation/.
+
+Parent bounded third-task declaration815fd49 preceded fixture edits; fresh plan review PASS0blockers0warnings.
+Follow-up repair e2b884e resets only the current test context timers before recursive storage removal in expectStoragePath teardown.
+The full owner is byte-exact after reversing that sole line. Every case/assertion, all44production files and both immutable14+2 evidence histories remain unchanged.
+Controlled retry and ordinary71-test owner pass, isolated coverage100% at504lines22functions57branches, uncachedlint/audit/cleanprestep/normalhooks pass.
+Original summary frontmatter and historical measurements remain exact; append-only follow-up records task03 separately.
+No independent correction or independently fixed ID reopening occurred; ACCOUNT original29IDs/counter0 continue.
+Native repair: /private/tmp/guardian-04-platform-fixture-isolation/terminal.json.
+
+Full npm run check then passed0 at clean e2b884e597295fa28d1b84c1aaeb2148abcea925.
+Node v26.11.1; UTC 2026-10-15T18:37:00.006080+00:00 to18:37:35.280100+00:00.
+Six static checks,104 Cucumber scenarios,1156steps and all43isolatedpairs passed.
+Native metadata/output: /private/tmp/guardian-phase4-wave10-fixture-repaired-gate.json and full-check.log.
+Generic amended12summary verification reports self_check failed: installed verifier scans from the first Self-Check heading through all later appendices and matches historical failure language.
+Its actual artifact and commit checks pass. The original Self-Check remains PASSED, and native follow-up preservation verifies the declared inputs.
+Parent inspected bin/lib/verify.cjs:235-242; this is a documented parser false positive, not an actual current self-check or full-gate failure.
+No tool, historical evidence or summary wording was changed to suppress it. Current plan09 is released after the actual successful parent full gate.
+RUN-01 remains Pending; all open process limits and the run-scoped worktree restoration obligation remain.
