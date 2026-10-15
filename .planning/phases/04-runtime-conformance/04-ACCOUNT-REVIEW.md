@@ -1213,3 +1213,111 @@ separate implementation disposition. The other 27 original IDs remain OPEN:
 full ACCOUNT correction after all 04-08/09 causes. The initial 29 findings and
 their original observations remain intact; RUN-01 remains Pending. No finding
 counter, D-03 stop condition or historical WINDOWS exception is reset or waived.
+
+## CR-04-ACCOUNT-001: complete source and owner headers
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_001_headers`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+This appendix preserves the complete initial review and all earlier repair
+appendices. The original 29 stable finding IDs and continuous ACCOUNT
+correction counter **0** remain unchanged. No partial clean verdict is claimed.
+
+Both complete headers now follow D-01 and the approved PROC-03 form:
+SPDX MIT first, one blank line, a separate copyright JSDoc for
+Copyright (c) 2026 Alessandro Colomba, one blank line, a separate purpose
+`@fileoverview` JSDoc, one blank line, then imports. The source coordinates
+account monitoring, credential rotation and commands. Its owner verifies
+account monitoring, lifecycle ownership and commands. Both files are original
+project work; the source's MIT classification is retained, with no template
+or Apache boundary added to the owner.
+
+The repair changes exactly three repository paths:
+
+- `src/runtime/accountRuntime.ts`, header at lines 1–10;
+- `test/runtime/accountRuntime.test.ts`, header at lines 1–10;
+- `.planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md`, this appendix.
+
+Pre-edit HEAD was `03df99257d871a6c2c959363ac99ed078cdd63bd`, on
+`features/code-review-sweep`, with empty index and clean tracked/untracked
+status. Complete AGENTS, all five complete project books, 04-07-PLAN,
+the complete review protocol including current isolation/maintainer notes,
+and the complete ACCOUNT report were read before the repository edits.
+Both actual complete headers and adjacent imports were inspected, along with
+the existing approved source/owner header pattern. No function, signature,
+alias, field, caller or runtime contract changes, so D-06 impact queries are
+not triggered. The implementation and owner bodies beginning at their first
+imports are byte-identical to their saved pre-edit bodies. This also preserves
+every original 024/025 active regression, assertion and native-history reference.
+
+### Verification location and immutable evidence
+
+All checks ran in the existing linked `features/code-review-sweep` checkout,
+with `workflow.use_worktrees=false`. No new checkout, branch or recovery
+sentinel was created. Observed versions: Node v26.11.1, npm 11.20.0,
+TypeScript 6.0.3 and Fallow 3.27.0. No full `npm run check` ran here;
+the parent owns the combined wave and later phase gates.
+
+Native directory: `/private/tmp/guardian-04-account-001-headers/`.
+Each command has separate complete `.stdout`, `.stderr` and `.json` records
+with exact executable/argv, cwd, pre-command HEAD, versions, raw child exit,
+and real UTC start/end. `before.json` records the exact initial empty diff,
+index, untracked set and 694 tracked path/blob/SHA-256 entries. Saved complete
+source/owner/report bytes support exact comparison. `provenance.json` retains
+the complete repair diff, header/body comparisons, original report-prefix
+comparison, unchanged evidence identity and native LCOV metrics.
+
+| Native record | Actual command/scope and raw result |
+| --- | --- |
+| `guard.json` | Installed Fallow guard on exactly the three authorized paths before edits; exit 0, no configured zones/rule packs. |
+| `snapshot.json` | Initial branch/HEAD/index/clean-status assertions, tracked manifest and exact pre-edit bytes; exit 0. |
+| `build.json` | `npm run build:test`; exit 0, 2026-10-15T05:37:26.300Z–05:37:29.335Z. |
+| `owner.json` | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`; exit 0, 136 pass, zero fail/cancel/skip/todo. |
+| `direct.json` | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; exit 0, exact isolated selector including fresh build. |
+| `native-coverage.json` | Complete compiled owner with all three 100% thresholds and exact-source include; exit 0, native compiled 994/994 lines, 57/57 functions, 181/181 branches. Full argv and LCOV retained. |
+| `lint.json` | Exact source/owner ESLint, no cache, max warnings 0; exit 0. |
+| `audit.json` | `node_modules/.bin/fallow audit --base e6f49a59671c13a20b696b7f46e38406a36aeec0 --format json --quiet --explain`; exit 0, verdict pass. |
+| `provenance-1.json` | Exact approved headers, unchanged entire source/owner bodies and original report prefix, unchanged RED blob, no unrelated tracked-input changes; exit 0. |
+| `pre-step-1.json` | Exact `SKIP=npm-check pre-commit run --files` on all three changed paths; exit 0, clean, no formatter changes, 2026-10-15T05:38:54.094Z–05:38:57.006Z. |
+| `provenance-2.json` | Repeated complete byte/provenance check after the clean pre-step; exit 0, exact three changed paths, empty index/untracked set. |
+| `pre-step-2.json` | Repeated exact three-path clean pre-step after recording results; exit 0, no formatter changes. |
+| `assert-before-stage.json` | Exact feature branch, expected HEAD, empty index and three-path dirty scope; exit 0. |
+| `stage-1.json` | Initial sandbox staging; exit 128, linked-checkout index.lock creation denied. No commit or hook ran. |
+
+The source blob changes only its header, from
+`767f8ff14df4220134281288d743697ece3df9f6` to
+`6e6795bb2720ea38dd46d01393d82692c636de16`.
+The owner blob changes only its header, from
+`9d146246782548769812b926fb9a627d45bbfb5c` to
+`cd258df8167e85daa7da8e2079c4f85d8e9894c9`.
+The entire RED JSON, including all six current/archive records and their
+complete untouched streams, retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`.
+The current native compiled line denominator includes the added header;
+selected pair checks do not refresh merged all-pair source-map LCOV.
+No new RED evidence, mutation control, install, live account or hardware run
+is introduced by this header cause.
+
+### Commit and remaining scope
+
+The repair commit is the Git object introducing this appendix and both
+header changes, titled `fix: complete account runtime file headers`.
+Resolve its actual hash and exact three paths from Git. The exact-file clean
+pre-step, branch/HEAD/index assertions, stage attempts and normal foreground
+commit have separate native records. Only their terminal native results
+certify completion; the implementing agent returns those results to the parent.
+No amend, hook bypass, stash, rebase or history rewrite is authorized.
+
+The initial staging failure is a filesystem-permission result, not a source,
+test or hook failure. Its complete native stderr is retained. The retry uses
+the authorized filesystem permission only after another exact-file clean
+pre-step. Separate `pre-step-3`, `stage-2`, staged assertions and foreground
+commit records retain the actual terminal results; no prospective pass is
+implied here.
+
+Only original 001 is implemented by this cause. Original 024 and 025 retain
+their separate implementation dispositions pending independent full ACCOUNT
+correction. The other 26 original IDs remain OPEN: 002–023 and 026–029.
+No ACCOUNT correction occurs until every 04-08/09 initial cause is finished.
+RUN-01 remains Pending, and D-03 stop conditions and historical WINDOWS 46/47
+remain unchanged and unwaived.

@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Coordinates account monitoring, credential rotation and commands.
+ */
+
 import timers from 'node:timers/promises';
 
 import { createReconciliation } from '../accessories/reconciliation.js';
