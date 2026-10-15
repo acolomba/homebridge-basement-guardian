@@ -18,7 +18,12 @@ import { mock, verify, when } from 'strong-mock';
 
 import { ARRIVAL_ANCHOR_FILENAME, createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 
-import { ARRIVAL_ANCHOR_MEMORY_CASES, ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS, assertArrivalAnchorMemoryContract } from './arrivalAnchorMemoryContract.js';
+import {
+  ARRIVAL_ANCHOR_MEMORY_CASES,
+  ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
+  assertArrivalAnchorMemoryContract,
+  exerciseArrivalAnchorMemoryContract,
+} from './arrivalAnchorMemoryContract.js';
 
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { LogLevel, Logging } from 'homebridge';
@@ -88,12 +93,13 @@ for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
       warn: () => undefined,
       log: () => undefined,
     });
-
-    // act
     const anchors = createArrivalAnchors({ storagePath, log });
 
+    // act
+    const observation = exerciseArrivalAnchorMemoryContract(anchors, contractCase);
+
     // assert
-    assertArrivalAnchorMemoryContract(anchors, contractCase);
+    assertArrivalAnchorMemoryContract(observation, contractCase);
   });
 }
 

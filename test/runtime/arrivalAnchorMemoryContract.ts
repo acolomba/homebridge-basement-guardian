@@ -36,68 +36,82 @@ export const ARRIVAL_ANCHOR_MEMORY_CASES = [
   'keeps devices independent',
 ] as const;
 
-/** Asserts one consumed-memory behavior directly, so a broken participant throws. */
-export function assertArrivalAnchorMemoryContract(
+/** Captures both device lookups at one point in a memory scenario. */
+export interface ArrivalAnchorMemoryObservation {
+  anchor: number | undefined;
+  otherAnchor: number | undefined;
+}
+
+/** Captures both devices before and after one device's anchor changes. */
+export interface ArrivalAnchorMemoryTransition {
+  beforeOverwrite: ArrivalAnchorMemoryObservation;
+  afterOverwrite: ArrivalAnchorMemoryObservation;
+}
+
+/** Exercises one consumed-memory behavior and captures its complete observations. */
+export function exerciseArrivalAnchorMemoryContract(
   anchors: Pick<ArrivalAnchors, 'get' | 'record'>,
+  contractCase: (typeof ARRIVAL_ANCHOR_MEMORY_CASES)[number],
+): ArrivalAnchorMemoryObservation | ArrivalAnchorMemoryTransition {
+  if (contractCase === 'returns missing anchors') {
+    return { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  }
+
+  if (contractCase === 'retains a zero anchor') {
+    anchors.record('placeholder-device', 0);
+
+    return { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  }
+
+  if (contractCase === 'retains a finite anchor') {
+    anchors.record('placeholder-device', 1_700_000_000_000);
+
+    return { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  }
+
+  if (contractCase === 'overwrites an anchor') {
+    anchors.record('placeholder-device', 1_700_000_000_000);
+    anchors.record('placeholder-device', 1_700_000_898_000);
+
+    return { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  }
+
+  anchors.record('placeholder-device', 1_700_000_000_000);
+  anchors.record('placeholder-other-device', 1_700_000_898_000);
+  const beforeOverwrite = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  anchors.record('placeholder-device', 0);
+  const afterOverwrite = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+
+  return { beforeOverwrite, afterOverwrite };
+}
+
+/** Asserts captured memory observations against independent literal expectations. */
+export function assertArrivalAnchorMemoryContract(
+  observation: ArrivalAnchorMemoryObservation | ArrivalAnchorMemoryTransition,
   contractCase: (typeof ARRIVAL_ANCHOR_MEMORY_CASES)[number],
 ): void {
   if (contractCase === 'returns missing anchors') {
-    // act
-    const observation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-
-    // assert
     assert.deepStrictEqual(observation, { anchor: undefined, otherAnchor: undefined });
     return;
   }
 
   if (contractCase === 'retains a zero anchor') {
-    // act
-    anchors.record('placeholder-device', 0);
-    const observation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-
-    // assert
     assert.deepStrictEqual(observation, { anchor: 0, otherAnchor: undefined });
     return;
   }
 
   if (contractCase === 'retains a finite anchor') {
-    // act
-    anchors.record('placeholder-device', 1_700_000_000_000);
-    const observation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-
-    // assert
     assert.deepStrictEqual(observation, { anchor: 1_700_000_000_000, otherAnchor: undefined });
     return;
   }
 
   if (contractCase === 'overwrites an anchor') {
-    // arrange
-    anchors.record('placeholder-device', 1_700_000_000_000);
-
-    // act
-    anchors.record('placeholder-device', 1_700_000_898_000);
-    const observation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-
-    // assert
     assert.deepStrictEqual(observation, { anchor: 1_700_000_898_000, otherAnchor: undefined });
     return;
   }
 
-  // arrange
-  anchors.record('placeholder-device', 1_700_000_000_000);
-  anchors.record('placeholder-other-device', 1_700_000_898_000);
-
-  // act
-  const beforeOverwrite = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-  anchors.record('placeholder-device', 0);
-  const afterOverwrite = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
-
-  // assert
-  assert.deepStrictEqual(
-    { beforeOverwrite, afterOverwrite },
-    {
-      beforeOverwrite: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
-      afterOverwrite: { anchor: 0, otherAnchor: 1_700_000_898_000 },
-    },
-  );
+  assert.deepStrictEqual(observation, {
+    beforeOverwrite: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
+    afterOverwrite: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+  });
 }

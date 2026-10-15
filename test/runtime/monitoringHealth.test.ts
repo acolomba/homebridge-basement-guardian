@@ -13,7 +13,12 @@ import { test } from 'node:test';
 
 import { createMonitoringHealth, HEARTBEAT_INTERVAL_MS, MISSED_HEARTBEATS_BEFORE_SILENT, REST_FAILURE_THRESHOLD } from '../../src/runtime/monitoringHealth.js';
 
-import { ARRIVAL_ANCHOR_MEMORY_CASES, ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS, assertArrivalAnchorMemoryContract } from './arrivalAnchorMemoryContract.js';
+import {
+  ARRIVAL_ANCHOR_MEMORY_CASES,
+  ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
+  assertArrivalAnchorMemoryContract,
+  exerciseArrivalAnchorMemoryContract,
+} from './arrivalAnchorMemoryContract.js';
 
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
@@ -145,10 +150,10 @@ for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
     const anchors = recordingAnchors();
 
     // act
-    assertArrivalAnchorMemoryContract(anchors, contractCase);
+    const observation = exerciseArrivalAnchorMemoryContract(anchors, contractCase);
 
     // assert
-    assert.deepStrictEqual(anchors.get('placeholder-missing-device'), undefined);
+    assertArrivalAnchorMemoryContract(observation, contractCase);
   });
 }
 
@@ -166,10 +171,13 @@ test('rejects an arrival-anchor participant that loses a recorded zero', () => {
     },
   };
 
+  // act
+  const observation = exerciseArrivalAnchorMemoryContract(anchors, 'retains a zero anchor');
+
   // act & assert
   assert.throws(
     () => {
-      assertArrivalAnchorMemoryContract(anchors, 'retains a zero anchor');
+      assertArrivalAnchorMemoryContract(observation, 'retains a zero anchor');
     },
     (error: unknown) => {
       assert.ok(error instanceof assert.AssertionError);

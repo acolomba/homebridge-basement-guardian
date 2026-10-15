@@ -20,8 +20,8 @@ correction_counter: 1
 source_revision: 0ad981c393536624fa5353e42f871f6db7b1e753
 first_independent_observer: /root/phase4_trust_first/trust_initial_review
 production_bugs: 1
-applied_repairs: 16
-applied_pending_correction_ids: [CR-04-TRUST-016]
+applied_repairs: 17
+applied_pending_correction_ids: [CR-04-TRUST-016, CR-04-TRUST-017]
 arrival_applied_ids: [CR-04-TRUST-001, CR-04-TRUST-002, CR-04-TRUST-003, CR-04-TRUST-004, CR-04-TRUST-005, CR-04-TRUST-006, CR-04-TRUST-007, CR-04-TRUST-008]
 partially_applied_ids: []
 open_findings: 2
@@ -2088,3 +2088,153 @@ current open set stays 016/017, counter 1, with no rejected/reopened finding or
 new correction. D-03 remains untriggered. High T-04-21 stays in the actual
 inventory with T-04-01 through T-04-20 and reserved T-04-SC; later security/seal
 judgments, WINDOWS 46/47 and RUN-01 remain pending with their existing owners.
+
+## 017 follow-up: captured actions and pure assertions, pending full correction
+
+Fixer `gsd-code-fixer`, identity
+`/root/phase4_trust_finish/trust017_capture_repair`, applies only cause
+CR-04-TRUST-017 under original amended task 04-06-03. Entry HEAD is
+`af644a397567f833f106c5c7f93c18ae513c153e`. The parent grants the exclusive
+writer/build/Git lease in the existing feature checkout. The actual 016 fix
+commit is `9694a45f1c8f092367aa775f2585945683ba1742`; its silent logger bodies
+remain unchanged. Original 001–015 remain independently fixed. Both 016/017
+remain formally open pending full correction round 2, retaining counter 1.
+
+Before editing, the fixer read AGENTS, all five complete TypeScript/verification
+books, both amended plans, CONTEXT, RESEARCH, PATTERNS, REVIEW-PROTOCOL,
+the continuing report, 04-05 SUMMARY, FINDINGS, STATE, REQUIREMENTS, canonical
+decisions and execute-plan workflow. Both complete TRUST pairs, the entire
+helper, its two actual owner callers and the private negative control were read.
+The documented role opt-out is active: workflow.use_worktrees=false. The
+persisted sentinel names phase 04, plan 04-06 and isolation none. No additional
+worktree, branch or recovery sentinel is created. All verification runs in the
+**existing main checkout**, branch features/code-review-sweep, repository root
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+
+### Refreshed exact signature evidence and bounded maintainer exception
+
+The actual maintainer option-1 exception was committed in `af644a3` before
+this repair. It applies only to the captured-observation signature of
+test/runtime/arrivalAnchorMemoryContract.ts:assertArrivalAnchorMemoryContract.
+After reading live Fallow help, the fixer refreshed both exact impact queries
+at unchanged entry HEAD, using one --type-aware-project per run and
+--type-aware-require complete --format json --quiet --explain.
+
+| Native record | Selected project | Raw exit / exact result |
+| --- | --- | --- |
+| impact-production | tsconfig.json | 1; unavailable, completeness unavailable, omission no-project |
+| impact-test | tsconfig.test.json | 0; complete, completeness complete; both existing owners are direct consumers and targeted tests |
+| project-scope | Both installed TypeScript programs | 0; TypeScript 6.0.3; full member lists retained, helper excluded from production and included in tests |
+
+The production result remains **unmet completeness evidence**, never a passing
+trace or deletion authorization. Complete test impact plus installed verified
+production exclusion supplies the explicitly permitted evidence for this one
+signature. Earlier failed scope proof remains intact under
+`/private/tmp/guardian-04-trust-followups/017-{impact-production,impact-test,project-scope}.json`.
+No other exception, compiler configuration change or production edit follows.
+The exact four-path Fallow guard returned 0 before the first repository edit;
+no configured boundary zones or rule packs were measured.
+
+### Applied repair and preserved observations
+
+Rollback inventory is exactly the existing shared contract, both existing
+owners and this report. The parent's previously committed plan amendment is
+the fifth cause path. No sixth path or new repository helper was added.
+The same-file exerciseArrivalAnchorMemoryContract accepts the actual consumed
+Pick<ArrivalAnchors, 'get' | 'record'> port, performs all records and captures
+whole reads under each owner's act marker. The same assertion function accepts
+those captured observations under assert and performs no adapter operations.
+Two documented observation interfaces express complete readbacks and the
+two-device before/after transition. Required undefined fields preserve the
+whole missing-value observation rather than making keys optional.
+
+All five original literal expectations remain exact: missing keys, zero,
+finite timestamp, overwrite and distinct-device independence before/after
+replacing one device with zero. The typed participant inventory and fresh
+real/fake instance for every case remain unchanged. The real owner retains
+case-owned temporary storage and cleanup registered before acting. The
+monitoring owner no longer pads assert with an unrelated missing-key read.
+
+The private zero-losing participant is exercised in act. The SAME direct pure
+assertion then runs inside assert.throws, under the combined throwing phase.
+The owner independently checks AssertionError and the complete structured
+fields: actual { anchor: undefined, otherAnchor: undefined }, expected
+{ anchor: 0, otherAnchor: undefined }, operator 'deepStrictEqual'. A separately
+recorded compiled-helper probe captures those exact fields and class. Both the
+whole owner and the uniquely named negative-control case pass. No production
+mutation, failing code commit or genuine RED history is created for 017.
+
+012 continues to establish only actual get/record memory agreement. Primitive
+keys/numbers have no mutable alias; this port has no enumeration or deletion.
+Disk/JSON validation, durable bytes and restore/persist behavior remain owned
+by the real adapter's disk cases. No fake full-disk equivalence is claimed.
+Exact parsed declarations preserve RecordingAnchors including stored,
+recordingAnchors, healthWithAMessageAtStart, healthWithTwoAdmittedDevices and
+anchorsThatStoreNothing against a4246b9, and the complete silent recordingLog
+and storeOver declarations against 9694a45. Native temporaryPath, both
+production blobs, the entire active positive/negative overflow block and
+immutable RED blob cac1f810efb536ba384c05bca9396604ccd72d6c remain unchanged.
+Source 23a2511 -> evidence-only 4544c71 -> GREEN 06ef961 ancestry and unchanged
+production through evidence are independently confirmed. Every earlier report
+body paragraph remains an exact byte prefix; historical failures and recursive
+classifier histories are preserved.
+
+### Native verification and remaining ownership
+
+Every JSON in `/private/tmp/guardian-04-trust017-capture/` retains exact argv,
+cwd, UTC start/end, raw child exit, Node/npm, before/after HEAD, all five TRUST
+blobs plus report/RED/plan blobs, complete tracked/staged diffs and untracked
+bytes. Untouched stdout and stderr are separate files. Recorder and supporting
+programs are retained under `/private/tmp/guardian-trust017-*`. Node is
+**v26.11.1**, npm **11.20.0**. No input or tool upgrade occurred.
+
+| Native record | Actual scope | Raw result |
+| --- | --- | --- |
+| typecheck-final | npm run typecheck, both strict compiler projects | 0 |
+| lint-final | Complete three changed TS files, ESLint --max-warnings=0 | 0 |
+| format-final | Complete three changed TS files, Prettier check | 0 |
+| build | Fresh npm run build:test before compiled owners | 0 |
+| owners | Both whole compiled owners, native TAP | 0; 56 pass, 0 fail/cancel/skip/todo; 18 arrival and 38 monitoring |
+| negative-control | Exact zero-loss title, native TAP | 0; 1 pass, 0 fail/cancel/skip/todo |
+| negative-fields | Same compiled exercise/assert exports, class and whole fields | 0; intended AssertionError fields captured |
+| arrival-direct | Isolated src/runtime/arrivalAnchors.ts + mirrored owner | 0; 100% lines/functions/branches |
+| monitoring-direct | Isolated src/runtime/monitoringHealth.ts + mirrored owner | 0; 100% lines/functions/branches |
+| identity-final | Native TypeScript-parser/Git preservation audit | 0; TRUST017_CAPTURE_IDENTITY_OK |
+| audit | Fallow audit --base 23a2511ac6deb26869db8d3c44916623a27ec997 --format json --quiet --explain | 0; verdict pass, no findings |
+
+Owners ran 2026-10-15T04:29:56.259131Z–04:29:56.551759Z. Arrival direct ran
+04:30:34.071452Z–04:30:37.428150Z; monitoring direct ran
+04:30:37.966477Z–04:30:41.302336Z. Direct selectors enforce complete matching
+isolated LCOV and delete temporary pair reports. No numerical denominator,
+declaration exception or merged all-pair coverage refresh is inferred.
+
+The initial format check returned 1 for assertion wrapping; formatter-only
+changes were followed by passing final checks. The first temporary identity
+program returned 1 because its top-level lookup did not handle variable
+statements; the corrected installed-parser lookup returned 0. Both original
+failed streams remain retained. The current audit passed directly; earlier
+raw-2 sandbox audit attempts and authorized retries remain historical failures
+and successes in their original records, without inventing a new retry here.
+The exact four-path clean pre-step, asserted stage and ordinary foreground
+commit follow in native prestep/stage/commit records. Normal staged checks must
+select all 43 pairs because shared support changed; no future hook or commit
+hash is claimed by this pre-commit report.
+
+017 is applied pending its normal four-path cause commit and full independent
+correction. Applied repairs total 17; independently fixed remains 15. The
+current formal open set is exactly 016/017, two warnings; correction counter 1
+and historical arithmetic 15 - 15 + 2 = 2 remain unchanged. No new/reopened/
+rejected ID or counter reset is claimed. Full five-file correction and immediate
+D-03 stop evaluation still belong to the parent, before further work. The
+parent also owns the fresh full wave-six npm run check and later config restore.
+High T-04-21 remains in the actual inventory with T-04-01 through T-04-20 and
+reserved T-04-SC. Security/seal judgments, WINDOWS 46/47 and RUN-01 remain
+pending. No shared record, SUMMARY, production/configuration change, private
+fixture redesign, live/vendor/hardware/private input or installation occurred.
+
+The exact four-path prestep returned clean 0 before stage, with no formatter
+changes. The first stage attempt returned native raw 128: Git could not create
+the linked-worktree index.lock outside the writable sandbox. It staged no file.
+That failure remains in stage.json and its untouched stderr. A fresh exact
+clean pre-step precedes the routine authorized metadata retry; normal hooks
+remain required. No rejected automatic approval or hook bypass is inferred.
