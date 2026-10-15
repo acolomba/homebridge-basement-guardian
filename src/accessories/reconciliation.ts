@@ -41,6 +41,8 @@ export interface Reconciliation {
    * poll without extra state.
    */
   observe(deviceIds: readonly string[]): readonly string[];
+  /** Records `deviceId` as present and eligible for future absence confirmation without changing other device counts. */
+  present(deviceId: string): void;
   /** Stops tracking `deviceId`, as if this module had never seen it. */
   forget(deviceId: string): void;
 }
@@ -99,6 +101,10 @@ export function createReconciliation(options: ReconciliationOptions): Reconcilia
       }
 
       return confirmedAbsent;
+    },
+
+    present(deviceId: string): void {
+      absenceCounts.set(deviceId, 0);
     },
 
     forget(deviceId: string): void {

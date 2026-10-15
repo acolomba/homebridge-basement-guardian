@@ -3301,3 +3301,136 @@ No security-relevant surface outside the existing threat model is introduced.
 RUN-01 remains Pending. D-03, original IDs/counter and historical open limits remain.
 Plans, shared records, summaries, configuration and unrelated code stay unchanged.
 The parent retains full-gate and final worktree-setting restoration obligations.
+
+## Original 021 dependency: targeted reconciliation presence
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_021_reconciliation_present`, on 2026-10-15.
+Disposition: **dependency implemented; original 021 remains OPEN for runtime integration**.
+The complete earlier report remains an exact byte prefix.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. No independent correction or closure occurs.
+
+### Minimum operation and public owner
+
+The documented `Reconciliation.present(deviceId): void` records presence by
+setting only that physical device's absence count to zero.
+It retains eligibility for later absence confirmation and admits a newly present ID.
+It does not advance or reset any other device's count.
+The complete `observe` and `forget` implementations remain byte-identical.
+The confirmation threshold, repeated confirmation, logging and caller-owned
+trustworthiness policy remain unchanged. No full inventory is replayed.
+The runtime still calls `forget` for final-check reappearance; its separate
+declared integration must call `present` for that confirmed candidate only.
+Successful removal continues to call `forget`.
+
+Five independent public cases exercise the new operation through the factory:
+reset after confirmed absence; exact first/second/third later omission answers;
+no neighbor count advancement; no neighbor count reset; fresh presence admission;
+and `forget` removing that presence eligibility.
+The two neighbor cases start from distinct counts and compare complete ordered
+confirmation arrays, so both advancing and resetting a neighbor are detectable.
+Every case completes its operations in ACT and asserts independent whole values.
+No private access, state getter, new helper, test-only export or logging assertion is added.
+All nine original cases, their operations and assertions remain byte-identical.
+Both complete approved headers and the entire original source overview remain exact.
+Removing only the documented declaration/method reproduces the complete prior source.
+
+### Pre-edit consumers, reads and declaration
+
+Pre-edit HEAD is `e914a627fd23c98bd6f701fab8547d13a56365f2`.
+The actual ordering is source c18541a, planning-only RED ce3305e,
+bounded declaration 169dbfd, header-only dependency e914a62, then this functional cause.
+Task 04-08-03 changes reconciliation source, its mirrored owner and this report.
+The already committed 04-08 declaration is its fourth cause path.
+No runtime, account owner, evidence, helper, plan or shared-state path is edited here.
+
+Installed Fallow help was read before four refreshed exact impacts at e914a62.
+Each command uses `dead-code --type-aware --symbol-impact
+src/accessories/reconciliation.ts:<symbol> --type-aware-project <project>
+--type-aware-require complete --format json --quiet --explain`.
+Each native exit is 0 with status and identity completeness both complete.
+Each selects its independently requested project; no omitted evidence is reported.
+
+| Exact symbol | tsconfig.json | tsconfig.test.json |
+| --- | --- | --- |
+| Reconciliation | Complete; no named consumer | Complete; reconciliation owner |
+| createReconciliation | Complete; account runtime | Complete; account runtime and reconciliation owner |
+
+Zero named production type consumers do not hide the factory's public return contract.
+The actual inferred runtime object and every `observe`/`forget` call were inspected,
+with the owner factory's explicit return type and both complete reconciliation files.
+The complete 1332-line account source, 7532-line active account owner and 3303-line
+pre-edit report were loaded through bounded contiguous reads before repository edits.
+Complete AGENTS, bootstrap, all five books, amended 04-08 and its tail, protocol,
+CONTEXT, RESEARCH, PATTERNS, FINDINGS, 07/11 summaries and canonical decisions were read.
+Applicable locked state, privacy, identity, licensing and platform/World callbacks
+were inspected. The native read inventory distinguishes complete from contextual reads.
+No prior trace exception supplies evidence for this new public operation.
+This dependency does not certify the later accessories sweep or full ACCOUNT conformance.
+
+### Verification location and retained attempts
+
+All checks ran serially in the existing linked features/code-review-sweep checkout,
+using the documented workflow.use_worktrees=false opt-out.
+No new checkout, branch, recovery sentinel, package or repository helper was created.
+Node v26.11.1 and npm 11.20.0 are recorded for every command.
+Native directory: `/private/tmp/guardian-04-account-021-reconciliation-present/`.
+Each record retains exact argv, raw exit, real UTC start/end, HEAD, input blobs
+and complete separate stdout/stderr. Saved complete before/after bytes, all 698
+tracked identities, untracked inventory and exact dirty diffs support comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json | Exact initial branch/HEAD/empty index and active-account-owner-only diff; exact three-path Fallow guard before edits; exit 0, no configured zones/rule packs. |
+| resolver.json, impact-Reconciliation-production/test.json, impact-createReconciliation-production/test.json | Fresh Codex resolver: omitted model, effort high, tier opus; four exact complete pre-edit impacts, each exit 0. |
+| build-final.json | Fresh npm run build:test after formatting; exit 0, 15:40:42.065658–15:40:45.134610 UTC. |
+| owner-final.json | Full native TAP reconciliation owner; exit 0, 14 pass, zero fail/cancel/skip/todo, 15:40:50.203938–15:40:50.448179 UTC. |
+| direct-final.json | Exact npm run test:coverage:direct reconciliation source/owner selector including fresh build; exit 0. |
+| native-coverage-final.json | Full owner, exact-source include and all three 100% thresholds; exit 0, native compiled 53/53 lines, 6/6 functions, 12/12 branches; reconciliation-final.lcov retained. |
+| lint-final.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| implementation-verification.json, pre-report-provenance.json | Minimal source addition, all nine old cases exact, headers/overview exact, active account patch exact and all unrelated tracked inputs unchanged; exit 0. |
+| evidence-gate.json, history-final.json | Installed current RED CLI and SAME recursively invoked classifier; exit 0, all twelve records RED_EVIDENCE_OK, prior ten-record root and saved active patch exact. |
+| audit.json, audit-final.json | Fallow audit against real ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; both exit 0, verdict pass, zero introduced issues. Final audit repeats on the formatted inputs. |
+| pre-step-1.json | Exact three-file SKIP=npm-check pre-commit; exit 1 solely because Prettier compacted two new test assertions. Every other applicable hook passed. A clean repetition is required after this appendix before staging. |
+
+All initial build, owner, coverage and lint checks passed.
+The formatter-changing pre-step remains a failed attempt, with complete streams retained.
+Fresh build, full owner, direct selector, native coverage and uncached lint repeated
+on the final formatted owner bytes and passed. No behavioral expectation changed.
+No source mutation control or new genuine RED history is claimed by this dependency.
+Selected pair checks do not refresh merged all-pair source-mapped LCOV.
+No full account-owner GREEN or full npm run check runs here.
+The active account regression still requires its separate runtime repair.
+The parent owns the combined wave and phase gates after the declared repairs.
+
+### Immutable evidence, commit and remaining scope
+
+Reconciliation source changes from 7761f91181950c8047a61319558400e633a89150
+to e25bd84d713b6daa16b9616d00e6f4d7f41f8f62.
+Its owner changes from a2c4a35703ef66305998f7c547ef7722775a6797
+to d2f766376859734efac00a8e98c52400e49e50eb.
+Account production remains 35411e8afb0f4b902684507cf31ad9da9cce0b53.
+Active failing account owner remains 5ff214b9d474fde7da84a26844663e34d5cd4aef;
+its entire saved patch remains exact and unstaged.
+RED JSON remains 822f393d3a0f37667cb8024e314a8ddd7ca7e993 with all twelve records.
+The prior ten-record raw root remains exactly blob 3358f0816f73c4e18ca1d40207d013a9d3c0a9bc.
+Actual source commits/blobs, evidence-first ancestry and every recursive classification
+were rechecked. Historical preliminary timing and immediate-trust attempts retain
+their original narrower meaning. No archived native output or disposition changes.
+
+The atomic commit introducing this appendix and both TypeScript paths is titled
+`fix: retain reconciliation tracking after targeted presence`.
+The exact three-path clean pre-step repeats after this report update before staging.
+Only these three owned paths are staged. The ordinary foreground commit runs hooks,
+using their normal temporary handling of the unrelated unstaged account regression.
+Native staging, hook and postcommit records establish the actual hash and paths.
+No manual stash, GSD commit wrapper, hook bypass, amend, rebase or history rewrite is used.
+
+Original 021 remains OPEN until its runtime integration and independent full correction.
+The original 29-ID ledger and counter 0 continue. RUN-01 remains Pending.
+T-04-16 retains targeted physical identity and neighbor isolation within the existing
+inventory/removal boundary. No new removal, trust or privacy policy follows.
+No security-relevant surface outside the existing threat model is introduced.
+D-03 and all historical OPEN/unwaived limits remain in force.
+The parent retains full-gate and final worktree-setting restoration obligations.

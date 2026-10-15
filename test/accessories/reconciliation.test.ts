@@ -141,6 +141,89 @@ describe('observe', () => {
   });
 });
 
+describe('present', () => {
+  test('resets a confirmed absence and confirms it again only after two later omissions', () => {
+    // arrange
+    const tracker = reconciliation();
+    tracker.observe([DEVICE_ID]);
+    tracker.observe([]);
+    tracker.observe([]);
+
+    // act
+    tracker.present(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+    const afterThirdOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFirstOmission, afterSecondOmission, afterThirdOmission },
+      { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID], afterThirdOmission: [DEVICE_ID] },
+    );
+  });
+
+  test('does not advance another device absence count', () => {
+    // arrange
+    const tracker = reconciliation();
+    tracker.observe([DEVICE_ID, OTHER_DEVICE_ID]);
+    tracker.observe([OTHER_DEVICE_ID]);
+
+    // act
+    tracker.present(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID, OTHER_DEVICE_ID] });
+  });
+
+  test('does not reset another device absence count', () => {
+    // arrange
+    const tracker = reconciliation();
+    tracker.observe([DEVICE_ID, OTHER_DEVICE_ID]);
+    tracker.observe([]);
+
+    // act
+    tracker.present(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFirstOmission, afterSecondOmission },
+      { afterFirstOmission: [OTHER_DEVICE_ID], afterSecondOmission: [DEVICE_ID, OTHER_DEVICE_ID] },
+    );
+  });
+
+  test('tracks a newly present device for two later omissions', () => {
+    // arrange
+    const tracker = reconciliation();
+
+    // act
+    tracker.present(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID] });
+  });
+
+  test('lets forget remove the eligibility of a device recorded present', () => {
+    // arrange
+    const tracker = reconciliation();
+    tracker.present(DEVICE_ID);
+    tracker.observe([]);
+
+    // act
+    tracker.forget(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [] });
+  });
+});
+
 describe('forget', () => {
   test('stops reporting a deviceId omitted afterward', () => {
     // arrange
