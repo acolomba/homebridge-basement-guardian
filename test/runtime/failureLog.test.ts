@@ -27,12 +27,12 @@ const ONE_HOUR_MS = 3_600_000;
 
 // A clock the case moves by hand, so an hour of failures runs instantly.
 function movableClock(): { clock: Clock; advance: (ms: number) => void } {
-  let value = 1_700_000_000_000;
+  let wallTimeMs = 1_700_000_000_000;
 
   return {
-    clock: { now: () => value },
+    clock: { now: () => wallTimeMs },
     advance: (ms: number): void => {
-      value += ms;
+      wallTimeMs += ms;
     },
   };
 }
