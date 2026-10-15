@@ -466,7 +466,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
     try {
       freshDevices = await options.api.devices(root.signal);
-    } catch {
+    } catch (error: unknown) {
+      if (error instanceof AuthRejectedError || error instanceof AuthHaltedError) {
+        throw error;
+      }
+
       // Deliberately silent, for the reason above. The `try` holds the fetch
       // and nothing else: every statement below it changes state, and a
       // failure there is a different fact that has to be reported rather than

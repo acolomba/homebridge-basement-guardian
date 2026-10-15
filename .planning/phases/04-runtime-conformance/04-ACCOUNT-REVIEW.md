@@ -2952,3 +2952,123 @@ correction round is claimed. The failing owner remains active and unstaged.
 The parent alone commits complete planning evidence through the required clean
 pre-step and ordinary foreground hooks BEFORE any GREEN edit or active-test commit.
 RUN-01 remains Pending. D-03 and all historical open process limits remain in force.
+
+## CR-04-ACCOUNT-023: terminal final-check authentication propagation
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_023_green`, on 2026-10-15.
+Disposition: **fixed: requires human verification and independent full ACCOUNT correction**.
+The entire previous report remains an exact byte prefix.
+All 29 original IDs and ACCOUNT correction counter **0** continue.
+This cause supplies no independent closure, correction round or partial clean verdict.
+
+### Minimum repair and preserved boundaries
+
+The final inventory fetch catch at `src/runtime/accountRuntime.ts:469` now
+rethrows only `AuthRejectedError` and `AuthHaltedError`.
+Both actual `applyDevices` callers already handle those errors:
+`runPoll` invokes the existing terminal act, and `launch` delegates to `launchFailure`.
+The rethrow prevents the enclosing poll from recording success after terminal refusal.
+The existing terminal act marks credentials rejected, makes commands unready,
+pushes complete keyed trust and closes the owned shadow client.
+Its existing halt guard prevents later polling, rotation and connection attempts.
+Explicit stop still aborts the shared root; terminal halt remains distinct.
+
+Every other final-fetch error retains the existing silent return and no-removal behavior.
+The unchanged transient final-check case still retries removal on the next successful poll.
+No new retry, authentication policy, removal condition or transport teardown promise is added.
+No public/shared name, signature, field presence, mutability or visibility changes.
+No private alias/member is deleted or renamed; D-06 contract-change traces are not triggered.
+Actual source callers, platform and both World composition callers, error classes,
+reconciliation and the complete current source/owner were inspected before the edit.
+The required bootstrap, AGENTS, five complete project books and owning planning context were loaded.
+Both complete source/owner headers retain the approved form and `.js` imports.
+
+The cause changes exactly three paths: source, mirrored owner and this report.
+The owner contains the already active two-row regression, byte-identical to the RED checkpoint.
+Both rows retain the complete independent canonical snapshots, exact anchors,
+account and keyed-device trust histories, close counts and full request history.
+They also preserve empty command/removal sets and explicit strict-port verification.
+Advancing 3600000 ms leaves the entire halted observation unchanged.
+No extra terminal report required an expectation adjustment.
+Original 024 remains exact, and 025 retains every literal deadline, timer operation,
+assertion and the stronger 013 verification unchanged.
+All prior owner assertions, adapter contracts and negative controls remain intact.
+
+### Evidence-first ancestry and immutable history
+
+The actual chain is source `49d30f93b72cada50bb2002ce14aaf4fa9822776`
+then planning-only evidence `3d554270b7451443b46a850ba75a150eb409c996`
+then this implementation commit.
+The evidence commit changes only this report and the pair RED JSON.
+Both source and evidence commits retain production blob
+`641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+GREEN production is `35411e8afb0f4b902684507cf31ad9da9cce0b53`.
+Active owner remains `e87b406b12ed6453e716a2131c0bb40afa922638`.
+Its full diff against the recorded source commit equals the saved regression patch exactly.
+The complete owner is byte-identical to its saved pre-GREEN contents.
+
+RED JSON remains immutable blob `3358f0816f73c4e18ca1d40207d013a9d3c0a9bc`.
+The installed CLI accepts the actual on-disk file as `RED_EVIDENCE_OK`.
+The SAME installed `classifyRedEvidence` recursively accepts all ten current/archive records.
+The full-owner RED also classifies independently for the second new target.
+The entire prior six-record root is deep-equal to immutable blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`; its saved raw JSON is exact.
+No archived field, native stream, test patch or source/evidence history is rewritten.
+The original RED remains 155 cases: 153 pass, two intended assertion failures.
+No assertion-maintenance control or additional genuine RED claim is introduced here.
+
+### Verification location, current inputs and attempts
+
+All checks ran serially in the existing linked `features/code-review-sweep` checkout,
+under the documented `workflow.use_worktrees=false` opt-out.
+Read-only lint and provenance checks overlapped after all build/coverage commands completed.
+No new checkout, branch, recovery sentinel or dependency was created.
+Node v26.11.1 and npm 11.20.0 were recorded for every native command.
+Native directory: `/private/tmp/guardian-04-account-023-green/`.
+Each check retains exact argv, raw exit, real UTC start/end, HEAD, input blobs
+and complete separate stdout/stderr.
+Saved source/owner/report bytes, tracked manifest, exact before/after dirty diffs,
+ancestry, full patch comparison and recursive classifications remain in before.json
+and provenance.json. Every other tracked input matches its saved SHA-256.
+
+| Native record | Actual command/scope and raw result |
+| --- | --- |
+| guard.json | Exact three-path installed Fallow guard before repository edits; exit 0, no configured zones/rule packs. |
+| build-1.json | Fresh npm run build:test; exit 0, 15:03:35.811118–15:03:39.015868 UTC. |
+| owner-1.json | Full native TAP owner; exit 0, 155 pass, zero fail/cancel/skip/todo, 15:03:42.443367–15:03:42.897319 UTC. |
+| direct-1.json | Exact isolated source/owner test:coverage:direct selector including fresh build; exit 0. |
+| native-coverage-1.json | Full owner, exact-source include and all three 100% thresholds; exit 0, native compiled 998/998 lines, 57/57 functions, 184/184 branches. Native LCOV is accountRuntime.lcov. |
+| lint-1.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| evidence-gate.json, provenance-1.json | Current installed RED CLI and SAME recursive classifier; exit 0, all ten accepted and full saved/active patch exact. |
+| audit.json | Fallow audit against actual ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass, zero introduced issues. |
+| pre-step-1.json | Exact three-file SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 15:05:58.552099–15:06:02.084219 UTC. Repeated after this report update before staging. |
+
+All executable GREEN checks passed their first attempt; no owner expectation changed.
+The initial temporary snapshot script failed on hashing a tracked symlink as a regular file.
+Its terminal tool output remains retained; it changed no repository input.
+The corrected snapshot hashes actual symlink bytes through Git's stdin and succeeds.
+snapshot-2.json retains that successful command and full streams.
+This script-preparation failure supplies no test or historical-process evidence.
+Selected pair checks do not refresh merged all-pair source-mapped LCOV.
+No full npm run check ran here; the parent owns the combined wave and phase gates.
+
+### Commit, threats and remaining scope
+
+The implementation commit introducing this appendix and both TypeScript paths is titled
+`fix: halt monitoring on final inventory authentication refusal`.
+The exact three-file clean `SKIP=npm-check pre-commit run --files` must pass
+after this final report content before staging, then the normal foreground commit runs.
+Native pre-step, branch/HEAD/index assertions, authorized linked-Git staging,
+ordinary hook completion and actual commit path/hash records establish the result.
+No amend, no-verify, rebase, stash, wrapper or history rewrite is used.
+
+T-04-13/T-04-16 retain terminal ownership and healthy-runtime removal boundaries.
+T-04-14 preserves sanitized diagnostics and synthetic evidence; T-04-SC has no install.
+No security-relevant surface outside the existing threat model is introduced.
+Only original 023 is implemented by this cause, pending independent full correction.
+Remaining 04-08 IDs are 018–022 and 026; the declared 04-09 work remains pending.
+The original 29-ID ledger and counter 0 remain unchanged; RUN-01 remains Pending.
+D-03 and all historical OPEN/unwaived process limits remain in force.
+No shared ledger, summary, STATE, ROADMAP, REQUIREMENTS, WINDOWS or configuration was edited.
+The parent retains its full-gate and final worktree-setting restoration obligations.

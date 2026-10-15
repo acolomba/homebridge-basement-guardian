@@ -826,6 +826,115 @@ for (const { contractCase, createAnchors, rejectedObservation, expectedObservati
   });
 }
 
+for (const { title, terminalError } of [
+  {
+    title: 'rejects account credentials',
+    terminalError: () => new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'),
+  },
+  {
+    title: 'reports halted authentication',
+    terminalError: () => new AuthHaltedError('authentication has stopped.', 'invalid_grant'),
+  },
+]) {
+  test(`halts monitoring when the final inventory check ${title}`, async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
+    const inventoryListener = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'trustworthy inventory listener' });
+    when(() => {
+      inventoryListener([DEVICE_ID]);
+    }).thenReturn(undefined);
+    when(() => {
+      inventoryListener([]);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    // The public retry factory receives the root signal before start.
+    let rootSignal!: AbortSignal;
+    const { runtime, store, anchors, calls, shadows, removed, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } =
+      harness(t, { pollIntervalMs: 1_000, command: commands }, undefined, {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        onDeviceRemoved: removals,
+        onTrustworthyInventory: inventoryListener,
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReject(terminalError());
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+    const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+    const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+    const expectedHaltedState = {
+      path: 'unavailable',
+      snapshots: [
+        {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 1, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME,
+        },
+      ],
+      anchors: [[DEVICE_ID, START_TIME]],
+      monitoringHealth: [healthyAccount, healthyAccount, haltedAccount],
+      monitoringByDevice: [new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, healthyDevice]]), new Map([[DEVICE_ID, haltedDevice]])],
+    };
+
+    // act
+    await runtime.start();
+    await settle();
+    await advance(1_000);
+    await advance(1_000);
+    const afterFinalCheck = {
+      path: runtime.monitoringPath,
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      monitoringHealth: [...monitoringHealth],
+      monitoringByDevice: [...monitoringByDevice],
+    };
+    const closesAfterFinalCheck = shadows[0]?.closes();
+    await advance(3_600_000);
+    const afterLaterWork = {
+      path: runtime.monitoringPath,
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      monitoringHealth: [...monitoringHealth],
+      monitoringByDevice: [...monitoringByDevice],
+    };
+    const closesBeforeStop = shadows[0]?.closes();
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFinalCheck, afterLaterWork, closesAfterFinalCheck, closesBeforeStop, calls, trustworthyInventories, removed, commandRequests },
+      {
+        afterFinalCheck: expectedHaltedState,
+        afterLaterWork: expectedHaltedState,
+        closesAfterFinalCheck: 1,
+        closesBeforeStop: 1,
+        calls: ['devices', 'credentials', 'shadow', 'devices', 'devices', 'devices'],
+        trustworthyInventories: [[DEVICE_ID], [], []],
+        removed: [],
+        commandRequests: [],
+      },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+    verify(inventoryListener);
+  });
+}
+
 test('waits until a distant credential expiry using only representable native timer delays', async (t) => {
   // arrange
   const requests = mock<Pick<CloudApi, 'awsCredentials'>>({ exactParams: true, name: 'scheduled vendor requests' });
