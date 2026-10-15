@@ -197,10 +197,14 @@ test('D-07 keeps serving at debug level and orphans no temporary file when the a
   await mkdir(join(storagePath, ARRIVAL_ANCHOR_FILENAME));
   const anchors = storeOver(storagePath, recorded);
   anchors.record(DEVICE_ID, ANCHOR);
+  anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
 
   // act
   await anchors.persist();
 
   // assert
-  assert.deepStrictEqual({ entries: await readdir(storagePath), recorded }, { entries: [ARRIVAL_ANCHOR_FILENAME], recorded: [NOT_WRITTEN_LINE] });
+  assert.deepStrictEqual(
+    { anchor: anchors.get(DEVICE_ID), otherAnchor: anchors.get(OTHER_DEVICE_ID), entries: await readdir(storagePath), recorded },
+    { anchor: ANCHOR, otherAnchor: OTHER_ANCHOR, entries: [ARRIVAL_ANCHOR_FILENAME], recorded: [NOT_WRITTEN_LINE] },
+  );
 });

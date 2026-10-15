@@ -795,8 +795,9 @@ changing exactly source, owner and report. The commit ran
 2026-10-15T02:46:23.641175Z–02:46:36.972032Z, raw exit 0. Typecheck,
 focused ESLint, native owner (9 pass), isolated direct coverage (100% lines,
 functions and branches), recorded-base audit and exact clean pre-step all
-returned 0. The normal hook returned 0; its npm-check hook reported no matching
-files for this header-only change. Focused checks supply the verification.
+returned 0. The normal pre-commit npm-check hook passed. The later commit-msg
+stage reported no matching npm-check files; it is a distinct hook invocation.
+The full retained stderr, rather than its displayed tail, establishes both.
 
 003 changes only owner and report. At source revision `d21c9ba`, the full
 round-trip case at owner lines 89–116 and forget case at 161–188 independently
@@ -838,3 +839,48 @@ No control bytes enter Git; the genuine RED JSON remains untouched.
 
 003 is applied pending normal commit and later complete independent correction.
 All 15 accepted IDs remain open, independently fixed 0 and counter 0.
+
+## 003 normal commit and 004 surviving-memory assertion
+
+003 committed normally as `99cd24bb060b51cbfef0cafc7ee7ed2a1253ea03`,
+changing exactly owner and report. Its raw commit exit was 0 during
+2026-10-15T02:48:25.086437Z–02:48:38.706284Z. The recorded-base audit,
+exact clean pre-step and normal pre-commit npm-check all passed.
+
+004 changes only owner and report. The failed-rename case at current owner
+lines 194–212 records both distinguishable anchors and compares the whole
+public memory readback, complete directory entries and retained diagnostic.
+The existing target-directory setup still forces rename failure and proves
+that no temporary file remains. Production ownership and error handling stay
+unchanged. The touched-file rollback list is owner/report; temporary control
+changes are confined to the source and restored separately.
+
+At source commit `99cd24b`, the owner blob is
+`f6feaae8c4990693417b5802efc41e0bce4431c4` and source blob remains
+`4dbeedb3eda6a5d26595fdc0419b705d02fb9cee`.
+Exact guard, formatter, typecheck, focused ESLint, build:test and native owner
+returned 0. Native records use `conformance-004-*` in the same directory,
+with complete provenance and raw streams under the contract above.
+
+### 004 separate failed-rename maintenance control
+
+The plausible wrong behavior clears the anchor map only in persist's catch.
+The complete saved source and exact patch are respectively
+`/private/tmp/guardian-004-control-original.ts` and
+`/private/tmp/guardian-004-control.patch`.
+Control typecheck, focused ESLint and fresh build:test returned 0.
+The named failed-write owner case ran
+2026-10-15T02:49:22.629513Z–02:49:23.048115Z, raw exit 1, one test and one
+intended whole-state `deepStrictEqual` / `ERR_ASSERTION` failure. Both memory
+anchors became undefined; directory entries and diagnostic still matched.
+No setup failure supplied the result. The mutated source blob was
+`5a989fbc1a37d07b060a0e5de6b17a093fc1cb88`.
+
+The source was restored with git checkout and exact saved-byte equality passed.
+A fresh build, all 9 owner tests and isolated 100% direct lines/functions/
+branches then passed, with 0 failures/cancelled/skipped/todo. The source
+returns to the blob above. This is a maintenance control, separate from the
+unchanged genuine RED history. No mutation is staged or committed.
+
+004 is applied pending normal commit and complete independent correction.
+All original 15 findings remain open, independently fixed 0, counter 0.
