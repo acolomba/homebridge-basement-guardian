@@ -1,10 +1,10 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-05: PORTS is independently clean at correction round 3
-and POLICIES at correction round 2. TRUST has complete initial review and
-arrival repairs; monitoring and full correction remain pending. Wave five
-passed. One genuine production bug has evidence-first GREEN.
+Current through 04-06: PORTS is independently clean at correction round 3.
+POLICIES and TRUST are independently clean at correction round 2.
+Wave six passed. ACCOUNT remains pending.
+One genuine production bug has evidence-first GREEN.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
@@ -12,7 +12,7 @@ The parent coordinator alone consolidates actual reports into this ledger.
 Initial source/test baseline: 008218be4badf44455ab35906f1dfcff06089bf8.
 Exactly twenty initial core paths form ten mirrored pairs. PORTS has full initial
 review and complete-header inspection. POLICIES is independently clean.
-TRUST has complete initial review; ACCOUNT remains pending. ACCOUNT initial sizes are 1,283 source
+TRUST has complete five-file correction and header review; ACCOUNT remains pending. ACCOUNT initial sizes are 1,283 source
 lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
@@ -31,10 +31,11 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | POLICIES | test/runtime/failureLog.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
-| TRUST | src/runtime/arrivalAnchors.ts | core | 23a2511; full file/header | Pending | Applied; independent correction pending |
-| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Pending | Applied; independent correction pending |
-| TRUST | src/runtime/monitoringHealth.ts | core | 23a2511; full file/header | Pending | Nonconformant; repair pending |
-| TRUST | test/runtime/monitoringHealth.test.ts | core | 23a2511; full file/header | Pending | Nonconformant; repair pending |
+| TRUST | src/runtime/arrivalAnchors.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
+| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
+| TRUST | src/runtime/monitoringHealth.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
+| TRUST | test/runtime/monitoringHealth.test.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
+| TRUST | test/runtime/arrivalAnchorMemoryContract.ts | Actual helper; 04-06-03 | 0ad981c; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
 | ACCOUNT | src/runtime/accountRuntime.ts | core | Pending | Pending | Pending |
 | ACCOUNT | test/runtime/accountRuntime.test.ts | core | Pending | Pending | Pending |
 
@@ -49,7 +50,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | --- | --- | --- | --- | --- | --- |
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
-| TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 0; arrival repairs applied | 001–015; full correction pending |
+| TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 2; clean at9782919 | None; 0; all17 fixed |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
@@ -126,8 +127,8 @@ and prove GREEN. No failing/skipped code commit or fabricated failure.
 
 ## Checks and threat dispositions
 
-PORTS/POLICIES have current independent closure; TRUST has initial/arrival
-evidence below, while monitoring correction and ACCOUNT remain pending.
+PORTS, POLICIES and TRUST have current independent closure.
+ACCOUNT and phase-wide verification remain pending.
 Record exact command, raw exit, revision/blobs,
 Node/runtime, scope, timings and dirty/untracked input evidence. Record each
 normal hook/clean pre-step and raw Fallow recorded-base audit. Pair evidence
@@ -432,3 +433,44 @@ The report maps every command, raw exit, UTC, revision/blob, dirty input and com
 Root amendment streams use guardian-04-arrival-amendment-*.
 No helper, package, external adaptation, live vendor, hardware, private input or migration was introduced.
 WINDOWS46/47 remain OPEN and unwaived. RUN-01 remains Pending.
+
+## Coordinator wave 6 evidence and current TRUST closure
+
+Full npm run check returned 0 at clean 0bc71adffd4eefa63c932db11e00a54204b43ed5.
+Node was v26.11.1; UTC interval 2026-10-15T04:44:29.741744+00:00 to 2026-10-15T04:45:04.501596+00:00.
+All six static checks, 104 Cucumber scenarios, 1156 steps and 43 isolated pairs passed.
+Native metadata: /private/tmp/guardian-phase4-wave6-gate.json.
+Full output: /private/tmp/guardian-phase4-wave6-full-check.log.
+Generic 04-06 summary verification passed; schema drift found none.
+Codebase drift skipped because STRUCTURE.md is absent.
+An initial unsupported verify summary subcommand returned 1; the registered verify-summary command then passed.
+
+Fresh full reviewers inspected all five files, every header and all five books.
+Correction 1 at 0ad981c: opening 15, fixed 15, new 016/017, closing 2; counter 1.
+Correction 2 at 9782919: opening 016/017, fixed both, rejected/new/reopened empty, closing 0; counter 2.
+All original IDs 001–015 remain fixed. All 17 accepted IDs are independently closed.
+Both rounds reduced the open count; D-03 did not trigger.
+The continuing report retains exact rules, locations, blobs, native checks and repair commits.
+
+Monitoring causes 009/010/011/013/014/015 were repaired at 6d4b84a, a4b018f, 8bb9880, 391cafe and a4246b9.
+Cause 012 added the bounded consumed-memory agreement at 0ad981c after plan amendment 86ed892.
+New 016 repaired incidental logger observations at 9694a45; private names and signatures remain intact.
+New 017 separates exercise/capture from pure assertions at 9782919.
+The maintainer selected option 1 for this test-only assertion signature exception, recorded before code at af644a3.
+Complete test-project impact names both owners; installed TypeScript confirms production exclusion.
+The production query remains unavailable/no-project, raw exit 1, not a passing trace.
+No other trace exemption or private-fixture redesign follows.
+
+The actual helper is test/runtime/arrivalAnchorMemoryContract.ts; both owners use fresh participants for five cases.
+The same pure assertion function rejects the zero-losing participant with independently expected structured error fields.
+Full correction covers 1637 lines across both sources, both owners and this helper.
+Focused checks pass 56 owner cases, both isolated pairs at 100%, and all 43 staged pairs.
+Four restored maintenance controls, unchanged genuine arrival RED and actual evidence-first ancestry remain verified.
+Native correction evidence: /private/tmp/guardian-04-trust-correction2/.
+Closeout evidence: /private/tmp/guardian-04-06-closeout/.
+
+T-04-21 remains in the actual security/seal inventory with T-04-01 through T-04-20 and reserved T-04-SC.
+The run-scoped worktree flag is still false under the recorded role opt-out.
+Restore only workflow.use_worktrees to true through config-set before final milestone audit and handoff.
+WINDOWS 46/47 remain OPEN/unwaived; RUN-01 remains Pending.
+ACCOUNT, later subsystems and remaining phase judgments are not preapproved.
