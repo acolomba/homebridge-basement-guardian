@@ -1992,3 +1992,92 @@ correction after all owning causes. Other initial findings retain their prior
 dispositions; the 29 original IDs and counter 0 remain. The parent owns full
 npm run check after terminal 04-11 and after completed 04-07; no full gate runs
 in this task. RUN-01 remains Pending. D-03 and WINDOWS 46/47 remain unwaived.
+
+## CR-04-ACCOUNT-002: scoped identifier permission and unconfirmed premise
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_002_privacy_comments`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every prior appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This repair supplies no correction round or partial clean verdict.
+
+The source comment at `src/runtime/accountRuntime.ts:81` and owner comment at
+`test/runtime/accountRuntime.test.ts:2881` state the existing local permission.
+It covers runtime logs, accessory context and persisted arrival anchors.
+Both comments explicitly retain the unconfirmed opaque-account-key premise.
+Both require placeholders in public and planning artifacts.
+Per-device identifiers, all log strings and persistence behavior remain unchanged.
+No identifier removal, migration, additional permission or privacy guarantee follows.
+
+The canonical evidence is `.planning/STATE.md:231–233`, including its explicit
+unconfirmed premise, and the later retained-log ruling at lines 313–318.
+`.planning/intel/decisions.md:83–92` (C-002) identifies account-plus-serial composition.
+D-027 at lines 614–630 requires sanitized public and committed planning artifacts.
+`.planning/intel/constraints.md:195–204` describes the composition and scoped permission.
+History `b868f4e9435f75706e70c0b489b08ed115dc6d3b` introduced the account-aware
+wording and the unsupported person/route guarantees. Its full two-file diff
+is retained in `history.json/.stdout/.stderr` below. The repair retains
+account-aware wording and the scoped permission without those guarantees.
+The applicable rules are D-05/D-06 privacy preservation and
+`typescript-comments` factual what/why prose. Original S-04-08 retains its disposition.
+
+Pre-edit HEAD was `09facce8d9c17a6bc7368fa09854ecd32d3aaff0`, on
+`features/code-review-sweep`, with clean status and empty index.
+The fixer read complete AGENTS, all five complete project books, amended 04-07,
+04-11-SUMMARY, the newest full protocol and this full report before editing.
+The complete 1327-line source and 3999-line owner were read, including headers.
+The reporting-kind calls from monitoring-health reporting and removal cleanup
+were traced in the complete source. No function, signature, export, alias,
+field or visibility changes, so contract-change impact queries are not triggered.
+The pre-edit guard covered all three owned paths before any repository edit.
+
+### Verification location and native evidence
+
+All commands ran in the existing linked feature checkout with
+`workflow.use_worktrees=false`. No additional worktree or branch was created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3 and Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-002/`.
+Every command record retains exact argv, cwd, HEAD, versions, input blobs,
+UTC start/end, raw child exit and full separate stdout/stderr.
+`before.json` retains the empty initial diff/index/untracked set and 694 tracked inputs.
+Saved complete source, owner and report bytes support exact comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard.json | Exact three-path pre-edit Fallow guard; exit 0, no configured boundary zones or rule packs. |
+| build.json | Fresh `npm run build:test`; exit 0, 13:18:12.625–13:18:16.137 UTC. |
+| owner.json | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`; exit 0, 151 pass, zero fail/cancel/skip/todo. |
+| direct.json | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; exit 0, exact isolated selector including fresh build. |
+| native-coverage.json | Full owner, exact-source include, all three 100% thresholds; exit 0, 151 pass. Native compiled coverage: 993/993 lines, 57/57 functions, 181/181 branches. |
+| lint.json | Exact two TypeScript files, no cache, max warnings 0; exit 0. |
+| audit.json | Fallow audit against original ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, pass. |
+| pre-step-1.json | Required exact three-file SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 13:19:43.712–13:19:47.186 UTC. Repeated after this report update before staging. |
+
+`provenance.json` retains the complete dirty diff and before/after blobs.
+It compares every non-comment source and owner line byte for byte.
+All executable statements, test titles and assertions remain unchanged.
+It also verifies every unrelated tracked input and the complete earlier report prefix.
+The RED file retains blob `849b2e725bc19a4742e962910cce05f804a6a4c1` and
+all six records. Existing adapter contracts, negative controls and original
+024/025 regressions remain unchanged. This documentation repair adds no bug,
+regression, control, helper, configuration, package, shared record or runtime behavior.
+Selected coverage does not refresh merged all-pair source-map LCOV.
+No full `npm run check` ran here. The parent owns the combined gate after 04-07.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and both comment edits is titled
+`fix: qualify scoped device identifier privacy comments`.
+It contains exactly the source, mirrored owner and this report.
+Exact clean `SKIP=npm-check pre-commit run --files` precedes staging.
+Report or formatter changes require another clean pre-step before staging.
+Native pre-step, branch/HEAD/index assertions, authorized linked-index staging
+and ordinary foreground commit records retain their actual terminal results.
+The returned actual Git hash and paths establish the committed result.
+No hook bypass, amend, stash, rebase or history rewrite is authorized.
+
+Only original 002 is implemented here. Original 003, 012, 013, 027 and 028
+remain for 04-07, with later owning causes and full ACCOUNT correction still pending.
+RUN-01 remains Pending. D-03 stays in force.
+WINDOWS 46/47/48 remain OPEN and unwaived.

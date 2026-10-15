@@ -79,11 +79,10 @@ const AUTHENTICATION_STOPPED =
 // cadence with no change to the limiter, and a pump that has been quiet all
 // afternoon can no longer hold back the first warning about the pump beside it.
 // The vendor `deviceId` carries the account identifier: it reads
-// `<account-id>_<serial-number>`, and the first segment is an opaque
-// 24-character lowercase hexadecimal key. That key names no person, and it
-// unlocks no route, no header and no credential, so the value is permitted in
-// runtime logs and in accessory context. A public artifact still replaces it
-// with a placeholder (D-14, D-027, AUTH-02).
+// `<account-id>_<serial-number>`. The scoped permission allows it in local
+// runtime logs, accessory context and persisted arrival anchors. That permission
+// rests on the unconfirmed assumption that `<account-id>` is an opaque key.
+// Public and planning artifacts use placeholders (D-14, D-027, AUTH-02).
 function liveReportingKind(deviceId: string): string {
   return `Live device reporting for ${deviceId}`;
 }

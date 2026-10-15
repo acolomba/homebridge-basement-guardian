@@ -2878,10 +2878,11 @@ describe('the degraded monitoring path', () => {
     );
   });
 
-  // The line names the controller and nothing else about the account. The vendor deviceId is a
-  // non-sensitive value and the one identifier admitted to logs, and on a two-pump account a sentence
-  // without it does not say which basement stopped being watched. Everything the redaction rules
-  // actually forbid -- route, header, credential -- still has to be absent (AUTH-02, D-027, D-14).
+  // The scoped permission allows vendor deviceId in local logs, accessory context and persisted
+  // arrival anchors. It rests on the unconfirmed assumption that the account-id segment is an opaque
+  // key. The identifier tells a two-pump account which basement stopped being watched. Public and
+  // planning artifacts use placeholders. Routes, headers and credentials stay out of this line
+  // (AUTH-02, D-027, D-14).
   test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
     // arrange
     const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
