@@ -926,3 +926,125 @@ ordinary foreground commit, raw hook output and terminal path/hash/clean-state
 checks remain under this evidence root. The parent owns the combined full gate
 and independent full six-file correction. No full-project pass or partial-clean
 POLICIES verdict is issued.
+
+## Repair evidence: CR-04-POLICIES-008
+
+Applied by `policies_fix_008` (`gsd-code-fixer`), task 04-04-01, under
+`/root/phase4_policies_finish/policies_fix_008`. Disposition: **applied, pending
+independent full correction**. All prior report bytes remain intact. Repairs
+001–008 are applied pending that review. The opening set remains 001–012,
+open count **12** (2 BLOCKER, 10 WARNING), correction counter **0**, and
+production bugs **0**. No ID is independently closed. RUN-01 stays Pending.
+
+Eight fresh sibling cases exercise `schedule()` through preceding scheduled
+callbacks, then observe completion, attempt and pending immediately after the
+target request, one millisecond before its deadline, and at its deadline.
+Independent scenario literals cover delays 500, 1000, 2000, 4000, 8000, 16000,
+30000 and the repeated 30000 cap. A separate schedule/reset/schedule case
+observes the explicit reset and the new 499/500 boundary after two completed
+scheduled attempts. All nine `nextDelayMs()` rows retain their values and
+assertions; their titles now describe returned delays.
+
+Two fresh cases hold the callback promise unresolved until explicit resolution
+or rejection. Their whole public timelines include callback starts and
+completions, attempt and pending at 499/500, duplicate refusal during the wait
+and outstanding callback, another 30000 milliseconds while work remains held,
+settlement, and a new callback's 999/1000 boundary and completion. Each case
+owns exact-parameter strict mocks, complete expectations and explicit final
+verification after public-state assertions. Callback recorders accompany those
+mocks. No private state reader, new policy, real timer wait or helper file was
+added. The case-owned deferred promise uses the project's ES2022 library.
+
+The existing reset case, all existing scheduled/abort/rejection cases,
+`countedWork`, `recordingLog` and their comments retain their exact bytes.
+Findings 009–012 remain for their own repairs. The only original owner edits
+are the strict-mock import and returned-delay title template; all functional
+observations above are additions. Both 007 headers remain unchanged.
+
+Initial location remains R:test/runtime/retryPolicy.test.ts:64–145. Actual
+pre-edit HEAD is `80c93ad8863fe57b57eb730670452d07f6002d77`. Current repaired
+locations at that HEAD plus the retained dirty diff are
+test/runtime/retryPolicy.test.ts:87–272. Terminal ordinary-commit evidence
+identifies the committed revision without a self-referential hash here.
+
+### Separate assertion controls and exact source restoration
+
+These are test-discrimination controls, not genuine production defects or
+RED histories. Type checking and lint miss all three semantic substitutions.
+Each control passed both compiler projects and focused uncached lint before
+its fresh build and native intended assertion failure:
+
+| Temporary source substitution | Named target / native folder | Actual outcome |
+| --- | --- | --- |
+| `Math.min(nextDelayMs(), 500)` as the wait, preserving attempt progression | `completes scheduled attempt 2 only at its 1000 ms deadline` / 017-fixed500-control | Exit 1; one intended `deepStrictEqual` failure. At 999 ms, completion is already 2 and pending is false instead of completion 1 and pending true. |
+| `nextDelayMs() - 1` as the wait | First and second scheduled-deadline cases / 022-early-control | Exit 1; two intended `deepStrictEqual` failures. Completion occurs at 499/999 instead of 500/1000. |
+| `pending = false` between the wait and `await runGuarded(run)` | Both callback resolution/rejection cases / 027-pending-control | Exit 1; two intended `deepStrictEqual` failures. Running work reports pending false, and the duplicate advances attempt to 2 while the first callback is unresolved. |
+
+Each native target ran, reached the whole-state assertion and failed with
+`ERR_ASSERTION`; all three streams report zero cancelled/skipped/todo cases.
+The complete untouched TAP expected/actual values and stacks, separate stderr,
+exact named-pattern argv and raw exits remain in those folders. Semantic
+inspection is retained in 035-native-semantics. No setup/import/filter failure
+supplies this control evidence, and no temporary control bytes enter Git.
+
+Restoration checks 018, 023 and 028 compare exact source bytes with the
+pre-edit saved file and HEAD, and retain matching blob and SHA-256 values:
+`2c57c73e97be282acfdff61b439bfd86333d5b48` and
+`4061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e`.
+After final restoration, 029 rebuilds and 030 proves the full owner GREEN.
+The complete production file, including the timer module-object import,
+first/capped delay, reset, guard, owned rejection and root abort, is unchanged.
+No RED JSON was created. No automatic command retry or consumer edit enters.
+
+### Native verification scope and retained attempts
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/008/`.
+Each command folder retains exact argv/cwd/UTC start/end/raw exit in
+`command.json`, separate untouched `stdout.raw` and `stderr.raw`, and
+before/after manifests with HEAD, Node/npm, source blobs/SHA-256, exact
+dirty/staged diffs, owned file bytes and untracked bytes. Interactive mandatory
+reads preceded the recorder. All checks ran in the existing checkout at the
+absolute repository root above, on `features/code-review-sweep`, Node v26.11.1
+and npm 11.20.0. The directly read persisted sentinel remains phase 04,
+plan 04-04, isolation `none`; no worktree was created.
+
+Complete AGENTS, all five books, current source/owner/report, owning plan,
+CONTEXT, REVIEW-PROTOCOL and PATTERNS were read before editing. Live shadow
+schedule/reset calls, runtime root-signal composition and its separate
+next-delay loop were traced before source controls. The shadow owner supplies
+only context-timer/awaited-settling technique. No existing type, member,
+signature or private alias changed, so exact-symbol refactor traces did not
+apply. The complete installed Fallow skill and live help preceded exact guard.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live Fallow help / 001–003; exact three-path guard / 004 | Exit 0 each; boundaries and rule packs remain unconfigured |
+| Pre-edit root/branch/HEAD/sentinel/ledger checks / 005 | Exit 0; clean assigned checkout; `gsd-plan-head-before-04-04` retains actual `ca0ebbc3f020bd6ad0bbcaf3be5dcd1ee0341950` |
+| Initial draft typecheck / 007; lint / 008 | Exits 2 and 1; ES2022 has no `Promise.withResolvers`/`PromiseWithResolvers`; lint also requires two blank lines. Retained attempts were corrected before controls. |
+| Corrected typecheck / 010; uncached owner/source lint / 011 | Exit 0 each |
+| Initial fresh build / 012; full native owner / 013 | Exit 0 each; 26 tests pass, zero failed/cancelled/skipped/todo |
+| Fixed-500 control typecheck/lint/build / 014–016 | Exit 0 each before intended native failure 017 |
+| Early-wait control typecheck/lint/build / 019–021 | Exit 0 each before intended native failures 022 |
+| Premature-pending control typecheck/lint/build / 024–026 | Exit 0 each before intended native failures 027 |
+| Exact source restoration / 018, 023, 028 | Exit 0 each; bytes, blob and SHA-256 match baseline |
+| Restored `npm run build:test` / 029; full native owner / 030 | Exit 0 each; 26 tests, zero failed/cancelled/skipped/todo |
+| `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` / 031 | Exit 0; isolated direct requirements pass |
+| Isolated native coverage / 032; `retryPolicy.lcov` | Exit 0; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15, all 100% |
+| Recorded-base Fallow audit, JSON/quiet/explain / 033 | Exit 0; verdict pass, zero dead-code/complexity/duplication findings |
+| Exact narrow-scope comparison / 034 | Exit 0; original helpers/cases/header/delay values, production and all report history preserved |
+
+Pre-step 037 returned 1 because Prettier split the two new chained strict-mock
+expectations across lines. The exact two formatting-only changes are retained
+in 038-formatter-diff. Control evidence above refers to the pre-format owner;
+source-control substitutions and assertions retain their exact content.
+Fresh build, full owner, direct selector, native coverage and audit were rerun
+after formatting; each passed, with 26 tests and the same 75/75, 8/8, 15/15
+compiled denominators. The required pre-step was repeated clean before staging.
+
+Audit base remains `e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+Selected checks do not refresh merged all-pair LCOV. The exact two-path clean
+pre-step, ordinary foreground commit with normal hooks, and terminal committed
+path/hash/deletion/clean-tree checks retain their actual native results under
+this evidence root. Only the owner and this report are committed. The parent
+owns the combined full gate and independent full six-file correction. No
+full-project pass or partial-clean POLICIES verdict is issued.

@@ -12,6 +12,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createRetryPolicy } from '../../src/runtime/retryPolicy.js';
 
 import type { RetryPolicy, RetryPolicyOptions } from '../../src/runtime/retryPolicy.js';
@@ -82,7 +84,7 @@ for (const { attempt, delayMs } of [
   { attempt: 8, delayMs: 30_000 },
   { attempt: 20, delayMs: 30_000 },
 ]) {
-  test(`waits ${String(delayMs)} ms before attempt ${String(attempt)}`, () => {
+  test(`returns ${String(delayMs)} ms for delay number ${String(attempt)}`, () => {
     // arrange
     const policy = createRetryPolicy(policyOptions(new AbortController().signal));
 
@@ -91,6 +93,181 @@ for (const { attempt, delayMs } of [
 
     // assert
     assert.deepStrictEqual({ taken, attempt: policy.attempt }, { taken: delayMs, attempt });
+  });
+}
+
+for (const { earlierDelays, delayMs, attempt } of [
+  { earlierDelays: [], delayMs: 500, attempt: 1 },
+  { earlierDelays: [500], delayMs: 1_000, attempt: 2 },
+  { earlierDelays: [500, 1_000], delayMs: 2_000, attempt: 3 },
+  { earlierDelays: [500, 1_000, 2_000], delayMs: 4_000, attempt: 4 },
+  { earlierDelays: [500, 1_000, 2_000, 4_000], delayMs: 8_000, attempt: 5 },
+  { earlierDelays: [500, 1_000, 2_000, 4_000, 8_000], delayMs: 16_000, attempt: 6 },
+  { earlierDelays: [500, 1_000, 2_000, 4_000, 8_000, 16_000], delayMs: 30_000, attempt: 7 },
+  { earlierDelays: [500, 1_000, 2_000, 4_000, 8_000, 16_000, 30_000], delayMs: 30_000, attempt: 8 },
+]) {
+  test(`completes scheduled attempt ${String(attempt)} only at its ${String(delayMs)} ms deadline`, async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const policy = createRetryPolicy(policyOptions(new AbortController().signal));
+    const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+    when(() => work())
+      .thenResolve(undefined)
+      .times(attempt);
+    let completions = 0;
+    async function run(): Promise<void> {
+      await work();
+      completions += 1;
+    }
+
+    for (const earlierDelay of earlierDelays) {
+      policy.schedule(run);
+      t.mock.timers.tick(earlierDelay);
+      await settled();
+    }
+
+    // act
+    policy.schedule(run);
+    const scheduled = { completions, attempt: policy.attempt, pending: policy.pending };
+    t.mock.timers.tick(delayMs - 1);
+    await settled();
+    const beforeDeadline = { completions, attempt: policy.attempt, pending: policy.pending };
+    t.mock.timers.tick(1);
+    await settled();
+    const atDeadline = { completions, attempt: policy.attempt, pending: policy.pending };
+
+    // assert
+    assert.deepStrictEqual(
+      { scheduled, beforeDeadline, atDeadline },
+      {
+        scheduled: { completions: attempt - 1, attempt, pending: true },
+        beforeDeadline: { completions: attempt - 1, attempt, pending: true },
+        atDeadline: { completions: attempt, attempt, pending: false },
+      },
+    );
+    verify(work);
+  });
+}
+
+test('schedules the first 500 ms delay again after an explicit reset', async (t) => {
+  // arrange
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const policy = createRetryPolicy(policyOptions(new AbortController().signal));
+  const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+  when(() => work())
+    .thenResolve(undefined)
+    .times(3);
+  let completions = 0;
+  async function run(): Promise<void> {
+    await work();
+    completions += 1;
+  }
+
+  policy.schedule(run);
+  t.mock.timers.tick(500);
+  await settled();
+  policy.schedule(run);
+  t.mock.timers.tick(1_000);
+  await settled();
+
+  // act
+  policy.reset();
+  const afterReset = { completions, attempt: policy.attempt, pending: policy.pending };
+  policy.schedule(run);
+  const scheduled = { completions, attempt: policy.attempt, pending: policy.pending };
+  t.mock.timers.tick(499);
+  await settled();
+  const beforeDeadline = { completions, attempt: policy.attempt, pending: policy.pending };
+  t.mock.timers.tick(1);
+  await settled();
+  const atDeadline = { completions, attempt: policy.attempt, pending: policy.pending };
+
+  // assert
+  assert.deepStrictEqual(
+    { afterReset, scheduled, beforeDeadline, atDeadline },
+    {
+      afterReset: { completions: 2, attempt: 0, pending: false },
+      scheduled: { completions: 2, attempt: 1, pending: true },
+      beforeDeadline: { completions: 2, attempt: 1, pending: true },
+      atDeadline: { completions: 3, attempt: 1, pending: false },
+    },
+  );
+  verify(work);
+});
+
+for (const { outcome, settle } of [
+  {
+    outcome: 'resolution',
+    settle: (): Promise<void> => Promise.resolve(),
+  },
+  {
+    outcome: 'rejection',
+    settle: (): Promise<void> => Promise.reject(new Error('connection refused')),
+  },
+]) {
+  test(`refuses duplicate schedules until callback ${outcome} and then accepts new work`, async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const policy = createRetryPolicy(policyOptions(new AbortController().signal));
+    let finishWork: () => void = assert.fail;
+    const completion = new Promise<void>((resolve) => {
+      finishWork = resolve;
+    }).then(() => settle());
+    const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+    const duplicate = mock<() => Promise<void>>({ exactParams: true, name: 'duplicate retry work' });
+    when(() => work()).thenReturn(completion);
+    when(() => work()).thenResolve(undefined);
+    let starts = 0;
+    let completions = 0;
+    async function run(): Promise<void> {
+      starts += 1;
+      try {
+        await work();
+      } finally {
+        completions += 1;
+      }
+    }
+
+    // act
+    policy.schedule(run);
+    policy.schedule(duplicate);
+    const waiting = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    t.mock.timers.tick(499);
+    await settled();
+    const beforeDeadline = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    t.mock.timers.tick(1);
+    await settled();
+    const running = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    policy.schedule(duplicate);
+    t.mock.timers.tick(30_000);
+    await settled();
+    const stillRunning = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    finishWork();
+    await settled();
+    const afterCompletion = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    policy.schedule(run);
+    t.mock.timers.tick(999);
+    await settled();
+    const beforeNextDeadline = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+    t.mock.timers.tick(1);
+    await settled();
+    const afterNextCompletion = { starts, completions, attempt: policy.attempt, pending: policy.pending };
+
+    // assert
+    assert.deepStrictEqual(
+      { waiting, beforeDeadline, running, stillRunning, afterCompletion, beforeNextDeadline, afterNextCompletion },
+      {
+        waiting: { starts: 0, completions: 0, attempt: 1, pending: true },
+        beforeDeadline: { starts: 0, completions: 0, attempt: 1, pending: true },
+        running: { starts: 1, completions: 0, attempt: 1, pending: true },
+        stillRunning: { starts: 1, completions: 0, attempt: 1, pending: true },
+        afterCompletion: { starts: 1, completions: 1, attempt: 1, pending: false },
+        beforeNextDeadline: { starts: 1, completions: 1, attempt: 2, pending: true },
+        afterNextCompletion: { starts: 2, completions: 2, attempt: 2, pending: false },
+      },
+    );
+    verify(work);
+    verify(duplicate);
   });
 }
 
