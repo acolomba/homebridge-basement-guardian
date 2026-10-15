@@ -6241,7 +6241,7 @@ describe('the degraded monitoring path', () => {
     when(() => {
       failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
     }).thenReturn(undefined);
-    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(
+    const { runtime, shadows, monitoringHealth, monitoringByDevice, advance, commandRequests } = harness(
       t,
       { devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])], pollIntervalMs: HEARTBEAT_MS, command: commands },
       failures,
@@ -6253,6 +6253,7 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
     await advance(HEARTBEAT_MS);
     const atFrontPumpSilence = monitoringByDevice.length;
+    const trustAtFrontPumpSilence = { account: monitoringHealth.at(-1), byDevice: monitoringByDevice.at(-1) };
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
@@ -6260,10 +6261,18 @@ describe('the degraded monitoring path', () => {
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
 
     const pathBeforeStop = runtime.monitoringPath;
+    const accountBeforeStop = monitoringHealth.at(-1);
     const devicesBeforeStop = [...monitoringByDevice];
     await runtime.stop();
 
     // assert
+    assert.deepStrictEqual(trustAtFrontPumpSilence, {
+      account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+      byDevice: new Map([
+        [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+        [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+      ]),
+    });
     assert.deepStrictEqual(
       {
         afterNeighbourHeartbeat,
@@ -6273,9 +6282,10 @@ describe('the degraded monitoring path', () => {
       { afterNeighbourHeartbeat: atFrontPumpSilence, afterFrontPumpSpoke: atFrontPumpSilence + 1, finalSilence: [false, false] },
     );
     assert.deepStrictEqual(
-      { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
+      { path: pathBeforeStop, account: accountBeforeStop, trust: devicesBeforeStop.at(-1) },
       {
         path: 'shadow-and-poll',
+        account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
         trust: new Map([
           [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
           [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],

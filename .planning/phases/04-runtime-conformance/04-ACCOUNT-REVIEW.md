@@ -4005,3 +4005,156 @@ RUN-01 remains Pending. Original IDs, counter 0, D-03 and historical OPEN/unwaiv
 limits continue. No evidence, plan, helper, external subsystem, summary, config,
 STATE, ROADMAP, REQUIREMENTS, WINDOWS or central FINDINGS path changes.
 The parent retains its full-gate, shared-state and final worktree-setting restoration duties.
+
+## CR-04-ACCOUNT-019: trust at the quiet-device recovery boundary
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_019_trust`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete preceding report remains an exact byte prefix.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. This is assertion maintenance, with no
+production bug, independent correction, finding rejection or partial clean verdict.
+
+### Existing implementation overlap and remaining gap
+
+Original 012 at 0b86403ffecb4eac0794c7dc98bc9e4104b08daf already added
+complete keyed trust observations to the converted diagnostic cases.
+Original 013 at 95a99345e6f0e680c06ed322a1be7a5da82ff838 already prescribes
+both complete callback arguments through exact-parameter strong mocks.
+This includes the single-device cases that retain `silenceOf` as an additional
+timing projection, and composition's supplied-listener case at current owner
+line 7972. Its second argument contains the exact physical ID and all four
+trust fields; the owning case explicitly verifies that listener.
+No duplicate composition repair or removal of the useful projections is needed.
+Original 018 at 7286cb9d9ca3957571481eedaaf56f843ca29544 independently
+protects canonical snapshots and leaves this trust cause separate.
+
+The existing D-14 quiet-pump recovery case, beginning at pre-edit owner line 6169,
+still captured only a count at its important intermediate quiet/healthy split.
+The installed strong-mock README states that different expectations can be
+satisfied in any order (lines 658–660). Its complete allowed argument values
+therefore do not attach each map to that checkpoint. The final keyed map
+already has a complete independent expectation from 012.
+
+Only that existing case changes. It now captures the complete account struct
+and keyed device map at the quiet checkpoint, then independently compares
+all four fields and both physical IDs after the actions finish.
+The quiet device alone has shadowSilent=true. Its reporting neighbor remains
+shadowSilent=false; REST remains trusted, commands ready and credentials accepted.
+The final existing whole-map observation gains the account struct from the
+same recovery boundary. Both device entries are healthy, while the account
+continues to decline an account-wide silence answer.
+All old count, no-extra-report, two-boolean, path, keyed-map, command-absence
+and explicit mock-verification assertions remain in the same case and order.
+Every other case and the complete support prefix remain byte-identical.
+No expected answer comes from production or a harness computation.
+
+### Separate assertion maintenance control
+
+The plausible wrong public behavior forwards valid device trust maps at the
+wrong poll checkpoints. Complete callback values and multiplicities alone,
+compilation, lint and direct coverage do not establish checkpoint timing.
+The temporary source control changes only the forwarded first-device silence
+on a two-device account: it reports silence after one poll interval and
+healthy after two. It leaves the internal health, recovery latch, diagnostics,
+canonical state, account fields, neighbor, report count and final recovery alone.
+Thus the set of permitted callback values still contains every expected value.
+This control is separate from genuine production RED history.
+
+The fresh control build exits 0. The exact named D-14 recovery target executes
+one test and fails the new intermediate deepStrictEqual with AssertionError
+and ERR_ASSERTION: actual first-device shadowSilent=false, expected=true.
+Zero tests are skipped, cancelled or marked todo. The failure is the intended
+checkpoint assertion, not a mock refusal, setup, import or TypeError.
+The native record does not claim that the old owner was separately run against
+this control; the installed mock semantics and retained old assertions identify
+the missing discriminator.
+
+The full source was restored through Git and compared byte for byte.
+Before/restored blob is ec7a77182bb5b222c5fe945abe3b4c67912d5781;
+control blob is 09fe8fe65c27ef01c1f59f209f3d613e0663e084.
+The source diff is empty. A fresh rebuilt named target passes after restoration.
+The final owner is eb297df730787f15cb0fdcc10beabefe5d57269e and matches
+the control target's owner bytes exactly. No control mutation enters Git.
+
+### Reads, current checks and verification location
+
+Pre-edit HEAD is 7286cb9d9ca3957571481eedaaf56f843ca29544 on features/code-review-sweep,
+with clean tree and empty index. The bootstrap, complete AGENTS and all five
+complete project books were loaded, including the additional unit reviewer.
+The amended 04-08 plan including task 03/tail, current protocol, CONTEXT,
+RESEARCH, PATTERNS, FINDINGS, full ACCOUNT report, 07/11 summaries, canonical
+decisions and applicable STATE boundaries were read through bounded ranges.
+The complete 1340-line account source, 8187-line owner and monitoring-health
+source/owner were read. Callers were traced from health projection through
+runtime reporting/recovery and composition to platform fan-out, accessory
+trust consumers and both Worlds. Both full approved headers remain intact.
+No existing public/shared/private alias/member name, signature, field,
+visibility or mutability changes; no contract-impact or deletion exception applies.
+
+All checks ran serially in the existing linked feature checkout with
+workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No checkout, branch, recovery sentinel, package or repository helper was created.
+Native directory: `/private/tmp/guardian-04-account-019/`.
+Every recorded command retains exact argv, raw exit, UTC start/end, HEAD,
+Node/npm, complete separate stdout/stderr, before/after tracked manifests,
+owned file bytes, untracked inventory and full dirty diffs.
+The initial manifest covers 698 tracked file/symlink inputs.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json, guard-report.json | Clean initial snapshot; exact three-path guards before edits, exit 0, no configured zones/rule packs. |
+| resolver-full.json | Fresh Codex fixer resolution, exit 0: model empty/omitted, effort high, tier opus. |
+| build-baseline.json, target-baseline.json | Fresh strengthened owner build and exact named target, exit 0. |
+| build-control.json, target-control.json | Temporary build 0; intended named whole intermediate-trust assertion failure 1, 16:36:21.399219–16:36:21.694971 UTC. |
+| restore-source.json, restored-inputs.json, build-restored.json, target-restored.json | Exact full source restoration, manifest comparison, fresh build and named GREEN, exit 0. Restored build 16:36:34.897290–16:36:37.944821 UTC. |
+| owner-final.json | Full native TAP owner, exit 0, 159 pass, zero fail/cancel/skip/todo, 16:36:47.146475–16:36:47.593159 UTC. |
+| direct-final.json | Exact account source/owner test:coverage:direct selector, including fresh build, exit 0. |
+| native-coverage-final.json | Full owner, exact-source include and all three 100% thresholds, exit 0: 1004/1004 native compiled lines, 58/58 functions, 188/188 branches. accountRuntime-final.lcov retained. |
+| lint-final.json | Exact source/owner ESLint, max warnings 0, no cache, exit 0. |
+| evidence-gate.json, history-final.json, provenance.json | Installed current RED CLI and SAME recursively invoked classifier, exit 0: all fourteen accepted, prior twelve-record root/raw and native TAP exact; saved/current patch and case comparisons retained. |
+| audit.json | Fallow audit against real ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain, exit 0, verdict pass. Authorized temporary linked-Git access used directly. |
+| pre-step-1.json | Exact two-file SKIP=npm-check pre-commit, exit 0, clean without formatter changes, 16:38:25.708870–16:38:28.874393 UTC. Repetition follows this report before staging. |
+
+Every executable check passed; the separately labeled control is the intended
+failure. Initial read-only discovery attempts used one absent temporary script
+path and two unavailable resolver-search paths; their tool errors supplied no
+test or provenance result. The actual script and registered resolver were then
+read and used successfully. No failed build, test preparation or gate is hidden.
+Every mutating process completed before the next edit/build.
+Selected coverage does not refresh merged all-pair source-mapped LCOV.
+No full npm run check runs here; the parent owns combined-wave and phase gates.
+
+### Immutable history, atomic commit and remaining scope
+
+The genuine RED JSON remains b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+All fourteen complete records, preceding twelve-record root/raw, original native
+TAP, sourceCommit/sourceBlob identities and genuine ancestry remain exact.
+The saved 022 patch remains unchanged; current owner differences retain the
+previous additive order case, 018 observations and this one bounded case change.
+Exact reversal of only these additions reproduces the entire pre-edit owner.
+Original 024, every literal 025 deadline and stronger verification, both 023
+terminal rows, full 021 callback/neighbor case, real-shadow 022 and order case,
+018 whole snapshots/frozen/refused readbacks, contracts and negative controls
+remain byte-identical. All nonowned tracked bytes and untracked inputs match.
+
+The atomic commit introducing this appendix is titled
+`test: pin per-device trust at recovery checkpoints`.
+Only test/runtime/accountRuntime.test.ts and this report are staged.
+The exact two-file clean pre-step repeats after this final content before staging.
+Authorized linked-Git staging and a plain foreground commit run normal hooks.
+Terminal native records and actual postcommit Git objects establish the hash,
+exact paths, no deletions and clean tree/index. No wrapper, manual stash,
+amend, hook bypass, rebase or history rewrite is used.
+
+Only original 019 is implemented here, pending independent full ACCOUNT correction.
+The existing 012/013 overlap supplies its already implemented portions without
+duplicated changes or rejecting the original finding. Remaining 04-08 causes
+are 020 and 026; declared 04-09 work and full ACCOUNT correction remain pending.
+T-04-15 retains narrow per-device trust and physical identity observations.
+No security-relevant surface outside the existing threat model is introduced.
+RUN-01 remains Pending. Original IDs, counter 0, D-03 and historical OPEN/unwaived
+limits continue. No evidence, plan, helper, external subsystem, summary, config,
+STATE, ROADMAP, REQUIREMENTS, WINDOWS or central FINDINGS path changes.
+The parent retains full-gate, shared-state and final worktree-setting restoration duties.
