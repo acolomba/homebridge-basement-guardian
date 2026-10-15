@@ -322,3 +322,22 @@ The original full config is retained at /private/tmp/guardian-autonomous-origina
 Restore only this one setting; preserve every other current key and any intervening authorized changes.
 This alignment supplies no retroactive proof about prior fixer instruction compliance and waives no historical exception.
 The stopped attempt changed no repository file. TRUST finding counts and correction counter remain unchanged.
+
+## Maintainer exception for TRUST-017
+
+The maintainer selected option 1 for the bounded exception after HEAD 9694a45f1c8f092367aa775f2585945683ba1742.
+This exception applies only to the signature of test/runtime/arrivalAnchorMemoryContract.ts:assertArrivalAnchorMemoryContract.
+The test-project impact is complete and names both existing owner modules.
+The production-project impact exits 1 and reports unavailable/no-project.
+Installed TypeScript program membership confirms production excludes this helper and the test project includes it.
+The production result remains an unmet completeness check, not a passing trace.
+For this signature change, complete test-project impact plus verified production exclusion supplies the permitted evidence.
+Retain both native results under /private/tmp/guardian-04-trust-followups/017-impact-{test,production}.json and their separate stdout/stderr.
+The project membership evidence is 017-project-scope.json in that directory.
+Refresh the relevant evidence before the code edit and read both actual callers.
+The same helper may add the declared exercise/capture function and observation types.
+Both existing owners must finish actions and reads before calling the same assertion function.
+Preserve every expected observation and the structured negative-control assertion.
+The existing five-path cause budget and correction counter 1 remain unchanged.
+No production or compiler configuration edit, private-fixture redesign, other trace exception or historical waiver follows.
+All other D-06 requirements and D-03 stop conditions remain in force.
