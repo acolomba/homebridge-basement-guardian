@@ -177,3 +177,74 @@ None -- no security-relevant surface outside the plan's `<threat_model>` was int
 ## Self-Check: PASSED
 
 All seven declared artifacts exist inside the canonical checkout. All four recorded commits are ancestors of HEAD. The persisted pre-commit ledger measures four commits and 3,202,074 diff characters through b7bae4a, matching the recorded actuals. The tracked tree and index were clean; only this summary was untracked. Native results are retained in /private/tmp/guardian-04-12-closeout/self-check.json.
+
+## Post-gate task 03 follow-up: storage fixture timers
+
+The original execution and measurement above remain historical: two tasks and four commits through b7bae4a.
+This addendum records only the later task 04-12-03, declared before its code edit at 815fd49eb31d036fd41dd1752d00514d37b9fa3e.
+Its final paths are test/platform.test.ts, the ACCOUNT report and this summary.
+The committed declaration is the fourth total cause path.
+
+The owner adds one t.mock.timers.reset() call before recursive storage cleanup in expectStoragePath's existing t.after callback.
+The helper signature, every case and assertion, retry settings, all production files and both genuine RED histories remain unchanged.
+Removing only that line reproduces the complete prior owner byte for byte.
+The owner blob is now 1b29564013cf6483e0c885f04b46bbd9fc964659.
+
+The parent full gate at ce67f4b remains failed/interrupted with actual exit 1.
+Its platform child reports 16 passing cases and file-level interruption after about 155 seconds, followed by controlled SIGTERM.
+Twelve natural investigation runs passed. A separate controlled retry diagnostic stalled at the same case boundary.
+Installed Node lazily captures a mocked setTimeout during recursive removal initialization.
+Resetting the context timer before cleanup lets that retry use real timers.
+The original filesystem error was not captured, so the precise connection remains inferred.
+These diagnostics are fixture controls, not genuine production RED or independent review.
+The earlier lstat probe did not exercise the retry path; its unsuccessful causal attempt remains retained.
+
+### Follow-up Check Results
+
+Checks ran in the existing linked feature checkout with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+Complete argv, UTC, raw exits, separate streams, before/after manifests and compiled copies remain in
+/private/tmp/guardian-04-platform-fixture-isolation/.
+Original interruption and probe records remain in their existing directories.
+
+| Check | Actual result |
+| --- | --- |
+| Fresh build | Exit 0 |
+| Same controlled retry | Exit 0; 71 pass, no timeout or remaining process group, explicit 60-second bound |
+| Natural full platform owner | Exit 0; 71 pass, zero fail/cancel/skip/todo |
+| Exact isolated direct selector | Exit 0, src/platform.ts with test/platform.test.ts |
+| Native isolated LCOV | Exit 0; 504/504 lines, 22/22 functions, 57/57 branches |
+| Uncached owner lint | Exit 0 |
+| Input preservation | Exit 0; all 44 production files, both immutable histories, original 026 case and prior metadata prefixes exact |
+
+The controlled retry uses the original preloader, DIAG_BUSY_CLEANUP=13 and identical native coverage argv.
+It completes at 18:31:22.753 UTC after the fresh build.
+One temporary capture preparation command failed before spawning a child; corrected resolver commands passed.
+No executable check failed on the one-line candidate. All attempts remain retained.
+Selected coverage does not refresh merged all-pair source-mapped LCOV.
+No fresh ACCOUNT owner run or full combined gate is claimed here; the parent runs that gate after terminal return.
+
+### Follow-up Self-Check and Limits
+
+Canonical-root containment and the exact summary-path check passed before this first addendum write at 18:32:41.840 UTC.
+The exact installed Fallow guard then passed on all three relative paths before the metadata edits.
+All 702 tracked inputs and modes were compared; only the three declared final paths may differ.
+The SAME installed classifier accepts the unchanged two PLATFORM and fourteen ACCOUNT records with actual source blobs verified.
+Their immutable blobs remain 5a35d0831979b6c7444b598c0987bdd9d98f758b and b3f7141fc652706628ec55c5bd5c1a3e4b560319.
+
+The normal commit introducing this addendum is titled `test: reset platform timers before storage cleanup`.
+Its actual hash, recorded-base audit, clean exact-file pre-step and ordinary foreground hook result remain native closeout records.
+Only their collected terminal results establish commit completion.
+The old measurement ledger and original summary frontmatter remain untouched.
+This task supplies no independent correction, reopened finding, requirement completion or shared-state advancement.
+ACCOUNT retains its original 29 IDs and counter 0; RUN-01 remains Pending.
+WINDOWS 46–53 remain OPEN and unwaived. The earlier containment gap remains historical.
+The parent retains the full combined gate, configuration restoration and independent ACCOUNT correction.
+
+### Follow-up Threat Flags
+
+None -- no security-relevant surface outside the plan's `<threat_model>` was introduced.
+
+The recorded-base audit against 3f4f1c3c8a9a732cd7a7711debbd7cb836611362 passes with exit 0 and zero introduced issues.
+The exact three-path pre-step passes cleanly with exit 0 at 18:34:19.006 UTC; no formatter changed any input.
+Final audit and pre-step repeat after this metadata addition before staging.
+Preservation-after-metadata passes: both full historical prefixes, the exact owner reversal and every nonowned input remain intact.

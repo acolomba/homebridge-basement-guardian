@@ -4837,3 +4837,128 @@ shared record, requirement completion or summary is written by this cause.
 No security-relevant surface outside the existing threat model is introduced.
 The parent retains combined gates, summary creation, final configuration
 restoration and independent full ACCOUNT correction.
+
+## Original CR-04-ACCOUNT-026: post-gate storage fixture isolation
+
+Implemented by typed gsd-code-fixer, task
+`/root/phase4_account_trust/account_026_fixture_isolation`, on 2026-10-15.
+This follow-up executes only the newly declared 04-12-03 fixture cause.
+Declaration 815fd49eb31d036fd41dd1752d00514d37b9fa3e precedes the owner edit.
+The original 29 finding IDs and ACCOUNT correction counter 0 remain unchanged.
+RUN-01 remains Pending. This is implementation self-check, not independent correction.
+
+### Retained interruption and diagnostic limits
+
+The parent full gate at ce67f4b117146f4d9f9fc793c36aaf3b5e29fe85 remains
+failed/interrupted, with actual exit 1 and controlled SIGTERM.
+Its platform child reports 16 passing cases and a file-level interruption
+after 154723 ms. It records no named stuck case or original filesystem error.
+The native gate and interruption records remain under
+/private/tmp/guardian-phase4-wave10-final-state-*.
+The investigation retains twelve naturally passing owner/coverage runs.
+These later passes do not erase the failed parent gate.
+
+Installed Node v26.11.1 lazily loads recursive removal's internal rimraf module.
+That module captures timers.setTimeout at initialization and uses it for retries.
+The leading platform cases enable fake setTimeout before their first recursive cleanup.
+A later retry can therefore wait on the first case's inactive mock queue.
+The installed context timer reset restores real timers and does nothing when inactive.
+
+Complete scripts and native results remain in
+/private/tmp/guardian-04-platform-hang-investigation/.
+The corrected unlink probe observes one injected retry resolving with real timers,
+remaining pending with mocked priming, and resolving with reset before cleanup.
+The earlier lstat probe did not reach the retry path and supplies no positive causal proof.
+The unchanged compiled-owner diagnostic injects exactly one EBUSY at cleanup ordinal 13.
+It records the first 16 cases passing, then stalls until its 15-second bound sends SIGTERM.
+Its actual exit is 1. This is controlled fixture diagnostic evidence, not genuine production RED.
+The precise connection to the original full-gate interruption remains inferred
+because that gate did not capture the original filesystem error.
+
+### One-line repair and preserved inputs
+
+Inside expectStoragePath's existing t.after callback, the owner now calls
+t.mock.timers.reset() immediately before recursive rm.
+The helper signature, retry settings, every case body, every assertion and test order remain intact.
+No production API, helper, package, compiler input or configuration changes.
+No internal-module priming, disabled retry, real sleep, skipped test or reporter change is added.
+
+The complete 2683-line pre-edit owner, all actual helper callers, full report,
+existing summary, amended plan, protocol, context, AGENTS and bootstrap were read.
+All five complete project books were loaded, including the additional unit reviewer.
+Fresh model and execution resolution each returned an empty model override and high effort.
+The documented worktree opt-out and matching forced-none phase 04/plan 04-12 sentinel apply.
+No checkout, branch or recovery sentinel was created.
+This local body change deletes no private member and changes no contract signature.
+
+The exact installed three-path guard preceded the owner edit and metadata writes.
+Explicit canonical-root containment and the exact relative summary-path check
+passed before the first summary edit, at 18:32:41.840 UTC.
+Every mutating process reached actual terminal completion before the next edit or build.
+The entire earlier report and summary remain exact byte prefixes.
+Removing only the new reset line reproduces the entire saved platform owner.
+Its blob changes from e37697774ec89fb532f6d890d2f3df2c4536f033
+to 1b29564013cf6483e0c885f04b46bbd9fc964659.
+All 44 production files and every nonowned tracked input remain byte-exact.
+The active original 026 restored-cache regression remains exact.
+
+### Current focused verification
+
+Checks ran serially in the existing linked features/code-review-sweep checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+Native directory: /private/tmp/guardian-04-platform-fixture-isolation/.
+Each command retains complete before/after input manifests and copies, dirty/index patches,
+untracked inventory, exact argv, UTC, HEAD, raw exit and separate stdout/stderr.
+Compiled source/owner copies are retained alongside the input snapshots.
+
+| Record | Actual result |
+| --- | --- |
+| guard-owner, guard-metadata | Exact three paths, exit 0; no configured zones or rule packs |
+| build | Fresh npm run build:test, exit 0, 18:31:13.840–18:31:17.266 UTC |
+| controlled-owner | Same preloader, DIAG_BUSY_CLEANUP=13 and exact native coverage argv as the retained stalled diagnostic; explicit 60-second bound; exit 0, 71 pass, no timeout, no remaining process group, 18:31:22.160–18:31:22.753 UTC |
+| owner | Full natural native TAP owner, exit 0; 71 pass, zero fail/cancel/skip/todo, 18:31:34.309–18:31:34.718 UTC |
+| direct | Exact npm run test:coverage:direct -- src/platform.ts test/platform.test.ts, including fresh build, exit 0 |
+| native-coverage | Exact-source native thresholds and platform.lcov, exit 0; 504/504 lines, 22/22 functions, 57/57 branches; 71 pass, zero fail/cancel/skip/todo |
+| lint | Exact owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| before-metadata | Complete input preservation, exact owner reversal, both metadata prefixes, canonical containment and SAME installed recursive classifier, exit 0 |
+
+All executable checks passed on the sole one-line candidate.
+One temporary capture invocation incorrectly supplied GSD_RUNTIME=codex as an executable.
+It failed with FileNotFoundError before spawning a child; its tool error and before snapshot remain retained.
+Corrected native resolver commands passed. This preparation error supplies no test evidence.
+The earlier interrupted diagnostic, natural runs and unsuccessful initial probe remain unchanged.
+No diagnostic is inserted into either genuine RED JSON or used to change a classifier.
+
+Platform evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b with two records.
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319 with fourteen.
+The SAME installed recursive classifier accepts all sixteen records, with actual source blobs verified.
+Selected coverage does not refresh merged all-pair source-mapped LCOV.
+No fresh ACCOUNT owner run or full npm run check is claimed here.
+The parent supplies the required full combined gate after this actual terminal handoff.
+
+### Atomic closeout and remaining work
+
+Only test/platform.test.ts, this report and the existing 04-12 summary enter the commit.
+The pre-code plan declaration is the fourth total cause path.
+The commit introducing this appendix is titled
+`test: reset platform timers before storage cleanup`.
+Recorded-real-base Fallow audit, exact three-path clean pre-step before staging,
+authorized linked-index staging and plain foreground normal hooks retain native terminal records.
+The actual Git object and returned terminal result establish the hash and committed paths.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+No independent review, finding closure, correction round or fixed-finding reopening is claimed.
+Original 026 retains its implementation disposition pending human verification and full ACCOUNT correction.
+The historical two-task/four-commit summary measurement remains unchanged.
+WINDOWS 46–53 remain OPEN and unwaived, including the prior summary containment gap.
+This new pre-write check does not reconstruct historical proof.
+No security-relevant surface outside the existing threat model is introduced.
+The parent retains combined gates, shared records, configuration restoration and later full correction.
+
+The recorded-base audit used 3f4f1c3c8a9a732cd7a7711debbd7cb836611362,
+the actual original plan-12 source base. Its actual exit is 0 and verdict is pass,
+with zero introduced issues. The retained cache-entry warning is diagnostic output.
+The exact three-path SKIP=npm-check pre-commit passed cleanly with exit 0
+at 18:34:19.006 UTC, without formatter changes or staging.
+The final audit and clean pre-step repeat after this metadata addition before staging.
+Native preservation-after-metadata confirms both entire historical prefixes and all nonowned inputs.
