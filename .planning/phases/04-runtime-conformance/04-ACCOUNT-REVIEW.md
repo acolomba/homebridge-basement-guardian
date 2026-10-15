@@ -5335,3 +5335,164 @@ observations. No new security-relevant surface or product meaning is introduced.
 No full npm run check, full-gate reuse, full correction, reopening, closure or
 phase completion is claimed; the parent owns the remaining work and full gate.
 RUN-01 stays Pending. WINDOWS 46-53 stay OPEN and unwaived.
+
+## CR-04-ACCOUNT-009: actual pending-command root cancellation
+
+**Requirement:** RUN-01. **Original severity:** BLOCKER.
+**Rule:** unit writer/reviewer, central discrimination rule and Assertions;
+04-09-01's existing shared-root cancellation contract. **Seed:** S-04-06.
+**Disposition:** applied, pending independent full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_009_pending_command.
+**Pre-edit HEAD:** 0c5647fcd8a8e1808bb6e8cc68bab2ed110f4d9e.
+Original location remains R:test/runtime/accountRuntime.test.ts:3072-3082.
+The new public case begins at current test/runtime/accountRuntime.test.ts:8118;
+the existing already-aborted case now begins at line 8425.
+The original 29 IDs, initial 18 BLOCKER/11 WARNING counts and correction counter
+0 remain. This is assertion maintenance on correct production, with no genuine
+production bug, independent correction, reopening or clean verdict.
+
+### Discriminating public setup and preserved scope
+
+The new standalone case sends a self-test through runtime.commands.send while
+the runtime is running. The injected command boundary announces actual dispatch,
+captures the actual signal and returns an unresolved response. It records the
+initially live signal and unresolved outcome before shutdown. Its abort listener
+rejects that pending response when the actual signal aborts.
+After stop and promise settling, the case captures the actual abort and complete
+refused outcome. The independently expected result is accepted=false with
+failure=vendor-error. It then asserts the complete unchanged canonical snapshot,
+actual root-signal identity and exact singleton device/body/initial-abort request,
+followed by explicit owning-case strong-mock verification.
+The actual public retry factory supplies the root identity during construction;
+there is no private accessor or production hook.
+
+The command mock has exactParams, exact physical device and self-test body,
+an initially live AbortSignal matcher, one allowed call and explicit verify.
+Signal identity is asserted separately against the actual captured root.
+All actions and checkpoint captures finish in ACT before ASSERT.
+The owned response is unconditionally released only AFTER the shutdown checkpoint
+capture. This lets a broken implementation finish and fail the captured-state
+assertion instead of hanging while awaiting an un-aborted signal.
+It adds no runtime deadline, retry, eligibility or wider teardown policy.
+
+The existing case is retained under the truthful title
+passes an already-aborted signal to a command sent after shutdown.
+Its complete body, assertions, exact request and strict verification stay exact.
+All seven 010 command outcomes and whole canonical expectations remain byte-exact.
+The remaining 148 prior cases also remain byte-exact; all 149 original assertion
+and verify sequences retain their exact order. One type-only CommandOutcome
+import supports the new case. No helper, seed, fixture, API, alias, field,
+signature, package, configuration or shared record changes.
+
+The complete current 1341-line source, 8920-line pre-edit owner and 5337-line
+report were read through bounded contiguous ranges before editing.
+Complete AGENTS/bootstrap and all five project books were loaded, including the
+unit reviewer. Current 09 plan, protocol, CONTEXT, RESEARCH, PATTERNS, FINDINGS,
+canonical decisions, applicable state and 07/08/11/12 summaries were read.
+Actual commandPort, family/registry, Gemini command builder, REST dispatch,
+controls outcome consumer, platform and both World composition/lifecycle callers
+were inspected. No contract change or private deletion triggers an impact query.
+Full approved headers and .js imports remain intact.
+
+### Separate maintenance control and exact source restoration
+
+The plausible wrong behavior sends an initially live signal that is independent
+of the runtime root. Compilation, lint and direct coverage cannot prove that
+shutdown reaches the actual pending request. The old stop-before-send setup
+does not establish this pending-work contract.
+
+The sole temporary production edit replaces root.signal with
+new AbortController().signal at the existing sendCommand call.
+Its fresh build exits 0. The exact anchored new target exits 1 at its FIRST
+whole deepStrictEqual assertion: atDispatch remains correctly live/unresolved,
+but atShutdown is aborted=false/outcome=undefined. Releasing the owned response
+then produces accepted=true instead of the independently expected refusal.
+Native AssertionError, ERR_ASSERTION and deepStrictEqual identify the intended
+failure; one test executes, with zero skip/cancel/todo and no timeout.
+No strict-mock, setup, import, compilation or cancellation failure supplies it.
+The subprocess has a ten-second bound and finishes in about 0.3 seconds.
+
+The full production source was restored through Git and compared byte for byte.
+Before/restored blob: c87b9330ad2589e7941c11aba90f2079c67dbc30.
+Temporary control blob: 770b7072137f7e51e240d0cd0938960b09321db6.
+The source diff is empty before every restored GREEN check and before staging.
+The final owner blob is 169775e1c3bc0c457f2ae02eca45567e229835fe.
+No control mutation or new genuine RED record enters Git.
+
+### Native verification, immutable history and input preservation
+
+All checks run serially in the existing linked features/code-review-sweep
+checkout with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No new checkout, branch or recovery sentinel is created.
+Fresh model resolution returns an empty model override, high effort and opus
+tier; execution resolution separately confirms high effective effort.
+The persisted 04/04-09 sentinel remains isolation none. The existing gitdir
+plan-head ledger remains 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574.
+The parent's initial-ledger-checkpoint.json retains SHA-256
+aef5e272b16ba900cae197a46420256be5bb9f530c77061d8fe14f979627af53.
+
+Native directory: /private/tmp/guardian-04-account-009/.
+Each subprocess record retains exact argv/cwd, actual UTC start/end, raw exit,
+Node/npm, HEAD, complete separate stdout/stderr, full source/owner/report input
+copies, all 702 tracked/nonignored input identities/modes and full dirty/index
+patches before and after. Initial input copies retain all 702 complete inputs.
+Compiled control copies are retained before the restored build; restored native
+runs also retain their exact compiled source/owner copies and blob identities.
+Every yielded process reached terminal completion before dependent work.
+
+| Native record | Actual terminal result |
+| --- | --- |
+| preedit-guard, guard-control, guard-restore, guard-report | Exact three authorized paths before changes; exit 0, no configured zones or rule packs |
+| build-baseline, lint-baseline, target-baseline | Fresh build, uncached exact-pair lint and unique intended target; exit 0 |
+| control-build, control-target | Build 0; intended assertion failure 1, 19:12:08.614666-19:12:08.918685 UTC; no timeout |
+| restore-source, restoration-proof | Git restoration and complete source-byte equality; exit 0 |
+| build-restored | Fresh npm run build:test, exit 0, 19:12:43.118725-19:12:46.138960 UTC |
+| target-restored | Unique pending-command native TAP, exit 0; one pass, no fail/cancel/skip/todo |
+| owner-final | Full native TAP owner, exit 0, 19:12:54.536343-19:12:54.977162 UTC; 167 pass, no fail/cancel/skip/todo |
+| direct-final | Exact npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts with fresh build; exit 0 |
+| native-coverage-final | Full owner, exact compiled-source include and all three 100% thresholds, exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; accountRuntime-final.lcov retained |
+| lint-final | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| account-evidence, platform-evidence | Installed CLI on each actual unchanged RED file, exit 0; RED_EVIDENCE_OK |
+| preservation-corrected | Complete original case/assertion-order, exact source/report-prefix and unrelated-input comparisons; SAME installed recursive classifier accepts all 14 ACCOUNT plus 2 PLATFORM records; exit 0 |
+| audit | Fallow audit --base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574 --format json --quiet --explain; exit 0, verdict pass, zero introduced issues |
+
+All executable candidates pass except the deliberately wrong signal control.
+The first temporary preservation verifier omitted the call-expression semicolon
+when reconstructing the expected insertion. Its retained exit 1 is a verifier
+preparation failure. Adding that punctuation to the temporary verifier makes
+the exact comparison pass without changing any repository byte.
+No unsuccessful attempt is discarded or relabeled as genuine RED.
+
+preservation-proof.json retains every complete saved/current original case,
+their exact assertion/verify sequences, the new case, input identities and
+all recursive classification/source-blob results. It proves the entire owner
+diff is exactly the additive case/import and one truthful title change.
+The complete 362579-byte earlier report remains an exact prefix.
+All 700 input paths outside owner/report retain their saved hashes and modes.
+Original 024, every literal 025 deadline and stronger 013 verification, 023
+terminal rows, 021 callback/neighbor proof, 022 real-shadow/order cases, 018
+frozen/refused readbacks, 019 checkpoints, 020 anchors, 026 and contracts remain.
+ACCOUNT RED remains b3f7141fc652706628ec55c5bd5c1a3e4b560319; PLATFORM remains
+5a35d0831979b6c7444b598c0987bdd9d98f758b. Every archived record, raw output,
+sourceCommit/sourceBlob and genuine evidence-first ancestry remains unchanged.
+No second parser or replacement history is introduced. Selected LCOV does not
+refresh merged all-pair source-map LCOV. The parent owns the full combined gate.
+
+### Atomic closeout and remaining work
+
+Only test/runtime/accountRuntime.test.ts and this append enter the cause commit,
+titled test: prove pending command cancellation on shutdown.
+Recorded-base audit and preservation repeat after this append. The exact required
+SKIP=npm-check pre-commit run --files covers both FINAL paths before staging.
+Any formatter or report change requires another clean terminal pre-step.
+Plain foreground git commit runs all ordinary hooks with SKIP absent.
+Native final-audit, preservation, pre-step, hook streams and actual postcommit
+Git objects establish the terminal result, exact two paths and clean tree/index.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+Original 009 and seed S-04-06 are implemented pending full independent correction.
+This protects T-04-17's existing shared-root single-attempt command boundary.
+No security-relevant surface outside the existing threat model changes.
+RUN-01 stays Pending. WINDOWS 46-53 stay OPEN and unwaived. Remaining causes,
+full ACCOUNT correction, full gates and shared-state advancement stay with the
+parent. No new policy, correction count, fixed-ID reopening or closure is claimed.

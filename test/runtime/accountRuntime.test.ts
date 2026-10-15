@@ -52,6 +52,7 @@ import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
+import type { CommandOutcome } from '../../src/runtime/commandPort.js';
 import type { FailureLog } from '../../src/runtime/failureLog.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
@@ -8114,6 +8115,95 @@ function credentialRequestCount(requests: readonly { url: string }[]): number {
   return requests.filter((request) => request.url.endsWith('/credentials/aws')).length;
 }
 
+test('cancels a pending command through the shared root signal when shutdown begins', async (t) => {
+  // arrange
+  // The promise constructors assign their resolvers synchronously.
+  let completeCommand!: (answer: CommandResult) => void;
+  let rejectCommand!: (error: Error) => void;
+  let announceDispatch!: () => void;
+  const pendingCommand = new Promise<CommandResult>((resolve, reject) => {
+    completeCommand = resolve;
+    rejectCommand = reject;
+  });
+  const dispatched = new Promise<void>((resolve) => {
+    announceDispatch = resolve;
+  });
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'pending command dispatch' });
+  when(() =>
+    commands(
+      DEVICE_ID,
+      { desiredData: { test_running: true } },
+      It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+    ),
+  ).thenReturn(pendingCommand);
+  // The public retry factory receives the root signal during construction.
+  let rootSignal!: AbortSignal;
+  let commandSignal: AbortSignal | undefined;
+  let commandOutcome: CommandOutcome | undefined;
+  const { runtime, commandRequests } = harness(
+    t,
+    {
+      command: (deviceId, command, signal) => {
+        commandSignal = signal;
+        signal.addEventListener(
+          'abort',
+          () => {
+            rejectCommand(new Error('the pending command was aborted'));
+          },
+          { once: true },
+        );
+        announceDispatch();
+        return commands(deviceId, command, signal);
+      },
+    },
+    undefined,
+    {
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  await runtime.start();
+
+  // act
+  const sending = runtime.commands.send(DEVICE_ID, 'self-test', true).then((outcome) => {
+    commandOutcome = outcome;
+    return outcome;
+  });
+  await dispatched;
+  const atDispatch = { aborted: commandSignal?.aborted, outcome: commandOutcome };
+  await runtime.stop();
+  await settle();
+  const atShutdown = { aborted: commandSignal?.aborted, outcome: commandOutcome };
+  // Release the owned response after capture so a missing abort fails an assertion without hanging.
+  completeCommand({ success: true });
+  const outcome = await sending;
+  const snapshot = runtime.store.snapshot(DEVICE_ID);
+
+  // assert
+  assert.deepStrictEqual(
+    { atDispatch, atShutdown, outcome },
+    {
+      atDispatch: { aborted: false, outcome: undefined },
+      atShutdown: { aborted: true, outcome: { accepted: false, failure: 'vendor-error' } },
+      outcome: { accepted: false, failure: 'vendor-error' },
+    },
+  );
+  assert.deepStrictEqual(snapshot, {
+    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: DEVICE_TIME },
+    data: { water_level: 1, primary_pump_running: false, ac_power: true },
+    metadata: {},
+    shadowVersion: undefined,
+    deviceTimestamp: DEVICE_TIME,
+    receivedAt: START_TIME,
+  });
+  assert.strictEqual(commandSignal, rootSignal);
+  assert.deepStrictEqual(commandRequests, [{ deviceId: DEVICE_ID, desiredData: { test_running: true }, aborted: false }]);
+  verify(commands);
+});
+
 describe('commands', () => {
   test('sends the family wire body for a self-test to the device the caller names', async (t) => {
     // arrange
@@ -8332,7 +8422,7 @@ describe('commands', () => {
     verify(commands);
   });
 
-  test('passes the root signal, so a shutdown cancels an attempt in flight', async (t) => {
+  test('passes an already-aborted signal to a command sent after shutdown', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
     when(() =>
