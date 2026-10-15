@@ -5,11 +5,13 @@
  */
 
 /**
- * @fileoverview Checks the arrival-anchor memory operations used by monitoring.
+ * @fileoverview Checks consumed arrival-anchor memory and persistence state.
  *
  * Numeric anchors have no mutable aliases. The get/record boundary has no
  * enumeration or deletion operation. Durable bytes and JSON validation belong
- * to the real store's restore/persist owner cases.
+ * to the real store's restore/persist owner cases. The separate account contract
+ * checks deletion and successful persistence state. Disk bytes, malformed JSON,
+ * write ownership and persistence failures remain real-store owner concerns.
  */
 
 import assert from 'node:assert/strict';
@@ -21,11 +23,12 @@ interface ArrivalAnchorMemoryParticipant {
   factoryName: string;
 }
 
-/** Lists the real and stateful monitoring participants and their owning modules. */
+/** Lists the real and stateful memory participants and their owning modules. */
 export const ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS = {
   real: { ownerPath: 'test/runtime/arrivalAnchors.test.ts', factoryName: 'createArrivalAnchors' },
   monitoring: { ownerPath: 'test/runtime/monitoringHealth.test.ts', factoryName: 'recordingAnchors' },
-} satisfies Record<'real' | 'monitoring', ArrivalAnchorMemoryParticipant>;
+  account: { ownerPath: 'test/runtime/accountRuntime.test.ts', factoryName: 'recordingAnchors' },
+} satisfies Record<'real' | 'monitoring' | 'account', ArrivalAnchorMemoryParticipant>;
 
 /** Names the memory behaviors each owner checks with a fresh participant. */
 export const ARRIVAL_ANCHOR_MEMORY_CASES = [
@@ -113,5 +116,98 @@ export function assertArrivalAnchorMemoryContract(
   assert.deepStrictEqual(observation, {
     beforeOverwrite: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
     afterOverwrite: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+  });
+}
+
+/** Lists participants that consume deletion, restore and successful persistence. */
+export const ARRIVAL_ANCHOR_PERSISTENCE_PARTICIPANTS = {
+  real: ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.real,
+  account: ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.account,
+} satisfies Record<'real' | 'account', ArrivalAnchorMemoryParticipant>;
+
+/** Names the consumed state behaviors, with fresh participants for each case. */
+export const ARRIVAL_ANCHOR_PERSISTENCE_CASES = [
+  'forgets only the named device',
+  'restores persisted anchors without clearing other memory',
+  'persists a snapshot including deletion',
+] as const;
+
+/** Captures both device lookups before and after the consumed operation. */
+export interface ArrivalAnchorPersistenceTransition {
+  beforeOperation: ArrivalAnchorMemoryObservation;
+  afterOperation: ArrivalAnchorMemoryObservation;
+}
+
+/** Exercises consumed state operations without checking disk representation. */
+export async function exerciseArrivalAnchorPersistenceContract(
+  anchors: ArrivalAnchors,
+  contractCase: (typeof ARRIVAL_ANCHOR_PERSISTENCE_CASES)[number],
+): Promise<ArrivalAnchorPersistenceTransition> {
+  await anchors.restore();
+
+  if (contractCase === 'forgets only the named device') {
+    anchors.record('placeholder-device', 0);
+    anchors.record('placeholder-other-device', 1_700_000_898_000);
+    anchors.forget('placeholder-missing-device');
+    const beforeOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+    anchors.forget('placeholder-device');
+    const afterOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+
+    return { beforeOperation, afterOperation };
+  }
+
+  if (contractCase === 'restores persisted anchors without clearing other memory') {
+    anchors.record('placeholder-device', 0);
+    await anchors.persist();
+    anchors.record('placeholder-device', 1_700_000_000_000);
+    anchors.record('placeholder-other-device', 1_700_000_898_000);
+    const beforeOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+    await anchors.restore();
+    const afterOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+
+    return { beforeOperation, afterOperation };
+  }
+
+  anchors.record('placeholder-device', 1_700_000_000_000);
+  anchors.record('placeholder-other-device', 0);
+  await anchors.persist();
+  anchors.forget('placeholder-device');
+  anchors.record('placeholder-other-device', 1_700_000_898_000);
+  await anchors.persist();
+  const beforeOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+  anchors.record('placeholder-device', 0);
+  anchors.record('placeholder-other-device', 42);
+  anchors.forget('placeholder-device');
+  anchors.forget('placeholder-other-device');
+  await anchors.restore();
+  const afterOperation = { anchor: anchors.get('placeholder-device'), otherAnchor: anchors.get('placeholder-other-device') };
+
+  return { beforeOperation, afterOperation };
+}
+
+/** Asserts consumed state observations against independent whole literals. */
+export function assertArrivalAnchorPersistenceContract(
+  observation: ArrivalAnchorPersistenceTransition,
+  contractCase: (typeof ARRIVAL_ANCHOR_PERSISTENCE_CASES)[number],
+): void {
+  if (contractCase === 'forgets only the named device') {
+    assert.deepStrictEqual(observation, {
+      beforeOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+    });
+    return;
+  }
+
+  if (contractCase === 'restores persisted anchors without clearing other memory') {
+    assert.deepStrictEqual(observation, {
+      beforeOperation: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+    });
+    return;
+  }
+
+  assert.deepStrictEqual(observation, {
+    beforeOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+    afterOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
   });
 }

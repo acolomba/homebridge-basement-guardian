@@ -27,6 +27,17 @@ import { createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
+import {
+  ARRIVAL_ANCHOR_MEMORY_CASES,
+  ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
+  ARRIVAL_ANCHOR_PERSISTENCE_CASES,
+  ARRIVAL_ANCHOR_PERSISTENCE_PARTICIPANTS,
+  assertArrivalAnchorMemoryContract,
+  assertArrivalAnchorPersistenceContract,
+  exerciseArrivalAnchorMemoryContract,
+  exerciseArrivalAnchorPersistenceContract,
+} from './arrivalAnchorMemoryContract.js';
+
 import type { CloudApi } from '../../src/cloud/api.js';
 import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient } from '../../src/cloud/shadow.js';
@@ -414,10 +425,9 @@ async function settle(): Promise<void> {
   }
 }
 
-// The anchor store, in memory. `restored` is what an earlier run left on disk,
-// installed by `restore()` one event-loop turn late so a case can tell an
-// awaited restore from a fired-and-forgotten one. `persists` counts the writes,
-// because where they happen is the behaviour.
+// The anchor store keeps a separate persisted snapshot, seeded by `restored`.
+// Restore merges it one event-loop turn late so a case can distinguish awaited
+// restoration. `persists` separately counts invocations on the reporting tick.
 interface RecordingAnchors extends ArrivalAnchors {
   stored: Map<string, number>;
   persists: () => number;
@@ -425,6 +435,7 @@ interface RecordingAnchors extends ArrivalAnchors {
 
 function recordingAnchors(restored: readonly (readonly [string, number])[] = []): RecordingAnchors {
   const stored = new Map<string, number>();
+  let persisted = new Map<string, number>(restored);
   let persists = 0;
 
   return {
@@ -440,11 +451,12 @@ function recordingAnchors(restored: readonly (readonly [string, number])[] = [])
     restore: async (): Promise<void> => {
       await nextEventLoopTurn();
 
-      for (const [deviceId, anchor] of restored) {
+      for (const [deviceId, anchor] of persisted) {
         stored.set(deviceId, anchor);
       }
     },
     persist: (): Promise<void> => {
+      persisted = new Map(stored);
       persists += 1;
 
       return Promise.resolve();
@@ -628,6 +640,94 @@ function countOfLine(logged: readonly string[], line: string): number {
 // pass whatever the runtime did (D-02).
 function silenceOf(pushes: readonly ReadonlyMap<string, MonitoringTrust>[]): (boolean | undefined)[] {
   return pushes.map((byDevice) => byDevice.get(DEVICE_ID)?.shadowSilent);
+}
+
+for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
+  test(`account ${ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.account.factoryName} ${contractCase}`, () => {
+    // arrange
+    const anchors = recordingAnchors();
+
+    // act
+    const observation = exerciseArrivalAnchorMemoryContract(anchors, contractCase);
+
+    // assert
+    assertArrivalAnchorMemoryContract(observation, contractCase);
+  });
+}
+
+for (const contractCase of ARRIVAL_ANCHOR_PERSISTENCE_CASES) {
+  test(`account ${ARRIVAL_ANCHOR_PERSISTENCE_PARTICIPANTS.account.factoryName} ${contractCase}`, async () => {
+    // arrange
+    const anchors = recordingAnchors();
+
+    // act
+    const observation = await exerciseArrivalAnchorPersistenceContract(anchors, contractCase);
+
+    // assert
+    assertArrivalAnchorPersistenceContract(observation, contractCase);
+  });
+}
+
+for (const { contractCase, createAnchors, rejectedObservation, expectedObservation } of [
+  {
+    contractCase: 'forgets only the named device',
+    createAnchors: (): ArrivalAnchors => ({ ...recordingAnchors(), forget: () => undefined }),
+    rejectedObservation: {
+      beforeOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+    },
+    expectedObservation: {
+      beforeOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+    },
+  },
+  {
+    contractCase: 'restores persisted anchors without clearing other memory',
+    createAnchors: (): ArrivalAnchors => ({ ...recordingAnchors(), restore: () => Promise.resolve() }),
+    rejectedObservation: {
+      beforeOperation: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
+    },
+    expectedObservation: {
+      beforeOperation: { anchor: 1_700_000_000_000, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: 0, otherAnchor: 1_700_000_898_000 },
+    },
+  },
+  {
+    contractCase: 'persists a snapshot including deletion',
+    createAnchors: (): ArrivalAnchors => ({ ...recordingAnchors(), persist: () => Promise.resolve() }),
+    rejectedObservation: {
+      beforeOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: undefined, otherAnchor: undefined },
+    },
+    expectedObservation: {
+      beforeOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+      afterOperation: { anchor: undefined, otherAnchor: 1_700_000_898_000 },
+    },
+  },
+] as const) {
+  test(`rejects an account anchor participant that never ${contractCase}`, async () => {
+    // arrange
+    const anchors = createAnchors();
+
+    // act
+    const observation = await exerciseArrivalAnchorPersistenceContract(anchors, contractCase);
+
+    // assert
+    assert.throws(
+      () => {
+        assertArrivalAnchorPersistenceContract(observation, contractCase);
+      },
+      (error: unknown) => {
+        assert.ok(error instanceof assert.AssertionError);
+        assert.deepStrictEqual(
+          { code: error.code, actual: error.actual, expected: error.expected, operator: error.operator },
+          { code: 'ERR_ASSERTION', actual: rejectedObservation, expected: expectedObservation, operator: 'deepStrictEqual' },
+        );
+        return true;
+      },
+    );
+  });
 }
 
 test('waits until a distant credential expiry using only representable native timer delays', async (t) => {

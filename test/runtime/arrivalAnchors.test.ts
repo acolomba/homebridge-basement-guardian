@@ -21,8 +21,12 @@ import { ARRIVAL_ANCHOR_FILENAME, createArrivalAnchors } from '../../src/runtime
 import {
   ARRIVAL_ANCHOR_MEMORY_CASES,
   ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
+  ARRIVAL_ANCHOR_PERSISTENCE_CASES,
+  ARRIVAL_ANCHOR_PERSISTENCE_PARTICIPANTS,
   assertArrivalAnchorMemoryContract,
+  assertArrivalAnchorPersistenceContract,
   exerciseArrivalAnchorMemoryContract,
+  exerciseArrivalAnchorPersistenceContract,
 } from './arrivalAnchorMemoryContract.js';
 
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
@@ -100,6 +104,20 @@ for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
 
     // assert
     assertArrivalAnchorMemoryContract(observation, contractCase);
+  });
+}
+
+for (const contractCase of ARRIVAL_ANCHOR_PERSISTENCE_CASES) {
+  test(`${ARRIVAL_ANCHOR_PERSISTENCE_PARTICIPANTS.real.factoryName} ${contractCase}`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const anchors = storeOver(storagePath, []);
+
+    // act
+    const observation = await exerciseArrivalAnchorPersistenceContract(anchors, contractCase);
+
+    // assert
+    assertArrivalAnchorPersistenceContract(observation, contractCase);
   });
 }
 

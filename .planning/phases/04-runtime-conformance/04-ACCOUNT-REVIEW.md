@@ -1687,3 +1687,154 @@ original IDs remain OPEN: 002–005, 009–023 and 026–029. All implementation
 await independent full ACCOUNT correction after all owning causes finish.
 RUN-01 remains Pending, counter 0 and D-03 stop conditions are unchanged,
 and historical WINDOWS 46/47 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-015A: consumed arrival-anchor agreement
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_015a_anchor_agreement`, on 2026-10-15.
+Disposition: **anchor portion implemented; original 015 remains OPEN pending
+shadow agreement and independent full ACCOUNT correction**. The original
+29 IDs and correction counter **0** continue. This appendix preserves the
+entire initial report and every earlier appendix. It claims no correction,
+independent closure or maintainer verification of the implementation.
+
+Pre-edit HEAD was `6072c207706224f93059cfb9ebe1c1e6185c554e`, on
+`features/code-review-sweep`, with clean status and empty index. The approved
+04-11 declaration and amended 04-07 dependency already exist at that commit.
+This task changes exactly four implementation paths: the ACCOUNT owner,
+`test/runtime/arrivalAnchorMemoryContract.ts`, the arrival-anchor owner and
+this report. The committed pre-code 04-11 declaration is the fifth cause path.
+No production, compiler configuration, monitoring-owner, RED JSON, other
+helper, central ledger or shared-state path changes.
+
+### Exact exception and consumed contracts
+
+Before editing the inventory, fresh exact Fallow queries targeted
+`test/runtime/arrivalAnchorMemoryContract.ts:ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS`.
+Each used one `--type-aware-project`, `--type-aware --symbol-impact`,
+`--type-aware-require complete --format json --quiet --explain`.
+The test query exits 0, status/completeness complete, selected_project
+`tsconfig.test.json`, and names only arrivalAnchors.test.ts and
+monitoringHealth.test.ts. Production exits **1**, unavailable/no-project,
+selected_project `tsconfig.json`. This remains an unmet completeness check.
+Installed TypeScript 6.0.3 programs independently confirm that production
+excludes the helper and tests include it. The maintainer exception permits
+only adding ACCOUNT to this test-only inventory on that evidence.
+No private-fixture or other exported-shape exception follows.
+
+The existing memory cases, exercise signature, observation types and SAME
+pure assertion function remain unchanged. All five cases now also run with
+fresh ACCOUNT `recordingAnchors` participants. Existing real/monitoring
+participants and the structured TRUST zero-loss negative control are intact.
+
+The same concern helper adds a separately scoped typed real/ACCOUNT inventory,
+three consumed persistence cases, action/capture function and pure assertion:
+deletion affects only its named device; restore recovers persisted zero while
+retaining another device present only in memory; persistence keeps memory and
+captures a snapshot including deletion, independent of later mutations.
+Both owners complete all actions and reads in ACT, then invoke the SAME
+assertion against independent literal whole observations in ASSERT.
+Three private broken participants separately ignore forget, restore or persist.
+The SAME assertion rejects each. Independent negative expectations check
+AssertionError identity, ERR_ASSERTION, complete actual/expected structures
+and deepStrictEqual operator. These are adapter-contract negative controls,
+not production RED or temporary source-mutation claims.
+
+The private ACCOUNT `recordingAnchors` name and complete signature stay intact.
+Its body keeps a separate map snapshot initialized from the supplied restored
+entries. Persist replaces that snapshot and separately increments the existing
+invocation counter; restore still merges after one event-loop turn. Existing
+startup ordering, restored-anchor, reporting-count, removal and 024/025 cases
+remain byte-identical. Counts establish invocation timing; the new contract
+establishes state semantics. Neither observation substitutes for the other.
+
+The agreement covers successful consumed state operations only. It does not
+establish disk bytes, malformed JSON handling, temporary-file ownership,
+persistence failures or complete disk equivalence. Every existing real-owner
+disk/error/temporary-path-supplier case remains unchanged. All monitoring
+cases and its helper remain unchanged. No source API, product policy, privacy
+permission, live boundary, package installation or feature changes.
+
+### Complete reads, headers and native checks
+
+Before edits, the fixer read complete AGENTS, all five complete books, the
+04-11 plan, amended 04-07 plan, complete latest review protocol and this whole
+report. All six task read_first files were read completely: arrivalAnchors
+and accountRuntime source, memory helper and arrival/account/monitoring owners.
+Actual callers were traced through harness/start/health to get/record,
+start to restore, reportMonitoringHealth to persist, and confirmed successful
+removal to forget. Existing memory exercise/assert callers in both owners
+were inspected. Installed Fallow help and TypeScript/Node API declarations
+were consulted without installation. The four actual test/helper headers
+(ACCOUNT, memory helper, arrival and monitoring) were inspected in full:
+SPDX MIT, separate 2026 copyright JSDoc, separate purpose overview and imports.
+New helper exports have JSDoc; .js imports and compiled layout remain intact.
+This implementation review supplies no independent full ACCOUNT correction.
+
+All checks ran in the existing linked feature checkout, using the documented
+`workflow.use_worktrees=false` opt-out. No worktree or branch was created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3, Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-015a/`. Every command record
+retains exact executable/argv, cwd, HEAD, versions, real UTC start/end, separate
+complete stdout/stderr and raw exit. before.json saves exact tracked hashes,
+empty diff/index/untracked set and complete before bytes. provenance.json
+retains the full dirty diff, blobs, compiled hashes and unchanged-input checks.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| snapshot.json, guard.json | Clean initial state and exact four-path pre-edit guard; exit 0. No boundary zones/rule packs configured. |
+| impact-production.json, impact-test.json, project-scope.json | Inventory production unavailable/raw 1; test complete/0; installed program membership/0, as limited above. |
+| build-final.json | Fresh npm run build:test; exit 0, 2026-10-15T12:50:18.093Z–12:50:21.358Z. |
+| owners-final.json | Full account, arrival and monitoring compiled owners; exit 0, 206 pass, zero fail/cancel/skip/todo. |
+| direct-account-final.json, direct-arrival-final.json, direct-monitoring-final.json | Each exact npm run test:coverage:direct source/owner pair with fresh build; all exit 0. |
+| coverage-accountRuntime.json | Exact-source native thresholds; exit 0, 147 pass; 994/994 lines, 57/57 functions, 181/181 branches. |
+| coverage-arrivalAnchors.json | Exact-source native thresholds; exit 0, 21 pass; 145/145 lines, 15/15 functions, 32/32 branches. |
+| coverage-monitoringHealth.json | Exact-source native thresholds; exit 0, 38 pass; 154/154 lines, 13/13 functions, 18/18 branches. |
+| lint-final.json | Exact three changed TypeScript files, no cache, max warnings 0; exit 0. |
+| audit.json | Fallow audit against original e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, verdict pass, no introduced issue. |
+| evidence-gate.json, provenance-2.json | Unchanged RED record CLI and SAME installed recursive classifier; all six records RED_EVIDENCE_OK; exit 0. |
+
+All build, owner, lint and direct checks passed on their first candidate.
+After self-review tightened the persisted-memory observation and names, fresh
+final checks repeated on the actual final TypeScript bytes. The first temporary
+provenance script had a syntax error; its raw failure is retained as
+provenance-1.json/.stderr. Corrected provenance-2 passes; no repository input
+changed to resolve it. Earlier passing candidate outputs remain retained too.
+No failed check is discarded or relabeled. Selected direct coverage does not
+refresh merged all-pair source-map LCOV.
+
+All production bytes remain unchanged, including account source blob
+`6e6795bb2720ea38dd46d01393d82692c636de16`. The complete six-record genuine
+RED JSON retains blob `849b2e725bc19a4742e962910cce05f804a6a4c1`.
+Provenance verifies the exact existing memory cases/assertions, all original
+ACCOUNT test cases, every real-anchor case and all other tracked inputs.
+Prior TRUST reviews and controls remain historical and unchanged; adapted
+owners/helper join the later full ACCOUNT correction inventory.
+
+### Threat mitigations, commit and remaining scope
+
+T-04-09/T-04-21: fresh independent state observations preserve the separate
+real disk/error/ownership tests and temporary-path-supplier coverage.
+T-04-13: existing account lifecycle and 024/025 regressions remain intact;
+shadow agreement remains the next declared task. T-04-14: synthetic identifiers
+only, no new logging permission, ordinary secret hooks. T-04-SC: no install.
+These are bounded observed checks, not a universal persistence/lifecycle claim.
+
+The atomic commit introducing this appendix and the three test/helper changes
+is titled `test: verify consumed account arrival anchor agreement`.
+Its exact four paths and actual hash are resolved from that Git object.
+Before the first 04-11 commit the authorized gitdir ledger records
+gsd-plan-head-before-04-11 as 6072c207706224f93059cfb9ebe1c1e6185c554e.
+Exact-file clean SKIP=npm-check pre-commit precedes staging; any formatter or
+report change requires repetition. Native pre-step, branch/HEAD/index checks,
+authorized linked-index staging and plain foreground commit retain terminal
+results. The shared support path selects all 43 pairs in ordinary staged
+check:commit; only its terminal output establishes success. No prospective
+hook pass, amend, no-verify, rebase, stash or history rewrite is claimed.
+
+Only the anchor portion of original 015 is implemented here. Shadow agreement,
+the remaining accepted causes and eventual independent full ACCOUNT correction
+remain pending. Original 001/006/007/008/024/025 retain their implementation
+dispositions. The 29 original IDs and counter 0 are unchanged. Parent full
+npm run check after terminal 04-11 remains required; none runs in this task.
+RUN-01 remains Pending. D-03 and historical WINDOWS 46/47 remain unwaived.
