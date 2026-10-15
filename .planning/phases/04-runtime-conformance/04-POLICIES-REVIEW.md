@@ -804,3 +804,62 @@ path/hash/clean-state checks retain their actual native results under this
 evidence root. Isolated coverage does not refresh merged all-pair LCOV.
 The parent owns the combined full gate and independent full six-file correction;
 no full-project pass or partial-clean POLICIES verdict is asserted.
+
+## Repair evidence: CR-04-POLICIES-006
+
+Applied by `policies_fix_006` (`gsd-code-fixer`), task 04-03-02, under
+`/root/phase4_policies_first/policies_fix_006`. Disposition: **applied, pending
+independent full correction**. The initial report and all prior repair
+appendices remain verbatim. Repairs 001–006 are now applied pending that
+whole-batch review; retry causes 007–012 remain for 04-04. The accepted opening
+set remains 001–012, open count **12**, correction counter **0**, and production
+bugs **0**. No accepted cause has independent closure. RUN-01 stays Pending.
+
+The constant case has separate lowercase arrange, act and assert markers.
+Arrange sets the independent expected reminder to `900_000`; act captures
+the exported `FAILURE_REMINDER_MS`; assert compares that capture with the
+expectation. An exact byte comparison confirms this case is the entire owner
+change. The title, fifteen-minute numeric contract, hourly whole-stream
+assertion, clock naming and all other owner bytes remain intact. Production
+is unchanged. No API, signature, private alias, helper or package changed.
+No production bug, RED history or assertion control applies to this repair.
+
+Initial location remains R:test/runtime/failureLog.test.ts:54–58. Actual
+pre-edit HEAD is `da5269fac68cdb76e915b7226eeca3f9b8cb29af`; the current case
+is at test/runtime/failureLog.test.ts:65–75 at that HEAD plus the retained
+exact dirty diff. The terminal ordinary commit supplies its committed revision
+without a self-referential hash in this appendix.
+
+All checks ran in the existing checkout at the absolute repository root above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. The persisted
+04-03 isolation sentinel records `none`. Root, branch, clean pre-edit HEAD,
+sentinel and existing Git metadata ledger `gsd-plan-head-before-04-03` were
+asserted before editing. The ledger remains R:
+`e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+Complete AGENTS, all five books, full report, owning plan, CONTEXT,
+REVIEW-PROTOCOL, source and owner were read. This test callback is registered
+with `node:test`; no production function or caller changes. The installed
+full Fallow skill and live help preceded the exact two-path guard.
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/006/`.
+Each numbered command folder retains exact argv/cwd/UTC/raw exit in
+`command.json`, separate untouched `stdout.raw` and `stderr.raw`, and
+before/after manifests with HEAD, Node/npm, blobs/SHA-256, exact dirty/staged
+diffs, owned bytes, production bytes and untracked bytes.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live Fallow help / 001–003; exact two-path guard / 004 | Exit 0 each; architecture zones and rule packs are unconfigured |
+| Root/branch/HEAD/sentinel/ledger assertions / 005 | Exit 0; clean assigned checkout and recorded base preserved |
+| Modified section reread and exact byte comparison / 006 | Exit 0; constant case only; production unchanged |
+| `npm run build:test` / 007 | Exit 0; fresh strict test build |
+| `node --test --test-reporter=tap dist-test/test/runtime/failureLog.test.js` / 008 | Exit 0; 15 cases, four suites, zero fail/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` / 009 | Exit 0; isolated direct requirements pass |
+| Isolated native coverage / 010; `failureLog.lcov` | Exit 0; compiled LH/LF 45/45, FNH/FNF 4/4, BRH/BRF 9/9, all 100% |
+| Recorded-base Fallow audit, JSON/quiet/explain / 011 | Exit 0; verdict pass; zero dead-code, complexity or duplication findings |
+
+The exact two-path clean pre-step, ordinary foreground commit and terminal
+path/hash/clean-state checks retain their actual native results under this
+evidence root. Isolated checks do not refresh merged all-pair LCOV. The parent
+owns the combined full gate and independent full six-file correction. No
+full-project pass or partial-clean POLICIES verdict is issued.

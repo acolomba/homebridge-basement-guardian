@@ -63,8 +63,14 @@ function failureLogWith(recorded: string[], clock: Clock): FailureLog {
 
 describe('FAILURE_REMINDER_MS', () => {
   test('D-14 reminds every fifteen minutes', () => {
-    // act & assert
-    assert.strictEqual(FAILURE_REMINDER_MS, 900_000);
+    // arrange
+    const expectedReminderMs = 900_000;
+
+    // act
+    const reminderMs = FAILURE_REMINDER_MS;
+
+    // assert
+    assert.strictEqual(reminderMs, expectedReminderMs);
   });
 });
 
