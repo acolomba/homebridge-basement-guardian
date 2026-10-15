@@ -1557,3 +1557,133 @@ remain OPEN: 002–005, 007, 009–023 and 026–029. All implementations still 
 independent full ACCOUNT correction after all owning causes finish. RUN-01
 remains Pending, counter 0 and D-03 stop conditions are unchanged, and the
 historical WINDOWS 46/47 exceptions remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-007: independent bundled rotation deadlines
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_007_timing`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial review and every earlier appendix remain intact.
+The continuous ACCOUNT correction counter remains **0**. This is assertion
+maintenance, with no genuine production RED or partial clean verdict.
+
+The existing lead case now expects the one-hour fixture's rotation at a
+literal 3000000 ms. It observes exactly one credential request at 2999999 ms
+and exactly two at 3000000 ms. The existing failed-refresh retry case observes
+two requests at 29999 ms after rejection and three at 30000 ms. Both bundled
+exports remain the actual harness inputs. Expected boundaries are independent
+of those inputs. Exact before/at request multiplicity is the public timing
+promise, so no unrelated state assertion or redundant new case is added.
+Every custom timing case and the genuine distant-expiry case remains unchanged.
+
+Pre-edit HEAD was `84fd96017082503acc897521f2d458e82297266f` on
+`features/code-review-sweep`, with clean status and empty index. Complete
+AGENTS, all five complete project books, 04-07-PLAN, the full review protocol
+and this full report were read before edits. The complete current 1327-line
+source and 3770-line owner were read. Callers were traced through harness and
+composition -> createAccountRuntime -> runCredentials -> refreshCredentials ->
+rotationDelayMs -> waitWhileRunning/waitFor. Platform and both World factory
+callers retain their existing optional override/default behavior.
+
+The final cause changes exactly two repository paths:
+
+- `test/runtime/accountRuntime.test.ts`, literal expected delay at line 133
+  and failed-refresh before/at floor observation at lines 1365 onward;
+- `.planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md`, this appendix.
+
+The production source is owned only for the separate temporary controls below.
+No final source diff, API, signature, name, alias, visibility, helper,
+configuration, dependency, shared record or policy change is introduced.
+
+### Separate assertion maintenance controls
+
+Both plausible wrong defaults retain compilation and direct coverage. The
+previous derived expectations move with the wrong input. The lead control
+changes only `ROTATION_LEAD_MS` from 600000 to 599999; the resulting deadline
+is 3000001 ms. After a fresh successful build, the exact lead target fails its
+intended `deepStrictEqual`: beforeDue=1, afterDue=1 instead of 1,2. The old
+derived delay would also become 3000001 and conceal that one-ms error.
+
+The complete source is restored byte for byte, rebuilt, and the exact lead
+target passes. Separately, the floor control changes only
+`MIN_ROTATION_DELAY_MS` from 30000 to 30001. After its fresh successful build,
+the exact failed-refresh target fails its new intended `deepStrictEqual`:
+beforeFloor=2, afterFloor=2 instead of 2,3. The old imported advance would move
+to 30001 and conceal the error. Both native failures execute exactly one test,
+with zero skips, cancellations or todos; neither is setup, import, compilation
+or unrelated assertion failure. Both full TAP streams remain untouched.
+
+The full source is restored again, compared byte for byte, and rebuilt. Both
+targets then pass before full-owner and direct checks. Source before/restored
+blob: `6e6795bb2720ea38dd46d01393d82692c636de16`.
+Lead control blob: `848037b59adcef0ac8732d3949f2460d38a74a5f`.
+Floor control blob: `5df1e7b4825dc93e659090e3d34a150c7f5faf8f`.
+Final owner blob: `f457367f2d4dd764547e6df151ca119e8a6e4921`.
+No control mutation enters Git or the genuine RED JSON.
+
+Before either exported-value control, live Fallow help and exact symbol impacts
+were read and retained. Each of `ROTATION_LEAD_MS` and
+`MIN_ROTATION_DELAY_MS` was queried independently for `tsconfig.json` and
+`tsconfig.test.json` with `--type-aware --symbol-impact
+src/runtime/accountRuntime.ts:<symbol> --type-aware-project <project>
+--type-aware-require complete --format json --quiet --explain`.
+All four native exits are 0, with complete identities and the correct selected
+project. Production names no external consumer; the test project names only
+the complete account owner. Internal composition and actual structural callers
+were read separately. These traces supply no deletion or rename permission.
+
+### Verification location and native records
+
+All checks ran in the existing linked `features/code-review-sweep` checkout,
+with `workflow.use_worktrees=false`, Node v26.11.1, npm 11.20.0,
+TypeScript 6.0.3 and Fallow 3.27.0. No new checkout or branch was created.
+No full `npm run check` ran here; the parent owns the combined wave gate.
+Selected coverage does not refresh merged all-pair source-map LCOV.
+
+Native directory: `/private/tmp/guardian-04-account-007-timing/`.
+Every command record retains exact executable/argv, cwd, HEAD, versions, raw
+exit, real UTC start/end times and separate complete stdout/stderr. Saved
+before bytes, full input manifest, exact control patches and final repair
+diff support restoration and unchanged-input comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| `snapshot.json`, `guard.json` | Initial clean/index snapshot and exact three-path pre-edit Fallow guard; exit 0, no configured zones or rule packs. |
+| `impact-lead-production/test.json`, `impact-floor-production/test.json` | Four independent exact-symbol compiler-project traces; each exit 0, complete. |
+| `baseline-build.json`, `baseline-target.json` | Fresh build and both strengthened named targets; exits 0. |
+| `lead-control-build.json`, `lead-control-target.json` | Build 0; one intended named assertion failure, exit 1, 2026-10-15T05:56:17.429Z–05:56:18.106Z. |
+| `lead-restoration.json`, `lead-restored-build.json`, `lead-restored-target.json` | Exact source-byte restoration, fresh build, named GREEN; each exit 0. |
+| `floor-control-build.json`, `floor-control-target.json` | Build 0; one intended named assertion failure, exit 1, 2026-10-15T05:56:41.330Z–05:56:42.008Z. |
+| `floor-restoration.json`, `restored-build.json`, `restored-target.json` | Exact second restoration, fresh build, both named targets GREEN; each exit 0. Restored build 2026-10-15T05:56:51.120Z–05:56:54.166Z. |
+| `owner.json` | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`; exit 0, 136 pass, zero fail/cancel/skip/todo. |
+| `direct.json` | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; exit 0, exact isolated selector including fresh build. |
+| `native-coverage.json` | Full owner, exact-source include, all three 100% thresholds; exit 0, 994/994 native lines, 57/57 functions, 181/181 branches. |
+| `lint.json` | Exact owner ESLint, no cache, max warnings 0; exit 0. |
+| `evidence-gate.json` | Installed CLI on unchanged genuine RED JSON; exit 0, RED_EVIDENCE_OK. |
+| `audit.json` | Fallow audit against real initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, verdict pass. |
+| `pre-step.json` | Required exact two-file SKIP=npm-check pre-commit; exit 0, clean with no formatter changes, 2026-10-15T05:58:21.535Z–05:58:24.412Z. Repeated after recording this result. |
+
+The genuine RED JSON retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, with all original archived streams.
+Every 024/025 active case and the complete owner outside the exact two edits
+remain byte-identical. The complete earlier report remains an exact prefix.
+The native provenance record compares every other tracked input and records
+the final dirty diff, compiled hashes and native coverage denominators.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and the independent timing expectations
+is titled `fix: assert bundled credential rotation deadlines`. Resolve its
+actual hash and exact two paths from Git. Required exact-file clean pre-step,
+branch/HEAD/index assertions, authorized staging and plain foreground normal
+commit retain their terminal output in the native directory. Only the owner
+and report are staged. No hook bypass, amend, stash, rebase or history rewrite
+is used. The known linked-index sandbox boundary uses the authorized filesystem
+permission after the clean pre-step; no repeat denial is manufactured.
+
+Only original 007 is implemented by this cause. Original 001, 006, 008, 024
+and 025 retain their separate implementation dispositions. The other 23
+original IDs remain OPEN: 002–005, 009–023 and 026–029. All implementations
+await independent full ACCOUNT correction after all owning causes finish.
+RUN-01 remains Pending, counter 0 and D-03 stop conditions are unchanged,
+and historical WINDOWS 46/47 remain OPEN and unwaived.

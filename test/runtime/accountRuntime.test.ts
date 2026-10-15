@@ -130,7 +130,7 @@ const STOPPED_LINE = 'Monitoring has stopped because the vendor refused the acco
 
 // The rotation the fixture expiry produces: an hour of credential life, less
 // the ten-minute lead.
-const ROTATION_DELAY_MS = ONE_HOUR_MS - ROTATION_LEAD_MS;
+const ROTATION_DELAY_MS = 3_000_000;
 
 // A lead and a floor far below the bundled ones, so a case that supplies them
 // fails if the runtime reads the bundled numbers instead.
@@ -1362,10 +1362,12 @@ describe('credential rotation', () => {
     await advance(ROTATION_DELAY_MS);
 
     // act
-    await advance(MIN_ROTATION_DELAY_MS);
+    await advance(29_999);
+    const beforeFloor = calls.filter((call) => call === 'credentials').length;
+    await advance(1);
 
     // assert
-    assert.strictEqual(calls.filter((call) => call === 'credentials').length, 3);
+    assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 2, afterFloor: 3 });
   });
 
   test('reports a failed refresh through the rate-limited discipline rather than directly', async (t) => {
