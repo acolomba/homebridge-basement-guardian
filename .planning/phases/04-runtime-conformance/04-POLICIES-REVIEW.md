@@ -1799,3 +1799,280 @@ clean-tree checks retain actual native streams under this root. Only the owner
 and this existing report enter the cause commit. The parent owns the current
 combined full gate and fresh full six-file correction round 2. No full-project
 pass, zero-open review or POLICIES closure is issued by this fixer.
+
+## Independent full correction round 2
+
+**Reviewer:** `policies_full_correction_two`, typed `gsd-code-reviewer`, under
+`/root/phase4_policies_finish/policies_full_correction_two`.
+**Reviewed revision Q:** `52fe134937c7723c019925d1a768ce12166a82de`.
+**Reviewed:** 2026-10-15 UTC. **Depth:** deep.
+
+Every line and complete header of all six original files was independently
+read. This includes every local helper, all 26 retry cases, all 15 logging
+cases, and the declaration-only command owner. Actual current callers,
+signatures, Git objects and retained native controls were inspected.
+There are no actual added helper files or external adaptations in this batch.
+The complete earlier report remains verbatim. This section is the current
+independent judgment; the initial frontmatter remains historical.
+
+```yaml
+revision: 52fe134937c7723c019925d1a768ce12166a82de
+review_round: 2
+correction_round: 2
+depth: deep
+files_reviewed: 6
+files_reviewed_list:
+  - src/runtime/commandPort.ts
+  - test/runtime/commandPort.test.ts
+  - src/runtime/failureLog.ts
+  - test/runtime/failureLog.test.ts
+  - src/runtime/retryPolicy.ts
+  - test/runtime/retryPolicy.test.ts
+findings:
+  critical: 0
+  warning: 0
+  info: 0
+  total: 0
+status: clean
+genuine_production_bugs: 0
+d03_stop: false
+```
+
+### Exact sets, continuous counter and immediate D-03 judgment
+
+Every suffix below has the full stable prefix `CR-04-POLICIES-`.
+
+| Set | Exact suffix set | Count | BLOCKER / WARNING |
+| --- | --- | ---: | --- |
+| Opening | {013} | 1 | 1 / 0 |
+| Fixed | {013} | 1 | 1 / 0 |
+| Rejected accepted IDs | {} | 0 | 0 / 0 |
+| New | {} | 0 | 0 / 0 |
+| Reopened | {} | 0 | 0 / 0 |
+| Closing | {} | 0 | 0 / 0 |
+
+`closing = opening - fixed - rejected + new + reopened = 1 - 1 - 0 + 0 + 0 = 0`.
+The continuous correction counter advances **1 to 2**, with no reset.
+Round 1 remains 12 - 12 + 1 = 1, with its original finding and provenance.
+Cumulative accepted inventory is 13 unique IDs: 3 BLOCKER and 10 WARNING.
+All 13 are independently fixed; there are **zero open IDs**.
+
+D-03 was evaluated immediately at this completed judgment, before the report
+append: closing zero reduces opening one, no previously fixed ID reopens,
+and correction round two is below four. **D-03 stop is false.**
+No PORTS-specific maintainer response or new permission is needed or inferred.
+The independent POLICIES source/owner review is clean. Combined wave-four
+verification and later phase obligations still belong to the coordinator.
+
+### Narrative Findings (AI reviewer)
+
+No new finding was confirmed in this full review. CR-04-POLICIES-013 is fixed
+by `52fe134937c7723c019925d1a768ce12166a82de`. At Q,
+`test/runtime/retryPolicy.test.ts:17,44–45` imports `MAX_BACKOFF_MS` and uses it
+as the actual policy input. Independently authored expected values remain
+30,000 at owner lines 85–87 and 108–109. Both the returned-delay cases and
+scheduled cap cases now observe the exported production ceiling. The exact
+Q-parent comparison confirms only those two replacements in the owner.
+
+Initial 013 location and first observer remain correction revision C and
+`policies_full_correction_one` above. Its BLOCKER classification concerns test
+reliability under the unit writer/reviewer discrimination and exported-owner
+rules. The production value was correct throughout; no genuine bug or
+BUG-01 RED history is implied by this closure.
+
+### Full scope, complete headers and current identities
+
+All paths resolve under the absolute repository root in the initial report.
+These six current files total 1,025 lines. Each complete header has MIT SPDX
+first, separate `Copyright (c) 2026 Alessandro Colomba` JSDoc, separate purpose
+`@fileoverview` JSDoc, and required blank lines. The retry source retains its
+justified module-object timer-import explanation. Owners were inspected
+independently of the source-only packaging gate. LICENSE/NOTICE retain the
+original-MIT boundary for these files.
+
+| Fully reviewed path | All Q lines | Q Git blob | Complete header |
+| --- | ---: | --- | --- |
+| src/runtime/commandPort.ts | 1–48 | e0189cf9040830a85c4aa447d8a763156c40acbe | Approved |
+| test/runtime/commandPort.test.ts | 1–40 | bc9395128c5467d2c09bb6069eda9107a4886113 | Approved |
+| src/runtime/failureLog.ts | 1–95 | 4d724a609b5da08f31b7978396fd4d240c93fe70 | Approved |
+| test/runtime/failureLog.test.ts | 1–327 | b2a366267264b4fafb821a8d1c779c047e02019d | Approved |
+| src/runtime/retryPolicy.ts | 1–101 | 2c57c73e97be282acfdff61b439bfd86333d5b48 | Approved |
+| test/runtime/retryPolicy.test.ts | 1–414 | 1b60805478d946fb41759df2fb0adbbc46709106 | Approved |
+
+Native 014-evidence-audit-corrected retains complete byte counts and SHA-256
+values in addition to these Git blobs. Q was clean throughout executable
+checks. Every command capture includes before/after complete six-file bytes,
+HEAD/runtime, exact working/staged diffs and nonignored untracked contents.
+The actual initial-R-to-Q path inventory contains only these six code files
+and planning/coordinator records. No helper, external source adaptation,
+deletion, dependency, configuration or product feature was added.
+The six tracked inputs are not ignored; no .codexignore is present.
+
+Complete AGENTS and all five complete style/comments/unit-writer/unit-review/
+local-verification books were read. Both owning plans, CONTEXT, RESEARCH,
+PATTERNS, REVIEW-PROTOCOL, the complete prior 1,801-line report, 04-03 SUMMARY,
+FINDINGS and REQUIREMENTS were read, with applicable STATE and locked decisions.
+The bootstrap, local skill inventory, GSD review skill, Fallow pointer and
+installed Fallow skill were inspected. No new Homebridge/Cucumber behavior
+question arose. The directly read sentinel remains phase04/04-04/isolation none.
+
+### Original findings remain fixed
+
+Initial revision-qualified locations and first observers remain unchanged in
+the original ledger. These current Q locations and real repair commits were
+independently checked. Every ID contributes RUN-01; headers also PROC-03.
+
+| Stable suffix / severity | Exact rule | Current Q location | Repair | Current independent disposition |
+| --- | --- | --- | --- | --- |
+| 001 / WARNING | D-01; style Files and modules | command source 1–19; owner 1–11 | 8052f80 | Remains fixed; both complete headers |
+| 002 / WARNING | style Types; D-06 | command source 24–36; owner 19–38 | c0f8062 | Remains fixed; public named mutable variants and strict contracts |
+| 003 / WARNING | D-01; style Files and modules | logging source 1–12; owner 1–18 | bd335c2 | Remains fixed; both complete headers |
+| 004 / BLOCKER | unit Assertions/discrimination | logging owner 157–202 | 5f07760 | Remains fixed; independent complete 120-entry stream |
+| 005 / WARNING | unit Naming values | logging owner 29–37 | da5269f | Remains fixed; fresh wallTimeMs state |
+| 006 / WARNING | unit Case structure/AAA | logging owner 65–74 | ed06aa0 | Remains fixed; separate constant action and assertion |
+| 007 / WARNING | D-01; style Files and modules | retry source 1–16; owner 1–20 | 80c93ad | Remains fixed; both complete headers |
+| 008 / BLOCKER | unit Assertions/discrimination; Patterns Time | retry owner 78–274 | 41268e3 | Remains fixed; exact deadlines, held callback, pending guard and reset |
+| 009 / WARNING | unit Case structure/AAA; titles | retry owner 276–287 | 01164c4 | Remains fixed; explicit reset action precedes assertion |
+| 010 / WARNING | unit Test doubles/logging | retry owner 22–45,355–414 | ddffc2c | Remains fixed; silent logger, callback and settlement observations |
+| 011 / WARNING | style Functions | retry owner 25–28 | ddffc2c | Remains fixed; named write declaration |
+| 012 / WARNING | unit Test doubles/mock verification | retry owner 290–374 | af2a8e1 | Remains fixed; case-owned exact mocks and explicit final verify |
+| 013 / BLOCKER | unit exported ownership/Assertions/discrimination | retry owner 17,44–45,78–109 | 52fe134 | Fixed this round; actual export input with independent expected ceiling |
+
+### Current callers, private-query limits and preserved contracts
+
+Current accountRuntime public options/factories and command implementation,
+inferred controls.answerWrite result narrowing, platform wiring and structural
+test/World consumers were read. Accepted true/refused false, required mutable
+failure and vendor-error/timed-out vocabulary remain exact. No forced import,
+private type leak, suppression, optional/readonly conversion or consumer
+adaptation was required. Command transmission remains one attempt.
+
+Current accountRuntime:330–333 and1269 creates two policies sharing root
+cancellation, using the exported ceiling. Its separate retryShadow next-delay
+loop remains distinct from shadow:298–304 scheduleReconnect; successful shadow
+subscription at352–374 resets its policy. Wait cancellation, pending until
+callback settlement, first500/capped30000 timing and owned rejection remain.
+No arbitrary callback teardown or terminal-auth/shutdown equivalence is claimed.
+
+Current failure/success/forget callers and wall-clock composition were read.
+Per-kind reminders, fixed safe supplied reasons, recovery and silent forget
+retain their existing meaning. Elapsed silence remains a separate domain.
+FailureLog from its first import and retryPolicy from its timer-import note
+are byte-identical to the initial baseline. No canonical telemetry, last valid
+value, physical identity, adapter selection, persistence format or safety
+meaning changed. Privacy retains its recorded opaque-key assumption.
+
+The twelve retained exact private probes for recordingLog, recordingLog.write
+and countedWork were reopened: all exit2/unavailable, not complete semantic
+evidence or deletion permission. Their signatures, names and current lexical
+callers remain compatible. Silent logging discards unused inputs with void;
+write is a declaration. countedWork retains its body/signature and accompanies
+three strict mocks rather than replacing them. The wrapper records a callback
+before awaiting its strict mock. Installed strong-mock:899–915 final verify
+checks recorded unexpected calls even when production caught the initial error.
+No complete private trace, alias deletion or exemption is invented.
+
+The two fresh pre-edit 013 MAX_BACKOFF_MS impacts at C each selected exactly
+one compiler project, returned exit0/complete status and identity, and retained
+their expected selected_project. Production names accountRuntime; the test
+project additionally names its owner. These are pre-edit named consumers,
+not a claim to exhaust inferred usage or the new post-edit owner import.
+
+S-04-02 remains fixed002. S-04-03/04 retain the original batch-specific
+rejections: concrete/required interface fields and existing mutation contracts
+do not justify optional or readonly conversions. S-04-05's004/008 remain fixed.
+Other seeds stay with their own batches. Every comment, test title, export,
+assertion, double, catch and loop was considered under the complete books.
+No additional security, correctness, style or test-reliability cause was proven.
+
+### Native controls, restoration and Git provenance
+
+The corrected audit reopens all six prior control streams, their exact raw
+exits and complete expected/actual assertions, and compares each restored
+source snapshot with current Q bytes. The004 hourly control preserves120
+entries/four warnings while corrupting116 debug reasons. The008 fixed500,
+one-ms-early and premature-pending controls produce their intended one/two/two
+assertion failures. The010 omitted callback and012 post-abort callback controls
+each fail the intended state observation. Their saved restored build/owner
+records all return0. Full original raw evidence remains intact.
+
+For013, native `/private/tmp/guardian-04-policies-fix-native/013/014-control-owner`
+has exact argv, native TAP, separate stderr and raw exit1. The uniquely named
+attempt7 deadline case executes, reaches deepStrictEqual and fails because
+at30000ms completions remain6/pendingtrue rather than7/false. It has one test,
+one failure, zero cancelled/skipped/todo. The audit verifies that the control's
+only source change was MAX_BACKOFF_MS30000 to30001. Typecheck/lint/build011–013
+all returned0 before that intended failure.
+
+Restoration015 has exact source bytes matching Q/HEAD and saved pre-control
+bytes, blob2c57c73e97be282acfdff61b439bfd86333d5b48,
+SHA-2564061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e.
+Restored build016, all26 owner cases017, direct018 and isolated native019 pass.
+No temporary control enters Git. These are assertion maintenance controls on
+correct production, with no genuine production bug, RED JSON or fabricated
+evidence-before-GREEN history.
+
+All twelve real repair commits are ancestors of Q. Their actual Git paths
+remain within the cause budgets, with no deleted code path. In particular,
+Q changes only the retry owner and this report, including the preserved round1
+appendix. Original013 audit020 reports verdict pass/exit0; clean pre-step022
+precedes individual stage023/024 and ordinary foreground commit025. Native
+commit output reports TruffleHog and npm run check:commit Passed; the later
+commit-message stage's no-files skip is distinct. Earlier hook provenance stays
+indexed under finish-native019. This reviewer stages and commits nothing.
+
+### Fresh current checks and limitations
+
+Native root: `/private/tmp/guardian-04-policies-round2-native/`.
+All commands ran at the recorded absolute root on features/code-review-sweep,
+Q, Node v26.11.1 and npm11.20.0. Each folder has command.json with exact argv,
+cwd, real UTC start/end and raw exit; untouched stdout.raw/stderr.raw; before/
+after full bytes, hashes, HEAD/runtime, exact dirty/staged diffs and untracked
+contents. Earlier native roots001–020 remain intact.
+
+| Native folder | Exact command/scope | UTC on2026-10-15 | Result |
+| --- | --- | --- | --- |
+| 001-static | npm run check:static | 02:07:14–02:07:19 | Exit0; all six static checks |
+| 002-build | npm run build:test | 02:07:19–02:07:23 | Exit0; fresh strict build |
+| 003-owners | node --test --test-reporter=tap plus all three compiled owner paths | 02:07:27–02:07:28 | Exit0;42 native records,4 suites,zero fail/cancel/skip/todo |
+| 004-retry-direct | npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts | 02:07:29–02:07:33 | Exit0; isolated100% |
+| 005-command-direct | npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts | 02:07:40–02:07:44 | Exit0; declaration-only selector acceptance |
+| 006-failure-direct | npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts | 02:07:45–02:07:49 | Exit0; isolated100% |
+| 007-retry-native | exact node:test TAP/LCOV argv in command.json, retry owner alone | 02:08:05–02:08:06 | Exit0;26 cases;LH/LF75/75,FNH/FNF8/8,BRH/BRF15/15 |
+| 008-failure-native | exact node:test TAP/LCOV argv in command.json, logging owner alone | 02:08:06–02:08:07 | Exit0;15 cases;LH/LF45/45,FNH/FNF4/4,BRH/BRF9/9 |
+| 010-fallow-review | installed review --base R --brief --format json --quiet --explain | 02:08:17–02:08:19 | Exit0;orientation verdict pass |
+| 012-report-guard | installed guard on this exact report, JSON/quiet/explain | 02:08:20–02:08:21 | Exit0;zones/rule packs unconfigured |
+| 014-evidence-audit-corrected | python3 /private/tmp/guardian-04-policies-round2-audit.py | 02:09:00–02:09:01 | Exit0;exact inputs,controls,restoration,queries,Git/hooks |
+
+The42 native records comprise15 logging cases,26 retry cases and one native
+command-file success. CommandPort authors **zero runtime cases**, with no
+fictional numerical coverage. Each direct selector rebuilt its inputs fresh.
+Native compiled LCOV denominators above remain distinct from merged full-gate
+source-mapped coverage; selected runs do not refresh the all-pair artifact.
+
+Fallow is orientation, not proof of correctness. Its entrypoint/default-export
+signal concerns an unchanged loader entrypoint; its public-contract signals
+were assessed against byte-preserved logging/retry implementations and actual
+callers. Unconfigured detectors are not measured passes. This reviewer used
+no new source control or production mutation. A guessed impact folder read
+failed before the actual006-impact-src was read. Audit013 exited1 because its
+hook-label assertion expected `npm check`; the actual retained label is
+`npm run check:commit`. Corrected014 verifies the exact Passed line. Both
+attempts remain retained and neither is called intended RED or a source defect.
+
+No full npm run check was run or reused here. The prior wave-three gate cannot
+certify the edited retry owner. The parent still owes current wave-four and
+later combined/phase gates, all remaining declaring plans, independent phase
+verification and actual remaining human judgments. RUN-01 remains Pending.
+WINDOWS46/47 remain OPEN/unwaived; historical hook/Gemini limits remain.
+No install, live vendor/hardware/private-account run, later subsystem closure,
+release approval or new identity/privacy permission is claimed.
+
+Only this existing report receives a repository append. Native scripts and
+evidence stay under /private/tmp. Source, helpers, staged state, Git history and
+shared coordinator records are unchanged. Reviewer/build resources are released
+at terminal return.
+
+**Terminal verdict:** complete six-file correction round **2**, opening
+`{CR-04-POLICIES-013}`, fixed `{CR-04-POLICIES-013}`, rejected/new/reopened/closing
+sets all empty; **zero open BLOCKER and zero open WARNING; D-03 stop false**.
