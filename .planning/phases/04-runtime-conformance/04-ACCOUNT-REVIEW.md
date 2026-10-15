@@ -6887,3 +6887,115 @@ parent owns any new declarations, evidence checkpoints, repairs, full gate,
 shared ledgers and eventual worktree-setting restoration. This reviewer releases
 its serial lease only with the actual terminal return; it performs no tool,
 build, mutation or dispatch after that return.
+
+
+## CR-04-ACCOUNT-030: genuine owner RED handoff before GREEN
+
+This is the RED evidence stage of 04-13-01 only. A fresh typed
+`gsd-code-fixer` used the inherited model and resolved HIGH effort. The parent
+resolved the role, execution mode and configured skills before dispatch. The
+existing `features/code-review-sweep` checkout has
+`workflow.use_worktrees=false`; no new checkout was created. HEAD remains
+`abf7e7ce8e2c7df892a768c3697fb0fdd63987b7`. No production repair, staging,
+commit, second review or full gate occurred in this stage.
+
+### Complete reads and bounded cause
+
+The same fixer completed the five complete TypeScript style, comments,
+unit-testing, unit-testing-review and local-verification books before editing.
+It read the full current 393-line plan, 360-line protocol, 6889-line original
+ACCOUNT report, 1341-line runtime source and 9040-line original owner test.
+It also completed AGENTS/bootstrap/discovery, CONTEXT, RESEARCH, PATTERNS,
+FINDINGS, all 830 canonical decision lines, PROJECT, REQUIREMENTS, applicable
+STATE ranges 1–130/220–340/700–747, summaries 08/11/12, and the required
+shadow/state/monitoring-health/owner-contract sources. Caller and helper reads
+covered the real MQTT seam, seed helpers, retry policy and wall/monotonic clocks.
+Completed contiguous ranges and exact blob proofs are in the native
+`read-progress.json` and evidence `readProvenance`; no future plan bodies or
+reduced read-scope exception were used. A premature preparation stop based on
+forecast read volume is retained honestly; no actual host limit was observed.
+
+Only one active public-owner test was added:
+`createAccountRuntime releases replaced shadow readiness and telemetry ownership until the current connection is ready`.
+It uses the real existing ShadowClient and existing offline MQTT transport seam.
+An actual first connection establishes version 7/water 3. Unchanged membership
+retains the connection. Changed physical membership ends the old transport and
+leaves the replacement client disconnected. Whole literal canonical snapshots,
+receipt times, keyed trust, anchors and lifecycle observations require release
+of old readiness/watermarks, healthy REST water 1 acceptance, and readiness only
+after the current subscription/get handshake. Current version 1/water 2 then
+has to be accepted. Old and stopped callbacks have active ownership guards.
+No helper, API, port or production shape was added or changed.
+
+### Actual native results
+
+The serial `npm run build:test` passed at
+2026-10-15T21:57:08.989Z–21:57:12.215Z. Exact owner ESLint passed at
+21:57:21.649Z–21:57:26.978Z. Node was v26.11.1 and npm was 11.20.0.
+The qualified named command used explicit TAP and the exact anchored pattern:
+
+```text
+node --test --test-reporter=tap --test-name-pattern="^createAccountRuntime releases replaced shadow readiness and telemetry ownership until the current connection is ready$" dist-test/test/runtime/accountRuntime.test.js
+```
+
+It exited 1 at 21:57:43.135Z–21:57:43.455Z: one executed test, one intended
+`ERR_ASSERTION`, zero skipped/cancelled/todo. The full native owner command
+`node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`
+exited 1 at 21:59:06.057Z–21:59:06.504Z: 169 executed, 168 passed, one intended
+failure, zero skipped/cancelled/todo. Both actual processes completed without
+signal, timeout, spawn, load or setup failure. The first three independent
+assertions passed before the complete seven-observation assertion failed.
+
+The actual replacement client is disconnected, but the runtime still reports
+`shadow-and-poll` and retains version 7. Healthy REST refresh updates receipt
+time but leaves water 3 instead of water 1. The new current connection's version
+1/water 2 also cannot replace the retained watermark. Full expected/actual
+structures, unabridged TAP, stdout and stderr are preserved separately for each
+run. Diagnostic success from correction1 is not being substituted for RED.
+
+### Preservation and evidence boundary
+
+Native artifacts are under
+`/private/tmp/guardian-account-030-red-YEgC4q`. They retain all command argv,
+UTC boundaries, raw exits, all attempts, full before/after owner copies and
+patches, compiled source/owner inputs, full tracked manifests/modes and all 44
+production contents. The pre-test independent-literal refinement, every exact
+path guard, formatter, build and lint result remain separate preparation
+history. The current owner patch matches the captured full-owner input patch.
+Removing exactly the one new test recovers the entire original owner byte for
+byte. All 151 previous authored cases, their complete text/token streams,
+helpers, seed calls, fixture resets, floor reset and existing 013/021–026
+coverage therefore remain intact. There are now 152 authored cases and 169
+expanded native tests.
+
+All 44 production blobs and modes match the unchanged HEAD. The runtime source
+blob is `c87b9330ad2589e7941c11aba90f2079c67dbc30`; the active owner blob is
+`e8f89dcdae97c9d46411b330cf30b903ab85608e`. PLATFORM evidence remains byte exact
+at `5a35d0831979b6c7444b598c0987bdd9d98f758b`. The complete original ACCOUNT
+root `b3f7141fc652706628ec55c5bd5c1a3e4b560319`, with all 14 recursive records,
+is preserved exactly deep-equal beneath the new named/full records. The new
+root has 16 records. The same installed `classifyRedEvidence` accepted every
+ACCOUNT record; historical sourceCommit/sourceBlob provenance was independently
+checked, and full intended assertion diagnostics remain present. The same
+installed on-disk CLI and terminal recursive checks are captured separately.
+
+Before each repository mutation, the actual target was read and its exact
+relative path received a fresh Fallow guard. Canonical containment and original
+byte equality precede evidence replacement and this append. The original
+476586-byte report prefix remains exact; no historical header or record was
+rewritten. The terminal checkpoint records exact final blobs, the three dirty
+paths and empty index for the parent's independent evidence-only commit.
+
+### Status retained at RED terminal
+
+Correction counter1 continues: original29 closed independently at correction1;
+new030–044 remain15 open, reopened0, closing15, round1. All 44 accepted findings
+remain stable. At the actual correction1 terminal all D-03 predicates were
+false: 29−29+15=15. This handoff declares no new initial/correction review,
+partial-clean result, fix closure or reopening. RUN-01 remains Pending.
+WINDOWS46–54 remain OPEN/unwaived. The previous full gate cannot be reused after
+this new owner code. The parent owns independent validation and the evidence-only
+report/JSON commit before any GREEN dispatch. All later assertions remain active
+even though this intended first combined checkpoint prevents their execution.
+The fixer releases the serial lease only with its actual final return and takes
+no further action after that return.
