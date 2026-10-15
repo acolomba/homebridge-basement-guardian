@@ -3,8 +3,8 @@
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
 Current through 04-06: PORTS is independently clean at correction round 3.
 POLICIES and TRUST are independently clean at correction round 2.
-Wave six passed. ACCOUNT remains pending.
-One genuine production bug has evidence-first GREEN.
+Wave seven adapter contracts passed. ACCOUNT has full initial review and partial repairs.
+Three genuine production bugs have evidence-first GREEN; full ACCOUNT correction remains pending.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
@@ -12,7 +12,8 @@ The parent coordinator alone consolidates actual reports into this ledger.
 Initial source/test baseline: 008218be4badf44455ab35906f1dfcff06089bf8.
 Exactly twenty initial core paths form ten mirrored pairs. PORTS has full initial
 review and complete-header inspection. POLICIES is independently clean.
-TRUST has complete five-file correction and header review; ACCOUNT remains pending. ACCOUNT initial sizes are 1,283 source
+TRUST has complete correction and header review; later adapted owners await ACCOUNT correction.
+ACCOUNT has complete initial review at e6f49a5; partial repairs do not certify its full scope. ACCOUNT initial sizes are 1,283 source
 lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
@@ -32,12 +33,14 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | TRUST | src/runtime/arrivalAnchors.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
-| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
+| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Historical round 2; current ACCOUNT correction pending | Approved; independently inspected |
 | TRUST | src/runtime/monitoringHealth.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
 | TRUST | test/runtime/monitoringHealth.test.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
-| TRUST | test/runtime/arrivalAnchorMemoryContract.ts | Actual helper; 04-06-03 | 0ad981c; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
-| ACCOUNT | src/runtime/accountRuntime.ts | core | Pending | Pending | Pending |
-| ACCOUNT | test/runtime/accountRuntime.test.ts | core | Pending | Pending | Pending |
+| TRUST | test/runtime/arrivalAnchorMemoryContract.ts | Actual helper; 04-06-03 | 0ad981c; full file/header | Historical round 2; current ACCOUNT correction pending | Approved; independently inspected |
+| ACCOUNT | src/runtime/accountRuntime.ts | core | e6f49a5; full1283lines/header | Pending; counter0 | Applied604d072; correction pending |
+| ACCOUNT | test/runtime/accountRuntime.test.ts | core | e6f49a5; full3365lines/header | Pending; counter0 | Applied604d072; correction pending |
+| ACCOUNT | test/runtime/accountShadowContract.ts | Actual helper; 04-11-02 | Added4fc498c; full review pending | Pending ACCOUNT | Applied; full review pending |
+| ACCOUNT | test/cloud/shadow.test.ts | Adapted owner; 04-11-02 | Prior cloud review historical | Pending ACCOUNT | Preserve; current full review pending |
 
 Initial helper inventory is empty. Add every actual helper and every narrowly
 required external adaptation as its own exact row before edits, with owning
@@ -51,7 +54,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 2; clean at9782919 | None; 0; all17 fixed |
-| ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
+| ACCOUNT | 04-07/11/08/09 | 04-ACCOUNT-REVIEW.md | 29 accepted ate6f49a5 | Counter0; partial repairs | All29 pending independent correction |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
 independent full correction. No-progress with open findings, a reopened fix, or
@@ -474,3 +477,53 @@ The run-scoped worktree flag is still false under the recorded role opt-out.
 Restore only workflow.use_worktrees to true through config-set before final milestone audit and handoff.
 WINDOWS 46/47 remain OPEN/unwaived; RUN-01 remains Pending.
 ACCOUNT, later subsystems and remaining phase judgments are not preapproved.
+
+## Inserted wave 7 ACCOUNT contracts and partial lifecycle evidence
+
+Full npm run check returned 0 at clean ac52e22efbb9b9863aa20e480f1e357237e9670a.
+Node was v26.11.1; UTC interval 2026-10-15T13:11:31.509381+00:00 to 2026-10-15T13:12:06.485929+00:00.
+Six static checks, 104 Cucumber scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata: /private/tmp/guardian-phase4-wave7-contract-gate.json.
+Full output: /private/tmp/guardian-phase4-wave7-contract-full-check.log.
+Generic 04-11 summary verification passed. Schema drift found none; codebase drift skipped because STRUCTURE.md is absent.
+
+Fresh account_initial_review inspected all 1283 source lines and 3365 owner lines at e6f49a5, including headers, all five books, callers and canonical history.
+It accepted 29 findings: 18 BLOCKER and 11 WARNING. Six genuine causes are 021–026.
+All original IDs remain pending independent full correction; counter 0.
+Applied plan-07 causes: 024 c179545, 025 03df992, 001 604d072, 006 18d814e, 008 84fd960 and 007 c627c2a.
+Remaining plan-07 causes 002/003/012/013/027/028 await continuation; 015 is implemented through inserted plan 11.
+Plan 08 owns 018–023 and 026; plan 09 owns 004–005, 009–011, 014, 016–017 and 029.
+Full ACCOUNT correction waits for all initial repairs.
+
+024 has actual source e6f49a5 → planning-only evidence 250516b → GREEN c179545 ancestry.
+Its full owner RED ran 129 tests: 128 pass and one intended assertion failure.
+A pending final inventory completion after terminal halt deleted the snapshot and anchor and appended trust.
+025 has actual source c179545 → planning-only evidence 6f9500e → GREEN 03df992 ancestry.
+Its full owner RED ran 136 tests: 135 pass and one intended assertion failure rejecting overflow delays.
+A separate native Node probe records 4319999990 → 1 ms and TimeoutOverflowWarning; mocked timer observations do not prove native clamping.
+The pair JSON retains all six current and recursive records, classified with the SAME installed classifier.
+Its current evidence blob is 849b2e725bc19a4742e962910cce05f804a6a4c1; both original regression cases remain unchanged.
+Root independently checked source identities, test patches, native output and recursive classifications before each evidence-only commit.
+Native prefixes /private/tmp/guardian-04-account-024-root and guardian-04-account-025-root retain audit, pre-step, hook and provenance checks.
+The 024 sandbox audit failed to create its temporary worktree; the retained authorized retry returned 0/pass.
+
+The maintainer selected option 1 to approve only adding ACCOUNT to ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.
+Pre-code declaration 6072c20 created sequential two-task plan 04-11 and amended dependencies without changing historical plan IDs.
+The fresh bounded plan checker returned PASS, zero blockers and warnings.
+Each task has four implementation paths plus its owning plan declaration as the fifth cause path.
+The production inventory query remains unavailable/no-project, raw 1. Complete test impact, raw 0, and installed TypeScript production exclusion supply the approved evidence.
+Private recordingAnchors and fakeShadow names and signatures remain. No wider trace exception follows.
+015A at fae2ce4 adds ACCOUNT memory agreement and separate forget, restore and successful-persist agreement.
+015B at 4fc498c adds test/runtime/accountShadowContract.ts and real/fake readiness and close agreement.
+Focused owners passed 206 tests, then 210 tests. Final counts are ACCOUNT 151 and shadow 59; all required isolated pairs reach 100%.
+Original TRUST cases, its negative control, the monitoring owner, production and the complete RED history remain unchanged.
+Both complete helpers and adapted arrival/shadow owners join the later ACCOUNT correction and seal inventory.
+Earlier cloud and TRUST reviews remain historical for changed files.
+Task evidence: /private/tmp/guardian-04-account-015a/ and /private/tmp/guardian-04-account-015b/.
+Closeout evidence: /private/tmp/guardian-04-11-closeout/.
+
+The summary's first write preceded its exact-path Fallow guard. The subsequent passing guard cannot repair that historical ordering.
+The parent recorded WINDOWS 48 through the owning CLI; it remains OPEN and unwaived.
+WINDOWS 46/47 also remain OPEN and unwaived. All historical capture limits remain.
+RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit and handoff.
+The parent owes another full gate after completed plan 07. No partial ACCOUNT clean verdict or later-phase acceptance is inferred.
