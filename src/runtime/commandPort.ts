@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
+
 /**
- * The one thing a HomeKit control may ask the vendor to do.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview The one thing a HomeKit control may ask the vendor to do.
  *
  * The HomeKit tier takes this by injection rather than reaching for the cloud
  * client, so a test hands in a recorder and asserts what a write did or did not

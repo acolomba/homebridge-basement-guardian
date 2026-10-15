@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks command port shapes through strict compiler contracts.
+ */
+
 import type { CommandFailure, CommandOutcome, CommandPort } from '../../src/runtime/commandPort.js';
 
 // A port is a contract, so the cases here are the shapes it admits and the ones
