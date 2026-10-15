@@ -6998,6 +6998,40 @@ describe('DEV-05 removal reconciliation', () => {
   // Distinct failure kinds preserve the identity of both stranded accessories.
   test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
     // arrange
+    const callbackStates: unknown[] = [];
+    const expectedSnapshots: DeviceSnapshot[] = [
+      {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME,
+      },
+      {
+        identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME,
+      },
+    ];
+    const expectedTracking = {
+      deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+      snapshots: expectedSnapshots,
+      anchors: [
+        [DEVICE_ID, START_TIME - 123],
+        [OTHER_DEVICE_ID, START_TIME - 456],
+      ],
+      account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+      byDevice: new Map([
+        [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+      ]),
+    };
     const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
     when(() => {
       listener(
@@ -7073,16 +7107,33 @@ describe('DEV-05 removal reconciliation', () => {
     when(() => {
       failures.recordFailure(`HomeKit removal of ${OTHER_DEVICE_ID}`, removalRefusedLine(OTHER_DEVICE_ID));
     }).thenReturn(undefined);
-    const { runtime, removed, advance, commandRequests, monitoringByDevice } = harness(
+    const { runtime, store, anchors, removed, advance, commandRequests, monitoringHealth, monitoringByDevice } = harness(
       t,
       {
         devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
         pollIntervalMs: FAST_POLL_INTERVAL_MS,
         removalFails: true,
+        anchors: recordingAnchors([
+          [DEVICE_ID, START_TIME - 123],
+          [OTHER_DEVICE_ID, START_TIME - 456],
+        ]),
         command: commands,
       },
       failures,
-      { onDeviceRemoved: removals, onMonitoringHealth: listener },
+      {
+        onDeviceRemoved: (deviceId) => {
+          callbackStates.push({
+            deviceId,
+            deviceIds: store.deviceIds(),
+            snapshots: store.deviceIds().map((id) => store.snapshot(id)),
+            anchors: [...anchors.stored],
+            account: monitoringHealth.at(-1),
+            byDevice: monitoringByDevice.at(-1),
+          });
+          removals(deviceId);
+        },
+        onMonitoringHealth: listener,
+      },
     );
     await runtime.start();
     await settle();
@@ -7093,9 +7144,22 @@ describe('DEV-05 removal reconciliation', () => {
 
     const pathBeforeStop = runtime.monitoringPath;
     const devicesBeforeStop = [...monitoringByDevice];
+    const afterRefusals = {
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+    };
     await runtime.stop();
 
     // assert
+    assert.deepStrictEqual(callbackStates, [
+      { deviceId: DEVICE_ID, ...expectedTracking },
+      { deviceId: OTHER_DEVICE_ID, ...expectedTracking },
+    ]);
+    assert.deepStrictEqual(afterRefusals, expectedTracking);
+    assert.deepStrictEqual(removed, [DEVICE_ID, OTHER_DEVICE_ID]);
     assert.deepStrictEqual([...removed].sort(), [DEVICE_ID, OTHER_DEVICE_ID].sort());
     assert.deepStrictEqual(
       { path: pathBeforeStop, trust: devicesBeforeStop.at(-1) },
@@ -7343,31 +7407,164 @@ describe('DEV-05 removal reconciliation', () => {
   // (D-14).
   test('does not re-arm the arrival anchor when a stray message arrives after a pump is removed', async (t) => {
     // arrange
+    const callbackStates: unknown[] = [];
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    };
+    const expectedNeighbor: DeviceSnapshot = {
+      identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME + 3_592_000,
+    };
+    const expectedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const expectedSilentDevice: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const expectedSurvivor = {
+      deviceIds: [OTHER_DEVICE_ID],
+      snapshots: [expectedNeighbor],
+      departedSnapshot: undefined,
+      anchors: [[OTHER_DEVICE_ID, START_TIME - 456]],
+      account: expectedAccount,
+      byDevice: new Map([[OTHER_DEVICE_ID, expectedSilentDevice]]),
+    };
+    const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
+    when(() => {
+      listener(
+        expectedAccount,
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        expectedAccount,
+        new Map([
+          [DEVICE_ID, expectedSilentDevice],
+          [OTHER_DEVICE_ID, expectedSilentDevice],
+        ]),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      listener(expectedAccount, new Map([[OTHER_DEVICE_ID, expectedSilentDevice]]));
+    }).thenReturn(undefined);
+    when(() => {
+      listener(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([[OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }]]),
+      );
+    }).thenReturn(undefined);
     const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'confirmed device removal' });
     when(() => {
       removals(DEVICE_ID);
     }).thenReturn(undefined);
 
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const { runtime, shadows, anchors, removed, advance, commandRequests } = harness(
+    const { runtime, store, shadows, anchors, removed, monitoringHealth, monitoringByDevice, advance, commandRequests } = harness(
       t,
       {
-        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
+        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([otherGeminiDevice()])],
         pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+        anchors: recordingAnchors([
+          [DEVICE_ID, START_TIME - 123],
+          [OTHER_DEVICE_ID, START_TIME - 456],
+        ]),
         command: commands,
       },
       undefined,
-      { onDeviceRemoved: removals },
+      {
+        onDeviceRemoved: (deviceId) => {
+          callbackStates.push({
+            deviceId,
+            deviceIds: store.deviceIds(),
+            snapshots: store.deviceIds().map((id) => store.snapshot(id)),
+            anchors: [...anchors.stored],
+            account: monitoringHealth.at(-1),
+            byDevice: monitoringByDevice.at(-1),
+          });
+          removals(deviceId);
+        },
+        onMonitoringHealth: listener,
+      },
     );
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
-    await advance(TWO_MISSED_HEARTBEATS_MS);
-    const atRemoval = { removed: [...removed], hasAnchor: anchors.stored.has(DEVICE_ID) };
 
     // act
+    const beforeRemoval = {
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+    };
+    await advance(TWO_MISSED_HEARTBEATS_MS);
+    const atRemoval = { removed: [...removed], hasAnchor: anchors.stored.has(DEVICE_ID) };
+    const trackingAtRemoval = {
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      departedSnapshot: store.snapshot(DEVICE_ID),
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+    };
+    const reportsAtRemoval = monitoringByDevice.length;
+
+    await advance(123);
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    const afterStray = {
+      deviceIds: store.deviceIds(),
+      snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+      departedSnapshot: store.snapshot(DEVICE_ID),
+      anchors: [...anchors.stored],
+      account: monitoringHealth.at(-1),
+      byDevice: monitoringByDevice.at(-1),
+    };
+    const reportsAfterStray = monitoringByDevice.length;
+    await runtime.stop();
 
     // assert
+    assert.deepStrictEqual(beforeRemoval, {
+      deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+      snapshots: [expectedSnapshot, { ...expectedNeighbor, receivedAt: START_TIME + 1_796_000 }],
+      anchors: [
+        [DEVICE_ID, START_TIME - 123],
+        [OTHER_DEVICE_ID, START_TIME - 456],
+      ],
+      account: expectedAccount,
+      byDevice: new Map([
+        [DEVICE_ID, expectedSilentDevice],
+        [OTHER_DEVICE_ID, expectedSilentDevice],
+      ]),
+    });
+    assert.deepStrictEqual(callbackStates, [
+      {
+        deviceId: DEVICE_ID,
+        deviceIds: [DEVICE_ID, OTHER_DEVICE_ID],
+        snapshots: [expectedSnapshot, expectedNeighbor],
+        anchors: [
+          [DEVICE_ID, START_TIME - 123],
+          [OTHER_DEVICE_ID, START_TIME - 456],
+        ],
+        account: expectedAccount,
+        byDevice: new Map([
+          [DEVICE_ID, expectedSilentDevice],
+          [OTHER_DEVICE_ID, expectedSilentDevice],
+        ]),
+      },
+    ]);
+    assert.deepStrictEqual({ trackingAtRemoval, afterStray }, { trackingAtRemoval: expectedSurvivor, afterStray: expectedSurvivor });
+    assert.deepStrictEqual({ reportsAtRemoval, reportsAfterStray, removed }, { reportsAtRemoval: 3, reportsAfterStray: 3, removed: [DEVICE_ID] });
     assert.deepStrictEqual(
       { atRemoval, afterStrayMessage: anchors.stored.has(DEVICE_ID) },
       { atRemoval: { removed: [DEVICE_ID], hasAnchor: false }, afterStrayMessage: false },
@@ -7375,6 +7572,7 @@ describe('DEV-05 removal reconciliation', () => {
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
     verify(removals);
+    verify(listener);
   });
 });
 
