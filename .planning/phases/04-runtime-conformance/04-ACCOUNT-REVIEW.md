@@ -4308,3 +4308,162 @@ RUN-01 remains Pending. Original IDs, counter 0, D-03 and historical OPEN/unwaiv
 limits continue. No evidence, plan, helper, external subsystem, summary, config,
 STATE, ROADMAP, REQUIREMENTS, WINDOWS or central FINDINGS path changes.
 The parent retains full-gate, shared-state and final worktree-setting restoration duties.
+
+## CR-04-ACCOUNT-026: true platform owner RED checkpoint
+
+Prepared by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_026_platform_red`, on 2026-10-15.
+This appendix records active unchanged-production RED preparation only.
+Original 026 remains **unimplemented** pending the parent evidence commit,
+runtime dependency, platform integration and later independent full correction.
+The entire preceding report remains an exact byte prefix.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. No correction or partial clean verdict occurs.
+
+### Public restored-cache regression
+
+The new case at `test/platform.test.ts:688` is
+`removes a restored device absent at startup only after healthy confirmations and a final inventory check`.
+It uses only the existing public constructor, configureAccessory and registered
+launch/shutdown listeners. Typed injected HTTP responses remain offline.
+The existing Homebridge/HAP stand-in supplies the accessory constructor and HAP
+objects through its API. The same supplied HAP namespace reaches the platform.
+No new cast, production API, private accessor, helper or seed is introduced.
+
+The platform constructs its runtime before cache restoration. The case restores
+one synthetic physical deviceId with a cached flood value of 1, vendor name and
+complete primary-pump observation record. ConfigureAccessory marks its existing
+StatusActive false without changing those values. No canonical snapshot,
+telemetry, fresh measurement, arrival stamp or normal condition is invented.
+
+The initial healthy empty inventory supplies the first absence. The case checks
+retention before the 300000-ms poll boundary. The second healthy empty inventory
+is requested at that boundary. A potential third, final inventory response is
+held so the case can also distinguish premature unregister from confirmed removal.
+It releases that response unconditionally: it never waits for the final request
+that the actual defect prevents. All actions and shutdown complete before ASSERT.
+
+All three preservation assertions pass. The fourth, afterFinalAnswer
+deepStrictEqual, executes and fails with AssertionError/ERR_ASSERTION.
+Actual state retains the cached accessory UUID and an empty removal-state array.
+Expected state has no cached accessory and exactly one unregister callback.
+That callback must see the same accessory still in the platform map, the full
+unchanged context, flood=1, stale active=false and three inventory requests.
+Its exact plugin name, platform name and accessory argument are prescribed by
+an exact-parameter, finite strong mock. Verification is explicit after the
+independent public assertions. The intended failure precedes verification;
+it is not a fixture, strict-dispatch, compiler, import, TypeError, filter,
+skip, cancellation or permission failure. Logging is silent.
+
+### Native evidence, preparation and verification location
+
+All commands completed serially in the existing linked features/code-review-sweep
+checkout with workflow.use_worktrees=false. No new checkout or branch was created.
+Node v26.11.1 and npm 11.20.0 are recorded for every command.
+Native directory: `/private/tmp/guardian-04-account-026-platform-red/`.
+Each record retains exact argv, raw exit, real UTC start/end, source HEAD,
+full before/after tracked manifests, index/status, blobs and complete separate
+stdout/stderr. Complete source and owner bytes and full patches are retained.
+Before every formatter invocation, full input bytes, patch and blob were saved;
+the completed output bytes are saved separately. No mutating session overlapped.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| before.json, guard.json | Clean HEAD 3f4f1c3, empty index/status, 699 tracked file/symlink inputs and all 44 production identities. Exact three-path Fallow guard before any repository edit or formatter: exit 0, no configured zones/rule packs. |
+| resolver.json | Fresh Codex fixer resolver: model empty/omitted, effort high, tier opus; exit 0. The same resolver was also queried before editing. |
+| owner-format.json | Exact-owner Prettier, exit 0. Complete pre-format and post-format source/patch captured. |
+| owner-lint.json, build.json | First uncached lint exits 1 solely for a required blank line; first fresh build exits 0. No test ran on those preparation bytes. |
+| owner-lint-final.json | Corrected exact-owner uncached ESLint, max warnings 0; exit 0. |
+| build-final.json | Fresh npm run build:test, exit 0, 17:12:50.964247–17:12:54.026983 UTC. |
+| target.json | Exact fully qualified anchored named native TAP target, exit 1: one executed intended assertion failure, zero skip/cancel/todo, 17:12:54.659373–17:12:55.093336 UTC. |
+| owner.json | node --test --test-reporter=tap dist-test/test/platform.test.js, exit 1: 64 tests, 63 pass, only the new case fails, zero skip/cancel/todo, 17:12:59.784161–17:13:00.206026 UTC. |
+
+The named argv uses the full `BasementGuardianPlatform` suite and exact case
+title, with native TAP and the compiled platform owner. Both complete native
+runs reach the same intended assertion on exactly the same final owner bytes.
+The full npm build output remains separate from TAP. The initial lint failure
+and its complete input/output remain preparation history, not genuine RED.
+One artifact-transfer attempt exceeded the single-tool output capacity before
+any repository write. Bounded contiguous transfer supplied the complete file;
+the failed attempt remains separately recorded without invented timestamps.
+Some broad read outputs were truncated; bounded follow-up reads supplied the
+required complete context. Read-only missing/glob probes supply no test evidence.
+
+### Separate pair history and unchanged inputs
+
+The NEW declared file is
+`.planning/phases/04-runtime-conformance/04-PLATFORM-RED-EVIDENCE.json`.
+Its root retains the full-owner run. priorEvidence[0] retains the complete
+earlier named run, with every field, native stream, full patch and source/owner
+bytes. This new pair history contains exactly **two** intended RED records.
+It preserves every platform native attempt in full; no failed setup is relabeled.
+The installed CLI accepted the actual on-disk file as RED_EVIDENCE_OK, exit 0.
+The SAME installed classifyRedEvidence recursively accepted both records as
+RED_EVIDENCE_OK. Independent inspection confirmed the intended assertion,
+complete native streams, exact active patch and actual Git source identities.
+
+The separate ACCOUNT record remains byte-exact at
+`b3f7141fc652706628ec55c5bd5c1a3e4b560319`, with all fourteen histories.
+No ACCOUNT record is embedded, displaced or duplicated in the platform history.
+Its SAME installed recursive classification accepted all fourteen records;
+real sourceCommit/sourceBlob comparisons passed. The original 022 missing first formatter
+input captures remain disclosed and unwaived; these new captures cannot repair them.
+
+Source HEAD remains `3f4f1c3c8a9a732cd7a7711debbd7cb836611362`.
+Platform source remains `7bea5aed77dd653d7396c7279fa709b6677817df`;
+runtime source remains `ec7a77182bb5b222c5fe945abe3b4c67912d5781`.
+Every one of the 44 production paths matches that HEAD byte for byte.
+Active platform owner is `eb576cb98b369df0b0d01616451c049013b31130`.
+The saved root patch equals the entire current owner diff exactly.
+Removing only the new case and its HttpFetch type import reproduces the entire
+prior owner, including every original case, assertion, helper and header.
+The account source/owner, persistence, reconciliation, packages and all other
+tracked inputs remain exact. No new untracked executable is introduced.
+
+### Official lifecycle grounding and terminal parent boundary
+
+Context7 MCP and ctx7 are unavailable. The applicable official fallback is the
+[Homebridge template lifecycle](https://github.com/homebridge/homebridge-plugin-template/blob/latest/src/platform.ts)
+and [DynamicPlatformPlugin callback](https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html).
+The template places discovery on launch after cached restoration. The callback
+initializes each restored accessory. Installed Homebridge 2.4.0 agrees:
+dist/api.d.ts:78–86 defines the callback, dist/server.js:181–184 restores cached
+accessories before signalFinished, and dist/api.js:179–181 emits launch.
+No relevant documentation/version difference was observed. Project runtime
+construction at platform.ts:581 precedes configureAccessory:632, so future
+integration must read the current validated context deviceIds at launch.
+Proposal probes remain leads, not refreshed contract-impact evidence.
+
+Complete AGENTS, bootstrap and all five complete project books were read.
+The complete 04-12 and amended 08/09/10 plans, ROADMAP, latest protocol,
+CONTEXT, RESEARCH, PATTERNS, FINDINGS, prior 4310-line ACCOUNT report, 07/11
+summaries, canonical decisions and relevant locked STATE were loaded.
+Complete current platform source/2384-line owner and account source/8395-line
+owner were read in contiguous bounded pages, with persistence/reconciliation
+and actual index/platform/World composition, restore and removal callers.
+This added case changes no existing shared/public/private alias or member shape.
+No incomplete impact result is treated as permission for a contract change.
+
+Exactly three repository paths remain dirty and unstaged: platform owner,
+this report and new platform RED JSON. The pre-code 04-12 declaration is already
+committed as the fourth cause path. No production/header/runtime dependency,
+control, GREEN, code staging, commit, direct-coverage pass, full npm run check,
+summary, shared-record advancement or independent correction occurred here.
+The parent ALONE commits planning report plus platform JSON after its clean
+required pre-step and normal foreground hooks, leaving the failing owner unstaged.
+That actual evidence-only commit must precede task 04-12-01 runtime GREEN,
+then platform integration GREEN, then the separate platform header-only cause.
+The generic classifier GREEN message does not establish an evidence commit.
+RUN-01 remains Pending. D-03, original IDs/counter and all historical OPEN limits
+remain. T-04-16 preserves cached identity, values and final confirmation; no new
+product/privacy/removal policy, package, private input, live vendor or hardware
+meaning is introduced. Parent full gates and later full correction remain pending.
+
+Terminal provenance verification completed at 17:18:35.481 UTC with exit 0.
+It confirms the exact three dirty paths, empty unchanged index, all 44 production
+files and every other tracked input, full prior report prefix, complete original
+ACCOUNT JSON, all original owner bytes outside the import/new case, and the
+root patch matching the active owner. The first verifier attempt exited 1
+because git hash-object followed a tracked directory symlink. Its full native
+record remains history-provenance.json. The corrected temporary verifier hashes
+the symlink target text and passed; neither attempt is native test RED.
