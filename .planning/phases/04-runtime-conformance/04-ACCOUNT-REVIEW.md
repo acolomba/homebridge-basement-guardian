@@ -1436,3 +1436,124 @@ correction. The other 25 original IDs remain OPEN: 002–005, 007–023 and 026�
 RUN-01 remains Pending. No full ACCOUNT correction occurs until every owning
 04-08/09 cause finishes. D-03 stop conditions, counter 0 and historical
 WINDOWS 46/47 remain unchanged and unwaived.
+
+## CR-04-ACCOUNT-008: exact restored and reported arrival anchors
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_008_restored_anchors`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and all earlier repair appendices remain intact.
+The continuous ACCOUNT correction counter remains **0**. This is assertion
+maintenance, with no genuine production RED or partial clean verdict.
+
+The restart case now captures the exact public anchor read and complete stored
+anchor set after startup. Both independently expect `START_TIME - 1796000`.
+The existing first-report count and silent boolean remain, preserving the
+one-event-loop-turn delayed restore ordering discriminator. The case advances
+the injected clock by 123 ms, routes a real reported arrival through the actual
+shadow callback supplied by public `createAccountRuntime`, and asserts the
+exact new timestamp and complete singleton anchor set as `START_TIME + 123`.
+Expected timestamps use independent literal intervals; no production formatter,
+projection, private access, new helper or API supplies the expected answer.
+
+Pre-edit HEAD was `18d814eaefe9e3e46a3f92ce7e36d8e5c3dad6ea` on
+`features/code-review-sweep`, with clean status and empty index. Before edits,
+complete AGENTS, all five complete project books, 04-07-PLAN, the full review
+protocol and this full report were read. The complete runtime, relevant owner
+setup and restart cases, arrival-anchor and monitoring-health contracts, and
+actual start/health composition callers were inspected. No contract, signature,
+alias, name, visibility or mutability change triggers D-06 impact queries.
+Only the existing restart case changes; the source has no final diff.
+
+### Separate assertion maintenance control
+
+The plausible wrong behavior replaces a restored timestamp with another old
+timestamp during admission. The old boolean/count observations, compilation
+and direct coverage cannot distinguish those two timestamps. The temporary
+minimum source mutation inserted one call after `health.admitDevice`:
+`options.anchors.record(device.deviceId, options.clock.now() - 1800000)`.
+It replaces the restored `1787916604000` with `1787916600000`, while retaining
+exactly one first report and `silent: true`.
+
+After a fresh successful build, the exact named target executes and fails its
+new startup `deepStrictEqual`: only the anchor and stored timestamp differ.
+Native TAP records one test, one intended failure and zero skips, cancellations
+or todos. The actual reported-arrival action has already executed before this
+assertion. The failure is not setup, compilation, import or unrelated state.
+The full source is restored and compared byte for byte, then rebuilt. The
+same target passes after restoration. This control is separate from genuine
+RED history; no mutation or evidence JSON change enters Git.
+
+Source before/restored blob:
+`6e6795bb2720ea38dd46d01393d82692c636de16`.
+One-line control blob: `5519d39c5e71c3d466f3cc76a83cd7f675cc1d88`.
+Final owner blob: `7ad6da177dbe54556473e8461029d8cf2b13b50e`.
+The full owner outside this restart case remains byte-identical, including
+every active 024/025 case and the implemented 001/006 changes.
+
+### Verification location and retained native records
+
+All checks ran in the existing linked `features/code-review-sweep` checkout,
+with `workflow.use_worktrees=false`, Node v26.11.1, npm 11.20.0,
+TypeScript 6.0.3 and Fallow 3.27.0. No new checkout or branch was created.
+No full `npm run check` ran here; the parent owns the combined wave gate.
+Selected coverage does not refresh the merged all-pair source-map LCOV.
+
+Native directory: `/private/tmp/guardian-04-account-008-anchors/`.
+Each command record retains exact executable/argv, cwd, HEAD, versions, raw
+exit, real UTC times and separate complete stdout/stderr. `before.json`
+retains the initial empty diff/index/untracked set and 694 tracked entries.
+Saved before/control/preparation/restored source bytes, final owner, exact
+control patch and complete repair diff support independent comparison.
+`provenance.json` compares every unrelated tracked input, the complete earlier
+report prefix and unchanged owner text outside the assigned restart case.
+
+| Native record | Scope and actual raw result |
+| --- | --- |
+| `guard.json` | Exact three owned paths before edits; exit 0, no configured zones or rule packs. |
+| `snapshot.json` | Exact initial feature branch/HEAD/index/clean-status assertions; exit 0. |
+| `baseline-build.json`, `baseline-target.json` | Fresh build and strengthened named target; both exit 0. |
+| `control-build-2.json`, `control-target.json` | One-line source control builds with exit 0; named target exits 1 at intended exact-anchor assertion. |
+| `restore-check.json`, `restored-build.json`, `restored-target.json` | Exact full source bytes and empty source diff, fresh build and named GREEN; all exit 0. |
+| `final-control-build.json`, `final-control-target.json` | Repeated control on final owner bytes; build 0, intended named assertion failure 1. |
+| `provenance-3.json`, `final-restored-build.json`, `final-restored-target.json` | Exact second restoration, fresh build and final named GREEN; all exit 0. |
+| `owner-final.json` | Full compiled owner; exit 0, 136 pass, zero failures/cancellations/skips/todos. |
+| `direct-final.json` | Exact isolated source/owner selector including fresh build; exit 0. |
+| `native-coverage-final.json` | Complete owner and exact-source 100% thresholds; exit 0, native compiled 994/994 lines, 57/57 functions, 181/181 branches. |
+| `lint-final.json` | Exact owner ESLint, no cache, max warnings 0; exit 0. |
+| `audit.json` | Fallow audit against initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, pass. |
+| `evidence-gate.json` | Installed CLI on unchanged genuine RED JSON; exit 0, RED_EVIDENCE_OK. |
+| `provenance-4.json` | Exact restored source, unchanged unrelated tracked files, prior report prefix and complete owner outside restart case; exit 0. |
+| `pre-step-1.json` | Required exact two-file SKIP=npm-check pre-commit; exit 0, clean, no formatter changes, 2026-10-15T05:51:31.338Z–05:51:34.229Z. Repeated after this result was recorded. |
+
+All preparation attempts remain native records. An initial temporary control
+was built before it was reduced to the one-line admission mutation; its full
+source bytes and successful build are retained, and no target ran against it.
+The first exact lint exposed Prettier's double-quoted apostrophe title. The
+title now avoids that apostrophe, and lint passes. The first provenance script
+failed to locate the reformatted title; its corrected reruns pass. The final
+control/build/restoration and all focused checks repeat on the final owner.
+These preparation results are not relabeled as genuine RED or passing gates.
+
+The complete genuine RED JSON retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, including all archived streams.
+No package install, live vendor request, hardware run, helper, configuration,
+privacy-comment cleanup or shared-record change is introduced.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and restart assertion is titled
+`fix: preserve restored arrival anchor assertions`. Resolve the actual hash
+and exact two paths from Git. Only `test/runtime/accountRuntime.test.ts` and
+this report are staged. Separate native exact-file clean pre-step, branch/HEAD/
+index assertions, authorized staging and ordinary foreground commit records
+retain their terminal results. No hook bypass, amend, stash, rebase or history
+rewrite is used. The known linked-index sandbox boundary uses the authorized
+filesystem permission after a fresh clean pre-step; no denial is manufactured.
+
+Only original 008 is implemented by this cause. Original 001, 006, 024 and 025
+retain their separate implementation dispositions. The other 24 original IDs
+remain OPEN: 002–005, 007, 009–023 and 026–029. All implementations still await
+independent full ACCOUNT correction after all owning causes finish. RUN-01
+remains Pending, counter 0 and D-03 stop conditions are unchanged, and the
+historical WINDOWS 46/47 exceptions remain OPEN and unwaived.

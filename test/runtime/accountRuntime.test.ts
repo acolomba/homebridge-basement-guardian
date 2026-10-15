@@ -1200,20 +1200,37 @@ describe('start', () => {
   // so a restore that was fired rather than awaited would land after the
   // admission loop had already anchored the device at this instant, and the
   // first report would call it trustworthy.
-  test('D-07 reports a pump silent on its first report when a stored anchor predates the whole window', async (t) => {
+  test('D-07 retains the restored anchor of a silent pump until a reported arrival', async (t) => {
     // arrange
-    const { runtime, monitoringByDevice } = harness(t, {
+    const { runtime, anchors, shadows, monitoringByDevice, advance } = harness(t, {
       anchors: recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]),
     });
 
     // act
     await runtime.start();
     await settle();
+    const afterStart = {
+      reports: monitoringByDevice.length,
+      silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent,
+      anchor: anchors.get(DEVICE_ID),
+      stored: [...anchors.stored],
+    };
+    await advance(123);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
 
     // assert
+    assert.deepStrictEqual(afterStart, {
+      reports: 1,
+      silent: true,
+      anchor: START_TIME - 1_796_000,
+      stored: [[DEVICE_ID, START_TIME - 1_796_000]],
+    });
     assert.deepStrictEqual(
-      { reports: monitoringByDevice.length, silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent },
-      { reports: 1, silent: true },
+      { anchor: anchors.get(DEVICE_ID), stored: [...anchors.stored] },
+      {
+        anchor: START_TIME + 123,
+        stored: [[DEVICE_ID, START_TIME + 123]],
+      },
     );
   });
 
