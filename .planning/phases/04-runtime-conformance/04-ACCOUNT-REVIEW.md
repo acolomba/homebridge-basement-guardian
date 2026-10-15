@@ -1095,3 +1095,121 @@ summary, or shared-state advancement is claimed. The failing owner remains
 unstaged. The parent alone must commit the complete planning evidence through
 the required clean pre-step and ordinary hooks before any 025 GREEN edit.
 All cause budgets, D-03 stop conditions and historical limits remain in force.
+
+## CR-04-ACCOUNT-025: deadline-preserving bounded waits
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_025_green`, on 2026-10-15.
+Disposition: **fixed by implementing agent; requires human verification and
+independent full ACCOUNT correction**. This appendix preserves the complete
+initial review and both genuine RED histories. It is not a correction review
+or a clean verdict. The continuous ACCOUNT correction counter remains **0**.
+
+The existing `waitFor` body waits in segments no greater than 2147483647 ms.
+Each completed full segment is subtracted before the final remainder wait.
+The fifty-day expiry therefore retains its entire 4319999990-ms
+expiration-minus-lead delay. Credentials are not refreshed at the intermediate
+segment boundaries. The same root signal reaches every segment, and the
+existing catch still returns false on cancellation. The lifecycle predicates,
+credential lead/floor, invalid-date fallback and refresh loop are unchanged.
+No new interval, product policy, API, helper, alias, signature or caller is added.
+
+The full current 1312-line source and 3734-line active owner were read before
+repair, with complete AGENTS and all five complete project books. Callers were
+traced through waitWhileRunning to retryShadow, runPolls and runCredentials,
+plus relaunch's direct waitFor call. The actual platform and both World
+composition/start/stop callers were read. This repair changes only the helper
+body and a module-local native timer-limit constant. It does not rename,
+delete or change a private/shared/exported signature, visibility or contract.
+D-06 contract-change impact queries are therefore not triggered.
+
+The cause changes exactly these three repository paths:
+
+- `src/runtime/accountRuntime.ts`
+- `test/runtime/accountRuntime.test.ts`
+- `.planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md`
+
+The owner change is the original active 025 regression and its timer-object
+import. Its entire saved patch is byte-identical to the active owner diff
+against source commit c179545. The original 024 regression is also preserved
+byte for byte. No added coverage case was needed: the existing active cases
+cover every new branch. Header conformance remains original 001; this cause
+contains no header churn, helper/configuration edit or shared-record change.
+
+### Immutable evidence and actual ancestry
+
+Source commit `c179545bf4d2bb1aa35a3e4b204b92f3930b1941` precedes
+planning-only evidence commit `6f9500e54ac7b6e72db982f42722f9ce2bf768d7`,
+the repair's parent. Both commits retain production blob
+`79128e3d0a6387c68d26266368138589b71c6e14`. The evidence commit changes only
+this report and the RED JSON; no failing owner was committed there.
+The GREEN source blob is `767f8ff14df4220134281288d743697ece3df9f6`.
+The active owner retains blob `9d146246782548769812b926fb9a627d45bbfb5c`.
+
+The RED JSON remains unchanged at blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`. Its installed CLI check passes,
+and the SAME installed classifyRedEvidence recursively accepts all six
+current/archive records as RED_EVIDENCE_OK. Actual source/test Git objects and
+the full saved active patch were compared again. The independent native clamp
+probe remains in `/private/tmp/guardian-04-account-025-red/`; the deterministic
+GREEN owner makes no new claim about an unmocked fifty-day elapsed wait.
+All 43 other production files remain byte-identical to c179545.
+
+### Verification location, exact inputs and native records
+
+Checks ran in the existing linked `features/code-review-sweep` checkout with
+`workflow.use_worktrees=false`, Node v26.11.1, npm 11.20.0, TypeScript 6.0.3
+and Fallow 3.27.0. No worktree or branch was created. No full npm run check ran
+here; the parent owns the combined wave and later phase gate.
+
+Native directory: `/private/tmp/guardian-04-account-025-green/`.
+Every command record retains exact argv, cwd, HEAD, versions, real UTC
+start/end times, separate stdout/stderr and raw exit. `before.json` retains
+the exact initial dirty diff, index state, tracked path/blob/SHA-256 manifest
+and untracked contents. `provenance.json` retains the complete repair diff,
+actual ancestry, immutable evidence hash, recursive classifications, patch
+comparison and native LCOV metrics.
+
+| Native record | Actual command/scope and raw result |
+| --- | --- |
+| `guard.json` | Exact three authorized paths before edits; exit 0, no configured zones/rule packs. |
+| `build-1.json` | Fresh npm run build:test; exit 0, 2026-10-15T05:31:02.630Z–05:31:05.440Z. |
+| `owner-1.json` | Complete compiled owner with TAP; exit 0, 136 pass, zero fail/cancel/skip/todo. |
+| `direct-1.json` | Exact isolated source/owner selector, including fresh build; exit 0. |
+| `native-coverage-1.json` | Complete owner, exit 0, 136 pass; native compiled 988/988 lines, 57/57 functions, 181/181 branches. |
+| `lint-1.json` | Exact two TypeScript files, no cache, max warnings 0; exit 0. |
+| `evidence-gate.json` | Installed CLI on unchanged on-disk RED JSON; exit 0, RED_EVIDENCE_OK. |
+| `provenance-1.json` | Exact active patch, retained 024 case, six recursive verdicts and real source/evidence ancestry; exit 0. |
+| `audit-1.json` | Fallow audit against initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, pass. |
+| `pre-step-1.json` | Required SKIP=npm-check pre-commit on all three changed paths; exit 0, clean, no formatter changes. Repeated after recording this result. |
+| `pre-step-2.json` | Repeated exact-file pre-step before staging; exit 0, clean, source/owner blobs unchanged. |
+| `stage-1.json` | Sandbox staging attempt; exit 128, linked-checkout index.lock creation denied. Index remained empty; complete stderr retained. Clean pre-step repeats before the authorized filesystem retry. |
+
+All GREEN source/owner checks passed their first attempt. The temporary
+snapshot script initially encountered tracked directory/symlink entries.
+Its two failed preparation attempts and corrected passing third attempt remain
+in snapshot-attempt-1/2/3 native records. They changed no repository input and
+are not test evidence or a hidden passing gate. No source mutation control,
+install, live vendor request or hardware run occurred.
+
+The initial staging attempt could not create the linked checkout's index.lock
+outside the writable checkout root. This is a retained filesystem failure,
+not a source/test failure or a hook bypass. The retry uses the authorized
+filesystem permission after another clean exact-file pre-step. Its separate
+native record and normal commit result remain the completion authority.
+
+### Commit and remaining scope
+
+The repair commit is the Git object introducing this appendix and both
+TypeScript changes, titled `fix: preserve distant credential refresh deadlines`.
+Resolve its actual hash and exact paths from Git. The clean exact-file
+pre-step, branch/HEAD/index assertions, staging and normal foreground commit
+have separate native records; only their terminal results prove completion.
+No amend, hook bypass, stash, rebase or history rewrite is authorized.
+
+Only original 025 is implemented by this cause. Original 024 retains its
+separate implementation disposition. The other 27 original IDs remain OPEN:
+001–023 and 026–029. Both implemented behavior fixes still await independent
+full ACCOUNT correction after all 04-08/09 causes. The initial 29 findings and
+their original observations remain intact; RUN-01 remains Pending. No finding
+counter, D-03 stop condition or historical WINDOWS exception is reset or waived.

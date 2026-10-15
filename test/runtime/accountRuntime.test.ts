@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
-import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
+import timers, { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
@@ -619,6 +619,39 @@ function countOfLine(logged: readonly string[], line: string): number {
 function silenceOf(pushes: readonly ReadonlyMap<string, MonitoringTrust>[]): (boolean | undefined)[] {
   return pushes.map((byDevice) => byDevice.get(DEVICE_ID)?.shadowSilent);
 }
+
+test('waits until a distant credential expiry using only representable native timer delays', async (t) => {
+  // arrange
+  const { runtime, calls, advance } = harness(t, {
+    credentials: [() => Promise.resolve(credentialsAt(START_TIME + 4_320_000_000))],
+    rotationLeadMs: 10,
+    minRotationDelayMs: 5,
+  });
+  const setTimeoutSpy = t.mock.method(timers, 'setTimeout');
+
+  // act
+  await runtime.start();
+  await settle();
+  await advance(2_147_483_647);
+  const afterFirstBoundedWait = calls.filter((call) => call === 'credentials').length;
+  await advance(2_147_483_647);
+  const afterSecondBoundedWait = calls.filter((call) => call === 'credentials').length;
+  await advance(25_032_695);
+  const beforeExpiryLead = calls.filter((call) => call === 'credentials').length;
+  await advance(1);
+  const afterExpiryLead = calls.filter((call) => call === 'credentials').length;
+  const unrepresentableDelays = setTimeoutSpy.mock.calls
+    .map((call) => call.arguments[0])
+    .filter((delay) => delay === undefined || !Number.isFinite(delay) || delay < 1 || delay > 2_147_483_647);
+
+  // assert
+  assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
+  assert.deepStrictEqual(unrepresentableDelays, [], 'credential expiry scheduling must keep every native timer delay within 1..2147483647 ms');
+  assert.deepStrictEqual(
+    { afterFirstBoundedWait, afterSecondBoundedWait, beforeExpiryLead, afterExpiryLead },
+    { afterFirstBoundedWait: 1, afterSecondBoundedWait: 1, beforeExpiryLead: 1, afterExpiryLead: 2 },
+  );
+});
 
 test('retains halted state when a pending final inventory check succeeds', async (t) => {
   // arrange

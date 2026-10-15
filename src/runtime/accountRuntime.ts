@@ -40,6 +40,7 @@ import type { Logging } from 'homebridge';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 const MILLISECONDS_PER_SECOND = 1_000;
+const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
 
 /** How long before a credential expiry a bundled runtime refreshes the cache. */
 export const ROTATION_LEAD_MS = 600_000;
@@ -363,6 +364,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // Homebridge process (D-20).
   async function waitFor(delayMs: number): Promise<boolean> {
     try {
+      while (delayMs > MAX_TIMEOUT_DELAY_MS) {
+        await timers.setTimeout(MAX_TIMEOUT_DELAY_MS, undefined, { signal: root.signal });
+        delayMs -= MAX_TIMEOUT_DELAY_MS;
+      }
+
       await timers.setTimeout(delayMs, undefined, { signal: root.signal });
 
       return true;
