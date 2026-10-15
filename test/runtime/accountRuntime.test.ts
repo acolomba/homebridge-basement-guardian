@@ -8644,7 +8644,7 @@ describe('createAccountRuntimeFromConfig', () => {
     verify(registerSecret);
   });
 
-  test('SYNC-04 arms the rotation on the lead and floor the caller states rather than the bundled pair', async (t) => {
+  test('SYNC-04 arms the rotation on the lead the caller states for a distant expiry', async (t) => {
     // arrange
     const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed HTTP requests' });
     when(() =>
@@ -8740,6 +8740,116 @@ describe('createAccountRuntimeFromConfig', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: credentialRequestCount(requests) }, { beforeDue: 1, afterDue: 2 });
+    verify(httpFetch);
+  });
+
+  test('waits for the supplied rotation floor when the composed expiry is inside the lead window', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'composed floor requests' });
+    when(() =>
+      httpFetch('https://tenant.example.test/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body:
+          '{"grant_type":"http://auth0.com/oauth/grant-type/password-realm","realm":"example-realm"' +
+          ',"client_id":"client-id-1","username":"account@example.test","password":"account-password"' +
+          ',"scope":"openid profile email"}',
+        signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+      }),
+    ).thenResolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/devices'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(credentialsAt(START_TIME + 5)), { status: 200 }));
+    when(() =>
+      httpFetch(
+        It.matches<string | URL>((input) => input instanceof URL && input.href === 'https://api.example.test/credentials/aws'),
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer id-token-1', 'User-Agent': 'homebridge-basement-guardian' },
+          signal: It.matches<AbortSignal>((signal) => signal instanceof AbortSignal && !signal.aborted),
+        },
+      ),
+    ).thenResolve(new Response(JSON.stringify(rotatedCredentialsAt(START_TIME + 5)), { status: 200 }));
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-floor-'));
+    let elapsedMs = 0;
+    const credentialRequests: number[] = [];
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      registry: createFamilyRegistry(),
+      storagePath,
+      clock: { now: () => START_TIME + elapsedMs },
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
+      connect: () => {
+        throw new Error('the offline broker refuses the connection');
+      },
+      httpFetch: (input, init) => {
+        if (input.toString() === 'https://api.example.test/credentials/aws') {
+          credentialRequests.push(elapsedMs);
+        }
+
+        return httpFetch(input, init);
+      },
+      createSalt: () => 'salt-1',
+      rotationLeadMs: 10,
+      minRotationDelayMs: 5,
+    });
+    t.after(async () => {
+      await runtime.stop();
+      t.mock.timers.reset();
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    });
+    const expectedSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME,
+    };
+
+    // act
+    await runtime.start();
+    await settle();
+    elapsedMs = 4;
+    t.mock.timers.tick(4);
+    await settle();
+    const beforeFloor = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), credentialRequests: [...credentialRequests] };
+    elapsedMs = 5;
+    t.mock.timers.tick(1);
+    await settle();
+    const atFloor = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), credentialRequests: [...credentialRequests] };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { beforeFloor, atFloor },
+      {
+        beforeFloor: { path: 'poll-only', snapshot: expectedSnapshot, credentialRequests: [0] },
+        atFloor: { path: 'poll-only', snapshot: expectedSnapshot, credentialRequests: [0, 5] },
+      },
+    );
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
     verify(httpFetch);
   });
 

@@ -5617,3 +5617,141 @@ RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
 No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
 No security-relevant surface outside the existing threat model changes.
 The parent retains remaining causes, full correction, combined gates and shared-state advancement.
+
+## CR-04-ACCOUNT-029: supplied composition rotation floor
+
+**Requirement:** RUN-01. **Original severity:** BLOCKER.
+**Rule:** unit writer/reviewer, case-title discrimination and independent Assertions.
+**Owning task:** 04-09-01. **Disposition:** applied, pending independent full ACCOUNT correction.
+**Fixer:** gsd-code-fixer, /root/phase4_account_trust/account_029_rotation_floor.
+**Pre-edit HEAD:** 028ea7f677e60b579822cf08b57e7ccc0c7cafa2.
+Original location remains R:test/runtime/accountRuntime.test.ts:3157-3199.
+The retained lead case starts at current owner line 8647; the new floor case starts at 8746.
+The original 29 IDs, initial 18 BLOCKER/11 WARNING counts and correction counter 0 remain.
+This is assertion maintenance on correct production, with no independent correction or clean verdict.
+
+### Existing timing overlap and minimum remaining repair
+
+Original 007 independently protects the bundled 600000-ms lead and 30000-ms floor.
+Original 013 already supplies exact finite HTTP expectations and owning-case verification.
+The direct-runtime short-floor case reaches the runtime options but bypasses composition.
+The existing composition case returns credentials an hour away, so its deadline exercises only the supplied lead.
+Its complete body, timer operations, request expectations and assertions remain byte-exact.
+Only its title narrows to the lead promise it actually observes.
+
+One separate case calls the public createAccountRuntimeFromConfig factory.
+The supplied response expires five milliseconds after the initial wall time, inside the supplied ten-ms lead window.
+The independently expected five-ms floor is observed immediately before and at its boundary.
+ACT advances literal four milliseconds, captures complete public state, then advances one millisecond and captures again.
+The request history must be [0] at four ms and [0, 5] at five ms.
+Both checkpoints also require the complete independently specified canonical snapshot and poll-only path.
+The snapshot retains physical identity, connectivity, all telemetry, metadata, watermark, device time and receipt time.
+Shutdown is completed before ASSERT and must leave the public path unavailable.
+
+The exact-parameter HTTP mock permits one token exchange, one inventory and two credential requests.
+Each response is fresh; exact method, URL, authorization, user agent, body and initially live signals are prescribed.
+The case explicitly verifies the mock after all whole public observations.
+The offline broker refusal drives the existing poll-only path without a live network connection.
+Separate wall and monotonic bases retain their existing units.
+The existing root, mutable credential cache, role registration, request deadlines and single credential loop remain unchanged.
+No retry/deadline policy, helper, seed, API, package or configuration is introduced.
+
+Complete AGENTS/bootstrap, all five project books, current 09 plan, protocol,
+CONTEXT, RESEARCH, PATTERNS, FINDINGS, canonical decisions, applicable STATE,
+PROJECT/ROADMAP/REQUIREMENTS and prior 07/08/11/12 summaries were loaded.
+The complete current 1341-line source, 9010-line owner and 5619-line report were read through bounded contiguous ranges.
+Actual platform and both World factory/start callers retain default and optional override behavior.
+The traced path is composition -> createAccountRuntime -> runCredentials ->
+refreshCredentials -> rotationDelayMs -> waitWhileRunning/waitFor, with the real auth/REST HTTP boundary.
+Production correctly forwards deps.minRotationDelayMs; no production defect is inferred.
+No existing shared/public/private name, signature, member, alias, mutability or visibility changes or deletion triggers D-06 impact requirements.
+Both approved complete headers, .js imports and all existing contracts remain intact.
+
+### Separate maintenance control and exact restoration
+
+The plausible wrong behavior wires MIN_ROTATION_DELAY_MS instead of the caller's floor.
+Compilation, lint and direct coverage cannot establish that composition honors this value.
+The sole temporary production edit replaces the minRotationDelayMs composition expression with that bundled constant.
+The fresh control build exits 0.
+The unique named new target exits 1 at the intended whole deepStrictEqual assertion:
+the five-ms checkpoint has credentialRequests [0], while the independent expectation is [0, 5].
+Both complete snapshots and poll-only paths remain correct.
+Native AssertionError, ERR_ASSERTION and deepStrictEqual identify the failure.
+Exactly one test executes, with zero skip/cancel/todo and no setup or unexpected-mock failure.
+The native process completes in about 0.3 seconds; no timeout supplies the result.
+
+The full production source was restored through Git and compared byte for byte before GREEN checks.
+Before/restored source blob is c87b9330ad2589e7941c11aba90f2079c67dbc30.
+Temporary control blob is ebb87ce271dc3588dd6080219389276bbef7337a.
+The source diff is empty. Fresh rebuilt lead and floor named targets both pass.
+The final owner is 04481f0b4f91a2c63a03bc46e9f13f981e45f598, identical to the control owner's bytes.
+No temporary mutation or new genuine RED record enters Git.
+
+### Native checks, preservation and verification location
+
+All checks run serially in the existing linked features/code-review-sweep checkout,
+with workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+Fresh model/execution resolution selects an omitted model, high effective effort and opus tier.
+The persisted phase 04/plan 04-09 sentinel remains isolation none.
+No additional checkout, branch or recovery sentinel is created.
+Native directory: /private/tmp/guardian-04-account-029/.
+Every subprocess record retains exact argv/cwd, actual UTC start/end, raw exit,
+Node/npm, before/after HEAD, all 702 input identities and modes, complete dirty/index patches,
+full owned bytes, compiled source/owner copies and complete separate stdout/stderr.
+The initial snapshot also saves every complete tracked/nonignored input.
+Every process reaches terminal completion before dependent edits or builds.
+
+| Native record | Actual terminal result |
+| --- | --- |
+| preedit-guard, guard-control, guard-restore, guard-report | Exact three authorized paths before changes; exit 0, no configured zones or rule packs |
+| build-baseline, target-baseline, lint-baseline | Fresh build, exact new target and uncached pair lint; exit 0 |
+| control-build, control-target | Build 0; intended named assertion failure 1, 19:31:53.243614-19:31:53.550921 UTC |
+| restore-source, build-restored, target-restored | Exact source restoration; fresh build 19:32:03.209981-19:32:06.092037 UTC; both lead/floor targets pass; exit 0 |
+| owner-final | Full compiled native TAP, exit 0, 19:32:19.175595-19:32:19.630602 UTC; 168 pass, zero fail/cancel/skip/todo |
+| direct-final | Exact npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts with fresh build; exit 0 |
+| native-coverage-final | Full owner with exact compiled-source include and all three 100% thresholds; exit 0; 1003/1003 lines, 58/58 functions, 193/193 branches; accountRuntime-final.lcov retained |
+| lint-final | Exact source/owner ESLint --max-warnings=0 --no-cache; exit 0 |
+| account-evidence, platform-evidence | Current installed on-disk RED CLI; exit 0, RED_EVIDENCE_OK for both unchanged files |
+| preservation | Complete original case/assertion-order, source restoration, report-prefix and unrelated-input comparisons; SAME installed recursive classifier over all sixteen records; exit 0 |
+| audit | Fallow audit against actual 09 base 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574, JSON/quiet/explain; exit 0, verdict pass, zero introduced issues |
+
+All executable candidate checks pass; the deliberate maintenance control is the intended failure.
+Early read-only discovery had an unmatched temporary-path glob and a denied unrelated temporary directory listing.
+Those tool results changed no repository input and supply no test or provenance evidence.
+No unsuccessful native test or preparation attempt is omitted or relabeled as genuine RED.
+
+preservation-proof.json retains all 150 complete saved/current original authored cases,
+their exact assertion/verify sequences and order, and the one new case.
+Reversing only the new case and truthful lead title reproduces the entire original owner byte for byte.
+The entire 383144-byte previous report remains an exact prefix before this append.
+All 700 inputs outside owner/report retain their saved hashes and modes.
+Original 024, every literal 025 deadline and stronger 013 verification, 023 rows,
+021 callback/neighbor proof, 022 real-shadow/order cases, 018 frozen/refused readbacks,
+019 checkpoints, 020 anchors, 026 fixture/contracts and all prior negative controls remain intact.
+The existing 09 plan ledger retains 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574.
+The parent's initial-ledger-checkpoint.json retains SHA-256 aef5e272b16ba900cae197a46420256be5bb9f530c77061d8fe14f979627af53.
+
+ACCOUNT evidence remains b3f7141fc652706628ec55c5bd5c1a3e4b560319 with fourteen complete records.
+PLATFORM evidence remains 5a35d0831979b6c7444b598c0987bdd9d98f758b with two complete records.
+The SAME installed classifyRedEvidence accepts every recursive record as RED_EVIDENCE_OK;
+each sourceCommit:path resolves to its original sourceBlob, and every raw history remains byte-exact.
+No second parser or replacement history is introduced.
+Selected native LCOV does not refresh merged all-pair source-map LCOV.
+No full npm run check, full-gate reuse, independent correction or closure is claimed; the parent owns those remaining gates.
+
+### Atomic closeout and remaining work
+
+Only test/runtime/accountRuntime.test.ts and this append enter the cause commit,
+titled test: verify the supplied composition rotation floor.
+Recorded-base audit and preservation repeat after the append.
+The exact required SKIP=npm-check pre-commit run --files covers both FINAL paths before staging.
+Any report or formatter change requires another clean terminal pre-step.
+Plain foreground git commit runs all ordinary hooks with SKIP absent.
+Final audit, preservation, pre-step, hook streams and actual postcommit Git objects establish completion.
+No wrapper, manual stash, amend, hook bypass, rebase or history rewrite is used.
+
+Original 029 is implemented pending full independent ACCOUNT correction.
+This preserves the existing command/composition threat boundary without new security-relevant surface or product meaning.
+RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived.
+No correction increment, fixed-ID reopening, rejection, clean verdict or phase completion is claimed.
+The parent retains remaining causes, full correction, combined gates and shared-state advancement.
