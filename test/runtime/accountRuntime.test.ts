@@ -2210,6 +2210,7 @@ describe('createAccountRuntime', () => {
     });
     t.after(async () => {
       await runtime.stop();
+      t.mock.timers.reset();
       await rm(storagePath, { recursive: true, force: true });
     });
     const expectedSnapshot: DeviceSnapshot = {
@@ -8767,6 +8768,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
+      t.mock.timers.reset();
       await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
@@ -8923,6 +8925,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
+      t.mock.timers.reset();
       await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
@@ -8978,6 +8981,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
+      t.mock.timers.reset();
       await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 
@@ -9088,6 +9092,7 @@ describe('createAccountRuntimeFromConfig', () => {
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
     t.after(async () => {
+      t.mock.timers.reset();
       await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     });
 

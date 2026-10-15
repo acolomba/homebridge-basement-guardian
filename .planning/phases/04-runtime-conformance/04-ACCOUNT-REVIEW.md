@@ -6062,3 +6062,157 @@ cause. RUN-01 stays Pending. WINDOWS 46-53 remain OPEN and unwaived. No correcti
 increment, fixed-ID reopening, rejection, phase completion or new security-relevant
 surface is claimed. The parent retains remaining causes, full correction, combined
 gates, shared records and the worktree-setting restoration obligation.
+
+## Declared task 04-09-03: account storage cleanup timer isolation
+
+The amended declaration landed at fb57728454df9eeb5262eba9f08a4e43e5c965ef
+before these edits. This separate fixture cause adds five context-owned timer
+resets before affected recursive storage cleanup. It changes no production code,
+public API, helper shape, test assertion, deadline, retry option or hook order.
+The original 29 finding IDs, correction counter zero and all eight initial
+09 cause promises remain intact. This is neither production RED nor an
+independent review, reopened finding or full correction result.
+
+### Confirmed control mechanism and historical limits
+
+The preceding 017 natural owner attempt exited raw 1 before AUTH-01. Its original
+filesystem error was not captured. Its unchanged retry exited 0, and its final
+168-case checks passed. Those observations remain separate and unchanged.
+
+The executor's already-completed unchanged-owner control retained every input
+and compiled byte. Cleanup ordinal 1 was the original 024 account-halt fixture,
+with mocked setTimeout still enabled. Cleanup ordinal 2 was endToEndRuntime's
+AUTH account fixture. The unchanged preloader injected one EBUSY at that second
+root. The owner then stalled after 159 passing cases. The external 15-second
+bound sent SIGTERM to owned process group 90171; actual raw exit was 1. No
+SIGKILL was needed, and the group was gone. No new baseline control was run.
+
+Installed Node v26.11.1 lazily loads internal rimraf, whose module captures
+setTimeout from timers. Its retryable errors include EBUSY. Static inspection
+and the unchanged control confirm that loading rimraf while the first context
+still owns mocked timers can leave later filesystem retry work on that clock.
+Connecting this mechanism to the earlier natural interruption remains an
+inference: the missing original filesystem error cannot be reconstructed.
+No Node internal module was primed, and no retry was disabled.
+
+The baseline records and unmodified preloader remain under
+/private/tmp/guardian-04-account-cleanup-investigation. The preparation-only
+Python unmatched-parenthesis error recorded there remains a preparation error,
+not a native test failure. The control is fixture evidence, not production RED.
+
+### All ten recursive cleanup sites
+
+The table gives saved and current rm line numbers. Only contexts that enable
+mocked timers receive a new reset. Four real-timer sites remain byte-exact.
+The already-correct floor case retains its complete stop/reset/rm body.
+
+| Context | Saved/current rm line | Timer ownership and change |
+| --- | --- | --- |
+| endToEndRuntime / AUTH-01 | 843 / 843 | Real timers; unchanged |
+| Original 024 pending final inventory | 2213 / 2214 | New reset after existing awaited runtime.stop |
+| Registration before composed use | 8581 / 8582 | Real timers; unchanged |
+| Inert composed construction | 8625 / 8626 | Real timers; unchanged |
+| AUTH-02 composed registration | 8672 / 8673 | Real timers; unchanged |
+| Supplied refresh lead | 8770 / 8772 | New reset immediately before rm |
+| Supplied refresh floor | 8882 / 8884 | Existing stop/reset/rm; complete case unchanged |
+| Default monitoring-health listener | 8926 / 8929 | New reset immediately before rm |
+| Supplied monitoring-health listener | 8981 / 8985 | New reset immediately before rm |
+| Default removal listener | 9091 / 9096 | New reset immediately before rm |
+
+No new runtime.stop call, helper abstraction, assertion, real sleep, reporter
+change, seed, dependency or configuration change accompanies the five resets.
+All affected cleanup hooks retain their existing stop-before-reset ordering.
+All five required TypeScript and local-verification books, current protocol,
+full amended plan, report, source, owner, callers and required planning context
+were read before editing. The declared workflow.use_worktrees=false opt-out and
+phase/plan isolation-none sentinel remain unchanged; checks ran in this linked
+main checkout. There was no new worktree.
+
+### Final-input native results
+
+Complete command records, separate stdout/stderr, UTC boundaries, raw exits,
+owned process groups, bounds, input manifests and compiled copies reside under
+/private/tmp/guardian-04-account-cleanup-isolation. Node was v26.11.1 and npm
+11.20.0. Every row below exited 0 without timeout or SIGKILL; each child group
+was gone before subsequent edits or builds.
+
+| Record | Actual command or result |
+| --- | --- |
+| build-final | npm run build:test; 20:10:33.500128-20:10:36.713150 UTC |
+| controlled-after | Exact baseline argv and unchanged fault/preloader; 30-second external bound; 20:10:52.079005-20:10:52.940369 UTC; full 168 pass, zero fail/cancel/skip/todo |
+| owner | node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js; full 168 pass |
+| direct | npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts; fresh build and 100% |
+| native-coverage | Full owner, exact compiled-source include and three 100% native thresholds; full 168 pass; accountRuntime.lcov: 1003/1003 lines, 58/58 functions, 193/193 branches |
+| lint | Exact source/owner ESLint --max-warnings=0 --no-cache; exit 0 |
+| account-evidence, platform-evidence | Actual installed RED-evidence CLI; both RED_EVIDENCE_OK |
+| preservation | Complete saved/current 151-case comparison and SAME installed recursive classifier; exit 0 |
+
+The controlled-after argv was exactly:
+
+```text
+node --import=/private/tmp/guardian-04-account-cleanup-investigation/trace-account-cleanup.mjs --test --experimental-test-coverage --test-coverage-include=dist-test/src/runtime/accountRuntime.js --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js
+```
+
+The unchanged preloader again injected its single EBUSY at ordinal 2. All ten
+cleanup ordinals completed, including that retry, in process group 99683.
+The full controlled owner completed naturally within one second. The selected
+native LCOV proves this exact source pair; it does not refresh merged all-pair
+source-map LCOV or establish the parent's combined gate.
+
+### Exact preservation and retained preparation attempts
+
+All 702 tracked inputs have complete initial copies and full hash/mode manifests.
+Every command retains before/after input identities, raw patches and compiled
+source/owner copies. All 700 paths outside owner/report, including all 44
+production files, retain their exact saved hashes and modes. Production source
+remains c87b9330ad2589e7941c11aba90f2079c67dbc30. The owner changes from
+3f2991823b157d31f41e1c2a88c3faa710f9cdc7 to
+bc5c8bd8e665fd8f6b1fec098a4938d772d230ff. The complete 415074-byte prior
+report remains an exact prefix.
+
+This is an explicit five-line teardown change, not a blanket owner byte freeze.
+Removing only those five new reset statements restores the entire saved owner
+byte-for-byte. Complete saved/current bodies, literal/token streams and ASTs for
+all 151 authored cases are retained together in preservation proof JSON. Original
+024's full comparison shows the new post-stop teardown reset; every other byte
+of that active case remains exact. Original 025 retains every literal deadline,
+timer operation and assertion, including stronger 013 verification. Both 023
+rows, complete 021 callback/neighbor, real-shadow 022 and ordering, 018 frozen
+and refused readbacks, 019 checkpoints, 020 anchors and 026 fixture/contracts
+retain their complete prior contents. All helper names, signatures, visibility,
+mutability and private aliases remain exact. No D06 shape change is introduced.
+
+ACCOUNT JSON remains b3f7141fc652706628ec55c5bd5c1a3e4b560319 and PLATFORM
+JSON remains 5a35d0831979b6c7444b598c0987bdd9d98f758b. The SAME installed
+classifyRedEvidence accepts all fourteen recursive ACCOUNT and two PLATFORM
+records. Every recorded sourceCommit:path resolves to its original sourceBlob.
+There is no second parser or evidence rewrite. The initial 09 ledger checkpoint
+is unchanged; its SHA-256 remains
+aef5e272b16ba900cae197a46420256be5bb9f530c77061d8fe14f979627af53.
+
+A preparation patch with numbered unified headers was rejected before any edit.
+Its normalized form initially matched two identical real-timer cleanup blocks
+instead of two intended mocked contexts. Diff inspection caught that scope error
+before any test or control. The first candidate build exited 0 and is retained
+as build, not final-input evidence. After collecting its actual terminal, a fresh
+guard and title-anchored correction restored both real-timer cases and added the
+two intended resets. The corrected full owner was reread, freshly rebuilt and
+used for every passing test/control above. All preparation attempts are retained.
+
+### Atomic closeout boundary
+
+Only the test owner and this append enter the fixture cause commit. The final
+recorded-base Fallow audit uses 8a700ac4b3594bf0c16af0a5e3ce35223ef3f574.
+Preservation and audit run against the final append. The exact
+SKIP=npm-check pre-commit run --files covers these two final paths and must be
+clean before staging; any formatter/report change requires clean repetition.
+Plain foreground git commit runs ordinary hooks with SKIP absent. Actual native
+terminal records and Git objects establish its exit, resulting hash and paths.
+No wrapper commit, manual stash, amend, hook bypass, rebase or history rewrite
+is used. No new security-relevant surface was introduced.
+
+Original 017 remains applied pending full independent ACCOUNT correction.
+RUN-01 stays Pending; WINDOWS 46-53 remain OPEN and unwaived. The correction
+counter remains zero. No SUMMARY, shared record, full npm run check, finding
+014 work or full correction is included here. The parent retains those gates,
+remaining causes and worktree-setting restoration obligation.
