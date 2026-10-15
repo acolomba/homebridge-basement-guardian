@@ -605,3 +605,35 @@ Plan 12 is complete out of numerical order; current plan remains 08 until its ow
 Original 29 ACCOUNT IDs and counter 0 continue; no independent correction or partial clean verdict is claimed.
 Plan 09 still owns the remaining initial causes and full current ACCOUNT correction.
 RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit/handoff.
+
+
+## Coordinator wave 10 trust and removal completion
+
+Full npm run check returned 0 at clean b3b1c879d37bbb45ac9ead5152f9c1ce9cb07674.
+Node v26.11.1; UTC 2026-10-15T18:15:00.459918+00:00 to 18:15:36.419130+00:00.
+Six static checks, 104 Cucumber scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata: /private/tmp/guardian-phase4-wave10-trust-gate.json.
+Output: /private/tmp/guardian-phase4-wave10-trust-full-check.log.
+Generic 04-08 summary verification passed; schema drift found none; codebase drift skipped absent STRUCTURE.md.
+
+All seven original 08 causes are implemented pending independent full correction.
+018 at 7286cb9 strengthens complete canonical observations; 019 at 3a9c441 checks actual trust checkpoints;
+020 at c330a13 preserves complete callback/prune and surviving-anchor observations.
+Each separate maintenance control failed its intended assertion, followed by exact source restoration and rebuilt GREEN.
+023 source 49d30f9 -> evidence 3d55427 -> GREEN c18541a preserves terminal authentication across final checks.
+021 source c18541a -> evidence ce3305e -> bounded reconciliation dependency 020498a -> integration 1055218 preserves reappearance eligibility.
+022 source 1055218 -> evidence 5987504 -> GREEN 30f944c routes newly discovered physical membership through the real shadow client.
+026 is delegated to completed 04-12 with its separate true-platform RED history and actual cross-file ancestry above.
+The summary distinguishes six primary 08 causes, two reconciliation dependencies and all parent/delegated work across the actual nineteen-commit interval.
+Its exact guard and canonical containment preceded creation; no new process-window gap arose in this closeout.
+
+Current ACCOUNT evidence remains fourteen records at b3f7141fc652706628ec55c5bd5c1a3e4b560319;
+PLATFORM remains two records at 5a35d0831979b6c7444b598c0987bdd9d98f758b.
+All original regression promises remain; stricter later assertions are distinguished from immutable historical records.
+WINDOWS 46-52 remain OPEN and unwaived.
+
+Current plan advances from 08 to 09 only after this actual completed-plan gate.
+The remaining original 09 causes are 004, 005, 009, 010, 011, 014, 016, 017 and 029.
+Full current ACCOUNT correction includes whole source/owner and every adapted pair/helper listed above.
+Original 29 IDs/counter 0 remain continuous; no independent ACCOUNT correction has occurred.
+RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit/handoff.
