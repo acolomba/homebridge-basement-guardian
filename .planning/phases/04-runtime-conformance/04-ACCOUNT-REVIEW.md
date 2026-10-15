@@ -2192,3 +2192,131 @@ for 04-07, with later owning causes and full ACCOUNT correction still pending.
 Original 015 retains both implementations and the parent's passing combined gate.
 The 29 stable IDs and counter 0 remain; RUN-01 remains Pending.
 D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-027: observable forbidden command attempts
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_027_forbidden_commands`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every prior appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This assertion-maintenance repair supplies no correction round or partial clean verdict.
+
+The harness records every `sendCommand` attempt before testing for a scripted answer.
+An unscripted rejection therefore remains observable when `commands.send` catches it.
+Each of 114 authored noncommand harness cases ends with
+`assert.deepStrictEqual(commandRequests, [])`, after its existing assertions.
+Generated rows expand those declarations to 119 executed absence checks.
+These cover startup, restore, polling, rotation, shadow callbacks, terminal halt,
+shutdown, silence recovery and removal. The check compares the whole attempt set.
+No verification is hidden in a hook, cleanup function or callback.
+The existing record includes device identity, complete desired data and initial signal state.
+
+The original 025 timing regression uses the harness but remains byte-identical.
+Its named promise concerns timer representability and the refresh deadline.
+It does not acquire a separate command-absence promise in this repair.
+The original self-contained 024 regression also remains byte-identical.
+All eight command cases retain their exact bodies, including their request and
+multiplicity expectations. All 015 contracts and negative controls remain unchanged.
+This does not claim that every original owner case asserts command absence.
+Original 012 logger-boundary and 013 strict-mock conformance remain separate pending causes.
+
+Pre-edit HEAD was `128c005b91b653815d46ea8dbe3119bebf9dc06d`, on
+`features/code-review-sweep`, with clean status and empty index.
+Before editing, the fixer read complete AGENTS and all five complete project books,
+amended 04-07, 04-11-SUMMARY, newest protocol, this full report, the complete
+1328-line account source and 4000-line owner, including both full headers.
+Actual callers were traced through every harness case and both public factories,
+launch/poll/rotation/shadow/removal/stop, command-body lookup and caught dispatch,
+plus platform and both World composition callers.
+The exact three-path Fallow guard ran before repository edits.
+No existing private, shared or exported name, signature, field, alias, visibility
+or mutability changes; contract-change impact queries are not triggered.
+
+### Separate assertion maintenance control
+
+The plausible wrong behavior automatically sends a self-test for each device
+during launch, awaits `commands.send`, and discards its refused outcome.
+The command API catches the harness rejection and returns a vendor-error refusal.
+Canonical discovery and monitoring state can therefore remain correct.
+Compilation and direct coverage cannot establish the required absence of dispatch.
+
+The temporary source mutation adds only that loop immediately before launch
+records poll success. Fresh compilation exits 0. The exact named target is
+`^start discovers every device and stores its canonical snapshot$`.
+Its independent complete canonical snapshot assertion passes first.
+The new empty-attempt assertion then fails with native `ERR_ASSERTION` and
+`deepStrictEqual`: actual is one attempt with placeholder device
+`account-1_serial-1`, desired data `{ test_running: true }` and `aborted: false`;
+expected is `[]`. Native TAP records one executed test, one failure and
+zero skips, cancellations or todos. The failure is neither a thrown strict-mock
+error nor a setup/import/compilation failure. It proves the caught-refusal hole
+is detected by an explicit owning-case assertion.
+
+The complete production file was restored byte for byte and compared with its
+saved bytes and Git diff. Source before/restored blob:
+`641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+Temporary control blob: `70e65211f7cdcc0e2edfe85cb2b4356e377fde35`.
+The fresh restored build and exact target both exit 0.
+Final owner blob: `d46e162b12b40fde6d5deecef650425a14e61905`.
+No control mutation enters Git or the genuine RED history.
+
+### Verification location and retained native evidence
+
+All checks ran serially in the existing linked feature checkout with
+`workflow.use_worktrees=false`. No worktree, branch or recovery sentinel was created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3 and Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-027/`.
+Each check retains exact executable/argv, cwd, HEAD, input blobs, versions,
+UTC start/end, raw child exit and complete separate stdout/stderr.
+Saved before/control/restored source identities, compiled control bytes, complete
+patch, case inventory and provenance support exact comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard.json | Exact three owned paths before edits; exit 0, no configured zones or rule packs. |
+| baseline-build.json, baseline-target.json | Fresh compilation and strengthened startup target; both exit 0. |
+| control-build.json, control-target.json | Fresh temporary-source build 0; intended named assertion failure 1, 13:33:39.365–13:33:39.846 UTC. |
+| restoration.json, restored-build.json, restored-target.json | Exact complete source restoration, fresh build and named GREEN; all exit 0. |
+| build-final.json | Fresh `npm run build:test`; exit 0, 13:36:57.144–13:37:00.223 UTC. |
+| owner-final.json | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`; exit 0, 151 pass, zero fail/cancel/skip/todo. |
+| direct-final.json | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; exit 0, exact isolated selector including fresh build. |
+| native-coverage-final.json | Full compiled owner, exact-source include and all three 100% thresholds; exit 0. Native lines 995/995, functions 57/57, branches 181/181; full argv and LCOV retained. |
+| lint-final-2.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| evidence-gate.json, provenance-3.json | Unchanged on-disk genuine RED CLI and SAME installed recursive classifier; all six records RED_EVIDENCE_OK, exit 0. |
+| audit.json | Fallow audit against original base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass. |
+| pre-step-1.json | Exact two final paths with required SKIP=npm-check pre-commit; exit 0, clean, 13:37:38.048–13:37:40.954 UTC. Repeated after this report update before staging. |
+
+The first temporary provenance comparison retained formatting hints in the
+TypeScript printer, so it rejected a harmless formatter-expanded argument object.
+Its complete failure remains in provenance-1.json and separate native streams.
+The corrected comparison checks the parsed AST after removing only each added
+binding and final empty-attempt assertion; every original test operation and
+assertion remains intact. It separately compares unmodified cases byte for byte,
+all 27 private function signatures, every interface shape and all unrelated inputs.
+The earlier patch-generation attempts failed before repository changes; their
+terminal tool output is retained. No build, owner, coverage or lint failure is concealed.
+
+The full source has no final diff. All other production, helper and contract bytes
+remain unchanged. The six-record genuine RED file retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, including every archived stream.
+Selected direct checks do not refresh merged all-pair source-mapped LCOV.
+The parent owns the full combined gate after completed 04-07;
+no full `npm run check` runs in this task.
+
+### Atomic commit and remaining scope
+
+The atomic commit introducing this appendix and the owner repair is titled
+`test: detect forbidden monitoring command attempts`.
+It contains only `test/runtime/accountRuntime.test.ts` and this report.
+The production path is owned only for the restored temporary control, so the
+cause uses exactly its three declared paths and adds no repository helper.
+Exact clean pre-commit runs again after this report update before staging.
+Native branch/HEAD/index checks, authorized linked-index staging and plain
+foreground normal commit records retain the terminal results and actual hash.
+No hook bypass, amend, stash, rebase or history rewrite is authorized.
+
+Only original 027 is implemented here. Original 012, 013 and 028 remain for
+04-07, with later owning causes and independent full ACCOUNT correction pending.
+The 29 stable IDs and counter 0 continue; RUN-01 remains Pending.
+D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.

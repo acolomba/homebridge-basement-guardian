@@ -401,9 +401,8 @@ interface Script {
   /**
    * How the vendor answers a command.
    *
-   * Absent leaves the rejecting stand-in in place, which is what asserts the
-   * monitoring path never reaches the command route; a case about commands
-   * supplies its own answer and gets the recording stand-in instead.
+   * Every attempt is recorded before an absent answer rejects. Cases promising
+   * no commands assert the empty attempt set; command cases supply an answer.
    */
   command: (deviceId: string, command: DeviceCommand, signal: AbortSignal) => Promise<CommandResult>;
   /** The anchor store the runtime is given. A case about restarts supplies a pre-loaded one. */
@@ -422,7 +421,7 @@ interface Harness {
   trustworthyInventories: string[][];
   /** One entry per deviceId the runtime reported confirmed absent, in report order. */
   removed: string[];
-  /** One entry per command the runtime sent, in send order. */
+  /** One entry per command attempt, including unscripted attempts, in send order. */
   commandRequests: CommandRequest[];
   /** One entry per monitoring-trust report the runtime pushed, the account struct, in push order. */
   monitoringHealth: MonitoringTrust[];
@@ -532,16 +531,14 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
       return nextCredentials(signal);
     },
     device: () => Promise.reject(new Error('the runtime must not reach the device route')),
-    // The monitoring path -- polling, shadow, credential rotation, removal --
-    // must never reach the command route, and this is what asserts it. A case
-    // about commands supplies `script.command` and gets the recorder below
-    // instead, so the deliberate assertion stays deliberate.
+    // Recording precedes rejection so a caught refusal cannot hide an attempt
+    // from the owning case's explicit empty-attempt assertion.
     sendCommand: (deviceId: string, command: DeviceCommand, signal: AbortSignal) => {
+      commandRequests.push({ deviceId, desiredData: command.desiredData, aborted: signal.aborted });
+
       if (script.command === undefined) {
         return Promise.reject(new Error('the monitoring path must not reach the command route'));
       }
-
-      commandRequests.push({ deviceId, desiredData: command.desiredData, aborted: signal.aborted });
 
       return script.command(deviceId, command, signal);
     },
@@ -1039,7 +1036,7 @@ test('starts no inventory work when restoration completes after shutdown', async
     completeRestore = resolve;
   });
   const anchors = { ...recordingAnchors(), restore: () => restoring };
-  const { runtime, store, calls, monitoringHealth } = harness(t, { anchors });
+  const { runtime, store, calls, monitoringHealth, commandRequests } = harness(t, { anchors });
 
   // act
   const starting = runtime.start();
@@ -1059,6 +1056,7 @@ test('starts no inventory work when restoration completes after shutdown', async
     },
   );
   assert.deepStrictEqual(calls, []);
+  assert.deepStrictEqual(commandRequests, []);
 });
 
 test('admits no devices when the launch inventory resolves after shutdown', async (t) => {
@@ -1068,7 +1066,7 @@ test('admits no devices when the launch inventory resolves after shutdown', asyn
   const inventory = new Promise<readonly ApiDevice[]>((resolve) => {
     completeInventory = resolve;
   });
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories } = harness(t, { devices: [() => inventory] });
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t, { devices: [() => inventory] });
 
   // act
   const starting = runtime.start();
@@ -1089,11 +1087,12 @@ test('admits no devices when the launch inventory resolves after shutdown', asyn
     },
   );
   assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [] });
+  assert.deepStrictEqual(commandRequests, []);
 });
 
 test('starts no background work when shutdown follows launch admission', async (t) => {
   // arrange
-  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories } = harness(t);
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories, commandRequests } = harness(t);
   store.subscribe(DEVICE_ID, () => {
     queueMicrotask(() => {
       void runtime.stop();
@@ -1123,6 +1122,7 @@ test('starts no background work when shutdown follows launch admission', async (
     },
   );
   assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [[DEVICE_ID]] });
+  assert.deepStrictEqual(commandRequests, []);
 });
 
 interface PendingInventory {
@@ -1171,7 +1171,7 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
       completeInventory = resolve;
       rejectInventory = reject;
     });
-    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance } = harness(t, {
+    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance, commandRequests } = harness(t, {
       devices: [...precedingInventories, () => inventory],
       credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
       pollIntervalMs: 1_000,
@@ -1222,13 +1222,14 @@ for (const { completion, finish, precedingInventories, expectedInventories, heal
       },
     );
     assert.deepStrictEqual(trustworthyInventories, expectedInventories);
+    assert.deepStrictEqual(commandRequests, []);
   });
 }
 
 describe('start', () => {
   test('discovers every device and stores its canonical snapshot', async (t) => {
     // arrange
-    const { runtime, store } = harness(t);
+    const { runtime, store, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1243,11 +1244,12 @@ describe('start', () => {
       deviceTimestamp: DEVICE_TIME,
       receivedAt: START_TIME,
     });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reads canonical state from the one store it maintains', async (t) => {
     // arrange
-    const { runtime, store } = harness(t);
+    const { runtime, store, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1263,11 +1265,12 @@ describe('start', () => {
       deviceTimestamp: DEVICE_TIME,
       receivedAt: START_TIME,
     });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports how many devices the account holds', async (t) => {
     // arrange
-    const { runtime, logged } = harness(t);
+    const { runtime, logged, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1275,11 +1278,12 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(logged, ['info Discovered 1 device(s).']);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('opens one shadow connection for every discovered device', async (t) => {
     // arrange
-    const { runtime, shadows } = harness(t);
+    const { runtime, shadows, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1287,33 +1291,36 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual({ connections: shadows.length, subscribed: shadows[0]?.subscribed }, { connections: 1, subscribed: [[DEVICE_ID]] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the discovered deviceIds to the trustworthy-inventory listener', async (t) => {
     // arrange
-    const { runtime, trustworthyInventories } = harness(t);
+    const { runtime, trustworthyInventories, commandRequests } = harness(t);
 
     // act
     await runtime.start();
 
     // assert
     assert.deepStrictEqual(trustworthyInventories, [[DEVICE_ID]]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports an empty list to the trustworthy-inventory listener on a valid empty response', async (t) => {
     // arrange
-    const { runtime, trustworthyInventories } = harness(t, { devices: [() => Promise.resolve([])] });
+    const { runtime, trustworthyInventories, commandRequests } = harness(t, { devices: [() => Promise.resolve([])] });
 
     // act
     await runtime.start();
 
     // assert
     assert.deepStrictEqual(trustworthyInventories, [[]]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('AUTH-02 registers every temporary credential value under its own rotated role', async (t) => {
     // arrange
-    const { runtime, registrations } = harness(t);
+    const { runtime, registrations, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1325,11 +1332,12 @@ describe('start', () => {
       'aws-secret-access-key test-secret-access-key',
       'aws-session-token test-session-token',
     ]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the route and the status when the vendor refuses discovery', async (t) => {
     // arrange
-    const { runtime, logged, store } = harness(t, {
+    const { runtime, logged, store, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))],
     });
 
@@ -1342,11 +1350,12 @@ describe('start', () => {
       { discoveryReport: logged[0], stored: store.deviceIds() },
       { discoveryReport: 'warn Device discovery failed on GET /devices with HTTP 403.', stored: [] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports a fixed message that repeats nothing from an unexpected discovery failure', async (t) => {
     // arrange
-    const { runtime, logged } = harness(t, {
+    const { runtime, logged, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))],
     });
 
@@ -1356,11 +1365,12 @@ describe('start', () => {
 
     // assert
     assert.strictEqual(logged[0], 'warn Device discovery failed.');
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-13 schedules nothing at all after the vendor refuses the account credentials', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
     });
 
@@ -1370,11 +1380,12 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(calls, ['devices']);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-22 waits the interval a throttling response carries rather than the capped backoff', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
     });
 
@@ -1389,12 +1400,13 @@ describe('start', () => {
       { afterCappedBackoff, afterCarriedInterval: calls.filter((call) => call === 'devices').length },
       { afterCappedBackoff: 1, afterCarriedInterval: 2 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-22 waits again when the launch that follows a throttling response is throttled too', async (t) => {
     // arrange
     const throttled = (): Promise<never> => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
-    const { runtime, calls, advance } = harness(t, { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])] });
+    const { runtime, calls, advance, commandRequests } = harness(t, { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])] });
 
     // act
     await runtime.start();
@@ -1403,11 +1415,12 @@ describe('start', () => {
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('performs no work when start runs after stop', async (t) => {
     // arrange
-    const { runtime, calls } = harness(t);
+    const { runtime, calls, commandRequests } = harness(t);
 
     // act
     await runtime.stop();
@@ -1416,6 +1429,7 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(calls, []);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The restart case, end to end. An earlier run left an anchor older than the
@@ -1429,7 +1443,7 @@ describe('start', () => {
   // first report would call it trustworthy.
   test('D-07 retains the restored anchor of a silent pump until a reported arrival', async (t) => {
     // arrange
-    const { runtime, anchors, shadows, monitoringByDevice, advance } = harness(t, {
+    const { runtime, anchors, shadows, monitoringByDevice, advance, commandRequests } = harness(t, {
       anchors: recordingAnchors([[DEVICE_ID, START_TIME - TWO_MISSED_HEARTBEATS_MS]]),
     });
 
@@ -1459,6 +1473,7 @@ describe('start', () => {
         stored: [[DEVICE_ID, START_TIME + 123]],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // An install carrying no anchor invents nothing. The device is judged from its
@@ -1466,7 +1481,7 @@ describe('start', () => {
   // anchor for the next one (D-08).
   test('D-08 vouches for a pump admitted on an install carrying no stored anchor, and anchors it from its admission', async (t) => {
     // arrange
-    const { runtime, anchors, monitoringByDevice } = harness(t);
+    const { runtime, anchors, monitoringByDevice, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -1477,6 +1492,7 @@ describe('start', () => {
       { silent: monitoringByDevice.at(0)?.get(DEVICE_ID)?.shadowSilent, anchor: anchors.stored.get(DEVICE_ID) },
       { silent: false, anchor: START_TIME },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The anchors are written where the trust is reported, which is every poll
@@ -1484,7 +1500,7 @@ describe('start', () => {
   // when it completed.
   test('D-07 writes the anchors on the reporting tick', async (t) => {
     // arrange
-    const { runtime, anchors, advance } = harness(t);
+    const { runtime, anchors, advance, commandRequests } = harness(t);
     await runtime.start();
     await settle();
     const afterTheLaunch = anchors.persists();
@@ -1494,13 +1510,14 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual({ afterTheLaunch, afterAPoll: anchors.persists() }, { afterTheLaunch: 1, afterAPoll: 2 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
 describe('credential rotation', () => {
   test('SYNC-04 refreshes the credentials ten minutes before the expiry the response carries', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t);
+    const { runtime, calls, advance, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -1511,11 +1528,12 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('holds the delay at the injected floor when the response already expires inside the injected lead window', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_ROTATION_LEAD_MS))],
       rotationLeadMs: SHORT_ROTATION_LEAD_MS,
       minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
@@ -1530,11 +1548,12 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 1, afterFloor: 2 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 takes the injected lead when the expiry sits further out than the injected floor', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS))],
       rotationLeadMs: SHORT_ROTATION_LEAD_MS,
       minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
@@ -1549,11 +1568,12 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual({ beforeDue, afterDue: calls.filter((call) => call === 'credentials').length }, { beforeDue: 1, afterDue: 2 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 schedules the next rotation from the new expiry rather than the first one', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       credentials: [
         () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
         () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
@@ -1573,11 +1593,12 @@ describe('credential rotation', () => {
       { beforeSecondDue, afterSecondDue: calls.filter((call) => call === 'credentials').length },
       { beforeSecondDue: 2, afterSecondDue: 3 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 arms the next rotation even after a refresh that rejects', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       credentials: [
         () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
         () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
@@ -1595,11 +1616,12 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual({ beforeFloor, afterFloor: calls.filter((call) => call === 'credentials').length }, { beforeFloor: 2, afterFloor: 3 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports a failed refresh through the rate-limited discipline rather than directly', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, {
+    const { runtime, logged, advance, commandRequests } = harness(t, {
       credentials: [
         () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
         () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
@@ -1618,11 +1640,12 @@ describe('credential rotation', () => {
       { warnings: countOfLine(logged, `warn ${ROTATION_FAILED_LINE}`), repeats: countOfLine(logged, `debug ${ROTATION_FAILED_LINE}`) },
       { warnings: 1, repeats: 2 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 replaces what the next handshake reads and leaves the live connection alone', async (t) => {
     // arrange
-    const { runtime, shadows, advance } = harness(t, {
+    const { runtime, shadows, advance, commandRequests } = harness(t, {
       credentials: [
         () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
         () => Promise.resolve(rotatedCredentialsAt(START_TIME + ROTATION_DELAY_MS + ONE_HOUR_MS)),
@@ -1649,13 +1672,17 @@ describe('credential rotation', () => {
         },
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('holds the delay at the injected floor when the vendor expiry cannot be read as a date', async (t) => {
     // arrange
     const unreadable = { ...credentialsAt(START_TIME + ONE_HOUR_MS) };
     unreadable.credentials = { ...unreadable.credentials, Expiration: 'whenever' };
-    const { runtime, calls, advance } = harness(t, { credentials: [() => Promise.resolve(unreadable)], minRotationDelayMs: SHORT_ROTATION_FLOOR_MS });
+    const { runtime, calls, advance, commandRequests } = harness(t, {
+      credentials: [() => Promise.resolve(unreadable)],
+      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+    });
     await runtime.start();
     await settle();
 
@@ -1664,11 +1691,12 @@ describe('credential rotation', () => {
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'credentials').length, 2);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 gives the shadow client a reconnect policy the runtime own retry has not advanced', async (t) => {
     // arrange
-    const { runtime, shadows, advance } = harness(t, { shadow: [false, true] });
+    const { runtime, shadows, advance, commandRequests } = harness(t, { shadow: [false, true] });
     await runtime.start();
     await settle();
 
@@ -1677,13 +1705,14 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual({ connections: shadows.length, shadowAttempt: shadows[0]?.options.retry.attempt }, { connections: 1, shadowAttempt: 0 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
 describe('the poll backstop', () => {
   test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
     // arrange
-    const { runtime, store, advance } = harness(t, {
+    const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 3 } }])],
     });
     await runtime.start();
@@ -1694,11 +1723,12 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 3 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-014 leaves every stored snapshot unchanged when a poll rejects', async (t) => {
     // arrange
-    const { runtime, store, advance } = harness(t, {
+    const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
@@ -1713,11 +1743,12 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), beforePoll);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('leaves connectivity alone when a poll rejects, because a failed request is not a device report', async (t) => {
     // arrange
-    const { runtime, store, advance } = harness(t, {
+    const { runtime, store, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
@@ -1731,11 +1762,12 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.connectivity, { connected: true, timestamp: DEVICE_TIME });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('schedules the next poll after one that rejects', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
@@ -1751,11 +1783,12 @@ describe('the poll backstop', () => {
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'devices').length, 3);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 reports no failure when a shutdown aborts a poll that is in flight', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, {
+    const { runtime, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)],
     });
     await runtime.start();
@@ -1768,11 +1801,12 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), errors: countOf(logged, 'error') }, { warnings: 0, errors: 0 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-02 keeps the telemetry and metadata a later poll would overwrite while the shadow owns them', async (t) => {
     // arrange
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
     });
     await runtime.start();
@@ -1787,6 +1821,7 @@ describe('the poll backstop', () => {
       { data: store.snapshot(DEVICE_ID)?.data, metadata: store.snapshot(DEVICE_ID)?.metadata, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
       { data: { water_level: 2, primary_pump_running: false, ac_power: true }, metadata: { firmware: 'v9' }, shadowVersion: 7 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The poll is the reconciliation backstop, and a shadow that has stopped
@@ -1803,7 +1838,7 @@ describe('the poll backstop', () => {
   test('D-13 reports the flood a poll found on a device whose live path went quiet', async (t) => {
     // arrange
     const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
     });
     await runtime.start();
@@ -1816,6 +1851,7 @@ describe('the poll backstop', () => {
 
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.water_level, PROVISIONAL_FLOOD_WATER_LEVEL_CODE);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A report of device metadata delivered no reading, so it cannot take the
@@ -1828,7 +1864,7 @@ describe('the poll backstop', () => {
   test('D-13 leaves the poll owning telemetry through a live message that reports only device metadata', async (t) => {
     // arrange
     const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.resolve([geminiDevice()]),
@@ -1855,6 +1891,7 @@ describe('the poll backstop', () => {
       },
       { waterLevel: PROVISIONAL_FLOOD_WATER_LEVEL_CODE, metadata: { mcu_firmware_version: '1.4.2' }, shadowVersion: undefined },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // Roughly fifteen minutes of quiet is ordinary, so one missed heartbeat is
@@ -1864,7 +1901,7 @@ describe('the poll backstop', () => {
   test('D-13 keeps a pump run the live path reported when a poll arrives inside the two-heartbeat window', async (t) => {
     // arrange
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
     });
     await runtime.start();
@@ -1876,6 +1913,7 @@ describe('the poll backstop', () => {
 
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A REST degradation is not silence. `recordPollSuccess` runs after
@@ -1890,7 +1928,7 @@ describe('the poll backstop', () => {
     // arrange
     const failing = (): Promise<ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([stoppedPump])],
     });
@@ -1905,6 +1943,7 @@ describe('the poll backstop', () => {
 
     // assert
     assert.strictEqual(store.snapshot(DEVICE_ID)?.data.primary_pump_running, true);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // Ownership returns through the patch path that already exists: the arriving
@@ -1915,7 +1954,7 @@ describe('the poll backstop', () => {
   test('D-13 lets the live path own telemetry again on the first message that carries an observation', async (t) => {
     // arrange
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([stoppedPump])],
     });
     await runtime.start();
@@ -1933,11 +1972,12 @@ describe('the poll backstop', () => {
       { pumpRunning: store.snapshot(DEVICE_ID)?.data.primary_pump_running, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
       { pumpRunning: true, shadowVersion: 6 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 lets the poll write telemetry again once the shadow connection is gone', async (t) => {
     // arrange
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4 } }])],
     });
     await runtime.start();
@@ -1950,6 +1990,7 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 4 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The handover is a fact about one controller. A pump whose live path is
@@ -1963,7 +2004,7 @@ describe('the poll backstop', () => {
   // heartbeat old while the first is two.
   test('D-13 hands only the quiet pump back to the poll and leaves its neighbour owning its telemetry', async (t) => {
     // arrange
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
     });
     await runtime.start();
@@ -1986,6 +2027,7 @@ describe('the poll backstop', () => {
       },
       { quiet: 7, quietVersion: undefined, healthy: 3, healthyVersion: 7 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A connection that ended took every device's live path with it, so this
@@ -1993,7 +2035,7 @@ describe('the poll backstop', () => {
   // the controller that stopped speaking (D-15, SYNC-03).
   test('D-15 hands every pump back to the poll when the connection that carried them all ends', async (t) => {
     // arrange
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve(bothDevicesAt(1)), () => Promise.resolve(bothDevicesAt(7))],
     });
     await runtime.start();
@@ -2010,11 +2052,12 @@ describe('the poll backstop', () => {
       { first: store.snapshot(DEVICE_ID)?.data.water_level, second: store.snapshot(OTHER_DEVICE_ID)?.data.water_level },
       { first: 7, second: 7 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-03 lets a shadow document that arrives after a poll win on the keys it carries', async (t) => {
     // arrange
-    const { runtime, shadows, store, advance } = harness(t, {
+    const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 4, ac_power: true } }])],
     });
     await runtime.start();
@@ -2026,13 +2069,14 @@ describe('the poll backstop', () => {
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 5, ac_power: true });
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
 describe('stop', () => {
   test('SYNC-05 resolves both calls and closes the connection once when stop is called twice', async (t) => {
     // arrange
-    const { runtime, shadows } = harness(t);
+    const { runtime, shadows, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2042,11 +2086,12 @@ describe('stop', () => {
 
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 resolves after a start that stopped at authentication', async (t) => {
     // arrange
-    const { runtime } = harness(t, {
+    const { runtime, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
     });
     await runtime.start();
@@ -2054,11 +2099,12 @@ describe('stop', () => {
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 resolves after a start that failed at discovery', async (t) => {
     // arrange
-    const { runtime } = harness(t, {
+    const { runtime, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
     });
     await runtime.start();
@@ -2066,19 +2112,21 @@ describe('stop', () => {
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 resolves when nothing was ever started', async (t) => {
     // arrange
-    const { runtime } = harness(t);
+    const { runtime, commandRequests } = harness(t);
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 cancels a pending retry wait so the attempt it was waiting for never runs', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, { shadow: [false] });
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false] });
     await runtime.start();
     await settle();
     const attemptsBeforeStop = calls.filter((call) => call === 'shadow').length;
@@ -2092,6 +2140,7 @@ describe('stop', () => {
       { attemptsBeforeStop, attemptsAfterStop: calls.filter((call) => call === 'shadow').length },
       { attemptsBeforeStop: 1, attemptsAfterStop: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 closes a shadow connection whose start resolved only after the shutdown began', async (t) => {
@@ -2099,7 +2148,7 @@ describe('stop', () => {
     // The shutdown lands after the connection is open and before the runtime
     // has recorded it, which is the window where nothing would close it.
     const stopped = { runtime: undefined as AccountRuntime | undefined };
-    const { runtime, shadows } = harness(t, { whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    const { runtime, shadows, commandRequests } = harness(t, { whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
     stopped.runtime = runtime;
 
     // act
@@ -2108,12 +2157,13 @@ describe('stop', () => {
 
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 raises nothing when the connection opened during a shutdown cannot be closed', async (t) => {
     // arrange
     const stopped = { runtime: undefined as AccountRuntime | undefined };
-    const { runtime } = harness(t, { closeFails: true, whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
+    const { runtime, commandRequests } = harness(t, { closeFails: true, whileShadowStarts: () => stopped.runtime?.stop() ?? Promise.resolve() });
     stopped.runtime = runtime;
 
     // act & assert
@@ -2121,11 +2171,12 @@ describe('stop', () => {
       await runtime.start();
       await settle();
     });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 schedules nothing and reports no failure when a shutdown aborts the launch', async (t) => {
     // arrange
-    const { runtime, logged, calls } = harness(t, { devices: [hangingUntilAborted] });
+    const { runtime, logged, calls, commandRequests } = harness(t, { devices: [hangingUntilAborted] });
     const starting = runtime.start();
     await settle();
 
@@ -2136,11 +2187,12 @@ describe('stop', () => {
 
     // assert
     assert.deepStrictEqual({ calls, warnings: logged.filter((line) => line.startsWith('warn ')) }, { calls: ['devices'], warnings: [] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 reports monitoring unavailable once the runtime has stopped', async (t) => {
     // arrange
-    const { runtime } = harness(t);
+    const { runtime, commandRequests } = harness(t);
     await runtime.start();
     await settle();
     const beforeStop = runtime.monitoringPath;
@@ -2150,11 +2202,12 @@ describe('stop', () => {
 
     // assert
     assert.deepStrictEqual({ beforeStop, afterStop: runtime.monitoringPath }, { beforeStop: 'shadow-and-poll', afterStop: 'unavailable' });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 records no failure when a shutdown aborts a poll already in flight', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
+    const { runtime, logged, advance, commandRequests } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
     await runtime.start();
     await settle();
     await advance(POLL_INTERVAL_MS);
@@ -2168,6 +2221,7 @@ describe('stop', () => {
       logged.filter((line) => line.startsWith('warn ')),
       [],
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The tier that decides whether a press may leave the plugin reads this fact from the runtime, and
@@ -2181,7 +2235,7 @@ describe('stop', () => {
   // condition that is over the moment the process ends (D-014, D-01).
   test('RES-04 pushes an unready command transport, and withdraws no scope, when the runtime stops', async (t) => {
     // arrange
-    const { runtime, monitoringHealth } = harness(t);
+    const { runtime, monitoringHealth, commandRequests } = harness(t);
     await runtime.start();
     await settle();
     const beforeStop = [...monitoringHealth];
@@ -2200,11 +2254,12 @@ describe('stop', () => {
         ],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 pushes once when a shutdown runs twice, because the second call returns before anything else', async (t) => {
     // arrange
-    const { runtime, monitoringHealth } = harness(t);
+    const { runtime, monitoringHealth, commandRequests } = harness(t);
     await runtime.start();
     await settle();
     const beforeStop = monitoringHealth.length;
@@ -2215,6 +2270,7 @@ describe('stop', () => {
 
     // assert
     assert.deepStrictEqual({ beforeStop, afterStop: monitoringHealth.length }, { beforeStop: 1, afterStop: 2 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A runtime nothing ever started has no poll behind it, so its transport was never ready and the
@@ -2222,7 +2278,7 @@ describe('stop', () => {
   // saying so, never by inferring it from a report that did not arrive.
   test('pushes the unready transport when a runtime that never started stops', async (t) => {
     // arrange
-    const { runtime, monitoringHealth } = harness(t);
+    const { runtime, monitoringHealth, commandRequests } = harness(t);
 
     // act
     await runtime.stop();
@@ -2231,11 +2287,12 @@ describe('stop', () => {
     assert.deepStrictEqual(monitoringHealth, [
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
     ]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 arms no timer that outlives it', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t);
+    const { runtime, calls, advance, commandRequests } = harness(t);
     await runtime.start();
     await settle();
     const callsBeforeStop = calls.length;
@@ -2246,21 +2303,23 @@ describe('stop', () => {
 
     // assert
     assert.deepStrictEqual({ callsBeforeStop, callsAfterStop: calls.length }, { callsBeforeStop: 3, callsAfterStop: 3 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
 describe('the degraded monitoring path', () => {
   test('reports monitoring unavailable before anything has succeeded', (t) => {
     // arrange
-    const { runtime } = harness(t);
+    const { runtime, commandRequests } = harness(t);
 
     // act & assert
     assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports monitoring unavailable while the poll is failing and the shadow is down, and the polling-only path once a poll succeeds', async (t) => {
     // arrange
-    const { runtime, advance } = harness(t, {
+    const { runtime, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
         () => Promise.resolve([geminiDevice()]),
@@ -2276,11 +2335,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ whileFailing, afterRecovery: runtime.monitoringPath }, { whileFailing: 'unavailable', afterRecovery: 'poll-only' });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-13 reports monitoring unavailable and records the stop when the vendor refuses the account credentials', async (t) => {
     // arrange
-    const { runtime, logged } = harness(t, {
+    const { runtime, logged, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
     });
 
@@ -2293,11 +2353,12 @@ describe('the degraded monitoring path', () => {
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
       { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-13 reports monitoring unavailable and records the stop when authentication has halted', async (t) => {
     // arrange
-    const { runtime, logged } = harness(t, {
+    const { runtime, logged, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))],
     });
 
@@ -2310,11 +2371,12 @@ describe('the degraded monitoring path', () => {
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
       { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-22 recovers the combined path after a throttled answer rather than claiming the runtime stopped for good', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, {
+    const { runtime, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
     });
     await runtime.start();
@@ -2329,11 +2391,12 @@ describe('the degraded monitoring path', () => {
       { whileWaiting, afterRetry: runtime.monitoringPath, stops: logged.filter((line) => line.endsWith(STOPPED_LINE)) },
       { whileWaiting: 'unavailable', afterRetry: 'shadow-and-poll', stops: [] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
     // arrange
-    const { runtime, advance } = harness(t, { shadow: [false] });
+    const { runtime, advance, commandRequests } = harness(t, { shadow: [false] });
 
     // act
     await runtime.start();
@@ -2341,11 +2404,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.strictEqual(runtime.monitoringPath, 'poll-only');
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 reports the degraded path once across three failed shadow attempts', async (t) => {
     // arrange
-    const { runtime, logged, calls, advance } = harness(t, { shadow: [false] });
+    const { runtime, logged, calls, advance, commandRequests } = harness(t, { shadow: [false] });
     await runtime.start();
     await settle();
 
@@ -2355,11 +2419,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ attempts: calls.filter((call) => call === 'shadow').length, warnings: countOf(logged, 'warn') }, { attempts: 3, warnings: 1 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 leaves a pending retry chain to reconnect rather than attempting again from every poll', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, { shadow: [false], pollIntervalMs: 100 });
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false], pollIntervalMs: 100 });
     await runtime.start();
     await settle();
     const attemptsBeforePoll = calls.filter((call) => call === 'shadow').length;
@@ -2372,11 +2437,12 @@ describe('the degraded monitoring path', () => {
       { attemptsBeforePoll, polls: calls.filter((call) => call === 'devices').length, attemptsAfterPoll: calls.filter((call) => call === 'shadow').length },
       { attemptsBeforePoll: 1, polls: 2, attemptsAfterPoll: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 restores the combined path and announces the recovery once when a later attempt succeeds', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, { shadow: [false, true] });
+    const { runtime, logged, advance, commandRequests } = harness(t, { shadow: [false, true] });
     await runtime.start();
     await settle();
 
@@ -2388,11 +2454,12 @@ describe('the degraded monitoring path', () => {
       { path: runtime.monitoringPath, recoveries: logged.filter((line) => line.endsWith('recovered.')) },
       { path: 'shadow-and-poll', recoveries: ['info The shadow connection recovered.'] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reads as the combined path once the shadow connection reports itself up', async (t) => {
     // arrange
-    const { runtime } = harness(t);
+    const { runtime, commandRequests } = harness(t);
 
     // act
     await runtime.start();
@@ -2400,11 +2467,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('falls back to the polling-only path without reporting a fault when the connection closes', async (t) => {
     // arrange
-    const { runtime, shadows, logged } = harness(t);
+    const { runtime, shadows, logged, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2413,11 +2481,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ path: runtime.monitoringPath, warnings: countOf(logged, 'warn') }, { path: 'poll-only', warnings: 0 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-04 reports no fault for the daily reconnect the provider connection ceiling forces', async (t) => {
     // arrange
-    const { runtime, shadows, logged } = harness(t);
+    const { runtime, shadows, logged, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2427,11 +2496,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'shadow-and-poll', reports: [] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 reports the degraded path once while the connection keeps failing', async (t) => {
     // arrange
-    const { runtime, shadows, logged } = harness(t);
+    const { runtime, shadows, logged, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2445,11 +2515,12 @@ describe('the degraded monitoring path', () => {
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
       { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('D-15 reports the degraded path when the broker refuses the subscription', async (t) => {
     // arrange
-    const { runtime, shadows, logged } = harness(t);
+    const { runtime, shadows, logged, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2461,12 +2532,13 @@ describe('the degraded monitoring path', () => {
       { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
       { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   for (const reason of ['transport-closed', 'transport-error', 'subscription-refused', 'handshake-refused'] as const) {
     test(`SYNC-03 hands telemetry back to the poll when the connection reports ${reason}`, async (t) => {
       // arrange
-      const { runtime, shadows, store } = harness(t);
+      const { runtime, shadows, store, commandRequests } = harness(t);
       await runtime.start();
       await settle();
       store.applyReportedPatch(DEVICE_ID, { data: { water_level: 7 }, state: undefined, version: 90 });
@@ -2476,12 +2548,13 @@ describe('the degraded monitoring path', () => {
 
       // assert
       assert.strictEqual(store.snapshot(DEVICE_ID)?.shadowVersion, undefined);
+      assert.deepStrictEqual(commandRequests, []);
     });
   }
 
   test('SYNC-05 closes the shadow connection when the runtime stops', async (t) => {
     // arrange
-    const { runtime, shadows } = harness(t);
+    const { runtime, shadows, commandRequests } = harness(t);
     await runtime.start();
     await settle();
 
@@ -2490,21 +2563,23 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.strictEqual(shadows[0]?.closes(), 1);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('SYNC-05 resolves stop when the shadow connection cannot be closed', async (t) => {
     // arrange
-    const { runtime } = harness(t, { closeFails: true });
+    const { runtime, commandRequests } = harness(t, { closeFails: true });
     await runtime.start();
     await settle();
 
     // act & assert
     await assert.doesNotReject(() => runtime.stop());
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('opens no shadow connection while discovery has returned no device', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'))],
     });
 
@@ -2517,12 +2592,13 @@ describe('the degraded monitoring path', () => {
       calls.filter((call) => call === 'shadow'),
       [],
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the polling path degraded on the second consecutive failure and trusted again on the next success', async (t) => {
     // arrange
     const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
-    const { runtime, monitoringHealth, advance } = harness(t, {
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), failing, failing, () => Promise.resolve([geminiDevice()])],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
     });
@@ -2538,6 +2614,7 @@ describe('the degraded monitoring path', () => {
       monitoringHealth.map((trust) => trust.restDegraded),
       [false, false, true, false],
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The two thresholds answer different questions, and this is the case that separates them. One
@@ -2548,7 +2625,7 @@ describe('the degraded monitoring path', () => {
   test('reports the command transport unready after a single failed poll, with neither degradation field moved', async (t) => {
     // arrange
     const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
-    const { runtime, monitoringHealth, advance } = harness(t, {
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), failing, () => Promise.resolve([geminiDevice()])],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
     });
@@ -2564,6 +2641,7 @@ describe('the degraded monitoring path', () => {
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: false },
       { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: true, credentialsRejected: false },
     ]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The one failure this project treats as final. Nothing polls, refreshes, or connects after it, so
@@ -2575,7 +2653,7 @@ describe('the degraded monitoring path', () => {
   // absence of interest (D-10).
   test('D-13 pushes a rejected credential and an unready command transport, and never reaches the vendor again', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, calls, advance } = harness(t, {
+    const { runtime, monitoringHealth, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
     });
 
@@ -2592,6 +2670,7 @@ describe('the degraded monitoring path', () => {
         calls: ['devices'],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The refusal an owner actually meets. A password changed at the vendor, or a block the vendor
@@ -2603,7 +2682,7 @@ describe('the degraded monitoring path', () => {
   // path. This one answers a healthy inventory first, so it examines the path a restart never takes.
   test('D-13 pushes a rejected credential and records the authentication stop for a refusal that follows a healthy start', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
     });
@@ -2626,6 +2705,7 @@ describe('the degraded monitoring path', () => {
         discoveryFailures: [],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // What makes the refusal a state rather than an act the runtime performed once. A socket left open
@@ -2636,7 +2716,7 @@ describe('the degraded monitoring path', () => {
   // not happen (D-10, D-13, SYNC-05).
   test('D-13 closes the live connection and opens no other for a refusal that follows a healthy start', async (t) => {
     // arrange
-    const { runtime, shadows, calls, logged, advance } = harness(t, {
+    const { runtime, shadows, calls, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
     });
@@ -2655,13 +2735,14 @@ describe('the degraded monitoring path', () => {
       },
       { closes: 1, clients: 1, shadowFailures: [] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
   // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
   test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
       credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
       rotationLeadMs: SHORT_ROTATION_LEAD_MS,
       minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
@@ -2685,6 +2766,7 @@ describe('the degraded monitoring path', () => {
         rotationFailures: [],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The second half of the same claim, and the half a retry would make expensive: the vendor lifts a
@@ -2693,7 +2775,7 @@ describe('the degraded monitoring path', () => {
   // the refusal is about every one of them (D-13, D-10).
   test('D-13 leaves the poll, the rotation and the shadow retry chain nothing to do once a mid-run refusal has halted it', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       shadow: [false],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
@@ -2708,6 +2790,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(calls, atTheRefusal);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // Two loops can be in flight against a tenant that has already said no. The rotation wakes ten
@@ -2715,7 +2798,7 @@ describe('the degraded monitoring path', () => {
   // nor the accessory tier pushed twice (D-10).
   test('D-13 pushes the terminal trust once when the poll and the rotation meet the refusal together', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance } = harness(t, {
+    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
       rotationLeadMs: SHORT_ROTATION_LEAD_MS,
@@ -2736,6 +2819,7 @@ describe('the degraded monitoring path', () => {
       },
       { terminalPushes: 1, stops: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // Closing the connection at the halt is only half the answer, because the loop that halted is
@@ -2752,7 +2836,7 @@ describe('the degraded monitoring path', () => {
     const granted = new Promise<AwsCredentialsResponse>((resolve) => {
       grantCredentials = resolve;
     });
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       credentials: [() => granted],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
@@ -2771,6 +2855,7 @@ describe('the degraded monitoring path', () => {
       0,
       'a halted runtime built a shadow client for a credential grant that landed after the refusal',
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The other half of the same claim, one function later. The connection was already opening when the
@@ -2779,7 +2864,7 @@ describe('the degraded monitoring path', () => {
   test('D-13 keeps no live connection that opened while a refusal was halting the runtime', async (t) => {
     // arrange
     const halting = { advance: undefined as ((ms: number) => Promise<void>) | undefined };
-    const { runtime, shadows, calls, advance } = harness(t, {
+    const { runtime, shadows, calls, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       whileShadowStarts: () => halting.advance?.(FAST_POLL_INTERVAL_MS) ?? Promise.resolve(),
@@ -2792,6 +2877,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ closes: shadows[0]?.closes(), clients: calls.filter((call) => call === 'shadow').length }, { closes: 1, clients: 1 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The shutdown's own push is the runtime telling the tier the transport has gone, so it is named
@@ -2800,7 +2886,7 @@ describe('the degraded monitoring path', () => {
   // (SYNC-05, RES-04).
   test('reports nothing for a poll a shutdown aborted', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, advance } = harness(t, {
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
     });
@@ -2823,11 +2909,12 @@ describe('the degraded monitoring path', () => {
         ],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the shadow silent once two heartbeats have passed with no message', async (t) => {
     // arrange
-    const { runtime, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
 
     // act
@@ -2836,11 +2923,12 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the silent live connection once across three silent polls inside one reminder interval', async (t) => {
     // arrange
-    const { runtime, logged, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const { runtime, logged, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -2856,11 +2944,12 @@ describe('the degraded monitoring path', () => {
       },
       { warnings: 1, repeats: 2 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('announces the live connection recovered once a message arrives after the silence', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const { runtime, shadows, logged, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -2876,6 +2965,7 @@ describe('the degraded monitoring path', () => {
       },
       { warnings: 1, recovered: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The scoped permission allows vendor deviceId in local logs, accessory context and persisted
@@ -2885,7 +2975,7 @@ describe('the degraded monitoring path', () => {
   // (AUTH-02, D-027, D-14).
   test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
     // arrange
-    const { runtime, logged, registrations, advance } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const { runtime, logged, registrations, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
     await runtime.start();
 
     // act
@@ -2903,11 +2993,12 @@ describe('the degraded monitoring path', () => {
       },
       { reported: true, scheme: false, authorization: false, secret: false, device: true },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
 
@@ -2917,6 +3008,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, false]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The recovery an owner waits on. Both arrival cases above advance the clock after the message,
@@ -2926,7 +3018,7 @@ describe('the degraded monitoring path', () => {
   // the recorded call list says no request left the plugin in between (CR-02, D-11).
   test('RES-03 restores the trust on the message that proves the live path is carrying, with no clock movement and no poll', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, calls, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, calls, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -2948,6 +3040,7 @@ describe('the degraded monitoring path', () => {
         calls: atSilence,
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The guard the report is made through. A healthy live path delivers a heartbeat roughly every
@@ -2956,7 +3049,7 @@ describe('the degraded monitoring path', () => {
   // second message, so it reports nothing (D-05).
   test('reports once per recovery rather than once per message when two messages arrive together', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringHealth, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -2972,13 +3065,14 @@ describe('the degraded monitoring path', () => {
       { atSilence, afterFirstMessage, afterSecondMessage: monitoringHealth.length },
       { atSilence: 3, afterFirstMessage: 4, afterSecondMessage: 4 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The same guard on the ordinary case: a live path that is working. It costs one push per poll
   // and none per heartbeat, because a message that resolved nothing is not news (D-05).
   test('reports nothing when a message arrives on a live path it never reported silent', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringHealth } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringHealth, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await settle();
     const afterLaunch = monitoringHealth.length;
@@ -2989,13 +3083,14 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual({ afterLaunch, afterTwoMessages: monitoringHealth.length }, { afterLaunch: 1, afterTwoMessages: 1 });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The diagnostic half of the same recovery. The owner is told the live connection came back once,
   // at the message that proves it, with the clock standing still (D-03).
   test('announces the live connection recovered once at the arriving message, with no clock movement', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, logged, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3012,6 +3107,7 @@ describe('the degraded monitoring path', () => {
       },
       { warnings: 1, recovered: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // Why the report is driven from the arrival callback and not from a snapshot listener. The
@@ -3019,7 +3115,7 @@ describe('the degraded monitoring path', () => {
   // subscriber at all, and it is still direct evidence that the live path is carrying (D-05, D-11).
   test('clears the silence on a heartbeat carrying the values the store already holds, which notifies no subscriber', async (t) => {
     // arrange
-    const { runtime, store, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, store, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3039,6 +3135,7 @@ describe('the degraded monitoring path', () => {
         pushed: { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false },
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // D-11's matching of clearing to cause, re-asserted against the arrival report. The arrival
@@ -3046,7 +3143,7 @@ describe('the degraded monitoring path', () => {
   // in the middle here still reports the silence unresolved, and the message after it clears it.
   test('D-11 leaves the shadow silence for the successful poll and clears it for the message that follows', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, advance } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3057,6 +3154,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(silenceOf(monitoringByDevice), [false, false, true, true, false]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // D-14. What the recovery latch being a set rather than a flag buys, stated as the two ways a flag
@@ -3073,7 +3171,7 @@ describe('the degraded monitoring path', () => {
   // this case.
   test('D-14 lets a quiet pump recover on its own message while its heartbeating neighbour neither reports nor is reported for', async (t) => {
     // arrange
-    const { runtime, shadows, logged, monitoringByDevice, advance } = harness(t, {
+    const { runtime, shadows, logged, monitoringByDevice, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
       pollIntervalMs: HEARTBEAT_MS,
     });
@@ -3108,6 +3206,7 @@ describe('the degraded monitoring path', () => {
         finalSilence: [false, false],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // D-14. The other half: the failure log's rate limiting is per kind, so a per-device kind gives
@@ -3126,7 +3225,7 @@ describe('the degraded monitoring path', () => {
   // Recorded limit (D-10): the second pump is this fixture's, not the vendor account's.
   test('D-14 gives each pump its own warning when two fall silent inside one reminder interval', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance } = harness(t, {
+    const { runtime, shadows, logged, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
       pollIntervalMs: HEARTBEAT_MS,
     });
@@ -3149,11 +3248,12 @@ describe('the degraded monitoring path', () => {
       },
       { frontPumpWarnings: 1, frontPumpRepeats: 1, backPumpWarnings: 1, gapBetweenSilencesMs: 898_000, reminderIntervalMs: 900_000 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
     // arrange
-    const { runtime, calls, advance } = harness(t, {
+    const { runtime, calls, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
         () => Promise.resolve([geminiDevice()]),
@@ -3167,6 +3267,7 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.strictEqual(calls.filter((call) => call === 'shadow').length, 1);
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
@@ -3177,7 +3278,7 @@ describe('DEV-05 removal reconciliation', () => {
 
   test('makes no extra devices call and reports no removal while a tracked device stays present', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance } = harness(t, {
+    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()])],
     });
     await runtime.start();
@@ -3188,11 +3289,12 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 2, removed: [] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('never reports removal for a deviceId absent once between two present observations', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance } = harness(t, {
+    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([geminiDevice()])],
     });
     await runtime.start();
@@ -3204,11 +3306,12 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 3, removed: [] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('makes exactly one final-check fetch per cycle and removes every deviceId still absent from it', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance } = harness(t, {
+    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
     });
     await runtime.start();
@@ -3223,11 +3326,12 @@ describe('DEV-05 removal reconciliation', () => {
       { devicesCalls: devicesCallCount(calls), removed: [...removed].sort() },
       { devicesCalls: 4, removed: [DEVICE_ID, OTHER_DEVICE_ID].sort() },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('does not remove a deviceId that reappears in the final-check fetch, and resets its absence count', async (t) => {
     // arrange
-    const { runtime, calls, removed, advance } = harness(t, {
+    const { runtime, calls, removed, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.resolve([]),
@@ -3246,11 +3350,12 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 5, removed: [] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   test('reports no removal when the final-check fetch itself fails, and retries the check on the next successful poll', async (t) => {
     // arrange
-    const { runtime, calls, removed, logged, advance } = harness(t, {
+    const { runtime, calls, removed, logged, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.resolve([]),
@@ -3278,6 +3383,7 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A removal Homebridge refuses leaves an accessory published that this plugin has already
@@ -3287,7 +3393,7 @@ describe('DEV-05 removal reconciliation', () => {
   // longer holds, nothing ever retries the removal, and nothing is said about any of it (D-014).
   test('keeps a pump whose removal was refused watched, distrusted and reported, and tries the removal again', async (t) => {
     // arrange
-    const { runtime, store, logged, anchors, removed, monitoringByDevice, advance } = harness(t, {
+    const { runtime, store, logged, anchors, removed, monitoringByDevice, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
       pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
       removalFails: true,
@@ -3316,13 +3422,14 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A refused removal strands an accessory this plugin has already vouched for, so the first one
   // is said the moment it happens rather than held back by the cadence its repeats are subject to.
   test('reports a refused removal as soon as the removal is refused', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance } = harness(t, {
+    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       removalFails: true,
@@ -3339,6 +3446,7 @@ describe('DEV-05 removal reconciliation', () => {
       { attempts: [...removed], warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`) },
       { attempts: [DEVICE_ID], warnings: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The documented refusal is a UUID another plugin had already bridged, which no poll clears, so
@@ -3347,7 +3455,7 @@ describe('DEV-05 removal reconciliation', () => {
   // same sentence 288 times a day at the shortest interval the configuration allows (D-14).
   test('says nothing further about a pump refused again inside the reminder window, and still retries every poll', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance } = harness(t, {
+    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       removalFails: true,
@@ -3371,6 +3479,7 @@ describe('DEV-05 removal reconciliation', () => {
       },
       { attempts: [DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID], warnings: 1, repeats: 3 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The kind is per device for the reason the live-reporting kind is: a pump refused all afternoon
@@ -3379,7 +3488,7 @@ describe('DEV-05 removal reconciliation', () => {
   // would send the second straight to debug (D-14).
   test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance } = harness(t, {
+    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
       removalFails: true,
@@ -3400,6 +3509,7 @@ describe('DEV-05 removal reconciliation', () => {
       },
       { attempts: [DEVICE_ID, OTHER_DEVICE_ID].sort(), pump: 1, pumpBesideIt: 1 },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so
@@ -3412,7 +3522,7 @@ describe('DEV-05 removal reconciliation', () => {
   // has been in the account for one poll and has never failed in it.
   test('drops the reporting kind of a removed pump, so the identifier coming back announces no recovery', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance } = harness(t, {
+    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
       devices: [
         () => Promise.resolve([geminiDevice()]),
         () => Promise.resolve([]),
@@ -3444,6 +3554,7 @@ describe('DEV-05 removal reconciliation', () => {
         recoveriesAfterTheIdentifierReturned: [],
       },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The store lives for the life of the process and is written back to disk, so
@@ -3453,7 +3564,7 @@ describe('DEV-05 removal reconciliation', () => {
   // device is really gone (D-14).
   test('drops the arrival anchor of a removed pump, so the stored set cannot outgrow the account', async (t) => {
     // arrange
-    const { runtime, anchors, removed, advance } = harness(t, {
+    const { runtime, anchors, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
     });
     await runtime.start();
@@ -3469,6 +3580,7 @@ describe('DEV-05 removal reconciliation', () => {
       { whileItIsCarried, afterRemoval: anchors.stored.has(DEVICE_ID), removed },
       { whileItIsCarried: true, afterRemoval: false, removed: [DEVICE_ID] },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // The recovery latch does not need pruning here, and this is what says so. The shadow client stays
@@ -3481,7 +3593,7 @@ describe('DEV-05 removal reconciliation', () => {
   // latch that accumulated instead of being rebuilt would fail this case.
   test('reports nothing for a message from a pump the account has already removed', async (t) => {
     // arrange
-    const { runtime, shadows, monitoringByDevice, removed, advance } = harness(t, {
+    const { runtime, shadows, monitoringByDevice, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
       pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
     });
@@ -3495,6 +3607,7 @@ describe('DEV-05 removal reconciliation', () => {
 
     // assert
     assert.deepStrictEqual({ removed, pushes: monitoringByDevice.length }, { removed: [DEVICE_ID], pushes: atRemoval });
+    assert.deepStrictEqual(commandRequests, []);
   });
 
   // A stray message can still arrive after removal for the structural reason the
@@ -3504,7 +3617,7 @@ describe('DEV-05 removal reconciliation', () => {
   // (D-14).
   test('does not re-arm the arrival anchor when a stray message arrives after a pump is removed', async (t) => {
     // arrange
-    const { runtime, shadows, anchors, removed, advance } = harness(t, {
+    const { runtime, shadows, anchors, removed, advance, commandRequests } = harness(t, {
       devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([]), () => Promise.resolve([])],
       pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
     });
@@ -3521,6 +3634,7 @@ describe('DEV-05 removal reconciliation', () => {
       { atRemoval, afterStrayMessage: anchors.stored.has(DEVICE_ID) },
       { atRemoval: { removed: [DEVICE_ID], hasAnchor: false }, afterStrayMessage: false },
     );
+    assert.deepStrictEqual(commandRequests, []);
   });
 });
 
