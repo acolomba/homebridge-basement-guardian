@@ -15,6 +15,8 @@ import { join } from 'node:path';
 import { describe, test } from 'node:test';
 import timers, { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createCloudApi } from '../../src/cloud/api.js';
 import { createAuthClient } from '../../src/cloud/auth.js';
 import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestError } from '../../src/cloud/errors.js';
@@ -27,6 +29,7 @@ import { createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
+import { ACCOUNT_SHADOW_CASES, ACCOUNT_SHADOW_PARTICIPANTS, assertAccountShadowContract, exerciseAccountShadowContract } from './accountShadowContract.js';
 import {
   ARRIVAL_ANCHOR_MEMORY_CASES,
   ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
@@ -316,12 +319,11 @@ interface ShadowRecorder {
   closes: () => number;
 }
 
-// A shadow client that opens no socket. Starting it reports the connection the
-// way the real client does, from its connect notification.
+// A socket-free shadow with start resolution separate from readiness.
 //
-// `whileStarting` holds the start unresolved after the connection has been
-// announced, which is the window a shutdown has to land in for the runtime to
-// see no client to close.
+// `whileStarting` deliberately holds the factory's start operation unresolved,
+// so a shutdown can land before the runtime records the client. Ordinary
+// readiness completes on a later event-loop turn and cannot survive close.
 function fakeShadow(
   options: ShadowRuntimeOptions,
   closeFails = false,
@@ -330,6 +332,8 @@ function fakeShadow(
   const subscribed: string[][] = [];
   let closes = 0;
   let live = false;
+  let closing = false;
+  let ending: Promise<void> | undefined;
 
   return {
     client: {
@@ -337,17 +341,37 @@ function fakeShadow(
         return live;
       },
       start: (deviceIds: readonly string[]): Promise<void> => {
-        subscribed.push([...deviceIds]);
-        live = true;
-        options.onConnected();
+        if (closing) {
+          return Promise.resolve();
+        }
 
-        return whileStarting === undefined ? Promise.resolve() : whileStarting();
+        subscribed.push([...deviceIds]);
+        const starting = whileStarting === undefined ? Promise.resolve() : whileStarting();
+        void starting.then(
+          async () => {
+            await nextEventLoopTurn();
+
+            if (!closing) {
+              live = true;
+              options.onConnected();
+            }
+          },
+          // The runtime observes the rejection through the returned start promise.
+          () => undefined,
+        );
+
+        return starting;
       },
       close: (): Promise<void> => {
-        closes += 1;
+        closing = true;
         live = false;
 
-        return closeFails ? Promise.reject(new Error('the connection could not be closed')) : Promise.resolve();
+        if (ending === undefined) {
+          closes += subscribed.length === 0 ? 0 : 1;
+          ending = closeFails ? Promise.reject(new Error('the connection could not be closed')) : Promise.resolve();
+        }
+
+        return ending;
       },
     },
     recorder: { options, subscribed, closes: () => closes },
@@ -641,6 +665,109 @@ function countOfLine(logged: readonly string[], line: string): number {
 function silenceOf(pushes: readonly ReadonlyMap<string, MonitoringTrust>[]): (boolean | undefined)[] {
   return pushes.map((byDevice) => byDevice.get(DEVICE_ID)?.shadowSilent);
 }
+
+for (const { name, connectedCalls } of ACCOUNT_SHADOW_CASES) {
+  test(`account ${ACCOUNT_SHADOW_PARTICIPANTS.account.factoryName} ${name}`, async () => {
+    // arrange
+    const notifications: string[] = [];
+    const callbacks = mock<Pick<ShadowRuntimeOptions, 'onConnected' | 'onDisconnected'>>({ exactParams: true, name: 'shadow notifications' });
+    when(() => {
+      callbacks.onConnected();
+    })
+      .thenReturn(undefined)
+      .times(connectedCalls);
+    const { client, recorder } = fakeShadow({
+      credentials: {
+        current: () => ({ endpoint: 'broker.invalid', clientId: 'client-1', accessKeyId: 'key', secretAccessKey: 'secret', sessionToken: 'token' }),
+      },
+      retry: createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
+      onConnected: () => {
+        callbacks.onConnected();
+        notifications.push('connected');
+      },
+      onDisconnected: (reason) => {
+        callbacks.onDisconnected(reason);
+        notifications.push(`disconnected ${reason}`);
+      },
+      onReportedPatch: () => undefined,
+    });
+    const participant = {
+      client,
+      notifications,
+      beginReadiness: () => undefined,
+      finishReadiness: async () => {
+        await nextEventLoopTurn();
+      },
+      opened: () => recorder.subscribed.length,
+      closed: () => recorder.closes(),
+    };
+
+    // act
+    const observations = await exerciseAccountShadowContract(participant, name);
+
+    // assert
+    assertAccountShadowContract(observations, name);
+    verify(callbacks);
+  });
+}
+
+test('rejects a shadow participant that opens after close', async () => {
+  // arrange
+  let connected = false;
+  let opens = 0;
+  const participant = {
+    client: {
+      get connected(): boolean {
+        return connected;
+      },
+      start: () => {
+        connected = true;
+        opens += 1;
+
+        return Promise.resolve();
+      },
+      close: () => Promise.resolve(),
+    },
+    notifications: [],
+    beginReadiness: () => undefined,
+    finishReadiness: () => Promise.resolve(),
+    opened: () => opens,
+    closed: () => 0,
+  };
+
+  // act
+  const observations = await exerciseAccountShadowContract(participant, 'stays closed when started after close');
+
+  // assert
+  assert.throws(
+    () => {
+      assertAccountShadowContract(observations, 'stays closed when started after close');
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof assert.AssertionError);
+      assert.deepStrictEqual(
+        { code: error.code, actual: error.actual, expected: error.expected, operator: error.operator },
+        {
+          code: 'ERR_ASSERTION',
+          actual: [
+            { stage: 'constructed', connected: false, notifications: [], opened: 0, closed: 0 },
+            { stage: 'closed before start', connected: false, notifications: [], opened: 0, closed: 0 },
+            { stage: 'start after close', connected: true, notifications: [], opened: 1, closed: 0 },
+            { stage: 'closed again', connected: true, notifications: [], opened: 1, closed: 0 },
+          ],
+          expected: [
+            { stage: 'constructed', connected: false, notifications: [], opened: 0, closed: 0 },
+            { stage: 'closed before start', connected: false, notifications: [], opened: 0, closed: 0 },
+            { stage: 'start after close', connected: false, notifications: [], opened: 0, closed: 0 },
+            { stage: 'closed again', connected: false, notifications: [], opened: 0, closed: 0 },
+          ],
+          operator: 'deepStrictEqual',
+        },
+      );
+      return true;
+    },
+  );
+});
 
 for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
   test(`account ${ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.account.factoryName} ${contractCase}`, () => {

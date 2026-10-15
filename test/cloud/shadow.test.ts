@@ -12,13 +12,22 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createShadowClient, SHADOW_TOPICS } from '../../src/cloud/shadow.js';
 import { createRetryPolicy } from '../../src/runtime/retryPolicy.js';
+import {
+  ACCOUNT_SHADOW_CASES,
+  ACCOUNT_SHADOW_PARTICIPANTS,
+  assertAccountShadowContract,
+  exerciseAccountShadowContract,
+} from '../runtime/accountShadowContract.js';
 
 import type { MqttTransport, MqttTransportOptions } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient, ShadowClientOptions, ShadowCredentials } from '../../src/cloud/shadow.js';
 import type { ReportedPatch } from '../../src/device/state.js';
 import type { RetryPolicy } from '../../src/runtime/retryPolicy.js';
+import type { AccountShadowParticipant } from '../runtime/accountShadowContract.js';
 import type { Logging } from 'homebridge';
 
 const DEVICE_A = 'account-1_serial-a';
@@ -222,6 +231,132 @@ async function connected(recorder: TransportRecorder | undefined): Promise<void>
 function body(document: unknown): Buffer {
   return Buffer.from(JSON.stringify(document), 'utf8');
 }
+
+interface ShadowContractParticipant extends AccountShadowParticipant {
+  finishSubscription(): Promise<void>;
+}
+
+function shadowContractParticipant(callbacks: Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>): ShadowContractParticipant {
+  const notifications: string[] = [];
+  let opens = 0;
+  let ends = 0;
+  let beginReadiness = (): void => undefined;
+  // Promise constructors assign the readiness gates synchronously.
+  let subscribed!: () => void;
+  let requested!: () => void;
+  const subscription = new Promise<void>((resolve) => {
+    subscribed = resolve;
+  });
+  const request = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  const client = createShadowClient({
+    scheme: 'wss',
+    region: 'us-east-1',
+    credentials: { current: credentials },
+    clock,
+    log: silentLog(),
+    retry: createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: 30_000, log: silentLog() }),
+    createTransport: () => {
+      opens += 1;
+
+      return {
+        onConnect: (handler) => {
+          beginReadiness = handler;
+        },
+        onMessage: () => undefined,
+        onError: () => undefined,
+        onClose: () => undefined,
+        subscribe: () => subscription,
+        publish: () => request,
+        end: () => {
+          ends += 1;
+
+          return Promise.resolve();
+        },
+      };
+    },
+    connect: () => {
+      throw new Error('the contract transport opens no socket');
+    },
+    userAgent: 'contract-user-agent',
+    onReportedPatch: () => undefined,
+    onConnected: () => {
+      callbacks.onConnected();
+      notifications.push('connected');
+    },
+    onDisconnected: (reason) => {
+      callbacks.onDisconnected(reason);
+      notifications.push(`disconnected ${reason}`);
+    },
+  });
+
+  async function finishSubscription(): Promise<void> {
+    subscribed();
+    await nextEventLoopTurn();
+  }
+
+  return {
+    client,
+    notifications,
+    beginReadiness: () => {
+      beginReadiness();
+    },
+    finishSubscription,
+    finishReadiness: async () => {
+      await finishSubscription();
+      requested();
+      await nextEventLoopTurn();
+    },
+    opened: () => opens,
+    closed: () => ends,
+  };
+}
+
+for (const { name, connectedCalls } of ACCOUNT_SHADOW_CASES) {
+  test(`${ACCOUNT_SHADOW_PARTICIPANTS.real.factoryName} ${name}`, async () => {
+    // arrange
+    const callbacks = mock<Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>>({ exactParams: true, name: 'shadow notifications' });
+    when(() => {
+      callbacks.onConnected();
+    })
+      .thenReturn(undefined)
+      .times(connectedCalls);
+    const participant = shadowContractParticipant(callbacks);
+
+    // act
+    const observations = await exerciseAccountShadowContract(participant, name);
+
+    // assert
+    assertAccountShadowContract(observations, name);
+    verify(callbacks);
+  });
+}
+
+test('reports readiness only after the complete shadow request finishes', async () => {
+  // arrange
+  const callbacks = mock<Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>>({ exactParams: true, name: 'shadow notifications' });
+  when(() => {
+    callbacks.onConnected();
+  }).thenReturn(undefined);
+  const participant = shadowContractParticipant(callbacks);
+
+  // act
+  await participant.client.start(['placeholder-device']);
+  participant.beginReadiness();
+  await participant.finishSubscription();
+  const whileRequestPending = { connected: participant.client.connected, notifications: [...participant.notifications] };
+  await participant.finishReadiness();
+  const afterRequest = { connected: participant.client.connected, notifications: [...participant.notifications] };
+  await participant.client.close();
+
+  // assert
+  assert.deepStrictEqual(
+    { whileRequestPending, afterRequest },
+    { whileRequestPending: { connected: false, notifications: [] }, afterRequest: { connected: true, notifications: ['connected'] } },
+  );
+  verify(callbacks);
+});
 
 describe('SHADOW_TOPICS', () => {
   test('exposes the get, get-accepted, get-rejected, and update-accepted helpers and no others', () => {

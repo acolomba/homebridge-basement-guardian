@@ -1838,3 +1838,157 @@ remain pending. Original 001/006/007/008/024/025 retain their implementation
 dispositions. The 29 original IDs and counter 0 are unchanged. Parent full
 npm run check after terminal 04-11 remains required; none runs in this task.
 RUN-01 remains Pending. D-03 and historical WINDOWS 46/47 remain unwaived.
+
+## CR-04-ACCOUNT-015B: consumed shadow lifecycle agreement
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_015b_shadow_agreement`, on 2026-10-15.
+Disposition: **shadow portion implemented; original 015 awaits independent
+full ACCOUNT correction**. The anchor portion retains its separate 015A
+implementation. All 29 original IDs and correction counter **0** continue.
+This appendix preserves the complete initial report and every prior appendix.
+It claims no independent closure, correction review or partial clean verdict.
+
+Pre-edit HEAD was `fae2ce4800e256a52e3aa1af7371a255a7db124b`, on
+`features/code-review-sweep`, with clean status and empty index. This task
+changes exactly four paths: `test/runtime/accountRuntime.test.ts`, new
+`test/runtime/accountShadowContract.ts`, `test/cloud/shadow.test.ts`, and
+this report. The pre-code 04-11 declaration at 6072c20 remains the fifth
+cause path. No source, compiler configuration, anchor helper/owner, RED
+history, shared-state record or other implementation path changes.
+
+### Common contract and real-owner boundary
+
+The new concern helper declares a typed real/ACCOUNT participant inventory.
+Both owners use fresh participants for the same three scenarios and invoke
+the SAME pure assertion function after completing actions and capture.
+Whole independently literal observations include connection state, complete
+notification history, opened connections and close effects at each checkpoint:
+
+- Construction is inert; normal start resolves while readiness remains false.
+- Readiness reports connected once; repeated close ends ownership once.
+- Closing during pending readiness suppresses its late connected notification.
+- Closing before start prevents a later start from opening a connection.
+
+The real participant runs `createShadowClient` over an injected offline
+`MqttTransport`. Its connect callback starts the actual subscription path.
+Separate public subscription and get-publish promises control readiness.
+A real-owner case independently captures false readiness after subscription
+completion while get-publish remains pending, then true readiness after that
+request completes. Existing subscription-refusal, transport-error, reconnect,
+replaced-connection, routing, shutdown and credential-owner cases remain intact.
+
+The ACCOUNT `fakeShadow` keeps its exact private name, full signature and
+recorder shape. Its ordinary start resolves before readiness on a later
+event-loop turn. A close flag prevents that late completion from becoming
+live, and a memoized close preserves the consumed once-only ending behavior.
+The optional `whileStarting` remains the intentional pending-start factory
+seam for existing shutdown/halt cases. It is not repurposed as a simulated
+subscription or get request. Every original ACCOUNT case, including all 015A
+anchor checks, original 024/025 regressions and pending-start shutdown cases,
+remains byte-identical. Their unchanged assertions pass with the new body.
+
+Each owner uses exact-parameter strong mocks for its promised connected
+callback and forbidden disconnection, verified in the owning case after
+state assertions. A private deliberately broken participant permits opening
+after close. The SAME pure contract assertion rejects it. An independently
+written expected error checks AssertionError identity, ERR_ASSERTION, full
+actual/expected checkpoint arrays and deepStrictEqual operator. This is a
+contract negative control, not genuine production RED or a source mutation.
+
+The common contract establishes only the consumed lifecycle facts above.
+The ACCOUNT participant implements no transport protocol, broker operation,
+subscription validation, message parsing or network failure. It supplies no
+full network equivalence or universal external transport teardown claim.
+Replacement-connection and real protocol/error promises stay in the real
+owner. Missing values, mutable aliases, value overwrite, deletion and input
+validation do not apply to this lifecycle-only contract. Both complete
+adapted owners and the complete new helper join later full ACCOUNT correction;
+earlier TRUST/cloud review judgments remain historical.
+
+### Complete reads, verification location and native evidence
+
+Before edits, complete AGENTS, all five complete books, 04-11, amended 04-07,
+the newest complete review protocol and this entire report were read.
+All four read_first files were read completely: shadow and account source,
+and both complete owners. Actual callers were traced from harness and wired
+composition to fakeShadow, and from refresh/openShadow/attemptShadow to
+start, post-await close, terminal halt and explicit stop. The real start,
+connect, requestEveryShadow, current-connection guard and close were traced.
+No existing shared/exported/private signature, name, visibility or alias is
+changed or deleted. The private impact limitations and narrow inventory
+exception remain unchanged; no neighboring trace supplies extra permission.
+
+The new helper and both complete owner headers were inspected independently:
+SPDX MIT first, separate 2026 copyright JSDoc, separate purpose overview,
+then imports. New helper exports have purpose JSDoc, and .js ESM imports and
+the compiled owner layout remain intact. No new package or production hook
+is introduced. Implementation review is not independent correction.
+
+All checks ran in the existing linked feature checkout with
+`workflow.use_worktrees=false`; no additional checkout, branch or recovery
+sentinel was created. Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3,
+Fallow 3.27.0. Native directory: `/private/tmp/guardian-04-account-015b/`.
+Every command record retains exact executable/argv, cwd, HEAD, versions,
+UTC start/end, complete separate stdout/stderr and raw child exit.
+before.json saves the initial exact tracked hashes and clean diff/index.
+provenance.json retains the full dirty diff, new helper bytes, compiled
+hashes, blobs, source/history preservation and recursive classifications.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| snapshot.json, guard.json | Clean initial state and exact four-path pre-edit Fallow guard; exit 0. No boundary zones/rule packs configured. |
+| callers.json | Actual lexical shadow/start/close callers before edits; exit 0. |
+| build-final.json | Fresh npm run build:test; exit 0, 2026-10-15T13:01:26.621Z–13:01:30.084Z. |
+| owners-final.json | Both complete compiled owners; exit 0, 210 pass, zero fail/cancel/skip/todo. |
+| direct-account.json, direct-shadow.json | Each exact npm run test:coverage:direct source/owner pair with fresh build; exit 0. |
+| coverage-account.json | Isolated exact-source native thresholds; exit 0, 151 pass, 994/994 lines, 57/57 functions, 181/181 branches. |
+| coverage-shadow.json | Isolated exact-source native thresholds; exit 0, 59 pass, 339/339 lines, 30/30 functions, 75/75 branches. |
+| lint-final.json | All three changed TypeScript files, no cache, max warnings 0; exit 0. |
+| evidence-gate.json, provenance-1.json | Unchanged RED CLI and SAME installed recursive classifier; all six records RED_EVIDENCE_OK; exit 0. |
+| audit.json | Fallow audit against e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, verdict pass, zero introduced issues. |
+| pre-step-1.json | Exact four-file SKIP=npm-check pre-commit; exit 0, clean, no formatter changes. Repeated after this report update before staging. |
+
+The first build and owners passed. The first lint attempt found one import
+group and two void-expression shorthand errors in the new code; its complete
+failure remains lint-1.json/.stdout/.stderr. They were corrected before the
+final build, owners, direct coverage and lint. No failed attempt is discarded
+or relabeled. Selected direct runs do not refresh merged all-pair LCOV.
+
+The first temporary pre-stage assertion script trimmed Git's leading status
+space before extracting paths, losing the leading dot of .planning. Its raw
+failure remains assert-before-stage.json/.stderr. Branch, HEAD and empty-index
+checks had passed; the corrected exact-path check uses Git's path output
+without status-column parsing. Staging contains only the four authorized
+paths. No executable input changed to correct this evidence script.
+
+All production bytes remain unchanged, including account blob
+`6e6795bb2720ea38dd46d01393d82692c636de16` and shadow blob
+`018f49c720f0119fb131b4f03dfbc3966a98dadc`.
+The complete six-record genuine RED JSON retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`.
+Provenance checks every other tracked input, prior report bytes, the exact
+private signature/recorder and all original cases in both owners.
+
+### Threat mitigations, atomic commit and remaining scope
+
+T-04-13: fresh whole lifecycle observations distinguish start from readiness
+and suppress late readiness after close; existing ownership cases stay active.
+T-04-14: synthetic data only, ordinary secret hooks, no new logging permission.
+T-04-SC: no install. No production surface or broader lifecycle policy changes.
+
+The atomic commit introducing this appendix and three test/helper changes is
+titled `test: verify consumed account shadow lifecycle agreement`.
+Resolve its actual hash and exact four paths from Git. Exact clean
+`SKIP=npm-check pre-commit run --files` precedes staging; report or formatter
+changes require repetition. Native pre-step, branch/HEAD/index assertions,
+authorized linked-index staging and plain foreground normal commit records
+retain the terminal results. Shared support selects all 43 pairs in ordinary
+check:commit. Only the actual terminal hook result establishes success.
+No hook bypass, amend, stash, rebase or history rewrite is authorized.
+
+Original 015's anchor and shadow portions are implemented pending full ACCOUNT
+correction after all owning causes. Other initial findings retain their prior
+dispositions; the 29 original IDs and counter 0 remain. The parent owns full
+npm run check after terminal 04-11 and after completed 04-07; no full gate runs
+in this task. RUN-01 remains Pending. D-03 and WINDOWS 46/47 remain unwaived.
