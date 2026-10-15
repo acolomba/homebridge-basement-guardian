@@ -240,7 +240,8 @@ export interface AccountRuntime {
    * mechanism every other wait and request already ends on (CTRL-05, SYNC-05).
    */
   readonly commands: CommandPort;
-  start(): Promise<void>;
+  /** Starts monitoring with known physical IDs eligible for absence confirmation, without supplying telemetry. */
+  start(knownDeviceIds?: readonly string[]): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -1168,7 +1169,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // Resolves once the first attempt has been made. A launch that must be
     // tried again waits in the background, so the Homebridge launch event is
     // never held open by a vendor that is not answering.
-    async start(): Promise<void> {
+    async start(knownDeviceIds: readonly string[] = []): Promise<void> {
       if (started || stopped) {
         return;
       }
@@ -1184,6 +1185,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
 
       if (hasFinished()) {
         return;
+      }
+
+      for (const deviceId of knownDeviceIds) {
+        reconciliation.present(deviceId);
       }
 
       const retryInMs = await launch();

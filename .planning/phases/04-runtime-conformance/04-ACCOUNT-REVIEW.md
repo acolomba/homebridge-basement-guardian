@@ -4467,3 +4467,136 @@ root patch matching the active owner. The first verifier attempt exited 1
 because git hash-object followed a tracked directory symlink. Its full native
 record remains history-provenance.json. The corrected temporary verifier hashes
 the symlink target text and passed; neither attempt is native test RED.
+
+## CR-04-ACCOUNT-026 — runtime startup identity dependency
+
+This appendix implements only declared task 04-12-01. The original finding
+remains open for platform integration, its separate header cause, parent gates
+and independent full correction. This logic change requires human verification.
+The initial ACCOUNT result remains 29 stable IDs: 18 BLOCKER and 11 WARNING.
+The correction counter remains 0. RUN-01 remains Pending; D-03 still applies.
+
+### Actual dependency ancestry and narrow implementation
+
+The committed fourth cause-path declaration is
+`3f4f1c3c8a9a732cd7a7711debbd7cb836611362`. That actual source commit produced
+the two genuine platform RED runs. The actual evidence-only commit is
+`9f7649eac84f5b82106535c941763ec1554bac1d`, containing only this report and the
+new platform pair JSON. Git ancestry and its exact two paths were verified.
+It precedes this runtime GREEN. The dependency's actual Git object is returned
+by the normal foreground commit and recorded by the later platform integration;
+no predicted hash, reconstructed 07 ledger or classifier message substitutes
+for that commit. Both production files were unchanged through the evidence commit.
+
+AccountRuntime.start accepts an optional readonly knownDeviceIds array, with
+an empty default. Existing no-argument callers retain their behavior. After
+anchor restoration and the existing terminal guard, start passes these IDs
+to the existing reconciliation.present operation before launch. No other
+production operation changes. Identity supplies absence eligibility only.
+It creates no canonical snapshot, metadata, value, watermark, connectivity,
+trust report or arrival anchor. Existing successful inventories, two healthy
+absence confirmations, final inventory checks and successful removal callbacks
+still govern removal and pruning. Existing start, shutdown and terminal guards
+continue to own asynchronous work.
+
+Only accountRuntime.ts, its direct owner and this report belong to this
+dependency commit. Platform source, owner and headers are not integrated here.
+The runtime source changes from ec7a77182bb5b222c5fe945abe3b4c67912d5781
+to d60a04e0d006746c79726d8ea10240e909499f00. No private member is deleted.
+No package, persistence format, permission, log, feature, vendor or hardware
+behavior is added. Cached identity validation remains the platform's responsibility.
+
+### Fresh exact contract impact before editing
+
+The fresh configured fixer resolver selected an omitted model, high effort
+and opus tier. Complete project instructions, bootstrap, all five project
+books, current plans and locked context were loaded before implementation.
+The complete runtime/platform sources and owners, reconciliation source/owner,
+factory composition and actual no-argument World/start consumers were read.
+Exact Fallow guard covered all three owned paths before editing; later edit
+and formatter boundaries have their own guard captures. Each returned exit 0.
+
+All six independent pre-edit impact commands ran at evidence HEAD 9f7649e.
+Each used --type-aware, one --type-aware-project, --symbol-impact,
+--type-aware-require complete, --format json, --quiet and --explain.
+Every selected project and identity reports complete, with no omissions.
+
+| Exact symbol | tsconfig.json | tsconfig.test.json |
+| --- | --- | --- |
+| AccountRuntime | Complete; no named consumers | Complete; direct owner and both Worlds |
+| createAccountRuntime | Complete; no named consumers | Complete; direct owner |
+| createAccountRuntimeFromConfig | Complete; platform | Complete; platform, direct owner and both Worlds |
+
+The production project hash is
+sha256:21136545e03add83002d24624dc948bec8da00383132c13a0882182a003d9a26.
+The test project hash is
+sha256:d84fa7d40c0319006004dc8560f0e84f3dee27cc3a3f1353bcb201f05c00e3b8.
+Structural consumers and no-argument starts were traced separately from named
+symbol results. Proposal probes were not reused as pre-edit evidence.
+Complete argv, selected projects, UTC, HEAD, streams, exits and results remain
+in the six symbol/project records under the native directory below.
+
+### Public owner proof and native checks
+
+Seven new executed cases use fresh state, independent whole expected literals
+and exact strict request/removal/forbidden-command mocks. Verification follows
+public result assertions. They establish no-argument compatibility; duplicate
+ID deduplication; two healthy omissions plus a held final check; no fabricated
+state or anchors; preserved restored anchors until legitimate removal; failed
+and incomplete inventory rejection without confirmation advancement; failed
+final checks and callback refusal retaining eligibility; repeated start guards;
+and shutdown ownership during restoration or final inventory awaits.
+The incomplete-inventory row exercises the existing CloudApi rejection contract,
+without adding another validator. The complete original 353198 owner bytes
+remain exact around one contiguous insertion. Original 024/025 deadline cases,
+both 023 rows, 021 whole-state and 022 real-shadow/order cases, 018/019/020 cases,
+shared contracts and negative controls remain intact.
+
+Native records are under
+`/private/tmp/guardian-04-account-026-runtime-seed/`.
+Checks ran in the existing linked features/code-review-sweep checkout with
+workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No new checkout or manual stash was created. Each mutation completed before
+the next edit or build. Initial and final successful attempts are retained.
+
+| Record | Actual final result |
+| --- | --- |
+| format-final | Exact source/owner Prettier, exit 0; complete authored bytes and patch captured first, complete output captured afterward |
+| build-final | Fresh npm run build:test, exit 0, 17:34:52.193935–17:34:55.182990 UTC |
+| owner-final | Full native direct-owner TAP, exit 0; 166 tests, 166 pass, 0 fail/cancel/skip/todo, 17:34:55.472130–17:34:55.928970 UTC |
+| lint-final | Exact source/owner ESLint --max-warnings=0 --no-cache, exit 0 |
+| direct-final | Exact isolated account source/owner direct coverage with fresh build, exit 0 |
+| native-coverage-final | Native isolated TAP plus accountRuntime-final.lcov, exit 0; 166 pass, no failure/skip/cancel; 1007/1007 lines, 193/193 branches, 58/58 functions |
+| installed-platform, installed-account | Installed CLI on each actual immutable file, exit 0; RED_EVIDENCE_OK |
+| preservation-final-bytes | SAME installed classifyRedEvidence accepts all 2 platform plus 14 ACCOUNT records; actual sourceCommit/sourceBlob identities and complete raw histories retained; exit 0 |
+| audit | Fallow audit against actual ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0, exit 0, verdict pass; required final pre-commit audit is captured separately |
+
+Raw streams, full argv, UTC, HEAD, exits, input/output copies, manifests and
+patches remain native artifacts. The first capture helper copied all 697
+regular tracked files but omitted three directory symlinks. The supplemental
+verifier checked their literal targets against evidence HEAD, and subsequent
+snapshots capture all 700 tracked files/symlinks. This is disclosed rather than
+relabeling the earlier manifest. Three temporary verifier attempts failed on
+an obsolete 699 count, the default Git output buffer, and an older record's
+schema. Corrected verification passed; all attempts remain. They are verifier
+preparation, not native test RED or code failures. No test/build/lint attempt
+failed during this dependency stage.
+
+### Immutable history and next boundary
+
+The platform JSON remains byte-exact at
+5a35d0831979b6c7444b598c0987bdd9d98f758b with its two records. The separate
+ACCOUNT JSON remains byte-exact at b3f7141fc652706628ec55c5bd5c1a3e4b560319
+with fourteen records. Both installed CLI checks and recursive SAME-classifier
+results are accepted. Full stored output bytes, prior records and real Git
+provenance remain exact. This stage does not repair or waive original 022's
+missing first formatter input captures.
+
+The active platform owner remains exactly
+eb576cb98b369df0b0d01616451c049013b31130, unstaged. Its full patch still equals
+the immutable platform RED root. Platform production remains
+7bea5aed77dd653d7396c7279fa709b6677817df. Every other tracked input and the full
+prior report prefix are preserved. No active platform owner run is claimed
+GREEN, and no full npm run check or independent correction is claimed.
+The parent retains platform integration, header repair, combined gates,
+shared-record updates, final configuration restoration and the full correction.

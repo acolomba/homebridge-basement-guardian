@@ -827,6 +827,460 @@ for (const { contractCase, createAnchors, rejectedObservation, expectedObservati
   });
 }
 
+test('confirms seeded physical IDs before removal without inventing device state', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded inventory requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removals' });
+  when(() => {
+    removals(DEVICE_ID);
+  }).thenReturn(undefined);
+  when(() => {
+    removals(OTHER_DEVICE_ID);
+  }).thenReturn(undefined);
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  // The promise constructor assigns the resolver synchronously.
+  let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
+  const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
+    completeFinalCheck = resolve;
+  });
+  const callbackStates: unknown[] = [];
+  let rootSignal!: AbortSignal;
+  const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, trustworthyInventories, commandRequests, advance } = harness(
+    t,
+    {
+      pollIntervalMs: 1_000,
+      anchors: recordingAnchors([
+        [DEVICE_ID, START_TIME - 123],
+        ['previous-device', START_TIME - 456],
+      ]),
+      command: commands,
+    },
+    undefined,
+    {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onDeviceRemoved: (deviceId) => {
+        removals(deviceId);
+        callbackStates.push({ deviceId, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls: [...calls] });
+      },
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+  // act
+  await runtime.start([DEVICE_ID, DEVICE_ID, OTHER_DEVICE_ID]);
+  await settle();
+  const afterFirstAbsence = {
+    path: runtime.monitoringPath,
+    deviceIds: store.deviceIds(),
+    snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+    anchors: [...anchors.stored],
+    account: monitoringHealth.at(-1),
+    byDevice: monitoringByDevice.at(-1),
+    removed: [...removed],
+  };
+  await runtime.start(['previous-device']);
+  await advance(1_000);
+  const beforeFinalAnswer = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+  completeFinalCheck([]);
+  await settle();
+  const afterFinalAnswer = {
+    path: runtime.monitoringPath,
+    deviceIds: store.deviceIds(),
+    snapshots: [store.snapshot(DEVICE_ID), store.snapshot(OTHER_DEVICE_ID)],
+    anchors: [...anchors.stored],
+    account: monitoringHealth.at(-1),
+    byDevice: monitoringByDevice.at(-1),
+    removed: [...removed],
+  };
+  await runtime.start([DEVICE_ID]);
+  await advance(1_000);
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(afterFirstAbsence, {
+    path: 'poll-only',
+    deviceIds: [],
+    snapshots: [undefined, undefined],
+    anchors: [
+      [DEVICE_ID, START_TIME - 123],
+      ['previous-device', START_TIME - 456],
+    ],
+    account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+    byDevice: new Map(),
+    removed: [],
+  });
+  assert.deepStrictEqual(beforeFinalAnswer, {
+    removed: [],
+    anchors: [
+      [DEVICE_ID, START_TIME - 123],
+      ['previous-device', START_TIME - 456],
+    ],
+    calls: ['devices', 'credentials', 'devices', 'devices'],
+  });
+  assert.deepStrictEqual(afterFinalAnswer, {
+    path: 'poll-only',
+    deviceIds: [],
+    snapshots: [undefined, undefined],
+    anchors: [['previous-device', START_TIME - 456]],
+    account: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+    byDevice: new Map(),
+    removed: [DEVICE_ID, OTHER_DEVICE_ID],
+  });
+  assert.deepStrictEqual(callbackStates, [
+    {
+      deviceId: DEVICE_ID,
+      deviceIds: [],
+      anchors: [
+        [DEVICE_ID, START_TIME - 123],
+        ['previous-device', START_TIME - 456],
+      ],
+      calls: ['devices', 'credentials', 'devices', 'devices'],
+    },
+    {
+      deviceId: OTHER_DEVICE_ID,
+      deviceIds: [],
+      anchors: [['previous-device', START_TIME - 456]],
+      calls: ['devices', 'credentials', 'devices', 'devices'],
+    },
+  ]);
+  assert.deepStrictEqual(
+    { calls, removed, trustworthyInventories, commandRequests, anchors: [...anchors.stored] },
+    {
+      calls: ['devices', 'credentials', 'devices', 'devices', 'devices'],
+      removed: [DEVICE_ID, OTHER_DEVICE_ID],
+      trustworthyInventories: [[], [], []],
+      commandRequests: [],
+      anchors: [['previous-device', START_TIME - 456]],
+    },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+});
+
+test('leaves restored anchors ineligible for removal when start receives no known IDs', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'unseeded inventory requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'unseeded device removal' });
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  let rootSignal!: AbortSignal;
+  const { runtime, store, anchors, removed, calls, trustworthyInventories, commandRequests, advance } = harness(
+    t,
+    { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
+    undefined,
+    {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onDeviceRemoved: removals,
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+  // act
+  await runtime.start();
+  await settle();
+  await advance(1_000);
+  await advance(1_000);
+  const path = runtime.monitoringPath;
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(
+    {
+      path,
+      deviceIds: store.deviceIds(),
+      snapshot: store.snapshot(DEVICE_ID),
+      anchors: [...anchors.stored],
+      removed,
+      calls,
+      trustworthyInventories,
+      commandRequests,
+    },
+    {
+      path: 'poll-only',
+      deviceIds: [],
+      snapshot: undefined,
+      anchors: [[DEVICE_ID, START_TIME - 123]],
+      removed: [],
+      calls: ['devices', 'credentials', 'devices', 'devices'],
+      trustworthyInventories: [[], [], []],
+      commandRequests: [],
+    },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+});
+
+for (const { title, inventoryError } of [
+  { title: 'failed', inventoryError: new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices') },
+  { title: 'incomplete', inventoryError: new Error('the inventory envelope is incomplete') },
+]) {
+  test(`retains seeded absence confirmation across ${title} inventories`, async (t) => {
+    // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'healthy and rejected inventory requests' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'seeded device removal' });
+    when(() => {
+      removals(DEVICE_ID);
+    }).thenReturn(undefined);
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    let rootSignal!: AbortSignal;
+    const { runtime, store, anchors, removed, calls, trustworthyInventories, commandRequests, advance } = harness(
+      t,
+      { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
+      undefined,
+      {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        onDeviceRemoved: removals,
+        createRetry: (signal) => {
+          rootSignal = signal;
+          return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+        },
+      },
+    );
+    when(() => requests.devices(rootSignal)).thenReject(inventoryError);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenReject(inventoryError);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.devices(rootSignal)).thenResolve([]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+    // act
+    await runtime.start([DEVICE_ID]);
+    await settle();
+    const afterFailedLaunch = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+    await advance(1_000);
+    const afterFirstHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+    await advance(1_000);
+    const afterFailedPoll = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+    await advance(1_000);
+    const afterSecondHealthy = { path: runtime.monitoringPath, removed: [...removed], anchors: [...anchors.stored] };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFailedLaunch, afterFirstHealthy, afterFailedPoll, afterSecondHealthy },
+      {
+        afterFailedLaunch: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+        afterFirstHealthy: { path: 'poll-only', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+        afterFailedPoll: { path: 'unavailable', removed: [], anchors: [[DEVICE_ID, START_TIME - 123]] },
+        afterSecondHealthy: { path: 'poll-only', removed: [DEVICE_ID], anchors: [] },
+      },
+    );
+    assert.deepStrictEqual(
+      { deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), calls, trustworthyInventories, commandRequests },
+      {
+        deviceIds: [],
+        snapshot: undefined,
+        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
+        trustworthyInventories: [[], []],
+        commandRequests: [],
+      },
+    );
+    verify(requests);
+    verify(removals);
+    verify(commands);
+  });
+}
+
+test('retains seeded removal eligibility after a failed final check and callback refusal', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded removal confirmation requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'refused then successful removal' });
+  when(() => {
+    removals(DEVICE_ID);
+  }).thenThrow(new Error('Homebridge refused removal'));
+  when(() => {
+    removals(DEVICE_ID);
+  }).thenReturn(undefined);
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  let rootSignal!: AbortSignal;
+  const { runtime, store, anchors, removed, calls, commandRequests, advance } = harness(
+    t,
+    { pollIntervalMs: 1_000, anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]), command: commands },
+    undefined,
+    {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onDeviceRemoved: removals,
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenReject(new Error('the final inventory is unavailable'));
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+  // act
+  await runtime.start([DEVICE_ID]);
+  await settle();
+  await advance(1_000);
+  const afterFailedCheck = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+  await advance(1_000);
+  const afterRefusedCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+  await advance(1_000);
+  const afterSuccessfulCallback = { removed: [...removed], anchors: [...anchors.stored], calls: [...calls] };
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(
+    { afterFailedCheck, afterRefusedCallback, afterSuccessfulCallback, deviceIds: store.deviceIds(), snapshot: store.snapshot(DEVICE_ID), commandRequests },
+    {
+      afterFailedCheck: { removed: [], anchors: [[DEVICE_ID, START_TIME - 123]], calls: ['devices', 'credentials', 'devices', 'devices'] },
+      afterRefusedCallback: {
+        removed: [],
+        anchors: [[DEVICE_ID, START_TIME - 123]],
+        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices'],
+      },
+      afterSuccessfulCallback: {
+        removed: [DEVICE_ID],
+        anchors: [],
+        calls: ['devices', 'credentials', 'devices', 'devices', 'devices', 'devices', 'devices', 'devices'],
+      },
+      deviceIds: [],
+      snapshot: undefined,
+      commandRequests: [],
+    },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+});
+
+test('removes no seeded identity when a final inventory completes after shutdown', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'seeded shutdown inventory requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  // The promise constructor assigns the resolver synchronously.
+  let completeFinalCheck!: (devices: readonly ApiDevice[]) => void;
+  const finalCheck = new Promise<readonly ApiDevice[]>((resolve) => {
+    completeFinalCheck = resolve;
+  });
+  let rootSignal!: AbortSignal;
+  const { runtime, store, anchors, removed, calls, monitoringHealth, monitoringByDevice, commandRequests, advance } = harness(
+    t,
+    {
+      pollIntervalMs: 1_000,
+      anchors: recordingAnchors([[DEVICE_ID, START_TIME - 123]]),
+      command: commands,
+    },
+    undefined,
+    {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      onDeviceRemoved: removals,
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
+    },
+  );
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenResolve([]);
+  when(() => requests.devices(rootSignal)).thenReturn(finalCheck);
+  when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+
+  // act
+  await runtime.start([DEVICE_ID]);
+  await settle();
+  await advance(1_000);
+  await runtime.stop();
+  completeFinalCheck([]);
+  await settle();
+  await runtime.start([OTHER_DEVICE_ID]);
+  await advance(1_000);
+
+  // assert
+  assert.deepStrictEqual(
+    {
+      path: runtime.monitoringPath,
+      deviceIds: store.deviceIds(),
+      anchors: [...anchors.stored],
+      removed,
+      calls,
+      monitoringHealth,
+      monitoringByDevice,
+      commandRequests,
+    },
+    {
+      path: 'unavailable',
+      deviceIds: [],
+      anchors: [[DEVICE_ID, START_TIME - 123]],
+      removed: [],
+      calls: ['devices', 'credentials', 'devices', 'devices'],
+      monitoringHealth: [
+        { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+      ],
+      monitoringByDevice: [new Map(), new Map()],
+      commandRequests: [],
+    },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+});
+
+test('starts no seeded inventory when anchor restoration finishes after shutdown', async (t) => {
+  // arrange
+  const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'forbidden stopped inventory requests' });
+  const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden stopped removal' });
+  const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+  // The promise constructor assigns the resolver synchronously.
+  let completeRestore!: () => void;
+  const restoring = new Promise<void>((resolve) => {
+    completeRestore = resolve;
+  });
+  const anchors = { ...recordingAnchors(), restore: () => restoring };
+  const { runtime, store, calls, removed, commandRequests } = harness(t, { anchors, command: commands }, undefined, {
+    devices: (signal) => requests.devices(signal),
+    awsCredentials: (signal) => requests.awsCredentials(signal),
+    onDeviceRemoved: removals,
+  });
+
+  // act
+  const starting = runtime.start([DEVICE_ID]);
+  await runtime.start([OTHER_DEVICE_ID]);
+  await runtime.stop();
+  completeRestore();
+  await starting;
+  await settle();
+
+  // assert
+  assert.deepStrictEqual(
+    { path: runtime.monitoringPath, deviceIds: store.deviceIds(), anchors: [...anchors.stored], calls, removed, commandRequests },
+    { path: 'unavailable', deviceIds: [], anchors: [], calls: [], removed: [], commandRequests: [] },
+  );
+  verify(requests);
+  verify(removals);
+  verify(commands);
+});
+
 test('keeps the shadow connection when the same physical devices are enumerated in another order', async (t) => {
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
