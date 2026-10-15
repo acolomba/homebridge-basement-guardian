@@ -20,7 +20,8 @@ correction_counter: 1
 source_revision: 0ad981c393536624fa5353e42f871f6db7b1e753
 first_independent_observer: /root/phase4_trust_first/trust_initial_review
 production_bugs: 1
-applied_repairs: 15
+applied_repairs: 16
+applied_pending_correction_ids: [CR-04-TRUST-016]
 arrival_applied_ids: [CR-04-TRUST-001, CR-04-TRUST-002, CR-04-TRUST-003, CR-04-TRUST-004, CR-04-TRUST-005, CR-04-TRUST-006, CR-04-TRUST-007, CR-04-TRUST-008]
 partially_applied_ids: []
 open_findings: 2
@@ -2011,3 +2012,79 @@ permission or release action occurred.
 
 _Correction 1 reviewer: gsd-code-reviewer; source 0ad981c; 15 fixed, 2 new
 warnings, 2 open; counter 1; no D-03 stop. Report only, uncommitted._
+
+## 016 follow-up: silent storage logger, pending full correction
+
+Fixer `/root/phase4_trust_finish/trust_followup_repairs` applies only original
+task 04-05-02 cause 016, starting at `135f28f`. The complete correction-one
+body above remains an exact byte prefix; frontmatter separately records applied
+work. Original 001–015 remain independently fixed. Both 016 and 017 remain
+formally open pending full correction round 2; counter 1 is unchanged.
+
+The fixer read complete AGENTS, both plans including the parent's committed
+`135f28f` amendment, CONTEXT, RESEARCH, PATTERNS, REVIEW-PROTOCOL, this entire
+report, 04-05 SUMMARY, FINDINGS, STATE, REQUIREMENTS, canonical decisions and
+execute-plan workflow. All five complete TypeScript/verification books, both
+complete original pairs, the full shared contract and actual callers were read.
+The recorded config-get returned literal false, raw 0. The documented role
+opt-out therefore applies: execution uses the existing **main checkout**,
+isolation none, features/code-review-sweep, with no new worktree or branch.
+The parent retains later config restoration and full wave-six gate ownership.
+
+Rollback inventory is exactly `test/runtime/arrivalAnchors.test.ts` and this
+report. Exact two-path Fallow guard returned 0 before edits; no boundary zones
+or rule packs are configured. Fresh exact `recordingLog`, nested `at`,
+`storeOver`, `UNUSABLE_LINE` and `NOT_WRITTEN_LINE` impact queries each ran
+separately for tsconfig.json and tsconfig.test.json with complete required
+semantic analysis. All ten returned raw 2: private targets unavailable.
+These are retained unmet traces, never deletion proof. All lexical uses and
+actual calls were read before changing the logger.
+
+The compatible fallback preserves `recordingLog(recorded)`, nested `at(level)`
+and its message function, the typed Logging shape and complete `storeOver`
+declaration. Logger bodies discard arguments and record nothing. No private
+helper is deleted, renamed or exported. Only the two diagnostic expectation
+constants made unused by this cause are removed, as explicitly authorized by
+the parent amendment. Storage cases remove incidental diagnostic fields and
+title clauses. Complete memory, literal durable bytes, restore, invalid-map
+rejection, directory and exclusive-write/cleanup observations remain intact.
+Both active positive/negative overflow regression bodies stay byte-identical.
+No production diagnostic, API, storage format, memory policy or RED file changes.
+
+Native records live in `/private/tmp/guardian-04-trust-followups/`; recorder
+`/private/tmp/guardian-trust-followups-record.py` retains each full argv, root
+cwd, UTC start/end, raw exit, Node/npm, before/after HEAD, all five TRUST blobs,
+report/RED/plan blobs, full tracked/staged diffs and complete untracked bytes.
+Untouched stdout and stderr are separate files. All checks run serially in the
+main checkout on Node **v26.11.1**, npm **11.20.0**. Initial focused typecheck,
+lint, build, both whole owners (56 pass, zero fail/cancel/skip/todo) and both
+isolated direct selectors returned 0, enforcing 100% lines/functions/branches.
+The first Prettier check returned 1 for assertion wrapping; its native failure
+is retained. The formatter changed layout only, followed by final checks below.
+These are focused checks; no full gate, Cucumber, independent closure or wave
+completion is claimed. No genuine production bug or new RED is warranted.
+
+Final 016 records `typecheck-final`, `lint-final`, `format-final`, `build-final`,
+`owners-final`, both `*-direct-final` and `identity` all returned raw 0.
+Whole owners ran 2026-10-15T04:20:20.242743Z–04:20:20.534908Z, 56 passing;
+arrival direct ran 04:20:21.011956Z–04:20:24.471525Z and monitoring direct
+04:20:24.971060Z–04:20:28.415101Z, each isolated 100% lines/functions/branches.
+Identity confirms exact original private monitoring declarations, unchanged
+native temporaryPath, both production blobs, immutable RED and exact active
+overflow block. `016-audit` returned raw 0 / verdict pass against full recorded
+base `23a2511ac6deb26869db8d3c44916623a27ec997`, with no findings. The exact
+two-path clean pre-step, asserted stage and ordinary commit follow in retained
+native records; no future hash or hook result is predicted here.
+
+`016-prestep` was clean 0 before stage. The sandbox stage wrapper returned
+raw 1 after underlying git add returned 128 because the linked-worktree
+index.lock is outside the writable sandbox. It staged nothing. This failed
+attempt remains retained; a fresh exact clean pre-step precedes the routine
+authorized metadata retry. No hook bypass or worktree creation is involved.
+
+016 is applied pending its ordinary two-path cause commit and full independent
+correction. 017 remains unapplied. The historical arithmetic is 15 - 15 + 2 = 2;
+current open set stays 016/017, counter 1, with no rejected/reopened finding or
+new correction. D-03 remains untriggered. High T-04-21 stays in the actual
+inventory with T-04-01 through T-04-20 and reserved T-04-SC; later security/seal
+judgments, WINDOWS 46/47 and RUN-01 remain pending with their existing owners.
