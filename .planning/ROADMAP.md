@@ -143,7 +143,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 04-02-PLAN.md
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 04-03-PLAN.md
+- [x] 04-03-PLAN.md
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 04-04-PLAN.md
@@ -236,7 +236,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
-| 4. Runtime Conformance | code-review-sweep | 2/10 | In Progress | - |
+| 4. Runtime Conformance | code-review-sweep | 3/10 | In Progress | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |

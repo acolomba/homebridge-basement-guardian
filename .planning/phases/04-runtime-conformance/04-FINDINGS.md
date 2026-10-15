@@ -1,16 +1,17 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-02: PORTS is independently clean at correction round 3.
-All nine observed findings are fixed; full wave-two verification passed.
-Other batches remain pending; no genuine production bug has been confirmed.
+Current through 04-03: PORTS is independently clean at correction round 3.
+POLICIES has complete initial review, six applied causes and six retry causes
+remaining. Full wave-three verification passed. No production bug is confirmed.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
 
 Initial source/test baseline: 008218be4badf44455ab35906f1dfcff06089bf8.
 Exactly twenty initial core paths form ten mirrored pairs. PORTS has full initial
-review and complete-header inspection; other batches remain pending. ACCOUNT initial sizes are 1,283 source
+review and complete-header inspection. POLICIES has complete initial review;
+TRUST and ACCOUNT remain pending. ACCOUNT initial sizes are 1,283 source
 lines and 3,365 owner lines; line-count changes never shrink the full review.
 
 | Batch | Exact path | Scope | Full initial review | Current full correction | Header |
@@ -23,12 +24,12 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | PORTS | test/runtime/monotonicClock.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
 | PORTS | src/runtime/timers.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
 | PORTS | test/runtime/timers.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
-| POLICIES | src/runtime/commandPort.ts | core | Pending | Pending | Pending |
-| POLICIES | test/runtime/commandPort.test.ts | core | Pending | Pending | Pending |
-| POLICIES | src/runtime/failureLog.ts | core | Pending | Pending | Pending |
-| POLICIES | test/runtime/failureLog.test.ts | core | Pending | Pending | Pending |
-| POLICIES | src/runtime/retryPolicy.ts | core | Pending | Pending | Pending |
-| POLICIES | test/runtime/retryPolicy.test.ts | core | Pending | Pending | Pending |
+| POLICIES | src/runtime/commandPort.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
+| POLICIES | test/runtime/commandPort.test.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
+| POLICIES | src/runtime/failureLog.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
+| POLICIES | test/runtime/failureLog.test.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
+| POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Pending | Nonconformant; repair pending |
+| POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Pending | Nonconformant; repair pending |
 | TRUST | src/runtime/arrivalAnchors.ts | core | Pending | Pending | Pending |
 | TRUST | test/runtime/arrivalAnchors.test.ts | core | Pending | Pending | Pending |
 | TRUST | src/runtime/monitoringHealth.ts | core | Pending | Pending | Pending |
@@ -46,7 +47,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | Batch | Plans | Report | Initial review | Last correction round | Open IDs |
 | --- | --- | --- | --- | --- | --- |
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
-| POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | Pending | Not started | Unknown until review |
+| POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 0; six repairs applied | 001–012; 12 pending independent closure |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | Pending | Not started | Unknown until review |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
 
@@ -60,7 +61,7 @@ ACCOUNT keeps one counter across all slices and any added owning cause tasks.
 | Candidate | Review question | Owning task | Disposition / evidence |
 | --- | --- | --- | --- |
 | S-04-01 | accessoryStore compiler positives/negatives versus tests of a literal recorder | 04-01-01 | Accepted CR-04-PORTS-002; compiler repair applied |
-| S-04-02 | CommandOutcome inline-object union against interface/public constituent rules | 04-03-01 | Pending |
+| S-04-02 | CommandOutcome inline-object union against interface/public constituent rules | 04-03-01 | Accepted CR-04-POLICIES-002; public variants applied |
 | S-04-03 | Optional versus required-present undefined; actual exhaustive public shape | Every affected cause, coordinated in 04-09-02 | Pending |
 | S-04-04 | Readonly advice versus interface rule scope and actual mutation contract | Every affected cause, coordinated in 04-09-02 | Pending |
 | S-04-05 | Count/negative/single-field checks versus each complete independently expected promise | Every owner, ACCOUNT 04-07 through 04-09 | Pending |
@@ -218,3 +219,61 @@ remain unchanged beneath approved headers. No helper or external adaptation.
 Execution-record commit1993aaa follows the five source/test cause commits. Generic summary JSON passed; schema drift found none,
 codebase drift explicitly skipped absent STRUCTURE.md. RUN-01 remains Pending.
 WINDOWS46/47 remain OPEN/unwaived; this recorded D-03 decision changes neither.
+
+## Coordinator wave 3 evidence and POLICIES handoff
+
+`npm run check` returned 0 at clean b0bbecb466927ef6a1253857af7aa192af8f57e1
+on v26.11.1, 2026-10-15T01:17:33.752503+00:00 to 2026-10-15T01:18:08.596890+00:00.
+Six static checks, 104 scenarios / 1156 steps and all 43 isolated pairs passed.
+Native output: /private/tmp/guardian-phase4-wave3-full-check.log; metadata:
+/private/tmp/guardian-phase4-wave3-gate.json. Generic04-03 summary passed;
+schema drift found none; codebase drift explicitly skipped absent STRUCTURE.md.
+
+Fresh typed policies_initial_review inspected all six originals, full headers,
+all five books and actual callers at e25e26e. Exact initial/current locations,
+blobs, rules, native evidence and first observer are retained in
+04-POLICIES-REVIEW.md, with repair appendices qualified by real commits.
+Initial 12 accepted = 2 BLOCKER + 10 WARNING, no production bugs.
+
+| Stable POLICIES ID | Accepted cause / severity | Current repair disposition |
+| --- | --- | --- |
+| CR-04-POLICIES-001 | Command pair headers; WARNING | Applied8052f80; full correction pending |
+| CR-04-POLICIES-002 | Interface object variants; WARNING | Appliedc0f8062; full correction pending |
+| CR-04-POLICIES-003 | Logging pair headers; WARNING | Appliedbd335c2; full correction pending |
+| CR-04-POLICIES-004 | Complete hourly stream; BLOCKER | Applied5f07760; full correction pending |
+| CR-04-POLICIES-005 | Clock role naming; WARNING | Appliedda5269f; full correction pending |
+| CR-04-POLICIES-006 | Reminder AAA; WARNING | Applieded06aa0; full correction pending |
+| CR-04-POLICIES-007 | Retry pair headers; WARNING | Unapplied;04-04 |
+| CR-04-POLICIES-008 | Scheduled boundaries/pending observations; BLOCKER | Unapplied;04-04 |
+| CR-04-POLICIES-009 | Reset act/assert/title; WARNING | Unapplied;04-04 |
+| CR-04-POLICIES-010 | Silent logging double; WARNING | Unapplied;04-04 |
+| CR-04-POLICIES-011 | Named logger helper declaration; WARNING | Unapplied;04-04; may share010 minimum cause |
+| CR-04-POLICIES-012 | Prescribed callback double; WARNING | Unapplied;04-04 |
+
+These are applied dispositions, not independent fixed-ID judgments: opening
+accepted001–012 remains12, correction counter0, no rejected/reopened/new IDs
+or D-03 stop in POLICIES. Full six-file correction follows all retry repairs.
+Header causes apply D-01/style Files and modules;002 style Types;004/008
+independent whole-value discrimination;005 Naming;006/009 AAA;010/012 Test
+doubles;011 Functions. All contribute RUN-01, headers also PROC-03.
+
+S-04-02 accepted002; S-04-03/04 rejected for POLICIES current shapes only;
+S-04-05 partially accepted004/008. Other batch obligations remain open.
+Exact six pre-edit symbol impacts at8052f80 independently selected both
+compiler projects, all exit0/complete; inferred controls/runtime wiring read.
+Public mutable accepted/refused constituents preserve exact required failure
+vocabulary, transitive use and compiler positives/negatives. No forced imports,
+private leak, suppression, optional/readonly conversion or external adaptation.
+FailureLog body from first import is unchanged; retry pair remains at baseline.
+
+Cause004 count-preserving wrong-debug-message control passed typecheck/lint,
+then failed the named whole120-entry hourly stream assertion (native exit1).
+Exact source4d724a609b5da08f31b7978396fd4d240c93fe70 restored, then
+fresh build,15 cases and isolated100% passed before commit. This is a
+maintenance control on correct production, with no genuine bug/RED JSON.
+Native initial/fix/closeout records remain under guardian-04-policies-*-native
+and guardian-04-policies-closeout in /private/tmp; report maps exact directories.
+Six cause audits, clean pre-steps before staging and ordinary hooks passed.
+Failed sandbox/reuse/comparison attempts remain historical, not passing
+evidence. No helper, deleted alias, package or new behavior; WINDOW46/47
+remain OPEN/unwaived. RUN-01 Pending.
