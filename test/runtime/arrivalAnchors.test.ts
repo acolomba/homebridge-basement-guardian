@@ -85,9 +85,9 @@ test('D-08 restores nothing and says nothing on a first start, when no anchor fi
   assert.deepStrictEqual({ anchor: anchors.get(DEVICE_ID), recorded }, { anchor: undefined, recorded: [] });
 });
 
-// A zero anchor is a legal value and a truthiness test would drop it, so the
-// round trip carries one. `JSON.stringify` also turns a non-finite number into
-// `null`, which is why the read-back guard is a `typeof` test.
+// A zero anchor is legal, and this round trip proves it survives persistence.
+// Finite-number validation rejects overflow JSON numbers that parse as infinity.
+// A truthiness check would incorrectly reject zero.
 test('D-07 reads back every anchor it wrote, including one whose value is zero', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);

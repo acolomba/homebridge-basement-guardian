@@ -1223,3 +1223,47 @@ monitoring portion of 015 remain with 04-06. All original **15** accepted IDs
 remain open, independently fixed **0**, correction counter **0**. RUN-01,
 shared records and full-gate ownership stay unchanged. No partial clean verdict
 or correction reset follows from these owner checks.
+
+## 002 documentation follow-up: finite read-back validation
+
+The fixer `/root/phase4_trust_first/arrival_validation_comment` updates only
+the three-line comment above the round-trip case at owner lines 89–91 and
+appends this evidence. The comment describes legal zero, its round-trip
+observation and finite validation of overflowing JSON numbers. This is a
+documentation follow-up to original CR-04-TRUST-002, whose production fix made
+the old typeof-only explanation stale. It introduces no new cause or counter.
+
+The fixer read complete AGENTS, all five required rulebooks, 04-05,
+REVIEW-PROTOCOL, this report and the complete arrival source/owner. The parent
+granted the exclusive foreground lease in the **main checkout**, isolation
+**none**, at `02ba8853fd5dfbbbb24760f1f6b9cac1189b6924`. Node is
+**v26.11.1** and npm **11.20.0**. The rollback list is exactly owner/report.
+The exact two-path Fallow guard returned 0 before editing; no architecture
+boundaries or rule packs are configured.
+
+All `comment-*` records in `/private/tmp/guardian-04-arrival-handoff/` retain
+exact argv/cwd, UTC intervals, raw exits, runtime version, before/after HEAD,
+source/owner blobs, complete tracked/staged diffs and all untracked bytes.
+Separate stdout/stderr files retain full native streams. The initial shell
+invocation used unavailable `python` and exited 127 before running the guard;
+the recorded commands use `python3`. That attempt supplies no passing evidence.
+
+Current-input typecheck, focused owner ESLint and Prettier, fresh build:test,
+native owner and isolated direct coverage all returned **0**. The complete
+native TAP ran 2026-10-15T03:10:36.409045Z–03:10:36.895985Z: **13 passed**,
+zero failures/cancelled/skipped/todo. Direct coverage ran
+03:10:37.064154Z–03:10:40.671753Z and enforced **100% lines/functions/branches**.
+The checked owner blob is `8567b3d5f21044994b5ea831e15a0b758a121115`.
+`comment-emitted-code` confirms identical compiler-emitted owner JavaScript
+with comments removed, complete source bytes and immutable RED JSON against
+`02ba885`. Test titles, statements and active overflow regressions are unchanged.
+The source remains blob `aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64`.
+
+The required Fallow audit against recorded base
+`23a2511ac6deb26869db8d3c44916623a27ec997` returned raw **0**, verdict **pass**.
+Exact two-path clean pre-step, asserted staging and ordinary foreground commit
+evidence follow in their `comment-*` records; no future commit is claimed here.
+This focused evidence does not establish a full combined-wave gate. No source
+behavior, RED history, helper, shared record or independent correction changed.
+All original **15** accepted findings remain open, independently fixed **0**,
+correction counter **0**; full TRUST correction remains pending 04-06.
