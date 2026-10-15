@@ -957,3 +957,140 @@ No mode argument, payload, path, storage behavior, new privacy permission or
 migration is introduced. No external validation of the opaque-key premise is
 claimed. 007 is applied pending normal commit and complete independent
 correction; all 15 original findings stay open with counter 0.
+
+## Arrival terminal cause inventory and verification
+
+007 committed normally as `d4454b2e5fad2c3f2cc9d1b23f6929b1487cfb47`,
+exactly source/report. All its focused checks, audit, clean pre-step and normal
+pre-commit npm-check passed. The six conformance commits below are distinct
+from 002's genuine bug commits and its immutable evidence record.
+
+| Cause | Normal fix commit | Exact committed paths |
+| --- | --- | --- |
+| 001 | d21c9ba3a85af561353ac0c4b78bd677904706c1 | arrival source, full owner, this report |
+| 003 | 99cd24bb060b51cbfef0cafc7ee7ed2a1253ea03 | full owner, this report |
+| 004 | 55663396e1e8f3cac55c5b6b0ae6a1d900de34d4 | full owner, this report |
+| 008 | 05e495f6baf45f85d0593bc09946ccb1a5e6887e | full owner, this report |
+| 006 and arrival 015 | 0e4602008f9c1a8f35a045100fd066f769190aef | arrival source, this report |
+| 007 | d4454b2e5fad2c3f2cc9d1b23f6929b1487cfb47 | arrival source, this report |
+
+Every cause stays within five paths. The source and owner names in this table
+mean `src/runtime/arrivalAnchors.ts` and `test/runtime/arrivalAnchors.test.ts`.
+The immutable RED JSON, monitoring files and shared records are unchanged.
+At `d4454b2`, final locations are source header 1–26, get/record 61–71,
+map comment 168, privacy 18–21 and 146–148; owner header 1–10, round trip
+89–114, forget 162–187, AAA marker 177 and failed-write case 193–211.
+
+All checks ran in the **main checkout**, Node **v26.11.1**, npm **11.20.0**.
+For each cause prefix, the retained `typecheck`, `lint`, `owner`, `direct`,
+`audit`, `prestep`, `stage` and `commit` JSON/stdout/stderr files identify
+the exact native argv, cwd, raw exit, UTC interval, before/after HEAD,
+source/owner blobs, full tracked/staged diff and all untracked bytes.
+004's direct record is `restored-direct`; 001's fresh build is included in its
+direct command. 003/004 also retain each separate control build and restore.
+All ordinary verification commands returned raw **0**:
+
+- `npm run typecheck` checks both strict compiler projects.
+- `node_modules/.bin/eslint src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts --max-warnings=0` checks the complete pair.
+- `npm run build:test` precedes the compiled owner; the direct script also rebuilds.
+- `node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js` executes 9 tests, all passing with no fail/cancel/skip/todo.
+- `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` enforces isolated 100% lines/functions/branches.
+- `node_modules/.bin/fallow audit --base 23a2511ac6deb26869db8d3c44916623a27ec997 --format json --quiet --explain` returns pass for every commit.
+- `env SKIP=npm-check pre-commit run --files <all exact cause paths>` returns clean before each stage. No pre-step formatter change required a retry.
+- Stage and ordinary foreground commit run through the retained assertion wrapper, checking the exact root, features/code-review-sweep and unchanged base marker before each Git action. Normal pre-commit npm-check passes for all six code commits; the separate commit-msg no-files result is not substituted for it.
+
+The selector enforces complete matching executable LCOV and deletes temporary
+per-pair LCOV. These records supply no invented denominator, declaration-only
+exception, merged all-pair coverage or full-project gate. The parent still owes
+the complete combined-wave gate and complete four-file correction review.
+
+| Cause | Checked HEAD | Source blob | Owner blob | Full owner UTC interval on 2026-10-15 |
+| --- | --- | --- | --- | --- |
+| 001 | 06ef961 | 4dbeedb3eda6a5d26595fdc0419b705d02fb9cee | 514df5555ec5358030e3467e3c253ea7c5f1cd58 | 02:46:07.575636–02:46:08.013350 |
+| 003 | d21c9ba | 4dbeedb3eda6a5d26595fdc0419b705d02fb9cee | 1a9a01b87715384361003151dcc308bb5c8774ca | 02:47:14.106272–02:47:14.527422 |
+| 004 | 99cd24b | 4dbeedb3eda6a5d26595fdc0419b705d02fb9cee | f6feaae8c4990693417b5802efc41e0bce4431c4 | 02:49:00.395377–02:49:00.842558 |
+| 008 | 5566339 | 4dbeedb3eda6a5d26595fdc0419b705d02fb9cee | 97f611bc74a7183194a995609941a407cc9f68f3 | 02:50:55.067137–02:50:55.487785 |
+| 006 | 05e495f | bf3abbcfe0051da47888d7d57ea1705f2b2cf392 | 97f611bc74a7183194a995609941a407cc9f68f3 | 02:52:02.715411–02:52:03.135912 |
+| 007 | 0e46020 | 01f144813427051d0fc9f25f59b35136c2fd9acc | 97f611bc74a7183194a995609941a407cc9f68f3 | 02:53:06.955969–02:53:07.366792 |
+
+Restored 003 owner GREEN ran 02:47:48.419298–02:47:48.826161 UTC;
+its restored direct check ran 02:47:48.927252–02:47:52.501717, both exit 0.
+Restored 004 owner GREEN ran 02:49:34.432848–02:49:34.851077 UTC;
+its restored direct check ran 02:49:34.949403–02:49:38.509430, both exit 0.
+The two intended control failures remain separate raw exit-1 evidence above.
+
+A supplementary `conformance-final-source-tokens` comparison returned 1:
+the standalone scanner did not rescan template continuations and included
+following comments in token text. Its complete failure remains retained;
+it is not a semantic failure or a passing check. The compiler-based
+`conformance-final-emitted-code` comparison returned 0: with comments removed,
+emitted JavaScript exactly matches the finite-fix commit `06ef961`.
+`conformance-final-provenance` returned 0 and confirms unchanged RED bytes
+and a clean source checkout before this report-only closeout. An initial header
+apply-patch attempt also failed on report context; the immediate reread found
+no changed files, and the corrected patch applied. No failed attempt is used
+as verification authority.
+
+## 005 read-only assessment: actual storage boundary and remaining decision
+
+No 005 source, owner, API, helper, permission or mode change was made.
+The current real storage adapter owns imported filesystem and cryptographic
+operations. Its public `storagePath` controls the directory boundary; the
+private random temporary filename is not selectable through that input.
+
+`conformance-005-existing-boundary` is a successful exploratory probe, not a
+new owner case, RED or control. At `d4454b2` it created a fresh mkdtemp,
+registered finally cleanup, placed an ordinary synthetic file at storagePath
+and called public persist with two distinct anchors. Initial temporary-file
+creation therefore failed because its parent was not a directory. The whole
+independent observation confirmed both memory anchors, complete parent-file
+bytes and the sole directory entry survived. It ran
+2026-10-15T02:53:55.550970Z–02:53:55.869284Z, raw exit 0.
+This demonstrates that an initial create failure is testable without API
+expansion. It does **not** discriminate `wx` from `w`, since neither can create
+a child under a regular file. It proves no occupied-temporary-file ownership
+contract and no production defect.
+
+The six exact impact records are named
+`conformance-005-impact-{production,test}-{ArrivalAnchorsOptions,createArrivalAnchors,temporaryPath}`.
+Each preserves full native stdout/stderr, argv, versions, HEAD, UTC and blobs.
+Each query selected one actual compiler project, with --type-aware,
+--type-aware-require complete, --format json --quiet --explain:
+
+| Exact target | tsconfig.json | tsconfig.test.json |
+| --- | --- | --- |
+| ArrivalAnchorsOptions | Raw 0; complete; no named external consumer | Raw 0; complete; no named external consumer |
+| createArrivalAnchors | Raw 0; complete; src/runtime/accountRuntime.ts | Raw 0; complete; source accountRuntime and both arrival/account owners |
+| private temporaryPath | Raw 2; export/class method not found | Raw 2; export/class method not found |
+
+The options type still appears in the exported factory signature despite zero
+named external imports. The exact private-target trace remains unmet and is
+not replaced by a public neighbor or interpreted as deletion proof. Lexical
+inspection finds the private helper and its one persist caller. Actual
+structural factory calls were read in accountRuntime's composition factory,
+its full owner's real-store case and the arrival owner's storeOver helper.
+
+The minimum existing-boundary option is a focused initial-create-failure case,
+which needs only owner/report and no new seam. That would leave the collision
+promise unverified. If discriminating occupied temporary-name ownership remains
+the confirmed cause, a complete path supplier is the narrow deterministic
+dependency; a filesystem mock graph, module replacement or test-only accessor
+is not justified. The reviewer's optional supplier with live fallback is a
+proposal, not an automatically accepted API design. A required supplier with
+composition wiring would also affect the actual factory consumers above.
+Removing/moving the private helper lacks the exact checker trace required by
+D-06. Before any structural repair, the parent must settle that minimum cause
+and declare the necessary bounded adapter/composition/owner paths and checks.
+This assessment grants no API amendment and makes no acceptance/rejection
+change to 005. Its inaccurate "everything ... by injection" overview also
+remains within that pending cause rather than being silently repaired here.
+
+Arrival causes 001/002/003/004/006/007/008 and the arrival portion of 015
+have applied repairs pending independent verification. 005 remains unapplied;
+monitoring 009–014 and monitoring 015 remain for their owner. All original
+**15** accepted findings remain open, independently fixed **0**, correction
+counter **0**. No correction review ran or stop counter was reset. RUN-01,
+shared records, package/live/private inputs and full-gate ownership remain
+unchanged. This report-only closeout is committed separately after its own
+audit and clean pre-step; its actual commit identity belongs in the parent's
+subsequent metadata, not in a predicted self-reference.
