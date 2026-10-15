@@ -1,9 +1,9 @@
 # Phase 04 findings ledger
 
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
-Current through 04-03: PORTS is independently clean at correction round 3.
-POLICIES has complete initial review, six applied causes and six retry causes
-remaining. Full wave-three verification passed. No production bug is confirmed.
+Current through 04-04: PORTS is independently clean at correction round 3
+and POLICIES at correction round 2. Full wave-four verification passed.
+TRUST and ACCOUNT remain pending; no production bug is confirmed.
 The parent coordinator alone consolidates actual reports into this ledger.
 
 ## Full current inventory
@@ -24,12 +24,12 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | PORTS | test/runtime/monotonicClock.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
 | PORTS | src/runtime/timers.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
 | PORTS | test/runtime/timers.test.ts | core | 6f475a0; full file/header | Round 3; dd5ea2d; clean | Approved; independently inspected |
-| POLICIES | src/runtime/commandPort.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
-| POLICIES | test/runtime/commandPort.test.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
-| POLICIES | src/runtime/failureLog.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
-| POLICIES | test/runtime/failureLog.test.ts | core | e25e26e; full file/header | Pending | Applied; independent correction pending |
-| POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Pending | Nonconformant; repair pending |
-| POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Pending | Nonconformant; repair pending |
+| POLICIES | src/runtime/commandPort.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
+| POLICIES | test/runtime/commandPort.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
+| POLICIES | src/runtime/failureLog.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
+| POLICIES | test/runtime/failureLog.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
+| POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
+| POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | TRUST | src/runtime/arrivalAnchors.ts | core | Pending | Pending | Pending |
 | TRUST | test/runtime/arrivalAnchors.test.ts | core | Pending | Pending | Pending |
 | TRUST | src/runtime/monitoringHealth.ts | core | Pending | Pending | Pending |
@@ -47,7 +47,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | Batch | Plans | Report | Initial review | Last correction round | Open IDs |
 | --- | --- | --- | --- | --- | --- |
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
-| POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 0; six repairs applied | 001–012; 12 pending independent closure |
+| POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | Pending | Not started | Unknown until review |
 | ACCOUNT | 04-07/08/09 | 04-ACCOUNT-REVIEW.md | Pending | Not started | Unknown until full review |
 
@@ -123,7 +123,7 @@ and prove GREEN. No failing/skipped code commit or fabricated failure.
 
 ## Checks and threat dispositions
 
-PORTS rows have observed current evidence below; later batches remain Pending.
+PORTS and POLICIES have observed current evidence below; TRUST/ACCOUNT remain Pending.
 Record exact command, raw exit, revision/blobs,
 Node/runtime, scope, timings and dirty/untracked input evidence. Record each
 normal hook/clean pre-step and raw Fallow recorded-base audit. Pair evidence
@@ -220,7 +220,7 @@ Execution-record commit1993aaa follows the five source/test cause commits. Gener
 codebase drift explicitly skipped absent STRUCTURE.md. RUN-01 remains Pending.
 WINDOWS46/47 remain OPEN/unwaived; this recorded D-03 decision changes neither.
 
-## Coordinator wave 3 evidence and POLICIES handoff
+## Historical coordinator wave 3 evidence and POLICIES handoff
 
 `npm run check` returned 0 at clean b0bbecb466927ef6a1253857af7aa192af8f57e1
 on v26.11.1, 2026-10-15T01:17:33.752503+00:00 to 2026-10-15T01:18:08.596890+00:00.
@@ -277,3 +277,64 @@ Six cause audits, clean pre-steps before staging and ordinary hooks passed.
 Failed sandbox/reuse/comparison attempts remain historical, not passing
 evidence. No helper, deleted alias, package or new behavior; WINDOW46/47
 remain OPEN/unwaived. RUN-01 Pending.
+
+## Coordinator wave 4 evidence and current POLICIES closure
+
+`npm run check` returned 0 at clean 9afbabefd7cc04321907669d417078611cbde82e.
+Node was v26.11.1; UTC interval: 2026-10-15T02:15:14.020912+00:00 to 2026-10-15T02:15:50.047695+00:00.
+Six static checks, 104 scenarios, 1156 steps and all 43 isolated pairs passed.
+Native output: /private/tmp/guardian-phase4-wave4-full-check.log.
+Metadata: /private/tmp/guardian-phase4-wave4-gate.json.
+The generic 04-04 summary check passed. Schema drift found none.
+Codebase drift explicitly skipped its check because STRUCTURE.md is absent.
+
+Current independent POLICIES closure at 52fe134 supersedes the historical wave-three pending dispositions above.
+Both fresh typed reviewers read all six files, complete headers, five books, callers and native evidence.
+Round 1 at af2a8e1: opening 001–012 = 12; fixed 12; new 013 = 1; closing 1.
+Round 2 at 52fe134: opening 013 = 1; fixed 1; new 0; closing 0.
+Rejected and reopened sets stayed empty. The counter advanced 0 → 1 → 2.
+Both rounds reduced the open count. No D-03 stop or waiver occurred.
+
+| Current stable POLICIES set | Actual repair | Current full-review disposition |
+| --- | --- | --- |
+| 001–006 | 8052f80, c0f8062, bd335c2, 5f07760, da5269f, ed06aa0 | All remain independently fixed |
+| 007 | 80c93ad; retry headers | Fixed |
+| 008 | 41268e3; public deadlines, cap, reset and held pending | Fixed |
+| 009 | 01164c4; reset AAA and title | Fixed |
+| 010/011 | ddffc2c; shared minimum silent-logger and named-helper cause | Both fixed |
+| 012 | af2a8e1; strict callback doubles | Fixed |
+| 013 | 52fe134; exported ceiling observation | Fixed |
+
+New 013 is a BLOCKER under the independent public-contract assertion rules.
+The owner supplied literal 30000 while account composition uses exported MAX_BACKOFF_MS.
+The report retains exact locations, rules, blobs, native checks and first observer policies_full_correction_one.
+The owner now uses the export as input and independently expects 30000.
+Before editing, exact constant impacts returned 0 and complete status for each compiler project separately.
+Actual account and shadow callers were read.
+Control value 30001 passed typecheck and lint, then failed the intended capped-deadline assertion.
+Exact source restoration and rebuilt GREEN followed.
+
+Six retry repair commits stayed in original task 04-04-01, with no helper or external adaptation.
+Report-only b64a206 and summary-only 9afbabe followed separately.
+The latest retry owner has 26 cases: native coverage 75/75 lines, 8/8 functions and 15/15 branches.
+Logging has 15 cases: 45/45 lines, 4/4 functions and 9/9 branches.
+The command owner is declaration-only. Its native file success is included in the 42 combined records.
+It has no authored runtime case or invented coverage denominator.
+
+Separate maintenance controls rejected fixed 500-ms waits, early waits, premature pending clearance, skipped callbacks, callbacks after abort and a wrong export.
+Each control failed its intended assertion after passing typecheck, lint and build.
+Exact restoration and rebuilt GREEN preceded every commit.
+Restored source blob: 2c57c73e97be282acfdff61b439bfd86333d5b48.
+No genuine bug, RED JSON or control bytes entered Git.
+Twelve exact private-helper queries returned 2/unavailable; they are not complete consumer evidence.
+The compatible fallback retained names and signatures and avoided deletion or rename.
+Both full reviews judged the actual silent logger and timeline accompaniment compatible.
+
+All cause audits, clean pre-steps before staging and ordinary hooks passed.
+Failed draft, formatter, sandbox, private-query, append-anchor and evidence-audit attempts remain recorded as failures.
+Native cause directories are /private/tmp/guardian-04-policies-fix-native/007, 008, 009, 010, 012 and 013.
+Other complete records are under /private/tmp/guardian-04-policies-finish-native and /private/tmp/guardian-04-policies-round2-native.
+No runtime behavior, command shape, privacy or persistence meaning changed.
+S-04-02 is fixed; S-04-03/04 retain their POLICIES-specific rejections; S-04-05 findings 004/008/013 are fixed.
+RUN-01 remains Pending. WINDOWS46/47 remain OPEN and unwaived.
+TRUST, ACCOUNT and remaining phase gates are not preapproved.
