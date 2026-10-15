@@ -3,7 +3,7 @@
 Milestone: code-review-sweep. Requirement RUN-01 remains Pending.
 Current through completed 04-07 and inserted 04-11/04-12: PORTS is independently clean at correction round 3.
 POLICIES and TRUST are independently clean at correction round 2.
-Wave eight lifecycle and wave seven adapter contracts passed. ACCOUNT has full initial review and partial repairs.
+Wave eight lifecycle and wave seven adapter contracts passed. ACCOUNT correction 1 independently closes the original 29 and leaves 15 new findings.
 Seven genuine production bugs have evidence-first GREEN; full ACCOUNT correction remains pending.
 The parent coordinator alone consolidates actual reports into this ledger.
 
@@ -40,6 +40,8 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | ACCOUNT | src/runtime/accountRuntime.ts | core | e6f49a5; full1283lines/header | Pending; counter0 | Applied604d072; correction pending |
 | ACCOUNT | test/runtime/accountRuntime.test.ts | core | e6f49a5; full3365lines/header | Pending; counter0 | Applied604d072; correction pending |
 | ACCOUNT | test/runtime/accountShadowContract.ts | Actual helper; 04-11-02 | Added4fc498c; full review pending | Pending ACCOUNT | Applied; full review pending |
+| ACCOUNT | test/runtime/accountRuntimeSeeds.ts | Actual concern seeds; 04-09-02 | Added d785fd7; entire 121 lines reviewed in correction 1 | Round 1; batch 15 open | Complete approved header reviewed |
+| ACCOUNT | src/cloud/shadow.ts | Real consumed adapter; current correction scope | Entire 478 lines reviewed at d785fd7 | Round 1; batch 15 open | Complete approved header reviewed |
 | ACCOUNT | test/cloud/shadow.test.ts | Adapted owner; 04-11-02 | Prior cloud review historical | Pending ACCOUNT | Preserve; current full review pending |
 | ACCOUNT | src/accessories/reconciliation.ts | Bounded dependency; 04-08-03 | Header e914a62; contract 020498a | Pending ACCOUNT | Applied; correction pending |
 | ACCOUNT | test/accessories/reconciliation.test.ts | Bounded dependency owner; 04-08-03 | Header e914a62; five additive cases 020498a | Pending ACCOUNT | Applied; correction pending |
@@ -58,7 +60,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 2; clean at9782919 | None; 0; all17 fixed |
-| ACCOUNT | 04-07/11/12/08/09 | 04-ACCOUNT-REVIEW.md | 29 accepted ate6f49a5 | Counter0; partial repairs | All29 pending independent correction |
+| ACCOUNT | 04-07/11/12/08/09 plus pending follow-ups | 04-ACCOUNT-REVIEW.md | 29 accepted at e6f49a5 | Round 1 at d785fd7; 29 fixed, 15 new | 030–044; 6 BLOCKER, 9 WARNING |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
 independent full correction. No-progress with open findings, a reopened fix, or
@@ -704,3 +706,38 @@ Native metadata/output: /private/tmp/guardian-phase4-wave11-account-cleanup-gate
 Plan09 remains incomplete:014 then full-current ACCOUNT correction. No summary, counter increment or partial clean verdict is inferred.
 Original29IDs/counter0 continue. WINDOWS46-53 remain OPEN/unwaived; RUN-01 Pending.
 The worktree opt-out restoration remains parent-owned before final milestone audit/handoff.
+
+
+## Independent current ACCOUNT correction 1
+
+Fresh typed account_full_correction_one reviewed the entire 13-file current inventory at d785fd7f8850038dcb345a05d47d14cf4312e9fd.
+It read all five complete books, every header, the whole source/owner, all three actual test helpers, arrival/shadow/reconciliation/platform pairs, full canonical history and actual supporting consumers.
+Native full reads, hashes, exact locations, rules and evidence are retained in the continuing ACCOUNT report from line 6340 and /private/tmp/guardian-04-account-correction1/actual-final.json.
+
+Continuous counter advances 0 to 1. Opening 001–029 = 29; fixed 001–029 = 29;
+rejected empty; new 030–044 = 15; reopened empty; closing 030–044 = 15.
+Arithmetic: 29 - 29 - 0 + 15 + 0 = 15.
+Current blockers are 030, 031, 039, 042, 043 and 044. Warnings are 032–038, 040 and 041.
+The initial 18 BLOCKER / 11 WARNING severities remain historical and unchanged.
+Immediate D-03 evaluation occurred after the actual terminal result and before further work:
+open count reduced, no independently fixed ID reopened, round 1 is below 4; all global stop predicates are false.
+No clean ACCOUNT verdict or requirement completion is claimed.
+
+New causes: 030 shadow replacement ownership; 031 refused registration caching;
+032 local callable declarations; 033 platform history comments; 034 typed API double;
+035 incidental logging assertions; 036 prescribed interactions; 037 fresh platform concern seeds;
+038 wall-clock polling synchronization; 039 source-text semantic gates; 040 private-concern grouping;
+041 merged AAA phases; 042 wrong HTTP absence boundary; 043 incomplete trust forwarding;
+044 missing configured-poll before-deadline observation.
+Each retains its exact rule/location/severity/owner and proposed bounded budget in the report.
+030 and 031 are source concerns supported by public diagnostics, not genuine owner assertion RED.
+Both still require unchanged-production true-owner regressions, complete recursive native history and actual parent evidence-only commits before any GREEN repair.
+
+Fresh build, 371 tests across six owners and uncached 13-file lint pass.
+All 16 SAME-classifier records and actual source/evidence/GREEN ancestry pass; immutable root blobs stay unchanged.
+Independent whole seed extraction, all 151 regrouped case payloads and original 024 promise preservation pass with declared fixture resets accounted separately.
+A required parent full combined gate follows this terminal review; prior 167dc3b gate inputs were changed by 014 and are not reused.
+
+09 is already at three tasks. New repair paths and maximum-three-task follow-ups must be explicitly declared before edits.
+Original IDs and counter 1 remain continuous across those sequential plans. No partial-scope review, reset or silent extension is authorized.
+WINDOWS 46–53 remain OPEN and unwaived. RUN-01 stays Pending; configuration restoration remains a parent obligation before final milestone audit/handoff.

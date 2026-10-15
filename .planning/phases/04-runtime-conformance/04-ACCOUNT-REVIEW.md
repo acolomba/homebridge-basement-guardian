@@ -6336,3 +6336,554 @@ finding, reopened finding or full correction verdict is claimed here.
 RUN-01 stays Pending and WINDOWS 46-53 remain OPEN and unwaived. The parent
 retains the required combined full gate, full correction, seal and eventual
 worktree-setting restoration obligations. No SUMMARY was written here.
+
+## Independent FULL CURRENT ACCOUNT correction 1 — 2026-10-15
+
+**Actual reviewer:** typed `gsd-code-reviewer`, `/root/phase4_account_trust/account_full_correction_one`.
+**Reviewed revision C:** `d785fd7f8850038dcb345a05d47d14cf4312e9fd`.
+**Initial revision R:** `e6f49a59671c13a20b696b7f46e38406a36aeec0`.
+**Depth:** deep; FULL current review, not repair-only verification.
+**Status:** issues_found. All 29 original findings are independently fixed;
+15 distinct newly observed causes remain open: 6 BLOCKER and 9 WARNING.
+This append does not certify the later whole accessories or root sweep.
+RUN-01 remains Pending. No source/test repair, assertion control, commit,
+staging, shared-record update or full `npm run check` occurs in this review.
+
+### Exact continuous accounting and D-03 decision
+
+Every ID below has the prefix `CR-04-ACCOUNT-`.
+
+| Set | Exact unique suffixes | Count |
+| --- | --- | ---: |
+| Opening | 001,002,003,004,005,006,007,008,009,010,011,012,013,014,015,016,017,018,019,020,021,022,023,024,025,026,027,028,029 | 29 |
+| Fixed in this independent correction | 001,002,003,004,005,006,007,008,009,010,011,012,013,014,015,016,017,018,019,020,021,022,023,024,025,026,027,028,029 | 29 |
+| Rejected original findings | empty | 0 |
+| New | 030,031,032,033,034,035,036,037,038,039,040,041,042,043,044 | 15 |
+| Reopened previously independently fixed | empty | 0 |
+| Closing open | 030,031,032,033,034,035,036,037,038,039,040,041,042,043,044 | 15 |
+
+`closing = opening - fixed - rejected + new + reopened = 29 - 29 - 0 + 15 + 0 = 15`.
+Initial severities remain immutable: 18 BLOCKER / 11 WARNING. Those originals
+retain their original severities while independently closed. Current open
+BLOCKER IDs are 030,031,039,042,043,044; current WARNING IDs are
+032,033,034,035,036,037,038,040,041. No severity is downgraded to obtain closure.
+The continuous correction counter advances 0 → 1. Implemented original IDs
+were not independently fixed before this review and are never called reopenings.
+
+D-03 predicates: open non-reduction is **false** (`15 > 0`, but `15 < 29`);
+independently fixed reopening is **false**; round-four predicate is **false**.
+**GLOBAL STOP is not triggered by this correction.** The executor must evaluate
+these actual terminal sets before any follow-up. These results authorize no
+repair by this reviewer and supply no production GREEN checkpoint.
+
+### Complete current inventory, headers and read provenance
+
+The checkout and index were clean at C. The documented worktree opt-out and
+parent-read isolation-none sentinel were honored; no new checkout was created.
+All source declarations, complete loops/handlers, command/lifecycle boundaries,
+all owner cases, generated rows, helpers, seeds, doubles, negative controls,
+AAA phases and complete headers were read independently of packaging results.
+Bounded contiguous reads filled actual truncation gaps. `reads.json` and
+`scope.json` under `/private/tmp/guardian-04-account-correction1/` retain the
+completed ranges, UTC, SHA-256 values and exact current input identities.
+
+| Entire file | C Git blob | Every line read | Header verdict |
+| --- | --- | --- | --- |
+| `src/runtime/accountRuntime.ts` | `c87b9330ad2589e7941c11aba90f2079c67dbc30` | 1–1341 | MIT; complete approved header |
+| `test/runtime/accountRuntime.test.ts` | `72576f9e2b3beae99db99f3d9fc39f331548b780` | 1–9040 | MIT; complete approved header |
+| `test/runtime/accountRuntimeSeeds.ts` | `871c06ca00b572ab092e0bdf9f534284ddea037a` | 1–121 | MIT; complete new helper/header/inventory |
+| `test/runtime/arrivalAnchorMemoryContract.ts` | `37f66e8fa86b495da8aee055684ba2b90a938aaa` | 1–213 | MIT; complete approved header |
+| `test/runtime/accountShadowContract.ts` | `08cfe9d5b45cbd2e9488d8781df59f5c73833aeb` | 1–142 | MIT; complete approved header |
+| `src/runtime/arrivalAnchors.ts` | `aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64` | 1–211 | MIT; complete approved header |
+| `test/runtime/arrivalAnchors.test.ts` | `355c746c0052c87c3ea4312ac0cfb49a7a5ee9da` | 1–379 | MIT; complete approved header |
+| `src/cloud/shadow.ts` | `018f49c720f0119fb131b4f03dfbc3966a98dadc` | 1–478 | MIT; complete approved header |
+| `test/cloud/shadow.test.ts` | `efecee5e0f6dfebc70ae1427f222cea7fd5a8bec` | 1–1146 | MIT; complete approved header |
+| `src/accessories/reconciliation.ts` | `e25bd84d713b6daa16b9616d00e6f4d7f41f8f62` | 1–114 | MIT; complete approved header |
+| `test/accessories/reconciliation.test.ts` | `d2f766376859734efac00a8e98c52400e49e50eb` | 1–256 | MIT; complete approved header |
+| `src/platform.ts` | `b7c1103e669d7d56f0a4b4c84dde7fb9248b23f5` | 1–664 | MIT; complete approved header |
+| `test/platform.test.ts` | `1b29564013cf6483e0c885f04b46bbd9fc964659` | 1–2684 | MIT; complete approved header |
+
+Each header separately has SPDX MIT, copyright and overview blocks, separated
+from imports. Platform's MIT classification agrees with the explicit recorded
+maintainer reclassification; no inferred template relicensing is introduced.
+
+Loaded full AGENTS, mandatory role bootstrap and applicable discovered skill
+entrypoints, all five complete Google/comments/unit-writer/unit-reviewer/local-
+verification books, complete current 09 plan, protocol, context, research,
+patterns, findings, this 6338-line pre-append report, all 830 canonical decisions,
+PROJECT/REQUIREMENTS/STATE and full 07/08/11/12 summaries. Configured three-book
+injection did not replace the writer or local-verification book.
+
+Actual supporting reads include complete monitoringHealth source 1–311 and
+owner 1–637, auth 1–596, API 1–215, cloud types 1–189, canonical state 1–419,
+commandPort 1–48, retryPolicy 1–101, clock 1–25, monotonicClock 1–57, timers
+1–53, family 1–216, registry 1–104 and Gemini 1–405. Actual platform and both
+World factory/start/removal/trust consumers were traced, including world
+625–786 and realWorld 270–345; controls 510–595 and the accessory trust consumer
+925–974 establish command outcomes and all four consumed trust fields.
+`httpDispatcher.ts` establishes the userland-undici boundary for new 042.
+This supporting inspection is not a fresh conformance certification of those
+other entire subsystems. Exact public shape consumers and the new seed exports
+were inspected; no unavailable trace was represented as complete.
+
+Official Homebridge API and DynamicPlatformPlugin documentation was consulted:
+https://developers.homebridge.io/homebridge/interfaces/API.html#registerPlatformAccessories
+and https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html.
+The installed Homebridge 2.4.0 `dist/api.d.ts:78–86`, `dist/api.js:179–181,218–228`
+and `dist/bridgeService.js:376–420` govern the checked lifecycle/registration
+behavior. The API is synchronous and forwards registration through an emitted
+event to bridge registration; it has no nonthrowing guarantee. The public docs
+do not add one. No documentation/version discrepancy changes this review.
+
+### Original 29 independent dispositions
+
+All initial locations below are at R; current locations are at C. `AR` means
+`src/runtime/accountRuntime.ts`; `AT` means its mirrored owner. Exact initial
+rule text, first observer `/root/phase4_account_lifecycle/account_initial_review`,
+full initial source locations and cause histories remain in the unchanged
+prefix. This table independently disposes each actual cause, rather than using
+an implementation status as a fixed verdict. Every row contributes RUN-01;
+001 also PROC-03 and production causes 021–026 retain BUG-01 obligations.
+
+| ID | Initial severity/location | Current evidence and reason fixed | Rule; implementation; owner |
+| --- | --- | --- | --- |
+| 001 | WARNING; AR1–2, AT1–6 | Both full approved headers and all added headers inspected above | Google Files/modules, D-01; 604d072; 04-07-01 |
+| 002 | WARNING; AR71–76, AT2247–2250 | AR81–85 and AT6074–6078 expressly limit local permission and retain the unconfirmed opaque-key premise | Comments factual claims, D-027; 3d193f1; 04-07-02 |
+| 003 | WARNING; AR316–322, AT511–513 | AR327–334 distinguishes root abort, owned close and late close; AT444–446 describes deliberate factory failure | Comments current behavior; 128c005; 04-07-02 |
+| 004 | WARNING; AR450–453,604–608,784–787; AT833–835,1963–1969,2026–2027,2409–2411 | AR489–491,642–644,820–822; AT2931–2932,5418–5420,5541–5542,6551–6552 now give present rationale without the removed implementation | Comments Forbidden; 92ed72f; 04-09-02 |
+| 005 | WARNING; AR1236–1238 | AR1294 has an explicit callable binding type and unchanged delegate/body | Google Functions; ed2301f; 04-09-01 |
+| 006 | BLOCKER; AT643–652 | AT2535 case checks exact supplied-store identity and independent complete public snapshot | Unit Assertions; 18d814e; 04-07-01 |
+| 007 | BLOCKER; AT121–123,527–529,870–883,947–965 | AT3124 and3284 cases distinguish literal 2999999/3000000 and29999/30000 boundaries; expected values do not reuse exported inputs | Unit independent expectations/Time; c627c2a; 04-07-02 |
+| 008 | BLOCKER; AT816–865 | AT2869 case checks exact old and new anchors, restore-before-admission and complete listener observation | Unit Assertions; 84fd960; 04-07-01 |
+| 009 | BLOCKER; AT3072–3082 | AT8033 case actually dispatches live unresolved work, stops, observes the captured root abort/refusal and unchanged whole canonical state | Unit title discrimination/Assertions; fa8a21f; 04-09-01 |
+| 010 | BLOCKER; AT2976–3040 | AT8121–8336 command cases check complete accepted/refused results and complete unchanged snapshots before prescribed interactions | Unit Assertions, D-037; 0c5647f; 04-09-01 |
+| 011 | BLOCKER; AT3087–3118 | AT8524 construction case truthfully promises HTTP/socket absence and verifies both actual injected ports; source factory construction is inert | Unit title discrimination/design; overlap95a9934, recorded028ea7f; 04-09-01 |
+| 012 | WARNING; AT232–249 and incidental log assertions | AT153 silent logger, silent default FailureLog and explicit failure-port mocks remove incidental logger-output claims | Unit Test doubles/Logging; 0b86403; 04-07-02 |
+| 013 | WARNING; AT477–559 and prescribed interactions throughout | Complete current ACCOUNT owner uses finite exact-parameter public mocks with explicit owning-case verification; typed canned responses and contract-checked stateful fakes retain their distinct roles | Unit Test doubles; 95a9934; 04-07-02 |
+| 014 | WARNING; AT135–229,602–604 | Complete121-line seed helper has eight exact moved builders and fresh constants factory at all ten uses; 151 complete cases and remaining whole owner transform are independently verified | Unit Test data; d785fd7; 04-09-02 |
+| 015 | WARNING; AT304–334,416–442 | Both complete shared helpers, all participants, all categories/limits and structured broken-participant assertions inspected; real/fake memory, persistence-state and normal shadow lifecycle agree at the consumed boundary | Unit Shared adapter contracts; fae2ce4/4fc498c; 04-11-01/02 |
+| 016 | WARNING; AT1623–1624,2631–2645,2664–2683,3331–3338 and wrappers | Complete current owner has ordered action/capture/assert sequences; the eight corrected cases preserve their original assertion methods/arguments/order | Unit Case structure; 2e669f7; 04-09-02 |
+| 017 | WARNING; AT623,869,1050,1399,1618,2538,2975,3086,3342 | Current groups829/8418 name the two exported factories; all151 regrouped token/literal streams match independently, with disclosed AUTH relocation | Unit Case structure; 918a98c; 04-09-02 |
+| 018 | BLOCKER; AT1832–1845 and related canonical projections | AT5157 and3503 include complete present/frozen/refused snapshots, receipt times, ordering, metadata and telemetry; optional watermark alone no longer supplies the promise | Unit whole independent Assertions; 7286cb9; 04-08-01 |
+| 019 | BLOCKER; AT2194–2205,2273–2285,2322–2357,2412–2475,3241–3281 | AT6626 captures the actual quiet checkpoint and complete recovery; exact listeners and composition8869 observe account plus keyed fields | Unit whole Assertions; 3a9c441 plus012/013 overlap; 04-08-01 |
+| 020 | BLOCKER; AT2653–2684,2819–2888 | AT7454/7863 check callback-before-prune whole state, refusal retention, exact removal and distinct surviving anchor after stray ingress | Unit whole Assertions; c330a13; 04-08-02 |
+| 021 | BLOCKER; AR454–460, reconciliation76–99 | AR495 calls targeted present; reconciliation106–108 resets only the candidate while retaining eligibility; full runtime1699 and five real-owner144–225 cases protect future omissions and neighbor isolation | D-029/identity/reconciliation; 020498a/1055218, headers e914a62; 04-08-03 then04-08-02 |
+| 022 | BLOCKER; AR419–428,813–818,875,980–984 | AR835–932 compares physical sets and restarts only changed membership; AT1393 real-shadow routing and1284 order case preserve both devices and unchanged-order stability | SYNC-02/03 physical membership; 30f944c; 04-08-02 |
+| 023 | BLOCKER; AR438–445,980–983 | AR471–474 propagates both terminal classes to the existing halt; AT1889 rows protect immediate complete halted trust, retained state and no later work | D-13 terminal policy; c18541a; 04-08-02 |
+| 024 | BLOCKER; AR439–471,980–984,1055–1057,1130–1132 | Guards at483,1013,1019,1097,1103,1182 preserve ended ownership; AT2039 and2181–2502 protect pending continuations. Original regression tokens remain exact after only the declared cleanup reset | D-13/SYNC-05 current ownership; c179545; 04-07-02 |
+| 025 | BLOCKER; AR306–313,954,969–974 | AR52,377–390 segments representable waits without changing the deadline; AT1988 retains literal50-day checkpoints, original assertions and stronger root credentials verification | Native timer range/unchanged deadline; 03df992; 04-07-02 |
+| 026 | BLOCKER; AR334,419–430,1254–1256; platform581–607,627–643 | AR1168 seeds identity eligibility only after restore/current guard; platform617–628 validates/deduplicates current cached IDs at launch. ACCOUNT830–1282 and true platform845 regression preserve unknown telemetry and final-check removal | D-029 cached physical identity; d7e0598/6c82ec9, header b7bae4a; 04-12-01/02 |
+| 027 | BLOCKER; AT488–500 | AT426 records every command attempt before rejection; all116 authored empty-attempt assertions remain, with strict forbidden command ports making caught/discarded requests observable | Unit absence discrimination; d6e4ee6; 04-07-02 |
+| 028 | BLOCKER; AT531–533,700–713,3121–3154 | AT2988 and8419 protect exact token/AWS role order before use, including rotation, rather than only membership in a final list | Unit prescribed order, AUTH-02; d4c8e5b; 04-07-02 |
+| 029 | BLOCKER; AT3157–3199 | AT8717 composition case exercises inside-lead literal4/5-ms supplied floor with independent whole checkpoints and exact finite requests; retained lead case has truthful title | Unit title discrimination/Time; fbc4c02; 04-09-01 |
+
+Original cause budgets remain those declared in their plans: ordinary ACCOUNT
+causes fit source/owner/report and conditional evidence/helper within five paths;
+015A/B each have four implementation/report paths plus their prior declaration;
+021's four-path reconciliation dependency precedes runtime integration; 026's
+runtime dependency has four declared paths and true platform cause five including
+its plan/evidence/report. No new repair path is silently authorized by closing an
+original. New 030 is a distinct current-connection handoff cause after 022's
+membership repair; 022's original missing-routing cause is fixed. New external
+owner findings do not rename original ACCOUNT-only 012/013/014/016/017 causes.
+
+### New confirmed findings
+
+For every new finding, **first observer** is this typed reviewer; **initial
+observation revision and current revision** are both C, with the exact first
+existing/current lines below. All contribute RUN-01. Full absolute paths expand
+from the repository root recorded above. BLOCKER030/031 are confirmed source
+concerns; **true intended unchanged-production regression RED is still required**
+in the owning owner, followed by the parent evidence-only checkpoint before any
+GREEN. The successful diagnostic observation processes below are not RED.
+All proposed budgets include the report; any undeclared dependency or additional
+path requires a parent declaration before editing. No repair occurs here.
+
+#### CR-04-ACCOUNT-030 — BLOCKER: replacement keeps a dead live-path claim and watermark
+
+**File/line:** C:`src/runtime/accountRuntime.ts:903` (membership branch835–920,
+connected state795–831); C:`src/cloud/shadow.ts:431–465` is the actual callee.
+**Rule:** SYNC-03 source handoff, D-15 reported authority, and the runtime's
+documented monitoring-path/current-connection contract.
+On changed membership, `client.start(deviceIds)` replaces and ends the old real
+transport. The new real connection starts `live=false`, and replacement does not
+emit `onDisconnected`. Runtime `shadowConnected` remains true and every old
+shadow watermark remains held. A subsequent healthy REST poll therefore cannot
+refresh that device's telemetry while the runtime still reports `shadow-and-poll`.
+The source explanation that a lost shadow hands telemetry back to polling is
+false for this replacement path.
+**Evidence:** `public-probes-final.stdout` uses public runtime plus real shadow
+and an offline transport. Ready: client true/path combined/version7/water3.
+After membership replacement: client false, two transports, path still combined,
+version7. A third healthy inventory returns water1; stored water remains3 and
+receipt time advances. No source mutation or invented telemetry policy supplies
+this observation.
+**Fix:** terminate the runtime's old live ownership when replacing membership,
+using the existing disconnect/release semantics; reestablish readiness only from
+the current client's connected notification. Observe before/after readiness and
+REST ownership in an actual owner regression.
+**Owner/budget/dependency:** 04-09-02; minimum ACCOUNT source/owner/report/evidence
+four paths, at most five with its declaration. Keep real shadow's existing API
+unless an explicit separately traced dependency proves necessary.
+
+#### CR-04-ACCOUNT-031 — BLOCKER: refused registration becomes permanently cached as success
+
+**File/line:** C:`src/platform.ts:342–345`, existing-device early return305–309.
+**Rule:** DEV-04/05 stable registration, per-inventory failure isolation and
+current dispatch's retry-after-failure contract.
+The instance map, store subscription and accessory map are populated before the
+synchronous `registerPlatformAccessories` call. If that call throws before
+acceptance, the outer catch logs and returns with both maps populated. Every
+later trustworthy inventory takes the existing-device branch and never attempts
+registration again. The HomeKit accessory can remain absent for the process life.
+**Evidence:** corrected/final public probes call exported registerDiscoveredDevices
+twice with a port refusing its first registration and willing to accept later
+ones. Observations are `(attempts,cached,instances)=(1,1,1)` after both calls.
+Installed Homebridge synchronously emits registration and bridge handlers can
+throw; the official API gives no nonthrowing promise. This is not a claim that
+every Homebridge exception means acceptance failed; partial acceptance must also
+be handled deliberately rather than blindly repeated.
+**Fix:** make publication/cache/subscription ownership transactional with actual
+registration outcome. Roll back or retain an explicit retryable state after a
+pre-acceptance refusal, without leaking a listener or duplicate accessory. Add a
+true platform owner case covering refusal then successful retry.
+**Owner/budget/dependency:** parent must declare a bounded platform follow-up
+before repair; prospective 04-09-02 dependency, not a silently extended completed
+04-12 task. Source/owner/report/evidence/declaration fit five paths.
+
+#### CR-04-ACCOUNT-032 — WARNING: named local functions lack the required declaration/type
+
+**File/line:** C:`test/runtime/accountRuntime.test.ts:2809,3938,5266,5330`;
+C:`test/accessories/reconciliation.test.ts:27`;
+C:`test/platform.test.ts:64,1793`.
+**Rule:** Google Functions, named declaration or explicit callable binding type.
+These `const` arrows have parameter/return annotations but no explicit function
+type on the binding, and none needs outer `this`. Original005's source helper
+is independently fixed; these are different extant declarations found in the
+full current owners. Platform constructor discoveryContext is allowed because
+it needs outer `this` and is not included.
+**Fix:** declarations or explicit callable binding annotations preserving bodies,
+scope and signatures. **Owner/budget/dependency:** 04-09-02 with prior bounded
+external-owner declaration; three owners/report/declaration = five paths.
+Do not rename/delete private members or invoke an unsupported-trace waiver.
+
+#### CR-04-ACCOUNT-033 — WARNING: platform comments retain removed implementation history
+
+**File/line:** C:`src/platform.ts:331–339,546–552`;
+C:`test/platform.test.ts:1717–1722,1775–1787,2556–2601`.
+**Rule:** typescript-comments Forbidden, current behavior rather than removed
+code/planning history; Google Comments/documentation.
+Examples narrate what caching first left behind, what a prior comment claimed,
+the fixture that was replaced, and the old three-literal source result. The
+owner also retains planning-artifact anchors such as `04-CONTEXT`/`03-CONTEXT`
+and `(05-16)` rather than self-contained durable rationale. These are source/
+test comments, not historical report records that must remain immutable.
+**Fix:** retain present publication-order, privacy and observation rationale;
+remove the removed-shape/process narration, preserving executable bytes and
+durable requirement/decision IDs. **Owner/budget/dependency:** bounded platform
+follow-up declared by parent; source/owner/report/declaration = four paths.
+
+#### CR-04-ACCOUNT-034 — WARNING: a broad API double assertion hides the actual consumed contract
+
+**File/line:** C:`test/platform.test.ts:374–389`.
+**Rule:** unit Types/hermeticity and Production design for tests: no double
+assertion hiding an invalid double; narrow consumer port or typed strict mock.
+`standIn` implements only HAP, the accessory constructor and three registration
+methods, then asserts `as unknown as API`. It does not satisfy the Homebridge
+API type that the consumer declares. Compiler success therefore supplies no
+contract check for this double. The surrounding helper makes this a recurring
+discovery dependency. This finding does not demand replacing the deliberately
+documented nominal fake-HAP cast or silently changing a private helper signature.
+**Fix:** use valid typed API mocks for prescribed interactions, or introduce the
+small real production-consumed port with complete caller/type evidence. Check
+hand-built doubles with satisfies. **Owner/budget/dependency:** bounded platform
+follow-up; source/owner/report/declaration at most four paths for a narrow-port
+solution; both projects' exact complete impacts precede any existing shape change.
+
+#### CR-04-ACCOUNT-035 — WARNING: platform owner asserts incidental logger output
+
+**File/line:** C:`test/platform.test.ts:63–78,1001–1058,1824–1884,2121–2290`.
+**Rule:** unit Test doubles, Not doubles/Logging: silent logging outside a module
+whose job is logging. Logger-output expectations are still coupled into platform
+configuration, marking and discovery tests, including empty-message assertions.
+ACCOUNT original012 is fixed in its own owner; these external cases remain.
+**Fix:** silent platform log ports; assert complete public platform/marking state
+and exact domain interactions. Put any logger-owned behavior in its actual
+paired owner without dropping a distinct meaningful security obligation.
+**Owner/budget/dependency:** declared platform follow-up; owner/report/declaration
+three paths; any actual other owner adaptation must be declared and stay within
+five paths, otherwise use a separate task.
+
+#### CR-04-ACCOUNT-036 — WARNING: prescribed platform interactions use ad hoc recorders/stub counts
+
+**File/line:** C:`test/platform.test.ts:374–389,430–462,1065–1105,1944–1973`.
+**Rule:** unit Test doubles, Mocks and Spies. Registration/removal/notification
+recorders are prescribed public interactions, but are plain replacement methods
+with manually asserted histories/counts rather than exactParams strong mocks
+and explicit verification. The replaced global fetch handles are stubs, despite
+their Spy names and call-count assertions. These are not spies running real
+behavior. Source031 shows one missing failure/retry observation, but does not
+exhaust this independent interaction-discipline cause.
+**Fix:** finite exact port expectations inside each case, meaningful function/
+signal matchers, whole public state before calls, explicit verify for every
+mock. Retain a shared timeline only where order itself is promised.
+**Owner/budget/dependency:** bounded platform follow-up; owner/report/declaration
+three paths; preserve helper contracts until exact complete evidence supports
+any removal or shape change. No broad 015 trace exception applies.
+
+#### CR-04-ACCOUNT-037 — WARNING: platform cross-case inputs remain shared mutable seeds
+
+**File/line:** C:`test/platform.test.ts:147–149,232–256,279–337,1564`.
+**Rule:** unit Case structure and Test data. Account config, telemetry fixtures,
+family objects and the shared NO_DEVICE_ANSWERED Map are reused across cases
+instead of concern seed factories/fresh case-owned values. TypeScript readonly
+views do not make the underlying objects/Map immutable. This is a data/support
+structure finding, not a claim that the passing current run demonstrated a leak.
+**Fix:** fresh concern seeds and fresh per-case stateful collections; retain only
+stateless stubs at module scope. Preserve independent expected answers.
+**Owner/budget/dependency:** bounded platform follow-up; owner/concern seed/report/
+declaration = four paths. New actual helper joins complete inventory/header review.
+
+#### CR-04-ACCOUNT-038 — WARNING: lifecycle synchronization polls the real wall clock
+
+**File/line:** C:`test/platform.test.ts:98–110` and its lifecycle callers.
+**Rule:** unit Patterns/Time: do not await real timers or poll.
+`until` repeatedly awaits event-loop turns against `Date.now()+5000`. Its result
+depends on real scheduling/load and adds a real five-second timeout to many
+otherwise controlled cases, including the new cached-identity owner. Real
+temporary filesystem work is allowed; it does not require wall-clock polling.
+**Fix:** announce the promised boundary through case-owned deferred signals
+(HTTP request, registration, persistence completion) and await those signals;
+drive actual scheduling behavior only with the owned mock clock.
+**Owner/budget/dependency:** declared platform follow-up; owner/report/declaration
+three paths. Avoid a new production test hook or live boundary.
+
+#### CR-04-ACCOUNT-039 — BLOCKER: source-text gates can pass the wrong promised structure
+
+**File/line:** C:`test/platform.test.ts:115–145,1414–1421,2387–2402,2614–2682`.
+**Rule:** unit title discrimination, Assertions and Production design for tests
+(use module exports); static call-graph questions belong to static analysis.
+The DiscoveryContext detector requires all nine keys in one fixed order. A
+second valid literal with reordered keys still satisfies DiscoveryContext but
+does not match the detector, so the exactly-one-literal test remains green.
+Its planted control uses only the favored order and does not close this hole.
+The comparedKeys case similarly inspects text of two local constants rather
+than the actual persistence behavior. Passing these tests does not establish the
+promised semantic structure/use. Compiler success cannot repair the regex blind
+spot because object property order is not part of the TypeScript contract.
+**Fix:** replace private-source observations with public behavior where that is
+the promise. A justified architectural gate belongs in proper static tooling
+with syntax-aware identity rather than this ordering-sensitive source regex.
+Preserve the existing real persistence and callback behavior assertions.
+**Owner/budget/dependency:** declared platform follow-up; owner/report/declaration
+three paths for removing/replacing redundant owner tests; any new static-tool
+dependency/path must be separately declared within five paths. No new install.
+
+#### CR-04-ACCOUNT-040 — WARNING: platform groups by a private implementation concern
+
+**File/line:** C:`test/platform.test.ts:2648`.
+**Rule:** unit Case structure: one top-level describe per exported entrypoint;
+do not group by private helper/concern. `the platform builds its runtime context
+once` is neither an exported entrypoint nor an allowed shared mutable fixture
+group. Original017's ACCOUNT factory groups are fixed; this external group was
+independently observed in the complete platform owner.
+**Fix:** put remaining behavioral cases under their actual exported owner;
+dispose source-inspection cases through039 without inventing another concern
+group. **Owner/budget/dependency:** declared platform follow-up;
+owner/report/declaration three paths. Can overlap039's minimum implementation.
+
+#### CR-04-ACCOUNT-041 — WARNING: platform AAA markers omit or merge ordinary phases
+
+**File/line:** C:`test/platform.test.ts:1414–1421,2675–2682`.
+**Rule:** unit Case structure: arrange/act/assert in order; combined marker only
+for one throws/rejects expression. The wiring case has no arrange phase; the
+planted-literal case performs ordinary deepStrictEqual work under act & assert.
+Original016's ACCOUNT phases are fixed; these external cases retain the defect.
+**Fix:** finish actions/captures before a separate assert phase, with meaningful
+setup separated, or dispose redundant source gates under039. Preserve any
+remaining assertions. **Owner/budget/dependency:** declared platform follow-up;
+owner/report/declaration three paths; no behavior or private API change needed.
+
+#### CR-04-ACCOUNT-042 — BLOCKER: no-HTTP assertions observe a different fetch implementation
+
+**File/line:** C:`test/platform.test.ts:1065–1078,1397–1410`;
+actual wiring C:`src/platform.ts:19,598–599` and `src/cloud/httpDispatcher.ts:12,28`.
+**Rule:** unit absence discrimination, explicit dependencies and offline
+hermeticity. These cases spy on globalThis.fetch, construct the platform with
+the default deps, and claim zero vendor calls. Default deps use the imported
+userland-undici httpFetch, so those spies cannot observe a premature vendor
+request. The neighboring lifecycle case explicitly injects globalThis.fetch
+through PlatformDeps, demonstrating the actual seam these cases omit.
+The current constructor is inert; the finding is a false-negative absence test,
+not an observed production request or a live-network run.
+**Fix:** inject an exact empty-expectation HttpFetch mock at the existing deps
+boundary and explicitly verify it, preserving exact lifecycle expectations and
+public state. **Owner/budget/dependency:** declared platform follow-up;
+owner/report/declaration three paths; existing dependency shape suffices.
+
+#### CR-04-ACCOUNT-043 — BLOCKER: two-device fan-out drops unobserved public trust fields
+
+**File/line:** C:`test/platform.test.ts:430–440,1573–1598`.
+**Rule:** unit Assertions/independent whole public values and prescribed
+notification arguments. The case promises each accessory's own answer, but
+its recording accessory keeps only deviceId/restDegraded/shadowSilent.
+It discards commandTransportReady and credentialsRejected, both consumed by
+the actual accessory. This is the named-device case supplying ready=true;
+the companion whole-value missing-entry case supplies ready=false. Rebuilding
+the named-device answer with a false command-ready default can therefore pass
+this claimed two-device forwarding observation. The whole struct is the promise.
+**Fix:** capture/assert each complete independently expected trust struct, with
+distinct meaningful account facts where needed and exact finite notification
+verification. Keep deviceId/UUID joining and missing-entry protections.
+**Owner/budget/dependency:** declared platform follow-up; owner/report/declaration
+three paths; no source behavior or blanket private fixture change is authorized.
+
+#### CR-04-ACCOUNT-044 — BLOCKER: configured poll interval has no before-deadline discriminator
+
+**File/line:** C:`test/runtime/accountRuntime.test.ts:3562–3588`.
+**Rule:** unit title discrimination, independent timing Assertions and Time.
+The configured-interval case advances the entire900000ms once and then checks
+the replacement snapshot. It never observes state immediately before the
+configured deadline. A shorter wait, such as half the interval, fires during
+that tick and its asynchronous continuation applies at the already advanced
+wall clock, producing the same receipt time and final snapshot. The next loop
+wait is installed after the tick, so the single observation does not expose an
+extra earlier poll. Complete final snapshots do not supply a missing boundary.
+Original007 concerned credential lead/floor and is fixed; this is a distinct
+poll-cadence assertion cause.
+**Fix:** capture complete state/request observations at literal899999ms and
+900000ms against the configured input, then verify exact requests. Retain the
+whole canonical expectation and forbidden command observation.
+**Owner/budget/dependency:** 04-09-02; owner/report two paths, at most three with
+an explicit declaration; correct production needs assertion maintenance, not a
+fabricated production RED.
+
+### Candidate dispositions and rejected speculative concerns
+
+| Seed | Full current disposition and actual rule/source evidence |
+| --- | --- |
+| S-04-01 | PORTS-only accepted002 remains outside this batch; current account/public store identity is checked by006. No new ACCOUNT candidate inferred from its name. |
+| S-04-02 | POLICIES-only public outcome variants already exist; commandPort24–36 has typed accepted/refused interfaces. No new ACCOUNT union redesign. |
+| S-04-03 | Blanket optional conversion rejected. Account options are genuine optional configuration seams; snapshot/patch required-present undefined members retain exhaustive public shapes. Google Types does not authorize weakening imported canonical contracts or arbitrary local-variable rewrites. |
+| S-04-04 | Blanket readonly advice rejected. Google Classes applies to class fields, which were inspected; factory ports/interfaces and maps with deliberate mutation do not inherit an indiscriminate readonly conversion. Public AccountRuntime store/commands/path remain readonly. |
+| S-04-05 | Accepted original006/007/008/010/011/018/019/020/028/029 are fixed with current complete independent promises; newly observed039/042/043/044 remain. Multiplicity-only observations and explicit absence ports are judged by their actual promise, not mechanically replaced by unrelated snapshots. |
+| S-04-06 | Accepted009 fixed by actual initially live pending command/root abort/refused outcome; original already-aborted case retained under truthful title. |
+| S-04-07 | Historical TRUST006 disposition remains; actual arrival helper/source current admission/restore/forget/persist behavior inspected, without a new blanket history cleanup. |
+| S-04-08 | Accepted002 fixed with scoped local permission and unconfirmed opaque-key premise; no broader privacy guarantee/default or new identifier permission is invented. |
+
+The initial-shadow pending-start overlap was investigated and not accepted as
+a demonstrated live production bug: the actual real start resolves immediately,
+whereas the deliberate pending seam belongs to injected shutdown cases. Late
+credential registration/cache work after a halt was not elevated to a universal
+teardown prohibition; canonical research explicitly distinguishes halt from
+root-aborting shutdown. A no-accessory removal's canonical no-op remains the
+existing explicitly tested platform contract, not an invented deletion policy.
+No existing independently fixed ID is reopened because of a fixture interruption.
+
+### Native checks, unchanged inputs and historical evidence
+
+All new checks run serially at C with Node v26.11.1 and npm11.20.0. The unique
+directory `/private/tmp/guardian-04-account-correction1/` retains exact argv,
+raw exits, actual UTC, complete separate stdout/stderr, full tracked/nonignored
+input SHA-256/mode/blob manifests and before/after identities. The final public
+probe also retains its complete temporary input and compiled input hashes.
+
+| Current native record | Actual result and scope |
+| --- | --- |
+| account-evidence | Installed actual-file CLI raw0 / RED_EVIDENCE_OK; 20:49:12.937868–20:49:18.100097 UTC |
+| platform-evidence | Same installed actual-file CLI raw0 / RED_EVIDENCE_OK; 20:49:36.327815–20:49:41.509841 UTC |
+| histories | SAME installed classifyRedEvidence recursively all14+2; raw0; actual sourceCommit:path→sourceBlob and six evidence-only ancestry chains; 20:50:07.303782–20:50:13.363984 UTC |
+| build | Fresh npm run build:test raw0; 20:50:30.039566–20:50:38.306966 UTC |
+| owners | Native full ACCOUNT, arrival, shadow, reconciliation, platform and supporting monitoring owners; raw0;371pass, zero fail/cancel/skip/todo; 20:50:43.465453–20:50:49.214289 UTC |
+| lint | Exact all13-file ESLint --no-cache --max-warnings=0 raw0; 20:52:45.158454–20:52:56.961664 UTC |
+| public-probes-final | Successful diagnostic observations only, raw0; real-shadow replacement and registration-refusal state; 20:55:09.556733–20:55:15.178836 UTC; no intended assertion RED |
+| provenance | Independent whole014 transformation, exact eight signatures/bodies, constants literal/ten calls,151cases, all44production unchanged, original header/input preservation and18 exact export results; raw0 |
+| cases-corrected | Independent all151 before/after017 token/literal comparisons and original024 exactness after reset removal; raw0;20:54:39.759845–20:54:45.068410 UTC |
+
+Both immutable blobs remain exactly
+ACCOUNT `b3f7141fc652706628ec55c5bd5c1a3e4b560319` and PLATFORM
+`5a35d0831979b6c7444b598c0987bdd9d98f758b`. `history-proof.json` and sixteen
+complete extracted records/TAP/patches preserve raw histories and classifier
+results; there is no second classifier, attempt-summary substitution or rewrite.
+Every stored output is processed by the same installed classifier. Intended
+assertions and original preliminary limits remain distinct, including025's
+earlier timing-only observations and separately documented actual native clamp.
+
+Actual Git ancestry and planning-only path checks independently confirm:
+
+- 024: e6f49a5 →250516b→c179545.
+- 025: c179545→6f9500e→03df992.
+- 023:49d30f9→3d55427→c18541a.
+- 021:c18541a→ce3305e→169dbfd→e914a62→020498a→1055218.
+- 022:1055218→5987504→30f944c.
+- 026:3f4f1c3→9f7649e→d7e0598→6c82ec9→b7bae4a.
+
+Full saved/current case material is retained in `cases-proof.json`,
+`014-independent-proof.json`, the copied017/cleanup full proofs and the immutable
+native history patch files.017's sole disclosed AUTH order relocation and group
+indentation preserve151complete token/literal streams.014 independently
+preserves all151complete cases after only constants factory calls, all eight
+moved signatures/bodies and the whole owner's exact declared transformation.
+025 retains literal deadlines and every original behavioral assertion, with013's
+strictly stronger root mock/verify addition; it is not blindly byte-frozen.
+024 differs only by its explicitly declared context timer reset. Other active
+023/021/022/026 cases and maintenance observations remain in the fully read owner.
+
+Nine exact seed-export test-project queries have raw0, status complete and only
+the ACCOUNT owner as consumer. Nine production-project queries have raw1,
+unavailable/no-project because tests are excluded. These are **limitations**,
+not complete passes or a new exception. The old eight builders were plain local
+nonexported functions, not deleted private aliases/members/shared shapes. Only
+the protocol's two explicit TRUST assertion/ACCOUNT participant inventory
+exceptions remain; none is generalized.
+
+`controls-inventory.json` maps the fifteen separate historical maintenance
+controls to actual failing target raw1, source restoration and rebuilt target
+raw0 records:006,008,007lead/floor,027,028,012,013,018,019,020,010outcome/canonical,
+009 and029. Their full native source-exact restoration/fresh-build evidence
+remains in the original mapped directories and unchanged appendices. They are
+not genuine production RED. No historical control was rerun or mutated here.
+
+Latest fixture diffs independently preserve all44production files. Platform's
+one timer reset and ACCOUNT's five added resets plus preexisting floor reset
+retain stop-before-reset ordering. The natural ce67f4b gate remains raw1 with
+unobserved original filesystem error; e2b884e's controlled EBUSY retry repair does
+not reconstruct it.017's natural interrupted raw1 and unchanged retry0 remain;
+the controlled account EBUSY mechanism and167dc3b isolation fix are separate.
+Full actual-final/terminal and investigation records remain at their original
+paths. No deterministic original-filesystem-cause or reopening is inferred.
+
+Fresh build/owner/lint evidence supplies the current ordinary focused checks.
+No redundant full project gate runs. Existing014 direct/native numerical
+evidence remains1003/1003lines,58/58functions,193/193branches; its normal hook
+selected all43pairs because of shared support. These are retained focused/hook
+records, not a current full-gate claim. The parent's167dc3b full gate predates014
+and cannot be reused as the final combined gate. The required parent gate after
+this actual terminal remains pending.
+
+Preparation attempts remain explicit: the first temporary manifest followed a
+directory symlink with git hash-object and failed before spawning the evidence
+CLI; it was corrected to hash literal link bytes. The first registration probe
+read a nonexistent `.hap` property from the fake namespace; its zero attempts
+are invalid setup evidence and are superseded only for the diagnosis by the
+corrected/final observations. The first independent token scanner mishandled a
+template tail, reporting indentation as string content; its raw1 is a verifier
+failure, corrected with the installed TypeScript AST leaf stream, not a test
+failure or RED. Read-only unmatched temporary globs changed no input and supply
+no check result. All successful and unsuccessful new command streams remain.
+
+### Append-only closeout boundary
+
+Before first report mutation, the exact canonical path is guarded and compared
+with the saved complete432747-byte prefix, SHA-256
+`0c0da62b1b993b5363f7ec596c81902f05e405278f504e89244a78b6e82ce827`.
+Only this existing report is appended. A terminal prefix/diff check records the
+actual resulting report blob and patch in the unique native directory. No
+formatter, new REVIEW.md, source/test edit, staging or commit is authorized.
+The historical frontmatter and every prior byte remain unchanged.
+
+WINDOWS46–53 stay OPEN/unwaived, including022's preparation-capture gap. The
+parent owns any new declarations, evidence checkpoints, repairs, full gate,
+shared ledgers and eventual worktree-setting restoration. This reviewer releases
+its serial lease only with the actual terminal return; it performs no tool,
+build, mutation or dispatch after that return.
