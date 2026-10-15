@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview What the plugin can currently say about its own ability to
  * observe one account, kept apart from what it can say about a device.

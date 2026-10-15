@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Verifies account polling trust and per-device silence.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 

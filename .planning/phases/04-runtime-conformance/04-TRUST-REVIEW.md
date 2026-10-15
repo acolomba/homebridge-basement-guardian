@@ -1290,3 +1290,48 @@ all six declared realized output paths. Exact argv/cwd/UTC/revision/input
 snapshots and complete streams are in
 `/private/tmp/guardian-04-arrival-handoff/closeout-native.json`.
 This metadata check supplies no full TRUST correction or full-project gate.
+
+## Monitoring initial repairs: 009 header cause
+
+Fixer `/root/phase4_trust_finish/monitoring_initial_repairs` holds the exclusive
+serial writer/build/control/Git lease for ordinary task 04-06-01. All work runs
+in the existing **main checkout**, isolation **none**, branch
+`features/code-review-sweep`, starting at `86ed892e46ad358e8aedcd671ad0d51337636dee`.
+The persisted dispatch sentinel identifies 04-06 and isolation none. The legal
+`gsd-plan-head-before-04-06` marker is
+`a6d68bcacbf95343b6434d4930f026a943f81b1e`, preserving the parent's amendment
+in the plan's measured history. The recorded TRUST audit base remains `23a2511`.
+
+009 changes only complete monitoring source/owner headers: MIT SPDX first,
+separate copyright and purpose overview JSDoc, with one blank line between
+sections and before imports. Both full headers were re-read. The source's
+overview body is retained for the separate present-behavior documentation cause.
+Touched-file rollback inventory: monitoring source, owner and this report.
+The exact three-path Fallow guard returned 0 before the first edit; no boundary
+zones or rule packs are configured. No runtime statement or test assertion
+changes with this cause.
+
+Native evidence directory: `/private/tmp/guardian-04-monitoring-repairs/`.
+Every named JSON retains exact argv/cwd, UTC start/end, raw child exit,
+Node/npm, before/after HEAD, all three owned blobs, complete tracked/staged
+diffs and all untracked bytes. Separate stdout/stderr streams remain unmodified.
+The `009-*` records cover this cause's checks and ordinary commit. Node is
+v26.11.1 and npm is 11.20.0. The private fixture declarations and helper names,
+signatures and bodies remain intact; unavailable pretrace output grants no
+deletion or redesign permission. Finding 012 belongs to separate task 04-06-03.
+
+009 is applied pending normal commit and full independent correction. All
+original **15** accepted IDs remain formally open, independently fixed **0**,
+correction counter **0**. No source bug, RED JSON, seed helper or external
+adaptation is introduced. Focused checks do not establish a full wave gate.
+
+009 typecheck, complete-pair ESLint/Prettier, fresh build, full native owner
+and isolated direct checks each returned 0. The owner ran **32 tests**, all
+passing with zero fail/cancel/skip/todo. The direct selector enforced **100%
+lines/functions/branches**. The first audit returned raw 2 because the sandbox
+could not create its temporary base worktree; `009-audit-authorized` returned
+0 / verdict pass against full base `23a2511ac6deb26869db8d3c44916623a27ec997`.
+The initial audit interval overlapped the tail of the ordinary build, without
+changing the reviewed files or running an owner concurrently; the authorized
+audit ran after all checks. Both attempts and full streams remain retained.
+No unconfigured boundary/policy detector result is represented as measured.
