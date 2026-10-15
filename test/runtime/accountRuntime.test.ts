@@ -23,10 +23,8 @@ import { AuthHaltedError, AuthRejectedError, AuthThrottledError, CloudRequestErr
 import { createFamilyRegistry } from '../../src/device/registry.js';
 import { createDeviceStateStore } from '../../src/device/state.js';
 import { PROVISIONAL_FLOOD_WATER_LEVEL_CODE } from '../../src/device/waterLevel.js';
-import { createRedactingLogger } from '../../src/logging.js';
 import { createAccountRuntime, createAccountRuntimeFromConfig, MIN_ROTATION_DELAY_MS, ROTATION_LEAD_MS } from '../../src/runtime/accountRuntime.js';
 import { createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
-import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failureLog.js';
 import { createRetryPolicy, MAX_BACKOFF_MS } from '../../src/runtime/retryPolicy.js';
 
 import { ACCOUNT_SHADOW_CASES, ACCOUNT_SHADOW_PARTICIPANTS, assertAccountShadowContract, exerciseAccountShadowContract } from './accountShadowContract.js';
@@ -52,9 +50,10 @@ import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
+import type { FailureLog } from '../../src/runtime/failureLog.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
 import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
-import type { LogLevel, Logging } from 'homebridge';
+import type { Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
 
 const DEVICE_ID = 'account-1_serial-1';
@@ -88,10 +87,6 @@ const DEGRADED_LINE = 'The shadow connection is unavailable, so device state is 
 // reason.
 const ROTATION_FAILED_LINE = 'The temporary shadow credentials could not be refreshed; the plugin will try again.';
 
-// The line a failing inventory poll records for the status the removal cases
-// script, restated here for the same reason.
-const DISCOVERY_FAILED_LINE = 'Device discovery failed on GET /devices with HTTP 503.';
-
 // The line a poll failure carrying no status records. A terminal authentication answer must never
 // reach it: it names a cause that did not happen, and an owner acts on a diagnostic (D-03).
 const DISCOVERY_FAILED_UNEXPLAINED_LINE = 'Device discovery failed.';
@@ -109,25 +104,12 @@ function liveReportingSilentLine(deviceId: string): string {
   );
 }
 
-// The line the same condition records when it clears. The failure log builds it
-// from the kind, so the kind's device travels into it.
-function liveReportingRecoveredLine(deviceId: string): string {
-  return `Live device reporting for ${deviceId} recovered.`;
-}
-
 // The line a removal Homebridge refused records, restated here for the same
 // reason. It names the controller, because the failing activity is that
 // controller's removal and not the account's, and a two-pump case has to say
 // which accessory is stranded.
 function removalRefusedLine(deviceId: string): string {
   return `Could not remove ${deviceId} from HomeKit; it stays published and stays watched.`;
-}
-
-// Every recovery the failure log announced, whole lines and in order. A count
-// alone cannot tell "the right pump recovered" from "a pump recovered", which is
-// the whole question on a two-pump account (D-14).
-function recoveriesIn(logged: readonly string[]): string[] {
-  return logged.filter((line) => line.startsWith('info ') && line.endsWith(' recovered.'));
 }
 
 // What the account struct's silence member always carries. There is no
@@ -253,24 +235,12 @@ function rotatedCredentialsAt(expiresAtMs: number): AwsCredentialsResponse {
   };
 }
 
-function recordingLog(recorded: string[]): Logging {
-  function at(level: string): (message: string) => void {
-    return (message: string): void => {
-      recorded.push(`${level} ${message}`);
-    };
+function silentLog(): Logging {
+  function silent(): void {
+    return undefined;
   }
 
-  return Object.assign(at('info'), {
-    prefix: 'basement guardian',
-    debug: at('debug'),
-    error: at('error'),
-    info: at('info'),
-    success: at('success'),
-    warn: at('warn'),
-    log: (level: LogLevel, message: string): void => {
-      recorded.push(`${level} ${message}`);
-    },
-  });
+  return Object.assign(silent, { prefix: '', debug: silent, error: silent, info: silent, success: silent, warn: silent, log: silent });
 }
 
 // One scripted answer per call, with the final entry standing for every call
@@ -412,6 +382,7 @@ interface Script {
 interface Harness {
   runtime: AccountRuntime;
   store: DeviceStateStore;
+  /** Compatibility field; silent logging does not populate it. */
   logged: string[];
   /** One entry per registered secret, its role first, in registration order. */
   registrations: string[];
@@ -487,11 +458,13 @@ function recordingAnchors(restored: readonly (readonly [string, number])[] = [])
   };
 }
 
-// Builds the runtime over a scripted cloud and a socket-free shadow. The
-// failure log and both retry policies are the real ones: the reminder cadence
-// and the pending guard are the behavior under test, and a hand-written double
-// would re-implement them.
-function harness(t: TestContext, script: Partial<Script> = {}): Harness {
+// Builds the runtime over a scripted cloud and a socket-free shadow.
+// A case that promises diagnostic notifications supplies its exact FailureLog port.
+function harness(
+  t: TestContext,
+  script: Partial<Script> = {},
+  failures: FailureLog = { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+): Harness {
   t.mock.timers.enable({ apis: ['setTimeout'] });
 
   const logged: string[] = [];
@@ -510,8 +483,8 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
   // harness: a case that advances time means both, and only a case about a
   // wall-clock correction moves one alone.
   const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME + (time - START_TIME) };
-  const log = recordingLog(logged);
-  const store = createDeviceStateStore({ clock, log: recordingLog([]) });
+  const log = silentLog();
+  const store = createDeviceStateStore({ clock, log: silentLog() });
   const anchors = script.anchors ?? recordingAnchors();
 
   const nextDevices = answering(script.devices ?? [() => Promise.resolve([geminiDevice()])]);
@@ -566,11 +539,11 @@ function harness(t: TestContext, script: Partial<Script> = {}): Harness {
 
       return client;
     },
-    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
+    createRetry: (signal: AbortSignal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() }),
     pollIntervalMs: script.pollIntervalMs ?? POLL_INTERVAL_MS,
     rotationLeadMs: script.rotationLeadMs ?? ROTATION_LEAD_MS,
     minRotationDelayMs: script.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
-    failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    failures,
     registerSecret: (secret: string, role?: SecretRole): void => {
       registrations.push(`${String(role)} ${secret}`);
     },
@@ -646,14 +619,6 @@ function heartbeatPatch(): ReportedPatch {
   return { data: { water_level: 1 }, state: undefined, version: undefined };
 }
 
-function countOf(logged: readonly string[], level: string): number {
-  return logged.filter((line) => line.startsWith(`${level} `)).length;
-}
-
-function countOfLine(logged: readonly string[], line: string): number {
-  return logged.filter((candidate) => candidate === line).length;
-}
-
 // What each push said about the one system this harness's account holds.
 //
 // The silence answer lives in the per-system map and nowhere else: the account
@@ -677,7 +642,7 @@ for (const { name, connectedCalls } of ACCOUNT_SHADOW_CASES) {
       credentials: {
         current: () => ({ endpoint: 'broker.invalid', clientId: 'client-1', accessKeyId: 'key', secretAccessKey: 'secret', sessionToken: 'token' }),
       },
-      retry: createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: MAX_BACKOFF_MS, log: recordingLog([]) }),
+      retry: createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() }),
       onConnected: () => {
         callbacks.onConnected();
         notifications.push('connected');
@@ -1268,17 +1233,40 @@ describe('start', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
-  test('reports how many devices the account holds', async (t) => {
+  test('stores the discovered inventory and reports successful monitoring', async (t) => {
     // arrange
-    const { runtime, logged, commandRequests } = harness(t);
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    const { runtime, commandRequests } = harness(t, {}, failures);
 
     // act
     await runtime.start();
     await settle();
 
     // assert
-    assert.deepStrictEqual(logged, ['info Discovered 1 device(s).']);
+    assert.deepStrictEqual(runtime.store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('opens one shadow connection for every discovered device', async (t) => {
@@ -1337,35 +1325,58 @@ describe('start', () => {
 
   test('reports the route and the status when the vendor refuses discovery', async (t) => {
     // arrange
-    const { runtime, logged, store, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Device polling', 'Device discovery failed on GET /devices with HTTP 403.');
+    }).thenReturn(undefined);
+    const { runtime, store, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 403.', 403, 'GET /devices'))],
+      },
+      failures,
+    );
 
     // act
     await runtime.start();
     await settle();
 
     // assert
-    assert.deepStrictEqual(
-      { discoveryReport: logged[0], stored: store.deviceIds() },
-      { discoveryReport: 'warn Device discovery failed on GET /devices with HTTP 403.', stored: [] },
-    );
+    assert.deepStrictEqual({ path: runtime.monitoringPath, stored: store.deviceIds() }, { path: 'unavailable', stored: [] });
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('reports a fixed message that repeats nothing from an unexpected discovery failure', async (t) => {
     // arrange
-    const { runtime, logged, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Device polling', DISCOVERY_FAILED_UNEXPLAINED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new Error('connect ECONNREFUSED https://api.example.test/devices'))],
+      },
+      failures,
+    );
 
     // act
     await runtime.start();
     await settle();
 
     // assert
-    assert.strictEqual(logged[0], 'warn Device discovery failed.');
+    assert.deepStrictEqual({ path: runtime.monitoringPath, stored: runtime.store.deviceIds() }, { path: 'unavailable', stored: [] });
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-13 schedules nothing at all after the vendor refuses the account credentials', async (t) => {
@@ -1756,14 +1767,41 @@ describe('credential rotation', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
-  test('reports a failed refresh through the rate-limited discipline rather than directly', async (t) => {
+  test('reports every failed credential refresh without changing the live monitoring path', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, {
-      credentials: [
-        () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
-        () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
-      ],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Credential rotation', ROTATION_FAILED_LINE);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + ONE_HOUR_MS)),
+          () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+        ],
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -1774,10 +1812,15 @@ describe('credential rotation', () => {
 
     // assert
     assert.deepStrictEqual(
-      { warnings: countOfLine(logged, `warn ${ROTATION_FAILED_LINE}`), repeats: countOfLine(logged, `debug ${ROTATION_FAILED_LINE}`) },
-      { warnings: 1, repeats: 2 },
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('SYNC-04 replaces what the next handshake reads and leaves the live connection alone', async (t) => {
@@ -1925,9 +1968,26 @@ describe('the poll backstop', () => {
 
   test('SYNC-05 reports no failure when a shutdown aborts a poll that is in flight', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), (signal: AbortSignal) => hangingUntilAborted(signal)],
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
     await advance(POLL_INTERVAL_MS);
@@ -1937,8 +1997,16 @@ describe('the poll backstop', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual({ warnings: countOf(logged, 'warn'), errors: countOf(logged, 'error') }, { warnings: 0, errors: 0 });
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'unavailable',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      },
+    );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('SYNC-02 keeps the telemetry and metadata a later poll would overwrite while the shadow owns them', async (t) => {
@@ -2313,7 +2381,9 @@ describe('stop', () => {
 
   test('SYNC-05 schedules nothing and reports no failure when a shutdown aborts the launch', async (t) => {
     // arrange
-    const { runtime, logged, calls, commandRequests } = harness(t, { devices: [hangingUntilAborted] });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+
+    const { runtime, calls, commandRequests } = harness(t, { devices: [hangingUntilAborted] }, failures);
     const starting = runtime.start();
     await settle();
 
@@ -2323,8 +2393,11 @@ describe('stop', () => {
     await settle();
 
     // assert
-    assert.deepStrictEqual({ calls, warnings: logged.filter((line) => line.startsWith('warn ')) }, { calls: ['devices'], warnings: [] });
+    assert.deepStrictEqual({ path: runtime.monitoringPath, stored: runtime.store.deviceIds() }, { path: 'unavailable', stored: [] });
+    assert.deepStrictEqual(calls, ['devices']);
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('SYNC-05 reports monitoring unavailable once the runtime has stopped', async (t) => {
@@ -2344,7 +2417,24 @@ describe('stop', () => {
 
   test('SYNC-05 records no failure when a shutdown aborts a poll already in flight', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      { devices: [() => Promise.resolve([geminiDevice()]), hangingUntilAborted] },
+      failures,
+    );
     await runtime.start();
     await settle();
     await advance(POLL_INTERVAL_MS);
@@ -2355,10 +2445,15 @@ describe('stop', () => {
 
     // assert
     assert.deepStrictEqual(
-      logged.filter((line) => line.startsWith('warn ')),
-      [],
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'unavailable',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }]]),
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // The tier that decides whether a press may leave the plugin reads this fact from the runtime, and
@@ -2477,9 +2572,17 @@ describe('the degraded monitoring path', () => {
 
   test('D-13 reports monitoring unavailable and records the stop when the vendor refuses the account credentials', async (t) => {
     // arrange
-    const { runtime, logged, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, commandRequests, monitoringHealth } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant'))],
+      },
+      failures,
+    );
 
     // act
     await runtime.start();
@@ -2487,17 +2590,31 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
+      { path: runtime.monitoringPath, monitoringHealth, stored: runtime.store.deviceIds() },
+      {
+        path: 'unavailable',
+        monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }],
+        stored: [],
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-13 reports monitoring unavailable and records the stop when authentication has halted', async (t) => {
     // arrange
-    const { runtime, logged, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, commandRequests, monitoringHealth } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new AuthHaltedError('authentication has stopped.', 'invalid_grant'))],
+      },
+      failures,
+    );
 
     // act
     await runtime.start();
@@ -2505,17 +2622,43 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'unavailable', warnings: [`warn ${STOPPED_LINE}`] },
+      { path: runtime.monitoringPath, monitoringHealth, stored: runtime.store.deviceIds() },
+      {
+        path: 'unavailable',
+        monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }],
+        stored: [],
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-22 recovers the combined path after a throttled answer rather than claiming the runtime stopped for good', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Authentication', 'Authentication is being throttled, so the plugin is waiting before it tries again.');
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS)), () => Promise.resolve([geminiDevice()])],
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
     const whileWaiting = runtime.monitoringPath;
@@ -2524,11 +2667,10 @@ describe('the degraded monitoring path', () => {
     await advance(THROTTLE_RETRY_MS);
 
     // assert
-    assert.deepStrictEqual(
-      { whileWaiting, afterRetry: runtime.monitoringPath, stops: logged.filter((line) => line.endsWith(STOPPED_LINE)) },
-      { whileWaiting: 'unavailable', afterRetry: 'shadow-and-poll', stops: [] },
-    );
+    assert.deepStrictEqual({ whileWaiting, afterRetry: runtime.monitoringPath }, { whileWaiting: 'unavailable', afterRetry: 'shadow-and-poll' });
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-15 stays up on the polling-only path when the shadow connection fails', async (t) => {
@@ -2544,9 +2686,24 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
-  test('D-15 reports the degraded path once across three failed shadow attempts', async (t) => {
+  test('D-15 reports each failed shadow attempt while retaining polling', async (t) => {
     // arrange
-    const { runtime, logged, calls, advance, commandRequests } = harness(t, { shadow: [false] });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('The shadow connection', DEGRADED_LINE);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    const { runtime, calls, advance, commandRequests } = harness(t, { shadow: [false] }, failures);
     await runtime.start();
     await settle();
 
@@ -2555,8 +2712,11 @@ describe('the degraded monitoring path', () => {
     await advance(1_000);
 
     // assert
-    assert.deepStrictEqual({ attempts: calls.filter((call) => call === 'shadow').length, warnings: countOf(logged, 'warn') }, { attempts: 3, warnings: 1 });
+    assert.strictEqual(runtime.monitoringPath, 'poll-only');
+    assert.strictEqual(calls.filter((call) => call === 'shadow').length, 3);
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-15 leaves a pending retry chain to reconnect rather than attempting again from every poll', async (t) => {
@@ -2577,9 +2737,25 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
-  test('D-15 restores the combined path and announces the recovery once when a later attempt succeeds', async (t) => {
+  test('D-15 reports a successful shadow retry and restores the combined path', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, { shadow: [false, true] });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('The shadow connection', DEGRADED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { shadow: [false, true] }, failures);
     await runtime.start();
     await settle();
 
@@ -2588,10 +2764,15 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, recoveries: logged.filter((line) => line.endsWith('recovered.')) },
-      { path: 'shadow-and-poll', recoveries: ['info The shadow connection recovered.'] },
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('reads as the combined path once the shadow connection reports itself up', async (t) => {
@@ -2609,7 +2790,20 @@ describe('the degraded monitoring path', () => {
 
   test('falls back to the polling-only path without reporting a fault when the connection closes', async (t) => {
     // arrange
-    const { runtime, shadows, logged, commandRequests } = harness(t);
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
     await runtime.start();
     await settle();
 
@@ -2617,13 +2811,36 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onDisconnected('transport-closed');
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, warnings: countOf(logged, 'warn') }, { path: 'poll-only', warnings: 0 });
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'poll-only',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      },
+    );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('SYNC-04 reports no fault for the daily reconnect the provider connection ceiling forces', async (t) => {
     // arrange
-    const { runtime, shadows, logged, commandRequests } = harness(t);
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    })
+      .thenReturn(undefined)
+      .times(2);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
     await runtime.start();
     await settle();
 
@@ -2632,13 +2849,39 @@ describe('the degraded monitoring path', () => {
     shadows[0]?.options.onConnected();
 
     // assert
-    assert.deepStrictEqual({ path: runtime.monitoringPath, reports: logged.slice(1) }, { path: 'shadow-and-poll', reports: [] });
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      },
+    );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
-  test('D-15 reports the degraded path once while the connection keeps failing', async (t) => {
+  test('D-15 reports each connection failure while retaining the polling path', async (t) => {
     // arrange
-    const { runtime, shadows, logged, commandRequests } = harness(t);
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('The shadow connection', DEGRADED_LINE);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
     await runtime.start();
     await settle();
 
@@ -2649,15 +2892,36 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'poll-only',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('D-15 reports the degraded path when the broker refuses the subscription', async (t) => {
     // arrange
-    const { runtime, shadows, logged, commandRequests } = harness(t);
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('The shadow connection', DEGRADED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, shadows, commandRequests, monitoringByDevice } = harness(t, {}, failures);
     await runtime.start();
     await settle();
 
@@ -2666,10 +2930,15 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
-      { path: runtime.monitoringPath, warnings: logged.filter((line) => line.startsWith('warn ')) },
-      { path: 'poll-only', warnings: [`warn ${DEGRADED_LINE}`] },
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'poll-only',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
+      },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   for (const reason of ['transport-closed', 'transport-error', 'subscription-refused', 'handshake-refused'] as const) {
@@ -2819,10 +3088,30 @@ describe('the degraded monitoring path', () => {
   // path. This one answers a healthy inventory first, so it examines the path a restart never takes.
   test('D-13 pushes a rejected credential and records the authentication stop for a refusal that follows a healthy start', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, monitoringHealth, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -2830,19 +3119,17 @@ describe('the degraded monitoring path', () => {
     await advance(FAST_POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual(monitoringHealth.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        pushed: monitoringHealth.at(-1),
-        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)),
-        discoveryFailures: logged.filter((line) => line.endsWith(DISCOVERY_FAILED_UNEXPLAINED_LINE)),
-      },
-      {
-        pushed: { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true },
-        stops: [`warn ${STOPPED_LINE}`],
-        discoveryFailures: [],
+        path: 'unavailable',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
       },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // What makes the refusal a state rather than an act the runtime performed once. A socket left open
@@ -2853,10 +3140,30 @@ describe('the degraded monitoring path', () => {
   // not happen (D-10, D-13, SYNC-05).
   test('D-13 closes the live connection and opens no other for a refusal that follows a healthy start', async (t) => {
     // arrange
-    const { runtime, shadows, calls, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, shadows, calls, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -2864,26 +3171,42 @@ describe('the degraded monitoring path', () => {
     await advance(FAST_POLL_INTERVAL_MS);
 
     // assert
-    assert.deepStrictEqual(
-      {
-        closes: shadows[0]?.closes(),
-        clients: calls.filter((call) => call === 'shadow').length,
-        shadowFailures: logged.filter((line) => line.endsWith(DEGRADED_LINE)),
-      },
-      { closes: 1, clients: 1, shadowFailures: [] },
-    );
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual({ closes: shadows[0]?.closes(), clients: calls.filter((call) => call === 'shadow').length }, { closes: 1, clients: 1 });
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // The rotation loop meets the same refusal and used to swallow it into a rotation failure -- a line
   // promising another attempt, for the one failure that must never be attempted again (CR-03, D-10).
   test('D-13 pushes a rejected credential and records the authentication stop when a credential rotation is refused', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
-      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
-      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, monitoringHealth, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -2891,19 +3214,17 @@ describe('the degraded monitoring path', () => {
     await advance(SHORT_CREDENTIAL_LIFETIME_MS);
 
     // assert
+    assert.deepStrictEqual(monitoringHealth.at(-1), { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        pushed: monitoringHealth.at(-1),
-        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)),
-        rotationFailures: logged.filter((line) => line.endsWith(ROTATION_FAILED_LINE)),
-      },
-      {
-        pushed: { restDegraded: false, shadowSilent: ACCOUNT_DECLINES_TO_VOUCH, commandTransportReady: false, credentialsRejected: true },
-        stops: [`warn ${STOPPED_LINE}`],
-        rotationFailures: [],
+        path: 'unavailable',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }]]),
       },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // The second half of the same claim, and the half a retry would make expensive: the vendor lifts a
@@ -2935,13 +3256,33 @@ describe('the degraded monitoring path', () => {
   // nor the accessory tier pushed twice (D-10).
   test('D-13 pushes the terminal trust once when the poll and the rotation meet the refusal together', async (t) => {
     // arrange
-    const { runtime, monitoringHealth, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
-      credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
-      rotationLeadMs: SHORT_ROTATION_LEAD_MS,
-      minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
-      pollIntervalMs: SHORT_CREDENTIAL_LIFETIME_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure('Authentication', STOPPED_LINE);
+    }).thenReturn(undefined);
+    const { runtime, monitoringHealth, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+        credentials: [() => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)), refusingTheAccount],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+        pollIntervalMs: SHORT_CREDENTIAL_LIFETIME_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -2949,14 +3290,14 @@ describe('the degraded monitoring path', () => {
     await advance(SHORT_CREDENTIAL_LIFETIME_MS);
 
     // assert
-    assert.deepStrictEqual(
-      {
-        terminalPushes: monitoringHealth.filter((trust) => trust.credentialsRejected).length,
-        stops: logged.filter((line) => line.endsWith(STOPPED_LINE)).length,
-      },
-      { terminalPushes: 1, stops: 1 },
-    );
+    assert.deepStrictEqual(monitoringHealth, [
+      { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false },
+      { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true },
+    ]);
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // Closing the connection at the halt is only half the answer, because the loop that halted is
@@ -3063,9 +3404,29 @@ describe('the degraded monitoring path', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
-  test('reports the silent live connection once across three silent polls inside one reminder interval', async (t) => {
+  test('reports live-device silence on every silent poll', async (t) => {
     // arrange
-    const { runtime, logged, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    })
+      .thenReturn(undefined)
+      .times(3);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -3075,18 +3436,40 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        repeats: countOfLine(logged, `debug ${liveReportingSilentLine(DEVICE_ID)}`),
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
       },
-      { warnings: 1, repeats: 2 },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
-  test('announces the live connection recovered once a message arrives after the silence', async (t) => {
+  test('reports live-device recovery on the arriving message and subsequent poll', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
     await runtime.start();
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
@@ -3096,13 +3479,15 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        recovered: countOfLine(logged, `info ${liveReportingRecoveredLine(DEVICE_ID)}`),
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
       },
-      { warnings: 1, recovered: 1 },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // The scoped permission allows vendor deviceId in local logs, accessory context and persisted
@@ -3110,27 +3495,43 @@ describe('the degraded monitoring path', () => {
   // key. The identifier tells a two-pump account which basement stopped being watched. Public and
   // planning artifacts use placeholders. Routes, headers and credentials stay out of this line
   // (AUTH-02, D-027, D-14).
-  test('names the controller and no route, no header, and no credential in the line a silent live connection records', async (t) => {
+  test('reports the exact device-scoped cause when live reporting falls silent', async (t) => {
     // arrange
-    const { runtime, logged, registrations, advance, commandRequests } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: FAST_POLL_INTERVAL_MS }, failures);
     await runtime.start();
 
     // act
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
     // assert
-    const reported = logged.filter((line) => line.includes('live connection')).join(' ');
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        reported: reported.length > 0,
-        scheme: /https?:\/\//.test(reported),
-        authorization: reported.toLowerCase().includes('authorization'),
-        secret: registrations.some((registration) => reported.includes(registration.split(' ')[1] ?? '')),
-        device: reported.includes(DEVICE_ID),
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
       },
-      { reported: true, scheme: false, authorization: false, secret: false, device: true },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('reports the shadow trusted over the same span once a message reached the reported-patch callback', async (t) => {
@@ -3225,9 +3626,29 @@ describe('the degraded monitoring path', () => {
 
   // The diagnostic half of the same recovery. The owner is told the live connection came back once,
   // at the message that proves it, with the clock standing still (D-03).
-  test('announces the live connection recovered once at the arriving message, with no clock movement', async (t) => {
+  test('reports live-device recovery once at the arriving message without clock movement', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance, commandRequests } = harness(t, { pollIntervalMs: HEARTBEAT_MS });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(t, { pollIntervalMs: HEARTBEAT_MS }, failures);
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
@@ -3238,13 +3659,15 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        recovered: countOfLine(logged, `info ${liveReportingRecoveredLine(DEVICE_ID)}`),
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }]]),
       },
-      { warnings: 1, recovered: 1 },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // Why the report is driven from the arrival callback and not from a snapshot listener. The
@@ -3308,10 +3731,39 @@ describe('the degraded monitoring path', () => {
   // this case.
   test('D-14 lets a quiet pump recover on its own message while its heartbeating neighbour neither reports nor is reported for', async (t) => {
     // arrange
-    const { runtime, shadows, logged, monitoringByDevice, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
-      pollIntervalMs: HEARTBEAT_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${OTHER_DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, shadows, monitoringByDevice, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
+        pollIntervalMs: HEARTBEAT_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await advance(HEARTBEAT_MS);
     // The back pump keeps speaking, so only the front pump reaches two missed heartbeats.
@@ -3327,45 +3779,69 @@ describe('the degraded monitoring path', () => {
     // assert
     assert.deepStrictEqual(
       {
-        frontPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        backPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(OTHER_DEVICE_ID)}`),
-        recoveries: recoveriesIn(logged),
         afterNeighbourHeartbeat,
         afterFrontPumpSpoke: monitoringByDevice.length,
         finalSilence: [monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent, monitoringByDevice.at(-1)?.get(OTHER_DEVICE_ID)?.shadowSilent],
       },
+      { afterNeighbourHeartbeat: atFrontPumpSilence, afterFrontPumpSpoke: atFrontPumpSilence + 1, finalSilence: [false, false] },
+    );
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        frontPumpWarnings: 1,
-        backPumpWarnings: 0,
-        recoveries: [`info ${liveReportingRecoveredLine(DEVICE_ID)}`],
-        afterNeighbourHeartbeat: atFrontPumpSilence,
-        afterFrontPumpSpoke: atFrontPumpSilence + 1,
-        finalSilence: [false, false],
+        path: 'shadow-and-poll',
+        trust: new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
       },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
-  // D-14. The other half: the failure log's rate limiting is per kind, so a per-device kind gives
-  // each pump its own cadence with no change to the limiter.
-  //
-  // The two silences here begin one heartbeat apart, inside one reminder interval, which is what
-  // makes the case discriminate. An account-wide kind would treat the back pump's first silence as a
-  // repeat of the front pump's and log it at debug. The front pump's own repeat in the same poll is
-  // asserted at debug for the same reason: it proves the reminder interval had not elapsed, so the
-  // back pump's warning cannot be explained away as a reminder.
-  //
-  // Both figures are asserted rather than assumed. If a heartbeat ever grows past the reminder
-  // cadence the two silences stop sharing an interval, and this case would go on passing while
-  // proving nothing -- so the numbers are read back here and a change to either one has to be seen.
-  //
+  // Each pump's failure kind identifies that controller independently.
   // Recorded limit (D-10): the second pump is this fixture's, not the vendor account's.
-  test('D-14 gives each pump its own warning when two fall silent inside one reminder interval', async (t) => {
+  test('D-14 reports each silent pump under its own failure kind', async (t) => {
     // arrange
-    const { runtime, shadows, logged, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
-      pollIntervalMs: HEARTBEAT_MS,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${OTHER_DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${OTHER_DEVICE_ID}`, liveReportingSilentLine(OTHER_DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, shadows, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()])],
+        pollIntervalMs: HEARTBEAT_MS,
+      },
+      failures,
+    );
     await runtime.start();
     await advance(HEARTBEAT_MS);
     shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
@@ -3376,16 +3852,18 @@ describe('the degraded monitoring path', () => {
 
     // assert
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        frontPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        frontPumpRepeats: countOfLine(logged, `debug ${liveReportingSilentLine(DEVICE_ID)}`),
-        backPumpWarnings: countOfLine(logged, `warn ${liveReportingSilentLine(OTHER_DEVICE_ID)}`),
-        gapBetweenSilencesMs: HEARTBEAT_MS,
-        reminderIntervalMs: FAILURE_REMINDER_MS,
+        path: 'shadow-and-poll',
+        trust: new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+        ]),
       },
-      { frontPumpWarnings: 1, frontPumpRepeats: 1, backPumpWarnings: 1, gapBetweenSilencesMs: 898_000, reminderIntervalMs: 900_000 },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   test('opens the shadow connection once a later poll finds the account devices', async (t) => {
@@ -3492,16 +3970,46 @@ describe('DEV-05 removal reconciliation', () => {
 
   test('reports no removal when the final-check fetch itself fails, and retries the check on the next successful poll', async (t) => {
     // arrange
-    const { runtime, calls, removed, logged, advance, commandRequests } = harness(t, {
-      devices: [
-        () => Promise.resolve([geminiDevice()]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([]),
-        () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
-        () => Promise.resolve([]),
-        () => Promise.resolve([]),
-      ],
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    when(() => {
+      failures.forget(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.forget(`HomeKit removal of ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    const { runtime, calls, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [
+          () => Promise.resolve([geminiDevice()]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+          () => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices')),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+        ],
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
 
@@ -3509,18 +4017,17 @@ describe('DEV-05 removal reconciliation', () => {
     await advance(POLL_INTERVAL_MS);
     await advance(POLL_INTERVAL_MS);
 
-    // assert
-    assert.deepStrictEqual(
-      { removed, warnings: countOfLine(logged, `warn ${DISCOVERY_FAILED_LINE}`), errors: countOf(logged, 'error') },
-      { removed: [], warnings: 0, errors: 0 },
-    );
-
-    // act
+    const beforeRetry = { removed: [...removed], path: runtime.monitoringPath, stored: runtime.store.deviceIds() };
     await advance(POLL_INTERVAL_MS);
 
     // assert
-    assert.deepStrictEqual({ devicesCalls: devicesCallCount(calls), removed }, { devicesCalls: 6, removed: [DEVICE_ID] });
+    assert.deepStrictEqual(beforeRetry, { removed: [], path: 'shadow-and-poll', stored: [DEVICE_ID] });
+    assert.deepStrictEqual(
+      { devicesCalls: devicesCallCount(calls), removed, stored: runtime.store.deviceIds() },
+      { devicesCalls: 6, removed: [DEVICE_ID], stored: [] },
+    );
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // A removal Homebridge refuses leaves an accessory published that this plugin has already
@@ -3530,11 +4037,42 @@ describe('DEV-05 removal reconciliation', () => {
   // longer holds, nothing ever retries the removal, and nothing is said about any of it (D-014).
   test('keeps a pump whose removal was refused watched, distrusted and reported, and tries the removal again', async (t) => {
     // arrange
-    const { runtime, store, logged, anchors, removed, monitoringByDevice, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
-      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
-      removalFails: true,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordFailure(`HomeKit removal of ${DEVICE_ID}`, removalRefusedLine(DEVICE_ID));
+    })
+      .thenReturn(undefined)
+      .times(2);
+    const { runtime, store, anchors, removed, monitoringByDevice, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+        pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+        removalFails: true,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
     await advance(TWO_MISSED_HEARTBEATS_MS);
@@ -3542,94 +4080,197 @@ describe('DEV-05 removal reconciliation', () => {
     // act
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
-    // assert
-    assert.deepStrictEqual(
-      {
-        attempts: [...removed],
-        stillStored: store.snapshot(DEVICE_ID) !== undefined,
-        keepsItsAnchor: anchors.stored.has(DEVICE_ID),
-        silence: silenceOf(monitoringByDevice).at(-1),
-        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
-      },
-      { attempts: [DEVICE_ID], stillStored: true, keepsItsAnchor: true, silence: true, warnings: 1 },
-    );
-
-    // act
+    const beforeRetry = {
+      attempts: [...removed],
+      snapshot: store.snapshot(DEVICE_ID),
+      anchors: [...anchors.stored],
+      silence: silenceOf(monitoringByDevice).at(-1),
+    };
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
     // assert
+    assert.deepStrictEqual(beforeRetry, {
+      attempts: [DEVICE_ID],
+      snapshot: {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME,
+      },
+      anchors: [[DEVICE_ID, START_TIME]],
+      silence: true,
+    });
     assert.deepStrictEqual([...removed], [DEVICE_ID, DEVICE_ID]);
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
+      {
+        path: 'shadow-and-poll',
+        trust: new Map([[DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }]]),
+      },
+    );
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
   // A refused removal strands an accessory this plugin has already vouched for, so the first one
   // is said the moment it happens rather than held back by the cadence its repeats are subject to.
   test('reports a refused removal as soon as the removal is refused', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-      removalFails: true,
-    });
-    await runtime.start();
-    await settle();
-    await advance(FAST_POLL_INTERVAL_MS);
-
-    // act
-    await advance(FAST_POLL_INTERVAL_MS);
-
-    // assert
-    assert.deepStrictEqual(
-      { attempts: [...removed], warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`) },
-      { attempts: [DEVICE_ID], warnings: 1 },
-    );
-    assert.deepStrictEqual(commandRequests, []);
-  });
-
-  // The documented refusal is a UUID another plugin had already bridged, which no poll clears, so
-  // the removal is refused again for the life of the process. The attempt has to keep happening --
-  // nothing else ever removes the accessory -- while the line does not: unlimited, it writes the
-  // same sentence 288 times a day at the shortest interval the configuration allows (D-14).
-  test('says nothing further about a pump refused again inside the reminder window, and still retries every poll', async (t) => {
-    // arrange
-    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-      removalFails: true,
-    });
-    await runtime.start();
-    await settle();
-    await advance(FAST_POLL_INTERVAL_MS);
-    await advance(FAST_POLL_INTERVAL_MS);
-
-    // act
-    await advance(FAST_POLL_INTERVAL_MS);
-    await advance(FAST_POLL_INTERVAL_MS);
-    await advance(FAST_POLL_INTERVAL_MS);
-
-    // assert
-    assert.deepStrictEqual(
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`HomeKit removal of ${DEVICE_ID}`, removalRefusedLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, removed, advance, commandRequests } = harness(
+      t,
       {
-        attempts: [...removed],
-        warnings: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
-        repeats: countOfLine(logged, `debug ${removalRefusedLine(DEVICE_ID)}`),
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+        removalFails: true,
       },
-      { attempts: [DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID], warnings: 1, repeats: 3 },
+      failures,
     );
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, attempts: [...removed], snapshot: runtime.store.snapshot(DEVICE_ID) },
+      {
+        path: 'shadow-and-poll',
+        attempts: [DEVICE_ID],
+        snapshot: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 1, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME,
+        },
+      },
+    );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
-  // The kind is per device for the reason the live-reporting kind is: a pump refused all afternoon
-  // must not hold back the first report about the pump beside it, whose accessory is stranded just
-  // as badly. Both refusals land in the same poll at the same clock reading, so one shared kind
-  // would send the second straight to debug (D-14).
+  // A refused accessory stays eligible for the next poll's removal attempt.
+  test('reports each refused removal and retries the same device on every poll', async (t) => {
+    // arrange
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(6);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(6);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`HomeKit removal of ${DEVICE_ID}`, removalRefusedLine(DEVICE_ID));
+    })
+      .thenReturn(undefined)
+      .times(4);
+    const { runtime, removed, advance, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([])],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+        removalFails: true,
+      },
+      failures,
+    );
+    await runtime.start();
+    await settle();
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // act
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+    await advance(FAST_POLL_INTERVAL_MS);
+
+    // assert
+    assert.deepStrictEqual(
+      { path: runtime.monitoringPath, attempts: [...removed] },
+      { path: 'shadow-and-poll', attempts: [DEVICE_ID, DEVICE_ID, DEVICE_ID, DEVICE_ID] },
+    );
+
+    assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
+  });
+
+  // Distinct failure kinds preserve the identity of both stranded accessories.
   test('reports the refused removal of each pump, so one refusal does not silence another', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
-      pollIntervalMs: FAST_POLL_INTERVAL_MS,
-      removalFails: true,
-    });
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${OTHER_DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`HomeKit removal of ${DEVICE_ID}`, removalRefusedLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`HomeKit removal of ${OTHER_DEVICE_ID}`, removalRefusedLine(OTHER_DEVICE_ID));
+    }).thenReturn(undefined);
+    const { runtime, removed, advance, commandRequests, monitoringByDevice } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice(), otherGeminiDevice()]), () => Promise.resolve([])],
+        pollIntervalMs: FAST_POLL_INTERVAL_MS,
+        removalFails: true,
+      },
+      failures,
+    );
     await runtime.start();
     await settle();
     await advance(FAST_POLL_INTERVAL_MS);
@@ -3638,60 +4279,127 @@ describe('DEV-05 removal reconciliation', () => {
     await advance(FAST_POLL_INTERVAL_MS);
 
     // assert
+    assert.deepStrictEqual([...removed].sort(), [DEVICE_ID, OTHER_DEVICE_ID].sort());
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, trust: monitoringByDevice.at(-1) },
       {
-        attempts: [...removed].sort(),
-        pump: countOfLine(logged, `warn ${removalRefusedLine(DEVICE_ID)}`),
-        pumpBesideIt: countOfLine(logged, `warn ${removalRefusedLine(OTHER_DEVICE_ID)}`),
+        path: 'shadow-and-poll',
+        trust: new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+        ]),
       },
-      { attempts: [DEVICE_ID, OTHER_DEVICE_ID].sort(), pump: 1, pumpBesideIt: 1 },
     );
+
     assert.deepStrictEqual(commandRequests, []);
+    verify(failures);
   });
 
-  // D-14. The failure log rate-limits per kind, and a removed device's kind can never recover, so
-  // nothing would ever delete it: the map holds an entry for the life of the process and the stale
-  // entry follows the identifier back if the account re-adds it.
-  //
-  // The harm is observable at the re-add, which is why the case ends there rather than at the
-  // removal. With the entry retained, the first healthy poll after the identifier returns reaches
-  // the log's success path, which deletes the entry and announces a recovery -- for a system that
-  // has been in the account for one poll and has never failed in it.
-  test('drops the reporting kind of a removed pump, so the identifier coming back announces no recovery', async (t) => {
+  // Removal forgets both device-scoped causes before a fresh admission.
+  test('forgets both reporting kinds when a removed device returns as a new admission', async (t) => {
     // arrange
-    const { runtime, logged, removed, advance, commandRequests } = harness(t, {
-      devices: [
-        () => Promise.resolve([geminiDevice()]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([]),
-        () => Promise.resolve([geminiDevice()]),
-      ],
-      pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
-    });
+    const notifications: string[][] = [];
+    const failures = mock<FailureLog>({ exactParams: true, name: 'account failure notifications' });
+    when(() => {
+      failures.recordSuccess('Device polling');
+    })
+      .thenReturn(undefined)
+      .times(4);
+    when(() => {
+      failures.recordSuccess(`Live device reporting for ${DEVICE_ID}`);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      failures.recordSuccess('Credential rotation');
+    })
+      .thenReturn(undefined)
+      .times(3);
+    when(() => {
+      failures.recordSuccess('The shadow connection');
+    }).thenReturn(undefined);
+    when(() => {
+      failures.recordFailure(`Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID));
+    }).thenReturn(undefined);
+    when(() => {
+      failures.forget(`Live device reporting for ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    when(() => {
+      failures.forget(`HomeKit removal of ${DEVICE_ID}`);
+    }).thenReturn(undefined);
+    const reporting: FailureLog = {
+      recordSuccess: (kind) => {
+        failures.recordSuccess(kind);
+        notifications.push(['success', kind]);
+      },
+      recordFailure: (kind, reason) => {
+        failures.recordFailure(kind, reason);
+        notifications.push(['failure', kind, reason]);
+      },
+      forget: (kind) => {
+        failures.forget(kind);
+        notifications.push(['forget', kind]);
+      },
+    };
+    const { runtime, removed, advance, commandRequests, anchors } = harness(
+      t,
+      {
+        devices: [
+          () => Promise.resolve([geminiDevice()]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([]),
+          () => Promise.resolve([geminiDevice()]),
+        ],
+        pollIntervalMs: TWO_MISSED_HEARTBEATS_MS,
+      },
+      reporting,
+    );
     await runtime.start();
+    await settle();
     // Two missed heartbeats, so the pump's live reporting is failing when it goes.
     await advance(TWO_MISSED_HEARTBEATS_MS);
     await advance(TWO_MISSED_HEARTBEATS_MS);
-    const atRemoval = { removed: [...removed], recoveries: recoveriesIn(logged) };
+    const atRemoval = { removed: [...removed], stored: runtime.store.deviceIds() };
 
     // act
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
     // assert
+    assert.deepStrictEqual(atRemoval, { removed: [DEVICE_ID], stored: [] });
     assert.deepStrictEqual(
+      { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), anchors: [...anchors.stored] },
       {
-        atRemoval,
-        warnings: countOfLine(logged, `warn ${liveReportingSilentLine(DEVICE_ID)}`),
-        recoveriesAfterTheIdentifierReturned: recoveriesIn(logged),
-      },
-      {
-        atRemoval: { removed: [DEVICE_ID], recoveries: [] },
-        warnings: 1,
-        recoveriesAfterTheIdentifierReturned: [],
+        path: 'shadow-and-poll',
+        snapshot: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 1, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: START_TIME + 5_388_000,
+        },
+        anchors: [[DEVICE_ID, START_TIME + 5_388_000]],
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    assert.deepStrictEqual(notifications, [
+      ['success', 'Device polling'],
+      ['success', `Live device reporting for ${DEVICE_ID}`],
+      ['success', 'Credential rotation'],
+      ['success', 'The shadow connection'],
+      ['success', 'Device polling'],
+      ['failure', `Live device reporting for ${DEVICE_ID}`, liveReportingSilentLine(DEVICE_ID)],
+      ['success', 'Credential rotation'],
+      ['forget', `Live device reporting for ${DEVICE_ID}`],
+      ['forget', `HomeKit removal of ${DEVICE_ID}`],
+      ['success', 'Device polling'],
+      ['success', 'Credential rotation'],
+      ['success', 'Device polling'],
+      ['success', `Live device reporting for ${DEVICE_ID}`],
+    ]);
+    verify(failures);
   });
 
   // The store lives for the life of the process and is written back to disk, so
@@ -3778,7 +4486,7 @@ describe('DEV-05 removal reconciliation', () => {
 // Wires the real authentication client, REST client, and store behind the
 // runtime, so only the network boundary is replaced. The token cache lands in
 // this case's own storage directory, which is removed when the case ends.
-async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
+async function endToEndRuntime(t: TestContext): Promise<{ runtime: AccountRuntime; store: DeviceStateStore }> {
   const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-'));
 
   t.after(async () => {
@@ -3787,7 +4495,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
 
   const clock: Clock = { now: () => START_TIME };
   const monotonic: MonotonicClock = { now: () => MONOTONIC_START_TIME };
-  const log = recordingLog(logged);
+  const log = silentLog();
   const auth = createAuthClient({
     constants: testConstants,
     clientId: 'client-id-1',
@@ -3812,7 +4520,7 @@ async function endToEndRuntime(t: TestContext, logged: string[]): Promise<{ runt
     pollIntervalMs: POLL_INTERVAL_MS,
     rotationLeadMs: ROTATION_LEAD_MS,
     minRotationDelayMs: MIN_ROTATION_DELAY_MS,
-    failures: createFailureLog({ clock, log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
     registerSecret: () => undefined,
     onTrustworthyInventory: () => undefined,
     onDeviceRemoved: () => undefined,
@@ -4099,7 +4807,7 @@ describe('createAccountRuntimeFromConfig', () => {
       storagePath,
       clock: { now: () => START_TIME },
       monotonic: { now: () => MONOTONIC_START_TIME },
-      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect,
       httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
@@ -4109,10 +4817,26 @@ describe('createAccountRuntimeFromConfig', () => {
     assert.deepStrictEqual({ path: runtime.monitoringPath, requests: requestSpy.mock.callCount(), sockets }, { path: 'unavailable', requests: 0, sockets: 0 });
   });
 
-  test('AUTH-02 registers the bearer token and the temporary credentials with the redacting logger', async (t) => {
+  test('AUTH-02 registers the bearer token and all temporary credential roles through composition', async (t) => {
     // arrange
-    const recorded: string[] = [];
-    const log = createRedactingLogger({ delegate: recordingLog(recorded), secrets: [] });
+    const registerSecret = mock<RedactingLogger['registerSecret']>({ exactParams: true, name: 'composed credential registration' });
+    when(() => {
+      registerSecret('id-token-1', undefined);
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-access-key-id', 'aws-access-key-id');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-secret-access-key', 'aws-secret-access-key');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-session-token', 'aws-session-token');
+    }).thenReturn(undefined);
+    const log = Object.assign(silentLog(), {
+      registerSecret: (secret: string, role?: SecretRole) => {
+        registerSecret(secret, role);
+      },
+    });
     stubCloud(t);
     const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-seam-'));
 
@@ -4134,15 +4858,25 @@ describe('createAccountRuntimeFromConfig', () => {
       httpFetch: (input, init) => globalThis.fetch(input, init),
       createSalt: () => 'salt-1',
     });
-    await runtime.start();
-    await settle();
-    await runtime.stop();
 
     // act
-    log.info('the grant produced id-token-1 and the handshake used test-session-token with test-secret-access-key');
+    await runtime.start();
+    await settle();
+    const discovered = runtime.store.snapshot(DEVICE_ID);
+    await runtime.stop();
 
     // assert
-    assert.strictEqual(recorded.at(-1), 'info the grant produced [redacted] and the handshake used [redacted] with [redacted]');
+    assert.deepStrictEqual(discovered, {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    verify(registerSecret);
   });
 
   test('SYNC-04 arms the rotation on the lead and floor the caller states rather than the bundled pair', async (t) => {
@@ -4162,7 +4896,7 @@ describe('createAccountRuntimeFromConfig', () => {
       storagePath,
       clock: { now: () => START_TIME },
       monotonic: { now: () => MONOTONIC_START_TIME },
-      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect: () => {
         throw new Error('no socket expected');
       },
@@ -4207,7 +4941,7 @@ describe('createAccountRuntimeFromConfig', () => {
       storagePath,
       clock: { now: () => START_TIME },
       monotonic: { now: () => MONOTONIC_START_TIME },
-      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect: () => {
         throw new Error('no socket expected');
       },
@@ -4247,7 +4981,7 @@ describe('createAccountRuntimeFromConfig', () => {
       storagePath,
       clock: { now: () => START_TIME },
       monotonic: { now: () => MONOTONIC_START_TIME },
-      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect: () => {
         throw new Error('no socket expected');
       },
@@ -4304,7 +5038,7 @@ describe('createAccountRuntimeFromConfig', () => {
       storagePath,
       clock: { now: () => START_TIME },
       monotonic: { now: () => MONOTONIC_START_TIME },
-      log: createRedactingLogger({ delegate: recordingLog([]), secrets: [] }),
+      log: Object.assign(silentLog(), { registerSecret: () => undefined }),
       connect: () => {
         throw new Error('no socket expected');
       },
@@ -4334,7 +5068,7 @@ describe('the wired account', () => {
   test('AUTH-01 authenticates once and carries the bearer token onto every vendor route', async (t) => {
     // arrange
     const requests = stubCloud(t);
-    const { runtime, store } = await endToEndRuntime(t, []);
+    const { runtime, store } = await endToEndRuntime(t);
 
     // act
     await runtime.start();

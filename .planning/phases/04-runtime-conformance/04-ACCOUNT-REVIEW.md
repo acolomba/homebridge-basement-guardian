@@ -2444,3 +2444,180 @@ with later owning causes and independent full ACCOUNT correction pending.
 The parent owns the full combined gate after completed 04-07; none runs in this task.
 The 29 stable IDs and counter 0 continue; RUN-01 remains Pending.
 D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-012: account diagnostic notifications at the injected boundary
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_012_failure_boundary`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every prior appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This boundary repair supplies no correction round or partial clean verdict.
+
+Thirty-two lifecycle, trust and removal cases now inject an exact-parameter
+`strong-mock` FailureLog. Each states every allowed success, failure and forget
+notification with exact kinds, complete reasons and definite multiplicities.
+Each case asserts public runtime state before explicitly verifying its mock.
+The aborted-launch case permits no notification at all.
+Terminal refusals permit the authentication diagnostic and no polling, rotation
+or shadow failure. Ordinary closes permit no failure; actual shadow errors do.
+Repeated refreshes, silent polls and refused removals each notify the boundary
+on every occurrence. Distinct live-reporting and removal kinds retain both
+device identities. No logger output, severity, reminder count or redactor
+result is asserted by the account owner.
+
+State observations retain the existing path transitions, exact retry/close
+multiplicity, removal identities and no-extra-report promises. Converted silence
+cases assert complete keyed trust values. The refused-removal case independently
+expects its complete retained snapshot and exact anchor set before another retry.
+The removed-device case independently expects absence at removal and a complete
+freshly admitted snapshot and anchor after return. It also compares the entire
+13-event diagnostic timeline before final mock verification, including both
+device-scoped forgets before the returning device's success notification.
+This preserves the account's responsibility for departure versus recovery.
+The failure-log owner's success/forget distinction supplies the output policy.
+
+The incidental composition redaction case now checks public registration through
+an exact mock: bearer token without a role, plus all three AWS values under
+their exact roles. Its complete discovered snapshot and stopped path are asserted
+first. Both original 028 registration-before-use cases remain byte-identical,
+including their independently expected chronological streams.
+Redaction, reminder cadence, severity selection and recovery formatting remain
+in `test/logging.test.ts` and `test/runtime/failureLog.test.ts`.
+Those owners were read; neither is changed or newly certified here.
+
+All account logging uses a silent typed stub. Cases with no diagnostic promise
+use a plain silent FailureLog stub. The local harness accepts an optional third
+FailureLog argument; existing two-argument calls remain compatible.
+`Harness.logged` retains its existing type/member shape as an empty compatibility
+array. It is not populated or asserted and supplies no logging evidence.
+`fakeShadow`, `recordingAnchors`, all existing private interfaces and their fields
+remain unchanged apart from that explanatory comment.
+
+### Local orphan cleanup and actual rule applicability
+
+Pre-edit HEAD was `d4c8e5bd13d25772a8053989518ee0955a133163`, on
+`features/code-review-sweep`, with clean status and empty index.
+Before edits, the fixer read complete AGENTS and all five complete project books,
+amended 04-07, full 04-11-SUMMARY, newest protocol, this entire report,
+the complete 1328-line source and 4356-line owner, including full headers.
+Actual callers were traced through the local harness, both factories,
+poll/rotation/terminal/shadow/removal paths, platform and both World compositions.
+The complete failure-log source/owner and logging source/owner were read.
+The exact three-path Fallow guard passed before repository edits.
+
+Fresh exact queries for recordingLog, countOf, countOfLine, recoveriesIn,
+liveReportingRecoveredLine and Harness.logged ran separately in both compiler
+projects. All twelve returned raw exit **2**, unavailable/not-found, without a
+complete selected-project result. They remain retained under
+`/private/tmp/guardian-04-account-012-pretrace/`; none is deletion permission.
+The installed help and lexical consumers were also inspected.
+
+The protocol's exact private-alias/member deletion restriction does not cover
+local nonexported function declarations. AGENTS requires removing functions,
+imports and variables this change orphans. Applying that actual scope removes
+only the five logger-only local functions above, the unused discovery-output
+constant and imports. The local endToEndRuntime helper loses its newly unused
+logger-array parameter; its sole lexical caller stops passing an empty array.
+No private alias/member is deleted, and no shared/exported contract, API,
+configuration or visibility changes. This is rule applicability, not a waiver
+or a complete private-symbol trace. No artificial calls, test-only exports,
+suppression or generic helper directory is introduced.
+
+### Separate assertion maintenance control
+
+The plausible wrong behavior omits the live-reporting forget when a device
+leaves the account. Canonical removal, anchor pruning and later admission still
+succeed, while the failure-log boundary retains the previous device's cause.
+Compilation and direct coverage cannot establish the missing notification.
+
+The temporary source edit deletes only
+`options.failures.forget(liveReportingKind(deviceId))` from successful removal.
+Fresh compilation exits 0. The exact target is
+`^DEV-05 removal reconciliation forgets both reporting kinds when a removed device returns as a new admission$`.
+Public removal, fresh canonical snapshot, exact anchor and empty command-attempt
+assertions pass first. The independent whole notification stream then fails
+with native ERR_ASSERTION/deepStrictEqual: its actual stream omits exactly
+`['forget', 'Live device reporting for account-1_serial-1']`.
+One test executes and fails, with zero skip/cancel/todo.
+This is the intended owning assertion, not setup, compilation or mock-dispatch
+failure, and not genuine production RED.
+
+The source was restored through Git and compared byte for byte with saved bytes.
+Source before/restored blob: `641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+Temporary control blob: `2ee564f6e4da9fe513259f5eda35987bf6fb4c13`.
+A fresh restored build and the exact named target both exit 0.
+The final owner blob is `02d887c020d72e9c61f6c73036b0192580bee2c9`.
+No control mutation enters Git or the genuine RED history.
+
+### Verification location and retained native evidence
+
+All builds, owners, direct checks and source controls ran serially in the existing
+linked feature checkout with `workflow.use_worktrees=false`.
+No worktree, branch or recovery sentinel was created.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3 and Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-012/`.
+Each command record retains exact executable/argv, cwd, HEAD, input blobs,
+UTC start/end, raw child exit and complete separate stdout/stderr.
+Saved complete before bytes, input manifest, dirty diff, lexical callers,
+control patch and final owner support input and restoration comparisons.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard.json in the pretrace directory | Exact three owned paths before edits; exit 0, no configured zones/rule packs. |
+| baseline-build-final.json, baseline-target-final.json | Fresh build and exact timeline target; both exit 0. |
+| control-build.json, control-target.json | Temporary-source build 0; intended whole-notification assertion failure 1, 14:04:41.844–14:04:42.135 UTC. |
+| restore-source.json, restored-build.json, restored-target.json | Git restoration, fresh build and named GREEN; all exit 0. |
+| build-final.json | Fresh npm run build:test; exit 0, 14:05:38.037–14:05:40.803 UTC. |
+| owner-final.json | Full compiled owner with TAP; exit 0, 153 pass, zero fail/cancel/skip/todo. |
+| direct-final.json | Exact source/owner test:coverage:direct selector including fresh build; exit 0. |
+| native-coverage-final.json | Full owner and exact-source include with all three 100% thresholds; exit 0. Native compiled lines 995/995, functions 57/57, branches 180/180. |
+| lint-final.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| audit.json | Original base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass. |
+| evidence-gate.json, provenance-1.json | Unchanged RED CLI and SAME installed recursive classifier; all six records RED_EVIDENCE_OK, exit 0. |
+| pre-step-1.json | Required exact two-path SKIP=npm-check pre-commit; exit 0, clean with no formatter changes. Repeated after this report update before staging. |
+
+The first patch-generation attempt failed before a repository edit because its
+assertion removal also removed an AAA marker. Its terminal tool output is retained.
+The first edited candidate then failed build and lint because its expectation
+generator read the wrong object and left a computed logger-output assertion.
+Complete native errors remain in build-1.json and lint-1.json; both were corrected
+before the first owner run. A later timeline baseline failed because the fixture's
+connected notification had not settled before the first clock advance.
+The removal case now explicitly settles initial readiness before that advance.
+The complete baseline-target.json failure remains; the subsequent baseline,
+control and restored checks use the corrected case. None is genuine RED.
+
+Provenance checks all 138 authored test declarations remain: 33 converted cases
+and 105 preserved cases, allowing only silent-stub/caller substitutions in the
+otherwise unchanged cases. Every one of the 116 authored empty command-attempt
+assertions remains exact; generated rows retain their previous execution count.
+Original 024/025 regression bodies, both 028 cases and both private stateful
+fixture bodies remain byte-identical. All 015 contract assertions and structured
+negative controls remain unchanged. All private interface shapes remain intact.
+Every other tracked input matches the initial manifest. The full production
+source has no final diff. The six-record RED file retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, with every archived stream intact.
+The native compiled denominator above is the actual current run; it is not
+substituted for prior 181-branch records or merged source-map LCOV.
+Selected direct checks do not refresh merged all-pair coverage.
+
+### Atomic commit and remaining scope
+
+The atomic commit introducing this appendix and the owner repair is titled
+`test: verify account diagnostics at the failure boundary`.
+Its only final paths are `test/runtime/accountRuntime.test.ts` and this report.
+The production path was used only for the restored temporary control.
+Exact clean `SKIP=npm-check pre-commit run --files` precedes staging and repeats
+after report or formatter changes. Native branch/HEAD/index assertions,
+authorized linked-index staging and plain foreground normal commit records
+retain the actual terminal result and hash. No hook bypass, amend, stash,
+rebase or history rewrite is used.
+
+Only original 012 is implemented here. Original 013 remains the separate 04-07
+API/registration/listener mock-conformance cause; existing unrelated violations
+are not silently repaired. Later owning causes and independent full ACCOUNT
+correction remain pending. The parent owns the full combined gate after completed
+04-07; no full npm run check runs in this task. RUN-01 remains Pending.
+The 29 stable IDs, counter 0 and D-03 remain unchanged.
+WINDOWS 46/47/48 remain OPEN and unwaived.
