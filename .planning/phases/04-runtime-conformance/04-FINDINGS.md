@@ -33,20 +33,20 @@ lines and 3,365 owner lines; line-count changes never shrink the full review.
 | POLICIES | src/runtime/retryPolicy.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | POLICIES | test/runtime/retryPolicy.test.ts | core | e25e26e; full file/header | Round 2;52fe134; clean | Approved; independently inspected |
 | TRUST | src/runtime/arrivalAnchors.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
-| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | Historical round 2; current ACCOUNT correction pending | Approved; independently inspected |
+| TRUST | test/runtime/arrivalAnchors.test.ts | core | 23a2511; full file/header | TRUST round 2 historical; ACCOUNT round 1 at d785fd7 reviewed, batch 15 open | Approved; independently inspected |
 | TRUST | src/runtime/monitoringHealth.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
 | TRUST | test/runtime/monitoringHealth.test.ts | core | 23a2511; full file/header | Round 2; 9782919; clean | Approved; independently inspected |
-| TRUST | test/runtime/arrivalAnchorMemoryContract.ts | Actual helper; 04-06-03 | 0ad981c; full file/header | Historical round 2; current ACCOUNT correction pending | Approved; independently inspected |
-| ACCOUNT | src/runtime/accountRuntime.ts | core | e6f49a5; full1283lines/header | Pending; counter0 | Applied604d072; correction pending |
-| ACCOUNT | test/runtime/accountRuntime.test.ts | core | e6f49a5; full3365lines/header | Pending; counter0 | Applied604d072; correction pending |
-| ACCOUNT | test/runtime/accountShadowContract.ts | Actual helper; 04-11-02 | Added4fc498c; full review pending | Pending ACCOUNT | Applied; full review pending |
+| TRUST | test/runtime/arrivalAnchorMemoryContract.ts | Actual helper; 04-06-03 | 0ad981c; full file/header | TRUST round 2 historical; ACCOUNT round 1 at d785fd7 reviewed, batch 15 open | Approved; independently inspected |
+| ACCOUNT | src/runtime/accountRuntime.ts | core | e6f49a5; full1283lines/header | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | test/runtime/accountRuntime.test.ts | core | e6f49a5; full3365lines/header | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | test/runtime/accountShadowContract.ts | Actual helper; 04-11-02 | Added4fc498c; full review pending | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
 | ACCOUNT | test/runtime/accountRuntimeSeeds.ts | Actual concern seeds; 04-09-02 | Added d785fd7; entire 121 lines reviewed in correction 1 | Round 1; batch 15 open | Complete approved header reviewed |
 | ACCOUNT | src/cloud/shadow.ts | Real consumed adapter; current correction scope | Entire 478 lines reviewed at d785fd7 | Round 1; batch 15 open | Complete approved header reviewed |
-| ACCOUNT | test/cloud/shadow.test.ts | Adapted owner; 04-11-02 | Prior cloud review historical | Pending ACCOUNT | Preserve; current full review pending |
-| ACCOUNT | src/accessories/reconciliation.ts | Bounded dependency; 04-08-03 | Header e914a62; contract 020498a | Pending ACCOUNT | Applied; correction pending |
-| ACCOUNT | test/accessories/reconciliation.test.ts | Bounded dependency owner; 04-08-03 | Header e914a62; five additive cases 020498a | Pending ACCOUNT | Applied; correction pending |
-| ACCOUNT | src/platform.ts | Bounded identity handoff; 04-12-02 | Integration 6c82ec9; full review pending | Pending ACCOUNT | Applied b7bae4a; correction pending |
-| ACCOUNT | test/platform.test.ts | True-owner regression; 04-12-02 | RED 9f7649e; GREEN 6c82ec9; full review pending | Pending ACCOUNT | Existing conforming header preserved; correction pending |
+| ACCOUNT | test/cloud/shadow.test.ts | Adapted owner; 04-11-02 | Prior cloud review historical | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | src/accessories/reconciliation.ts | Bounded dependency; 04-08-03 | Header e914a62; contract 020498a | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | test/accessories/reconciliation.test.ts | Bounded dependency owner; 04-08-03 | Header e914a62; five additive cases 020498a | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | src/platform.ts | Bounded identity handoff; 04-12-02 | Integration 6c82ec9; full review pending | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
+| ACCOUNT | test/platform.test.ts | True-owner regression; 04-12-02 | RED 9f7649e; GREEN 6c82ec9; full review pending | Round 1 at d785fd7; batch 030–044 open | Complete approved header reviewed |
 
 Initial helper inventory is empty. Add every actual helper and every narrowly
 required external adaptation as its own exact row before edits, with owning
@@ -60,7 +60,7 @@ No source-only license result substitutes for owner/helper header inspection.
 | PORTS | 04-01/02 | 04-PORTS-REVIEW.md | 7 accepted at 6f475a0 | 3; clean at dd5ea2d | None; 0 |
 | POLICIES | 04-03/04 | 04-POLICIES-REVIEW.md | 12 accepted at e25e26e | 2; clean at52fe134 | None;0 |
 | TRUST | 04-05/06 | 04-TRUST-REVIEW.md | 15 accepted at23a2511 | 2; clean at9782919 | None; 0; all17 fixed |
-| ACCOUNT | 04-07/11/12/08/09 plus pending follow-ups | 04-ACCOUNT-REVIEW.md | 29 accepted at e6f49a5 | Round 1 at d785fd7; 29 fixed, 15 new | 030–044; 6 BLOCKER, 9 WARNING |
+| ACCOUNT | 04-07/11/12/08/09/13–17 | 04-ACCOUNT-REVIEW.md | 29 accepted at e6f49a5 | Round 1 at d785fd7; 29 fixed, 15 new | 030–044; 6 BLOCKER, 9 WARNING |
 
 D-03 requires opening/fixed/rejected/new/reopened/closing ID sets/counts for each
 independent full correction. No-progress with open findings, a reopened fix, or
@@ -741,3 +741,57 @@ A required parent full combined gate follows this terminal review; prior 167dc3b
 09 is already at three tasks. New repair paths and maximum-three-task follow-ups must be explicitly declared before edits.
 Original IDs and counter 1 remain continuous across those sequential plans. No partial-scope review, reset or silent extension is authorized.
 WINDOWS 46–53 remain OPEN and unwaived. RUN-01 stays Pending; configuration restoration remains a parent obligation before final milestone audit/handoff.
+
+
+## Declared sequential ACCOUNT correction follow-ups
+
+Five additive plans 13–17 and bounded 09/10 amendments passed fresh independent plan verification after one revision: 0 blockers and 0 unresolved warnings.
+The declaration is planning only; no finding 030–044 is repaired by a plan or forecast.
+Current count stays 44 accepted, original 29 independently fixed, 15 open, continuous correction counter 1.
+The non-circular execution graph is completed 08+12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 09 closeout -> 10 seal, waves 11–17.
+Original 09 source repairs and its actual 8a700ac ledger remain preserved as already committed checkpoints.
+
+| Plan | Exact assigned causes | Tasks | Maximum per-cause paths |
+| --- | --- | ---: | --- |
+| 13 | 030 replacement ownership; 031 refused registration; 044 poll deadline | 3 | 5 / 5 / 3 |
+| 14 | 032 callable bindings; 033 current comments; 034 typed API double/port | 3 | 5 / 4 / 4 |
+| 15 | 035 silent logging; 036 finite exact mocks; 037 fresh seeds | 3 | 5 / 3 / 4 |
+| 16 | 038 deferred signals; 039 with 040/041 explicit overlap; 042 real HTTP absence seam | 3 | 3 / 5 / 3 |
+| 17 | 043 whole trust forwarding; complete current correction 2 | 2 | 3 / 1 |
+
+New or conditional paths declared before any execution are test/platformSeeds.ts,
+test/architecture/platformWiring.test.ts, existing eslint.config.js and conditional test/logging.test.ts/platform source adaptation.
+They are planned scope, not yet actual changed artifacts. Every path actually used joins exact inventory, header review, checks and full current correction.
+The architecture owner uses the already installed parser and existing unpaired-test discovery; no sixth tooling path or dependency is needed.
+No src/logging.ts edit is authorized; its consumed contract and complete pair join review if the owner is actually adapted.
+
+030 and 031 require true-owner unchanged-production assertion RED and actual parent evidence-only commits before production GREEN.
+The existing fourteen ACCOUNT and two PLATFORM records stay complete inside any later recursive history.
+Every atomic cause includes its report, declaration, evidence and any helper within the five-path total.
+All original regression promises remain, with saved/current comparisons accounting for stronger assertions, grouping and declared fixture resets.
+Fresh typed cause workers and one whole independent reviewer retain all five books and exact caller/guard/trace rules.
+The parent supplies full npm run check after each terminal plan, after 09 and at phase end.
+
+The revised seal validates each historical round against its actual committed report and revision-qualified path/blob snapshot.
+Only the latest full ACCOUNT correction must match the complete expanded current inventory and current blobs.
+Historical PORTS round 2 preserves its actual 1-to-1 stop, the recorded bounded maintainer option-1 resolution, unchanged counter and actual clean round 3.
+A later clean result alone never resolves a historical stop; a pending or new trigger blocks all work. No historical evidence or future authorization is fabricated.
+
+Aggregate plan estimates remain above the advisory 100,000-token smart zone and were raised after actual input-size estimates.
+Separate fresh serial controller/fixer and whole-review forecasts use the configured 1,000,000-token window, bounded tool output, complete read ranges and normal host compaction.
+Byte-count/4 is an estimate convention, not measured harness usage, host capacity or a guaranteed fit. Full read/review scope is not reduced.
+Current full gate passed at 278b8713fc4ff015aad135641b4ccec1452a8a43, Node v26.11.1, UTC 21:05:17.541777–21:05:52.613556 on 2026-10-15.
+Six static checks, 104 Cucumber scenarios, 1156 steps and 43 isolated pairs passed.
+Native metadata: /private/tmp/guardian-phase4-correction1-full-gate.json; output: /private/tmp/guardian-phase4-correction1-full-full-check.log.
+Only planning Markdown changes since those inputs; exact comparison governs any reuse.
+
+The threat inventory now includes declared T-04-22–28 alongside original T-04-01–21 and SC; these are mitigation obligations, not observed passes.
+Existing E-04-01 and both descriptorless prohibitions retain their actual pending human judgments and serializer representation.
+WINDOWS 46–53 remain OPEN/unwaived. RUN-01 remains Pending. Restore only workflow.use_worktrees=true before final milestone audit/handoff.
+
+
+The first parent declaration pre-step returned 1 because end-of-file-fixer normalized blank lines in new plans 13–17.
+Planner guards existed before their writes, but the parent had not refreshed these five path guards immediately before its formatter run.
+WINDOWS 54 records that ordering gap. The full subsequent path guard and clean retry cannot provide historical pre-formatter proof.
+No source or semantic plan content changed; raw output is /private/tmp/guardian-04-followups-parent-prestep.stdout.
+WINDOWS 46–54 now remain OPEN and unwaived. Executors must freshly guard every concrete formatter/pre-step path before a potentially mutating run.
