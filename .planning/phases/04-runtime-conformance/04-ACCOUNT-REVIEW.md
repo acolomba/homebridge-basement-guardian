@@ -998,3 +998,100 @@ independent correction, not a recalculated correction-round verdict.
 Round-zero's 29 findings and all initial observations remain historical facts.
 RUN-01 remains Pending. D-03 stop rules and historical WINDOWS 46/47 remain
 unchanged and unwaived.
+
+## CR-04-ACCOUNT-025: active unchanged-production RED handoff
+
+Prepared by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_025_red`, on 2026-10-15.
+This appendix preserves the complete initial report and both 024 appendices.
+It records evidence preparation only. Original 025 remains OPEN; 024 retains
+its implementation disposition pending independent full ACCOUNT correction.
+The original 29 finding IDs and correction counter **0** are unchanged.
+
+The active mirrored-owner case is
+`waits until a distant credential expiry using only representable native timer delays`,
+at `test/runtime/accountRuntime.test.ts:623`. It starts the public
+`createAccountRuntime` with a valid expiry fifty days away and a ten-ms lead.
+Its intended refresh deadline is 4319999990 ms. A context-owned method spy
+observes the actual `node:timers/promises` object after the context enables
+timer mocks. No timer method implementation is replaced by this spy.
+The case observes the public monitoring path, every requested native delay,
+and independent refresh counts across two representable waits and the final
+remaining deadline. It requests no new refresh interval or invalid-date policy.
+
+The final named and full-owner runs execute the intended `deepStrictEqual`
+for timer representability. Both fail with `ERR_ASSERTION`: the runtime passes
+`[4319999990, 2172516343]` as out-of-range delays, where the expected set is
+exactly `[]`. The public `shadow-and-poll` assertion passes first. The following
+independent no-early-refresh/deadline assertion stays active, but this RED stops
+at the timer-range assertion. The existing 024 case remains byte-identical
+and passes in the full owner. There is no setup, compilation, import,
+TypeError, skip, cancellation, source mutation control, or logger assertion
+supplying this RED.
+
+The timer mocks provide deterministic scheduling. Their behavior does not
+establish native timer clamping. A separate actual-native probe at current
+source HEAD records requestedDelay=4319999990 and effectiveDelay=1, plus the
+complete native `TimeoutOverflowWarning` and its one-ms fallback message.
+The probe clears the timer immediately. It opens no cloud boundary and waits
+for no elapsed deadline. The initial review's independent native probe and
+its original raw streams remain intact and are also retained in the record.
+
+### Native attempts and verification location
+
+All checks ran in the existing linked `features/code-review-sweep` checkout,
+with `workflow.use_worktrees=false`, Node v26.11.1 and npm 11.20.0.
+No worktree or branch was created. Native captures are retained under
+`/private/tmp/guardian-04-account-025-red/`. Each command has complete separate
+stdout/stderr, exact argv, raw child exit, UTC start/end, versions and HEAD.
+
+| Native record | Command/scope and raw result |
+| --- | --- |
+| `guard.json` | Installed Fallow guard on exactly the three authorized paths before edits; exit 0, no configured zones/rule packs. |
+| `owner-format.json`, `owner-format-2.json` | Exact owner Prettier; both exit 0, unchanged. |
+| `owner-lint.json`, `owner-lint-2.json` | Exact owner ESLint, max warnings 0, no cache; both exit 0. |
+| `build.json`, `build-2.json` | Fresh `npm run build:test`; both exit 0; complete npm stdout/stderr retained. |
+| `target.json`, `owner.json` | First exact named/full-owner attempts; exit 1, only the new 025 case fails. These preliminary failures precede execution of the timer-range assertion. |
+| `target-2.json` | `node --test --test-reporter=tap '--test-name-pattern=^waits until a distant credential expiry using only representable native timer delays$' dist-test/test/runtime/accountRuntime.test.js`; exit 1, one intended timer-range assertion failure, zero skip/cancel/todo. |
+| `owner-2.json` | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js`; exit 1, 136 tests, 135 pass, only 025 fails, zero skip/cancel/todo. |
+| `native-timer-bound.json` | Isolated actual-native timer probe; exit 0, effective one-ms delay and native overflow warning. This observation is distinct from an intended regression run. |
+| `current-installed-gate.json` | Installed CLI on the actual on-disk pair record; exit 0, `RED_EVIDENCE_OK`, `target_test_failed`. |
+
+The first named/full runs failed the independent timing assertion with refresh
+counts 2,3,3,4 instead of 1,1,1,2. Their bounded-delay assertion had not run.
+Both complete streams, original owner blob and full original regression patch
+remain separately archived. The final preparation places the intended
+timer-range assertion after public path state and before the timing assertion.
+The final fresh build precedes both final native runs. No preparation attempt
+is discarded, and no mocked timing result is called native-clamp proof.
+
+### Evidence history and unchanged production
+
+The pair record is
+`.planning/phases/04-runtime-conformance/04-ACCOUNT-RUNTIME-RED-EVIDENCE.json`.
+Its root is the final full-owner 025 run. `priorEvidence[0]` is the ENTIRE
+previous 024 root, including its recursively nested earlier named run and
+every other original field. Its raw original JSON is retained too. The saved
+previous blob is `137389f36157ae9a3df284d618e929c0d2eaa416`, from evidence
+commit `250516bb892a3d88bd5c63826ed3073876e4fad6`.
+The other three direct archives preserve both preliminary 025 runs and the
+final named 025 run. The SAME installed `classifyRedEvidence` recursively
+accepts all six root/archive records as `RED_EVIDENCE_OK`. The installed
+`check tdd-red-evidence` CLI separately accepts the actual on-disk pair file.
+No second report parser or external evidence-path gate is used.
+
+Source HEAD remains `c179545bf4d2bb1aa35a3e4b204b92f3930b1941`.
+Production `src/runtime/accountRuntime.ts` retains blob
+`79128e3d0a6387c68d26266368138589b71c6e14`, including the implemented 024
+guards. All 44 tracked `src/` files match that commit byte for byte, and
+`git diff -- src` is empty. The final active owner blob is
+`9d146246782548769812b926fb9a627d45bbfb5c`. The full patch, original/current
+owner blobs, compiled hashes and production manifest are retained in the
+record. The original report bytes remain an exact prefix of this appendix.
+
+No staging, commit, GREEN production edit, source control, direct-coverage
+success, full `npm run check`, finding closure, correction review, ancillary
+summary, or shared-state advancement is claimed. The failing owner remains
+unstaged. The parent alone must commit the complete planning evidence through
+the required clean pre-step and ordinary hooks before any 025 GREEN edit.
+All cause budgets, D-03 stop conditions and historical limits remain in force.
