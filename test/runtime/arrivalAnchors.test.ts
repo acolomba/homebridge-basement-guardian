@@ -18,6 +18,8 @@ import { mock, verify, when } from 'strong-mock';
 
 import { ARRIVAL_ANCHOR_FILENAME, createArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 
+import { ARRIVAL_ANCHOR_MEMORY_CASES, ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS, assertArrivalAnchorMemoryContract } from './arrivalAnchorMemoryContract.js';
+
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { LogLevel, Logging } from 'homebridge';
 import type { TestContext } from 'node:test';
@@ -70,6 +72,28 @@ function storeOver(storagePath: string, recorded: string[]): ArrivalAnchors {
 
 async function writeAnchorText(storagePath: string, text: string): Promise<void> {
   await writeFile(join(storagePath, ARRIVAL_ANCHOR_FILENAME), text, 'utf8');
+}
+
+for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
+  test(`${ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.real.factoryName} ${contractCase}`, async (t) => {
+    // arrange
+    const storagePath = await createStoragePath(t);
+    const log: Logging = Object.assign(() => undefined, {
+      prefix: 'basement guardian',
+      debug: () => undefined,
+      error: () => undefined,
+      info: () => undefined,
+      success: () => undefined,
+      warn: () => undefined,
+      log: () => undefined,
+    });
+
+    // act
+    const anchors = createArrivalAnchors({ storagePath, log });
+
+    // assert
+    assertArrivalAnchorMemoryContract(anchors, contractCase);
+  });
 }
 
 test('D-08 restores nothing and says nothing on a first start, when no anchor file exists yet', async (t) => {

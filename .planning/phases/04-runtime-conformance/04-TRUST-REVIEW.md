@@ -1499,3 +1499,180 @@ contract addition, and optional trusted supplier threat **T-04-21**. The current
 clock/anchor, account/device and narrow-trust behavior remains unchanged under
 T-04-11/12. Parent-owned full wave-six gate, shared records and RUN-01 remain
 pending. No live/private/vendor/hardware/package/release action is claimed.
+
+## 012 consumed-memory contract and preserved private participants
+
+Fixer `/root/phase4_trust_finish/arrival_memory_contract` executes only amended
+task 04-06-03 under the parent's exclusive serial writer/build/control/Git
+lease. The existing linked feature checkout is the execution directory:
+`/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+The entry revision is `42003d3099d21487497d21b10eaa57cf85b81fde`, branch
+`features/code-review-sweep`. The original plan marker remains
+`a6d68bcacbf95343b6434d4930f026a943f81b1e`; TRUST's audit base remains
+`23a2511ac6deb26869db8d3c44916623a27ec997`.
+
+The earlier bounded plan amendment is actual ancestor
+`86ed892e46ad358e8aedcd671ad0d51337636dee`. This cause changes exactly four
+code/report paths: new `test/runtime/arrivalAnchorMemoryContract.ts`, both
+existing TRUST owners, and this report. The parent's prior plan amendment is
+the fifth cause path. The separate coordinator isolation-maintenance commit
+`42003d3` changes config/protocol, not this cause's code inventory. No sixth
+cause path, production edit, Seeds file or external adaptation is introduced.
+The ordinary monitoring documentation cause is now actually committed as
+`a4246b9a7a53fcd73f8e96b9035b10c981bc5bf1`, following `6d4b84a`, `a4b018f`,
+`8bb9880` and `391cafe`. Those five commits remain distinct from this cause.
+
+### Stopped isolation attempts and actual documented resolution
+
+The injected fixer setup required a new temporary worktree while the project
+flag was true. The first attempt stopped before edits. The clarification that
+this was already a linked worktree did not supply the literal role exception;
+the second attempt also stopped without edits. The coordinator then used the
+registered config-set command and normally committed the run-scoped false
+setting and protocol record in `42003d3`. This fixer's recorded
+`config-opt-out` query subsequently returned raw 0 and literal `false`.
+The documented role opt-out therefore applies to this execution: no additional
+worktree, branch, recovery sentinel or cleanup tail is created. The parent
+owns restoring the setting later. This is no retroactive compliance claim
+about earlier fixers or a waiver of historical process exceptions.
+
+Before edits the fixer read complete AGENTS, all five TypeScript/verification
+books, amended plan, CONTEXT, RESEARCH, PATTERNS, REVIEW-PROTOCOL, the entire
+continuing report, 04-05 SUMMARY, FINDINGS, STATE, REQUIREMENTS and canonical
+intel decisions. Both complete TRUST pairs and actual store/health factory
+callers were read. Health calls only `anchors.get` and `anchors.record`;
+account runtime separately owns restore, persist and forgotten-key pruning.
+The exact four-path Fallow guard returned 0 before any repository edit. It
+reported no configured boundary zones or rule packs; no detector coverage is
+inferred from that absence.
+
+The retained `/private/tmp/guardian-04-monitoring-pretrace/assessment.json`
+records raw-2 unavailable exact private-target queries in both compiler
+projects. Its initial case-insensitive filename collision and numbered reruns
+remain disclosed. No neighboring public target or lexical result supplies
+deletion permission. The present repair preserves exact names, signatures and
+ENTIRE parsed declaration bodies for RecordingAnchors, including stored,
+recordingAnchors, healthWithAMessageAtStart and healthWithTwoAdmittedDevices
+against `a4246b9`. The stateless anchorsThatStoreNothing declaration is also
+exactly preserved. Fake restore/persist and existing stored observations are
+unchanged; no private fixture is exported.
+
+### Contract scope, participant inventory and negative control
+
+The new concern-specific support contains one direct assertion function whose
+port is `Pick<ArrivalAnchors, 'get' | 'record'>`. It performs no registration,
+disk operation or production change. Five separately registered owner cases
+check missing keys, zero, finite numbers, replacement and distinct-device
+independence. Every whole expectation is a literal independent answer. The
+two-device case compares both devices before and after replacing one with
+zero, so cross-device leakage fails the complete observation.
+
+The same file contains a typed participant inventory naming both actual owner
+paths and factories. Both owners use their inventory factory name in the
+contract case titles and call the same assertion function. The real participant
+uses createArrivalAnchors with a silent logger and a case-owned mkdtemp whose
+cleanup is registered before acting. Construction opens no storage, and these
+cases call only memory operations. Each monitoring case creates the existing
+recordingAnchors participant afresh. There is no generic runner or test of a
+registration-only helper.
+
+String device keys and numeric anchors have no mutable input or output alias to clone.
+The consumed port exposes no enumeration, so ordering is outside this contract.
+It exposes no deletion operation; health forgets its elapsed stamp while account
+runtime owns durable anchor pruning. Disk/JSON validation and durable-format,
+restore/persist semantics remain exclusively in the real adapter's existing
+owner cases. The fake's no-op disk operations gain no equivalence claim.
+The contract intentionally states only the actual get/record memory agreement.
+
+One private broken participant loses a recorded zero. Its passing negative
+control calls the SAME assertion function and catches the intended
+AssertionError. It independently compares the whole structured fields:
+`actual: { anchor: undefined, otherAnchor: undefined }`,
+`expected: { anchor: 0, otherAnchor: undefined }`, and
+`operator: 'deepStrictEqual'`. Class and exact fields are checked; no message
+substring, unrelated thrown error or expected answer from the contract is used.
+The native whole-owner run and separately named negative-control run both pass.
+No production mutation or genuine RED history is created, and no failing or
+skipped test is committed.
+
+### Current native verification and limits
+
+Every record under `/private/tmp/guardian-04-memory-contract/` retains exact
+argv, repository-root cwd, UTC start/end, raw child exit, Node/npm, before/after
+HEAD, all four TRUST blobs plus support/report/RED blobs, full tracked/staged
+diffs and complete untracked bytes. Separate stdout/stderr streams remain
+untouched. Verification runs in the **existing main checkout**, isolation none,
+on Node **v26.11.1**, npm **11.20.0**, entry HEAD `42003d3` with exact dirty
+input snapshots. The recorder and identity programs are retained in
+`/private/tmp/guardian-memory-record.py` and `guardian-memory-identity.cjs`.
+
+| Native record | Actual command / scope | Raw result |
+| --- | --- | --- |
+| typecheck-final | `npm run typecheck` | 0; both strict projects |
+| lint-final | Complete three-TS-file ESLint, `--max-warnings=0` | 0 |
+| format-final | Complete three-TS-file Prettier check | 0 |
+| build | `npm run build:test` | 0; fresh compilation before owners |
+| owners | Native TAP for both whole compiled TRUST owners | 0; 56 pass, 0 fail/cancel/skip/todo; 18 arrival and 38 monitoring |
+| negative-control | Native TAP for the exact zero-loss control title | 0; the intended AssertionError is caught and checked |
+| arrival-direct | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | 0; isolated 100% lines/functions/branches |
+| monitoring-direct | `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | 0; isolated 100% lines/functions/branches |
+| identity | `node /private/tmp/guardian-memory-identity.cjs` | 0; ARRIVAL_MEMORY_IDENTITY_OK |
+
+Whole owners ran 2026-10-15T03:57:59.027424Z–03:57:59.337679Z. Arrival direct
+ran 03:57:59.804958Z–03:58:03.300019Z; monitoring direct ran
+03:58:03.776663Z–03:58:07.177080Z. The direct selectors enforce complete
+matching executable LCOV and delete temporary pair reports. No per-pair
+denominators, declaration exception or merged all-pair coverage are invented.
+The new support selects ALL pairs in the normal staged commit checks. These
+focused checks and the later broad staged gate do not claim a full npm run
+check, Cucumber result, independent TRUST correction or wave-six completion.
+
+The identity program also checks complete current headers, unchanged production
+bytes, original report as an exact prefix, unchanged arrival RED JSON and real
+evidence-before-fix ancestry, allowed-path scope, branch/root, preserved plan
+marker and isolation setting. Checked blobs: support
+`ca2e045bfeac340c9e7be10bf1de13836c02cf1e`, arrival owner
+`20f52ff906ccbf4dbdaf4e6583d74de112592bc9`, monitoring owner
+`09a2cda2a37697824185e8dc65d81452a7209fe9`.
+
+Earlier draft lint failures and the subsequent formatter failure remain raw
+failures in their native records. ESLint and Prettier required incompatible
+switch indentation; the helper now uses direct conditionals, passing both
+without suppression or tool configuration change. The initial negative-control
+draft also needed an explicit zero-loss condition and a block callback to meet
+the lint rules. These were draft corrections before any owner/control execution
+or staging. No unsuccessful draft is relabeled as passing evidence.
+
+012 is applied pending its normal four-path cause commit and independent FULL
+TRUST correction. All original **15** IDs remain formally open, independently
+fixed **0**, correction counter **0**, with no new/rejected/reopened ID or D-03
+reset. Full correction must read all four original current files and the entire
+new support file, and retain high **T-04-21** in the security/seal inventory.
+The immutable 002 evidence chain remains unchanged. Parent-owned full gates,
+shared records and RUN-01 remain pending. No package, live vendor, hardware,
+private account input, new API, storage format or privacy permission is added.
+
+### 012 recorded-base audit and clean commit preparation
+
+The native `audit` attempt returned raw **2** because the sandbox could not
+create its temporary comparison worktree for base `23a2511`. That complete
+failed stdout/stderr remains retained. The routine authorized filesystem retry
+`audit-authorized` ran 2026-10-15T04:00:20.924987Z–04:00:21.763313Z and
+returned raw **0**, JSON kind `audit`, verdict **pass**, with no findings.
+Its warning about two generated tsbuildinfo entry points is preserved; no
+configured architecture or policy-detector coverage is inferred.
+
+The exact four-path `prestep` ran
+`env SKIP=npm-check pre-commit run --files test/runtime/arrivalAnchorMemoryContract.ts test/runtime/arrivalAnchors.test.ts test/runtime/monitoringHealth.test.ts .planning/phases/04-runtime-conformance/04-TRUST-REVIEW.md`
+from 04:00:31.063840Z–04:00:33.551173Z and returned **0**, clean, with no
+formatter changes. It preceded any staging. Only that approved pre-step uses
+SKIP; the foreground commit uses ordinary hooks. After this report-only append,
+the same exact pre-step must pass clean again before stage. The subsequent
+native `prestep-final`, `stage` and `commit` records retain their actual raw
+outcomes; no future commit hash or hook result is asserted in this report.
+
+`prestep-final` returned clean 0 before staging. The sandbox `stage` wrapper
+returned 1 after underlying git add returned 128: external linked-worktree
+index.lock creation was denied. No file was staged by that attempt. The native
+failure is retained. A fresh exact clean pre-step precedes the routine
+authorized metadata retry; no hook bypass or content rollback is needed.

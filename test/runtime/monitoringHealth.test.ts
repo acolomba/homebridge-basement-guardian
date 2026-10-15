@@ -13,6 +13,8 @@ import { test } from 'node:test';
 
 import { createMonitoringHealth, HEARTBEAT_INTERVAL_MS, MISSED_HEARTBEATS_BEFORE_SILENT, REST_FAILURE_THRESHOLD } from '../../src/runtime/monitoringHealth.js';
 
+import { ARRIVAL_ANCHOR_MEMORY_CASES, ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS, assertArrivalAnchorMemoryContract } from './arrivalAnchorMemoryContract.js';
+
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringHealth } from '../../src/runtime/monitoringHealth.js';
@@ -136,6 +138,53 @@ function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock, a
 
   return health;
 }
+
+for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
+  test(`${ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.monitoring.factoryName} ${contractCase}`, () => {
+    // arrange
+    const anchors = recordingAnchors();
+
+    // act
+    assertArrivalAnchorMemoryContract(anchors, contractCase);
+
+    // assert
+    assert.deepStrictEqual(anchors.get('placeholder-missing-device'), undefined);
+  });
+}
+
+test('rejects an arrival-anchor participant that loses a recorded zero', () => {
+  // arrange
+  const stored = new Map<string, number>();
+  const anchors: Pick<ArrivalAnchors, 'get' | 'record'> = {
+    get: (deviceId: string): number | undefined => {
+      const anchor = stored.get(deviceId);
+
+      return anchor === 0 ? undefined : anchor;
+    },
+    record: (deviceId: string, at: number): void => {
+      stored.set(deviceId, at);
+    },
+  };
+
+  // act & assert
+  assert.throws(
+    () => {
+      assertArrivalAnchorMemoryContract(anchors, 'retains a zero anchor');
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof assert.AssertionError);
+      assert.deepStrictEqual(
+        { actual: error.actual, expected: error.expected, operator: error.operator },
+        {
+          actual: { anchor: undefined, otherAnchor: undefined },
+          expected: { anchor: 0, otherAnchor: undefined },
+          operator: 'deepStrictEqual',
+        },
+      );
+      return true;
+    },
+  );
+});
 
 test('publishes the thresholds it measures against', () => {
   // arrange
