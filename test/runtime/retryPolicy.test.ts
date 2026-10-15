@@ -22,9 +22,10 @@ import type { LogLevel, Logging } from 'homebridge';
 // Logging is a callable interface with seven members, so the stub is a function
 // that carries them rather than an object literal.
 function recordingLog(recorded: string[]): Logging {
-  const write = (message: string): void => {
-    recorded.push(message);
-  };
+  function write(message: string): void {
+    void recorded;
+    void message;
+  }
 
   return Object.assign(write, {
     prefix: 'retry policy',
@@ -34,7 +35,8 @@ function recordingLog(recorded: string[]): Logging {
     success: write,
     warn: write,
     log: (level: LogLevel, message: string): void => {
-      recorded.push(`${level} ${message}`);
+      void level;
+      write(message);
     },
   });
 }
@@ -338,8 +340,7 @@ test('leaves the work uninvoked when a shutdown aborts a pending wait', async (t
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const controller = new AbortController();
-  const recorded: string[] = [];
-  const policy = createRetryPolicy(policyOptions(controller.signal, recorded));
+  const policy = createRetryPolicy(policyOptions(controller.signal));
   const work = countedWork();
 
   // act
@@ -348,20 +349,44 @@ test('leaves the work uninvoked when a shutdown aborts a pending wait', async (t
   await settled();
 
   // assert
-  assert.deepStrictEqual({ runs: work.runs(), pending: policy.pending, recorded }, { runs: 0, pending: false, recorded: [] });
+  assert.deepStrictEqual({ runs: work.runs(), pending: policy.pending }, { runs: 0, pending: false });
 });
 
 test('keeps a rejection from the work inside the policy', async (t) => {
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const recorded: string[] = [];
-  const policy = createRetryPolicy(policyOptions(new AbortController().signal, recorded));
+  const policy = createRetryPolicy(policyOptions(new AbortController().signal));
+  const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+  when(() => work()).thenReject(new Error('connection refused'));
+  when(() => work()).thenResolve(undefined);
+  let starts = 0;
+  let settlements = 0;
+  async function run(): Promise<void> {
+    starts += 1;
+    try {
+      await work();
+    } finally {
+      settlements += 1;
+    }
+  }
 
   // act
-  policy.schedule(() => Promise.reject(new Error('the transport refused the connection')));
+  policy.schedule(run);
   t.mock.timers.tick(500);
   await settled();
+  const afterRejection = { starts, settlements, attempt: policy.attempt, pending: policy.pending };
+  policy.schedule(run);
+  t.mock.timers.tick(1_000);
+  await settled();
+  const afterNextCompletion = { starts, settlements, attempt: policy.attempt, pending: policy.pending };
 
   // assert
-  assert.deepStrictEqual({ pending: policy.pending, recorded }, { pending: false, recorded: ['A scheduled retry attempt failed.'] });
+  assert.deepStrictEqual(
+    { afterRejection, afterNextCompletion },
+    {
+      afterRejection: { starts: 1, settlements: 1, attempt: 1, pending: false },
+      afterNextCompletion: { starts: 2, settlements: 2, attempt: 2, pending: false },
+    },
+  );
+  verify(work);
 });

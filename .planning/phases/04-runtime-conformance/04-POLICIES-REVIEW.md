@@ -1112,3 +1112,131 @@ path/hash/deletion/clean-tree checks retain their native results under this root
 Only the owner and this report are committed. The parent owns the combined full
 gate and independent full six-file correction. No full-project pass or
 partial-clean POLICIES verdict is issued.
+
+## Repair evidence: CR-04-POLICIES-010 and CR-04-POLICIES-011
+
+Applied by `policies_fix_010_011` (`gsd-code-fixer`), task 04-04-01, under
+`/root/phase4_policies_finish/policies_fix_010_011`. Disposition: **applied,
+pending independent full correction**. Both IDs share this minimum cause.
+All previous report bytes remain intact. Repairs 001–011 are applied pending
+that review; 012 retains its separate callback-double repair. The opening
+set remains 001–012, open count **12** (2 BLOCKER, 10 WARNING), correction
+counter **0**, and production bugs **0**. No ID is independently closed.
+RUN-01 stays Pending.
+
+The callable typed logger silently discards messages. The abort case retains
+its explicit zero-callback and cleared-pending observations. The rejection
+case owns a fresh exact-parameter strict callback mock: its first invocation
+rejects and its next invocation resolves. A case-owned wrapper records starts
+and settlements, with settlement recorded in `finally`. After the first
+controlled deadline and awaited settling, the whole observation requires one
+start, one settlement, attempt 1 and pending false. A second scheduled deadline
+requires two starts, two settlements, attempt 2 and pending false. The strict
+mock is verified after those public-state assertions. The native owner passes
+without escaping/unhandled rejections. Neither case asserts logger calls.
+
+### Exact private-query limitation and contract-preserving fallback
+
+Before editing, installed Fallow exact `--symbol-impact` and `--trace` queries
+targeted `test/runtime/retryPolicy.test.ts:recordingLog` and
+`test/runtime/retryPolicy.test.ts:recordingLog.write`, separately with
+`tsconfig.json` and `tsconfig.test.json`. Each command used one
+`--type-aware-project`, `--type-aware-require complete --format json --quiet
+--explain`. All eight returned **exit 2**: private export/member not found,
+or unknown-symbol for the nested exact impact. They supply no selected-project
+complete semantic proof and no zero-consumer deletion permission. The raw
+unavailable results remain in native folders 006–013.
+
+The fallback therefore preserves the existing helper names and signatures:
+`recordingLog(recorded: string[]): Logging`, its nested
+`write(message: string): void`, the callable logger members, and
+`policyOptions(signal: AbortSignal, recorded: string[] = []): RetryPolicyOptions`.
+Unused inputs are explicitly discarded with `void`; no record is retained.
+The nested `write` uses a named function declaration, directly repairing 011.
+No helper, type, import, member or signature was deleted or renamed. Exact
+lexical uses and every helper caller were read before editing; a public-neighbor
+query or named-import count was not substituted for the missing private result.
+The parent confirmed this protocol-prescribed fallback before completion.
+
+Both complete headers, all 008 timing/pending cases, the 009 reset case, and
+the `countedWork` helper retain their exact bytes. The latter remains within
+012's next cause. No source API, consumer, new helper file, package, live input,
+new retry design or production change enters this commit.
+
+Initial locations remain R:test/runtime/retryPolicy.test.ts:10–31,148–177 for
+010 and R:test/runtime/retryPolicy.test.ts:12–15 for 011. Actual pre-edit HEAD
+is `01164c48bb4136c6fe64a61bd30d115561d083b1`. Current locations at that HEAD
+plus the retained exact dirty diff are test/runtime/retryPolicy.test.ts:22–45
+and 339–392. The terminal ordinary commit supplies the committed revision;
+this appendix does not claim its own future hash.
+
+### Separate assertion control and exact restoration
+
+Plausible wrong behavior: the guarded work silently completes without invoking
+the callback. Type checking and lint miss that semantic substitution. The
+temporary control changes only `await run()` to `await Promise.resolve(run)`
+inside production `runGuarded`. Both compiler projects and uncached focused
+lint pass before the control's fresh build. The named rejection test then
+executes and fails its intended whole-state `deepStrictEqual`, raw exit 1:
+starts and settlements are 0 after both deadlines, rather than 1 and then 2,
+even though pending is false and attempts progress. Native TAP records one
+failed test, zero cancelled/skipped/todo, and `ERR_ASSERTION`; this is not a
+setup/import/type/unhandled-rejection failure.
+
+The exact target argv is retained in 023-control-owner:
+
+```text
+node --test --test-reporter=tap --test-name-pattern=^keeps a rejection from the work inside the policy$ dist-test/test/runtime/retryPolicy.test.js
+```
+
+The full untouched expected/actual diff, native TAP and separate stderr are
+retained. This assertion control is not an observed production bug or genuine
+RED history; no RED JSON was created. Exact restoration matches saved bytes
+and HEAD, with source blob `2c57c73e97be282acfdff61b439bfd86333d5b48` and SHA-256
+`4061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e`.
+A fresh build and full owner pass after restoration. The timer module-object
+import, first/capped delays, pending guard, reset, owned rejection and root-abort
+production behavior remain unchanged; no temporary control bytes enter Git.
+
+### Native verification scope
+
+All checks ran in the existing checkout at the absolute repository root above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. No worktree was
+created. The directly read sentinel records phase 04, plan 04-04, isolation
+`none`. The existing Git metadata ledger `gsd-plan-head-before-04-04` retains
+actual `ca0ebbc3f020bd6ad0bbcaf3be5dcd1ee0341950`.
+Complete AGENTS, all five books, current full retry pair/report, owning plan,
+CONTEXT, REVIEW-PROTOCOL and PATTERNS were read before editing. Shadow schedule,
+reset and guarded lifecycle calls, account root-signal composition and its
+separate next-delay retry loop, and relevant owners were read before controls.
+The complete installed Fallow skill and live help preceded guard and queries.
+
+Native evidence root: `/private/tmp/guardian-04-policies-fix-native/010/`.
+Each numbered command folder retains exact argv/cwd/UTC start/end/raw exit
+in `command.json`, separate untouched `stdout.raw` and `stderr.raw`, and
+before/after manifests with HEAD, Node/npm, blobs/SHA-256, exact dirty/staged
+diffs, owned bytes and untracked bytes. Initial interactive reads preceded the
+recorder. Command folders also retain full control/restoration snapshots.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live Fallow help / 001–003, 029; exact three-path guard / 004 | Exit 0 each; boundaries and rule packs remain unconfigured |
+| Root/HEAD/clean-tree/sentinel/ledger checks / 005; lexical uses / 014 | Exit 0; assigned checkout and persisted baseline preserved |
+| Eight exact private impact/trace queries / 006–013 | Exit 2 each; unavailable private targets retained; no semantic completeness or deletion proof claimed |
+| Modified owner diff/reread / 015 | Exit 0; silent stub, declaration and public-state observations present |
+| `npm run typecheck` / 016; focused uncached ESLint / 017 | Exit 0 each |
+| Initial `npm run build:test` / 018; full native owner / 019 | Exit 0 each; 26 tests, zero fail/cancel/skip/todo |
+| Control typecheck/lint/build / 020–022 | Exit 0 each before intended native assertion failure 023 |
+| Exact source restoration / 024 | Exit 0; saved bytes, blob, SHA-256 and HEAD match |
+| Restored `npm run build:test` / 025; full native owner / 026 | Exit 0 each; 26 tests, zero fail/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` / 027 | Exit 0; isolated direct requirements pass |
+| Native isolated coverage / 028; `retryPolicy.lcov` | Exit 0; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15, all 100% |
+| Recorded-base Fallow audit, JSON/quiet/explain / 030 | Exit 0; verdict pass, zero dead-code/complexity/duplication findings |
+
+Audit base remains `e25e26e6232ed99411b7463a7f9839c5eb837ec0`. Selected checks
+do not refresh merged all-pair LCOV. Exact two-path clean pre-step, ordinary
+foreground commit with normal hooks, and terminal committed-path/hash/deletion/
+clean-tree checks retain their actual native results under this evidence root.
+Only the owner and this report are committed. The parent owns the combined
+full gate and independent full six-file correction. No full-project pass or
+partial-clean POLICIES verdict is issued.
