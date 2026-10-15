@@ -758,3 +758,32 @@ All original **15** accepted TRUST IDs remain open, with **0** independently
 fixed and correction counter **0**. The full correction still belongs after
 the complete repair pass over all four originals and actual additions in
 04-06. Other accepted causes, shared records and RUN-01 remain unchanged.
+
+## Arrival conformance execution: 001 header cause
+
+The delegated fixer `/root/phase4_trust_first/arrival_conformance` holds the
+exclusive writer/build/Git lease in the existing checkout, with isolation none.
+It read complete AGENTS, all five books, 04-05, CONTEXT, REVIEW-PROTOCOL,
+PATTERNS, this report, the complete source/owner, actual runtime callers,
+canonical C-002 and STATE's scoped deviceId premise before editing.
+The dispatch sentinel names 04-05 with isolation none. The preserved Git-dir
+`gsd-plan-head-before-04-05` remains the real base
+`23a2511ac6deb26869db8d3c44916623a27ec997`.
+
+002 is now committed as `06ef961`, after evidence-only `4544c71`.
+001 changes only both full headers: MIT SPDX, separate 2026 Alessandro Colomba
+copyright JSDoc, overview JSDoc and section spacing. The existing source overview
+body is retained for separate narrative causes. Both complete headers were
+inspected; no runtime or assertion changes share this cause.
+
+Native records use `/private/tmp/guardian-04-arrival-handoff/` and unique
+`conformance-001-*` names. Each records exact argv/cwd, UTC interval, raw exit,
+Node, HEAD, source/owner blobs, tracked/staged diffs and all untracked bytes.
+`conformance-preflight.json` retains npm, correct root/nonprotected branch,
+empty initial index and the preserved base marker. Exact-path guard exited 0.
+Checks and commit evidence are appended in subsequent records as they occur;
+no future result is claimed here. Every command runs in the main checkout.
+
+001 is applied pending its normal commit and full independent correction.
+All original 15 accepted IDs remain open, independently fixed 0, round 0 and
+correction counter 0. No helper, RED modification or shared record is added.
