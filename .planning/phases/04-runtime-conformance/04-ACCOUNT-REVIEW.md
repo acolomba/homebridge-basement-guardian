@@ -1321,3 +1321,118 @@ correction. The other 26 original IDs remain OPEN: 002–023 and 026–029.
 No ACCOUNT correction occurs until every 04-08/09 initial cause is finished.
 RUN-01 remains Pending, and D-03 stop conditions and historical WINDOWS 46/47
 remain unchanged and unwaived.
+
+## CR-04-ACCOUNT-006: exact injected store identity
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_006_store_identity`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and all prior appendices remain intact.
+The continuous ACCOUNT correction counter remains **0**. No partial clean
+verdict or correction review is claimed.
+
+The existing `reads canonical state from the one store it maintains` case
+now asserts `assert.strictEqual(runtime.store, store)`. It then compares the
+complete public snapshot against an independent literal: identity, connectivity,
+all three discovery data values, empty metadata, absent shadow watermark,
+device timestamp and local receipt timestamp. The separate complete discovery
+case remains unchanged. No production behavior, API, private contract, header,
+mock, helper, configuration or shared record changes.
+
+Pre-edit HEAD was `604d072a4f5169ef17f27a74c1176e8f1aca2289` on
+`features/code-review-sweep`, with clean status and empty index. Before editing,
+the fixer read complete AGENTS, all five complete project books, 04-07-PLAN,
+the full review protocol and this full report. The complete source, relevant
+owner setup and adjacent cases, public store contract, factory wiring and
+actual platform/World store consumers were read. The source return and the
+owner harness both use the same injected store. No name, signature, field,
+mutability, visibility or alias change triggers D-06 impact queries.
+
+### Separate assertion maintenance control
+
+The plausible wrong public behavior is a distinct store object that forwards
+the injected store's methods. Equal current snapshot values do not establish
+the promised binding identity; the prior deep-value assertion accepts this
+behavior. Compilation and direct coverage also cannot establish identity.
+
+The only temporary source change was `store: { ...options.store }` in the
+public factory's returned runtime. The copied methods retain their original
+closure-backed state, so the snapshot remains equal while the store reference
+differs. After a fresh successful build, the exact named test failed at the
+new strict identity assertion: `Values have same structure but are not
+reference-equal`. Native TAP records one executed test, one failure and zero
+skip/cancel/todo. There was no setup, import, compilation or other state failure.
+This is an assertion maintenance control, not a genuine production RED.
+
+The complete source was then restored exactly and compared with its saved
+bytes. Source before/restored blob:
+`6e6795bb2720ea38dd46d01393d82692c636de16`.
+Temporary control blob: `ae229dffab326a3d76bf4caaba9800bcd8494f51`.
+The source diff is empty; no mutation enters Git. A fresh restored build and
+the exact named test pass. The final owner blob is
+`e276f66508b481b1724d52cfd9da6f504f31d8ab`.
+
+### Verification location and native evidence
+
+All checks ran in the existing linked `features/code-review-sweep` checkout,
+with `workflow.use_worktrees=false`, Node v26.11.1, npm 11.20.0,
+TypeScript 6.0.3 and Fallow 3.27.0. No worktree or branch was created.
+No full `npm run check` ran here; the parent owns the combined wave gate.
+
+Native directory: `/private/tmp/guardian-04-account-006-identity/`.
+Every command record retains executable/argv, cwd, HEAD, versions, raw exit,
+real UTC start/end and complete separate stdout/stderr. Saved before/control/
+restored source bytes, the final owner, exact full patch and tracked-file
+hash manifest are retained. Provenance checks confirm all unrelated tracked
+file bytes and the complete prior report prefix remain intact.
+
+| Native record | Actual command/scope and raw result |
+| --- | --- |
+| `guard.json` | Fallow guard on exactly the three owned paths before edits; exit 0, no configured zones/rule packs. |
+| `snapshot.json` | Exact initial feature branch/HEAD/index/clean-status assertions; exit 0, 694 tracked entries. |
+| `baseline-build.json`, `baseline-target.json` | Fresh build then exact named test with strengthened assertions; both exit 0. |
+| `control-build.json`, `control-target.json` | Fresh temporary-source build exits 0; exact named test exits 1 at intended identity assertion. |
+| `control-provenance.json` | Exact one-line source mutation and complete intended-failure semantics; exit 0. |
+| `restored-build.json`, `restored-target.json` | Exact restored source, fresh build then named test; both exit 0. |
+| `owner.json` | Complete compiled owner; exit 0, 136 pass, zero fail/cancel/skip/todo. |
+| `direct.json` | Exact isolated source/owner selector, including fresh build; exit 0. |
+| `native-coverage.json` | Complete owner with exact-source 100% thresholds; exit 0, native compiled 994/994 lines, 57/57 functions, 181/181 branches. |
+| `lint.json` | Exact owner ESLint, no cache, max warnings 0; exit 0. |
+| `audit.json` | Fallow audit against initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, verdict pass. |
+| `evidence-gate.json` | Installed CLI on unchanged genuine RED JSON; exit 0, RED_EVIDENCE_OK. |
+| `provenance-1.json` | Source restoration, complete prior report prefix, unchanged unrelated files and immutable RED blob; exit 0. |
+| `pre-step-1.json` | Required exact two-file SKIP=npm-check pre-commit; exit 0, clean, no formatter changes. |
+| `provenance-2.json` | Repeated restored-source, final-owner and unchanged-input checks after clean pre-step; exit 0. |
+| `pre-step-2.json` | Repeated exact two-file clean pre-step after report update; exit 0, no formatter changes. |
+| `assert-before-stage.json` | Exact feature branch/HEAD, empty index and final two-path scope; exit 0. |
+| `stage-1.json` | Sandbox staging exits 128: linked-checkout index.lock creation denied; no commit or hook ran. |
+
+The genuine RED JSON retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, including all original archived
+streams. Original 024/025 active cases and all other owner assertions remain
+byte-identical; the owner diff is confined to this identity case. Selected
+coverage does not refresh merged all-pair source-map LCOV. No package install,
+live request or hardware test occurs.
+
+### Atomic commit and remaining scope
+
+The commit introducing this appendix and the owner assertion is titled
+`fix: assert account runtime store identity`. Resolve its actual hash and
+exact two paths from Git. Only `test/runtime/accountRuntime.test.ts` and this
+report belong to the final commit. The source control is restored before any
+staging. Exact-file clean pre-step, branch/HEAD/index checks, staging and normal
+foreground commit records retain the terminal results in the native directory.
+No amend, hook bypass, rebase, stash or history rewrite is used.
+
+The initial staging failure is a filesystem-permission result, not a source,
+test or hook failure. Complete native stderr is retained. The retry uses the
+authorized filesystem permission after another clean exact-file pre-step.
+Separate pre-step, staging, staged-scope assertion and foreground commit
+records retain the real terminal outcomes; no prospective hook pass is implied.
+
+Only original 006 is implemented by this cause. Original 001, 024 and 025
+retain their implementation dispositions pending independent full ACCOUNT
+correction. The other 25 original IDs remain OPEN: 002–005, 007–023 and 026–029.
+RUN-01 remains Pending. No full ACCOUNT correction occurs until every owning
+04-08/09 cause finishes. D-03 stop conditions, counter 0 and historical
+WINDOWS 46/47 remain unchanged and unwaived.

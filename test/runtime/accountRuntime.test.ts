@@ -1026,7 +1026,16 @@ describe('start', () => {
     await runtime.start();
 
     // assert
-    assert.deepStrictEqual(runtime.store.snapshot(DEVICE_ID), store.snapshot(DEVICE_ID));
+    assert.strictEqual(runtime.store, store);
+    assert.deepStrictEqual(runtime.store.snapshot(DEVICE_ID), {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: START_TIME,
+    });
   });
 
   test('reports how many devices the account holds', async (t) => {
