@@ -171,10 +171,10 @@ test('D-14 drops a forgotten device from the file, so the stored set cannot outg
   // act
   writer.forget(DEVICE_ID);
   await writer.persist();
-
-  // assert
   const reader = storeOver(storagePath, recorded);
   await reader.restore();
+
+  // assert
   assert.deepStrictEqual(ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-arrivals.json');
   assert.deepStrictEqual(
     {

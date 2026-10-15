@@ -884,3 +884,21 @@ unchanged genuine RED history. No mutation is staged or committed.
 
 004 is applied pending normal commit and complete independent correction.
 All original 15 findings remain open, independently fixed 0, counter 0.
+
+## 004 normal commit and 008 AAA-only cause
+
+004 committed normally as `5566339`, exactly owner/report. Recorded-base audit
+and exact pre-step returned 0; complete ordinary hook streams retain the
+passing pre-commit check:commit. Native commit provenance is
+`conformance-004-commit.json`; source was restored before staging.
+
+008 changes only the forget case's phase-marker placement, plus this report.
+At source revision `5566339`, owner lines 172–180 now construct and restore
+the fresh reader under act before asserting its complete public observation.
+003's assertions remain unchanged. These are independent line edits: 003
+strengthened the observation without moving the phase marker, allowing this
+case-structure cause to remain atomic. No minimum overlap is claimed.
+The exact guard passed before editing. Checks/commit use `conformance-008-*`
+records in the same native directory with the complete provenance contract.
+008 is applied pending normal commit and full independent correction;
+all original 15 IDs stay open with correction counter 0.
