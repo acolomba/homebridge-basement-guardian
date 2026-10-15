@@ -384,6 +384,19 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     return !halted && (await waitFor(delayMs)) && !halted;
   }
 
+  // Whether the runtime will ever open a connection again. A shutdown has
+  // begun, or a refused credential has halted it for good. Neither ends, so a
+  // connection opened after either is one nothing will use and nothing will
+  // close, and one answer covers both because the question the connect path
+  // asks is the same either way.
+  //
+  // It is asked through a function so that a check after an await asks again
+  // rather than reusing the answer from before it, which is the whole point of
+  // checking twice (SYNC-05, D-13).
+  function hasFinished(): boolean {
+    return stopped || halted;
+  }
+
   // The final check re-fetches the inventory once more, immediately before a
   // removal commits, closing the race where a device reappears between the
   // second confirming poll and the removal decision (D-029). Its own failure
@@ -442,6 +455,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // and nothing else: every statement below it changes state, and a
       // failure there is a different fact that has to be reported rather than
       // dropped.
+      return;
+    }
+
+    if (hasFinished()) {
       return;
     }
 
@@ -794,19 +811,6 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     }
   }
 
-  // Whether the runtime will ever open a connection again. A shutdown has
-  // begun, or a refused credential has halted it for good. Neither ends, so a
-  // connection opened after either is one nothing will use and nothing will
-  // close, and one answer covers both because the question the connect path
-  // asks is the same either way.
-  //
-  // It is asked through a function so that a check after an await asks again
-  // rather than reusing the answer from before it, which is the whole point of
-  // checking twice (SYNC-05, D-13).
-  function hasFinished(): boolean {
-    return stopped || halted;
-  }
-
   // Opens the connection once there is both a credential cache to sign from and
   // a device to subscribe for, and reports whether it was refused so the caller
   // can decide whether a retry chain needs starting.
@@ -979,7 +983,18 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // (SYNC-03).
   async function runPoll(): Promise<void> {
     try {
-      await applyDevices(await options.api.devices(root.signal));
+      const devices = await options.api.devices(root.signal);
+
+      if (hasFinished()) {
+        return;
+      }
+
+      await applyDevices(devices);
+
+      if (hasFinished()) {
+        return;
+      }
+
       recordPollSuccess();
       await openShadow();
     } catch (error: unknown) {
@@ -993,7 +1008,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // A terminal authentication answer is not a poll failure. Reaching the
       // generic device-discovery line below would name a cause that did not
       // happen, and an owner acts on a diagnostic (D-13, D-03).
-      if (haltOnTerminalAuthFailure(error)) {
+      if (haltOnTerminalAuthFailure(error) || hasFinished()) {
         return;
       }
 
@@ -1025,7 +1040,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // retried on the long interval the error carries rather than on the capped
   // backoff (D-22).
   function launchFailure(error: unknown): number | undefined {
-    if (root.signal.aborted) {
+    if (hasFinished()) {
       return undefined;
     }
 
@@ -1053,7 +1068,17 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   async function launch(): Promise<number | undefined> {
     try {
       const devices = await options.api.devices(root.signal);
+
+      if (hasFinished()) {
+        return undefined;
+      }
+
       await applyDevices(devices);
+
+      if (hasFinished()) {
+        return undefined;
+      }
+
       recordPollSuccess();
       options.log.info(`Discovered ${String(devices.length)} device(s).`);
     } catch (error: unknown) {
@@ -1128,6 +1153,10 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       // anchored at this instant -- and a bridge restarted after a pump had been
       // quiet for hours would vouch for it (D-07).
       await options.anchors.restore();
+
+      if (hasFinished()) {
+        return;
+      }
 
       const retryInMs = await launch();
 

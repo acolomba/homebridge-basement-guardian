@@ -620,6 +620,341 @@ function silenceOf(pushes: readonly ReadonlyMap<string, MonitoringTrust>[]): (bo
   return pushes.map((byDevice) => byDevice.get(DEVICE_ID)?.shadowSilent);
 }
 
+test('retains halted state when a pending final inventory check succeeds', async (t) => {
+  // arrange
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-account-halt-'));
+  // Promise constructors assign both resolvers synchronously.
+  let completeInventory!: (devices: readonly ApiDevice[]) => void;
+  let announceFinalCheck!: () => void;
+  const pendingInventory = new Promise<readonly ApiDevice[]>((resolve) => {
+    completeInventory = resolve;
+  });
+  const finalCheckStarted = new Promise<void>((resolve) => {
+    announceFinalCheck = resolve;
+  });
+  interface TrustReport {
+    account: MonitoringTrust;
+    byDevice: ReadonlyMap<string, MonitoringTrust>;
+  }
+  const healthReports: TrustReport[] = [];
+  let elapsedMs = 0;
+
+  function silent(): void {
+    return undefined;
+  }
+
+  const log: Logging = Object.assign(silent, {
+    prefix: '',
+    debug: silent,
+    error: silent,
+    info: silent,
+    success: silent,
+    warn: silent,
+    log: silent,
+  });
+  const clock: Clock = { now: () => START_TIME + elapsedMs };
+  const store = createDeviceStateStore({ clock, log });
+  const removeSpy = t.mock.method(store, 'remove');
+  const anchors = createArrivalAnchors({ storagePath, log });
+  const api: CloudApi = {
+    devices: answering([
+      () => Promise.resolve([geminiDevice()]),
+      () => Promise.resolve([]),
+      () => Promise.resolve([]),
+      () => {
+        announceFinalCheck();
+
+        return pendingInventory;
+      },
+    ]),
+    awsCredentials: answering([
+      () => Promise.resolve(credentialsAt(START_TIME + 2_510)),
+      () => Promise.reject(new AuthRejectedError('the vendor rejected the account credentials.', 'invalid_grant')),
+    ]),
+    device: () => Promise.reject(new Error('no single-device request is scripted')),
+    sendCommand: () => Promise.reject(new Error('no command is scripted')),
+  };
+  const runtime = createAccountRuntime({
+    api,
+    store,
+    registry: createFamilyRegistry(),
+    createShadow: () => ({ connected: false, start: () => Promise.resolve(), close: () => Promise.resolve() }),
+    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+    pollIntervalMs: 1_000,
+    rotationLeadMs: 10,
+    minRotationDelayMs: 5,
+    failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
+    registerSecret: silent,
+    onTrustworthyInventory: silent,
+    onDeviceRemoved: (deviceId) => {
+      store.remove(deviceId);
+    },
+    onMonitoringHealth: (account, byDevice) => {
+      healthReports.push({ account, byDevice: new Map(byDevice) });
+    },
+    clock,
+    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+    anchors,
+    log,
+  });
+  t.after(async () => {
+    await runtime.stop();
+    await rm(storagePath, { recursive: true, force: true });
+  });
+  const expectedSnapshot: DeviceSnapshot = {
+    identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+    connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+    data: { water_level: 1, primary_pump_running: false, ac_power: true },
+    metadata: {},
+    shadowVersion: undefined,
+    deviceTimestamp: 1_700_000_000_000,
+    receivedAt: START_TIME,
+  };
+  const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+  const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+  const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+  const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+  const expectedHaltedState = {
+    path: 'unavailable',
+    snapshots: [expectedSnapshot],
+    anchors: [[DEVICE_ID, START_TIME]],
+    healthReports: [
+      { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
+      { account: healthyAccount, byDevice: new Map([[DEVICE_ID, healthyDevice]]) },
+      { account: haltedAccount, byDevice: new Map([[DEVICE_ID, haltedDevice]]) },
+    ],
+  };
+
+  // act
+  await runtime.start();
+  await settle();
+  elapsedMs = 1_000;
+  t.mock.timers.tick(1_000);
+  await settle();
+  elapsedMs = 2_000;
+  t.mock.timers.tick(1_000);
+  await finalCheckStarted;
+  elapsedMs = 2_500;
+  t.mock.timers.tick(500);
+  await settle();
+  const beforeCompletion = {
+    path: runtime.monitoringPath,
+    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+    anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
+    healthReports: [...healthReports],
+  };
+  completeInventory([]);
+  await settle();
+  const afterCompletion = {
+    path: runtime.monitoringPath,
+    snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+    anchors: [[DEVICE_ID, anchors.get(DEVICE_ID)]],
+    healthReports: [...healthReports],
+  };
+
+  // assert
+  assert.deepStrictEqual({ beforeCompletion, afterCompletion }, { beforeCompletion: expectedHaltedState, afterCompletion: expectedHaltedState });
+  assert.deepStrictEqual(
+    removeSpy.mock.calls.map((call) => call.arguments),
+    [],
+  );
+});
+
+test('starts no inventory work when restoration completes after shutdown', async (t) => {
+  // arrange
+  // The promise constructor assigns the resolver synchronously.
+  let completeRestore!: () => void;
+  const restoring = new Promise<void>((resolve) => {
+    completeRestore = resolve;
+  });
+  const anchors = { ...recordingAnchors(), restore: () => restoring };
+  const { runtime, store, calls, monitoringHealth } = harness(t, { anchors });
+
+  // act
+  const starting = runtime.start();
+  await runtime.stop();
+  completeRestore();
+  await starting;
+  await settle();
+
+  // assert
+  assert.deepStrictEqual(
+    { path: runtime.monitoringPath, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth },
+    {
+      path: 'unavailable',
+      snapshots: [],
+      anchors: [],
+      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+    },
+  );
+  assert.deepStrictEqual(calls, []);
+});
+
+test('admits no devices when the launch inventory resolves after shutdown', async (t) => {
+  // arrange
+  // The promise constructor assigns the resolver synchronously.
+  let completeInventory!: (devices: readonly ApiDevice[]) => void;
+  const inventory = new Promise<readonly ApiDevice[]>((resolve) => {
+    completeInventory = resolve;
+  });
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories } = harness(t, { devices: [() => inventory] });
+
+  // act
+  const starting = runtime.start();
+  await settle();
+  await runtime.stop();
+  completeInventory([geminiDevice()]);
+  await starting;
+  await settle();
+
+  // assert
+  assert.deepStrictEqual(
+    { path: runtime.monitoringPath, snapshots: store.deviceIds(), anchors: [...anchors.stored], monitoringHealth },
+    {
+      path: 'unavailable',
+      snapshots: [],
+      anchors: [],
+      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+    },
+  );
+  assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [] });
+});
+
+test('starts no background work when shutdown follows launch admission', async (t) => {
+  // arrange
+  const { runtime, store, anchors, calls, monitoringHealth, trustworthyInventories } = harness(t);
+  store.subscribe(DEVICE_ID, () => {
+    queueMicrotask(() => {
+      void runtime.stop();
+    });
+  });
+
+  // act
+  await runtime.start();
+  await settle();
+
+  // assert
+  assert.deepStrictEqual(
+    { path: runtime.monitoringPath, snapshot: store.snapshot(DEVICE_ID), anchors: [...anchors.stored], monitoringHealth },
+    {
+      path: 'unavailable',
+      snapshot: {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME,
+      },
+      anchors: [[DEVICE_ID, START_TIME]],
+      monitoringHealth: [{ restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }],
+    },
+  );
+  assert.deepStrictEqual({ calls, trustworthyInventories }, { calls: ['devices'], trustworthyInventories: [[DEVICE_ID]] });
+});
+
+interface PendingInventory {
+  resolve: (devices: readonly ApiDevice[]) => void;
+  reject: (error: Error) => void;
+}
+
+for (const { completion, finish, precedingInventories, expectedInventories, healthyReports, haltAtMs } of [
+  {
+    completion: 'regular inventory succeeds',
+    finish: (pending: PendingInventory) => {
+      pending.resolve([otherGeminiDevice()]);
+    },
+    precedingInventories: [() => Promise.resolve([geminiDevice()])],
+    expectedInventories: [[DEVICE_ID]],
+    healthyReports: 1,
+    haltAtMs: 1_500,
+  },
+  {
+    completion: 'regular inventory fails',
+    finish: (pending: PendingInventory) => {
+      pending.reject(new Error('inventory failed'));
+    },
+    precedingInventories: [() => Promise.resolve([geminiDevice()])],
+    expectedInventories: [[DEVICE_ID]],
+    healthyReports: 1,
+    haltAtMs: 1_500,
+  },
+  {
+    completion: 'final inventory check fails',
+    finish: (pending: PendingInventory) => {
+      pending.reject(new Error('inventory failed'));
+    },
+    precedingInventories: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([]), () => Promise.resolve([])],
+    expectedInventories: [[DEVICE_ID], [], []],
+    healthyReports: 2,
+    haltAtMs: 2_500,
+  },
+]) {
+  test(`retains halted state when a pending ${completion}`, async (t) => {
+    // arrange
+    // The promise constructor assigns both resolvers synchronously.
+    let completeInventory!: (devices: readonly ApiDevice[]) => void;
+    let rejectInventory!: (error: Error) => void;
+    const inventory = new Promise<readonly ApiDevice[]>((resolve, reject) => {
+      completeInventory = resolve;
+      rejectInventory = reject;
+    });
+    const { runtime, store, anchors, monitoringHealth, monitoringByDevice, trustworthyInventories, advance } = harness(t, {
+      devices: [...precedingInventories, () => inventory],
+      credentials: [() => Promise.resolve(credentialsAt(START_TIME + haltAtMs + 10)), refusingTheAccount],
+      pollIntervalMs: 1_000,
+      rotationLeadMs: 10,
+      minRotationDelayMs: 5,
+    });
+    const healthyAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const healthyDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+    const haltedAccount: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: true };
+    const haltedDevice: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
+
+    // act
+    await runtime.start();
+
+    for (let elapsedMs = 1_000; elapsedMs < haltAtMs; elapsedMs += 1_000) {
+      await advance(1_000);
+    }
+
+    await advance(500);
+    finish({ resolve: completeInventory, reject: rejectInventory });
+    await settle();
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        path: runtime.monitoringPath,
+        snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+        anchors: [...anchors.stored],
+        monitoringHealth,
+        monitoringByDevice,
+      },
+      {
+        path: 'unavailable',
+        snapshots: [
+          {
+            identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+            connectivity: { connected: true, timestamp: DEVICE_TIME },
+            data: { water_level: 1, primary_pump_running: false, ac_power: true },
+            metadata: {},
+            shadowVersion: undefined,
+            deviceTimestamp: DEVICE_TIME,
+            receivedAt: START_TIME,
+          },
+        ],
+        anchors: [[DEVICE_ID, START_TIME]],
+        monitoringHealth: [...Array.from({ length: healthyReports }, () => healthyAccount), haltedAccount],
+        monitoringByDevice: [...Array.from({ length: healthyReports }, () => new Map([[DEVICE_ID, healthyDevice]])), new Map([[DEVICE_ID, haltedDevice]])],
+      },
+    );
+    assert.deepStrictEqual(trustworthyInventories, expectedInventories);
+  });
+}
+
 describe('start', () => {
   test('discovers every device and stores its canonical snapshot', async (t) => {
     // arrange
@@ -1494,6 +1829,7 @@ describe('stop', () => {
     // arrange
     const { runtime, logged, calls } = harness(t, { devices: [hangingUntilAborted] });
     const starting = runtime.start();
+    await settle();
 
     // act
     await runtime.stop();

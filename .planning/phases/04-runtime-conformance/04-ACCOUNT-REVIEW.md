@@ -878,3 +878,123 @@ remains unstaged. The parent must commit only complete planning evidence
 through the required clean pre-step and ordinary hooks before any GREEN edit.
 The classifier's generic GREEN message does not replace that D-04 ordering.
 Global D-03 stop conditions and all existing cause budgets remain in force.
+
+## CR-04-ACCOUNT-024: bounded lifecycle ownership repair
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_024_green`, on 2026-10-15.
+Disposition: **fixed by implementing agent; requires human verification and
+independent full ACCOUNT correction**. This appendix preserves the complete
+round-zero review and RED handoff. It is not an independent correction or a
+partial clean verdict. The ACCOUNT correction counter remains **0**.
+
+The repair uses the existing `hasFinished()` predicate after awaited anchor
+restore, launch/regular inventory, applied inventory, and the final removal
+check. A completion that has lost lifecycle ownership admits no new device,
+removes no device, reports no poll result, and starts no background work.
+Late poll failures also preserve the halted answer. Terminal errors still
+reach the existing idempotent classifier; explicit shutdown still aborts the
+shared root. No universal transport teardown, retry policy, credential-expiry
+policy, inventory membership policy, or new authentication policy is added.
+The nested final-check terminal-error handling remains the separate OPEN 023.
+
+The private predicate moved before its first new use to satisfy the existing
+declaration-order rule. Its name, signature and body are unchanged. No shared
+or exported contract, field, mutability, visibility, private alias, or signature
+changed or was deleted. D-06 contract-change impact queries were therefore not
+triggered. Actual callers were traced before edits: start -> restore -> launch;
+launch/relaunch -> applyDevices; runPolls -> runPoll -> applyDevices; and
+applyDevices -> final fetch -> removal/pruning. Platform and both World
+composition/start/stop callers, REST resolution, the real anchor adapter,
+reconciliation, canonical lifecycle decisions and the shadow ownership analog
+were read. The full current 1283-line source and 3506-line active owner were
+read before repair, with all five complete project books and AGENTS.
+
+The cause changes exactly three repository paths:
+
+- `src/runtime/accountRuntime.ts`
+- `test/runtime/accountRuntime.test.ts`
+- `.planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md`
+
+Header conformance remains original 001; this functional cause adds no header
+or unrelated cleanup. There is no new helper file, dependency, configuration,
+central ledger, state, roadmap, requirement, or WINDOWS edit.
+
+### Active regression and immutable evidence
+
+Source `e6f49a59671c13a20b696b7f46e38406a36aeec0` precedes planning-only
+evidence commit `250516bb892a3d88bd5c63826ed3073876e4fad6`, the repair's parent.
+Production at the evidence commit still has blob
+`bf9094668ef1e600d44c2e302e46dfaf6c3e5866`. The pair's RED JSON retains blob
+`137389f36157ae9a3df284d618e929c0d2eaa416` unchanged. Its installed CLI check
+and the SAME installed recursive `classifyRedEvidence` accept both complete
+records as `RED_EVIDENCE_OK`. The root native record remains 129 cases,
+128 pass and one intended `ERR_ASSERTION`/`deepStrictEqual` failure. No RED
+record or archived output is rewritten by this repair.
+
+The entire saved regression addition remains an exact byte substring of the
+GREEN owner, including its original title and all assertions. There is no
+formatter difference inside that saved case. Additional cases exercise
+shutdown during restore, successful launch inventory after shutdown, shutdown
+between launch admission and its awaited continuation, regular inventory
+success/failure after terminal halt, and final-check failure after halt.
+They observe complete independently specified canonical/trust/anchor state
+through public factories. The existing in-flight launch-abort case now awaits
+dispatch before shutdown, so it still tests its actual pending-request promise
+after the new restore guard. No skipped or weakened regression is introduced.
+
+### Verification and retained attempts
+
+Checks ran in the existing linked `features/code-review-sweep` checkout with
+`workflow.use_worktrees=false`, Node v26.11.1, npm 11.20.0 and Fallow 3.27.0.
+No new worktree or branch was created. No full `npm run check` ran here; the
+parent owns the combined wave and later phase gate.
+
+Native directory: `/private/tmp/guardian-04-account-024-green/`.
+Each command record retains argv, cwd, HEAD, versions, real UTC times, separate
+stdout/stderr and the child's raw exit. `provenance.json` retains complete
+dirty diff, blobs, ancestry, saved-patch comparison and recursive verdicts.
+
+| Native record | Scope and actual result |
+| --- | --- |
+| `guard.json` | Exact three authorized paths before edits; exit 0. No boundary zones or rule packs configured. |
+| `build-1.json` | Fresh `npm run build:test`; exit 0. |
+| `owner-1.json` | Complete compiled owner; exit 0, 134 pass at the first candidate. |
+| `direct-3.json` | Exact isolated source/owner selector, including fresh build; exit 0. |
+| `native-coverage-2.json` | Complete compiled owner; exit 0, 135 pass, zero fail/cancel/skip/todo. Native compiled coverage: 983/983 lines, 57/57 functions, 180/180 branches. |
+| `lint-3.json` | Both exact TypeScript files, no cache, max warnings 0; exit 0. |
+| `evidence-gate.json` | Current unchanged RED JSON, installed checker; exit 0, RED_EVIDENCE_OK. |
+| `audit.json` | Fallow audit against real initial ACCOUNT base e6f49a59671c13a20b696b7f46e38406a36aeec0; exit 0, pass. Its four changed paths include prior planning evidence; this repair has three paths. |
+| `pre-step-1.json` | Required SKIP=npm-check pre-commit on all three paths; exit 0, clean, no formatter changes. Repeated after this result was recorded. |
+
+The first direct run and first native coverage run failed their thresholds
+because the existing idempotent terminal-classifier branch lost its caller.
+The poll error guard now preserves that classifier path while suppressing late
+nonterminal failures. These are retained `direct-1`/`native-coverage-1` attempts,
+not claimed passes. `lint-1`/`lint-2` retain declaration-order, row-callback and
+blank-line preparation failures. `direct-2` retains one new case's incorrect
+expected inventory callback history; its public state assertion already
+passed. The independent expected callback history was corrected to include
+the two healthy empty inventories before the pending final check. All failed
+outputs remain intact. No source mutation control or additional genuine RED
+claim follows from these preparation failures.
+
+### Atomic commit check and remaining scope
+
+The repair commit is the Git object introducing this appendix and both
+TypeScript changes. Its conventional title is
+`fix: retain account ownership after pending inventory work`.
+Resolve its actual hash and paths with `git log -1 --name-status --` on these
+three paths. The required exact-file clean pre-step, exact branch/HEAD check,
+stage attempt and foreground normal commit have separate native records in
+the same directory. Only their terminal native results certify completion;
+the implementing agent returns the actual hash and hook result to the parent.
+No amend, hook bypass, stash, rebase or history rewrite is authorized.
+
+Only original **CR-04-ACCOUNT-024** is implemented by this cause. Other original
+IDs **001–023 and 025–029** remain OPEN (28); 021/022/023/025/026 are not repaired
+here. This is an implementation disposition pending the eventual full-batch
+independent correction, not a recalculated correction-round verdict.
+Round-zero's 29 findings and all initial observations remain historical facts.
+RUN-01 remains Pending. D-03 stop rules and historical WINDOWS 46/47 remain
+unchanged and unwaived.
