@@ -2320,3 +2320,127 @@ Only original 027 is implemented here. Original 012, 013 and 028 remain for
 04-07, with later owning causes and independent full ACCOUNT correction pending.
 The 29 stable IDs and counter 0 continue; RUN-01 remains Pending.
 D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.
+
+## CR-04-ACCOUNT-028: credential registration before downstream use
+
+Implemented by typed `gsd-code-fixer`, task
+`/root/phase4_account_lifecycle/account_028_registration_order`, on 2026-10-15.
+Disposition: **implemented; pending independent full ACCOUNT correction**.
+The complete initial report and every previous appendix remain intact.
+The original 29 stable IDs and correction counter **0** continue.
+This assertion-maintenance repair supplies no correction round or partial clean verdict.
+
+Two fresh public-factory cases add independent whole chronological observations.
+The runtime case registers all three initial AWS values under their exact roles
+before the shadow factory reads the complete credential object.
+At the next rotation it registers all three replacement values under the same roles.
+The original held cache then supplies the complete replacement object for the next handshake.
+The shadow start and close each have one exact strong-mock expectation.
+A strict command port with no allowed call protects the new monitoring case.
+The composition case observes the real auth/REST/shadow wiring through injected boundaries.
+It expects token registration with no role before the first authenticated HTTP request.
+It also expects all three AWS-role registrations before the first MQTT connection attempt.
+The offline broker deliberately refuses that attempt; its public path remains poll-only.
+This case does not claim a successful signed handshake or broker subscription.
+
+Both cases compare complete independently literal canonical state before interaction checks.
+ACT completes every operation and captures each chronological observation before ASSERT.
+ASSERT compares each entire timeline against an independent literal and explicitly verifies every mock.
+All mocks use exactParams and exact registration/lifecycle arguments with definite counts.
+Logging is silent in both new cases; no logger output is asserted.
+Existing registration checks remain byte-identical, including the separate logger-output case.
+That logger-boundary cause remains original 012; this repair does not claim its correction.
+
+Pre-edit HEAD was `d6e4ee6e2cab5e62cba4396e5e0f2424b920f185` on
+`features/code-review-sweep`, with clean status and empty index.
+The fixer read complete AGENTS and all five complete project books, amended 04-07,
+04-11-SUMMARY, the newest protocol, this full report and the complete current pair.
+The source had 1328 lines; the owner had 4114 lines before this repair.
+No 04-07-SUMMARY exists yet; the amended plan supplies the current owning scope.
+Actual auth, REST, shadow, MQTT and logging contracts were read before editing.
+Callers were traced from platform and both Worlds through composition, token registration,
+HTTP authorization, credential refresh, cache creation/replacement and shadow start.
+The exact three-path Fallow guard ran before repository edits and again before this appendix.
+No existing name, signature, export, alias, field, visibility or mutability changes.
+D-06 contract-change impact queries are not triggered; no private-trace exception is inferred.
+
+### Separate assertion maintenance control
+
+The plausible wrong behavior moves all three AWS registrations after shadow creation/start.
+Registration values and final canonical/cache state remain correct, so separate unordered arrays,
+compilation and direct coverage can accept that behavior.
+The temporary source moves only the three registration calls below cache creation/replacement
+and awaited openShadow, before the existing rotation-success notification.
+After a fresh successful build, the exact named target fails its intended whole-order assertion:
+`^registers every AWS role before shadow use and replaces the next handshake credentials in place$`.
+Public canonical, replacement-cache and stopped-path assertions pass first.
+Native ERR_ASSERTION/deepStrictEqual reports shadow credentials as the first actual event,
+where the independently expected first three events are the three role registrations.
+The final control executes one test, one intended failure and zero skip/cancel/todo.
+It is neither a setup/import/compilation failure nor genuine production RED.
+
+The control ran again after the new expectation callbacks received lint-required braces
+and the runtime case moved outside the existing internal describe group.
+Both complete attempts remain retained. The final control uses the final owner bytes.
+The source was restored through Git after each attempt and compared byte for byte.
+Source before/restored blob: `641f40950d20e1fbfbc7de6dd1200e867c67ecb0`.
+Temporary control blob: `6a9e6e2d258de2071c795129978f843ca341bd4b`.
+Final owner blob: `6ad279d247668060a44390199608d1a723125730`.
+The fresh restored build and full owner pass; no control mutation enters Git.
+
+### Verification location and retained native evidence
+
+All builds, owner runs, coverage and source controls ran serially in the existing linked checkout.
+`workflow.use_worktrees=false`; no worktree, branch or recovery sentinel was created.
+Independent read-only lint, audit and provenance checks could overlap.
+Versions: Node v26.11.1, npm 11.20.0, TypeScript 6.0.3 and Fallow 3.27.0.
+Native directory: `/private/tmp/guardian-04-account-028/`.
+Each command retains exact executable/argv, cwd, HEAD, input blobs, versions,
+UTC start/end, raw exit and complete separate stdout/stderr.
+Saved complete before/control/restored identities, compiled control bytes and patches
+support independent source restoration and final-input comparison.
+
+| Native record | Actual scope and raw result |
+| --- | --- |
+| guard.json, report-guard.json | Exact three owned paths before edits; exit 0, no configured boundary zones or rule packs. |
+| baseline-build.json, baseline-target.json | Fresh build and both new cases; both exit 0. |
+| control-build.json, control-target.json | Initial temporary build 0; named intended order-assertion failure 1. |
+| restoration.json, restored-build.json, restored-target.json | Exact first restoration, fresh build and both named targets; all exit 0. |
+| final-control-build.json, final-control-target.json | Final-owner temporary build 0; exact named intended assertion failure 1, 13:48:59.220–13:48:59.805 UTC. |
+| final-restoration.json, build-final.json | Exact second restoration and fresh build; both exit 0, build 13:49:11.198–13:49:14.760 UTC. |
+| owner-final.json | Full compiled owner with TAP; exit 0, 153 pass, zero fail/cancel/skip/todo. |
+| direct-final.json | Exact isolated source/owner selector including fresh build; exit 0. |
+| native-coverage-final.json | Full owner, exact-source include and all three 100% thresholds; exit 0. Native compiled lines 995/995, functions 57/57, branches 181/181. |
+| lint-final-2.json | Exact source/owner ESLint, max warnings 0, no cache; exit 0. |
+| audit.json | Original base e6f49a59671c13a20b696b7f46e38406a36aeec0, JSON/quiet/explain; exit 0, verdict pass. |
+| evidence-gate.json, provenance-1.json | Unchanged on-disk genuine RED CLI and SAME installed recursive classifier; all six records RED_EVIDENCE_OK, exit 0. |
+| pre-step-1.json | Required exact two-path SKIP=npm-check pre-commit; exit 0, clean, 13:51:04.545–13:51:07.736 UTC. Repeated after this report update before staging. |
+
+The first lint attempt found ten void-expression shorthand errors in the new expectations.
+Explicit callback bodies resolved them; the full failed streams remain in lint.json.
+No other build, owner or coverage attempt failed outside the deliberate controls.
+Provenance preserves all 136 existing authored test calls byte for byte,
+including generated rows, original 024/025 regressions, every 015 contract/negative control
+and all 027 absence assertions. It also preserves all 33 existing function/interface declarations.
+Every other tracked path retains its initial blob; the full source has no final diff.
+The complete six-record genuine RED file retains blob
+`849b2e725bc19a4742e962910cce05f804a6a4c1`, with every archived stream unchanged.
+Selected coverage does not refresh merged all-pair source-mapped LCOV.
+No helper, API, configuration, dependency, shared record, live input or product policy changes.
+
+### Atomic commit and remaining scope
+
+The atomic commit introducing this appendix and the two new owner cases is titled
+`test: verify credential registration before downstream use`.
+Its final paths are only `test/runtime/accountRuntime.test.ts` and this report.
+The production path is owned only for the fully restored temporary control.
+Exact clean SKIP=npm-check pre-commit precedes staging and repeats after report changes.
+Native branch/HEAD/index assertions, authorized linked-index staging and plain foreground
+normal commit output retain the actual terminal result and Git hash.
+No hook bypass, amend, stash, rebase or history rewrite is used.
+
+Only original 028 is implemented here. Original 012 and 013 remain for 04-07,
+with later owning causes and independent full ACCOUNT correction pending.
+The parent owns the full combined gate after completed 04-07; none runs in this task.
+The 29 stable IDs and counter 0 continue; RUN-01 remains Pending.
+D-03 stays in force. WINDOWS 46/47/48 remain OPEN and unwaived.

@@ -43,13 +43,13 @@ import {
 
 import type { CloudApi } from '../../src/cloud/api.js';
 import type { MqttConnect } from '../../src/cloud/mqttTransport.js';
-import type { ShadowClient } from '../../src/cloud/shadow.js';
+import type { CredentialCache, ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
 import type { BgConfig } from '../../src/config.js';
 import type { DeviceSnapshot, DeviceStateStore, ReportedPatch } from '../../src/device/state.js';
-import type { SecretRole } from '../../src/logging.js';
+import type { RedactingLogger, SecretRole } from '../../src/logging.js';
 import type { ProtocolConstants } from '../../src/protocol.js';
-import type { AccountRuntime, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
+import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
@@ -1512,6 +1512,143 @@ describe('start', () => {
     assert.deepStrictEqual({ afterTheLaunch, afterAPoll: anchors.persists() }, { afterTheLaunch: 1, afterAPoll: 2 });
     assert.deepStrictEqual(commandRequests, []);
   });
+});
+
+test('registers every AWS role before shadow use and replaces the next handshake credentials in place', async (t) => {
+  // arrange
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const credentialEvents: unknown[][] = [];
+  const credentialCaches: CredentialCache[] = [];
+  const registerSecret = mock<AccountRuntimeOptions['registerSecret']>({ exactParams: true, name: 'credential registration' });
+  when(() => {
+    registerSecret('test-access-key-id', 'aws-access-key-id');
+  }).thenReturn(undefined);
+  when(() => {
+    registerSecret('test-secret-access-key', 'aws-secret-access-key');
+  }).thenReturn(undefined);
+  when(() => {
+    registerSecret('test-session-token', 'aws-session-token');
+  }).thenReturn(undefined);
+  when(() => {
+    registerSecret('test-next-access-key-id', 'aws-access-key-id');
+  }).thenReturn(undefined);
+  when(() => {
+    registerSecret('test-next-secret-access-key', 'aws-secret-access-key');
+  }).thenReturn(undefined);
+  when(() => {
+    registerSecret('test-next-session-token', 'aws-session-token');
+  }).thenReturn(undefined);
+  const shadow = mock<Pick<ShadowClient, 'start' | 'close'>>({ exactParams: true, name: 'shadow lifecycle' });
+  when(() => shadow.start(['account-1_serial-1'])).thenResolve(undefined);
+  when(() => shadow.close()).thenResolve(undefined);
+  const commands = mock<Pick<CloudApi, 'sendCommand'>>({ exactParams: true, name: 'forbidden monitoring commands' });
+  let elapsedMs = 0;
+
+  function silent(): void {
+    return undefined;
+  }
+
+  const log: Logging = Object.assign(silent, { prefix: '', debug: silent, error: silent, info: silent, success: silent, warn: silent, log: silent });
+  const clock: Clock = { now: () => START_TIME + elapsedMs };
+  const runtime = createAccountRuntime({
+    api: {
+      devices: () => Promise.resolve([geminiDevice()]),
+      device: () => Promise.reject(new Error('no single-device request is scripted')),
+      awsCredentials: answering([() => Promise.resolve(credentialsAt(START_TIME + 1_000)), () => Promise.resolve(rotatedCredentialsAt(START_TIME + 2_000))]),
+      sendCommand: (deviceId, command, signal) => commands.sendCommand(deviceId, command, signal),
+    },
+    store: createDeviceStateStore({ clock, log }),
+    registry: createFamilyRegistry(),
+    createShadow: (options) => {
+      credentialCaches.push(options.credentials);
+      credentialEvents.push(['shadow credentials', structuredClone(options.credentials.current())]);
+
+      return { connected: false, start: (deviceIds) => shadow.start(deviceIds), close: () => shadow.close() };
+    },
+    createRetry: (signal) => createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log }),
+    pollIntervalMs: POLL_INTERVAL_MS,
+    rotationLeadMs: 10,
+    minRotationDelayMs: 5,
+    failures: { recordFailure: silent, recordSuccess: silent, forget: silent },
+    registerSecret: (secret, role) => {
+      registerSecret(secret, role);
+      credentialEvents.push(['register', secret, role]);
+    },
+    onTrustworthyInventory: silent,
+    onDeviceRemoved: silent,
+    onMonitoringHealth: silent,
+    clock,
+    monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+    anchors: recordingAnchors(),
+    log,
+  });
+  t.after(async () => {
+    await runtime.stop();
+  });
+
+  // act
+  await runtime.start();
+  await settle();
+  elapsedMs = 990;
+  t.mock.timers.tick(990);
+  await settle();
+  const nextHandshakeCredentials = credentialCaches[0]?.current();
+  credentialEvents.push(['next handshake credentials', structuredClone(nextHandshakeCredentials)]);
+  const runningState = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID), nextHandshakeCredentials };
+  await runtime.stop();
+
+  // assert
+  assert.deepStrictEqual(runningState, {
+    path: 'poll-only',
+    snapshot: {
+      identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME,
+    },
+    nextHandshakeCredentials: {
+      endpoint: 'broker-two.invalid',
+      clientId: 'client-second',
+      accessKeyId: 'test-next-access-key-id',
+      secretAccessKey: 'test-next-secret-access-key',
+      sessionToken: 'test-next-session-token',
+    },
+  });
+  assert.strictEqual(runtime.monitoringPath, 'unavailable');
+  assert.deepStrictEqual(credentialEvents, [
+    ['register', 'test-access-key-id', 'aws-access-key-id'],
+    ['register', 'test-secret-access-key', 'aws-secret-access-key'],
+    ['register', 'test-session-token', 'aws-session-token'],
+    [
+      'shadow credentials',
+      {
+        endpoint: 'broker.invalid',
+        clientId: 'client-first',
+        accessKeyId: 'test-access-key-id',
+        secretAccessKey: 'test-secret-access-key',
+        sessionToken: 'test-session-token',
+      },
+    ],
+    ['register', 'test-next-access-key-id', 'aws-access-key-id'],
+    ['register', 'test-next-secret-access-key', 'aws-secret-access-key'],
+    ['register', 'test-next-session-token', 'aws-session-token'],
+    [
+      'next handshake credentials',
+      {
+        endpoint: 'broker-two.invalid',
+        clientId: 'client-second',
+        accessKeyId: 'test-next-access-key-id',
+        secretAccessKey: 'test-next-secret-access-key',
+        sessionToken: 'test-next-session-token',
+      },
+    ],
+  ]);
+  verify(registerSecret);
+  verify(shadow);
+  verify(commands);
 });
 
 describe('credential rotation', () => {
@@ -3833,6 +3970,111 @@ describe('commands', () => {
 });
 
 describe('createAccountRuntimeFromConfig', () => {
+  test('registers the bearer token and every AWS role before their first composed downstream use', async (t) => {
+    // arrange
+    const storagePath = await mkdtemp(join(tmpdir(), 'basement-guardian-registration-'));
+    const credentialEvents: unknown[][] = [];
+    const registerSecret = mock<RedactingLogger['registerSecret']>({ exactParams: true, name: 'composed credential registration' });
+    when(() => {
+      registerSecret('id-token-1', undefined);
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-access-key-id', 'aws-access-key-id');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-secret-access-key', 'aws-secret-access-key');
+    }).thenReturn(undefined);
+    when(() => {
+      registerSecret('test-session-token', 'aws-session-token');
+    }).thenReturn(undefined);
+
+    function silent(): void {
+      return undefined;
+    }
+
+    const log: RedactingLogger = Object.assign(silent, {
+      prefix: '',
+      debug: silent,
+      error: silent,
+      info: silent,
+      success: silent,
+      warn: silent,
+      log: silent,
+      registerSecret: (secret: string, role?: SecretRole) => {
+        registerSecret(secret, role);
+        credentialEvents.push(['register', secret, role]);
+      },
+    });
+    const runtime = createAccountRuntimeFromConfig({
+      config: accountConfig(),
+      constants: testConstants,
+      registry: createFamilyRegistry(),
+      storagePath,
+      clock: { now: () => START_TIME },
+      monotonic: { now: () => MONOTONIC_START_TIME },
+      log,
+      connect: (url, options) => {
+        credentialEvents.push(['connect', url, options.clientId]);
+        throw new Error('the offline broker refuses the connection');
+      },
+      httpFetch: (input, init) => {
+        const url = input.toString();
+        credentialEvents.push(['request', url, new Headers(init?.headers).get('authorization')]);
+
+        if (url === 'https://tenant.example.test/oauth/token') {
+          return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+        }
+
+        if (url === 'https://api.example.test/devices') {
+          return Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }));
+        }
+
+        if (url === 'https://api.example.test/credentials/aws') {
+          return Promise.resolve(new Response(JSON.stringify(credentialsAt(START_TIME + ONE_HOUR_MS)), { status: 200 }));
+        }
+
+        throw new Error('no response is scripted for this route');
+      },
+      createSalt: () => 'salt-1',
+    });
+    t.after(async () => {
+      await runtime.stop();
+      await rm(storagePath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    });
+
+    // act
+    await runtime.start();
+    await settle();
+    const runningState = { path: runtime.monitoringPath, snapshot: runtime.store.snapshot(DEVICE_ID) };
+    await runtime.stop();
+
+    // assert
+    assert.deepStrictEqual(runningState, {
+      path: 'poll-only',
+      snapshot: {
+        identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: 1_700_000_000_000,
+        receivedAt: START_TIME,
+      },
+    });
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual(credentialEvents, [
+      ['request', 'https://tenant.example.test/oauth/token', null],
+      ['register', 'id-token-1', undefined],
+      ['request', 'https://api.example.test/devices', 'Bearer id-token-1'],
+      ['request', 'https://api.example.test/credentials/aws', 'Bearer id-token-1'],
+      ['register', 'test-access-key-id', 'aws-access-key-id'],
+      ['register', 'test-secret-access-key', 'aws-secret-access-key'],
+      ['register', 'test-session-token', 'aws-session-token'],
+      ['connect', 'wss://broker.invalid/mqtt', 'client-first'],
+    ]);
+    verify(registerSecret);
+  });
+
   test('builds every collaborator without opening a connection, reading a file, or starting a timer', async (t) => {
     // arrange
     const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
