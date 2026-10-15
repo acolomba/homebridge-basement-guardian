@@ -670,3 +670,37 @@ Its actual artifact and commit checks pass. The original Self-Check remains PASS
 Parent inspected bin/lib/verify.cjs:235-242; this is a documented parser false positive, not an actual current self-check or full-gate failure.
 No tool, historical evidence or summary wording was changed to suppress it. Current plan09 is released after the actual successful parent full gate.
 RUN-01 remains Pending; all open process limits and the run-scoped worktree restoration obligation remain.
+
+
+## Partial plan09 causes and account fixture dependency gate
+
+The actual pre-first-commit09ledger is8a700ac; it remains preserved, not reconstructed.
+Eight original causes are implemented pending full independent correction:
+004 at92ed72f corrects seven historical comment blocks with executable emit/case bodies unchanged;
+005 ated2301f supplies only explicit local binding type with emitted JavaScript/owner unchanged;
+010 at0c5647f strengthens seven whole command outcome/canonical cases with separate wrong-outcome and optimistic-write controls;
+009 atfa8a21f adds genuinely pending dispatch/root-abort/refusal and unchanged canonical proof, retaining the earlier already-aborted case under a truthful title;
+011 at028ea7f records existing013 narrow construction-title overlap with exact unchanged-input evidence reuse;
+029 atfbc4c02 adds inside-lead four/five-ms injected-floor observation, preserving far-expiry lead coverage and restoring wrong-floor control exactly;
+016 at2e669f7 fixes eight remaining AAA cases with old assertion methods/literals/order intact;
+017 at918a98c groups by exported factory, preserves all151case token/AST/assertion/phase payloads and module-scope support declarations, and discloses the required AUTH relocation.
+All cause audits, clean presteps and normal hooks pass. Actual source/tests/report proofs remain in per-ID native directories and continuing ACCOUNT report.
+
+017's first owner stalled after159passes; controlled SIGTERM produced raw1, unchanged retry/final inputs pass168.
+The natural filesystem error was not captured; its precise cause stays unconfirmed.
+Parent declared bounded third task09-03 atfb57728 before edits; fresh plan checker PASS0blockers0warnings.
+Unchanged-owner controlled retry demonstrates Node lazy recursive-cleanup timer capture:024initializes under mock clock, injected retry atAUTHordinal2 stalls after159passes.
+Controlled-before raw1/explicit15secondbound/process-group cleanup and corrected-after raw0 are retained as fixture diagnostics, not production RED.
+Task repair167dc3b adds exactly five context-owned timer resets before affected recursive storage cleanup.
+Existing stop ordering, floor reset and four real-timer cleanup sites stay exact.
+Removing the five reset statements recovers all151saved case bodies/tokens/ASTs; all44production files and both14+2 immutable histories remain unchanged.
+Controlled retry passes168, naturalowner168, direct/native1003lines58functions193branches all100%, uncachedlint/audit/cleanprestep/normalhooks pass.
+Native dependency: /private/tmp/guardian-04-account-cleanup-isolation/actual-final.json.
+
+Required parent full npm run check returned0 at clean167dc3b6bfd643e7b217b873c7f8fcb1311f9472.
+Nodev26.11.1; UTC2026-10-15T20:19:59.572363+00:00 to20:20:34.853976+00:00.
+Six static checks,104 Cucumber scenarios,1156steps and all43isolatedpairs passed.
+Native metadata/output: /private/tmp/guardian-phase4-wave11-account-cleanup-gate.json and full-check.log.
+Plan09 remains incomplete:014 then full-current ACCOUNT correction. No summary, counter increment or partial clean verdict is inferred.
+Original29IDs/counter0 continue. WINDOWS46-53 remain OPEN/unwaived; RUN-01 Pending.
+The worktree opt-out restoration remains parent-owned before final milestone audit/handoff.
