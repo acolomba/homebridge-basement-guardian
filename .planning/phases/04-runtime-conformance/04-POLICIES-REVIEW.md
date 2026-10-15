@@ -1240,3 +1240,125 @@ clean-tree checks retain their actual native results under this evidence root.
 Only the owner and this report are committed. The parent owns the combined
 full gate and independent full six-file correction. No full-project pass or
 partial-clean POLICIES verdict is issued.
+
+## Repair evidence: CR-04-POLICIES-012
+
+Applied by `policies_fix_012` (`gsd-code-fixer`), task 04-04-01, under
+`/root/phase4_policies_finish/policies_fix_012`. Disposition: **applied, pending
+independent full correction**. All previous report bytes remain intact. Repairs
+001–012 are applied pending that review. The accepted opening set remains
+001–012, open count **12** (2 BLOCKER, 10 WARNING), correction counter **0**,
+and production bugs **0**. No ID is independently closed. RUN-01 stays Pending.
+
+The duplicate-notification, successive-run and aborted-wait cases each own a
+fresh `strong-mock` callback with `exactParams: true`. Their complete promises
+are one invocation, two invocations and no invocation, respectively. Each mock
+has an explicit final `verify(work)` after its whole public-state assertion.
+The independent observations retain callback counts and now include attempt
+alongside pending. The case-owned wrapper records its start before reaching
+the strict callback, so an unexpected callback caught by production cannot
+silently preserve a zero-invocation observation. The pending-only case retains
+its canned stub; its promise concerns pending state alone.
+
+All 008 scheduled-boundary, reset and held-callback cases, the 009 direct reset
+case, the 010 rejection/reschedule case and silent logger, all helpers, imports,
+comments, titles and complete headers retain their bytes. Only the three named
+cases change. No new helper file, package, public API, private signature, retry
+policy, real elapsed wait or private state access was introduced. Production
+remains byte-identical after the separate control below.
+
+### Exact private-query limitation and preserved helper
+
+Before editing, fresh exact Fallow `--symbol-impact` and `--trace` queries
+targeted `test/runtime/retryPolicy.test.ts:countedWork`, separately for
+`tsconfig.json` and `tsconfig.test.json`. Every command supplied one
+`--type-aware-project`, `--type-aware-require complete --format json --quiet
+--explain`. All four returned **exit 2**, reporting the private target absent.
+They establish neither complete semantic consumers nor deletion permission.
+Native outputs remain in 006–009. Exact lexical uses, the full helper body,
+return signature and all three callers were read before editing.
+
+The protocol-prescribed fallback preserves `countedWork()` and its exact
+`{ run: () => Promise<void>; runs: () => number }` signature and body. Each
+case uses its fresh result only as an independent observation accompanying
+the strict mock and its explicit verification. No private alias/member/helper
+is removed or renamed; the logger fallback from 010 remains unchanged.
+
+Initial location remains R:test/runtime/retryPolicy.test.ts:40–51,99–163.
+Actual pre-edit HEAD is `ddffc2c882b1951a538643ec1713c2fad1e45fab`.
+Current repaired locations at that HEAD plus the retained exact dirty diff
+are test/runtime/retryPolicy.test.ts:290–376. The terminal ordinary commit
+supplies the committed revision without a self-referential hash here.
+
+### Separate assertion control and exact source restoration
+
+Plausible wrong behavior: an aborted wait still invokes its callback. Type
+checking and lint cannot detect this semantic change. The temporary source
+control adds `await runGuarded(run)` in the wait's catch branch. Both compiler
+projects and uncached focused lint pass before the fresh control build. The
+named abort case executes and fails its intended whole-state `deepStrictEqual`,
+raw exit **1**: actual is `{ runs: 1, attempt: 1, pending: false }`, while the
+independent expected observation is `{ runs: 0, attempt: 1, pending: false }`.
+Native TAP records one failed test, zero cancelled/skipped/todo, `ERR_ASSERTION`
+and `deepStrictEqual`. The assertion catches the wrong behavior even though
+`runGuarded` swallows the strict mock's unexpected-call error. No import,
+setup, filtering or uncaught mock error supplies the failure.
+
+The exact native target command in 020-control-owner is:
+
+```text
+node --test --test-reporter=tap --test-name-pattern=^leaves the work uninvoked when a shutdown aborts a pending wait$ dist-test/test/runtime/retryPolicy.test.js
+```
+
+Full untouched TAP, expected/actual, stack, separate stderr and exact argv
+remain there. This is an assertion control, not a genuine production bug or
+RED history; no RED JSON was created. Restoration 021 compares exact saved
+bytes and HEAD with source blob `2c57c73e97be282acfdff61b439bfd86333d5b48`
+and SHA-256 `4061246a1abfd0a42a9f19238a4e091f68cd27c76a21a89a2ae71bdacac3290e`.
+A fresh restored build and all 26 owner tests pass. No control enters Git.
+First/capped delays, reset, pending guard, owned rejection, root cancellation
+and the timer module-object import are unchanged.
+
+### Native verification scope
+
+All checks ran in the existing checkout at the absolute repository root above,
+on `features/code-review-sweep`, Node v26.11.1 and npm 11.20.0. No worktree
+was created. The directly read sentinel records phase 04, plan 04-04,
+isolation `none`. The existing Git metadata ledger `gsd-plan-head-before-04-04`
+retains `ca0ebbc3f020bd6ad0bbcaf3be5dcd1ee0341950`. Complete AGENTS, all five
+books, current full retry source/owner/report, plan, CONTEXT, REVIEW-PROTOCOL
+and PATTERNS were read. Actual shadow schedule/reset and runtime root-signal
+composition and next-delay callers were read before the control. The shadow
+owner supplies context-timer and awaited-settling techniques only. The installed
+full Fallow skill and live help preceded the exact three-path guard and queries.
+
+Native root: `/private/tmp/guardian-04-policies-fix-native/012/`. Each command
+folder retains exact argv/cwd/UTC start/end/raw exit in `command.json`, separate
+untouched `stdout.raw` and `stderr.raw`, and before/after manifests with HEAD,
+Node/npm, Git blobs/SHA-256, exact dirty/staged diffs, owned bytes and untracked
+bytes. Interactive mandatory reads preceded this recorder. An initial shell
+attempt used unavailable `python` (exit 127); actual captures use `python3`.
+
+| Command / native folder | Actual result |
+| --- | --- |
+| Live Fallow help / 001–004; exact three-path guard / 005 | Exit 0 each; boundaries and rule packs remain unconfigured |
+| Exact private impact/trace queries / 006–009 | Exit 2 each; unavailable private target retained; no complete deletion proof |
+| Root/HEAD/clean-tree/sentinel/ledger checks / 010; lexical callers / 011 | Exit 0; existing checkout and persisted baseline preserved |
+| Modified owner diff/reread / 012 | Exit 0; strict mocks and independent public-state assertions present |
+| `npm run typecheck` / 013; focused uncached ESLint / 014 | Exit 0 each |
+| Initial `npm run build:test` / 015; full native owner / 016 | Exit 0 each; 26 tests, zero failed/cancelled/skipped/todo |
+| Control typecheck/lint/build / 017–019 | Exit 0 each before intended native assertion failure 020 |
+| Exact source restoration / 021 | Exit 0; saved bytes, blob, SHA-256 and HEAD match |
+| Restored `npm run build:test` / 022; full native owner / 023 | Exit 0 each; 26 tests, zero failed/cancelled/skipped/todo |
+| `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` / 024 | Exit 0; isolated direct requirements pass |
+| Native isolated coverage / 025; `retryPolicy.lcov` | Exit 0; compiled LH/LF 75/75, FNH/FNF 8/8, BRH/BRF 15/15, all 100% |
+| Recorded-base Fallow audit, JSON/quiet/explain / 026 | Exit 0; verdict pass; zero dead-code, complexity or duplication findings |
+
+The audit base remains `e25e26e6232ed99411b7463a7f9839c5eb837ec0`.
+Selected checks do not refresh merged all-pair LCOV. Exact scope/history checks,
+the required clean two-path pre-step, individual staging, ordinary foreground
+commit with normal hooks and terminal path/hash/deletion/clean-tree checks
+retain their actual native streams under this root. Only the owner and this
+report enter the commit. The parent owns the combined full gate and the first
+independent full six-file correction. No full-project pass, zero-open result
+or partial-clean POLICIES verdict is issued.

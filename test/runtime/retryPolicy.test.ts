@@ -291,16 +291,23 @@ test('runs the work once when an error and a close notification both ask for a r
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const policy = createRetryPolicy(policyOptions(new AbortController().signal));
-  const work = countedWork();
+  const observedWork = countedWork();
+  const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+  when(() => work()).thenResolve(undefined);
+  async function run(): Promise<void> {
+    await observedWork.run();
+    await work();
+  }
 
   // act
-  policy.schedule(work.run);
-  policy.schedule(work.run);
+  policy.schedule(run);
+  policy.schedule(run);
   t.mock.timers.tick(500);
   await settled();
 
   // assert
-  assert.deepStrictEqual({ runs: work.runs(), pending: policy.pending }, { runs: 1, pending: false });
+  assert.deepStrictEqual({ runs: observedWork.runs(), attempt: policy.attempt, pending: policy.pending }, { runs: 1, attempt: 1, pending: false });
+  verify(work);
 });
 
 test('reports a pending retry between scheduling the work and completing it', async (t) => {
@@ -322,18 +329,27 @@ test('runs the work again for a failure that arrives after the previous retry fi
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const policy = createRetryPolicy(policyOptions(new AbortController().signal));
-  const work = countedWork();
+  const observedWork = countedWork();
+  const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+  when(() => work())
+    .thenResolve(undefined)
+    .twice();
+  async function run(): Promise<void> {
+    await observedWork.run();
+    await work();
+  }
 
   // act
-  policy.schedule(work.run);
+  policy.schedule(run);
   t.mock.timers.tick(500);
   await settled();
-  policy.schedule(work.run);
+  policy.schedule(run);
   t.mock.timers.tick(1_000);
   await settled();
 
   // assert
-  assert.deepStrictEqual({ runs: work.runs(), pending: policy.pending }, { runs: 2, pending: false });
+  assert.deepStrictEqual({ runs: observedWork.runs(), attempt: policy.attempt, pending: policy.pending }, { runs: 2, attempt: 2, pending: false });
+  verify(work);
 });
 
 test('leaves the work uninvoked when a shutdown aborts a pending wait', async (t) => {
@@ -341,15 +357,21 @@ test('leaves the work uninvoked when a shutdown aborts a pending wait', async (t
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const controller = new AbortController();
   const policy = createRetryPolicy(policyOptions(controller.signal));
-  const work = countedWork();
+  const observedWork = countedWork();
+  const work = mock<() => Promise<void>>({ exactParams: true, name: 'retry work' });
+  async function run(): Promise<void> {
+    await observedWork.run();
+    await work();
+  }
 
   // act
-  policy.schedule(work.run);
+  policy.schedule(run);
   controller.abort();
   await settled();
 
   // assert
-  assert.deepStrictEqual({ runs: work.runs(), pending: policy.pending }, { runs: 0, pending: false });
+  assert.deepStrictEqual({ runs: observedWork.runs(), attempt: policy.attempt, pending: policy.pending }, { runs: 0, attempt: 1, pending: false });
+  verify(work);
 });
 
 test('keeps a rejection from the work inside the policy', async (t) => {
