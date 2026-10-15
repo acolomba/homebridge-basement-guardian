@@ -844,6 +844,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
       return false;
     }
 
+    if (shadow !== undefined) {
+      // Membership replacement ends the old transport without a disconnect callback.
+      handleShadowDisconnected('transport-closed');
+    }
+
     try {
       const client =
         shadow ??

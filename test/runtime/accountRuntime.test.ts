@@ -1281,6 +1281,341 @@ describe('createAccountRuntime', () => {
     verify(commands);
   });
 
+  test('releases replaced shadow readiness and telemetry ownership until the current connection is ready', async (t) => {
+    // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let elapsedMs = 0;
+    const clock: Clock = { now: () => START_TIME + elapsedMs };
+    const log = silentLog();
+    const store = createDeviceStateStore({ clock, log });
+    const anchors = recordingAnchors();
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'membership handoff requests' });
+    const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'forbidden monitoring commands' });
+    const removals = mock<AccountRuntimeOptions['onDeviceRemoved']>({ exactParams: true, name: 'forbidden membership removal' });
+    const inventories = mock<AccountRuntimeOptions['onTrustworthyInventory']>({ exactParams: true, name: 'membership inventory notifications' });
+    const monitoring = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'membership trust notifications' });
+    const connected: (() => void)[] = [];
+    const messages: ((topic: string, payload: Buffer) => void)[] = [];
+    const errors: ((error: Error) => void)[] = [];
+    const closed: (() => void)[] = [];
+    const transports: Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>[] = [];
+    const endings: number[] = [];
+    const reports: { account: MonitoringTrust; byDevice: ReadonlyMap<string, MonitoringTrust> }[] = [];
+    // The promise constructor assigns the resolver synchronously.
+    let completeSubscription!: () => void;
+    const replacementSubscription = new Promise<void>((resolve) => {
+      completeSubscription = resolve;
+    });
+    let rootSignal!: AbortSignal;
+    let shadowClient: ShadowClient | undefined;
+    const runtime = createAccountRuntime({
+      api: {
+        devices: (signal) => requests.devices(signal),
+        awsCredentials: (signal) => requests.awsCredentials(signal),
+        device: () => Promise.reject(new Error('no individual-device request is scripted')),
+        sendCommand: commands,
+      },
+      store,
+      registry: createFamilyRegistry(),
+      createShadow: (options) => {
+        shadowClient = createShadowClient({
+          ...options,
+          scheme: 'wss',
+          region: 'us-east-1',
+          clock,
+          log,
+          userAgent: 'offline-account-test',
+          connect: () => {
+            throw new Error('the injected transport opens no socket');
+          },
+          createTransport: () => {
+            const ordinal = transports.length;
+            const transport = mock<Pick<MqttTransport, 'subscribe' | 'publish' | 'end'>>({ exactParams: true, name: 'membership shadow transport' });
+            const topics = [
+              '$aws/things/account-1_serial-1/shadow/get/accepted',
+              '$aws/things/account-1_serial-1/shadow/get/rejected',
+              '$aws/things/account-1_serial-1/shadow/update/accepted',
+            ];
+            if (ordinal === 1) {
+              topics.push(
+                '$aws/things/account-1_serial-2/shadow/get/accepted',
+                '$aws/things/account-1_serial-2/shadow/get/rejected',
+                '$aws/things/account-1_serial-2/shadow/update/accepted',
+              );
+            }
+
+            when(() => transport.subscribe(topics)).thenReturn(ordinal === 0 ? Promise.resolve() : replacementSubscription);
+            when(() => transport.publish('$aws/things/account-1_serial-1/shadow/get', '')).thenResolve(undefined);
+            if (ordinal === 1) {
+              when(() => transport.publish('$aws/things/account-1_serial-2/shadow/get', '')).thenResolve(undefined);
+            }
+
+            when(() => transport.end()).thenResolve(undefined);
+            transports.push(transport);
+            return {
+              onConnect: (handler) => {
+                connected.push(handler);
+              },
+              onMessage: (handler) => {
+                messages.push(handler);
+              },
+              onError: (handler) => {
+                errors.push(handler);
+              },
+              onClose: (handler) => {
+                closed.push(handler);
+              },
+              subscribe: (topics) => transport.subscribe(topics),
+              publish: (topic, payload) => transport.publish(topic, payload),
+              end: () => {
+                endings.push(ordinal);
+                return transport.end();
+              },
+            } satisfies MqttTransport;
+          },
+        });
+        return shadowClient;
+      },
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log });
+      },
+      pollIntervalMs: 1_000,
+      rotationLeadMs: ROTATION_LEAD_MS,
+      minRotationDelayMs: MIN_ROTATION_DELAY_MS,
+      failures: { recordFailure: () => undefined, recordSuccess: () => undefined, forget: () => undefined },
+      registerSecret: () => undefined,
+      onTrustworthyInventory: inventories,
+      onDeviceRemoved: removals,
+      onMonitoringHealth: (account, byDevice) => {
+        monitoring(account, byDevice);
+        reports.push({ account, byDevice: new Map(byDevice) });
+      },
+      clock,
+      monotonic: { now: () => MONOTONIC_START_TIME + elapsedMs },
+      anchors,
+      log,
+    });
+    t.after(async () => {
+      await runtime.stop();
+    });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice(), otherGeminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([otherGeminiDevice(), geminiDevice()]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
+    when(() => {
+      inventories([DEVICE_ID]);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      inventories([DEVICE_ID, OTHER_DEVICE_ID]);
+    }).thenReturn(undefined);
+    when(() => {
+      inventories([OTHER_DEVICE_ID, DEVICE_ID]);
+    }).thenReturn(undefined);
+    const account: MonitoringTrust = { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false };
+    const deviceTrust: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false };
+    const pairTrust = new Map([
+      [DEVICE_ID, deviceTrust],
+      [OTHER_DEVICE_ID, deviceTrust],
+    ]);
+    when(() => {
+      monitoring(account, new Map([[DEVICE_ID, deviceTrust]]));
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      monitoring(account, pairTrust);
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      monitoring(
+        { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+        new Map([
+          [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+          [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+        ]),
+      );
+    }).thenReturn(undefined);
+    const firstSnapshot: DeviceSnapshot = {
+      identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 3, primary_pump_running: false, ac_power: true },
+      metadata: { firmware: 'first-live' },
+      shadowVersion: 7,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME + 123,
+    };
+    const otherSnapshot: DeviceSnapshot = {
+      identity: { deviceId: OTHER_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+      connectivity: { connected: true, timestamp: 1_700_000_000_000 },
+      data: { water_level: 1, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: undefined,
+      deviceTimestamp: 1_700_000_000_000,
+      receivedAt: START_TIME + 2_000,
+    };
+    function captureMonitoring() {
+      return {
+        path: runtime.monitoringPath,
+        connected: shadowClient?.connected,
+        snapshots: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
+        anchors: [...anchors.stored],
+        report: reports.at(-1),
+        connections: transports.length,
+        endings: [...endings],
+      };
+    }
+
+    // act
+    await runtime.start();
+    await settle();
+    const beforeFirstReadiness = { path: runtime.monitoringPath, connected: shadowClient?.connected };
+    connected[0]?.();
+    await settle();
+    elapsedMs = 123;
+    messages[0]?.(
+      '$aws/things/account-1_serial-1/shadow/get/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 3 }, state: { firmware: 'first-live' } } }, version: 7 })),
+    );
+    const initiallyReady = captureMonitoring();
+    elapsedMs = 1_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const unchangedMembership = captureMonitoring();
+    elapsedMs = 2_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const replacedMembership = captureMonitoring();
+    connected[0]?.();
+    errors[0]?.(new Error('a replaced transport failed'));
+    closed[0]?.();
+    messages[0]?.(
+      '$aws/things/account-1_serial-1/shadow/update/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 0 } } }, version: 99 })),
+    );
+    await settle();
+    const afterOldCallbacks = captureMonitoring();
+    elapsedMs = 3_000;
+    t.mock.timers.tick(1_000);
+    await settle();
+    const afterRestRefresh = captureMonitoring();
+    connected[1]?.();
+    await settle();
+    const whileSubscriptionPending = captureMonitoring();
+    completeSubscription();
+    await settle();
+    const currentReady = captureMonitoring();
+    elapsedMs = 3_250;
+    messages[1]?.(
+      '$aws/things/account-1_serial-1/shadow/get/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 2 }, state: { firmware: 'current-live' } } }, version: 1 })),
+    );
+    const currentTelemetry = captureMonitoring();
+    await runtime.stop();
+    connected[1]?.();
+    messages[1]?.(
+      '$aws/things/account-1_serial-1/shadow/update/accepted',
+      Buffer.from(JSON.stringify({ state: { reported: { data: { water_level: 0 } } }, version: 100 })),
+    );
+    await settle();
+    const stopped = captureMonitoring();
+    const expectedReplacement = {
+      path: 'poll-only',
+      connected: false,
+      snapshots: [{ ...firstSnapshot, shadowVersion: undefined, receivedAt: START_TIME + 2_000 }, otherSnapshot],
+      anchors: [
+        [DEVICE_ID, START_TIME + 123],
+        [OTHER_DEVICE_ID, START_TIME + 2_000],
+      ],
+      report: { account, byDevice: pairTrust },
+      connections: 2,
+      endings: [0],
+    };
+    const expectedRest = {
+      ...expectedReplacement,
+      snapshots: [
+        { ...firstSnapshot, data: { water_level: 1, primary_pump_running: false, ac_power: true }, shadowVersion: undefined, receivedAt: START_TIME + 3_000 },
+        { ...otherSnapshot, receivedAt: START_TIME + 3_000 },
+      ],
+    };
+    const expectedCurrent = {
+      ...expectedRest,
+      path: 'shadow-and-poll',
+      connected: true,
+      snapshots: [
+        {
+          ...firstSnapshot,
+          data: { water_level: 2, primary_pump_running: false, ac_power: true },
+          metadata: { firmware: 'current-live' },
+          shadowVersion: 1,
+          receivedAt: START_TIME + 3_250,
+        },
+        { ...otherSnapshot, receivedAt: START_TIME + 3_000 },
+      ],
+      anchors: [
+        [DEVICE_ID, START_TIME + 3_250],
+        [OTHER_DEVICE_ID, START_TIME + 2_000],
+      ],
+    };
+
+    // assert
+    assert.deepStrictEqual(beforeFirstReadiness, { path: 'poll-only', connected: false });
+    assert.deepStrictEqual(initiallyReady, {
+      path: 'shadow-and-poll',
+      connected: true,
+      snapshots: [firstSnapshot],
+      anchors: [[DEVICE_ID, START_TIME + 123]],
+      report: { account, byDevice: new Map([[DEVICE_ID, deviceTrust]]) },
+      connections: 1,
+      endings: [],
+    });
+    assert.deepStrictEqual(unchangedMembership, {
+      path: 'shadow-and-poll',
+      connected: true,
+      snapshots: [{ ...firstSnapshot, receivedAt: START_TIME + 1_000 }],
+      anchors: [[DEVICE_ID, START_TIME + 123]],
+      report: { account, byDevice: new Map([[DEVICE_ID, deviceTrust]]) },
+      connections: 1,
+      endings: [],
+    });
+    assert.deepStrictEqual(
+      { replacedMembership, afterOldCallbacks, afterRestRefresh, whileSubscriptionPending, currentReady, currentTelemetry, stopped },
+      {
+        replacedMembership: expectedReplacement,
+        afterOldCallbacks: expectedReplacement,
+        afterRestRefresh: expectedRest,
+        whileSubscriptionPending: expectedRest,
+        currentReady: { ...expectedRest, path: 'shadow-and-poll', connected: true },
+        currentTelemetry: expectedCurrent,
+        stopped: {
+          ...expectedCurrent,
+          path: 'unavailable',
+          connected: false,
+          endings: [0, 1],
+          report: {
+            account: { restDegraded: false, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
+            byDevice: new Map([
+              [DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+              [OTHER_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false }],
+            ]),
+          },
+        },
+      },
+    );
+    verify(requests);
+    verify(commands);
+    verify(removals);
+    verify(inventories);
+    verify(monitoring);
+    for (const transport of transports) {
+      verify(transport);
+    }
+  });
+
   test('keeps the shadow connection when the same physical devices are enumerated in another order', async (t) => {
     // arrange
     t.mock.timers.enable({ apis: ['setTimeout'] });

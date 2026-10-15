@@ -6999,3 +6999,91 @@ report/JSON commit before any GREEN dispatch. All later assertions remain active
 even though this intended first combined checkpoint prevents their execution.
 The fixer releases the serial lease only with its actual final return and takes
 no further action after that return.
+
+
+## CR-04-ACCOUNT-030: repair implemented, pending independent correction
+
+The parent independently verified and committed the complete RED report and
+ACCOUNT evidence at `2157f9e9d6e6ed6a55c6df1417a1f54cc638f513` before
+authorizing this same fixer's GREEN stage. That commit left the active failing
+owner unstaged. The source first changed only after that evidence commit. The
+source/test/report cause commit directly follows it; the exact resulting hash,
+commit hooks, clean prestage result and final blobs are recorded in
+`/private/tmp/guardian-account-030-red-YEgC4q/green-terminal-checkpoint.json`.
+No evidence JSON was edited during GREEN.
+
+### Existing ownership behavior reused
+
+The five-line source insertion calls the existing clean-disconnect handler
+before an existing client's changed-membership start. It clears runtime
+readiness and releases the fleet's shadow watermarks before replacement, so a
+later healthy REST refresh owns telemetry until the current connection becomes
+ready. The existing order-independent membership early return still precedes
+this release. The real ShadowClient continues to gate all old callbacks and
+restores readiness only after current subscription and complete-shadow requests.
+No API, port, alias, helper contract, retry policy or public shape changed.
+
+Current caller/control-flow reads covered poll and credential callers,
+attemptShadow, disconnect release, and real ShadowClient replacement/readiness.
+The prior complete five-book, owned-file, report, plan/protocol and context
+reads remain valid: unchanged blobs were checked against the durable range
+ledger, and the new source range was read back after editing. The actual source
+path received its fresh Fallow guard at
+2026-10-15T22:10:28.448Z–22:10:28.604Z before the insertion. Exact-path guards
+and canonical containment checks also precede this append and any formatter.
+
+The owner remains byte exact at
+`e8f89dcdae97c9d46411b330cf30b903ab85608e`. No adaptation of 022 was necessary:
+its physical membership, literal topic/get, real ingress, canonical snapshot,
+anchor and old-device expectations all pass unchanged. All 151 older authored
+cases, the new 030 whole observations, fixture resets, floor reset and seed
+helpers remain unchanged. The source blob is
+`5d1ea815151fb008a4d49c003a2b8416cc02bf3a`; the other 43 production files and
+all 44 file modes remain exact to the evidence baseline.
+
+### Focused GREEN verification
+
+All following runs used Node v26.11.1/npm 11.20.0 in the existing checkout,
+completed without timeout/signal/setup failure, and preserved separate native
+argv, UTC, raw exit, stdout/stderr, full input manifests, owner/source copies
+and patches:
+
+- Fresh `npm run build:test`: exit 0,
+  22:10:41.250Z–22:10:44.407Z.
+- Full native owner with explicit TAP: exit 0, 169 tests passed,
+  22:10:56.629Z–22:10:57.118Z; zero skipped/cancelled/todo.
+- Exact qualified 030 named native TAP: exit 0, one test passed,
+  22:11:13.045Z–22:11:13.329Z; zero skipped/cancelled/todo.
+- Direct isolated source/owner pair: exit 0,
+  22:11:29.148Z–22:11:30.181Z.
+- Separate native exact-SF coverage: exit 0,
+  22:11:42.343Z–22:11:42.845Z. The sole record is
+  `SF:dist-test/src/runtime/accountRuntime.js`: 1007/1007 lines,
+  58/58 functions and 195/195 branches. Explicit 100% thresholds passed.
+- Uncached source and owner ESLint: exit 0,
+  22:11:55.645Z–22:12:01.423Z.
+- Same installed on-disk ACCOUNT evidence CLI: exit 0,
+  22:12:23.685Z–22:12:23.945Z, `RED_EVIDENCE_OK`.
+- Recursive installed classifier/provenance check: exit 0,
+  22:13:02.519Z–22:13:03.686Z: all 16 ACCOUNT and two PLATFORM historical
+  records accepted with matching sourceCommit/sourceBlob provenance.
+
+ACCOUNT evidence remains immutable at
+`b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134`; PLATFORM remains immutable at
+`5a35d0831979b6c7444b598c0987bdd9d98f758b`. The entire original 14-record
+ACCOUNT root remains exactly deep-equal inside the 16-record history. This
+append preserves the complete preceding report prefix. The real-base Fallow
+audit, clean `SKIP=npm-check` prestage hooks, ordinary foreground commit with
+SKIP absent, and final clean-tree result are retained in the same native
+directory and terminal checkpoint. Their raw results govern the handoff.
+
+### Disposition retained
+
+030 is implemented pending independent correction; this is no finding closure
+or independent review. Correction counter1 continues with 030–044 still15
+open, reopened0, round1, RUN-01 Pending. The correction1 equation remains
+29−29+15=15 and its actual D-03 predicates remain false. WINDOWS46–54 stay
+OPEN/unwaived. No 031/044 repair, shared ledger/config update, summary or full
+parent gate occurred here. The previous full gate predates these source/test
+inputs; the parent owns the required combined gate and independent correction.
+The serial lease ends only with this fixer's actual final return.
