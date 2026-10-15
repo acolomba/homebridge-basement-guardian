@@ -3557,3 +3557,160 @@ T-04-16 retains targeted identity, neighbor isolation and callback-before-prune 
 No security-relevant surface outside the existing threat model is introduced.
 RUN-01 remains Pending. Original IDs, counter 0, D-03 and all historical OPEN/unwaived limits remain.
 The parent retains its full-gate, shared-state and final worktree-setting restoration obligations.
+
+## CR-04-ACCOUNT-022: later-device shadow membership RED checkpoint
+
+Prepared by typed `gsd-code-fixer`, task
+`/root/phase4_account_trust/account_022_red`, on 2026-10-15.
+This appendix records active unchanged-production RED preparation only.
+Original 022 remains OPEN. All earlier implementation dispositions remain.
+All 29 original IDs, initial 18 BLOCKER/11 WARNING counts and ACCOUNT
+correction counter **0** continue. No independent correction or closure occurs.
+The complete earlier report remains an exact byte prefix.
+
+### Public regression and intended assertion
+
+The new standalone case at `test/runtime/accountRuntime.test.ts:830` is
+`adds a later discovered device to live shadow routing without reconnecting unchanged inventories`.
+It calls public `createAccountRuntime` with the real `createShadowClient`.
+An injected offline `MqttTransport` provides typed handler-registration stubs
+and exact-parameter strong mocks for subscription, publication and ending.
+The actual real client's route table, complete-shadow requests and current
+connection guards process every message. The test assumes no fake routing equivalence.
+The existing lifecycle-only fake contract, fakeShadow and recordingAnchors remain unchanged.
+
+The first inventory admits one synthetic physical device. The offline transport
+completes the real subscription and get-publication readiness chain.
+The first executed assertion independently compares the complete canonical
+snapshot, ID set, healthy account and keyed-device trust, and ready public path.
+It passes. Thus the intended failure follows established real shadow readiness.
+
+At elapsed 1000 ms, a later successful inventory admits the second device.
+Existing start/replacement behavior must establish all six accepted/rejected
+topics and request both complete shadows. The next unchanged inventory at
+2000 ms must leave that replacement count unchanged.
+At 2250 ms, the current transport delivers first-device update-accepted and
+second-device get-accepted documents. Complete independent expected snapshots
+retain both identities, connectivity, unaffected data, metadata, watermarks,
+device timestamps and distinct local receipt times. Exact arrival anchors
+must advance for both devices. Full account and keyed-device trust stay healthy.
+After stop, a further second-device message must change neither snapshot nor anchor.
+Command trust becomes unready in the complete account and keyed-device answers.
+
+The second executed deepStrictEqual compares all these captured observations,
+the whole subscription/get histories and all trustworthy inventories together.
+It fails with AssertionError/ERR_ASSERTION for the intended missing membership:
+
+- Both physical devices are present in canonical storage and REST observations.
+- Only the first three-topic subscription and first-device get exist.
+- The first-device message updates level 3, firmware first-live, version 11,
+  receipt and anchor START_TIME + 2250, as independently expected.
+- The second-device message is ignored. Its level remains 1, pump false,
+  metadata empty and watermark absent. Receipt remains START_TIME + 2000;
+  its anchor remains the exact admission time START_TIME + 1000.
+- The connection count remains one. The chosen existing start operation would
+  replace once on membership change, then remain at two through the unchanged poll.
+- Shutdown suppresses the subsequent message through the real ownership guard.
+
+The failure is the explicit public-state assertion. It is not strict mock
+dispatch or verification, fixture, compilation, import, TypeError, missing
+target, filtering, skip or cancellation. The forbidden command/removal ports
+and exact inventory/trust callbacks have explicit verification after public
+assertions, as does every created transport-operation mock.
+Canned REST and credential answers remain typed stubs. Logging stays silent.
+
+### Native results and preparation attempts
+
+All commands completed serially in the existing linked feature checkout with
+workflow.use_worktrees=false, Node v26.11.1 and npm 11.20.0.
+No additional checkout, branch, recovery sentinel or dependency was created.
+Native directory: `/private/tmp/guardian-04-account-022-red/`.
+Each command retains exact argv, raw exit, real UTC start/end, source HEAD,
+source/owner blobs, complete separate stdout/stderr and its full active patch.
+Complete before/current owner bytes and the 44-file production manifest remain.
+
+| Native record | Actual command or scope and raw result |
+| --- | --- |
+| before.json, guard.json | Clean HEAD 1055218, empty index/status, 44 production and 695 file/symlink identities; exact three-path Fallow guard before edits or formatting, exit 0. No boundary zones/rule packs configured. |
+| owner-format.json | First exact owner Prettier, exit 0; complete post-format candidate bytes/patch retained. The original insertion remains in the tool patch, without a separate pre-format file capture. |
+| owner-lint.json | First uncached owner ESLint, exit 1 for new-case array notation, indentation and padding. Full streams and original candidate bytes/patch retained. |
+| build.json | First fresh npm run build:test, exit 0. No native test ran on that candidate. |
+| lint-fix.json, format-final.json, lint-final.json | Serial exact-owner lint fixing, formatting and final uncached lint; each exit 0. Every mutating process completed before the next command. |
+| build-final.json | Fresh npm run build:test, exit 0, 16:01:04.249283–16:01:07.283976 UTC. |
+| target.json | Native TAP exact anchored title above, exit 1; one executed intended assertion failure, zero skip/cancel/todo, 16:01:07.369312–16:01:07.695318 UTC. |
+| owner.json | node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js, exit 1; 157 tests, 156 pass and only the new assertion fails, zero skip/cancel/todo, 16:01:17.360171–16:01:17.792340 UTC. |
+| assemble.json, classifications.json | Complete old-root preservation and SAME installed classifyRedEvidence recursively over all fourteen records; exit 0, every verdict RED_EVIDENCE_OK, actual source Git blobs verified. |
+| installed-gate.json | Installed check tdd-red-evidence on the actual on-disk pair with GSD_RUNTIME=codex and --raw; exit 0, RED_EVIDENCE_OK. |
+
+The exact named command uses node --test --test-reporter=tap,
+`--test-name-pattern=^adds a later discovered device to live shadow routing without reconnecting unchanged inventories$`,
+and the compiled account owner. Native TAP remains complete and untouched in
+both the JSON records and separate stdout files. Build output is separate.
+The initial shell invocation used unavailable `python` and exited 127 before
+snapshot or guard. Its exact tool stderr and command are retained separately
+in preparationAttempts. The corrected invocation uses installed python3.
+No UTC is invented for that first tool-only failure.
+All preparation attempts retain their actual meaning; none is intended RED.
+Both actual native test runs reach the same intended assertion.
+Mutating-tool records identify their completed output bytes and patch.
+Their pre-command candidate bytes were not separately captured for the first
+formatter and lint-fix invocation; the exact edits remain in the tool record.
+This preparation provenance limit does not replace either complete native RED
+run: both ran on the same saved final owner with a fresh preceding build.
+
+### Immutable history, production and prior owner
+
+Source HEAD remains `105521860844e2c8fc0f04ab917019e9bcf6f564`.
+Account source remains blob `334537d18395e5f234bb346e2a993852ab80f730`.
+All 44 production files remain byte-identical to that commit, including shadow.
+Original owner is `5ff214b9d474fde7da84a26844663e34d5cd4aef`.
+Active owner is `6c5489e0836a084fc93650e937ef000410615d7d`.
+Removing only the new standalone case and its two import adjustments reproduces
+the entire original owner byte for byte. Every earlier assertion, both 023
+terminal rows, the full two-device 021 regression, exact 024, all 025 literal
+timer/deadline assertions and its stronger 013 verification remain unchanged.
+Both contract helpers, all existing contracts and negative controls stay exact.
+
+The pair JSON root contains the complete full-owner native run and active patch.
+Its priorEvidence[0] is the ENTIRE original twelve-record root from immutable
+blob `822f393d3a0f37667cb8024e314a8ddd7ca7e993`, deeply verbatim.
+The exact old raw JSON is retained in priorEvidencePreservation as well.
+The other archive is this case's complete named-target run.
+Total recursive records are **14 = 12 preserved + 2 new**.
+The saved root regressionPatch equals the entire active owner diff exactly.
+The SAME installed classifyRedEvidence accepts every old/new record as
+RED_EVIDENCE_OK; the current CLI separately accepts the actual on-disk pair.
+Independent semantic assessments retain every original narrower preliminary
+025 timing and 023 immediate-trust attempt without relabeling it.
+Every recorded sourceCommit resolves to its actual account source Git blob.
+No second parser, partial history or alternative evidence-path gate is used.
+
+### Terminal checkpoint and bounded next action
+
+Exactly three repository paths change: account owner, this report and pair RED JSON.
+No production, real shadow owner, helper, seed, plan, summary, configuration or shared record changes.
+Complete current account source/owner and full prior ACCOUNT report were read
+through bounded contiguous ranges before edits, with complete AGENTS, bootstrap,
+all five books and the amended 08 plan including dependency and tail.
+Current protocol, context, research, patterns, findings, 07/11 summaries,
+canonical decisions and applicable locked-state boundaries were loaded.
+Actual shadow start/replacement/routing/readiness/current-close operations,
+its owner examples and platform/World composition callers were inspected.
+No existing public/shared/private alias/member shape or signature changes.
+No exact private-target deletion exception or fake-equivalence claim follows.
+
+The minimum proposed GREEN repair reconciles the existing shadow client's
+tracked physical device membership through its existing start operation only
+when membership changes. An unchanged poll must not reconnect. Preserve
+post-await lifecycle ownership, current connection handling and existing
+credential rotation, with no new external API or reconnect policy.
+This proposal fits existing task 04-08-01 and needs no external edit or new task.
+Any wider dependency still requires the parent's concrete sequential cause plan first.
+
+The parent alone commits complete planning evidence after the required clean
+pre-step and ordinary foreground hooks BEFORE any GREEN edit or code staging.
+The failing active owner remains unstaged. The classifier's generic GREEN
+message does not establish that parent commit or authorize skipping it.
+No production control, direct-coverage pass, full npm run check, staging,
+commit, repair, closure, correction or ancillary summary occurred here.
+RUN-01 remains Pending. D-03 and all historical OPEN/unwaived limits continue.
