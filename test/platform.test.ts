@@ -2096,22 +2096,12 @@ describe('registerDiscoveredDevices', () => {
 
       // act
       registerDiscoveredDevices(context(), [DEVICE_ID, SECOND_DEVICE_ID], store);
-
-      // assert
-      assert.deepStrictEqual(
-        {
-          accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
-          instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
-          listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
-          accepted,
-        },
-        {
-          accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
-          instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
-          listenerOwners: [SECOND_DEVICE_ID],
-          accepted: acceptedUuids,
-        },
-      );
+      const initialOwnership = structuredClone({
+        accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+        instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        accepted,
+      });
       const healthyAccessory = accessories.get(SECOND_ACCESSORY_UUID);
       const healthyInstance = basementGuardianAccessories.get(SECOND_ACCESSORY_UUID);
 
@@ -2129,55 +2119,61 @@ describe('registerDiscoveredDevices', () => {
       registerDiscoveredDevices(context(), [DEVICE_ID, SECOND_DEVICE_ID], store);
       store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
       store.applyReportedPatch(SECOND_DEVICE_ID, reportedPatch({ ac_power: true }));
-      assert.deepStrictEqual(
-        {
-          accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
-          instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
-          sameAccessory: accessories.get(SECOND_ACCESSORY_UUID) === healthyAccessory,
-          sameInstance: basementGuardianAccessories.get(SECOND_ACCESSORY_UUID) === healthyInstance,
-          listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
-          healthyUpdates: updateSpy.mock.calls.map((call) => ({ deviceId: call.arguments[0].identity.deviceId, source: call.arguments[1] })),
-          mainsLost: healthyAccessory
-            .getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
-            ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
-          canonical: [store.snapshot(DEVICE_ID), store.snapshot(SECOND_DEVICE_ID)],
-          accepted,
-        },
-        {
-          accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
-          instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
-          sameAccessory: true,
-          sameInstance: true,
-          listenerOwners: [SECOND_DEVICE_ID],
-          healthyUpdates: [
-            { deviceId: SECOND_DEVICE_ID, source: 'poll' },
-            { deviceId: SECOND_DEVICE_ID, source: 'poll' },
-            { deviceId: SECOND_DEVICE_ID, source: 'live' },
-          ],
-          mainsLost: CONTACT_DETECTED,
-          canonical: [
-            {
-              identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
-              connectivity: { connected: true, timestamp: 0 },
-              data: { ac_power: true },
-              metadata: {},
-              shadowVersion: undefined,
-              deviceTimestamp: 0,
-              receivedAt: 0,
-            },
-            {
-              identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Second System', serialNumber: 'serial-2' },
-              connectivity: { connected: true, timestamp: 0 },
-              data: { ac_power: true },
-              metadata: {},
-              shadowVersion: undefined,
-              deviceTimestamp: 0,
-              receivedAt: 0,
-            },
-          ],
-          accepted: acceptedUuids,
-        },
-      );
+      const laterOwnership = structuredClone({
+        accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+        instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        sameAccessory: accessories.get(SECOND_ACCESSORY_UUID) === healthyAccessory,
+        sameInstance: basementGuardianAccessories.get(SECOND_ACCESSORY_UUID) === healthyInstance,
+        listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        healthyUpdates: updateSpy.mock.calls.map((call) => ({ deviceId: call.arguments[0].identity.deviceId, source: call.arguments[1] })),
+        mainsLost: healthyAccessory
+          .getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
+          ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
+        canonical: [store.snapshot(DEVICE_ID), store.snapshot(SECOND_DEVICE_ID)],
+        accepted,
+      });
+
+      // assert
+      assert.deepStrictEqual(initialOwnership, {
+        accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+        instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
+        listenerOwners: [SECOND_DEVICE_ID],
+        accepted: acceptedUuids,
+      });
+      assert.deepStrictEqual(laterOwnership, {
+        accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+        instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
+        sameAccessory: true,
+        sameInstance: true,
+        listenerOwners: [SECOND_DEVICE_ID],
+        healthyUpdates: [
+          { deviceId: SECOND_DEVICE_ID, source: 'poll' },
+          { deviceId: SECOND_DEVICE_ID, source: 'poll' },
+          { deviceId: SECOND_DEVICE_ID, source: 'live' },
+        ],
+        mainsLost: CONTACT_DETECTED,
+        canonical: [
+          {
+            identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+            connectivity: { connected: true, timestamp: 0 },
+            data: { ac_power: true },
+            metadata: {},
+            shadowVersion: undefined,
+            deviceTimestamp: 0,
+            receivedAt: 0,
+          },
+          {
+            identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Second System', serialNumber: 'serial-2' },
+            connectivity: { connected: true, timestamp: 0 },
+            data: { ac_power: true },
+            metadata: {},
+            shadowVersion: undefined,
+            deviceTimestamp: 0,
+            receivedAt: 0,
+          },
+        ],
+        accepted: acceptedUuids,
+      });
       assert.deepStrictEqual(registrations, [
         { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [ACCESSORY_UUID], cached: [false], listeners: [] },
         { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [SECOND_ACCESSORY_UUID], cached: [false], listeners: [] },

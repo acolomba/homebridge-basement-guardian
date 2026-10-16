@@ -9390,3 +9390,142 @@ The parent receives the exact D-03 sets/counts above before its next action.
 
 _Reviewed by `/root/phase4_account_correction2` as typed `gsd-code-reviewer`;
 FULL deep correction2 at Q. No repair or requirement completion is claimed._
+
+### 2026-10-16 — 041 assertion ordering implementation, pending whole correction 3
+
+This appendix records only CR-04-ACCOUNT-041 under 04-18-01. It is an
+implementation checkpoint, not an independent review or closure. The existing
+`features/code-review-sweep` linked checkout was used with the exclusive serial
+code/build/report/index lease and `workflow.use_worktrees=false`. Initial HEAD
+and the immutable plan ledger remain
+`0e6ad2de891d6dac3c8ea541d14791ac7c46c97c`. No branch, checkout, dependency,
+configuration, production API, helper contract or production behavior changed.
+
+The two expanded uncertain-registration rows now remain in ACT through their
+complete sequence. Immediately after the first registration call,
+`initialOwnership` captures all accessory owners, instance owners, listener
+owners and accepted UUIDs through `structuredClone`. Mutable device records
+and arrays are detached from later actions. The healthy-owner lookup, its
+existing missing-owner guard, real update spy, rebuilt-context registrations,
+empty inventories, removal attempt, explicit store removal, reappearance and
+both live patches retain their original order. `laterOwnership` captures the
+complete later state before ASSERT starts.
+
+Both original independent ownership expectations remain complete. The later
+expectation still includes both identity equalities, poll/poll/live updates,
+the mains-power reading and both complete canonical snapshots. Both accepted
+UUID outcomes remain distinct. The full registration timeline and exact safe,
+actionable restart diagnostic remain unchanged. Every public comparison now
+precedes the four explicit strict-mock verifications: registration, removal,
+diagnostic and API. The real redacting logger, synthetic secrets and the same
+ordinary production-visible Error remain intact in both rows.
+
+An AST-backed preservation check compared the saved original and current
+owner. All four complete expected arguments and both original complete
+observation expressions match. Action calls and verification calls match in
+order. The first detached capture immediately follows the first registration.
+The other 60 authored cases, complete headers, imports, helper bodies and row
+definitions are byte-exact outside the one assigned callback. The owner still
+contains 61 authored declarations and expands to 70 cases. Full-owner reading
+did not authorize any unrelated correction; 045 and 047 remain separate work.
+
+The actual 031 human choice remains authoritative. Any synchronous registration
+throw has uncertain acceptance and suspends automatic retries for the stable
+accessory-map run until restart, including rebuilt contexts, absence, removal,
+store removal and reappearance. Normal return earns local ownership, and
+configureAccessory restoration remains authoritative. Healthy neighbors and
+pre-call preparation retry remain covered. This test maintenance supplies no
+acceptance oracle, compensation or restart-recovery guarantee. No new genuine
+production defect or RED is claimed.
+
+Verification ran in the existing linked checkout with Node v26.11.1 and npm
+11.20.0. Native filesystem access supported the existing real watcher case.
+Every process below reached its actual terminal before dependent work.
+
+| Current command | Raw exit and observation |
+| --- | --- |
+| `npm run build:test` | 0; fresh compiled test build |
+| `node --test dist-test/test/platform.test.js` | 0; 70/70, zero fail/cancel/skip/todo |
+| `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | 0; isolated pair accepted |
+| Native sole-source platform LCOV run | 0; 70/70, lines 508/508, functions 22/22, branches 63/63 |
+| `node_modules/.bin/eslint test/platform.test.ts --max-warnings=0 --no-cache` | 0; exact installed uncached invocation |
+| Original/current assertion preservation proof | 0 after correcting the temporary proof's comment-trivia boundary |
+
+The selector validates and deletes its temporary pair LCOV. A separate native
+run retained `platform.sole.lcov` with exactly one source,
+`dist-test/src/platform.js`. Existing merged `coverage/direct.lcov` was not used
+as new sole-source evidence. The explicit build ran at 06:04:14–06:04:17 UTC;
+the owner at 06:04:24–06:04:25; direct selector at 06:04:28–06:04:33; uncached
+ESLint at 06:04:36–06:04:41; retained native LCOV at 06:05:13–06:05:14.
+
+Complete current required reads covered AGENTS, all five full books, both
+plans 18 and 13 including the human supersession, the whole context/protocol,
+all 9,392 report lines, the entire owner/source/seeds/state/logging files and
+supporting helpers/callers. Bounded displayed ranges and their SHA256 identities
+are retained in the read ledger. Truncated displays were refilled. Ordinary
+compaction reconciled unchanged identities; byte capture did not replace reads.
+
+All 44 production files retain their 464,915 bytes and modes. The three literal
+directory symlinks under `.claude/skills/` retain their targets and modes; no
+recursive byte read followed them. The original report prefix is saved as
+`report.prefix.md`: 650,734 bytes, SHA256
+`8a874774e152b18ce5a6e84f8a9e3171a9361b6d243e51db4445be9a2a52f2d8`.
+This appendix preserves that complete prefix, frontmatter and all earlier
+findings and histories. The current owner is 160,861 bytes, SHA256
+`4b2fb523b1eae1705106c9653ab1970eec6db492b6ac223f644bf784c2911196`.
+
+Native evidence lives at `/private/tmp/guardian-account041-native/`, including
+`read-ledger.json`, original owner, prefix, content-addressed input bytes/modes,
+literal symlink bodies, command JSON envelopes and complete stdout/stderr.
+Fresh exact installed Fallow guards preceded the edit and this append. The
+real-base audit and clean pre-step precede staging; their terminal outputs and
+the normal foreground commit hook's actual output are retained there. At this
+append checkpoint those later outcomes are pending and are not presumed green.
+No full `npm run check` was run by this bounded fixer; the parent retains the
+combined gate after terminal plan work.
+
+Limits remain explicit. Initial transcript-only discovery/read commands have
+no native UTC envelopes. Early full input manifests recorded hashes/modes;
+later unchanged input reconciliation saved complete bytes. The direct patch
+tool's edit has before/after byte evidence and transcript output, without a
+separate native edit-process UTC envelope. A bare `fallow` executable was absent
+from PATH; the exact installed `node_modules/.bin/fallow` guard passed instead.
+Other retained failures include one wrong helper path, the temporary proof's
+comment-trivia mistake, an ignored-coverage discovery no-match and a source
+proof's wrong symlink names. Corrected proofs use the actual three symlink
+paths. None is represented as a passing setup attempt or new RED. Historical
+sandbox fs.watch EMFILE/raw1 and WINDOWS 46–58 remain unwaived.
+
+041 is implemented pending independent whole correction 3. Accepted stable IDs
+remain 48, independently closed IDs 43, and open IDs remain exactly
+041,045,046,047,048. All 43 closed IDs remain protected; the continuous
+correction counter remains 2. RUN-01 is Pending. E-04-01 remains flagged and
+unresolved; descriptorless P-04-01/P-04-02 remain unverified. This checkpoint
+does not certify a clean batch, seal, phase, release or real-home behavior.
+
+#### 041 formatter and pre-commit checkpoint
+
+The first required pre-step returned raw1 because Prettier reformatted the
+two relocated deep comparisons. It changed no expected values. The saved
+AST preservation proof passed again, including all 60 other authored bodies,
+helpers, headers, action calls and complete expectations. The formatted owner
+is 160,735 bytes and 3,761 lines, SHA256
+`7f844f2d36553594bc2abb2c83431b2d0ff4623bafcf3fc9a1f605b6eeaf807c`.
+This supersedes the earlier owner byte identity at the first append checkpoint.
+
+Fresh `formatted-build-test`, `formatted-platform-owner`,
+`formatted-direct-coverage`, `formatted-eslint-platform` and
+`formatted-platform-native-lcov` captures all returned raw0 on those formatted
+bytes. The owner again passed 70/70 with zero fail/cancel/skip/todo, and the
+retained `platform.formatted.sole.lcov` again contains only platform JavaScript
+with lines 508/508, functions 22/22 and branches 63/63.
+
+The first real-base Fallow audit returned raw2 because the sandbox could not
+create its temporary comparison worktree. It is a setup failure. The native
+filesystem rerun returned raw0 with verdict pass against the actual initial
+HEAD, two changed files and zero introduced findings. Existing unconfigured
+architecture boundaries remain a tool limit, not a claim they were measured.
+Fresh guards and re-read targets precede the clean pre-step retry. Its result
+and the ordinary foreground commit hook remain native terminal evidence;
+neither is assumed successful in this pre-staging appendix. The full original
+650,734-byte report prefix remains exact.
