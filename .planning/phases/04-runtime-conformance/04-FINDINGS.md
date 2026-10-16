@@ -928,3 +928,56 @@ Plan 16 is next. Counter 1 still has 44 accepted, 29 independently closed and
 15 pending causes until whole correction 2 in 17. No independent closure or
 RUN-01 readiness is claimed. Restore only workflow.use_worktrees=true before
 final milestone audit/handoff; numerical 09 remains a later metadata closeout.
+
+
+## ACCOUNT stage D implementation and combined gate
+
+Plan 16 implements 038, overlapping 039/040/041 and 042. Five actual commits
+span the persisted af6f9c9 ledger: 251efe2 lifecycle signals; fdc3b43 typed
+architecture/public observations; 48b0a77 separate config header; 32d6fda parent
+temporary-control declaration; 0193735 actual-port HTTP absence. These are
+three causes, not five tasks. Final committed path union is five, with no
+production-source delta or deletion. Temporary source ownership made042's
+cause four paths, within the limit, before the control ran.
+
+All 13 until callers use announced boundaries. Native filesystem notification
+and readback observe actual persistence. Early teardown now closes the watcher
+and stops runtime even when sandbox setup throws. Sandbox EMFILE remains a
+failure; authorized native filesystem access passes. The earlier tail-only
+success/callback-timing diagnosis was corrected from complete TAP.
+
+NEW test/architecture/platformWiring.test.ts has the approved full header and
+10 public ESLint controls. Actual TypeScript/binding identity preserves shared
+context construction/callback wiring and SAFE-07 timer scope independently of
+property order. Positive comments, strings, shadow bindings and property reads
+remain permitted. Four redundant private-source cases were removed only after
+public persistence/callback observations retained their distinct outcomes.
+Platform70 plus architecture10 pass. The new owner is unpaired, with no invented
+source coverage. The headered eslint.config.js and whole new owner join17's
+full correction/seal inventory. Public JS plugin-shape checking uses strict
+false and is not strict helper-parameter verification.
+
+042's two injected empty HttpFetch mocks reject actual constructor premature
+calls in qualified controls. All 44 source files, 464915 bytes and modes were
+restored exactly before a fresh build. Both targets and whole platform70 pass;
+isolated platform coverage is 508/508 lines, 22/22 functions and 63/63 branches.
+Both compilers, uncached lint, pairing/unpaired discovery, all23 immutable
+history classifiers/Git provenance, audits, clean prestaging and normal hooks
+pass. The old npm lint/no-cache invocation remains raw2; the plan now names
+the identical whole-scope passing direct installed ESLint command.
+
+Parent full npm run check passed at clean 019373505800ce5f6ea7187112c14726c8a5cf5a,
+Node v26.11.1, UTC 2026-10-16T04:32:03.425443+00:00 to04:32:59.566984+00:00.
+Six static checks, compiled unpaired owners,104 scenarios,1156steps and all43
+isolated pairs passed with native filesystem/npm-cache access. Native metadata
+and streams: /private/tmp/guardian-phase4-plan16-full-gate.*.
+Only planning Markdown changes permit unchanged-input reuse.
+
+WINDOW57 retains initial native-envelope gaps, failed watcher setup/process
+termination, corrected diagnosis and failed classifier/lint/proof attempts.
+Passing native reruns do not reconstruct missing timestamps or waive limits.
+WINDOWS46–57 remain OPEN/unwaived. Actual031 user policy/security diagnostics
+and original026/030/044 promises remain. Counter1 still44accepted29closed15open
+pending whole correction2 in17; RUN-01 remains Pending. T-04-26/27 require the
+later security/seal judgment. Restore only workflow.use_worktrees=true before
+final milestone audit/handoff; numerical09 closes after17, not now.
