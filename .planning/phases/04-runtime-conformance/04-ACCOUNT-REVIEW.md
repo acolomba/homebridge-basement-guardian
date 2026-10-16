@@ -8627,3 +8627,154 @@ all44 production files, all23 genuine records and retained promises remain
 unchanged. The parent still owns the full completed-plan gate and shared
 records. No042/043 work, counter increment, partial clean verdict or new task
 is included in this header completion.
+
+## CR-04-ACCOUNT-042 — injected constructor HTTP absence
+
+Status: implemented, pending the whole ACCOUNT correction review 2. This is
+assertion maintenance. No actual production network defect was established.
+The continuous ACCOUNT counter remains correction 1: 44 accepted, 29
+independently closed, 15 open IDs 030–044. No subset clean verdict, independent
+closure, reopening or counter reset is claimed. RUN remains pending, and
+WINDOWS 46–56 remain OPEN and unwaived.
+
+### Scope, reads and declared temporary control
+
+The permanent change touches only test/platform.test.ts and this report.
+The controller's earlier declaration commit
+32d6fda16b7446786598332e05698a2c1813577a explicitly adds src/platform.ts as
+the temporary fourth cause path, beside the precommitted 04-16-PLAN.md.
+No source control was applied before that declaration. The initial precontrol
+checkpoint was a bounded seam/ownership checkpoint, not a completed read or
+implementation claim. Its provisional target list incorrectly included the
+accepted-password security case; full report/source reading reconciled the
+actual two absence cases before any repository edit. AUTH-02 remains exact.
+
+The fixer read the complete current 3,758-line owner, 673-line platform,
+31-line HTTP dispatcher, 176-line seeds, 328-line lint configuration,
+280-line typed architecture owner, 8,629-line/594,007-byte prior report,
+380-line current plan, all five complete rulebooks, AGENTS/bootstrap/discovery,
+current context/protocol/research/patterns, all 830 canonical decisions,
+13-PLAN including user_supersession_031, summaries 13–15, applicable previous
+phase and archived product records, actual helper/caller bodies and native
+038/039 checkpoints. The feature caller context includes features/CLAUDE.md
+and the complete Cucumber book. Caller ranges are recorded as ranges and do
+not claim whole-feature review. No external lifecycle behavior was changed.
+
+Actual bounded emissions, file lengths, hashes, blobs and contiguous ranges
+are in /private/tmp/guardian042-read-ledger.jsonl. Truncated displays were
+refilled; unchanged hash reconciliation allowed ordinary host compaction to
+continue the same cause. It did not impose an artificial input cutoff or use
+byte capture as a substitute for reading. Some initial direct/bootstrap reads
+have transcript-only envelopes; no missing earlier UTC was invented. Resume
+resolver captures show empty model output (inherit), high effort and the
+configured comments/unit-writer/Google/local skills; unit-review was read too.
+
+### Actual assertion repair and preserved promises
+
+Both constructor cases now create their own exactParams HttpFetch mock named
+vendor HTTP with no allowed request and pass it through existing PlatformDeps:
+
+- registers the launch and shutdown listeners once the configuration is valid;
+- reaches no vendor route until Homebridge reports it has finished launching.
+
+Each asserts the complete public empty accessory map before verifying HTTP,
+storage user and API mocks explicitly. Exact finite launch/shutdown listener
+expectations and the listener-count assertion remain. The second case retains
+its settle observation. Both wrong globalThis.fetch absence observations and
+requestSpy names are removed. There is no new dependency port, production API,
+module replacement, test hook, transport wrapper or default external request.
+
+All 61 authored declarations and 70 expanded platform cases remain. Actual
+compiler-AST comparison confirms the other 59 case bodies are byte-identical,
+including AUTH-02, CONF-03, 026 retention/removal, 031 uncertain-registration
+restart/redaction semantics and 038 watcher cleanup. The unchanged runtime
+owner retains its readiness/watermark and 899,999/900,000 boundary cases.
+Shared types, optionality and private aliases did not change; no new
+symbol-impact compatibility claim is needed.
+
+### Controlled premature call and exact restoration
+
+After fresh current source reads and installed exact-path Fallow guards, the
+temporary source inserted precisely this statement immediately before the
+real constructor's createAccountRuntimeFromConfig call:
+
+```typescript
+void deps.httpFetch('https://constructor-control.invalid/');
+```
+
+The strict empty injected mock intercepted the call; no transport or external
+request ran. Each fully qualified named target ran separately after the
+successful controlled build. Both native processes completed with raw exit 1,
+one executed test, zero passes, one intended failure and zero skip/cancel/todo.
+The native error in each is:
+
+```text
+Didn't expect vendor HTTP("https://constructor-control.invalid/") to be called.
+No remaining expectations.
+```
+
+The stack identifies new BasementGuardianPlatform at
+dist-test/src/platform.js:445:19. Listener target location is
+dist-test/test/platform.test.js:699:5; no-vendor target is :1069:5.
+Control intervals are 2026-10-16T04:24:07.291710–04:24:07.649843 UTC and
+04:24:11.943912–04:24:12.288646 UTC. These are real constructor-consumed-seam
+failures, not a direct mock self-call, parser/setup failure or genuine RED.
+
+The pre-control native envelope saved all 44 source files, 464,915 bytes,
+every mode, all three literal directory symlinks and the full binary patch.
+A fresh source read/guard preceded removal of the control. Exact equality of
+every saved source byte and mode then passed. src/platform.ts returned to
+SHA-256 9730cb62264f75b1bb9154834ca8b54c209d6f15ce5272396211f26370926ced
+and blob 8f48e059bce57d8ca320e6523d6beb0c0385eb03. No control or source edit
+is staged or included in the permanent cause. Headers and licensing remain.
+
+### Fresh native checks and retained evidence
+
+Native command folders under /private/tmp/guardian042-native contain exact
+argv, actual UTC start/end, raw exit, separate complete stdout/stderr,
+input bytes/modes, literal symlinks and full binary/index patches. All
+commands ran serially in the existing linked checkout on Node v26.11.1,
+npm 11.20.0. No build/test process remained running before its dependent step.
+
+| Native capture | Actual result |
+| --- | --- |
+| build-owner; green-before-control | build exit 0; qualified targets 2/2 |
+| build-control; control-listeners; control-no-vendor | build 0; intended named failures 1 and 1 |
+| restoration-proof; build-restored; green-restored | exact 44-file restoration 0; fresh build 0; targets 2/2 |
+| owner-whole | node --test --test-reporter=tap dist-test/test/platform.test.js: exit 0, 70/70, zero fail/skip/cancel/todo |
+| direct | npm run test:coverage:direct -- src/platform.ts test/platform.test.ts: exit 0, isolated 100% |
+| native-coverage | separate native TAP/LCOV: exit 0, 70/70; exact sole SF dist-test/src/platform.js |
+| lint-pair | installed eslint src/platform.ts test/platform.test.ts --max-warnings=0 --no-cache: exit 0 |
+| compiler-production; compiler-test | installed tsc --noEmit -p tsconfig.json and tsconfig.test.json separately: both 0 |
+| red-account; red-platform | actual current JSON paths, installed tdd-red-evidence CLI: both 0, RED_EVIDENCE_OK |
+| proof-corrected | exact restoration/case preservation/control/native LCOV/23-history provenance: exit 0 |
+
+Native isolated LCOV is /private/tmp/guardian042-platform.lcov: LF/LH
+508/508, FNF/FNH 22/22, BRF/BRH 63/63, all 100%. It is a separate native
+record, not a rewritten source-mapped denominator or refreshed merged coverage.
+Whole-owner/direct/native runs used authorized native filesystem access for
+the existing fs.watch case. This cause encountered no new sandbox watcher
+failure; 038's retained environment/cleanup limits remain unchanged.
+
+The same installed classifyRedEvidence recursively classified all 16 ACCOUNT
+and seven PLATFORM records. Each actual sourceCommit:path resolves to its
+sourceBlob and is an ancestor of HEAD; present embedded source/owner texts
+match their recorded blobs. Immutable JSON blobs remain respectively
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. No history was rewritten, no JSON
+was created, and these maintenance controls are excluded from genuine bugs.
+
+One temporary proof-harness attempt returned 1 because its inventory counted
+only 58 literal-title test declarations and omitted three template-title
+declarations. The corrected AST enumeration includes all 61 and verifies 59
+unchanged bodies; the failed harness attempt is retained separately. It is
+not a test/control failure. Initial python executable discovery returned 127
+before using installed python3; no source test was involved. No other failed
+native build, owner, lint, compiler or control setup is hidden.
+
+The complete prior 594,007-byte report prefix is preserved exactly. Fresh
+real-16-base audit, clean exact-file pre-step BEFORE individual staging and
+ordinary foreground commit results follow in their native envelopes; no
+future result is asserted here. The parent owns the full completed-plan gate,
+shared records and metadata-only summary resume. No 043/17 dispatch, summary,
+whole-review acceptance, PR, push, deployment or new helper is included.

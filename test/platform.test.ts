@@ -892,7 +892,7 @@ describe('BasementGuardianPlatform', () => {
 
   test('registers the launch and shutdown listeners once the configuration is valid', async (t) => {
     // arrange
-    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
@@ -900,12 +900,12 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
     // act
-    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch });
 
     // assert
-    assert.strictEqual(listeners.length, 2);
-    assert.strictEqual(requestSpy.mock.callCount(), 0);
     assert.deepStrictEqual(platform.accessories, new Map());
+    assert.strictEqual(listeners.length, 2);
+    verify(httpFetch);
     verify(user);
     verify(api);
   });
@@ -1351,7 +1351,7 @@ describe('BasementGuardianPlatform', () => {
 
   test('reaches no vendor route until Homebridge reports it has finished launching', async (t) => {
     // arrange
-    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
@@ -1359,11 +1359,12 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
     // act
-    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch });
     await settle();
 
     // assert
-    assert.strictEqual(requestSpy.mock.callCount(), 0);
+    assert.deepStrictEqual(platform.accessories, new Map());
+    verify(httpFetch);
     verify(user);
     verify(api);
   });
