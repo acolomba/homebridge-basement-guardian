@@ -135,7 +135,10 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 14/17 plans executed; 14 complete, 3 pending
+**Plans**: 15/19 plans executed; 15 complete, 4 pending
+- [ ] 04-18-PLAN.md
+- [ ] 04-19-PLAN.md
+
 **Wave 1**
 - [x] 04-01-PLAN.md
 
@@ -179,12 +182,18 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 04-16-PLAN.md — Deferred synchronization, architecture gates and actual HTTP absence
 
 **Wave 15** *(blocked on Wave 14 completion)*
-- [ ] 04-17-PLAN.md — Whole trust forwarding and full ACCOUNT correction 2
+- [x] 04-17-PLAN.md — Whole trust forwarding and full ACCOUNT correction 2
 
-**Wave 16** *(08 complete; blocked on delegated 17 correction)*
-- [ ] 04-09-PLAN.md — Metadata closeout; original repairs and ledger preserved
+**Wave 16** *(blocked on Wave 15 completion)*
+- [ ] 04-18-PLAN.md — Registration test phases, accurate comment and architecture owner organization
 
 **Wave 17** *(blocked on Wave 16 completion)*
+- [ ] 04-19-PLAN.md — Complete configured catalogue and full ACCOUNT correction 3
+
+**Wave 18** *(08 complete; blocked on delegated 19 correction and resolved findings)*
+- [ ] 04-09-PLAN.md — Metadata closeout; original repairs and ledger preserved
+
+**Wave 19** *(blocked on Wave 18 completion)*
 - [ ] 04-10-PLAN.md — Current inventory, historical evidence and final seal
 
 **Batching**: Ten pairs. `accountRuntime.ts` (1,283 lines; test 3,365 lines) is a batch of its own and can split across sequential waves if one plan cannot hold it; the nine small modules fit in two or three batches. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
@@ -192,7 +201,12 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 ACCOUNT correction 1 at d785fd7 independently fixed original 001–029 and found 030–044.
 The open count fell from 29 to 15, with no rejection or reopening; counter 1 continues.
 Plans 13–17 declare those repairs before edits. They do not depend on the incomplete 09 summary;
-its already committed implementation is an available checkpoint. Plan 09 closes after 17.
+its already committed implementation is an available checkpoint.
+Correction 2 at d0f46b0 fixed 14, rejected none, found 045–048 and reopened none.
+Five remain: 041/045/046/047/048; 48 accepted = 43 independently closed + 5 open.
+The parent applied D-03 immediately: 5 < 15, no reopening, counter 2 < 4.
+Plans 18–19 declare the bounded repairs and ONE whole correction 3 before edits.
+Plan 09 closes after 19 only when actual findings are resolved and D-03 permits.
 
 ### Phase 5: Accessories Conformance
 
@@ -262,7 +276,7 @@ its already committed implementation is an available checkpoint. Plan 09 closes 
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
-| 4. Runtime Conformance | code-review-sweep | 14/17 | In Progress | - |
+| 4. Runtime Conformance | code-review-sweep | 15/19 | In Progress | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
