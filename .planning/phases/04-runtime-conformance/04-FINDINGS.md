@@ -795,3 +795,54 @@ Planner guards existed before their writes, but the parent had not refreshed the
 WINDOWS 54 records that ordering gap. The full subsequent path guard and clean retry cannot provide historical pre-formatter proof.
 No source or semantic plan content changed; raw output is /private/tmp/guardian-04-followups-parent-prestep.stdout.
 WINDOWS 46–54 now remain OPEN and unwaived. Executors must freshly guard every concrete formatter/pre-step path before a potentially mutating run.
+
+
+## ACCOUNT stage A implementation and combined gate
+
+Plan 13 implements 030, 031 and 044; its summary records the actual initial
+abf7e7c ledger and six intervening commits. Original 09 ledger 8a700ac remains
+unchanged. These implementations await whole independent correction 2 in 17;
+44 accepted, 29 independently closed and 15 open remain at counter 1.
+No partial clean verdict, requirement completion or new review is claimed.
+
+030 genuine unchanged-production RED was committed as evidence-only 2157f9e
+before runtime repair 6a90071. All 169 tests pass; isolated native coverage is
+1007/1007 lines, 58/58 functions and 195/195 branches. The RED owner stayed exact.
+
+Actual Homebridge 2.4.0 void registration can throw the same error before or
+after acceptance. The successful installed-API diagnostic is not RED.
+The human selected option 1: fail visibly and require restart after uncertainty.
+Declaration ad05d52 explicitly supersedes only 031's automatic-retry demand;
+the original finding and historical evidence remain unchanged.
+Evidence-only 13a06a1 precedes GREEN c44c36f. Any registration throw now suspends
+automatic attempts for that platform run and emits the fixed safe restart
+message. Normal registration return earns local maps/listener ownership.
+Rebuilt contexts, absence/removal/reappearance, healthy neighbors, preparation
+retry and authoritative configureAccessory restoration are observed. Restart
+releases in-memory suspension, without guaranteeing bridge state or recovery.
+All 74 platform tests pass; isolated coverage is 511/511 lines, 22/22 functions
+and 63/63 branches. The complete active RED owner remains unchanged.
+
+044 at 2c5944e adds literal 899999/900000 ms observations. A shorter-interval
+control failed at the intended whole before-deadline assertion; all 44 source
+contents/modes were restored before a fresh build and 169 passing tests.
+Coverage remains 1007/58/195 at 100 percent. The two capture EISDIR preparation
+failures spawned no requested command; their exact UTC bounds were not captured.
+All cause audits, clean prestaging checks and ordinary foreground hooks passed.
+ACCOUNT has 16 and PLATFORM has 7 complete same-classifier/provenance records;
+all 23 remain immutable and accepted, including superseded native owner inputs.
+
+The parent full npm run check passed at clean 2c5944e2e9431fc7442415e701ba39a9e02ac9d7,
+Node v26.11.1, UTC 2026-10-16T01:10:50.713709+00:00 to 01:11:27.325035+00:00.
+Six static checks, 104 scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata and separate streams: /private/tmp/guardian-phase4-plan13-full-gate-retry.*.
+The prior same-input run exited 1 because sandbox npm-cache access blocked
+package inspection. Its complete streams remain under full-gate.*; the
+unchanged-input authorized retry passed without install, chown or config change.
+Metadata-only reuse requires the exact input comparison and no new executable.
+
+The next declared plan is 14. New T-04-22/23 behavior remains subject to the
+whole correction, security audit and phase seal. RUN-01 stays Pending;
+WINDOWS 46–54 remain OPEN/unwaived. Restore only workflow.use_worktrees=true
+before the final milestone audit/handoff. Numerical current-plan 09 remains
+an incomplete closeout after 17; out-of-order 13 completion does not advance it.
