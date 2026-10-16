@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 17
+open_count: 18
 waived_count: 19
 fixed_count: 21
-total_count: 57
-last_updated: 2026-10-16T04:33:33.811Z
+total_count: 58
+last_updated: 2026-10-16T04:53:53.049Z
 ---
 
 # Broken Windows Ledger
@@ -72,6 +72,7 @@ last_updated: 2026-10-16T04:33:33.811Z
 | 55 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan 14 retains three native capture/order gaps: 032 display-only audit extraction had a syntax error without original UTC/separate streams; 033 preservation hash child required SIGTERM (01:42:47.662251-01:45:46.342230 UTC), and read-only audit overlapped it at 01:43:16.944439-01:43:17.750457 rather than running serially; 034 read-only sed/prettier check exited1 without a separate UTC/native envelope. Tool transcripts and original attempts remain. Corrected complete symlink manifests, serialized preservation/audit, final checks and normal hooks passed, but supply no missing historical capture or serial-order proof. No repository/build/index mutation occurred during the overlap. Report and native guardian032/033/034 directories disclose the limits. Leave open and unwaived. | open |  | 2026-10-16T02:12:35.820Z |  |
 | 56 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan15 retains read/help/query preparation outputs without separate original UTC/native envelopes across035-037. In036 an intermediate noEmit compiler attempt overlapped a read-only guard despite required serial order; final compiler-tests-serialized and guard-append-serialized reruns passed but do not provide historical ordering proof. Original transcripts, optional-access build failure, lint failures and failed temporary preservation proofs remain in guardian035/036/037 native records and report. No source/build/index mutation during the read-only overlap is claimed; corrected current proofs and passing hooks are not waivers. The037 pause was independently assessed as the explicitly declared local-builder/new-export relocation, not a new trace exception or historical pretrace pass. Leave actual capture/order gaps open and unwaived. | open |  | 2026-10-16T03:09:09.875Z |  |
 | 57 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan16 bootstrap/direct read and exact-process control calls include transcript-only evidence without separate original native UTC envelopes. In038 three sandbox owner attempts failed fs.watch setup with EMFILE and required owned-process termination; an initial tail-only message incorrectly called cases successful and blamed callback timing. Complete TAP corrected that diagnosis. Revised early teardown makes sandbox failure terminate naturally; authorized native filesystem owner/direct/full-gate runs pass, without proving the earlier failed attempts passed or a universal sandbox guarantee. Incorrect classifier filename/raw0 INVALID_RED, lint/proof failures, and literal npm lint cache-flag setup raw2 remain failures; corrected current-file classifier and bounded plan-command correction passed. No historical timestamp/order or permission proof is reconstructed. Report and guardian038/039/042 native records retain all attempts. Leave capture/process limits open and unwaived. | open |  | 2026-10-16T04:33:33.811Z |  |
+| 58 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] In043 the controller freshly resolved fixer effort high but omitted the advertised explicit reasoning_effort spawn argument. The child inherited the same high controller effort, so no wrong-effort result is inferred; this still lacks the required explicit dispatch binding and is not retrofitted. Subsequent guidance requires explicit resolved effort on future typed spawns and schema-supported recording on followups. Controller read-only discovery/no-match failures and a truncated oversized checkpoint display were retained and accurately summarized; no missing historical native envelope or full-read result is invented. The report and guardian043-native checkpoint disclose the routing/capture limits. Leave open and unwaived. | open |  | 2026-10-16T04:53:53.049Z |  |
 
 ````json
 [
@@ -768,6 +769,19 @@ last_updated: 2026-10-16T04:33:33.811Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-16T04:33:33.811Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 58,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] In043 the controller freshly resolved fixer effort high but omitted the advertised explicit reasoning_effort spawn argument. The child inherited the same high controller effort, so no wrong-effort result is inferred; this still lacks the required explicit dispatch binding and is not retrofitted. Subsequent guidance requires explicit resolved effort on future typed spawns and schema-supported recording on followups. Controller read-only discovery/no-match failures and a truncated oversized checkpoint display were retained and accurately summarized; no missing historical native envelope or full-read result is invented. The report and guardian043-native checkpoint disclose the routing/capture limits. Leave open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T04:53:53.049Z",
     "resolved_at": null,
     "milestone": null
   }

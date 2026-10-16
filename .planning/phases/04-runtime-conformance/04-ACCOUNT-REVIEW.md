@@ -8922,3 +8922,471 @@ prohibitions remain2 surfaced=2 authored+0 omitted, pending actual judgments.
 RUN-01 remains Pending; WINDOWS46–57 remain OPEN/unwaived. No task02 reviewer,
 summary, shared record, full combined gate, seal, PR, push or deployment is
 included. The serial lease ends only with this fixer's actual FINAL.
+
+## Independent FULL CURRENT ACCOUNT correction 2 — 2026-10-16
+
+**Actual reviewer:** typed `gsd-code-reviewer`, `/root/phase4_account_correction2`.
+**Reviewed revision Q:** `d0f46b0cd027fc1d011e8a39ac3b17d0a0a75bb7`.
+**Prior full correction C:** `d785fd7f8850038dcb345a05d47d14cf4312e9fd`.
+**Repository root:** `/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian`.
+**Depth:** deep; FULL current batch, all sixteen current core files and all cases,
+not repair-only confirmation. **Status:** issues_found. RUN-01 remains Pending.
+The sixteen-file scope includes the three actual additions since correction 1.
+No source, owner, helper, configuration, test control, staging, commit, SUMMARY,
+WINDOWS, state or other shared record is changed by this reviewer.
+
+### Exact continuous accounting and immediate D-03 facts
+
+Every suffix in this section has the prefix `CR-04-ACCOUNT-`.
+
+| Set | Exact unique suffixes | Count |
+| --- | --- | ---: |
+| Opening open | 030,031,032,033,034,035,036,037,038,039,040,041,042,043,044 | 15 |
+| Independently fixed in this full correction | 030,031,032,033,034,035,036,037,038,039,040,042,043,044 | 14 |
+| Rejected accepted findings | empty | 0 |
+| New | 045,046,047,048 | 4 |
+| Reopened previously independently fixed | empty | 0 |
+| Closing open | 041,045,046,047,048 | 5 |
+
+`closing = opening - fixed - rejected + new + reopened = 15 - 14 - 0 + 4 + 0 = 5`.
+Opening severities are 6 BLOCKER and 9 WARNING. This correction independently
+fixes those 6 BLOCKERs and 8 WARNINGs. Closing BLOCKER is **045**; closing WARNINGs
+are **041,046,047,048**. No finding is downgraded to achieve closure. Original
+001–029 remain independently closed, with no reopening. Accepted stable IDs grow
+44 → 48, independently closed IDs grow 29 → 43, and `48 = 43 closed + 5 open`.
+The same continuous ACCOUNT correction counter advances **1 → 2 exactly once**.
+Repair implementation entries in the preserved prefix did not close findings.
+
+D-03's three immediate predicates are explicit:
+
+- **Open without count reduction: false.** Closing is nonzero, but `5 < 15`.
+- **Any independently fixed finding reopens: false.** Reopened set is empty.
+- **Fourth correction reached, including if clean: false.** Counter is 2.
+
+These terminal facts do not trigger D-03's global stop. The parent must evaluate
+them before any subsequent tool, edit, build, commit or dispatch. This review
+does not authorize a follow-up repair or waive the required combined-tree gate.
+Historical PORTS nonprogress was globally stopped; its actual maintainer choice
+authorized only the bounded 009 repair and its next full review, with its counter
+retained. That history supplies no prospective waiver here.
+
+### Complete manual scope, books, headers and callers
+
+AGENTS was read first. All five books were read in full, not only the three
+configured reviewer injections. The role bootstrap and actual agent-skills query
+were checked; its configured subset did not displace these required books.
+Their complete current ranges and Git blobs are:
+
+| Book | Full lines read | Q blob |
+| --- | --- | --- |
+| `skills/typescript-comments/SKILL.md` | 1–130 | `60a5054091ca043d8ef600905b5d4502029d234e` |
+| `skills/typescript-google-style-review/SKILL.md` | 1–137 | `e2e900dab0f140cc141e9c10b0cfc8098416e422` |
+| `skills/typescript-unit-testing/SKILL.md` | 1–268 | `8514313074cc6f28df8728683bdd10ebb4c1a263` |
+| `skills/typescript-unit-testing-review/SKILL.md` | 1–118 | `c585a633aad5a7c3119b83109355b5d4d4439972` |
+| `skills/local-verification/SKILL.md` | 1–34 | `845f087ba747234a5257ae63c7fb78a8466c3c78` |
+
+Every declaration, handler, loop, test body and generated row in the following
+sixteen complete files was manually read. The approved full header was inspected
+separately in every file: SPDX MIT first, blank line, separate 2026 Alessandro
+Colomba copyright JSDoc, blank line, complete purpose overview JSDoc, blank line
+before imports. Longer overview bodies remain part of that inspection; approval
+does not require every overview to have the same number of lines. Platform's
+recorded MIT reclassification is retained, without inventing template relicensing.
+
+| Entire current core file | Every line read | Q Git blob | Header |
+| --- | --- | --- | --- |
+| `src/runtime/accountRuntime.ts` | 1–1346 | `5d1ea815151fb008a4d49c003a2b8416cc02bf3a` | approved |
+| `test/runtime/accountRuntime.test.ts` | 1–9404 | `8ebf14ce198a88cc3cab2335def43d9f6896b5b8` | approved |
+| `test/runtime/accountRuntimeSeeds.ts` | 1–121 | `871c06ca00b572ab092e0bdf9f534284ddea037a` | approved |
+| `test/runtime/arrivalAnchorMemoryContract.ts` | 1–213 | `37f66e8fa86b495da8aee055684ba2b90a938aaa` | approved |
+| `test/runtime/accountShadowContract.ts` | 1–142 | `08cfe9d5b45cbd2e9488d8781df59f5c73833aeb` | approved |
+| `src/runtime/arrivalAnchors.ts` | 1–211 | `aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64` | approved |
+| `test/runtime/arrivalAnchors.test.ts` | 1–379 | `355c746c0052c87c3ea4312ac0cfb49a7a5ee9da` | approved |
+| `src/cloud/shadow.ts` | 1–478 | `018f49c720f0119fb131b4f03dfbc3966a98dadc` | approved |
+| `test/cloud/shadow.test.ts` | 1–1146 | `efecee5e0f6dfebc70ae1427f222cea7fd5a8bec` | approved |
+| `src/accessories/reconciliation.ts` | 1–114 | `e25bd84d713b6daa16b9616d00e6f4d7f41f8f62` | approved |
+| `test/accessories/reconciliation.test.ts` | 1–256 | `12ecb92479c70f1387685a235f5ddc84f6179b6a` | approved |
+| `src/platform.ts` | 1–673 | `8f48e059bce57d8ca320e6523d6beb0c0385eb03` | approved |
+| `test/platform.test.ts` | 1–3765 | `5a3e7c0632321b8c837961bdf15b011ad058ca60` | approved |
+| `test/platformSeeds.ts` | 1–176 | `ad02884ba05cadfa45959eb8c283720ca56eb27e` | approved |
+| `eslint.config.js` | 1–328 | `c3a89b524b7069f6a644550ccda4d395bf068912` | approved |
+| `test/architecture/platformWiring.test.ts` | 1–280 | `e8d25300b20f7ae1814690925c151a1b4eb4b38a` | approved |
+
+The supporting unchanged logging pair was also fully read: `src/logging.ts:1–180`
+(`b4c2f70fec0e819d1d1963bd1d221ed7414dc0e7`) and
+`test/logging.test.ts:1–432` (`aed3ebe79c287e1b6cde9e95b5af18f1a4fe213f`).
+It establishes the required real redaction behavior, not an additional adapted
+pair or a fresh whole-logging conformance/header certification.
+
+All seventeen specified context files were read completely: AGENTS, PROJECT,
+ROADMAP, STATE, REQUIREMENTS, all 830 decision lines, 04-CONTEXT, 04-RESEARCH,
+04-PATTERNS, 04-REVIEW-PROTOCOL, complete 04-13/14/15/16/17 plans, 04-13-SUMMARY,
+and 04-10-PLAN. The entire current pre-append report, lines1–8924, was read;
+previous dispositions, supersession, controls and unresolved limits were not
+substituted by dispatch summaries. Its immutable input identity is 612613 bytes,
+blob `829fe0f11750d8ad6634cc6746ebbb5a7efd7309`, SHA256
+`36b7899b1f257199796790bde12c584bcc1fe5b8cfda8cec0c85be603ede885c`.
+
+All seven exact direct caller/owner files were fully read:
+`features/real-pump/support/realWorld.ts:1–366`,
+`features/support/steps/shadow.ts:1–455`, `features/support/world.ts:1–786`,
+`src/index.ts:1–13`, `src/runtime/monitoringHealth.ts:1–311`,
+`test/index.test.ts:1–23`, and `test/runtime/monitoringHealth.test.ts:1–637`.
+The no-argument runtime start consumers remain valid; platform's cached-ID start
+handoff is an intentional compatible extension. All actual callback/context,
+physical identity, trust and command consumers were traced rather than inferring
+safety from named imports alone.
+
+Additional complete relevant structural/type/behavior reads were
+`src/cloud/{api,auth,httpDispatcher,mqttTransport,types}.ts`,
+`src/device/{family,gemini,registry,state}.ts`,
+`src/accessories/{basementGuardian,controls,pumpRecords}.ts`,
+`src/persistence/accessoryContext.ts`, and
+`src/runtime/{clock,commandPort,monotonicClock,retryPolicy,timers}.ts`.
+`features/CLAUDE.md`, the full Cucumber book and installed Fallow skill were also
+read. These are contract/context discoveries, not newly adapted files or later
+subsystem whole-sweep certifications. No additional adaptation was discovered.
+Both compiler-project impacts remain prerequisites to any future shape change;
+this read-only reviewer makes none and claims no fresh refactoring trace.
+
+Durable actual-read evidence is under
+`/private/tmp/guardian-account-correction2-review/read-ledger.jsonl` and
+`read-completion.json`. Bounded, fully displayed contiguous reads were followed
+by SHA/blob/HEAD/range reconciliation for all 48 mandatory unique files,
+2,108,358 bytes, plus complete discovered support (69 complete files total).
+The native completion proof records every range and sixteen header boundaries.
+AGENTS, books and protocol were also re-read into the durable ledger after their
+initial full transcript reads. A captured file is never counted as read merely
+because it was captured. Normal host compactions continued this same reviewer.
+The inventory's bytes/4 estimate527090 and configured1m arithmetic margin472910
+are estimates, not measured capacity or a completion guarantee.
+
+### Original 001–029: no independently fixed cause reopens
+
+For this table, all current locations are at Q; original revision/locations,
+severities, initial observations and implementation commits remain exactly in
+the preserved initial report and correction1 table at lines6450–6478. Their first
+independent observer remains `/root/phase4_account_lifecycle/account_initial_review`,
+at `e6f49a59671c13a20b696b7f46e38406a36aeec0`, not this reviewer.
+These are rechecks of independently closed IDs, not another 29 fixes in this
+round. Rule sections below refer to the complete books identified above.
+
+| ID | Current independent recheck | Disposition / rule |
+| --- | --- | --- |
+| 001 | Full source/owner/header inspection, including every actual added core file above | remains closed; D-01 / Google Files and modules |
+| 002 | Runtime privacy caveat and owner permission premise remain scoped and do not guarantee opaque identifiers | remains closed; Comments factual claims / D-027 |
+| 003 | Runtime root abort, owned transport close, late completion and deliberately failed construction comments match current behavior | remains closed; Comments current what/why |
+| 004 | Whole runtime/owner comments retain present rationale without removed-implementation/process narration | remains closed; Comments Forbidden |
+| 005 | Q:`src/runtime/accountRuntime.ts:1299` retains explicit typed callable `registerSecret` binding and delegate ordering | remains closed; Google Functions |
+| 006 | Q:`test/runtime/accountRuntime.test.ts:2861–2882` public supplied-store case observes exact identity and complete independent state | remains closed; Unit Assertions |
+| 007 | Q:`test/runtime/accountRuntime.test.ts:3459–3530` literal credential lead/floor before/at observations remain independent; polling cadence is separately 044 | remains closed; Unit independent expectations / Time |
+| 008 | Q:`test/runtime/accountRuntime.test.ts:3204` restored-anchor case observes old/new anchors, admission and public listener state | remains closed; Unit whole Assertions |
+| 009 | Q:`test/runtime/accountRuntime.test.ts:8397` dispatches unresolved real command work before stop and observes root abort, refusal and whole unchanged canonical state | remains closed; Unit title discrimination |
+| 010 | Q:`test/runtime/accountRuntime.test.ts:8485–8723` complete command accepted/refused results and canonical state precede exact finite interaction verification | remains closed; Unit Assertions / D-037 |
+| 011 | Q:`test/runtime/accountRuntime.test.ts:8888` inert construction observes the actual supplied HTTP/socket ports, not an unrelated global | remains closed; Unit absence / design |
+| 012 | ACCOUNT owner uses silent incidental logging; credential/failure security boundaries retain their meaningful domain assertions | remains closed; Unit Test doubles / Logging |
+| 013 | Complete ACCOUNT owner has strict finite exact-parameter public interaction mocks and explicit case-owned verification | remains closed; Unit Mocks / Spies |
+| 014 | Complete121-line ACCOUNT seeds and all uses retain fresh concern values, separate from later platform037 | remains closed; Unit Test data |
+| 015 | Q:`test/runtime/arrivalAnchorMemoryContract.ts:1–213`, `accountShadowContract.ts:1–142`, runtime owner547–827 and true arrival/shadow owners retain real/fake participants, category limits and structured broken-participant expectations | remains closed; Unit Shared adapter contracts |
+| 016 | Complete ACCOUNT owner preserves ordered action/capture/assert phases; external platform041 stays distinct | remains closed; Unit Case structure |
+| 017 | Q:`test/runtime/accountRuntime.test.ts:829,8782` describes the two exported factories, without private-concern nesting; new architecture048 is a distinct owner | remains closed; Unit Case structure |
+| 018 | Q:`test/runtime/accountRuntime.test.ts:3838–3896,5505–5537` whole canonical present/frozen/refused snapshots retain receipt, identity, telemetry and metadata protections | remains closed; Unit whole independent Assertions |
+| 019 | Q:`test/runtime/accountRuntime.test.ts:6990` quiet checkpoint/recovery and keyed composition observations retain all promised public trust fields | remains closed; Unit whole Assertions |
+| 020 | Q:`test/runtime/accountRuntime.test.ts:7550–7680,8227–8395` retains callback-before-prune complete state, refusal retention, exact target and surviving neighbor anchor | remains closed; Unit whole Assertions |
+| 021 | Q runtime targeted-present handoff and reconciliation106–108 reset the candidate while preserving future omission eligibility and neighbor state | remains closed; D-029 / physical identity |
+| 022 | Q runtime835–932 compares physical membership, adds live routes and avoids reconnect on unchanged/order-only inventories | remains closed; SYNC-02/03 |
+| 023 | Q runtime final-check terminal authentication classes propagate to halt; owner rows retain immediate complete halted trust and no later work | remains closed; D-13 terminal policy |
+| 024 | Q runtime483,1018–1024,1102–1108,1187 reject stale post-await work; pending final-check/restore/rotation cases preserve halted ownership | remains closed; D-13 / SYNC-05 |
+| 025 | Runtime bounded native wait segments retain the actual distant deadline;50-day owner checkpoints and literal native maximum protect against timer overflow | remains closed; native timer range / Time |
+| 026 | Q runtime1173 start handoff and platform627–637 restoration seed valid deduplicated cached physical IDs before absence tracking | remains closed; D-029 |
+| 027 | Command attempt recording occurs before rejection; forbidden strict command ports make caught/discarded calls observable | remains closed; Unit absence discrimination |
+| 028 | Q:`test/runtime/accountRuntime.test.ts:3323–3457,8783–8886` token/AWS registrations precede their actual dependent use in startup, rotation and composition timelines | remains closed; Unit prescribed cross-port order / AUTH-02 |
+| 029 | Q:`test/runtime/accountRuntime.test.ts:9081` exercises literal4/5-ms injected floor inside the lead window and verifies whole checkpoints and exact requests | remains closed; Unit title discrimination / Time |
+
+No original assertion promise is silently dropped, no unavailable private trace
+is converted to complete evidence, and no original cause is renamed as a new ID.
+
+### Independent dispositions of opening 030–044
+
+The first independent observer for all fifteen remains
+`/root/phase4_account_trust/account_full_correction_one`, at C and its exact
+locations in lines6502–6758 of the preserved prefix. The current independent
+observer is this reviewer at Q. Source/evidence/fix commits and raw native
+attempts remain in the preserved implementation entries and immutable histories;
+implementation by itself was not closure.
+
+| ID / severity | Current Q observation and applicable contract | Independent disposition |
+| --- | --- | --- |
+| 030 BLOCKER | Runtime811/849 releases old connection readiness/watermarks before changed-membership `start`; unchanged/order-only sets do not replace. Real-shadow regression retains whole before/after readiness, REST telemetry ownership and original022 assertions. Native genuine source→evidence→GREEN history independently verified. | FIXED |
+| 031 BLOCKER | Platform105/312–316 private WeakMap is keyed by the stable accessory map. Actual register350 is isolated: every throw suspends UUID automatic retries through rebuilt contexts, absence, removal, store removal and reappearance; success alone earns map/instance/listener ownership. PRECALL preparation remains retryable and restored configureAccessory ownership authoritative. | FIXED under actual user supersession below |
+| 032 WARNING | All seven originally cited owner-local bindings now have explicit callable binding types or declarations; names, body/signature contracts and remaining private aliases are preserved. | FIXED; Google Functions |
+| 033 WARNING | Complete platform source/owner comments give present publication, privacy and observation rationale without the cited removed implementation/process history. New047 is a separate inaccurate factual claim, not that old cause. | FIXED; Comments Forbidden |
+| 034 WARNING | `fakeDiscoveryApi` returns `mock<API>({exactParams:true,...})`; the existing compatibility overload remains. The parameterless implementation avoids dummy parameters. The three nominal HAP constructor conversions are one documented owner-local typed binding, not a broad API assertion. | FIXED; Unit Types / Mocks |
+| 035 WARNING | Incidental logger-output checks are removed. Whole public configuration/marking/lifecycle state and exact domain interactions remain. CONF-03/AUTH-02 and real-redactor031 diagnostics retain distinct meaningful privacy obligations. | FIXED; Unit Logging / public Assertions |
+| 036 WARNING | Full platform owner uses strict finite exact-argument API, lifecycle and trust notification mocks with explicit verification after public results/state. The nominal constructor binding is bounded. | FIXED; Unit Mocks / Spies |
+| 037 WARNING | All176 helper lines and3765 owner lines read. Twelve NEW seed exports supply fresh values; exactly eight authorized formerly local builders moved with same names/parameters/returns/body tokens except declared factory substitutions; eight fresh Maps plus one literal replace shared data. Thirty other private functions, API overload and aliases are preserved. | FIXED; Unit fresh case state / Test data |
+| 038 WARNING | Thirteen polling sites use actual lifecycle/deferred events or native final-file rename/readback observation. Cleanup is registered before watcher/platform setup. No production test hook or real wall-clock polling remains. | FIXED; Unit Time / filesystem ownership |
+| 039 BLOCKER | Four private-source cases are removed after stronger public two-device persistence/callback/context tests. Installed syntax/type-aware ESLint rules check actual assignable DiscoveryContext bindings, one construction and all three shared-builder callbacks; timer rules resolve actual imports/aliases/namespace references. Ten public ESLint controls discriminate original/reordered duplicate and miswired callbacks with zero TypeScript diagnostics and exact rule/message IDs. | FIXED; Unit title discrimination / public behavior / static ownership |
+| 040 WARNING | The platform private-concern group is removed; remaining groups name actual exported platform entrypoints. New048 concerns the distinct added architecture owner. | FIXED; Unit Case structure |
+| 041 WARNING | Original private-source sites were removed, but Q:`test/platform.test.ts:2100–2131` returns to actions after assertion in the generated031 rows. Detailed retained finding below. | STILL OPEN; Unit ordered AAA |
+| 042 BLOCKER | Both actual absence cases inject empty-expectation strict `HttpFetch` at the actual PlatformDeps seam, assert complete public state/lifecycle and verify at case end. AUTH-02 security coverage remains. Declared temporary constructor call fails both exact qualified cases; all44 production files restored and rebuilt GREEN. | FIXED; Unit absence discrimination / hermeticity |
+| 043 BLOCKER | Complete named-device fan-out now asserts all four independent MonitoringTrust fields and every finite exact notification before verification. Ready=true named fixture remains distinct from missing-entry ready=false. The existing036 strict mock already caught the temporary false-forwarding control; the report honestly records that fact. | FIXED; Unit independent whole Assertions / Mocks |
+| 044 BLOCKER | Q:`test/runtime/accountRuntime.test.ts:3897` uses literal899999/900000 checkpoints, whole independent canonical receipt/state and exact finite requests. A shorter-wait maintenance control actually failed and was exactly restored. | FIXED; Unit independent timing Assertions |
+
+031 is assessed against the actual maintainer choice in 04-13 at
+`ad05d52f0d1088020a8666deeacd06842ebedad8` (`user_supersession_031`), not an
+invented acceptance oracle. Homebridge2.4 declares synchronous void registration;
+the same exception can precede or follow acceptance. Installed API/bridge code
+and official API/DynamicPlatformPlugin documentation were compared. Relevant
+pages are https://developers.homebridge.io/homebridge/interfaces/API.html#registerPlatformAccessories
+and https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html.
+The applicable contract has no discrepancy requiring a different pinned policy.
+No rollback/compensation, automatic retry, cache oracle or restart guarantee is
+invented. The actual safe actionable restart diagnostic is asserted through the
+REAL redacting logger after registering a synthetic secret; its exact safe
+output and lack of secret leakage are necessary security outcomes. Historical
+031 wording and the narrower supersession remain preserved.
+
+037's exact eight relocations are expressly authorized new-seed-export scope.
+The retained `/private/tmp/guardian037-checkpoint/checkpoint.json` and independent
+plan check establish that boundary; this review does not demand a preexisting
+consumer trace for NEW exports or invent an old-location trace pass/gap. Twelve
+test-project queries are complete with zero consumers; twelve production queries
+are unavailable/no-project raw1. Actual project membership excludes the helper
+and owner from production. Exclusion is not a complete production trace, and no
+general visibility exception follows.
+
+038's earlier constrained EMFILE setup leaked waits and required owned SIGTERM.
+After cleanup ordering was repaired, constrained EMFILE naturally fails in under
+0.4s; that is not GREEN. Authorized native filesystem focused/full gates pass.
+This review does not claim universal filesystem sandbox support. For039, actual
+public JS configuration has `checkJs:true`, `strict:false`; no stricter JavaScript
+parameter typing or new architecture policy is imposed. Configuration's complete
+approved header landed in its separately declared header-only commit.
+
+### Narrative findings: retained and new
+
+All findings below contribute RUN-01. Paths expand from the absolute repository
+root above; all initial/current locations for NEW findings are at Q. Their first
+independent observer is `/root/phase4_account_correction2`. No supplied external
+reviewer lane or structural Fallow substrate is being relabeled as manual work.
+The WARNINGs apply explicit current project rules, including the review book's
+classification, rather than introducing optional reviewer preferences.
+
+#### CR-04-ACCOUNT-045 — BLOCKER: the ignored-adapter case does not protect its promised remaining catalogue
+
+**File/line:** Q:`test/platform.test.ts:3350–3392`, especially3385–3390.
+**Rule:** Unit writer Assertions91–108 and reviewer Assertions46–50 / classification117;
+the central title-discrimination rule at writer10 and reviewer10.
+**Issue:** The case promises “every adapter but the one an administrator ignored,”
+but reduces the public catalogue to two booleans: mains-power-lost absent and
+primary-pump-fault present. A wrong implementation that preserves that sibling
+but omits any other supported service when `ignoredFaults` is nonempty still
+passes this observation and its registration/context interaction matchers.
+Default-configuration whole-catalogue checks do not protect this configured
+branch. The adjacent unknown-profile restart case also observes only the ignored
+adapter and one sibling; it does not supply the missing complete catalogue.
+This is an assertion reliability defect, not proof that current publication is
+wrong and not a genuine production bug/RED claim.
+**Fix:** Observe the complete ordered public catalogue for this configured case
+and compare it to an independently authored expected remaining catalogue before
+`verify(context.api)`. With this power-family fixture, the existing17-service
+catalogue loses only `Mains Power Lost`; the remaining sixteen names are
+`Sump Pit Flood`, `Sump Pit Level`, `Primary Pump`, `Primary Pump Running`,
+`Backup Pump`, `Backup Pump Running`, `Sump Mains Power`, `Backup Battery Level`,
+`Backup Battery`, `Primary Pump Fault`, `Backup Pump Fault`, `Water Sensor Fault`,
+`Pump Controller Link Lost`, `System Self-Test`, `Alarm Mute`, and
+`Basement Guardian Offline`. Keep the explicit ignored subtype observation and
+meaningful configuration state. Do not compute expected names by filtering the
+actual catalogue or invoking the production adapter. A later declared maintenance
+control can remove a different sibling only on this configured branch, observe
+the intended whole-catalogue failure, restore exact source, rebuild and prove GREEN.
+**Disposition:** NEW OPEN BLOCKER. Independent static counterexample; no source
+mutation or negative-control execution by this read-only reviewer.
+**Owning repair:** parent-declared platform owner/report assertion-maintenance
+slice, with any temporary control source explicitly declared before mutation.
+
+#### CR-04-ACCOUNT-041 — WARNING: platform cases return to actions after entering assert
+
+**Initial observer/location:** correction1 reviewer at C:`test/platform.test.ts:1414–1421,2675–2682`.
+**Current file/line:** Q:`test/platform.test.ts:2097–2131`, both generated031 rows.
+**Rule:** Unit writer Case structure34–42; reviewer Case structure30–36 and WARNING118.
+**Issue:** After `// assert` at2100 and the ownership assertion2101–2114, the case
+installs an update spy and performs registration, absence, explicit removal,
+store removal, rediscovery and live patches2122–2131 before another assertion.
+Removing the old source-text cases repaired those cited sites but did not make
+the complete current platform owner obey ordered arrange/act/assert phases.
+**Fix:** Capture the first ownership checkpoint during act, perform the later
+transitions and capture their public outcome, then compare both independent
+expected observations in assert before verifying mocks. Alternatively split
+independently meaningful cases. Preserve every genuine031 same-error branch,
+restored ownership, privacy and no-retry assertion; do not weaken regression
+discrimination merely to move comments.
+**Disposition:** STILL OPEN WARNING, not independently fixed and then reopened.
+This remains the existing platform041 cause. Original ACCOUNT016 stays closed;
+no new ID is assigned for the same platform AAA defect.
+
+#### CR-04-ACCOUNT-046 — WARNING: the added architecture owner uses banned generic observation names
+
+**File/line:** Q:`test/architecture/platformWiring.test.ts:128,153,178,189,204,220,243,258,275`.
+**Rule:** Unit writer Naming46 and reviewer Naming38–43 explicitly prohibit
+`result`; reviewer Classification118 assigns naming WARNING.
+**Issue:** Nine authored bindings (ten expanded cases) use `const result` for the
+whole `{diagnostics,enabled,messages}` public lint observation. The generic name
+conceals the role that distinguishes the lint observation from parsed source,
+configuration and compiler diagnostics in this owner. This is explicit project
+conformance/readability debt, not a claim that these complete assertions fail.
+**Fix:** Name the binding for the observed production role, for example
+`wiringDiagnostics`, and update its local whole-value assertion. Preserve exact
+diagnostic/rule/message expectations and row behavior.
+**Disposition:** NEW OPEN WARNING, distinct from repaired callable-binding032.
+**Owning repair:** separately declared architecture-owner/report slice.
+
+#### CR-04-ACCOUNT-047 — WARNING: the missing-entry fixture comment claims discrimination its values do not provide
+
+**File/line:** Q:`test/platform.test.ts:1636–1640`.
+**Rule:** Comments8 describes current what/why; Google Comments124–129 and
+Classification137 require accurate documentation. This concerns a factual claim,
+not cosmetic prose.
+**Issue:** The comment says “the other three members are each set away from their
+falsy default,” but the immediately following account fixture sets
+`commandTransportReady:false` and `credentialsRejected:false`; only
+`restDegraded:true` differs from its falsy default. A maintainer reading it can
+wrongly infer that this fixture independently distinguishes default-false
+forwarding for all members. Its accepted purpose is the missing-entry silent
+default; the companion named-device ready=true fixture supplies another promise.
+**Fix:** State the actual missing-entry silence override and the one true REST
+fact, or remove the inaccurate claim. Preserve the accepted ready=false fixture,
+whole expected trust values and the distinct named ready=true case. No broader
+test-data redesign is required.
+**Disposition:** NEW OPEN WARNING; old033's removed-code/process-history cause
+remains closed. This is a different false claim added to the current fixture.
+**Owning repair:** declared platform-owner/report comment-only slice.
+
+#### CR-04-ACCOUNT-048 — WARNING: the single-entrypoint configuration owner adds a concern describe group
+
+**File/line:** Q:`test/architecture/platformWiring.test.ts:122–280`;
+public configuration Q:`eslint.config.js:184` and its one default export.
+**Rule:** Unit writer Case structure37–38 and reviewer33 / classification118.
+**Issue:** The new owner puts all cases under
+`describe('ESLint platform wiring configuration', ...)`. The module under test
+has one loader-required default export; the project's single-entrypoint rule
+keeps those cases at top level. This is not one describe per exported function in
+a multi-entrypoint module. The private `lintWiring` harness does not add a public
+entrypoint. The group adds an extra concern layer to test identities instead of
+the mandated exported-entrypoint organization.
+**Fix:** Flatten this single group while preserving all ten expanded cases,
+row titles, fresh dependencies and complete awaited assertions. Do not create
+another private-concern wrapper.
+**Disposition:** NEW OPEN WARNING in the added architecture owner. Platform040
+and ACCOUNT017 remain closed; their distinct owners were not renamed/reopened.
+**Owning repair:** same declared architecture-owner/report structure slice may
+address046 without changing configuration or production contracts.
+
+### Native checks, immutable histories and limits
+
+Evidence was reused only after independently reconciling exact current inputs,
+not because a summary called them GREEN. Native archive for this review is
+`/private/tmp/guardian-account-correction2-review/`. Its `run.py` owns each child
+through terminal exit and saves exact argv, cwd, branch/HEAD, Node/npm/SKIP,
+UTC start/end, raw exit, separate stdout/stderr, full tracked/untracked/compiled
+input identities plus content-addressed byte bodies, dirty diff and staged diff.
+No proof/build/mutation was overlapped, no test was rerun merely to repeat valid
+unchanged checks, and no native check changed source/test/configuration.
+
+The parent PRE-REVIEW READY terminal checkpoint/proof in
+`/private/tmp/guardian-04-account-correction2-readiness/` was inspected, then
+independently checked at Q. All tracked bytes/modes matched the readiness inputs,
+including exact parent-only dirty WINDOWS bytes; the index was clean and no
+untracked executable or extra adaptation existed. All44 production files,
+464915 bytes and modes, and all three literal symlink targets matched. The
+supporting logging pair was unchanged. Native Node is26.11.1, npm11.20.0.
+
+`independent-native-provenance-corrected/attempt.json` records raw0,
+2026-10-16T05:14:05.296065+00:00–05:14:07.041318+00:00, and
+`native-proof.json` retains the independent reconciliation. The first own proof
+attempt raw1 at05:13:50.001574–05:13:51.627900 is retained: a temporary proof
+bookkeeping lookup selected a later successful invocation of the same command
+as a known failed attempt. Selecting the two actual historical failed UTC
+attempts corrected that lookup; it was not a product/test failure or RED.
+Likewise the first own read-completion check raw1 assumed every approved overview
+ended on line9; the full manually read multi-line overviews disproved that
+temporary verifier assumption. Its corrected proof raw0 at05:19:22.270594–
+05:19:22.323655 records the actual closing overview lines. Both failed raw
+attempts remain separate and are never called passes.
+
+The applicable readiness checks are fresh build raw0, actual whole uncached
+`node_modules/.bin/eslint . --max-warnings=0 --no-cache` raw0, and seven owner
+modules **376 passed**: runtime169, arrival21, shadow59, reconciliation14,
+platform70, logging33, architecture10. The invalid ESLint10 combination
+`npm run lint -- --no-cache` was not used. Exact native single-SF direct coverage:
+
+| Source / true mirrored owner | Lines | Functions | Branches |
+| --- | ---: | ---: | ---: |
+| accountRuntime | 1007/1007 | 58/58 | 195/195 |
+| arrivalAnchors | 145/145 | 15/15 | 32/32 |
+| shadow | 339/339 | 30/30 | 75/75 |
+| reconciliation | 53/53 | 6/6 | 12/12 |
+| platform | 508/508 | 22/22 | 63/63 |
+| logging | 127/127 | 11/11 | 29/29 |
+
+All six are100% in each column, verified from their native sole-SF LCOV and TAP.
+The direct selectors for the five mandatory production pairs plus separate
+logging also pass. Architecture controls are unpaired configuration tests;
+no fictional production pair or coverage percentage is assigned to them.
+
+The two genuine RED roots retain exact Git blobs:
+ACCOUNT `b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134` and
+PLATFORM `321b61af80c611fda8d825dd613a2537b16303e1`.
+All16 ACCOUNT and7 PLATFORM recursive records were independently reclassified
+with the SAME installed `classifyRedEvidence` implementation, SHA256
+`82cd570745ec1810fece2635e15fc31f8b1262b803b45a6a60b905be5cade802`.
+Every record is RED_EVIDENCE_OK; exact source blobs, source→planning-only evidence
+commit→GREEN ancestry and unchanged production through evidence were verified
+for the eight distinct bugs021,022,023,024,025,026,030,031. The026 runtime/platform
+dependency chain is retained. Earlier embedded active-owner blobs need not exist
+as Git objects: exact embedded text/hash or exact patch application against the
+source owner was checked instead. Object-valued older expected observations are
+valid classifier input. Historical roots, recursive payloads and unsuccessful
+preparations were not normalized or rewritten.
+
+Whole large JSON/base64/manifests were machine-processed without printing them.
+All23 native expected/actual/semantic-assessment records were separately read;
+preliminary025 mock-count observations are not promoted to the later native
+timer-clamp proof. 023's combined terminal classes and031's same-error branches
+remain distinguished. No setup/import/permission failure substitutes for the
+intended assertion semantics. Both fresh actual installed CLI checks also pass:
+`installed-account-cli` raw0 at05:14:15.143956–05:14:15.405582 and
+`installed-platform-cli` raw0 at05:14:18.491209–05:14:18.748211, each
+RED_EVIDENCE_OK / target_test_failed. The readiness verifier's two earlier
+setup/bookkeeping raw1 attempts remain retained and do not become bug REDs.
+
+042's declared temporary premature-constructor HTTP control and043's temporary
+false-forwarded trust control were checked as assertion maintenance, not inserted
+into those genuine histories. 043's native terminal/proof/read-completion under
+`/private/tmp/guardian043-native/` confirms current owner blob, exact restoration
+of44 production files and unchanged60 other case bodies (61 authored,70 expanded).
+The already-existing036 strict mock caught the false-forwarding control; this
+review does not invent a prior blind spot or an old-owner GREEN comparison.
+044's shorter-wait control is also separate maintenance evidence.
+
+The parent's latest whole combined gate after04-16 predates043. Focused current
+readiness is applicable evidence for this review; it is **not a final whole
+`npm run check` result at Q**, a phase/merge gate, real-home/hardware validation,
+release clearance or successful seal. Existing historical WINDOWS exceptions,
+unclassified E-04-01 and descriptorless prohibitions remain unresolved/unwaived.
+
+### Append-only terminal boundary
+
+The pre-append612613-byte report prefix is immutable. Before this append the
+reviewer supplies a fresh installed Fallow guard on the exact report path and
+canonical-containment/input-prefix checks. Only this full-review append may
+change in the repository; parent WINDOWS bytes, all other tracked bytes/modes,
+the clean index, literal symlinks, HEAD and absence of new untracked files are
+checked again in the terminal native proof. The terminal report Git blob/SHA256
+and actual read-ledger identity are returned with ACTUAL FINAL after all proof
+children have exited. No formatter, staging, commit or state update is performed.
+The parent receives the exact D-03 sets/counts above before its next action.
+
+_Reviewed by `/root/phase4_account_correction2` as typed `gsd-code-reviewer`;
+FULL deep correction2 at Q. No repair or requirement completion is claimed._
