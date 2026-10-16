@@ -16,6 +16,7 @@ import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { It, mock, verify, when } from 'strong-mock';
 
@@ -188,6 +189,10 @@ const HAP = createFakeHap();
 // The stand-in answers the members the plugin reads and nothing else, which no structural type can
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
+
+// The fake HAP accessory carries the consumed service behavior; its constructor
+// crosses the same nominal HAP boundary as the namespace above.
+const PLATFORM_ACCESSORY: API['platformAccessory'] = HarnessPlatformAccessory as unknown as API['platformAccessory'];
 
 // The accessory identifier the plugin derives for this device, taken from the same derivation the
 // plugin uses rather than restated as a literal.
@@ -372,22 +377,11 @@ interface FakeApiCall {
   accessories: FakeAccessory[];
 }
 
-function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls: FakeAccessory[][] = [], unregisterCalls: FakeApiCall[] = []): API {
-  const standIn = {
-    hap: HAP_NAMESPACE,
-    platformAccessory: HarnessPlatformAccessory,
-    registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
-      registerCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
-    },
-    updatePlatformAccessories(accessories: FakeAccessory[]) {
-      updateCalls.push([...accessories]);
-    },
-    unregisterPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
-      unregisterCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
-    },
-  };
-
-  return standIn as unknown as API;
+// The compatibility signature keeps existing callers and their recording arrays.
+// Each case prescribes and records its own finite API interactions.
+function fakeDiscoveryApi(registerCalls: FakeApiCall[], updateCalls?: FakeAccessory[][], unregisterCalls?: FakeApiCall[]): API;
+function fakeDiscoveryApi(): API {
+  return mock<API>({ exactParams: true, name: 'homebridge discovery api' });
 }
 
 interface ContextOptions {
@@ -692,6 +686,8 @@ describe('BasementGuardianPlatform', () => {
     // arrange
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const restorationApi = fakeDiscoveryApi([]);
+    when(() => restorationApi.hap).thenReturn(HAP_NAMESPACE);
+    when(() => restorationApi.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     const cachedAccessory = new restorationApi.platformAccessory<BasementGuardianAccessoryContext>('Cached Sump', ACCESSORY_UUID);
     cachedAccessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
     const listeners: (() => void)[] = [];
@@ -765,6 +761,7 @@ describe('BasementGuardianPlatform', () => {
     verify(removal);
     verify(user);
     verify(api);
+    verify(restorationApi);
   });
 
   for (const { identity, contextJson } of [
@@ -779,6 +776,8 @@ describe('BasementGuardianPlatform', () => {
       // arrange
       t.mock.timers.enable({ apis: ['setTimeout'] });
       const restorationApi = fakeDiscoveryApi([]);
+      when(() => restorationApi.hap).thenReturn(HAP_NAMESPACE);
+      when(() => restorationApi.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
       const cachedAccessory = new restorationApi.platformAccessory('Cached Sump', ACCESSORY_UUID);
       const context: unknown = JSON.parse(contextJson);
 
@@ -840,6 +839,7 @@ describe('BasementGuardianPlatform', () => {
       );
       verify(user);
       verify(api);
+      verify(restorationApi);
     });
   }
 
@@ -847,6 +847,8 @@ describe('BasementGuardianPlatform', () => {
     // arrange
     t.mock.timers.enable({ apis: ['setTimeout'] });
     const restorationApi = fakeDiscoveryApi([]);
+    when(() => restorationApi.hap).thenReturn(HAP_NAMESPACE);
+    when(() => restorationApi.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     const hap = restorationApi.hap;
     const cachedAccessory = new restorationApi.platformAccessory<BasementGuardianAccessoryContext>('Cached Sump', ACCESSORY_UUID);
     cachedAccessory.context = {
@@ -983,6 +985,7 @@ describe('BasementGuardianPlatform', () => {
     verify(removal);
     verify(user);
     verify(api);
+    verify(restorationApi);
   });
 
   test('holds no accessory and calls nothing on the API once constructed', () => {
@@ -1186,7 +1189,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(2);
-    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
@@ -1252,7 +1255,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(2);
-    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
@@ -1345,7 +1348,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(3);
-    when(() => api.platformAccessory).thenReturn(HarnessPlatformAccessory as unknown as API['platformAccessory']);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
@@ -1501,6 +1504,7 @@ describe('configureAccessory', () => {
     flood.updateCharacteristic(HAP.Characteristic.LeakDetected, HAP.Characteristic.LeakDetected.LEAK_DETECTED);
     flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+    when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
     platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
@@ -1514,6 +1518,7 @@ describe('configureAccessory', () => {
       },
       { statusActive: false, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED, recorded: true },
     );
+    verify(platform.api);
   });
 
   // The window the restart passes exist for. HAP answers a write with no handler by storing the
@@ -1525,6 +1530,7 @@ describe('configureAccessory', () => {
     const control = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
     control.updateCharacteristic(HAP.Characteristic.On, false);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+    when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
     platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
@@ -1534,6 +1540,7 @@ describe('configureAccessory', () => {
       { press: await pressOutcomeOf(control), on: control.getCharacteristic(HAP.Characteristic.On)?.value },
       { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
     );
+    verify(platform.api);
   });
 
   test('D-03 removes nothing from HomeKit on cache-restore alone', () => {
@@ -1596,6 +1603,7 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow false`]);
+    verify(context.api);
   });
 
   // A system the push never named does not vouch. A pump the account gained since the last push, and
@@ -1638,6 +1646,7 @@ describe('applyMonitoringHealth', () => {
         unnamed: { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
       },
     );
+    verify(context.api);
   });
 
   test('reaches nothing when this run has published no accessory yet', () => {
@@ -1652,6 +1661,7 @@ describe('applyMonitoringHealth', () => {
     assert.doesNotThrow(() => {
       applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, NO_DEVICE_ANSWERED);
     });
+    verify(context.api);
   });
 
   // The walk is over the platform's own accessory map rather than over the `BasementGuardianAccessory`
@@ -1663,6 +1673,9 @@ describe('applyMonitoringHealth', () => {
     // arrange
     const restored = restoredAccessories();
     const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
 
     // act
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
@@ -1672,6 +1685,7 @@ describe('applyMonitoringHealth', () => {
       { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
       { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
     ]);
+    verify(context.api);
   });
 
   // A refusal that arrives after a successful start reaches the accessories this run built, not only
@@ -1688,6 +1702,9 @@ describe('applyMonitoringHealth', () => {
       registry: unknownRegistry(),
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
     });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
 
     const account = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
 
@@ -1710,6 +1727,7 @@ describe('applyMonitoringHealth', () => {
         ],
       },
     );
+    verify(context.api);
   });
 
   // The recording instance observes the account-wide fan-out beside the restored services' failure
@@ -1725,6 +1743,9 @@ describe('applyMonitoringHealth', () => {
       registry: unknownRegistry(),
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
     });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
 
     // act
     applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
@@ -1734,6 +1755,7 @@ describe('applyMonitoringHealth', () => {
       { marks, statuses: statusesOf(restored.floods) },
       { marks: [`${DEVICE_ID} rest true shadow true`], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] },
     );
+    verify(context.api);
   });
 
   // The ordering inside the fan-out is load-bearing and this is what pins it: an ordinary push clears
@@ -1754,6 +1776,7 @@ describe('applyMonitoringHealth', () => {
       registry: powerRegistry(),
       basementGuardianAccessories: live.basementGuardianAccessories,
     });
+    when(() => context.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
     applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
@@ -1762,6 +1785,7 @@ describe('applyMonitoringHealth', () => {
     assert.deepStrictEqual(trustReadsOf(live.floods), [
       { statusActive: { value: false, threw: COMMUNICATION_FAILURE }, leakDetected: { value: 0, threw: undefined } },
     ]);
+    verify(context.api);
   });
 
   // Two identically built republishing fixtures distinguish the push orders: the plugin's order
@@ -1814,6 +1838,7 @@ describe('applyMonitoringHealth', () => {
       registry: unknownRegistry(),
       log: createRecordingLog(messages),
     });
+    when(() => context.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
@@ -1827,6 +1852,7 @@ describe('applyMonitoringHealth', () => {
       },
       { messages: [NOTHING_MARKED], carriesTrust: false, on: { value: true, threw: undefined } },
     );
+    verify(context.api);
   });
 
   // One line per refusal per accessory would be noise: a marked tile stops answering, which is the
@@ -1841,12 +1867,16 @@ describe('applyMonitoringHealth', () => {
       registry: unknownRegistry(),
       log: createRecordingLog(messages),
     });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
 
     // act
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
     assert.deepStrictEqual({ messages, statuses: statusesOf(restored.floods) }, { messages: [], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] });
+    verify(context.api);
   });
 
   // An empty accessory map is a zero too, and it says nothing is wrong: a launch the vendor refused
@@ -1867,6 +1897,7 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(messages, []);
+    verify(context.api);
   });
 
   // Credential rejection is the only cause in this plugin that makes a characteristic unreadable.
@@ -1892,6 +1923,7 @@ describe('applyMonitoringHealth', () => {
         { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
         { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
       ]);
+      verify(context.api);
     });
   }
 });
@@ -1952,13 +1984,21 @@ describe('registerDiscoveredDevices', () => {
           listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
         });
       });
-      const api: API = {
-        ...fakeDiscoveryApi([]),
-        registerPlatformAccessories: (...parameters) => {
+      const api: API = fakeDiscoveryApi([]);
+      when(() => api.hap)
+        .thenReturn(HAP_NAMESPACE)
+        .times(9);
+      when(() => api.platformAccessory)
+        .thenReturn(PLATFORM_ACCESSORY)
+        .times(2);
+      when(() => api.registerPlatformAccessories)
+        .thenReturn((...parameters) => {
           registration.registerPlatformAccessories(...parameters);
-        },
-        unregisterPlatformAccessories: removal,
-      };
+        })
+        .times(2);
+      when(() => api.unregisterPlatformAccessories)
+        .thenReturn(removal)
+        .atMost(1);
       const context = (): DiscoveryContext => discoveryContext({ api, accessories, basementGuardianAccessories, registry: powerRegistry(), log });
       store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
       store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, name: 'Second System', serialNumber: 'serial-2', data: { ac_power: false } });
@@ -2055,6 +2095,7 @@ describe('registerDiscoveredDevices', () => {
       verify(registration);
       verify(removal);
       verify(diagnostic);
+      verify(api);
     });
   }
 
@@ -2075,12 +2116,36 @@ describe('registerDiscoveredDevices', () => {
           ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
       });
     });
-    const api: API = {
-      ...fakeDiscoveryApi([]),
-      registerPlatformAccessories: (...parameters) => {
+    const api: API = fakeDiscoveryApi([]);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(9);
+    when(() => api.platformAccessory)
+      .thenReturn(PLATFORM_ACCESSORY)
+      .times(2);
+    when(() => api.registerPlatformAccessories)
+      .thenReturn((...parameters) => {
         registration.registerPlatformAccessories(...parameters);
-      },
-    };
+      })
+      .times(2);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
@@ -2146,6 +2211,7 @@ describe('registerDiscoveredDevices', () => {
     );
     assert.deepStrictEqual(registrations, [{ plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [ACCESSORY_UUID], mainsLost: CONTACT_NOT_DETECTED }]);
     verify(registration);
+    verify(api);
   });
 
   test('registers one accessory for a newly discovered device not already in accessories', () => {
@@ -2153,6 +2219,31 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
 
@@ -2174,6 +2265,7 @@ describe('registerDiscoveredDevices', () => {
         registerCalls: [{ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, deviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] }],
       },
     );
+    verify(api);
   });
 
   test('updates a deviceId already present in accessories in place instead of registering it again', () => {
@@ -2182,6 +2274,29 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
@@ -2209,6 +2324,7 @@ describe('registerDiscoveredDevices', () => {
         updatedAccessoryCount: 1,
       },
     );
+    verify(api);
   });
 
   test('adopts a vendor rename when the display name still matches the stored vendor name', () => {
@@ -2217,6 +2333,29 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump Sentry' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
@@ -2233,6 +2372,7 @@ describe('registerDiscoveredDevices', () => {
       { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
       { displayName: 'Sump Sentry', lastVendorName: 'Sump Sentry', updatedAccessoryCount: 1 },
     );
+    verify(api);
   });
 
   test('keeps a customized display name but still advances the stored vendor name', () => {
@@ -2241,6 +2381,29 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Basement Pump' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Basement Pump', uuid);
     existing.context.lastVendorName = 'Sump System';
@@ -2257,6 +2420,7 @@ describe('registerDiscoveredDevices', () => {
       { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
       { displayName: 'Basement Pump', lastVendorName: 'Sump Sentry', updatedAccessoryCount: 1 },
     );
+    verify(api);
   });
 
   test('calls updatePlatformAccessories no times when nothing about the cached accessory changed', () => {
@@ -2265,6 +2429,9 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     existing.context.lastVendorName = 'Sump System';
@@ -2281,6 +2448,7 @@ describe('registerDiscoveredDevices', () => {
       { displayName: existing.displayName, lastVendorName: existing.context.lastVendorName, updatedAccessoryCount: updateCalls.length },
       { displayName: 'Sump System', lastVendorName: 'Sump System', updatedAccessoryCount: 0 },
     );
+    verify(api);
   });
 
   // The first poll on a new device runs before registration for throw-safety, and it always seeds
@@ -2293,6 +2461,31 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi(registerCalls, updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
 
@@ -2304,6 +2497,7 @@ describe('registerDiscoveredDevices', () => {
       { registered: registerCalls.map((call) => call.accessories.map((accessory) => accessory.UUID)), updated: updateCalls },
       { registered: [[ACCESSORY_UUID]], updated: [] },
     );
+    verify(api);
   });
 
   test('persists a vendor rename it already applied when the update that follows it throws', () => {
@@ -2311,6 +2505,29 @@ describe('registerDiscoveredDevices', () => {
     const updateCalls: FakeAccessory[][] = [];
     const api = fakeDiscoveryApi([], updateCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump Sentry' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const existing = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     existing.context.lastVendorName = 'Sump System';
     existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
@@ -2331,6 +2548,7 @@ describe('registerDiscoveredDevices', () => {
       },
       { displayName: 'Sump Sentry', persisted: [['Sump Sentry']] },
     );
+    verify(api);
   });
 
   test('does nothing for a deviceId the store holds no snapshot for', () => {
@@ -2338,6 +2556,7 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
 
     // act
@@ -2345,6 +2564,7 @@ describe('registerDiscoveredDevices', () => {
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls }, { accessoryCount: 0, registerCalls: [] });
+    verify(api);
   });
 
   test('explains and skips an unsupported device, registering nothing for it', () => {
@@ -2352,6 +2572,7 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
     const messages: string[] = [];
@@ -2369,6 +2590,7 @@ describe('registerDiscoveredDevices', () => {
       { accessoryCount: accessories.size, registerCalls, messages },
       { accessoryCount: 0, registerCalls: [], messages: [expectedMessage] },
     );
+    verify(api);
   });
 
   test('explains and skips an unknown device, registering nothing for it', () => {
@@ -2376,6 +2598,7 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
     const messages: string[] = [];
@@ -2388,6 +2611,7 @@ describe('registerDiscoveredDevices', () => {
       { accessoryCount: accessories.size, registerCalls, messages },
       { accessoryCount: 0, registerCalls: [], messages: [`Skipping ${DEVICE_ID}: ${DEVICE_TYPE_ID} is not a recognized device family.`] },
     );
+    verify(api);
   });
 
   test('says nothing for a skipped device once the registry reports it already logged', () => {
@@ -2395,6 +2619,7 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
     const messages: string[] = [];
@@ -2408,6 +2633,7 @@ describe('registerDiscoveredDevices', () => {
 
     // assert
     assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls, messages }, { accessoryCount: 0, registerCalls: [], messages: [] });
+    verify(api);
   });
 
   test('registers a valid device after skipping an unsupported device earlier in the same batch', () => {
@@ -2415,6 +2641,31 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const haloDeviceId = 'halo-device';
     store.applyDiscovery({ ...geminiDevice(), deviceId: haloDeviceId, deviceTypeId: 'wayneWaterHalo' });
@@ -2436,6 +2687,7 @@ describe('registerDiscoveredDevices', () => {
       },
       { accessoryCount: 1, registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }] },
     );
+    verify(api);
   });
 
   test('registers a healthy device after an earlier device in the same batch throws', () => {
@@ -2443,6 +2695,33 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(4);
+    when(() => api.platformAccessory)
+      .thenReturn(PLATFORM_ACCESSORY)
+      .times(2);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), deviceId: THROWING_DEVICE_ID });
     store.applyDiscovery(geminiDevice());
@@ -2463,6 +2742,7 @@ describe('registerDiscoveredDevices', () => {
         messages: [`Skipping ${THROWING_DEVICE_ID} on this inventory; every other device still updates.`],
       },
     );
+    verify(api);
   });
 
   test('publishes onto the accessory it registered after a first update on a new device throws', () => {
@@ -2470,6 +2750,33 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(4);
+    when(() => api.platformAccessory)
+      .thenReturn(PLATFORM_ACCESSORY)
+      .times(2);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
     const family = recoveringFamily();
@@ -2502,6 +2809,7 @@ describe('registerDiscoveredDevices', () => {
       'Basement Guardian Offline',
     ]);
     assert.strictEqual(contactStateOf(registered, 'mains-power-lost'), CONTACT_NOT_DETECTED);
+    verify(api);
   });
 
   test('reuses the same BasementGuardianAccessory across polls so the DEV-08 log-once state persists', () => {
@@ -2509,6 +2817,31 @@ describe('registerDiscoveredDevices', () => {
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registerCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
@@ -2524,6 +2857,7 @@ describe('registerDiscoveredDevices', () => {
       `Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
       'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
     assert.deepStrictEqual(messages, [expectedMessage]);
+    verify(api);
   });
 
   test('delivers a between-poll shadow change to HomeKit without waiting for the next poll', () => {
@@ -2531,6 +2865,30 @@ describe('registerDiscoveredDevices', () => {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
     const accessory = registeredDevice(context, accessories, store);
     const beforePatch = contactStateOf(accessory, 'mains-power-lost');
 
@@ -2542,6 +2900,7 @@ describe('registerDiscoveredDevices', () => {
       { beforePatch, afterPatch: contactStateOf(accessory, 'mains-power-lost') },
       { beforePatch: CONTACT_NOT_DETECTED, afterPatch: CONTACT_DETECTED },
     );
+    verify(context.api);
   });
 
   test('updates from the poll as poll-sourced and from the store notification as live', (t) => {
@@ -2550,6 +2909,30 @@ describe('registerDiscoveredDevices', () => {
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
     registeredDevice(context, accessories, store);
     const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
 
@@ -2562,6 +2945,7 @@ describe('registerDiscoveredDevices', () => {
       updateSpy.mock.calls.map((call) => call.arguments[1]),
       ['live', 'poll'],
     );
+    verify(context.api);
   });
 
   test('calls updatePlatformAccessories once a suppression changes the published service set', () => {
@@ -2571,6 +2955,31 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
     const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry(), ignoredFaults });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
     registeredDevice(context, accessories, store);
     const afterFirstPoll = updateCalls.length;
 
@@ -2581,6 +2990,7 @@ describe('registerDiscoveredDevices', () => {
     // Two calls on the first poll: the record the accessory seeded from that snapshot, and the
     // service set the suppression changed. The second poll changes neither, so it adds none.
     assert.deepStrictEqual({ afterFirstPoll, afterSecondPoll: updateCalls.length }, { afterFirstPoll: 2, afterSecondPoll: 2 });
+    verify(context.api);
   });
 
   // The store is built per accessory at the one call site that builds an accessory, so no shared or
@@ -2597,6 +3007,72 @@ describe('registerDiscoveredDevices', () => {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(6);
+    when(() => context.api.platformAccessory)
+      .thenReturn(PLATFORM_ACCESSORY)
+      .times(2);
+    when(() => {
+      context.api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      context.api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== SECOND_ACCESSORY_UUID ||
+            accessory.displayName !== 'Second System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== SECOND_ACCESSORY_UUID ||
+            accessory.displayName !== 'Second System' ||
+            accessories.get(SECOND_ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          updateCalls.push([accessory]);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const secondDevice = { ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2', name: 'Second System' };
     store.applyDiscovery(geminiDevice());
     store.applyDiscovery(secondDevice);
@@ -2615,6 +3091,7 @@ describe('registerDiscoveredDevices', () => {
       },
       { seeds: 0, sinceTheSeeds: [[SECOND_ACCESSORY_UUID]] },
     );
+    verify(context.api);
   });
 
   // The record members are deliberately absent from this comparison, which is the whole reason the
@@ -2640,6 +3117,30 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
     const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry(), ignoredFaults });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
 
     // act
     const accessory = registeredDevice(context, accessories, store);
@@ -2652,12 +3153,37 @@ describe('registerDiscoveredDevices', () => {
       },
       { ignored: true, sibling: true },
     );
+    verify(context.api);
   });
 
   test('removes an adapter added to ignoredFaults on a restart whose profile no longer resolves', () => {
     // arrange
     const api = fakeDiscoveryApi([], []);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(4);
+    when(() => {
+      api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const accessory = registeredDevice(discoveryContext({ api, accessories, registry: powerRegistry() }), accessories, store);
     const ignoredFaults: readonly NotificationServiceKind[] = ['mains-power-lost'];
@@ -2673,6 +3199,7 @@ describe('registerDiscoveredDevices', () => {
       },
       { ignored: undefined, sibling: CONTACT_DETECTED },
     );
+    verify(api);
   });
 
   test('confirms a device offline on the run of polls an administrator configured', () => {
@@ -2680,6 +3207,30 @@ describe('registerDiscoveredDevices', () => {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], []), accessories, registry: powerRegistry(), offlineConfirmationPollCount: 1 });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
     const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
     accessory.context.lastVendorName = 'Sump System';
     accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
@@ -2691,6 +3242,7 @@ describe('registerDiscoveredDevices', () => {
 
     // assert
     assert.strictEqual(contactStateOf(accessory, 'basement-guardian-offline'), CONTACT_NOT_DETECTED);
+    verify(context.api);
   });
 });
 
@@ -2701,6 +3253,51 @@ describe('removeDiscoveredDevice', () => {
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], [], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      context.api.unregisterPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     registeredDevice(context, accessories, store);
     const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
 
@@ -2711,6 +3308,7 @@ describe('removeDiscoveredDevice', () => {
 
     // assert
     assert.strictEqual(updateSpy.mock.callCount(), 0);
+    verify(context.api);
   });
 
   test('subscribes again when the same deviceId is discovered after a removal', (t) => {
@@ -2719,6 +3317,72 @@ describe('removeDiscoveredDevice', () => {
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], [], []), accessories, basementGuardianAccessories, registry: powerRegistry() });
+    when(() => context.api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(5);
+    when(() => context.api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
+    when(() => {
+      context.api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      context.api.updatePlatformAccessories(
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    })
+      .thenReturn(undefined)
+      .times(2);
+    when(() => {
+      context.api.unregisterPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     registeredDevice(context, accessories, store);
     removeDiscoveredDevice(context, DEVICE_ID, store);
     store.applyDiscovery(geminiDevice());
@@ -2733,6 +3397,7 @@ describe('removeDiscoveredDevice', () => {
       updateSpy.mock.calls.map((call) => call.arguments[1]),
       ['live'],
     );
+    verify(context.api);
   });
 
   test('unregisters a cached accessory, drops it from accessories, and removes its stored state', () => {
@@ -2741,6 +3406,28 @@ describe('removeDiscoveredDevice', () => {
     const unregisterCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls, [], unregisterCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
+    when(() => {
+      api.unregisterPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            accessories.get(ACCESSORY_UUID) !== accessory
+          ) {
+            return false;
+          }
+
+          unregisterCalls.push({ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, accessories: [accessory] } satisfies FakeApiCall);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const uuid = ACCESSORY_UUID;
     const existing = new HarnessPlatformAccessory('Sump System', uuid);
     accessories.set(uuid, existing as unknown as BasementGuardianPlatformAccessory);
@@ -2767,6 +3454,7 @@ describe('removeDiscoveredDevice', () => {
         storedSnapshot: undefined,
       },
     );
+    verify(api);
   });
 
   test('does nothing for a deviceId with no cached accessory', () => {
@@ -2775,6 +3463,7 @@ describe('removeDiscoveredDevice', () => {
     const unregisterCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls, [], unregisterCalls);
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const expectedSnapshot = store.applyDiscovery(geminiDevice());
 
@@ -2786,6 +3475,7 @@ describe('removeDiscoveredDevice', () => {
       { accessoryCount: accessories.size, unregisterCalls, storedSnapshot: store.snapshot(DEVICE_ID) },
       { accessoryCount: 0, unregisterCalls: [], storedSnapshot: expectedSnapshot },
     );
+    verify(api);
   });
 });
 

@@ -7749,3 +7749,153 @@ check and recorded-base audit follow this note before the exact clean pre-step
 and staging. The earlier general serial/no-signal statements apply only to the
 checks completed when they were written; this note records the later exception.
 No original attempt or failure is discarded.
+
+## CR-04-ACCOUNT-034 implementation — typed discovery API
+
+This is the single 04-14-03 fixture repair at starting revision
+bf1a7f98e9ccac6ea5b196d530fdcfa20471119d. Original correction location is
+C:test/platform.test.ts:374–389. The controlling rules are Unit Types and
+hermeticity, Test doubles and typed literals, plus D-02/D-05/D-06/D-07.
+The broad `standIn as unknown as API` assertion is removed. The helper now
+returns the installed strong-mock 9.2.2 `mock<API>` with exactParams:true.
+Homebridge's installed 2.4.0 definitions check every consumed API member.
+
+The fakeDiscoveryApi name, sole externally callable signature and all 44
+original call expressions remain. Its overload retains the existing array
+parameters for caller compatibility; the implementation creates only the
+strict mock. Each case now configures and records its own finite calls.
+There is no dummy parameter use, unbounded permission, new helper or port.
+All 36 other private function declaration bodies remain exact. All 80 original
+assertion ASTs and 65 test declarations remain in their original order;
+data rows still execute 74 cases. Explicit API verification follows each
+case's existing public-result and state assertions, including zero-call cases.
+
+The checker prints optional overload parameters with `| undefined`, while
+the previous default-initialized parameters omitted that text. Both raw
+displays are retained. Same-program bidirectional callable assignability
+passes with zero diagnostics, and all existing calls compile unchanged.
+The production project excludes this owner; its exclusion is recorded, not
+represented as an exact private-symbol consumer trace. No existing shared,
+exported, private alias/member or production contract shape changes, so no
+new unavailable impact result is promoted to a complete trace or exception.
+
+The three pre-existing HarnessPlatformAccessory-to-API constructor conversions
+are consolidated into one documented owner-local PLATFORM_ACCESSORY binding.
+Its conversion and target are exactly the existing nominal fake-HAP boundary.
+It supplies the three original cases and the newly explicit finite constructor
+expectations. This is a retained nominal limitation, not structural HAP proof.
+No broad API assertion, Partial cast, new assertion category, dependency,
+export, helper file or production edit is added. New hand-built call records
+use satisfies FakeApiCall. Nominal accessory matchers check one candidate,
+its class, physical UUID, display name and applicable complete device identity;
+update/removal cases also check the owned accessory reference where available.
+Plugin/platform arguments and invocation counts are prescribed explicitly.
+
+The existing 031 ordered registration recorders retain their original whole
+argument, ownership, listener, accepted-state and diagnostic assertions. Their
+API property expectations are finite. The existing strict removal function
+remains connected through a property expectation bounded at most once; it has
+zero allowed invocations and its original explicit verification remains active.
+This does not grant a removal call. The fixed actionable restart diagnostic
+still passes through the real redacting logger. Every original before/after
+acceptance, rebuilt-context, removal/store-removal/reappearance, healthy-device,
+pre-call preparation retry, fresh-run and configureAccessory promise remains.
+The 026 cached identity and seed-before-registration assertions remain active.
+The 032 annotation and 033 rationale comments are unchanged.
+
+All 44 production files and modes are byte-exact at the starting revision.
+Platform source remains blob8f48e059bce57d8ca320e6523d6beb0c0385eb03.
+The current owner is blob73c2ae45f76c51d68cd71a2d68fa9dc00f0dafb9 before this
+report append. Actual new changes are the owner and this append-only report;
+the precommitted 04-14 declaration is the third actual cause path. Conditional
+src/platform.ts is unused. No fifth/sixth path or later-cause repair is hidden.
+
+Official [Homebridge API documentation](https://developers.homebridge.io/homebridge/interfaces/API.html)
+and [dynamic platform documentation](https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html)
+were compared with the complete installed api.d.ts. Registration, update and
+removal are synchronous void methods; configureAccessory restores cached
+ownership. No relevant signature difference was found. Neither documentation
+nor types establish atomic acceptance or a nonthrowing registration guarantee.
+Context7 was unavailable and ctx7 was absent, so the official web fallback was
+used without an install. The complete installed strong-mock README/types were
+read before using its API.
+
+### Native checks and retained attempts
+
+All task checks ran serially in the existing main checkout on
+features/code-review-sweep with workflow.use_worktrees=false and the persisted
+isolation:none sentinel. No worktree, sentinel or configuration changed.
+The actual gitdir 14 ledger remains cfd221ddcde1177e29dcb852d437d12bbf7fc478;
+09/13 ledgers and the parent's initial checkpoint were read, not reconstructed.
+Native root is /private/tmp/guardian034-e1pwotud. Each captured attempt folder
+holds exact argv/cwd/HEAD/branch/runtime/UTC/raw exit, separate complete streams,
+tracked/untracked input bytes and modes, compiled copies, and both patches.
+The full manifests include all three directory symlinks as literal Git targets.
+Hash inputs use saved files and bounded Git --no-filters; no stdin hash process
+or manual signal was needed.
+
+| Attempt | Actual result |
+| --- | --- |
+| before-contract |0; both projects clean; original helper signature and44 callers saved |
+| private-diagnostic |1; copied owner70/74, four expected missing source-path lookups; orientation only |
+| candidate-types |1; virtual source omitted Node ESM metadata and produced three import.meta diagnostics |
+| candidate-types-retry |0 after preserving actual source metadata; no repository change |
+| candidate-owner |0; private compiled candidate74/74; repository checks follow separately |
+| build-test / final-build-test |0 /0; fresh npm run build:test |
+| owner-lint |1;52 new void-arrow/padding style errors, preserved in full |
+| owner-lint-fix / owner-format |0 /0; freshly guarded exact owner before each mutation |
+| owner-tap-final |0; native TAP74 pass,0 fail/cancel/skip/todo |
+| direct-platform |0; exact isolated src/platform.ts/test/platform.test.ts pair100% |
+| native-platform |0; sole SF dist-test/src/platform.js;508/508 lines,22/22 functions,63/63 branches |
+| typecheck-source / typecheck-test |0 /0; separate current compiler projects, noEmit/nonincremental |
+| final-lint |0; uncached owner/source lint, zero warnings |
+| red-account-cli / red-platform-cli |0 /0; actual installed current-file CLI returns RED_EVIDENCE_OK |
+| final-proof |1; raw signature display comparison exposed optional-parameter formatting difference |
+| final-proof-retry |0; actual bidirectional contract proof, preservation and all 23 histories pass |
+| cause-audit |0/pass against the actual cfd221d ledger; no dead-code, complexity or duplication findings |
+
+The final proof ran02:05:23.908353–02:05:49.821438UTC on Node v26.11.1,
+npm 11.20.0. preservation-proof.json retains all 23 SAME installed
+classifyRedEvidence results and actual sourceCommit:path-to-sourceBlob
+comparisons. ACCOUNT remains 16 records at
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134; PLATFORM remains 7 records at
+321b61af80c611fda8d825dd613a2537b16303e1. Both JSONs and complete recursive
+histories are immutable. Actual Git ancestry and saved source/owner texts
+match their recorded blobs. This fixture maintenance creates no production
+bug, invented behavioral RED, new runtime case or evidence-only commit.
+
+The same proof verifies zero compiler diagnostics, accepted typed API calls
+and three intended type diagnostics in each project for wrong arity, a numeric
+accessory and an incomplete structural API. Those temporary compiler controls
+are type evidence, not native production regression failures. All original
+assertions, other private function bodies, call expressions, production bytes,
+symlink targets and the complete534713-byte report prefix remain exact.
+
+One capture limit remains: a direct read-only combined sed and prettier --check
+command after the lint fixer returned1 for formatting. Its command, output and
+exit remain in the tool transcript, but it lacks a separate native UTC/envelope.
+The following captured guard preserves the same owner input before formatting;
+this does not reconstruct the missing timestamp or claim that attempt passed.
+The first proof and diagnostic failures above remain failures. No later success
+erases any historical capture or process limit.
+
+read-completion.json records 55 full files, 1,739,334 bytes, complete contiguous
+ranges, revision/blob/SHA-256 identities and no pending ranges. It includes
+both whole platform files, the full current report, all five complete books,
+current planning context, canonical830-line decisions,13 plan/supersession and
+summary, declared actual consumers, installed definitions and applicable
+historical policy records. Display-limit gaps were refilled explicitly.
+Bytes/4 estimates 434,834 tokens of read volume before additional output/callers.
+This exceeds the initial 300k–390k forecast as the full referenced historical
+context is included. The configured 1,000,000 comparison leaves 565,166 by this
+arithmetic only; it is not measured harness usage or a host-capacity claim.
+Normal compaction retained this same cause and checked unchanged starting
+hashes; no mandatory read was omitted because of the 100k advisory.
+
+The final serialized preservation/audit and exact clean pre-step precede
+individual staging and an ordinary foreground cause commit. Native commit
+and final checkpoint records retain their actual results. No independent
+correction verdict or count reset follows from this implementation: 44 accepted,
+29 independently closed,15 open030–044, counter 1. Whole correction 2 remains
+assigned to 17. RUN-01 stays Pending; WINDOWS 46–54 remain OPEN and unwaived.
+Parent owns the full combined gate, shared records, remaining causes and seal.
