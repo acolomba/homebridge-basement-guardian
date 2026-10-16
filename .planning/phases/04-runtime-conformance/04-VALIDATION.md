@@ -1,300 +1,199 @@
 ---
 phase: "04"
 slug: "runtime-conformance"
-status: draft
+status: validated
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-10-14"
+validated: "2026-10-16"
 ---
 
 # Phase 4 — Validation Strategy
 
-This is a bound planning strategy for RUN-01, with twenty concrete tasks in ten
-serial waves. No Phase 4 source repair, full-file execution review, owner test,
-mutation, regression RED, direct coverage or full gate ran during planning.
-Pending rows do not imply missing production behavior. Draft/Nyquist flags stay
-false until actual execution meets their obligations.
+This validation map covers all 19 executed plans and 48 actual tasks. Automated task coverage is complete. RUN-01 remains PARTIAL/Pending because phase goal/security verification and three actual human judgments remain required. Nyquist compliance stays false conservatively until those judgments are resolved. A passing coverage gate does not supply human acceptance.
+
+## Audit Scope and Evidence
+
+This is a validation-coverage audit, not another whole-batch correction review. It consumes existing independent review and native execution evidence. It does not reopen or re-review all 87 findings. The 14 MB seal is processed structurally; there is no claim that every serialized byte was manually read. Source/test names, contracts, verify blocks, current blob identities and native streams establish the map.
+
+The current reference is `cda29908927ef5dbfddcbe31e31e65ba95aa01e8`. The canonical seal SHA256 is `bad44c95f952224b042dd35a98327e62e241ebb0dbb85c733d7d0ddf4c3b211c`. It records 34 reviewed paths (20 original core paths), 14 pairs, 87 closed findings, ten whole-batch rounds, 27 genuine RED records across nine bug episodes, 39 maintenance attempts/43 intended targets, eight seeds, 32 threats, 137 historical plan-qualified threat occurrences and 99 historical commits. These record counts do not imply a new bug or threat classification.
 
 ## Test Infrastructure
 
-| Property | Current evidence |
+| Property | Actual evidence |
 | --- | --- |
-| Framework | Native node:test and node:assert/strict |
-| Observed Node | v26.11.1 |
-| Observed TypeScript | 6.0.3 |
-| Configuration | Existing source/test TypeScript projects; strict ESM |
-| Quick feedback | Fresh build:test, then the exact compiled owner or named tracer |
-| Direct evidence | test:coverage:direct with one source/owner |
+| Framework | Native node:test / node:assert/strict; strict TypeScript ESM; existing Cucumber runner |
+| Runtime | Node v26.11.1, npm 11.20.0 |
+| Focused feedback | npm run build:test followed by exact compiled owner |
+| Isolated coverage | npm run test:coverage:direct -- <source.ts> <owner.test.ts> |
 | Full combined gate | npm run check |
-| Tooling | Existing pre-commit 4.5.1 and Fallow 3.27.0 |
-| Duration | Phase 4 durations remain unmeasured; record actual times during execution |
+| Executable pairs | 12 in current seal, each isolated 100% lines/functions/branches |
+| Declaration-only pairs | accessoryStore and commandPort: meaningful strict compiler contracts, zero authored runtime cases, coverage null |
+| Unpaired architecture owner | test/architecture/platformWiring.test.ts: ten typed positive/negative configured-rule controls; actual unpaired selector, no invented source denominator |
 
-The manifest defines the build/check/direct commands. The existing selector
-accepts type-only sources with no executable LCOV record after strict compilation.
-It does not fabricate numerical runtime coverage. [VERIFIED:
-package.json:35-59; scripts/test-coverage-direct.mjs:137-190]
+The direct selector rejects missing/wrong executable LCOV sources and any unequal hit/found denominator. Its type-only branch permits no LCOV records after strict compilation. The AccessoryStore void callback intentionally accepts a value-returning implementation; omission and noncallable persistence are the meaningful negatives. CommandOutcome checks require a refusal cause and closed discriminants/vocabulary.
 
-## Bound Ownership and Sampling
+## Current Full Gate and Feedback Latency
 
-| Batch | Full initial scope | Suggested order | Final independent correction scope |
-| --- | --- | --- | --- |
-| PORTS | accessoryStore, clock, monotonicClock, timers and all four owners | 04-01/02, waves 1/2 | All eight files plus actual additions |
-| POLICIES | commandPort, failureLog, retryPolicy and all three owners | 04-03/04, waves 3/4 | All six files plus actual additions |
-| TRUST | arrivalAnchors, monitoringHealth and both owners | 04-05/06, waves 5/6 | All four files plus actual additions |
-| ACCOUNT | Complete accountRuntime source and its complete owner | 04-07/08/09, waves 7/8/9 | Both full files, actual helpers and required external adaptations |
-| Coordinator | Reports, inventory, real Git/evidence and current gate | 04-10, wave 10 | All current scope and records |
+The latest actual full gate is `/private/tmp/guardian-04-10-closeout/postseal/full-gate/attempt.json`: npm run check, raw exit 0, empty stderr, Node v26.11.1/npm 11.20.0, at source HEAD 3ed5af03cefba8928a7b863fc999ccd7c20a64b9, 2026-10-16T15:39:39.811823+00:00 through 15:40:35.513971+00:00 (55.702148 seconds). It reports six passing static checks, 104 Cucumber scenarios/1156 steps and 43 isolated pairs. Successful unpaired output is suppressed; no unpaired count is inferred.
 
-The batch order is the selected planning choice within approved discretion.
-ACCOUNT keeps one counter and original IDs across every sequential plan.
-Initial review covers each whole batch before its first repair. A plan slice
-does not substitute for review of the full 1,283-line source or 3,365-line owner.
-[VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:76-89]
+A fresh read-only comparison of all 721 recorded tracked/untracked input entries to the current tree finds only `.planning/ROADMAP.md` and the exact declared generated `.planning/phases/04-runtime-conformance/04-SEAL-AUDIT.json` differ. All 28 recorded source/owner blobs still match Git hash-object. This preserves applicability of the existing gate under the project rulebook; the generated seal is an exact existing exception, not a general JSON exclusion. Historical native evidence continues to describe its original tool versions and inputs.
 
-- **During each cause:** Run the exact owner/tracer and isolated pair command.
-- **Before each commit:** Run required Fallow audit and the clean exact-file pre-step.
-- **Normal commit:** Preserve the actual foreground hook output, exit and committed paths.
-- **After each combined code wave:** Run the full npm check on combined inputs.
-- **Before phase verification:** Require a current full result under local-verification.
-- **Feedback target:** Use focused tracer feedback within 30 seconds where measured.
-  Do not claim that this target is already observed.
+| Observed command | Native UTC interval | Actual elapsed |
+| --- | --- | ---: |
+| Final ledger tracer | 15:42:35.395964–15:42:35.578405 | 0.182441 s |
+| Final history audit | 15:42:36.132864–15:42:38.232101 | 2.099237 s |
+| Final automated seal audit | 15:42:38.820157–15:43:06.814953 | 27.994796 s |
+| Plan19 readiness build | 07:12:14.160015–07:12:17.185411 | 3.025396 s |
+| Plan19 seven-owner readiness | 07:12:24.398046–07:12:46.405964 | 22.007918 s |
 
-This schedule follows the project rulebook. The 2,400-second full-gate limit is
-not a passing result. Serial ownership covers builds, source controls, helpers,
-Git and shared records. [VERIFIED: skills/local-verification/SKILL.md:7-34;
-.planning/phases/04-runtime-conformance/04-CONTEXT.md:59-63]
+These are measured process intervals, not a universal feedback guarantee. Some whole-owner/full gates exceed a 30-second feedback target. Do not invent an estimated latency for any task lacking retained timestamps.
 
 ## Exact Command Keys
 
-Each direct command includes its own fresh strict build. For several sequential
-feedback runs, one serialized fresh build can precede compiled owner commands,
-provided the coordinator tracks exact unchanged inputs. [VERIFIED:
-package.json:35,51,54; skills/local-verification/SKILL.md:19-34]
+`BUILD` is `npm run build:test`. Every compiled owner below requires a fresh build or exact unchanged compiled-input evidence. `PAIR:<name>` expands to the exact command in this table.
 
-| Key | Exact command |
-| --- | --- |
-| BUILD | `npm run build:test` |
-| TYPE | `npm run typecheck` |
-| PAIR-STORE | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` |
-| PAIR-CLOCK | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` |
-| PAIR-MONOTONIC | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` |
-| PAIR-TIMERS | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` |
-| PAIR-COMMAND | `npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts` |
-| PAIR-LOG | `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` |
-| PAIR-RETRY | `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` |
-| PAIR-ANCHORS | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` |
-| PAIR-HEALTH | `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` |
-| PAIR-ACCOUNT | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` |
-| OWNER-ACCOUNT | `node --test --test-reporter=tap dist-test/test/runtime/accountRuntime.test.js` |
-| LICENSE | `node --test --test-reporter=tap dist-test/test/packaging/licenseHeaders.test.js` |
-| FULL | `npm run check` |
+| Key | Exact command | Result |
+| --- | --- | --- |
+| PAIR:runtime/accessoryStore | `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | compiler contract / null coverage; exit 0 |
+| PAIR:runtime/clock | `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/monotonicClock | `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/timers | `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/commandPort | `npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts` | compiler contract / null coverage; exit 0 |
+| PAIR:runtime/failureLog | `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/retryPolicy | `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/arrivalAnchors | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/monitoringHealth | `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:runtime/accountRuntime | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:cloud/shadow | `npm run test:coverage:direct -- src/cloud/shadow.ts test/cloud/shadow.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:accessories/reconciliation | `npm run test:coverage:direct -- src/accessories/reconciliation.ts test/accessories/reconciliation.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:platform | `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | isolated 100/100/100; exit 0 |
+| PAIR:logging | `npm run test:coverage:direct -- src/logging.ts test/logging.test.ts` | isolated 100/100/100; exit 0 |
 
-Compiled owner commands require BUILD first. The compiled-file path comes from
-the existing selector's ``return `dist-test/${file.slice(0, -3)}.js`;`` rule.
-The license gate covers source licensing; independently inspect complete
-headers in owners/helpers and bounded external consumers.
-[VERIFIED: scripts/test-coverage-direct.mjs:35-36;
-test/packaging/licenseHeaders.test.ts:50-103]
+`TRACER`, `SEAL` and `HISTORY` mean the exact literal inline node predicates in 04-10 PLAN verify blocks. Their complete argv and input/stream hashes are retained in `/private/tmp/guardian-04-10-canonical/final-native/{tracer,seal,history}-labels-final/attempt.json`, not paraphrased substitute commands. Their stdout is respectively RUNTIME_LEDGER_TRACER_OK, RUNTIME_SEAL_AUTOMATED_AUDIT_OK and RUNTIME_HISTORY_AUDIT_OK; all three raw exits are 0 and stderr is empty. Stream SHA256 values were independently compared with retained streams during this audit.
 
-## Per-Task Verification Map — Bound, Not Executed
+## Per-Task Verification Map
 
-Every PLAN verify block carries literal root-relative automated commands and an
-explicit failure condition. BUILD plus the exact compiled owner gives feedback;
-PAIR commands rebuild and check each source alone. Two declaration-only owners
-retain honest strict compiler contracts with no artificial runtime denominator.
+All rows address RUN-01. COVERED denotes the task’s automated verification obligation, not completion of phase acceptance. Reviews/caller traces/header inspection/history judgments still rely on actual retained independent reports; a green owner alone does not prove those process obligations. Tasks are listed by actual wave rather than original draft order. The full literal command and fail-condition map is in the companion temporary audit task-map.json, extracted directly from the current plans.
 
-| Task | Batch | Wave | Requirement | Threat refs | Secure behavior | Commands / evidence | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 04-01-01 | PORTS | 1 | RUN-01, PROC-01/03 | T-04-01/02 | Full eight-file initial review; real persistence shape | BUILD + accessoryStore owner, PAIR-STORE; complete report/headers | Pending |
-| 04-01-02 | PORTS | 1 | RUN-01 | T-04-01/02 | Epoch wall-time contract | BUILD + clock owner, PAIR-CLOCK | Pending |
-| 04-02-01 | PORTS | 2 | RUN-01 | T-04-03 | Independent elapsed/bigint conversion | BUILD + monotonicClock owner, PAIR-MONOTONIC | Pending |
-| 04-02-02 | PORTS | 2 | RUN-01, PROC-02/03 | T-04-04 | Exact timer/cancel; full PORTS correction | BUILD + timers owner, PAIR-TIMERS; complete eight-file review/counts | Pending |
-| 04-03-01 | POLICIES | 3 | RUN-01 | T-04-05 | Full six-file initial; exact command union/callers | BUILD + commandPort owner, PAIR-COMMAND; separate project traces | Pending |
-| 04-03-02 | POLICIES | 3 | RUN-01 | T-04-06 | Safe whole log stream/per-kind cadence | BUILD + failureLog owner, PAIR-LOG | Pending |
-| 04-04-01 | POLICIES | 4 | RUN-01 | T-04-07 | Capped/pending/root-abort retry | BUILD + retryPolicy owner, PAIR-RETRY | Pending |
-| 04-04-02 | POLICIES | 4 | RUN-01, PROC-02/03 | T-04-08 | Full six-file correction/counts | BUILD + commandPort/failureLog/retryPolicy owners; terminal report | Pending |
-| 04-05-01 | TRUST | 5 | RUN-01 | T-04-09 | Full four-file initial; real storage/restore | BUILD + arrivalAnchors owner, PAIR-ANCHORS | Pending |
-| 04-05-02 | TRUST | 5 | RUN-01 | T-04-10 | Actual restart/privacy history; all arrival causes | PAIR-ANCHORS; canonical Git narrative triage | Pending |
-| 04-06-01 | TRUST | 6 | RUN-01 | T-04-11 | Two-device whole trust/clock/anchor projection | BUILD + monitoringHealth owner, PAIR-HEALTH | Pending |
-| 04-06-02 | TRUST | 6 | RUN-01, PROC-02/03 | T-04-12 | All health causes/full TRUST correction | PAIR-HEALTH; complete four-file review/counts | Pending |
-| 04-07-01 | ACCOUNT | 7 | RUN-01 | T-04-13 | Entire source/full owner initial review; restore before launch | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT; full round0 scope | Pending |
-| 04-07-02 | ACCOUNT | 7 | RUN-01 | T-04-13/14 | Lifecycle/poll/rotation/halt/shutdown/secret registration | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
-| 04-08-01 | ACCOUNT | 8 | RUN-01 | T-04-15 | Whole canonical/reported/narrow trust and SC-03 | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
-| 04-08-02 | ACCOUNT | 8 | RUN-01 | T-04-16 | Physical inventory/final check/callback/prune/refusal | PAIR-ACCOUNT | Pending |
-| 04-09-01 | ACCOUNT | 9 | RUN-01 | T-04-17 | Exact command request/outcome; no retry/optimism | BUILD, OWNER-ACCOUNT, PAIR-ACCOUNT | Pending |
-| 04-09-02 | ACCOUNT | 9 | RUN-01, PROC-01/02/03 | T-04-18 | Every remaining cause/full ACCOUNT correction | PAIR-ACCOUNT; whole source/full owner/additions/counts | Pending |
-| 04-10-01 | Coordinator | 10 | RUN-01, PROC-01 | T-04-19 | Real report/blob/Git/native ledger tracer | Exact inline node predicate; RUNTIME_LEDGER_TRACER_OK | Pending |
-| 04-10-02 | Coordinator | 10 | RUN-01, BUG-01, GATE-01 | T-04-19/20 | Unique all-scope/history/threat/current-input audit | Exact inline scope/history predicates; LICENSE; FULL | Pending |
-| Owning cause task | Any original batch | Conditional | BUG-01 | Actual owning threat | Intended active unchanged-production RED/evidence-before-GREEN | Native TAP + existing current CLI/nested classifier and actual Git ancestry | Conditional |
-| Parent combined gate | Coordinator | Every wave 1–10 and phase | GATE-01 | Every owning wave threat | Current combined input, no omitted step | FULL; exact same-session input comparison only | Pending |
+| Task | Wave | Observable obligation | Commands | Coverage |
+| --- | ---: | --- | --- | --- |
+| 04-01-01 | 1 | Prove the accessory persistence declaration after full PORTS initial review | `npm run build:test && node --test dist-test/test/runtime/accessoryStore.test.js`; `npm run test:coverage:direct -- src/runtime/accessoryStore.ts test/runtime/accessoryStore.test.ts` | COVERED |
+| 04-01-02 | 1 | Complete wall-clock conformance without collapsing time domains | `npm run build:test && node --test dist-test/test/runtime/clock.test.js`; `npm run test:coverage:direct -- src/runtime/clock.ts test/runtime/clock.test.ts` | COVERED |
+| 04-02-01 | 2 | Prove forward elapsed readings through the public monotonic adapter | `npm run build:test && node --test dist-test/test/runtime/monotonicClock.test.js`; `npm run test:coverage:direct -- src/runtime/monotonicClock.ts test/runtime/monotonicClock.test.ts` | COVERED |
+| 04-02-02 | 2 | Finish scheduling causes and re-review every PORTS file | `npm run build:test && node --test dist-test/test/runtime/timers.test.js`; `npm run test:coverage:direct -- src/runtime/timers.ts test/runtime/timers.test.ts` | COVERED |
+| 04-03-01 | 3 | Prove accepted/refused public outcomes after the whole POLICIES review | `npm run build:test && node --test dist-test/test/runtime/commandPort.test.js`; `npm run test:coverage:direct -- src/runtime/commandPort.ts test/runtime/commandPort.test.ts` | COVERED |
+| 04-03-02 | 3 | Complete safe failure-stream conformance with exact cadence observations | `npm run build:test && node --test dist-test/test/runtime/failureLog.test.js`; `npm run test:coverage:direct -- src/runtime/failureLog.ts test/runtime/failureLog.test.ts` | COVERED |
+| 04-04-01 | 4 | Prove the public retry schedule with one pending abortable path | `npm run build:test && node --test dist-test/test/runtime/retryPolicy.test.js`; `npm run test:coverage:direct -- src/runtime/retryPolicy.ts test/runtime/retryPolicy.test.ts` | COVERED |
+| 04-04-02 | 4 | Independently close all POLICIES files with continuous round arithmetic | `npm run build:test && node --test dist-test/test/runtime/commandPort.test.js dist-test/test/runtime/failureLog.test.js dist-test/test/runtime/retryPolicy.test.js` | COVERED |
+| 04-05-01 | 5 | Prove one stored arrival through restore before repairing TRUST | `npm run build:test && node --test dist-test/test/runtime/arrivalAnchors.test.js`; `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | COVERED |
+| 04-05-02 | 5 | Finish arrival causes and verify current restart/privacy narrative | `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | COVERED |
+| 04-05-03 | 5 | Resolve CR-04-TRUST-005 through a compatible temporary-path dependency | `npm run typecheck && npm run build:test && node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts` | COVERED |
+| 04-06-01 | 6 | Prove one device arrival through a distinct two-device trust projection | `npm run build:test && node --test dist-test/test/runtime/monitoringHealth.test.js`; `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | COVERED |
+| 04-06-02 | 6 | Complete health causes and full TRUST independent correction | `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | COVERED |
+| 04-06-03 | 6 | Verify the preserved monitoring fake through a shared memory contract | `npm run typecheck && npm run build:test && node --test --test-reporter=tap dist-test/test/runtime/arrivalAnchors.test.js dist-test/test/runtime/monitoringHealth.test.js`; `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts`; `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | COVERED |
+| 04-11-01 | 7 | Check ACCOUNT arrival-anchor agreement | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js dist-test/test/runtime/arrivalAnchors.test.js dist-test/test/runtime/monitoringHealth.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; `npm run test:coverage:direct -- src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts`; `npm run test:coverage:direct -- src/runtime/monitoringHealth.ts test/runtime/monitoringHealth.test.ts` | COVERED |
+| 04-11-02 | 7 | Check ACCOUNT shadow lifecycle agreement | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js dist-test/test/cloud/shadow.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; `npm run test:coverage:direct -- src/cloud/shadow.ts test/cloud/shadow.test.ts` | COVERED |
+| 04-07-01 | 8 | Prove restore-to-admission after reviewing the whole ACCOUNT pair | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-07-02 | 8 | Complete owned lifecycle, polling, credential rotation and shutdown causes | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-12-01 | 9 | Seed known physical IDs through the existing runtime start boundary | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-12-02 | 9 | Prove and wire restored platform identities at launch | `npm run build:test && node --test dist-test/test/platform.test.js dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-12-03 | 9 | Isolate mocked timers before recursive storage teardown | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-08-01 | 10 | Prove reported ingress through canonical state and two-device trust | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-08-02 | 10 | Finish trustworthy inventory, removal and anchor ownership causes | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-08-03 | 10 | Add targeted reconciliation presence reset for original 021 | `npm run build:test && node --test dist-test/test/accessories/reconciliation.test.js`; `npm run test:coverage:direct -- src/accessories/reconciliation.ts test/accessories/reconciliation.test.ts` | COVERED |
+| 04-13-01 | 11 | Relinquish replaced shadow ownership through the real runtime path —030 | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-ACCOUNT-RUNTIME-RED-EVIDENCE.json --raw` | COVERED |
+| 04-13-02 | 11 | Fail visibly and suspend uncertain accessory registration until restart —031 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-PLATFORM-RED-EVIDENCE.json --raw` | COVERED |
+| 04-13-03 | 11 | Observe the configured poll immediately before its deadline —044 | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-14-01 | 12 | Conform local callable bindings through all three real owners —032 | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js dist-test/test/accessories/reconciliation.test.js dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts src/accessories/reconciliation.ts test/accessories/reconciliation.test.ts src/platform.ts test/platform.test.ts` | COVERED |
+| 04-14-02 | 12 | State current platform rationale in source and owner comments —033 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-14-03 | 12 | Make discovery's Homebridge API double satisfy its actual contract —034 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-15-01 | 13 | Observe platform domain and security boundaries with silent incidental logs —035 | `npm run build:test && node --test dist-test/test/platform.test.js dist-test/test/logging.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts src/logging.ts test/logging.test.ts` | COVERED |
+| 04-15-02 | 13 | State complete finite platform public interactions —036 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-15-03 | 13 | Give platform cases fresh seeds and their own trust maps —037 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-16-01 | 14 | Await announced platform lifecycle boundaries —038 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-16-02 | 14 | Replace private-source gates and dispose their group/AAA overlap —039/040/041 | `npm run build:test && node --test dist-test/test/platform.test.js dist-test/test/architecture/platformWiring.test.js`; `node_modules/.bin/eslint . --max-warnings=0 --no-cache`; `npm run test:corresponding && npm run test:unpaired:compiled`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-16-03 | 14 | Observe the actual platform HTTP dependency's absence —042 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-17-01 | 15 | Forward every named device's complete monitoring trust —043 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-17-02 | 15 | Review the whole current ACCOUNT batch and immediately enforce D-03 | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js dist-test/test/runtime/arrivalAnchors.test.js dist-test/test/cloud/shadow.test.js dist-test/test/accessories/reconciliation.test.js dist-test/test/platform.test.js dist-test/test/logging.test.js dist-test/test/architecture/platformWiring.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts src/cloud/shadow.ts test/cloud/shadow.test.ts src/accessories/reconciliation.ts test/accessories/reconciliation.test.ts src/platform.ts test/platform.test.ts`; `npm run test:coverage:direct -- src/logging.ts test/logging.test.ts`; `node_modules/.bin/eslint . --max-warnings=0 --no-cache`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-ACCOUNT-RUNTIME-RED-EVIDENCE.json --raw`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-PLATFORM-RED-EVIDENCE.json --raw` | COVERED |
+| 04-18-01 | 16 | Capture both registration checkpoints before assertions —041 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-18-02 | 16 | Describe the missing-entry fixture accurately —047 | `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-18-03 | 16 | Flatten and name the complete architecture controls —046/048 | `npm run build:test && node --test dist-test/test/architecture/platformWiring.test.js`; `node_modules/.bin/eslint . --max-warnings=0 --no-cache`; `npm run test:corresponding && npm run test:unpaired:compiled` | COVERED |
+| 04-19-01 | 17 | Observe the whole configured remaining service catalogue —045 | `npm run build:test && node --test --test-reporter=tap --test-name-pattern='publishes every adapter but the one an administrator ignored' dist-test/test/platform.test.js`; `npm run build:test && node --test dist-test/test/platform.test.js`; `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | COVERED |
+| 04-19-02 | 17 | Review the WHOLE current ACCOUNT batch and return the immediate D-03 result | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js dist-test/test/runtime/arrivalAnchors.test.js dist-test/test/cloud/shadow.test.js dist-test/test/accessories/reconciliation.test.js dist-test/test/platform.test.js dist-test/test/logging.test.js dist-test/test/architecture/platformWiring.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts src/runtime/arrivalAnchors.ts test/runtime/arrivalAnchors.test.ts src/cloud/shadow.ts test/cloud/shadow.test.ts src/accessories/reconciliation.ts test/accessories/reconciliation.test.ts src/platform.ts test/platform.test.ts`; `npm run test:coverage:direct -- src/logging.ts test/logging.test.ts`; `node_modules/.bin/eslint . --max-warnings=0 --no-cache`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-ACCOUNT-RUNTIME-RED-EVIDENCE.json --raw`; `GSD_RUNTIME=codex node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/04-runtime-conformance/04-PLATFORM-RED-EVIDENCE.json --raw`; `node -e 'const fs=require("node:fs"),assert=require("node:assert/strict"),red=require("./.codex/gsd-core/bin/lib/tdd-red-evidence.cjs");const base=".planning/phases/04-runtime-conformance/";for(const [file,expectedCount] of [["04-ACCOUNT-RUNTIME-RED-EVIDENCE.json",16],["04-PLATFORM-RED-EVIDENCE.json",7]]){let count=0;function walk(n){if(Array.isArray(n)){for(const child of n)walk(child);return;}if(!n\|\|typeof n!=="object")return;if(n.command&&Object.hasOwn(n,"exitCode")&&n.targetTest){assert.equal(red.classifyRedEvidence(n).verdict,"RED_EVIDENCE_OK");count++;if(n.priorEvidence)walk(n.priorEvidence);}else for(const child of Object.values(n))walk(child);}walk(JSON.parse(fs.readFileSync(base+file,"utf8")));assert.equal(count,expectedCount);console.log(file+" recursive "+count+" RED_EVIDENCE_OK");}'` | COVERED |
+| 04-09-01 | 18 | Prove one real command from runtime port through exact family request/outcome | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-09-02 | 18 | Close original implementation records after delegated whole correction19 | `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-09-03 | 18 | Isolate account storage cleanup from mocked retry timers | `npm run build:test && node --test dist-test/test/runtime/accountRuntime.test.js`; `npm run test:coverage:direct -- src/runtime/accountRuntime.ts test/runtime/accountRuntime.test.ts` | COVERED |
+| 04-10-01 | 19 | Trace one actual review outcome through report, current blobs and real Git commits | TRACER | COVERED |
+| 04-10-02 | 19 | Audit the exact whole inventory, all histories, rounds, threats and final checked input | SEAL; HISTORY; `npm run build:test && node --test dist-test/test/packaging/licenseHeaders.test.js`; `npm run check` | COVERED |
 
-No batch is predeclared clean. No helper or external source edit is preauthorized
-by this map alone. A confirmed cause receives explicit same-wave paths and its
-own five-file budget before edits. Report/evidence/helper/task-amendment paths
-count toward that budget. [VERIFIED:
-.planning/phases/04-runtime-conformance/04-CONTEXT.md:83-89]
+## Failure Conditions
+
+Every one of the 48 current task verify blocks declares fails_when. A nonzero command, stale/missing target, unintended skip/cancellation or incomplete promised public observation fails its mapped task. Executable pair failure includes missing/extra/wrong source LCOV or any line/function/branch below 100%. A declaration-only pair fails strict intended positive/negative compilation or selector acceptance; zero cases and null coverage are valid.
+
+Specific controls also require the intended assertion to fail under the retained controlled defect, exact source/mode/literal-link restoration, a rebuilt green target and preserved original promises. Setup/import/parser errors and unrelated TypeErrors cannot substitute. Review tasks require whole original batch plus actual additions, exact revisions/headers, independent terminal review and continuous D-03 arithmetic; owner green alone is insufficient. Seal/history tasks reject missing/substituted paths, changed histories, unsupported audit exceptions, stale inputs, unresolved stop or inferred human approval. All literal task-specific conditions remain authoritative in each current PLAN.
 
 ## Wave 0 Requirements
 
-- [x] Author the phase review protocol and concrete batch ownership (planning only).
-- [x] Author the pending central ledger with all 20 exact files and header/review status.
-- [ ] Create batch reports without invented initial findings or clean results.
-- [x] Bind actual task/wave/threat IDs and all automated failure conditions.
-- [x] Author concrete ledger/provenance and exact unique-inventory predicates in 04-10 (not executed).
-- [ ] Verify the forced isolation sentinel directly before executor dispatch.
-- [ ] Record the actual source baseline and applicable same-session check evidence.
+- [x] Existing compiler, runner, source/test pairing and isolated selector are present and exercised.
+- [x] Authored protocol and original twenty-file ownership ledger exist.
+- [x] All four actual batch reports exist and retain original findings and continuous rounds.
+- [x] Every actual task/wave/threat binding has automated commands and failure conditions.
+- [x] Ledger, inventory and history predicates exist and ran with real native terminal evidence.
+- [x] Source baseline and exact same-session check inputs are recorded; final pair identities are current.
+- [x] Existing forced-none isolation is evidenced in dispatch records/summaries; current direct sentinel is phase04/plan04-10/isolation none.
 
-Existing runner, compiler, selector and ten owner files are available.
-No framework installation or speculative helper creation is required.
-[VERIFIED: package.json:35-86;
-.planning/phases/04-runtime-conformance/04-CONTEXT.md:154-160,175-184]
+Wave 0 marks available validation prerequisites, not blanket process compliance. Historical dispatch/serial/evidence exceptions in WINDOWS46–58 stay OPEN/unwaived. Later passing gates do not erase those failures.
 
-## Native Evidence and Failure Conditions
+## Manual-Only Judgments and Requirement Status
 
-A source owner must run alone with full direct lines, functions and branches.
-For declaration-only modules, require strict meaningful compiler positives and
-negatives plus the selector's honest acceptance. No runtime denominator is
-invented. [VERIFIED: scripts/test-coverage-direct.mjs:137-190;
-skills/typescript-unit-testing/SKILL.md:204-225]
+| ID | Actual status | Required resolution |
+| --- | --- | --- |
+| RUN-01 | PARTIAL / Pending | Complete independent goal/security verification and actual phase judgments; automated task coverage is present |
+| E-04-01 | Unclassified, unresolved, flagged assumption | Actual human category/resolution/reason/verification; one surfaced = zero lifted + one flagged |
+| P-04-01 | Descriptorless, unverified | Actual phase-specific human judgment; no serializer substitute |
+| P-04-02 | Descriptorless, unverified | Actual phase-specific human judgment; two surfaced = two authored + zero omitted |
 
-A genuine bug requires an executed active target failing its intended assertion
-on unchanged production. Retain complete TAP, command, real exit, target,
-expected/actual, versions, timestamps, source commit/blob identities and full
-patch. Validate each current on-disk record with the existing native
-check tdd-red-evidence command, then each nested archived record with the same
-installed classifyRedEvidence function, recursively preserving priorEvidence.
-Audit actual source/evidence/fix Git ancestry and unchanged production blobs.
-Commit planning-only evidence before GREEN production edits.
-No failing code, skipped regression or hook bypass enters Git.
-[VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:38-44;
-.planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md:155-190]
+Vendor/hardware/real-home/install and release gates remain outside this validation audit. Exact acceptance is limited to 021 ce3305e /022 5987504 unknown historical audit exits (null remains null) and 008 84fd960’s exact post-audit title patch. It does not waive other WINDOWS46–58 entries. Prior Phase3 answers and the bounded historical acceptance supply none of the three pending phase judgments.
 
-Assertion controls are separate. Require the intended named failure, exact
-source-byte restoration, a fresh rebuild and GREEN. Missing/filtered targets,
-compile/import/setup errors, unrelated TypeErrors, cancellations and permission
-errors supply no intended assertion proof. Preserve unsuccessful attempts.
-[VERIFIED: .planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md:155-196]
+## Continuous Stop Accounting
 
-D-03 pauses ALL work on a nonreducing open count, a reopened fixed ID, or the
-fourth correction round, even clean. Retain original IDs/counters across causes
-and account slices. Record real counts before further edits or dispatch.
-[VERIFIED: .planning/phases/04-runtime-conformance/04-CONTEXT.md:33-37,76-81]
-
-## Manual-Only Judgments and Limits
-
-04-10's inline audit compares exact unique twenty core paths and ten pairs,
-current runtime tracked/untracked inventory, all actual helpers/adaptations,
-current review/header blobs, every native pair/commit/history and continuous
-rounds. The new generated 04-SEAL-AUDIT.json is an evidence output excluded by
-the actual formatter/ESLint/Fallow/TypeScript/build selectors. Retain its real
-before/after metadata difference; no claim that the JSON was unchanged or
-general JSON reuse shortcut follows. Exact checkedInputManifest path/blob
-comparison covers every other tracked/untracked path except planning Markdown,
-with raw dirty diff/untracked snapshots and actual tool versions. Any source,
-support, configuration, dependency, runtime or tool change requires a new full
-parent gate under local-verification. No Phase04 automated outcome is observed.
-
-| Item | Treatment |
-| --- | --- |
-| Rulebook interpretation and rejected candidates | Independent complete source/rule reading with concrete evidence |
-| Phase-end taxonomy/prohibition flags | Derive from actual Phase 4 plans; route genuine unresolved human judgments without inheriting Phase 3 answers |
-| WINDOWS 46/47 | Remain OPEN/unwaived historical process gaps |
-| Opaque-key assumption | Preserve scoped log/persistence treatment; sanitize committed/public examples |
-| Vendor protocol, hardware and real-home gates | Outside this phase; no live run, install or release claim |
-
-These limits come from the approved context. They do not create a new planning
-permission checkpoint. [VERIFIED:
-.planning/phases/04-runtime-conformance/04-CONTEXT.md:91-104,199-207]
-
-## Prior Evidence — Not a Phase 4 Result
-
-Phase 3's final report records npm check at
-cf04e71b85ce45bcdd73fb861d77d88e22d3ebe5 on Node v26.11.1, exit 0,
-104 scenarios, 1,156 steps and 43 isolated pairs. Research did not rerun that
-gate. The coordinator must check exact inputs and session applicability before
-reuse. Selected pair runs do not refresh the merged full-gate LCOV.
-[VERIFIED: .planning/phases/03-device-and-persistence-conformance/03-VERIFICATION.md:205-209;
-scripts/test-coverage-direct.mjs:359-364]
-
-Research-only Fallow evidence is separate: nine shared symbols, independently
-queried once per compiler project, 18 exit-0 complete results. It identifies
-consumer scope; it proves no conformance repair, safe deletion, owner test or
-coverage result. Native capture:
-`/private/tmp/guardian-runtime-research-fallow.json`.
-[VERIFIED: research native Fallow captures]
+ACCOUNT remains at correction counter3 with zero open findings. Any next whole correction would be round4 and must stop under D-03. The present coverage audit is not a fresh code-review/correction round. Original PORTS round2 stop and narrowly authorized009 continuation remain intact. No counter reset, generic new threat policy or RED reclassification is implied.
 
 ## Validation Sign-Off
 
-- [ ] Every real task has an exact automated command or Wave 0 dependency.
-- [ ] Every command has a concrete failure condition.
-- [ ] No three consecutive tasks lack automated feedback.
-- [ ] Every full batch and actual helper/external addition receives independent review.
-- [ ] Every edited executable pair has isolated 100% metrics.
-- [ ] Declaration-only pairs retain meaningful compiler tests and honest reporting.
-- [ ] Shared-contract changes have separate complete project traces and actual caller reads.
-- [ ] Private deletions have exact pre-edit alias/member evidence.
-- [ ] Genuine RED histories and assertion controls remain distinct and complete.
-- [ ] Stop counters and findings arithmetic reconcile without resets.
-- [ ] Required full wave and phase gates have current actual results.
-- [ ] Header inspection covers owners/helpers, beyond the source-only license gate.
-- [ ] Phase-specific unresolved judgments and historical limits remain visible.
-- [ ] No watch command, live vendor/hardware run or install is included.
-- [ ] Actual feedback latency is recorded.
-- [ ] wave_0_complete and nyquist_compliant change only after their obligations are met.
+- [x] All 19 actual plans and 48 tasks are represented; none lacks automated feedback or explicit failure condition.
+- [x] No three consecutive tasks lack automated feedback.
+- [x] All fourteen current source/owner identities match recorded pair evidence.
+- [x] Twelve executable pairs have isolated 100% evidence; two declaration-only pairs retain compiler evidence and null coverage.
+- [x] Expanded helpers/config/architecture owner and supporting logging pair have their actual assigned checks.
+- [x] Current full gate and canonical tracer/history/seal streams have actual passing evidence.
+- [x] Measurement scope, old versions/inputs, suppressed counts and historical limits stay explicit.
+- [x] No tests, production files, reports, build outputs or Git state were changed by this read-only audit.
+- [ ] Phase goal/security verification and all three actual human judgments complete RUN-01.
+- [ ] nyquist_compliant may become true only after remaining required validation obligations are resolved.
 
-**Approval:** Pending. This draft claims no executed PASS or Nyquist compliance.
+## Coverage Audit Detail
 
+| Metric | Result |
+| --- | --- |
+| Actual plans / tasks | 19 / 48 |
+| Automated task obligations COVERED | 48 |
+| Automated task obligations PARTIAL / MISSING | 0 / 0 |
+| Newly discovered behavioral test gaps | 0 |
+| Tests generated / executed in this audit | 0 / 0 (existing evidence reused on unchanged inputs) |
+| Pending human judgments | 3 |
+| Requirement classification | RUN-01 PARTIAL |
+| Metadata gaps | Existing draft ten-wave/twenty-task map and stale flags need replacement by this actual map |
 
-## Executed seal preparation at 3ed5af0
+The parent publishes this map from the independent read-only Nyquist audit. The owning append-audit record follows; the independent task map and native proof remain under /private/tmp/guardian-phase4-nyquist-audit/.
 
-This current execution projection supplements the historical draft above.
-It does not change its frontmatter, human approval or Nyquist flags.
+## Validation Audit 2026-10-16
 
-| Check | Actual result | Native evidence |
-| --- | --- | --- |
-| Tracer | raw0; RUNTIME_LEDGER_TRACER_OK | final-native/tracer-01 |
-| Automated canonical seal | raw0; RUNTIME_SEAL_AUTOMATED_AUDIT_OK | final-native/seal-03 |
-| Canonical history | raw0; RUNTIME_HISTORY_AUDIT_OK | final-native/history-02 |
-| Original99 integration and ten scope/D03 rounds | 308 checks, zero failures | final-integration-pass-1792164823783.json |
-| License fresh build and owner | raw0;5/5 | focused-current/license-build-and-owner.json |
-| Applicable parent full gate | raw0;104 scenarios/1156 steps/43 isolated pairs | /private/tmp/guardian-phase4-preseal-full-gate.* |
-
-Relative native paths above resolve under
-/private/tmp/guardian-04-10-canonical/. Full argv, UTC bounds, actual raw exits,
-stdout/stderr, Node/npm, exact input bodies/modes and compiled inputs are retained.
-The canonical record is audited again after final metadata updates.
-
-The first history projection omitted separate native stdout streams and failed
-with INVALID_RED. The first automated seal projection lacked ACCOUNT inventory
-membership; the second lacked comparator inputEvidence fields. These failed
-attempts are retained as history-01/seal-01/seal-02. Corrected projections use
-the original unchanged evidence. No classifier, predicate, report or raw payload
-was changed to obtain a pass. Earlier TMP setup failures remain in the actual
-tool transcript; missing separate UTC envelopes were not reconstructed.
-
-Current scope is34 exact reviewed paths with full applicable headers; all87
-findings are independently closed. Ten whole rounds retain the PORTS round2
-stop and narrowly authorized009 resolution, plus ACCOUNT's continuous counter3.
-The record includes27 genuine RED identities/nine bug episodes,39 maintenance
-attempts/43 intended targets, eight seed outcomes and31 numeric threats plus SC.
-Original threat-ID collisions remain plan/revision-qualified. Current caller,
-rulebook and checked-input comparisons support review/gate reuse.
-
-The user accepted only the exact021/022 unknown audit exits and008 post-audit
-title change. Null exits, original passJSON/commands, exact title patch, unknown
-inner times and missing auxiliary metadata remain explicit. Current Fallow and
-current gate evidence are separate from these historical qualifications.
-
-The full-gate reference is2ffeb331eb60adf1ec47bec1ef909ad12184d4fd,
-UTC2026-10-16T07:59:52.668809+00:00→08:00:48.586425+00:00,
-Node26.11.1/npm11.20.0. Exact executable inputs remain unchanged; only planning
-Markdown and this declared generated seal output differ. The generated output
-is excluded only by the exact approved predicate. Other JSON remains checked.
-Compiled inventory is397 current files:130 dist and267 dist-test; the original
-267-file historical capture described dist-test only.
-
-Three actual E/P human judgments, parent final gate, goal/security/Nyquist
-verification, SUMMARY and shared advancement remain pending. The original
-equations remain edges1=lifted0+flagged1 and prohibitions2=authored2+omitted0.
-No new descriptor, serializer, survey or inherited Phase3 approval is supplied.
-RUN-01 remains Pending; WINDOWS46–58 remain OPEN/unwaived. No vendor/hardware,
-install, release or cross-platform runtime certification is claimed.
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Pending human judgments | 3 |
+| Automated tasks covered | 48 |
