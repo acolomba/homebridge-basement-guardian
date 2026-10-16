@@ -7331,3 +7331,69 @@ closure or fresh independent review. Counter1 remains44 accepted/29 closed/
 WINDOWS46–54 stay OPEN/unwaived. No044/SUMMARY/shared-state/config change or
 full parent gate is included. The parent owns the combined gate after13 is
 terminal. The serial lease ends only at this fixer's actual FINAL.
+
+### CR-04-ACCOUNT-044 assertion maintenance — 2026-10-16
+
+The existing configured poll interval case now observes the whole initial
+canonical snapshot, its unchanged receipt, the complete request sequence and
+the absence of commands at literal 899,999 ms. It then advances 1 ms and retains
+every original assertion, including the whole updated snapshot with receipt
+START_TIME+900,000 and the separate data and command observations. Neither
+expected deadline comes from runtime configuration or production calculations.
+The existing wall, monotonic and mock timer domains remain unchanged.
+
+The case uses finite strong-mock expectations for exactly two inventory calls
+and one credential call with the runtime root signal. Before the deadline the
+request history is exactly devices/credentials/shadow, leaving the second
+inventory expectation unconsumed. At 900,000 ms the history adds exactly one
+devices request. Explicit verification follows the public state assertions;
+the forbidden-command mock is still verified. No helper or production contract
+changed. All owner bytes outside this case and all four original assertions
+are preserved exactly, including the 030 readiness case, 014 seed calls,
+024/025 literal clamps, 013 root mocks and fixture resets.
+
+Native evidence is under `/private/tmp/guardian-04-account-044-4uyesz`.
+Each completed command has argv, UTC bounds, raw exit, Node v26.11.1/npm 11.20.0,
+separate stdout/stderr, exact tracked input hashes, production and owner byte
+copies, compiled runtime/owner copies and the active binary diff. The initial
+capture helper twice rejected a tracked directory with EISDIR before executing
+either requested child command; preparation-errors.json records these attempts.
+Filtering manifest entries to regular files resolved capture preparation.
+
+Fresh build and named baseline passed. A guarded temporary control changed
+only the existing poll wait argument to options.pollIntervalMs/2. Its fresh
+build passed and the named native TAP run exited 1 at the new beforeDeadline
+deepStrictEqual: an extra inventory request, water 3 and receipt START+899,999
+had already replaced the expected initial state. One target executed and
+failed; this is assertion-maintenance control evidence, not a newly discovered
+production bug or genuine RED record. No unexpected GREEN attempt occurred.
+After collecting the control exit, a fresh guard preceded exact restoration
+from the saved entire runtime file, including its mode. proofs.json confirms
+all 44 production files equal the clean c44c36f baseline bytes and modes.
+
+The rebuilt restored named case passed 1/1; the complete account owner passed
+169/169 with no skipped or cancelled cases. The isolated direct source/owner
+pair passed. A separate native exact-SF run passed 169/169 and reported
+1007/1007 lines, 58/58 functions and 195/195 branches, all 100%, for only
+dist-test/src/runtime/accountRuntime.js. Uncached ESLint passed for the
+runtime and its owner. Full native streams retain every observed denominator.
+The platform 031 owner 74-pass and 511-line/22-function/63-branch 100% results
+remain historical unchanged-input evidence; no extra platform gate ran here.
+
+Both actual installed on-disk tdd-red-evidence CLI checks passed. The same
+installed classifyRedEvidence recursively accepted all 16 ACCOUNT and 7
+PLATFORM records, with every sourceCommit:path resolving to its recorded
+sourceBlob in Git. The complete JSON histories remain byte-identical:
+ACCOUNT blob b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and PLATFORM blob
+321b61af80c611fda8d825dd613a2537b16303e1. The full prior report prefix is
+also byte-identical. Fresh Fallow audit, exact pre-stage hooks, ordinary commit
+hooks and the final clean-tree check are retained separately in this native
+folder; only their actual completed results govern the final handoff.
+
+044 is implemented pending whole independent correction2. No independent
+closure or review-counter change is claimed. All 15 findings 030–044 remain
+open at counter 1; 030 and 031 remain implemented pending independent review,
+including the actual 031 human choice 1 policy. RUN-01 stays Pending and
+WINDOWS46–54 stay OPEN/unwaived. No source or JSON change, SUMMARY, shared
+state change, new review or combined full gate is included. The parent owns
+the combined gate after the actual 04-13 terminal handoff.

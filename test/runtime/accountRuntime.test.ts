@@ -3896,18 +3896,42 @@ describe('createAccountRuntime', () => {
   });
   test('SYNC-03 reconciles every device again at the configured interval', async (t) => {
     // arrange
+    const requests = mock<Pick<CloudApi, 'devices' | 'awsCredentials'>>({ exactParams: true, name: 'scheduled inventory requests' });
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const { runtime, store, advance, commandRequests } = harness(t, {
-      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([{ ...geminiDevice(), data: { water_level: 3 } }])],
-      command: commands,
+    let rootSignal!: AbortSignal;
+    const { runtime, store, advance, calls, commandRequests } = harness(t, { command: commands }, undefined, {
+      devices: (signal) => requests.devices(signal),
+      awsCredentials: (signal) => requests.awsCredentials(signal),
+      createRetry: (signal) => {
+        rootSignal = signal;
+        return createRetryPolicy({ signal, maxDelayMs: MAX_BACKOFF_MS, log: silentLog() });
+      },
     });
+    when(() => requests.devices(rootSignal)).thenResolve([geminiDevice()]);
+    when(() => requests.devices(rootSignal)).thenResolve([{ ...geminiDevice(), data: { water_level: 3 } }]);
+    when(() => requests.awsCredentials(rootSignal)).thenResolve(credentialsAt(START_TIME + ONE_HOUR_MS));
     await runtime.start();
     await settle();
 
     // act
-    await advance(POLL_INTERVAL_MS);
+    await advance(899_999);
+    const beforeDeadline = { snapshot: store.snapshot(DEVICE_ID), calls: [...calls], commandRequests: [...commandRequests] };
+    await advance(1);
 
     // assert
+    assert.deepStrictEqual(beforeDeadline, {
+      snapshot: {
+        identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+        connectivity: { connected: true, timestamp: DEVICE_TIME },
+        data: { water_level: 1, primary_pump_running: false, ac_power: true },
+        metadata: {},
+        shadowVersion: undefined,
+        deviceTimestamp: DEVICE_TIME,
+        receivedAt: START_TIME,
+      },
+      calls: ['devices', 'credentials', 'shadow'],
+      commandRequests: [],
+    });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
       identity: { deviceId: DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
       connectivity: { connected: true, timestamp: DEVICE_TIME },
@@ -3918,8 +3942,10 @@ describe('createAccountRuntime', () => {
       receivedAt: START_TIME + 900_000,
     });
     assert.deepStrictEqual(store.snapshot(DEVICE_ID)?.data, { water_level: 3 });
+    assert.deepStrictEqual(calls, ['devices', 'credentials', 'shadow', 'devices']);
     assert.deepStrictEqual(commandRequests, []);
     verify(commands);
+    verify(requests);
   });
 
   test('D-014 leaves every stored snapshot unchanged when a poll rejects', async (t) => {
