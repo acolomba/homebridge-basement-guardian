@@ -8111,3 +8111,156 @@ Parent owns the combined full gate and whole correction2 in17. Continuous
 ACCOUNT1 remains44 accepted,29 independently closed,15 open030–044, counter1.
 RUN-01 remains Pending; WINDOWS46–55 remain OPEN and unwaived. No independent
 closure, new review round, summary, shared record or later cause is changed.
+
+## CR-04-ACCOUNT-037 implementation — fresh platform inputs and trust maps
+
+Baseline is bf7b47ab7d2c198109354eda31e27441f5b3cdf6 on the existing
+features/code-review-sweep checkout. The actual15 ledger is still
+d8dc569dff5264d21e0d451df382b89eb46633a0; the persisted sentinel says
+isolation:none, phase04, plan04-15. No branch, worktree or configuration was
+created. This is the final assigned cause of15, not a correction review.
+
+The explicitly declared new test/platformSeeds.ts contains fresh account and
+empty configurations, device and wire telemetry, family adapters, registries
+and reported-patch inputs. Its three module constants are primitive synthetic
+identifiers. Mutable records and nested wire telemetry are allocated by the
+factories; recoveringFamily owns its decode counter per call. reportedPatch
+preserves its original parameter and wraps the owning case's literal input.
+Eight former NO_DEVICE_ANSWERED use sites now allocate a new typed Map inside
+their own test callback, including each execution of the generated test body.
+The no-cached-accessory removal case now states its complete stored snapshot
+as an independent literal instead of taking its expected answer from the
+production discovery return value.
+
+No production file changed. In particular, the real redacting logger,
+CONF-03 wrapper-before-refusal and AUTH-02 password-registration observations,
+026 preparation retry, 031 same-error restart behavior before and after
+acceptance, stable accessory-map ownership, healthy-device continuation,
+restored configureAccessory path, 030 readiness/watermark and044 deadline
+controls remain active. The owner API helper keeps its exact compatibility
+overload and strict mock implementation. The documented single nominal fake
+HAP binding and all existing private interface shapes remain exact.
+
+### Actual relocation boundary and the preserved pause
+
+The first implementation stopped without staging or committing when the
+fixer questioned whether moving an old local builder required an old-location
+pre-edit impact query. The paused checkpoint remains at
+/private/tmp/guardian037-checkpoint/checkpoint.json, with complete saved
+original/current owner/helper bodies, declarations, signatures, lexical
+occurrences, patches, hashes and native attempts. No old-location Fallow
+query was made, and none is reconstructed or described as a passing pretrace.
+
+The parent and an independent gsd-plan-checker then assessed this exact
+uncommitted patch against CONTEXT D-06, protocol93–110 and task15-03. Their
+bounded interpretation distinguishes the expressly authorized relocation and
+new-module exports from changing an existing shared/exported contract or a
+private alias/member shape. The eight formerly local builders preserve their
+names, parameters and return types; their bodies preserve tokens after only
+the declared fresh-input substitutions. All30 other function declarations,
+including both API helper declarations, and FakeApiCall, ContextOptions,
+RestoredAccessories and RepublishingAccessory remain exact. No additional
+callable signature, alias or member-shape change was found. The parent
+authorized continuation on that basis. This is no blanket visibility
+exception, unavailable existing-contract pass, process waiver or retroactive
+old-location trace claim. The resumed edit only added the import-group blank
+line required by lint.
+
+### New helper, actual consumers and preservation
+
+The whole new helper was read:176 lines,5959 bytes, Git blob
+ad02884ba05cadfa45959eb8c283720ca56eb27e. It starts with MIT SPDX, a separate
+2026 Alessandro Colomba copyright JSDoc and a separate fileoverview. It joins
+the entire actual helper/header/current-caller inventory for the whole
+correction in17; it is not assigned fabricated runtime coverage or metatests.
+
+Its twelve actual exports are emptyConfig, accountConfig, geminiDevice,
+geminiWireDeviceList, unknownRegistry, fakeFamily, throwingFamily,
+recoveringFamily, implementedRegistry, powerRegistry, unsupportedRegistry and
+reportedPatch. AFTER creation, each export received its own installed Fallow
+dead-code --type-aware --symbol-impact query with complete-required semantics,
+once with ONLY tsconfig.test.json and separately with ONLY tsconfig.json.
+All twelve test-project queries return raw0/status complete, with exactly
+test/platform.test.ts as direct consumer and targeted test. All twelve
+production-project queries return raw1/status unavailable, omission no-project;
+their empty lists are NOT complete no-consumer proofs. Actual TypeScript
+program membership independently excludes owner/helper from the production
+program and includes both in the test program. No production-consumer pass or
+existing private-contract waiver follows from that exclusion. Every actual
+helper caller is in the wholly read owner; exact call expressions/locations
+are retained in preservation-proof.json.
+
+The corrected AST-leaf token comparison establishes26,534 equal owner tokens
+after removing only relocated seed declarations/import wiring, replacing
+factory calls and case-owned Map declarations, and spelling the one declared
+independent snapshot literal. It checks all65 authored titles and their
+ordering; the complete native owner still expands to74 passing cases. Thus
+the original case bodies, assertions, controls and finite mock expectations
+survive except those explicit transformations. All44 production files and
+every other tracked file retain their original bytes and modes. All three
+tracked directory symlinks were captured as literal targets before formatting,
+not followed or omitted. Before this append, the complete559305-byte report
+prefix exactly matched blob05355d1e11ed134578a2fc3672bf97a775928280.
+
+### Native checks and truthful attempt history
+
+Complete native records are under /private/tmp/guardian037-native. Each named
+attempt retains actual argv, UTC start/end, raw exit, Nodev26.11.1/npm11.20.0,
+HEAD, full tracked/untracked input bytes and modes, compiled inputs, full
+dirty/staged patches, separate stdout/stderr and literal directory symlink
+targets. Every process reached terminal before a dependent step, mutation or
+audit. Hash provenance uses saved files and bounded Git child waits. The
+same-cause pause retained its original evidence; no input was rolled back.
+
+| Actual final attempt | Result |
+| --- | --- |
+| build-final | raw0; fresh build:test |
+| owner-final | raw0;74 pass,0 fail/skip/cancel/todo |
+| direct-final | raw0; exact src/platform.ts + test/platform.test.ts isolated100% |
+| native-platform-final | raw0; sole SF dist-test/src/platform.js;508/508 lines,22/22 functions,63/63 branches |
+| compiler-production-final / compiler-tests-final | raw0/raw0; separate nonincremental noEmit projects |
+| lint-final | raw0; uncached source/owner/new helper |
+| consumer-production-* / consumer-test-* | raw1 unavailable/raw0 complete for EACH of twelve exports, as bounded above |
+| red-cli-account / red-cli-platform | raw0/raw0; installed FILE CLI on both actual JSONs |
+| preservation-proof-literal-format-corrected | raw0; complete token/caller/membership/prefix/23-record Git proof |
+
+The SAME installed classifyRedEvidence accepts every recursive record:
+ACCOUNT16 and PLATFORM7, including priorEvidence. Every sourceCommit:path
+resolves to the recorded sourceBlob and is an ancestor of HEAD; embedded
+source/owner bytes match the recorded blobs. Both JSONs remain byte-exact at
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. No genuine production defect or
+new assertion-maintenance control was introduced by this seed extraction.
+
+Failures remain failures. Initial direct reads/help/query attempts have tool
+transcripts without separate native UTC envelopes; they are not reconstructed.
+They include a wrong historical03 directory read and an unsupported
+resolve-effort query, subsequently corrected. The first patch-tool attempt
+rejected numbered diff context without changing repository bytes. Initial
+uncached lint returned raw1 for import grouping; the guarded one-line fix and
+fresh final checks passed. The first temporary preservation proof returned
+raw1 because a plain scanner mishandled template tokens; the next returned
+raw1 for two formatter-added commas around the explicit expected literal.
+The parser-aware, exact-literal comparison then passed. All attempted proof
+scripts and complete raw failures remain captured. No unsuccessful attempt
+is used as passing behavior evidence.
+
+Complete same-cause mandatory reads covered AGENTS and all five books, the
+actual15 plan/context/protocol, whole8113-line report, canonical830 decisions,
+the full referenced planning context and13 supersession/summary plus14 summary.
+The original complete owner3961 lines and platform673 lines, runtime seed and
+monitoring source, actual callers, installed Fallow skill/help and whole new
+helper were read. Bounded contiguous range records and original transcripts
+retain the reads and refills; resume hash comparisons verified unchanged read
+inputs. Byte snapshots are evidence retention, not a substitute for reading.
+Normal same-cause compaction and the pause did not omit mandatory scope.
+
+The subsequent real15-base audit, exact clean pre-step and normal foreground
+commit supply their own actual native outcomes and full hook streams; this
+pre-commit append does not declare their results in advance. Shared helper
+staging must select all43 direct pairs. Parent owns the combined full gate,
+summary and whole correction2 in17. ACCOUNT continuous counter1 remains44
+accepted,29 independently closed,15 OPEN030–044 pending that whole correction.
+RUN-01 remains Pending. WINDOWS46–55 remain OPEN/unwaived; the parent owns
+their process records. No review round, closure, shared record or later cause
+is changed here.

@@ -33,19 +33,32 @@ import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
+import {
+  accountConfig,
+  emptyConfig,
+  fakeFamily,
+  geminiDevice,
+  geminiWireDeviceList,
+  implementedRegistry,
+  powerRegistry,
+  recoveringFamily,
+  reportedPatch,
+  throwingFamily,
+  unknownRegistry,
+  unsupportedRegistry,
+} from './platformSeeds.js';
+
 import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '../features/support/fakeHap.js';
 import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
 import type { HttpFetch } from '../src/cloud/httpDispatcher.js';
-import type { ApiDevice } from '../src/cloud/types.js';
-import type { DeviceFamily } from '../src/device/family.js';
 import type { FamilyOutcome, FamilyRegistry } from '../src/device/registry.js';
-import type { DeviceStateStore, ReportedPatch } from '../src/device/state.js';
+import type { DeviceStateStore } from '../src/device/state.js';
 import type { BasementGuardianAccessoryContext, BasementGuardianPlatformAccessory, DiscoveryContext } from '../src/platform.js';
 import type { CommandPort } from '../src/runtime/commandPort.js';
 import type { MonitoringTrust } from '../src/runtime/monitoringHealth.js';
-import type { API, LogLevel, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
+import type { API, LogLevel, Logging, PlatformAccessory } from 'homebridge';
 import type { TestContext } from 'node:test';
 
 // Logging is a callable interface with seven members, so a silent stub is a
@@ -146,10 +159,6 @@ function comparedKeys(source: string, name: string): readonly string[] {
   return [...block.matchAll(/^\s*(\w+): .*,$/gmu)].map((match) => match[1] ?? '');
 }
 
-const emptyConfig: PlatformConfig = { platform: PLATFORM_NAME };
-
-const accountConfig: PlatformConfig = { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password' };
-
 const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
 
 const DEVICE_ID = 'account-1_serial-1';
@@ -222,154 +231,8 @@ async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
 
 const SECOND_ACCESSORY_UUID = HAP.uuid.generate(SECOND_DEVICE_ID);
 
-function geminiDevice(): ApiDevice {
-  return {
-    deviceId: DEVICE_ID,
-    deviceTypeId: DEVICE_TYPE_ID,
-    name: 'Sump System',
-    serialNumber: 'serial-1',
-    connectivity: { connected: true, timestamp: 0 },
-    data: {},
-  };
-}
-
-// A full, legal Gemini telemetry payload, so a case that needs the real adapter
-// to publish its rows states no field of its own.
-const VALID_GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
-  water_level: 1,
-  primary_pump_running: false,
-  primary_pump_fault: false,
-  backup_pump_running: false,
-  backup_pump_fault: false,
-  backup_pump_fuse_blown: false,
-  ac_power: true,
-  battery_charging: false,
-  battery_voltage_low: false,
-  battery_health: 8,
-  hours_of_protection: 8,
-  water_sensor_fault: false,
-  serial_communications: true,
-  alarm_audio_muted: false,
-  test_running: false,
-  offline: false,
-};
-
-// The same device as the vendor's list route sends it: the records sit under a
-// plural key and the serial number under `attributes`.
-function geminiWireDeviceList(): { devices: Record<string, unknown>[] } {
-  return {
-    devices: [
-      {
-        accountId: 'account-1',
-        deviceId: DEVICE_ID,
-        deviceTypeId: DEVICE_TYPE_ID,
-        name: 'Sump System',
-        data: VALID_GEMINI_TELEMETRY,
-        attributes: { productLine: 'wayneWater', serialNumber: 'serial-1' },
-        connectivity: { connected: true, timestamp: 0 },
-      },
-    ],
-  };
-}
-
-function unknownRegistry(): FamilyRegistry {
-  return { lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unknown', deviceTypeId }), shouldLog: () => true };
-}
-
-// A minimal fake family, so `registerDiscoveredDevices` tests exercising the
-// `implemented` outcome need not depend on Gemini's own field shapes. Its
-// `validate()` reports one scope's field invalid, which is what puts the
-// accessory into the degraded state these dispatch-focused cases observe;
-// `decode()` then omits that scope, as every family does for a scope whose own
-// fields did not validate.
-const FAKE_FAMILY: DeviceFamily<unknown> = {
-  deviceTypeId: DEVICE_TYPE_ID,
-  displayName: 'Fake Family',
-  implemented: true,
-  validate: () => ({ valid: false, violations: [{ field: 'ac_power', reason: 'missing', scope: 'power' }] }),
-  decode: () => ({}),
-  capabilities: () => [],
-  command: () => ({ desiredData: {} }),
-};
-
-// A family that decodes every scope, with the one telemetry field the live-state cases change
-// driving the power group, so a shadow patch produces an observable characteristic change rather
-// than only a call the suite could have mocked. Every scope decodes because a row publishes no
-// service until it has something to vouch for, so a case about the published service set needs a
-// family that vouches for every scope.
-//
-// The backup pump follows its own reported field for the same reason: an activation a record case
-// counts has to be one the accessory watched a payload report, not one this module asserted. No
-// other case supplies that field, so every one of them keeps reading the `false` it read before.
-const POWER_FAMILY: DeviceFamily<unknown> = {
-  deviceTypeId: DEVICE_TYPE_ID,
-  displayName: 'Power Family',
-  implemented: true,
-  validate: () => ({ valid: true }),
-  decode: (snapshot) => ({
-    metadata: {},
-    water: { levelCode: 0, levelPercent: 0, flooded: false },
-    pump: { primaryRunning: false, backupRunning: snapshot.data.backup_pump_running === true, backupActivatedAt: undefined },
-    power: { mainsPresent: snapshot.data.ac_power === true },
-    battery: { charging: true, voltageLow: false, healthCode: 8, protectionHoursCode: 8, levelPercent: 100, low: false },
-    fault: { primaryPumpFault: false, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: false, controllerLinkPresent: true },
-    connectivity: { reportedOffline: false },
-  }),
-  capabilities: () => [],
-  command: () => ({ desiredData: {} }),
-};
-
-// A device whose decode raises, so a case can drive one failing device through a batch that also
-// carries a healthy one.
+// A device whose decode raises while a batch also carries a healthy one.
 const THROWING_DEVICE_ID = 'account-1_serial-throwing';
-
-// A family that raises while decoding one named device and decodes every other one normally. The
-// three reachable throws inside the dispatch (the identity guard, the AccessoryInformation guard,
-// and a family decode guard) all reach the loop the same way, so one of them stands for all three.
-const THROWING_FAMILY: DeviceFamily<unknown> = {
-  ...POWER_FAMILY,
-  decode: (snapshot) => {
-    if (snapshot.identity.deviceId === THROWING_DEVICE_ID) {
-      throw new TypeError('decode() expected ac_power to be a boolean');
-    }
-
-    return { metadata: {}, power: { mainsPresent: true } };
-  },
-};
-
-// A family that raises on its first decode and decodes normally afterwards, so a case can drive one
-// device through a failed first registration and the inventory that follows it.
-function recoveringFamily(): DeviceFamily<unknown> {
-  let decodes = 0;
-
-  return {
-    ...POWER_FAMILY,
-    decode: (snapshot) => {
-      decodes += 1;
-
-      if (decodes === 1) {
-        throw new TypeError('decode() expected ac_power to be a boolean');
-      }
-
-      return POWER_FAMILY.decode(snapshot);
-    },
-  };
-}
-
-function implementedRegistry(): FamilyRegistry {
-  return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: FAKE_FAMILY }), shouldLog: () => true };
-}
-
-function powerRegistry(): FamilyRegistry {
-  return { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: POWER_FAMILY }), shouldLog: () => true };
-}
-
-function unsupportedRegistry(shouldLog: boolean): FamilyRegistry {
-  return {
-    lookup: (deviceTypeId: string): FamilyOutcome<unknown> => ({ kind: 'unsupported', deviceTypeId, displayName: 'Wayne Water HALO' }),
-    shouldLog: () => shouldLog,
-  };
-}
 
 interface FakeApiCall {
   pluginIdentifier: string;
@@ -597,10 +460,6 @@ function builtAccessory(basementGuardianAccessories: Map<string, BasementGuardia
   return built;
 }
 
-function reportedPatch(data: Readonly<Record<string, unknown>>): ReportedPatch {
-  return { data, state: undefined, version: undefined };
-}
-
 // The one accessory the platform handed Homebridge, so a case reads what an owner would find in
 // their home rather than what the plugin believes it published.
 function onlyRegisteredAccessory(registerCalls: readonly FakeApiCall[]): FakeAccessory {
@@ -729,7 +588,7 @@ describe('BasementGuardianPlatform', () => {
       return Promise.reject(new Error('no response is scripted for this route'));
     };
 
-    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, { httpFetch });
     const [launch, shutdown] = listeners;
 
     // act
@@ -811,7 +670,7 @@ describe('BasementGuardianPlatform', () => {
         return Promise.resolve(new Response('{}', { status: 503 }));
       };
 
-      const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+      const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, { httpFetch });
       const [launch, shutdown] = listeners;
 
       // act
@@ -912,7 +771,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => {
       removal(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
     }).thenReturn(undefined);
-    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, { httpFetch });
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, { httpFetch });
     const [launch, shutdown] = listeners;
     const removalStates: unknown[] = [];
     when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
@@ -991,7 +850,7 @@ describe('BasementGuardianPlatform', () => {
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
 
     // act
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
 
     // assert
     assert.deepStrictEqual(platform.accessories, new Map());
@@ -1003,7 +862,7 @@ describe('BasementGuardianPlatform', () => {
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
 
     // act
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
 
     // assert
     assert.deepStrictEqual(platform.accessories, new Map());
@@ -1017,7 +876,7 @@ describe('BasementGuardianPlatform', () => {
     const refusedReason = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is "Bearer [redacted]".';
 
     // act
-    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, pollInterval: 'Bearer leaked-token' }, api);
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig(), pollInterval: 'Bearer leaked-token' }, api);
 
     // assert
     assert.deepStrictEqual(platform.accessories, new Map());
@@ -1032,7 +891,7 @@ describe('BasementGuardianPlatform', () => {
     const refusedReason = 'the account email must be an email address.';
 
     // act
-    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, email: 'jane.doe@company' }, api);
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig(), email: 'jane.doe@company' }, api);
 
     // assert
     assert.deepStrictEqual(platform.accessories, new Map());
@@ -1049,7 +908,7 @@ describe('BasementGuardianPlatform', () => {
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    const platform = new BasementGuardianPlatform(createRecordingLog(messages), accountConfig, api);
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), accountConfig(), api);
 
     // act
     platform.log.info('the grant used account-password');
@@ -1071,7 +930,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
     // act
-    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
 
     // assert
     assert.strictEqual(listeners.length, 2);
@@ -1114,7 +973,7 @@ describe('BasementGuardianPlatform', () => {
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch });
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch });
     const [launch, shutdown] = listeners;
 
     // act
@@ -1148,7 +1007,7 @@ describe('BasementGuardianPlatform', () => {
     const { user, storagePath } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
+    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
     const [launch, shutdown] = listeners;
 
     // act
@@ -1240,7 +1099,7 @@ describe('BasementGuardianPlatform', () => {
     // snapshot mutates only the context, because the accessory is not registered yet, and the
     // registration's own cache save is what carries the seeded record to disk. The strict mock
     // fails this case by name if the seed asks Homebridge to update anyway (CTRL-01, D-008).
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
+    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
     const [launch, shutdown] = listeners;
 
     // act
@@ -1312,7 +1171,7 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
-    new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, {
+    new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, {
       httpFetch: (input, init) => globalThis.fetch(input, init),
     });
     const [launch, shutdown] = listeners;
@@ -1436,7 +1295,7 @@ describe('BasementGuardianPlatform', () => {
         }),
       );
     }).thenReturn(undefined);
-    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig, pollInterval: 300 }, api, {
+    const platform = new BasementGuardianPlatform(createSilentLog(), { ...accountConfig(), pollInterval: 300 }, api, {
       httpFetch: (input, init) => globalThis.fetch(input, init),
     });
     const [launch, shutdown] = listeners;
@@ -1471,7 +1330,7 @@ describe('BasementGuardianPlatform', () => {
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
 
     // act
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
     await settle();
 
     // assert
@@ -1496,7 +1355,7 @@ describe('BasementGuardianPlatform', () => {
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api);
+    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
 
     // act
     for (const listener of listeners) {
@@ -1520,7 +1379,7 @@ describe('configureAccessory', () => {
       .thenReturn([])
       .times(2);
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
 
     // act
     platform.configureAccessory(restoredAccessory);
@@ -1549,7 +1408,7 @@ describe('configureAccessory', () => {
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
       .times(2);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
 
     // act
     platform.configureAccessory(restoredAccessory);
@@ -1568,7 +1427,7 @@ describe('configureAccessory', () => {
     const flood = restoredAccessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
     flood.updateCharacteristic(HAP.Characteristic.LeakDetected, HAP.Characteristic.LeakDetected.LEAK_DETECTED);
     flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), fakeDiscoveryApi([]));
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
@@ -1594,7 +1453,7 @@ describe('configureAccessory', () => {
     const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
     const control = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
     control.updateCharacteristic(HAP.Characteristic.On, false);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, fakeDiscoveryApi([]));
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), fakeDiscoveryApi([]));
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
@@ -1618,7 +1477,7 @@ describe('configureAccessory', () => {
       .thenReturn([])
       .times(2);
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
 
     // act
     platform.configureAccessory(staleAccessory);
@@ -1630,12 +1489,6 @@ describe('configureAccessory', () => {
 });
 
 describe('applyMonitoringHealth', () => {
-  // What a launch the vendor refused before its first inventory pushes: no device was ever
-  // discovered, so no system has an answer and the credential branch is the whole of what the pass
-  // does. Every accessory therefore takes the missing-entry rule, which is the conservative reading
-  // and the one that costs nothing here (RES-04, D-01, D-02).
-  const NO_DEVICE_ANSWERED = new Map<string, MonitoringTrust>();
-
   // Two systems, one account, and each accessory hears the answer for its own controller. The map is
   // keyed by deviceId while the accessory map is keyed by the UUID that deviceId seeds, so this also
   // holds the join: keying the pushed map by the generated UUID makes both accessories miss, both
@@ -1776,6 +1629,7 @@ describe('applyMonitoringHealth', () => {
 
   test('reaches nothing when this run has published no accessory yet', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: new Map<string, BasementGuardianPlatformAccessory>(),
@@ -1784,7 +1638,7 @@ describe('applyMonitoringHealth', () => {
 
     // act & assert
     assert.doesNotThrow(() => {
-      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, NO_DEVICE_ANSWERED);
+      applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false }, noDeviceAnswered);
     });
     verify(context.api);
   });
@@ -1796,6 +1650,7 @@ describe('applyMonitoringHealth', () => {
   // (RES-04, D-10).
   test('makes every restored accessory unreadable when the vendor has refused the credentials', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessories();
     const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
     when(() => context.api.hap)
@@ -1803,7 +1658,7 @@ describe('applyMonitoringHealth', () => {
       .times(2);
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(trustReadsOf(restored.floods), [
@@ -1877,6 +1732,7 @@ describe('applyMonitoringHealth', () => {
   // unchanged. The republishing instance in the next case makes ordering observable (WR-01).
   test('leaves the pushed status standing after the boolean fan-out has run', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const marks: string[] = [];
     const restored = restoredAccessories();
     const firstAccessory = recordingBasementGuardianAccessory(DEVICE_ID, marks);
@@ -1906,7 +1762,7 @@ describe('applyMonitoringHealth', () => {
       .times(2);
 
     // act
-    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(
@@ -1928,6 +1784,7 @@ describe('applyMonitoringHealth', () => {
   // by `restoredAccessories`, because it has no instance publishing onto those services (D-10).
   test('leaves the pushed status standing over an accessory that republishes its own rows', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const live = restoredAccessoryRepublishingItsRows();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
@@ -1938,7 +1795,7 @@ describe('applyMonitoringHealth', () => {
     when(() => context.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
-    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(trustReadsOf(live.floods), [
@@ -1986,6 +1843,7 @@ describe('applyMonitoringHealth', () => {
 
   test('retains a cached control without inventing a trust characteristic when credentials are refused', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessoryCarryingNoTrustReport();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
@@ -1996,7 +1854,7 @@ describe('applyMonitoringHealth', () => {
     when(() => context.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(
@@ -2013,6 +1871,7 @@ describe('applyMonitoringHealth', () => {
 
   test('retains both cached accessories and their readings while refused credentials make trust unreadable', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessories();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
@@ -2025,7 +1884,7 @@ describe('applyMonitoringHealth', () => {
       .times(2);
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(
@@ -2048,6 +1907,7 @@ describe('applyMonitoringHealth', () => {
 
   test('creates no accessory or live instance when credentials are refused before discovery', () => {
     // arrange
+    const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: new Map<string, BasementGuardianPlatformAccessory>(),
@@ -2056,7 +1916,7 @@ describe('applyMonitoringHealth', () => {
     });
 
     // act
-    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
+    applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
     assert.deepStrictEqual(
@@ -2078,11 +1938,12 @@ describe('applyMonitoringHealth', () => {
   ] satisfies readonly { cause: string; trust: MonitoringTrust }[]) {
     test(`leaves every restored accessory readable for ${cause}`, () => {
       // arrange
+      const noDeviceAnswered = new Map<string, MonitoringTrust>();
       const restored = restoredAccessories();
       const context = discoveryContext({ api: fakeDiscoveryApi([]), accessories: restored.accessories, registry: unknownRegistry() });
 
       // act
-      applyMonitoringHealth(context, trust, NO_DEVICE_ANSWERED);
+      applyMonitoringHealth(context, trust, noDeviceAnswered);
 
       // assert
       assert.deepStrictEqual(trustReadsOf(restored.floods), [
@@ -2381,14 +2242,14 @@ describe('registerDiscoveredDevices', () => {
         }),
       );
     }).thenReturn(undefined);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const subscribeSpy = t.mock.method(store, 'subscribe');
     store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
     const context = (): DiscoveryContext =>
       discoveryContext({ api, accessories: platform.accessories, basementGuardianAccessories, registry: powerRegistry() });
-    const priorPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const priorPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
     const priorStore = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const priorInstances = new Map<string, BasementGuardianAccessory>();
     priorStore.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
@@ -2407,7 +2268,7 @@ describe('registerDiscoveredDevices', () => {
     }
 
     registerDiscoveredDevices(context(), [DEVICE_ID], store);
-    const restartedPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const restartedPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
     const restoredInstances = new Map<string, BasementGuardianAccessory>();
     const restoredStore = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const restoredSubscribeSpy = t.mock.method(restoredStore, 'subscribe');
@@ -2940,7 +2801,9 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(geminiDevice());
     const registry: FamilyRegistry = {
       lookup: (deviceTypeId: string): FamilyOutcome<unknown> =>
-        deviceTypeId === DEVICE_TYPE_ID ? { kind: 'implemented', family: FAKE_FAMILY } : { kind: 'unsupported', deviceTypeId, displayName: 'Wayne Water HALO' },
+        deviceTypeId === DEVICE_TYPE_ID
+          ? { kind: 'implemented', family: fakeFamily() }
+          : { kind: 'unsupported', deviceTypeId, displayName: 'Wayne Water HALO' },
       shouldLog: () => true,
     };
 
@@ -2993,7 +2856,7 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), deviceId: THROWING_DEVICE_ID });
     store.applyDiscovery(geminiDevice());
-    const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: THROWING_FAMILY }), shouldLog: () => true };
+    const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: throwingFamily() }), shouldLog: () => true };
     const context = discoveryContext({ api, accessories, registry, log: createSilentLog() });
 
     // act
@@ -3830,7 +3693,7 @@ describe('removeDiscoveredDevice', () => {
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
-    const expectedSnapshot = store.applyDiscovery(geminiDevice());
+    store.applyDiscovery(geminiDevice());
 
     // act
     removeDiscoveredDevice(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() }), DEVICE_ID, store);
@@ -3838,7 +3701,19 @@ describe('removeDiscoveredDevice', () => {
     // assert
     assert.deepStrictEqual(
       { accessoryCount: accessories.size, unregisterCalls, storedSnapshot: store.snapshot(DEVICE_ID) },
-      { accessoryCount: 0, unregisterCalls: [], storedSnapshot: expectedSnapshot },
+      {
+        accessoryCount: 0,
+        unregisterCalls: [],
+        storedSnapshot: {
+          identity: { deviceId: 'account-1_serial-1', deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: {},
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+      },
     );
     verify(api);
   });
