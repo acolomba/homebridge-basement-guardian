@@ -846,3 +846,43 @@ whole correction, security audit and phase seal. RUN-01 stays Pending;
 WINDOWS 46–54 remain OPEN/unwaived. Restore only workflow.use_worktrees=true
 before the final milestone audit/handoff. Numerical current-plan 09 remains
 an incomplete closeout after 17; out-of-order 13 completion does not advance it.
+
+
+## ACCOUNT stage B implementation and combined gate
+
+Plan 14 implements 032/033/034 in three normal cause commits:
+9b33167 callable annotations, bf1a7f9 present platform rationale and 1e54b11
+typed strict discovery API mocks. The actual initial ledger cfd221d remains.
+Names, callable behavior and original public assertions remain; source changes
+are comments only. All 44 fakeDiscoveryApi calls and 80 original assertions
+survive the strict-mock repair. A compatibility overload preserves the callable
+contract, with bidirectional compiler evidence; no public production port changes.
+The three existing nominal fake-HAP constructor conversions use one documented
+local binding. That retained nominal limitation is not structural equivalence.
+The actual user-approved 031 uncertainty policy and safe restart diagnostic
+remain required and pass. No new product policy or dependency was introduced.
+
+032 passes 257 tests across the three owners and isolated 100 percent coverage:
+runtime 1007/58/195, reconciliation 53/6/12, platform 511/22/63.
+033 and 034 each pass all 74 platform tests and native isolated 508/22/63
+at 100 percent. Comments account for the changed line denominator; historical
+measurements remain unchanged. Compiler, token/emitted equivalence, typed-API
+controls, lint, audits, clean prestaging checks and normal hooks pass.
+Both immutable evidence JSONs retain all 23 accepted records and Git provenance.
+
+The parent full npm run check passed at clean 1e54b11e480197aa38d5b8ae136c8a4cb82319d5,
+Node v26.11.1, UTC 2026-10-16T02:11:43.317345+00:00 to 02:12:19.168539+00:00.
+Six static checks, 104 scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata/streams: /private/tmp/guardian-phase4-plan14-full-gate.*.
+Metadata-only comparison remains empty outside planning Markdown; no untracked
+executable joins these inputs. The next declared plan is 15.
+
+WINDOW 55 retains 032 display-capture bounds/stream limits, 033's failed owned
+hash capture and overlapping read-only audit, and 034 formatting-check envelope
+gap. Complete corrected symlink manifests, serialized preservation/audit and
+passing reruns do not reconstruct missing historical capture or serial order.
+WINDOWS 46–55 remain OPEN/unwaived. The report and summary preserve each attempt.
+Counter 1 still has 44 accepted, 29 independently closed and 15 open causes
+pending the whole correction 2 in 17. No partial clean or RUN-01 completion is
+claimed. T-04-24 remains subject to phase security/seal; restore only
+workflow.use_worktrees=true before the final milestone audit/handoff.
