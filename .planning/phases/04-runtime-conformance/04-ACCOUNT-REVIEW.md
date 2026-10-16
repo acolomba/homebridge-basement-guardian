@@ -9529,3 +9529,143 @@ Fresh guards and re-read targets precede the clean pre-step retry. Its result
 and the ordinary foreground commit hook remain native terminal evidence;
 neither is assumed successful in this pre-staging appendix. The full original
 650,734-byte report prefix remains exact.
+
+### CR-04-ACCOUNT-047 implementation: missing-entry fixture comment
+
+This is the bounded comment implementation for 04-18-02, pending independent
+whole correction 3. The input checkout is `features/code-review-sweep` at
+`8e6c1aec6caec615aa143e34949864a9ac3c679a`, after the separate 041 commit.
+The immutable initial plan ledger remains
+`0e6ad2de891d6dac3c8ea541d14791ac7c46c97c`. Work ran in the existing checkout
+with `workflow.use_worktrees=false` and the parent's exclusive serial lease.
+No worktree, branch, configuration or production contract was changed.
+
+Only the four comment lines immediately above the account fixture in
+`makes an accessory the push never named decline to vouch, and hands it the
+account facts unchanged` changed in `test/platform.test.ts:1636`.
+The comment now explains why `shadowSilent=false` makes the missing-entry
+override to `true` observable. It names the actual shared facts:
+`restDegraded=true`, `commandTransportReady=false` and
+`credentialsRejected=false`. The named accessory keeps `shadowSilent=false`;
+the unnamed accessory receives `shadowSilent=true` because its entry is absent.
+The claim that all three account-wide fields differ from false defaults is gone.
+
+The production lookup at `src/platform.ts:412` takes the named map entry or
+spreads the account and overrides only `shadowSilent`. The full monitoring
+interface, runtime fan-out, accessory consumer and actual caller context were
+read. No underlying Homebridge or Cucumber API behavior changes or new external
+documentation claims are needed. No existing export, shared/private helper,
+alias, member or signature changed, so no contract-impact query was substituted
+for the complete byte and token preservation proofs.
+
+The complete fixture, both independent four-field expected objects, finite
+notification mocks and explicit verification remain exact. The distinct
+accepted 043 case with `commandTransportReady=true` remains exact. All other
+comments, headers, helper bodies, test titles and prior 041 observations remain
+exact. Replacing the new four-line comment with the saved old comment restores
+the entire original owner byte-for-byte; no other owner edit is permitted.
+
+#### Current rules, reads and identity proof
+
+All five books were read in full. Comments and Google style revisions are
+`a73d5181a93681819c2efe93b342d31c99a8f159`; unit writer, unit reviewer and local
+verification revisions are `340fd07d7a5df26a8070d87f6442bd2358af0048`.
+The applied rules require accurate present-tense rationale, consecutive `//`
+comments, discriminating whole-value expectations, explicit mock verification,
+focused current verification and the normal hook. This comment explains the
+non-obvious setup without adding planning history to TypeScript.
+
+The actual displayed read ledger covers all 9,531 current report lines and
+3,761 owner lines, full AGENTS and rulebooks, the complete current plan,
+context/protocol, required planning context, platform and monitoring source,
+seeds/state/logging, HAP/API helpers and runtime/feature callers. All 36 ledger
+entries were complete at the edit checkpoint. Truncated displays were refilled
+with bounded contiguous ranges. Normal host compaction retained the durable
+ranges; unchanged SHA256 reconciliation passed. Captured bytes did not replace
+these reads. The ledger checkpoint SHA256 is
+`5a52b4e8661912e958c6ed7076c65194765b472f7dfc5fc0b5865b721d2e60c3`.
+
+TypeScript 6.0.3 parsed both complete owners without parse diagnostics.
+All 27,050 significant leaf tokens, including their exact raw spelling, match;
+their serialized SHA256 is
+`3edea402edf2de5cfb7af1fcc67654911b9fe28e31b683b8baac5a58e94d7e65`.
+The complete kinds/children/token-text AST also matches, SHA256
+`1d1db8eed6c527fd237deecbd2576de1d6a31dbdd0459f185a70ecc703a5659d`.
+Actual compiler programs using the installed compiler and parsed test project
+emit identical ESM JavaScript with `removeComments=true` and source maps off,
+SHA256 `7508f18ef16d92194cb0a166c4f9669894d123deb8799e3a7ce0f58d591c13ed`.
+Ordinary comment-bearing JavaScript and source maps differ. This is not a claim
+that ordinary compiled JavaScript bytes are equal.
+
+The saved owner is 160,735 bytes, SHA256
+`7f844f2d36553594bc2abb2c83431b2d0ff4623bafcf3fc9a1f605b6eeaf807c`.
+The revised owner is 160,765 bytes and still 3,761 lines, SHA256
+`43ec598c277aa0f3ea8452544dd0bba56c93071782778fa1449e7eb891280a65`.
+All 44 production files retain all 464,915 bytes and modes. The three literal
+directory symlinks `.claude/skills/babysit-pr`, `new-gsd-milestone` and
+`new-gsd-workspace` retain their targets and modes; no byte read followed them.
+The pre-append report is saved as `report.prefix.before.md`: all 659,667 bytes,
+SHA256 `8da93b8843b5840583c7b2738ca76bed3ccf71a776adf02815090c59811465b0`.
+It includes the full original 650,734-byte report and the 041 append. This
+append preserves that entire prefix, frontmatter and all earlier dispositions.
+
+#### Fresh native focused results
+
+The native capture directory is `/private/tmp/guardian-account047-native/`.
+Command envelopes retain exact argv, input HEAD, tracked/untracked input and
+output bytes through content-addressed blobs, modes, literal symlinks, raw
+exit, UTC start/end, Node/npm and full stdout/stderr. The successful focused
+commands ran on Node v26.11.1 and npm 11.20.0 with the revised owner above.
+
+| Capture | Actual command/scope | UTC start–end, 2026-10-16 | Raw exit and observation |
+| --- | --- | --- | --- |
+| `identity-proof-program` | `node /private/tmp/account047_proof.cjs` | 06:20:53.038922–06:20:58.650972 | 0; exact comment, tokens, AST, compiler-program ESM, prefix, source and symlink proofs |
+| `build-test` | `npm run build:test` | 06:21:00.510612–06:21:03.870685 | 0; fresh compiled layout |
+| `owner-tests` | `node --test dist-test/test/platform.test.js` | 06:21:08.610199–06:21:09.393379 | 0; 70/70, zero fail/cancel/skip/todo |
+| `direct-coverage` | `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | 06:21:13.355547–06:21:17.965899 | 0; exact isolated pair; successful detailed output suppressed by repository tooling |
+| `uncached-lint` | `node_modules/.bin/eslint test/platform.test.ts --max-warnings=0 --no-cache` | 06:21:20.346801–06:21:25.115736 | 0; zero warnings |
+| `sole-source-lcov` | native Node test coverage, three 100% thresholds, include only `dist-test/src/platform.js`, same full owner, TAP and LCOV reporters | 06:21:31.461804–06:21:32.305989 | 0; 70/70, sole SF, lines 508/508, functions 22/22, branches 63/63 |
+
+The sole-source LCOV command's full argv is retained in its native envelope;
+`platform.sole.lcov` contains exactly `SF:dist-test/src/platform.js`. Owner,
+direct pair and LCOV ran with native filesystem access for watcher fidelity.
+Their passes do not waive the historical sandbox fs.watch EMFILE/raw1 or make
+a universal sandbox claim. No full `npm run check` ran in this bounded cause;
+the parent owns the combined gate after terminal plan work.
+
+#### Attempts, commit boundary and retained limits
+
+An early response inferred a reading limit and stopped before any repository
+edit. The parent resumed this same cause without a read waiver. Continued
+bounded reads and ordinary host compaction completed the required reads; no
+actual host failure prevented continuation. Initial transcript-only discovery
+and read commands have no native UTC envelopes. Retained setup failures include
+a wrong prior-run helper path and an unrelated temporary-directory discovery
+permission error. They are not passing checks.
+
+The first temporary emit proof returned raw1: a relative transpile filename
+conflicted with the absolute project root (diagnostic 6059). A corrected
+transpile experiment returned raw0 but emitted CommonJS and initially counted
+only 43 TypeScript source files. The actual compiler-program proof supersedes
+that experiment: it checks ESM and all 44 production files, including JSON.
+One evidence-summary command returned raw1 after a proof-result/capture JSON
+filename collision caused a missing `raw_exit` key. The first emit failure's
+stdout/stderr and transcript raw1 survive, but its original JSON UTC envelope
+was overwritten by that collision and is unavailable. Later capture envelopes
+and the final compiler-program proof are separate and intact. No fabricated
+timestamps or passing setup results replace these limits. Direct patch tool
+edits have transcript and before/after bytes, without a native edit-process UTC
+envelope. These temporary-evidence errors are not production defects or REDs.
+
+Fresh exact installed Fallow guards preceded the owner edit and this append;
+they report unconfigured boundary zones/rule packs, a tool limit. The actual
+initial-base audit, required clean pre-step, exact staging and ordinary
+foreground commit remain pending at this append checkpoint. Their actual
+terminal captures, rather than presumed results, govern the commit boundary.
+
+047 is implemented pending independent whole correction 3. Accepted stable IDs
+remain 48, independently closed IDs 43, and open IDs exactly 041,045,046,047,048.
+All 43 closed IDs remain protected. The correction counter remains 2; RUN-01
+is Pending. WINDOWS 46–58 stay OPEN and unwaived. E-04-01 remains flagged and
+unresolved; descriptorless P-04-01/P-04-02 remain unverified. No independent
+review, human approval, clean batch, seal, release or real-home result is claimed.

@@ -1633,10 +1633,10 @@ describe('applyMonitoringHealth', () => {
         ],
       ]),
     });
-    // The account vouches for the live path here, and that is what makes the override observable: a
-    // rule that resolved a missing entry to the account struct unchanged would hand the unnamed
-    // accessory this `false` and read as a pass. The other three members are each set away from their
-    // falsy default for the same reason.
+    // The account's shadowSilent=false makes the missing entry's override to true observable.
+    // Both accessories retain restDegraded=true, commandTransportReady=false and
+    // credentialsRejected=false from the account. The named accessory keeps shadowSilent=false;
+    // the unnamed accessory defaults to shadowSilent=true because no device entry vouches for it.
     const account = { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } satisfies MonitoringTrust;
 
     // act
