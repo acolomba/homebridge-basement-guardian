@@ -30,6 +30,7 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 
 ### Validated
 
+- ✓ RUN-01: Runtime source modules and their paired tests conform. All 87 findings are independently closed; nine genuine bug histories retain regression evidence. The full check and three explicit human judgments pass. Historical audit and process limits remain recorded. — code-review-sweep, Phase 4
 - ✓ SC-01 through SC-05 have discriminating regression or mutation evidence, clean independent reviews, and a passing full repository gate. — code-review-sweep, Phase 1
 - ✓ All 19 cloud source/test/helper files conform to the rules. All 56 findings and six genuine bug histories are closed with independent verification and the full gate. Taxonomy and ALPN limits remain explicit. — code-review-sweep, Phase 2
 - ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
@@ -206,4 +207,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-10-14 after completing code-review-sweep Phase 2*
+*Last updated: 2026-10-16 after completing code-review-sweep Phase 4*

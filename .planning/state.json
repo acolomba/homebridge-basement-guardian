@@ -21,7 +21,7 @@
     {
       "number": "4",
       "name": "Runtime Conformance",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "5",
@@ -46,8 +46,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 4 of 8 · 38% · executing"
+    "label": "Advance to the next step (plan phase 5)",
+    "reason": "Phase 5 of 8 — needs a plan"
   },
-  "updated_at": "2026-10-16T07:58:17.478Z"
+  "updated_at": "2026-10-16T18:36:00.383Z"
 }
