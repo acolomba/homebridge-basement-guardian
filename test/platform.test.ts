@@ -460,7 +460,7 @@ function trustRecordingBasementGuardianAccessory(deviceId: string, heard: Map<st
 
 // The status a refused credential is presented under, and the leak state the restored accessories
 // below carry. Both are written independently of the stand-in, so a drifted number fails here
-// (D-10, 04-CONTEXT D-04).
+// (D-10).
 const COMMUNICATION_FAILURE = -70402;
 const LEAK_DETECTED = 1;
 
@@ -1712,15 +1712,9 @@ describe('applyMonitoringHealth', () => {
     );
   });
 
-  // What this case pins is the fan-out's reach, not its ordering: every accessory in the map hears the
-  // same account-wide answer in the same pass that makes the restored accessories unreadable.
-  //
-  // It cannot pin the ordering, and the comment that said it did was wrong. The stand-in pushes
-  // nothing, so the flood services the error push walks are not services it ever touched, and
-  // inverting the two loops in `applyMonitoringHealth` leaves this case green. The case below --
-  // "leaves the pushed status standing over an accessory that republishes its own rows" -- is the one
-  // that pins the ordering, because the instance it drives republishes onto the very services the
-  // error push then marks (WR-01).
+  // The recording instance observes the account-wide fan-out beside the restored services' failure
+  // status. It publishes no characteristic values, so either push order leaves those statuses
+  // unchanged. The republishing instance in the next case makes ordering observable (WR-01).
   test('leaves the pushed status standing after the boolean fan-out has run', () => {
     // arrange
     const marks: string[] = [];
@@ -1748,12 +1742,9 @@ describe('applyMonitoringHealth', () => {
   // the same flood service the error push walks, so an inverted order is observable as a readable
   // value where a status should stand.
   //
-  // The value *under* the status is `false`, while the fixture-driven case two above reads `true`
-  // under the same status. Neither is wrong and neither should be "corrected" to match the other. A
-  // refused credential withdraws every trust scope, so a real accessory republishes its trust report
-  // as `false` before the error lands on it; the fixture's `true` was written by
-  // `restoredAccessories` and no accessory ever republished it, because that case holds no instance
-  // bound to those services (05-16).
+  // Credential refusal withdraws every trust scope, so this real accessory republishes its trust
+  // report as `false` before the error lands. The recording-only fixture retains the `true` seeded
+  // by `restoredAccessories`, because it has no instance publishing onto those services (D-10).
   test('leaves the pushed status standing over an accessory that republishes its own rows', () => {
     // arrange
     const live = restoredAccessoryRepublishingItsRows();
@@ -1773,19 +1764,10 @@ describe('applyMonitoringHealth', () => {
     ]);
   });
 
-  // The case above is only as good as the fixture it reads, and the fixture it replaced was
-  // indistinguishable from a working one: it reported the same green under both push orders. So this
-  // case asserts the discriminating property directly, over two identically built fixtures -- the
-  // plugin's own order leaves a status standing, the inversion leaves a readable value, and the two
-  // readings differ.
-  //
-  // Built on a stand-in that pushes nothing, both orders leave the same status standing, the readings
-  // do not differ, and this case fails. That is the whole point: the vacuity nobody noticed is caught
-  // by the suite rather than by an executor's report of a mutation they applied by hand.
-  //
-  // The two halves are driven by calling the collaborators directly rather than by copying
-  // `applyMonitoringHealth`'s body, so this case measures the instrument and not a second copy of the
-  // production loop.
+  // Two identically built republishing fixtures distinguish the push orders: the plugin's order
+  // leaves the failure status standing, and the inverted order restores a readable value.
+  // Calling the collaborators directly checks that fixture property without copying
+  // `applyMonitoringHealth`'s body (WR-01).
   test('reads a different trust report under each push order, which is what makes the ordering case able to fail', () => {
     // arrange
     const inPluginOrder = restoredAccessoryRepublishingItsRows();
@@ -1890,7 +1872,7 @@ describe('applyMonitoringHealth', () => {
   // Credential rejection is the only cause in this plugin that makes a characteristic unreadable.
   // Every row here is a degradation that clears itself once its transport returns, and greying out an
   // accessory for one of those teaches an owner to ignore the one signal that needs them
-  // (D-10, 03-CONTEXT D-05).
+  // (D-10).
   for (const { cause, trust } of [
     { cause: 'a shadow silence', trust: { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false } },
     { cause: 'a REST degradation', trust: { restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } },
@@ -2807,23 +2789,13 @@ describe('removeDiscoveredDevice', () => {
   });
 });
 
-// The static gate on the platform's runtime context.
+// The platform assembles one runtime context for discovery, removal and monitoring callbacks.
+// Sharing that assembly keeps configuration and command wiring consistent across those paths
+// (D-12, WR-07).
 //
-// `DiscoveryContext` was assembled inline in each of the three runtime callbacks, over the same nine
-// fields written out three times. That is the drift D-12 exists to prevent: a field
-// added to two of the three gives the monitoring path a different plugin from the discovery path,
-// and no runtime layer can see it. Both spellings type-check, both lint, and every behavioural case
-// passes, because each literal satisfies `DiscoveryContext` on its own. Reading the source text is
-// the only layer that can name it. The Cucumber harness already builds its own context once
-// (`features/support/world.ts`), so the platform was the outlier.
-//
-// The marker is the *shape* of the literal, not the name of a field in it. A count over
-// `basementGuardianAccessories` would answer ten lines in this file, of which only the literals are
-// literals -- it moves when an unrelated edit adds a property read, and it does not move when a
-// re-inlined literal spells one field differently. The detector below matches the nine members in
-// key position, in declaration order, with no brace between them, so a property read such as
-// `context.basementGuardianAccessories.get(uuid)` cannot match it and a re-inlined literal must
-// supply all nine members to satisfy the type and therefore does.
+// This source-text detector counts the nine members in the listed declaration order, with no brace
+// between them. A property read such as `context.basementGuardianAccessories.get(uuid)` contains
+// no matching key chain. Reordered keys are outside this detector's observation.
 const DISCOVERY_CONTEXT_MEMBERS: readonly string[] = [
   'api',
   'accessories',
@@ -2844,15 +2816,11 @@ const PLATFORM_SOURCE = 'src/platform.ts';
 // an empty read reporting the same green as a full one.
 const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-// `src/platform.ts` is a little over twenty-eight thousand bytes. A read answering less than this
-// read something other than the platform.
+// The size floor rejects a platform source read shorter than 20,000 characters.
 const PLATFORM_SOURCE_FLOOR = 20000;
 
-// Two, not one: the `DiscoveryContext` interface body matches the detector as well, because its nine
-// members are declared in the same order and in the same key position. So the expected count is the
-// number of object literals plus one for the declaration they satisfy. Measured by running the
-// detector over the unchanged file, which answered four -- the interface plus the three literals the
-// three callbacks each built.
+// The expected count includes the interface declaration and the shared context literal. Both list
+// the nine members in the order this detector recognizes.
 const EXPECTED_DISCOVERY_CONTEXT_SHAPES = 2;
 
 // A comment line can hold a brace and would break the member chain below, and this file's own gate

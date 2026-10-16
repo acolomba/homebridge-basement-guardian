@@ -7552,3 +7552,200 @@ The next actual whole correction2 evaluates D-03 immediately; no-progress,
 reopening or round4 even clean requires the global stop. RUN-01 stays Pending;
 WINDOWS46–54 remain OPEN/unwaived. No summary, metadata/shared-state update,
 new helper, production policy or full combined-gate claim is included here.
+
+### CR-04-ACCOUNT-033 implementation — current platform comment rationale
+
+033 is implemented pending the whole independent correction2 in 04-17.
+This is only the bounded 04-14-02 cause, starting at clean
+9b331673cf6c49981965e0e5a5edc9cd5f5b990d on features/code-review-sweep.
+The exact rules are typescript-comments Forbidden: remove narration of removed
+code and planning artifacts; preserve current what/why and useful durable IDs.
+Google Comments/documentation also applies. This is comments-only conformance,
+not a production repair, new regression, assertion control or independent review.
+
+| Original correction C location | Starting/current location | Current rationale |
+| --- | --- | --- |
+| src/platform.ts331–339 | src/platform.ts342–343 /342–346 | Candidate preparation precedes registration; normal return earns ownership; any throw has uncertain acceptance and suspends reattempts |
+| src/platform.ts546–552 | src/platform.ts555–564 /558–561 | Redaction precedes diagnostics; email-format refusal omits the account email before secret registration |
+| test/platform.test.ts1717–1722 | test/platform.test.ts1715–1723 /1715–1717 | Recording fixture observes fan-out and failure status; a real republishing instance makes order observable |
+| test/platform.test.ts1775–1787 | test/platform.test.ts1776–1788 /1767–1770 | Identical republishing fixtures distinguish the two push orders through the actual collaborators |
+| test/platform.test.ts2556–2601 | test/platform.test.ts2809–2858 /2792–2823 | One context assembly, actual fixed-order detector scope, size-floor check and current two recognized shapes |
+| Additional planning anchors named by033 | test/platform.test.ts463,1756,1893 /463,1747,1875 | Remove04-CONTEXT,03-CONTEXT and05-16 references; retain D-10 and present rationale |
+
+The original registration-history block already changed under031. Its current
+preparation explanation is retained and supplemented with the actual accepted
+policy. Every registration throw remains uncertain, whether acceptance preceded
+the throw or not. The private WeakMap follows the stable platform-owned accessory
+Map across rebuilt contexts, disappearance, removal and reappearance. Normal
+return earns instance, listener and accessory ownership. Actual configureAccessory
+restoration remains authoritative. Healthy neighbors and pre-call preparation
+retry retain their behavior. Restart releases in-memory suspension only; no
+acceptance oracle, automatic compensation or bridge-removal guarantee is claimed.
+The exact fixed safe actionable restart diagnostic and every real-redacting-logger
+assertion remain active and unchanged for later035.
+
+The privacy explanation follows the actual constructor, validateConfig and real
+redacting logger: email refusal precedes password registration and omits the
+account email instead of retaining it in the secret list. STATE231–233 and313–318,
+canonical C-002/D-023/D-024/D-027, constraints194–204 and actual scoped history
+were read. The separate deviceId log/context/persistence permission retains its
+unconfirmed opaque-key premise. No identifier permission, redaction guarantee,+migration or public-artifact exception is broadened. The fixed message adds no
+thrown payload, account identifier, credential or token.
+
+The owner comments preserve current persistence and observation rationale.
+The recording-only fixture leaves seeded trust values in place; the real
+republishing fixture updates those values before the unreadable status lands.
+The order-discrimination case invokes collaborators directly. The source-text
+comment explicitly limits the detector to its fixed key order; it does not
+claim to repair039's separately pending architectural-gate defect. Every
+existing persistence call, pump observation, scope, clock, literal, test title,+assertion, mock expectation and explicit verification remains unchanged.
+
+#### Complete reads, callers and executable equivalence
+
+Before the first repository edit, complete AGENTS/bootstrap/discovery and all
+FIVE complete project books were loaded: comments, Google style, unit writer,
+unit reviewer and local verification. The installed Fallow book was read too.
+Complete current14/13/09 plans,13summary, CONTEXT/protocol/research/patterns,
+PROJECT/REQUIREMENTS/ROADMAP/STATE, FINDINGS, canonical830 decision lines,
+source676, owner2938 and report7554 lines were read in bounded contiguous chunks.
+The13 user_supersession_031 and entire current ACCOUNT history were included.
+read-ranges.jsonl and read-completion.json retain revision/blob/SHA256, saved
+full bodies, completed ranges and empty pending ranges. Initial transcript
+book/plan reads are explicitly distinguished from captured native sed reads.
+Truncated combined displays received bounded refills: Google/unit writer and
+the FINDINGS tail790–848. Byte capture did not replace a required full read.
+
+Actual callers were traced in the complete owner and source: constructor
+callbacks -> discovery/monitoring/removal; configureAccessory -> authoritative
+accessory Map; dispatch -> candidate preparation -> synchronous registration ->
+local ownership; live subscription -> accessory update; persistence closure ->
+Homebridge cache update only for an owned accessory. index registers the class.
+World600–750 rebuilds DiscoveryContext while retaining launch-owned maps; a new
+launch owns fresh maps. realWorld270–345 uses the runtime independently.
+The actual logger, persistence context, accessory record creation and relevant
+installed Homebridge implementation were inspected. No function, contract,+signature, name, import, visibility, mutability, alias or member is changed or
+deleted, so no existing-contract impact exception is needed. Both full headers
+retain their approved MIT form; all032 callable annotations remain exact.
+
+The applicable current official API and DynamicPlatformPlugin pages agree with
+installed Homebridge2.4.0 for synchronous void registration and restored-cache
+configuration. Neither promises nonthrowing registration or an acceptance oracle:
+[API registration](https://developers.homebridge.io/homebridge/interfaces/API.html#registerPlatformAccessories),
+[restored accessory callback](https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html).
+Installed api.d.ts497, api.js218–228 and bridgeService.js376–420 preserve the
+actual partial-acceptance boundary. No relevant version difference was observed.
+
+Installed TypeScript6.0.3 parsed both saved pre-edit files and final full files.
+Their complete AST leaf token kind/text streams match exactly:2219 source tokens
+and21066 owner tokens. Both compiler projects report zero diagnostics before
+and after. Comment-free source emit is byte-identical in both projects, SHA256
+6209bbb2d206932276c19b7f6b195b13f19150cf656b2e534b4cf01debc59181.
+The entire comment-free owner emit is also exact, SHA256
+091ee4601c3422ca0ff2e0d03ab92c136fb64f4bc4a1a7e9b6b825e73a5005b0.
+The production project excludes the owner; no artificial production-owner result
+is asserted. Source maps and comment-bearing output may differ and were not
+claimed equal. Removing only standalone comment lines also leaves both complete
+files exact. before/after-token-emit-proof.json and full saved/emitted copies
+retain these independent proofs. No redundant comments-only tests were added.
+
+#### Current native checks and retained capture limitation
+
+Native evidence: /private/tmp/guardian033-dqmmik8l. Checks ran serially in the
+existing linked main checkout under workflow.use_worktrees=false and persisted
+04/04-14 isolation:none. No worktree/config/sentinel changed. Nodev26.11.1 and
+npm11.20.0 are recorded with exact argv/cwd/HEAD, actual UTC bounds, raw exit,
+separate complete stdout/stderr, complete dirty/staged patches, input bodies,
+modes and compiled copies. Every child reached terminal before later mutation.
+
+| Final-input native record | Command/scope | Raw result |
+| --- | --- | --- |
+| build-test-final-02 | npm run build:test | 0;2026-10-16T01:40:36.700505–01:40:39.641266UTC |
+| owner-tap-final | node --test --test-reporter=tap dist-test/test/platform.test.js | 0;74pass,0fail/cancel/skip/todo;01:40:48.772806–01:40:49.208849UTC |
+| direct-platform-final | npm run test:coverage:direct -- src/platform.ts test/platform.test.ts | 0;fresh build and exact isolated pair;01:40:51.899227–01:40:55.832430UTC |
+| native-platform-final | Exact source include, native TAP/LCOV and all three100 thresholds | 0;74pass;sole SF:dist-test/src/platform.js;508/508lines,22/22functions,63/63branches |
+| lint-uncached-final | Installed ESLint on both files --no-cache --max-warnings=0 | 0;no output/warnings;01:41:21.632528–01:41:25.596271UTC |
+| red-cli-account-final;red-cli-platform-final | SAME installed CLI on each actual immutable JSON | 0;both RED_EVIDENCE_OK |
+| after-token-emit-final | Actual TypeScript AST tokens, both project diagnostics and comment-free compiler emit | 0;full executable/owner equivalence |
+| preservation-before-report | SAME installed recursive classifyRedEvidence plus Git sourceCommit:path/sourceBlob | 0;all16ACCOUNT+7PLATFORM=23 accepted;all nonowned inputs exact |
+
+Initial build,74-case owner,direct/native coverage and lint all passed too.
+The first capture helper omitted three tracked directory symlinks. All raw
+attempts and original manifests remain retained with that limitation. The
+corrected runner captures each literal link target and mode; final checks repeat
+on those complete manifests. symlink-supplement.json later compares the three
+targets against starting Git bodies without inventing an earlier capture time.
+One subsequent guarded comment refinement narrows the size-floor wording to
+the actual20,000-character check; fresh final build/owner/direct/native/lint
+and token/emit checks follow it. No failed test, control, genuine RED or hidden
+code change is introduced. Earlier combined tool display truncations are retained
+as display limits, not failed assertions. No check timed out or required a signal.
+
+Native508-line coverage reflects the current comment-bearing compiled file;
+prior031/032 results remain511lines with22functions/63branches. Neither replaces
+the other or merged all-pair source-map LCOV. Selected pair runs do not refresh
+that merged artifact. No full npm run check or full-gate reuse is claimed here;
+the parent owns the combined gate after terminal14.
+
+Both whole JSON histories remain immutable: ACCOUNT
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and PLATFORM
+321b61af80c611fda8d825dd613a2537b16303e1. The SAME installed classifier processes
+every recursive record and verifies actual sourceCommit:path/sourceBlob ancestry
+and embedded source/owner identities where supplied. Successful diagnostics and
+maintenance controls remain distinct from genuine historical RED. All43 other
+production files and every nonowned tracked input retain their bodies and modes.
+The entire previous520084-byte report is an exact prefix:blob
+caf4f83c04d3346021aeab2933c8d42621fdc2b6,SHA256
+f7131252cd5dc25965cf5f24b44b40db02e7e01de7a5e7afd2043fbbc81ddb60.
+
+Canonical root containment precedes this first append. Fresh exact installed
+Fallow guards precede every source/owner edit and this append. The cause budget
+is source+owner+report+precommitted14plan=four paths; only the first three change.
+No repository helper or extra evidence path is created. Native evidence is
+temporary. The actual14 ledger remains cfd221ddcde1177e29dcb852d437d12bbf7fc478;
+the09/13 ledgers and parent initial-ledger-checkpoint remain unchanged.
+The recorded real-base audit against cfd221dd and exact clean three-path
+SKIP=npm-check pre-commit must finish after this append BEFORE individual staging.
+The ordinary foreground commit runs with SKIP absent. Their actual terminal
+streams, Git object and committed-checkpoint.json establish the commit/hook
+result; this appendix does not predict those future results. No wrapper, amend,
+hook bypass, rebase, reset, stash, clean, PR, push or deployment occurs.
+
+The measured mandatory read inventory is1256787bytes across26files, or314196.75
+by the bytes/4 estimate convention, excluding repeated reads/callers/output.
+The original280k–360k forecast and640k arithmetic margin to configured1m remain
+estimates, not measured harness tokens or effective host capacity. The advisory
+100k zone caused no omission. No actual host context failure was observed.
+
+Counts stay44accepted,29independentlyclosed and15open030–044 at counter1,
+pending the whole correction2 in17. No independent review, subset clean verdict,
+closure, reopening or counter reset is claimed. RUN-01 stays Pending;
+WINDOWS46–54 remain OPEN/unwaived. D-03 remains global. Parent owns remaining
+causes, full gates, shared state, summary and final configuration restoration.
+
+#### Closeout capture correction and serialized rerun
+
+This later note qualifies the earlier capture statements. The post-append
+preservation-after-report attempt ran from01:42:47.662251 through01:45:46.342230
+UTC and exited1 after its owned Git hash-object --stdin child received SIGTERM.
+The child waited without output; the cause was not established. Its original
+helper body, input manifest, exact argv, complete stderr and empty stdout remain
+retained. The parent Node process and capture runner both reached terminal
+before any later file mutation. This was an evidence-helper failure; no test
+failed, and no production source changed during the attempt.
+
+The private helper now saves each hash input as a file and invokes actual Git
+hash-object --no-filters with a30-second bound. preservation-after-report-02
+then passed, raw0, from01:45:55.756087 through01:46:14.378804UTC. It again checks
+the complete report prefix, all nonowned bodies and modes, both immutable JSONs,
+all23 SAME-installed classifier records and their actual Git provenance.
+This change affects only temporary evidence capture, so unchanged successful
+build, owner, coverage, lint and compiler-equivalence inputs remain applicable.
+
+The read-only audit-final attempt overlapped the waiting preservation attempt
+from01:43:16.944439 through01:43:17.750457UTC. It passed with raw0, but that
+overlap does not satisfy the requested serial command order. No repository,
+build or index mutation occurred during it. A fresh serialized preservation
+check and recorded-base audit follow this note before the exact clean pre-step
+and staging. The earlier general serial/no-signal statements apply only to the
+checks completed when they were written; this note records the later exception.
+No original attempt or failure is discarded.

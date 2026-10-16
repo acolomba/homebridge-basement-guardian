@@ -341,6 +341,9 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
 
   // Preparation publishes only onto the candidate. A failure here precedes any
   // registration side effect, so the next inventory may safely rebuild it.
+  // A normal registration return earns local ownership and a live listener.
+  // Any registration throw suspends reattempts for this platform run because
+  // bridge acceptance is uncertain.
   basementGuardianAccessory.update(snapshot, 'poll');
 
   try {
@@ -552,16 +555,10 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     readonly api: API,
     deps: PlatformDeps = DEFAULT_PLATFORM_DEPS,
   ) {
-    // Installed before anything else can log, so no secret reaches the
-    // delegate unredacted. The refusal below quotes no configured value: it is
-    // logged before any secret is registered, and an account email is an
-    // account identifier the Privacy constraint keeps out of the log (WR-01).
-    // Registering the configured email as a secret first was considered and
-    // rejected, because it would hold the raw identifier in the secret list
-    // for the life of the process and still leave a marker where a value was.
-    // Recording an exception to the Privacy constraint was considered and
-    // rejected too: it would weaken a constraint to keep one diagnostic that
-    // the settings form's own email format already gives.
+    // Install redaction before any diagnostic reaches the delegate. Configuration
+    // refusals precede secret registration, so the email-format refusal omits the
+    // account email. This keeps that account identifier out of both the diagnostic
+    // and the logger's retained secret list (WR-01, AUTH-02, D-024).
     this.log = createRedactingLogger({ delegate: log, secrets: [] });
 
     const validated = validateConfig(this.config);
