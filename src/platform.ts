@@ -100,6 +100,10 @@ export interface DiscoveryContext {
   commands: CommandPort;
 }
 
+// Contexts are rebuilt for each callback, but this map belongs to one platform
+// run. Disappearance cannot make an uncertain registration safe to repeat.
+const uncertainRegistrations = new WeakMap<DiscoveryContext['accessories'], Set<string>>();
+
 // A HALO or unknown outcome never becomes an accessory (DEV-01), so the
 // explanation is the only trace it leaves. Distinct wording for each kind is
 // what lets a reader tell "recognized but unsupported" apart from "never
@@ -305,6 +309,17 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
     return;
   }
 
+  let uncertain = uncertainRegistrations.get(context.accessories);
+
+  if (uncertain === undefined) {
+    uncertain = new Set<string>();
+    uncertainRegistrations.set(context.accessories, uncertain);
+  }
+
+  if (uncertain.has(uuid)) {
+    return;
+  }
+
   const outcome = context.registry.lookup(snapshot.identity.deviceTypeId);
 
   if (outcome.kind !== 'implemented') {
@@ -324,25 +339,22 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
 
   const basementGuardianAccessory = createBasementGuardianAccessoryFor(context, accessory);
 
-  // The device publishes before anything records it, and nothing between the
-  // four statements below can throw, so a first update that raises leaves no
-  // cached instance, no live subscription, and no registration at all: the next
-  // inventory rebuilds the device from scratch.
-  //
-  // Caching first and registering last left exactly the orphan that costs an
-  // owner their monitoring. The cached instance stayed bound to a
-  // `PlatformAccessory` Homebridge was never handed, `context.accessories` was
-  // still empty, so every later inventory took this same new-device path,
-  // published all fifteen services onto that orphan, and registered a fresh
-  // accessory carrying none. The home then showed a Basement Guardian with no
-  // flood sensor, no pump, and no offline sensor for as long as the plugin ran,
-  // while the plugin's own state reported fifteen healthy services.
+  // Preparation publishes only onto the candidate. A failure here precedes any
+  // registration side effect, so the next inventory may safely rebuild it.
   basementGuardianAccessory.update(snapshot, 'poll');
+
+  try {
+    context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+  } catch {
+    uncertain.add(uuid);
+    context.log.error('Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.');
+
+    return;
+  }
 
   context.basementGuardianAccessories.set(uuid, basementGuardianAccessory);
   subscribeToLiveState(basementGuardianAccessory, deviceId, store);
   context.accessories.set(uuid, accessory);
-  context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 }
 
 /**
@@ -467,7 +479,7 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
  * Unregisters a confirmed-absent accessory from HomeKit and drops its stored
  * canonical state.
  *
- * A `deviceId` with no cached accessory is a no-op: it was never registered,
+ * A `deviceId` with no cached accessory is a no-op: this run does not own it,
  * or an earlier removal already unregistered it. The UUID is derived the
  * same way discovery derives it, so the same physical device always resolves
  * to the same accessory (DEV-05, D-029). Dropping the cached

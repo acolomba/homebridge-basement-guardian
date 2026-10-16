@@ -26,6 +26,7 @@ import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
 import { isRecord } from '../src/cloud/types.js';
 import { createDeviceStateStore } from '../src/device/state.js';
+import { createRedactingLogger } from '../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
 import { systemTimers } from '../src/runtime/timers.js';
@@ -1912,6 +1913,257 @@ describe('applyMonitoringHealth', () => {
 });
 
 describe('registerDiscoveredDevices', () => {
+  for (const { location, accept, acceptedUuids } of [
+    { location: 'before acceptance', accept: () => undefined, acceptedUuids: [] },
+    {
+      location: 'after acceptance',
+      accept: (uuid: string, accepted: string[]) => {
+        accepted.push(uuid);
+      },
+      acceptedUuids: [ACCESSORY_UUID],
+    },
+  ]) {
+    test(`suspends uncertain registration ${location} across rebuilt contexts and reappearance`, (t) => {
+      // arrange
+      const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+      const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+      const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+      const subscribeSpy = t.mock.method(store, 'subscribe');
+      const accepted: string[] = [];
+      const registrations: { plugin: string; platform: string; uuids: string[]; cached: boolean[]; listeners: string[] }[] = [];
+      const diagnostics: unknown[][] = [];
+      const registration = mock<Pick<API, 'registerPlatformAccessories'>>({ exactParams: true, name: 'registration' });
+      const removal = mock<API['unregisterPlatformAccessories']>({ exactParams: true, name: 'removal' });
+      const diagnostic = mock<Pick<Logging, 'error'>>({ exactParams: true, name: 'restart diagnostic' });
+      const registrationError = new Error('private-response-body account-private credential-private token-private');
+      const log = createRedactingLogger({
+        delegate: Object.assign(createSilentLog(), {
+          error: (message: string, ...parameters: unknown[]) => {
+            diagnostic.error(message, ...parameters);
+          },
+        }),
+        secrets: ['account-private', 'credential-private'],
+      });
+      log.registerSecret('token-private');
+      when(() => diagnostic.error).thenReturn((message: string, ...parameters: unknown[]) => {
+        diagnostics.push([message, ...parameters]);
+      });
+      when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
+        registrations.push({
+          plugin,
+          platform,
+          uuids: candidates.map((accessory) => accessory.UUID),
+          cached: candidates.map((accessory) => accessories.has(accessory.UUID)),
+          listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        });
+        accept(ACCESSORY_UUID, accepted);
+        throw registrationError;
+      });
+      when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
+        registrations.push({
+          plugin,
+          platform,
+          uuids: candidates.map((accessory) => accessory.UUID),
+          cached: candidates.map((accessory) => accessories.has(accessory.UUID)),
+          listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        });
+      });
+      const api: API = {
+        ...fakeDiscoveryApi([]),
+        registerPlatformAccessories: (...parameters) => {
+          registration.registerPlatformAccessories(...parameters);
+        },
+        unregisterPlatformAccessories: removal,
+      };
+      const context = (): DiscoveryContext => discoveryContext({ api, accessories, basementGuardianAccessories, registry: powerRegistry(), log });
+      store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+      store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, name: 'Second System', serialNumber: 'serial-2', data: { ac_power: false } });
+
+      // act
+      registerDiscoveredDevices(context(), [DEVICE_ID, SECOND_DEVICE_ID], store);
+
+      // assert
+      assert.deepStrictEqual(
+        {
+          accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+          instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+          listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+          accepted,
+        },
+        {
+          accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+          instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
+          listenerOwners: [SECOND_DEVICE_ID],
+          accepted: acceptedUuids,
+        },
+      );
+      const healthyAccessory = accessories.get(SECOND_ACCESSORY_UUID);
+      const healthyInstance = basementGuardianAccessories.get(SECOND_ACCESSORY_UUID);
+
+      if (healthyAccessory === undefined || healthyInstance === undefined) {
+        throw new Error('the healthy device has no public owner');
+      }
+
+      const updateSpy = t.mock.method(healthyInstance, 'update');
+      registerDiscoveredDevices(context(), [DEVICE_ID, SECOND_DEVICE_ID], store);
+      registerDiscoveredDevices(context(), [], store);
+      removeDiscoveredDevice(context(), DEVICE_ID, store);
+      store.remove(DEVICE_ID);
+      registerDiscoveredDevices(context(), [], store);
+      store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+      registerDiscoveredDevices(context(), [DEVICE_ID, SECOND_DEVICE_ID], store);
+      store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
+      store.applyReportedPatch(SECOND_DEVICE_ID, reportedPatch({ ac_power: true }));
+      assert.deepStrictEqual(
+        {
+          accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+          instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+          sameAccessory: accessories.get(SECOND_ACCESSORY_UUID) === healthyAccessory,
+          sameInstance: basementGuardianAccessories.get(SECOND_ACCESSORY_UUID) === healthyInstance,
+          listenerOwners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+          healthyUpdates: updateSpy.mock.calls.map((call) => ({ deviceId: call.arguments[0].identity.deviceId, source: call.arguments[1] })),
+          mainsLost: healthyAccessory
+            .getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
+            ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
+          canonical: [store.snapshot(DEVICE_ID), store.snapshot(SECOND_DEVICE_ID)],
+          accepted,
+        },
+        {
+          accessoryOwners: [[SECOND_ACCESSORY_UUID, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+          instanceOwners: [[SECOND_ACCESSORY_UUID, SECOND_DEVICE_ID]],
+          sameAccessory: true,
+          sameInstance: true,
+          listenerOwners: [SECOND_DEVICE_ID],
+          healthyUpdates: [
+            { deviceId: SECOND_DEVICE_ID, source: 'poll' },
+            { deviceId: SECOND_DEVICE_ID, source: 'poll' },
+            { deviceId: SECOND_DEVICE_ID, source: 'live' },
+          ],
+          mainsLost: CONTACT_DETECTED,
+          canonical: [
+            {
+              identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+              connectivity: { connected: true, timestamp: 0 },
+              data: { ac_power: true },
+              metadata: {},
+              shadowVersion: undefined,
+              deviceTimestamp: 0,
+              receivedAt: 0,
+            },
+            {
+              identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Second System', serialNumber: 'serial-2' },
+              connectivity: { connected: true, timestamp: 0 },
+              data: { ac_power: true },
+              metadata: {},
+              shadowVersion: undefined,
+              deviceTimestamp: 0,
+              receivedAt: 0,
+            },
+          ],
+          accepted: acceptedUuids,
+        },
+      );
+      assert.deepStrictEqual(registrations, [
+        { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [ACCESSORY_UUID], cached: [false], listeners: [] },
+        { plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [SECOND_ACCESSORY_UUID], cached: [false], listeners: [] },
+      ]);
+      assert.deepStrictEqual(diagnostics, [['Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.']]);
+      verify(registration);
+      verify(removal);
+      verify(diagnostic);
+    });
+  }
+
+  test('owns a fresh run independently and honors an accessory restored through configureAccessory', (t) => {
+    // arrange
+    const registration = mock<Pick<API, 'registerPlatformAccessories'>>({ exactParams: true, name: 'fresh registration' });
+    const registrations: { plugin: string; platform: string; uuids: string[]; mainsLost: unknown }[] = [];
+    when(() => registration.registerPlatformAccessories).thenReturn(() => {
+      throw new Error('uncertain prior run');
+    });
+    when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
+      registrations.push({
+        plugin,
+        platform,
+        uuids: candidates.map((accessory) => accessory.UUID),
+        mainsLost: candidates[0]
+          ?.getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
+          ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
+      });
+    });
+    const api: API = {
+      ...fakeDiscoveryApi([]),
+      registerPlatformAccessories: (...parameters) => {
+        registration.registerPlatformAccessories(...parameters);
+      },
+    };
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const subscribeSpy = t.mock.method(store, 'subscribe');
+    store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+    const context = (): DiscoveryContext =>
+      discoveryContext({ api, accessories: platform.accessories, basementGuardianAccessories, registry: powerRegistry() });
+    const priorPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const priorStore = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const priorInstances = new Map<string, BasementGuardianAccessory>();
+    priorStore.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+
+    // act
+    registerDiscoveredDevices(
+      discoveryContext({ api, accessories: priorPlatform.accessories, basementGuardianAccessories: priorInstances, registry: powerRegistry() }),
+      [DEVICE_ID],
+      priorStore,
+    );
+    registerDiscoveredDevices(context(), [DEVICE_ID], store);
+    const registered = platform.accessories.get(ACCESSORY_UUID);
+
+    if (registered === undefined) {
+      throw new Error('the first run did not register its accessory');
+    }
+
+    registerDiscoveredDevices(context(), [DEVICE_ID], store);
+    const restartedPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
+    const restoredInstances = new Map<string, BasementGuardianAccessory>();
+    const restoredStore = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    const restoredSubscribeSpy = t.mock.method(restoredStore, 'subscribe');
+    restartedPlatform.configureAccessory(registered);
+    restoredStore.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
+    const restoredContext = (): DiscoveryContext =>
+      discoveryContext({ api, accessories: restartedPlatform.accessories, basementGuardianAccessories: restoredInstances, registry: powerRegistry() });
+    registerDiscoveredDevices(restoredContext(), [DEVICE_ID], restoredStore);
+    registerDiscoveredDevices(restoredContext(), [DEVICE_ID], restoredStore);
+    restoredStore.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        firstOwners: [...platform.accessories.keys()],
+        firstInstances: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        restoredOwners: [...restartedPlatform.accessories.keys()],
+        restoredInstances: [...restoredInstances].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        restoredIdentity: restartedPlatform.accessories.get(ACCESSORY_UUID) === registered,
+        firstListeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        restoredListeners: restoredSubscribeSpy.mock.calls.map((call) => call.arguments[0]),
+        mainsLost: registered
+          .getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
+          ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
+      },
+      {
+        firstOwners: [ACCESSORY_UUID],
+        firstInstances: [[ACCESSORY_UUID, DEVICE_ID]],
+        restoredOwners: [ACCESSORY_UUID],
+        restoredInstances: [[ACCESSORY_UUID, DEVICE_ID]],
+        restoredIdentity: true,
+        firstListeners: [DEVICE_ID],
+        restoredListeners: [DEVICE_ID],
+        mainsLost: CONTACT_DETECTED,
+      },
+    );
+    assert.deepStrictEqual(registrations, [{ plugin: PLUGIN_NAME, platform: PLATFORM_NAME, uuids: [ACCESSORY_UUID], mainsLost: CONTACT_NOT_DETECTED }]);
+    verify(registration);
+  });
+
   test('registers one accessory for a newly discovered device not already in accessories', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];

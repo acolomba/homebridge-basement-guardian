@@ -7230,3 +7230,104 @@ closed/15 open030–044 pending correction2, with no closure/reopen claim.
 RUN-01 remains Pending, D-03 predicates remain false, and WINDOWS46–54 remain
 OPEN/unwaived.030's focused GREEN evidence is prior evidence; the parent owns
 the combined gate after13 is terminal. The serial lease ends at actual FINAL.
+
+## ACCOUNT-031 GREEN implementation pending independent correction
+
+The actual parent evidence-only commit
+`13a06a1b109e8c027c4d59d51a103e0d4c7f7f37` precedes this production edit.
+Its PLATFORM JSON remains byte-exact at
+`321b61af80c611fda8d825dd613a2537b16303e1`; ACCOUNT JSON remains byte-exact at
+`b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134`. The preceding report, original031
+finding, superseded retry policy, successful non-RED diagnostic and complete
+RED history remain unchanged. This implements the actual user's choice1;
+it supplies no new product policy or inferred human decision timestamp.
+
+### Minimum repair and stable ownership
+
+Platform source changed from
+`b7c1103e669d7d56f0a4b4c84dde7fb9248b23f5` to
+`45666e623be425bdc4934618477349ad9da4aa4a`. A new module-private WeakMap keys
+uncertain UUID sets by the existing platform-owned accessory Map. Actual root
+callbacks retain the readonly root accessory Map while rebuilding each
+DiscoveryContext. World.launch likewise retains its local accessory Map across
+inventory/removal/health callbacks and creates fresh maps for another launch.
+These actual caller/lifetime facts were re-read before editing. The ledger's
+only production uses are dispatch's lookup/initialization, refusal check and
+registration-catch insertion. It has no reset on inventory membership or store
+removal and no process-global set shared across unrelated platform maps.
+
+The candidate still publishes before the registration call. Preparation failure
+therefore remains retryable because it precedes registration. Only a throw from
+the actual synchronous registration call marks uncertainty. That catch emits
+the exact fixed actionable restart-required explanation with no thrown payload
+or parameters, returns without claiming local maps/listener ownership, and lets
+the batch continue. A normal registration return precedes successful instance,
+listener and accessory ownership. Existing/restored accessories remain
+authoritative before the uncertainty check. No compensation, acceptance oracle,
+private Homebridge cache inspection, new port/test hook or restart removal
+guarantee was introduced. The removal documentation now accurately describes
+the absence of local ownership without asserting that registration never
+accepted the accessory.
+
+No existing alias/member name, visibility, mutability, signature or public
+DiscoveryContext shape changed. An AST comparison confirms unchanged existing
+interface/type/function/class-member contracts. The genuinely new private
+ledger had no pre-existing consumer to trace; its actual postcreation uses were
+inspected. No D-06 unavailable-query exception is claimed. All43 other
+production files and all44 production modes are unchanged. The entire active
+RED owner stays byte-exact at
+`eefe895a1cc4aae261e0670ac2224d2c59872250`, retaining all original71 cases and
+all031 assertions without edits or additional coverage witnesses.
+
+### Focused native verification
+
+Native folder: `/private/tmp/guardian-04-account-031-green-vDE7Y6/`.
+Every attempt retains complete separate stdout/stderr, exact argv/raw exit/UTC,
+current source/test input bodies and modes, full dirty patch and compiled
+inputs. baseline.json captures the actual evidence-commit HEAD, all44 initial
+production bodies/modes, whole active owner, both immutable evidence files and
+the entire pre-GREEN report. Checks ran in the existing feature checkout with
+workflow.use_worktrees=false; Node v26.11.1 and npm11.20.0.
+
+| Native check | UTC start–end on2026-10-16 | Result |
+| --- | --- | --- |
+| build-01, npm run build:test | 00:49:05.303002–00:49:08.740095 | exit0 |
+| full-01, explicit native TAP platform owner | 00:49:18.498147–00:49:19.002143 | exit0;74/74 pass |
+| named-before-01, exact qualified031 target | 00:49:48.573119–00:49:48.944469 | exit0;1/1 pass |
+| named-after-01, exact qualified031 target | 00:49:56.463109–00:49:56.824246 | exit0;1/1 pass |
+| direct-01, isolated src/platform.ts owner pair | 00:50:09.205944–00:50:13.311768 | exit0 |
+| native-coverage-01, explicit100% thresholds | 00:50:26.057616–00:50:26.559451 | exit0 |
+| lint-01, uncached source and owner | 00:50:44.838374–00:50:50.319345 | exit0 |
+| immutable-provenance-01, SAME installed recursive classifier | 00:51:16.374153–00:51:17.966904 | exit0;all23 accepted |
+| installed current-file PLATFORM CLI | 00:51:26.673945–00:51:26.945486 | exit0;RED_EVIDENCE_OK |
+| audit-01, real basead05d52 | 00:51:47.405449–00:51:48.566143 | exit0;verdict pass |
+
+All named/full owner runs have zero failures/skips/cancellations/todo and no
+signal. The sole native LCOV record is SF:dist-test/src/platform.js with
+511/511 lines,22/22 functions and63/63 branches. Both indistinguishable throw
+locations now pass all complete ownership, lifetime, canonical/live state,
+finite API interaction and real redacting-logger assertions. Healthy devices,
+original026 preparation retry, seed-before-registration persistence and actual
+configureAccessory restoration all pass without weakening assertions.
+
+The real-base audit reports zero dead-code issues, complexity findings and
+duplication groups. Its raw stderr retains a warning about two ignored
+TypeScript build-info entry points; the actual audit verdict is pass. This is
+not a waiver or a claim that stderr was empty. Formatting check passes without
+a source/owner formatter edit. The SAME classifier again accepts seven
+PLATFORM and16 ACCOUNT records with actual sourceCommit:path/blob provenance;
+both entire JSON files remain immutable. The whole pre-GREEN report prefix and
+whole RED owner were independently compared byte-for-byte.
+
+The normal cause commit must contain exactly platform source, active platform
+owner and this append-only report. Actual real-base audit, guarded prestage
+hooks before staging, ordinary foreground commit/hooks and final clean-tree
+verification are retained in this native folder and terminal checkpoint; their
+actual exit statuses govern the final handoff. No failing code is staged.
+
+031 is implemented pending whole independent correction2, with no finding
+closure or fresh independent review. Counter1 remains44 accepted/29 closed/
+15 open030–044; RUN-01 remains Pending; D-03 predicates remain false and
+WINDOWS46–54 stay OPEN/unwaived. No044/SUMMARY/shared-state/config change or
+full parent gate is included. The parent owns the combined gate after13 is
+terminal. The serial lease ends only at this fixer's actual FINAL.
