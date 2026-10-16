@@ -135,9 +135,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 15/19 plans executed; 15 complete, 4 pending
-- [ ] 04-18-PLAN.md
-- [ ] 04-19-PLAN.md
+**Plans**: 16/19 plans executed; 16 complete, 3 pending
 
 **Wave 1**
 - [x] 04-01-PLAN.md
@@ -185,7 +183,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 04-17-PLAN.md — Whole trust forwarding and full ACCOUNT correction 2
 
 **Wave 16** *(blocked on Wave 15 completion)*
-- [ ] 04-18-PLAN.md — Registration test phases, accurate comment and architecture owner organization
+- [x] 04-18-PLAN.md — Registration test phases, accurate comment and architecture owner organization
 
 **Wave 17** *(blocked on Wave 16 completion)*
 - [ ] 04-19-PLAN.md — Complete configured catalogue and full ACCOUNT correction 3
@@ -276,7 +274,7 @@ Plan 09 closes after 19 only when actual findings are resolved and D-03 permits.
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
-| 4. Runtime Conformance | code-review-sweep | 15/19 | In Progress | - |
+| 4. Runtime Conformance | code-review-sweep | 16/19 | In Progress | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
