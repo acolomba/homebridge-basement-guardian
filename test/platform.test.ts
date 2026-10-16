@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, watch } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -96,32 +96,23 @@ function createRecordingLog(messages: string[]): Logging {
 // Drains the promise chains a lifecycle event starts, so the work it triggered
 // has settled before the assertions run.
 //
-// A fixed turn count is sound only for a negative assertion, where draining
-// longer can only make the case stricter. For anything the lifecycle reaches
-// asynchronously, wait on the condition itself with `until`: eight turns is a
-// guess, and a filesystem write behind the token cache needs more of them on a
-// slower machine than on the one the constant was chosen on.
+// Positive lifecycle checkpoints await their announced boundary first. This
+// drain lets already-triggered continuations run before checking silence or
+// advancing the owned clock; it does not wait for filesystem completion.
 async function settle(): Promise<void> {
   for (let turn = 0; turn < 8; turn += 1) {
     await nextEventLoopTurn();
   }
 }
 
-// Waits for a condition the lifecycle reaches on its own schedule, rather than
-// for a number of turns that happened to be enough locally. Fails with what it
-// was waiting for instead of with whatever the assertion would have said.
-async function until(reached: () => boolean | Promise<boolean>, what: string): Promise<void> {
-  const deadlineMs = Date.now() + 5_000;
+function completionSignal(): [Promise<void>, () => void] {
+  // The promise constructor assigns the resolver synchronously.
+  let announce!: () => void;
+  const completed = new Promise<void>((resolve) => {
+    announce = resolve;
+  });
 
-  while (Date.now() < deadlineMs) {
-    if (await reached()) {
-      return;
-    }
-
-    await nextEventLoopTurn();
-  }
-
-  throw new Error(`timed out waiting for ${what}`);
+  return [completed, announce];
 }
 
 // Every module under `src/` that names a symbol, in path order. A module that wants to defer has to
@@ -560,12 +551,14 @@ describe('BasementGuardianPlatform', () => {
       removal(PLUGIN_NAME, PLATFORM_NAME, [cachedAccessory]);
     }).thenReturn(undefined);
     const removedIds: string[] = [];
+    const [removed, announceRemoval] = completionSignal();
     when(() => api.unregisterPlatformAccessories).thenReturn((pluginIdentifier, platformName, accessories) => {
       removal(pluginIdentifier, platformName, accessories);
       removedIds.push(...accessories.map((accessory) => accessory.UUID));
+      announceRemoval();
     });
     let inventories = 0;
-    let credentialsRequested = false;
+    const [credentialsRequested, announceCredentialsRequest] = completionSignal();
     const httpFetch: HttpFetch = (input) => {
       const url = input.toString();
 
@@ -580,7 +573,7 @@ describe('BasementGuardianPlatform', () => {
       }
 
       if (url.endsWith('/credentials/aws')) {
-        credentialsRequested = true;
+        announceCredentialsRequest();
 
         return Promise.resolve(new Response('{}', { status: 503 }));
       }
@@ -595,11 +588,11 @@ describe('BasementGuardianPlatform', () => {
     platform.configureAccessory(cachedAccessory);
     platform.configureAccessory(cachedAccessory);
     launch?.();
-    await until(() => credentialsRequested, 'the first empty inventory to complete');
+    await credentialsRequested;
     await settle();
     const beforeConfirmation = { cachedIds: [...platform.accessories.keys()], removedIds: [...removedIds] };
     t.mock.timers.tick(300_000);
-    await until(() => inventories >= 3, 'the confirming inventory and final check');
+    await removed;
     await settle();
     shutdown?.();
     await settle();
@@ -651,7 +644,8 @@ describe('BasementGuardianPlatform', () => {
       when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
       when(() => api.hap).thenReturn(restorationApi.hap);
       let inventories = 0;
-      let credentialsRequested = false;
+      const [credentialsRequested, announceCredentialsRequest] = completionSignal();
+      const [confirmingInventoryRequested, announceConfirmingInventoryRequest] = completionSignal();
       const httpFetch: HttpFetch = (input) => {
         const url = input.toString();
 
@@ -662,10 +656,14 @@ describe('BasementGuardianPlatform', () => {
         if (url.endsWith('/devices')) {
           inventories += 1;
 
+          if (inventories === 2) {
+            announceConfirmingInventoryRequest();
+          }
+
           return Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
         }
 
-        credentialsRequested = true;
+        announceCredentialsRequest();
 
         return Promise.resolve(new Response('{}', { status: 503 }));
       };
@@ -676,10 +674,10 @@ describe('BasementGuardianPlatform', () => {
       // act
       platform.configureAccessory(cachedAccessory);
       launch?.();
-      await until(() => credentialsRequested, 'the first empty inventory to complete');
+      await credentialsRequested;
       await settle();
       t.mock.timers.tick(300_000);
-      await until(() => inventories >= 2, 'the second empty inventory');
+      await confirmingInventoryRequested;
       await settle();
       shutdown?.();
       await settle();
@@ -722,7 +720,9 @@ describe('BasementGuardianPlatform', () => {
       completeFinalCheck = resolve;
     });
     let inventories = 0;
-    let credentialsRequested = false;
+    const [credentialsRequested, announceCredentialsRequest] = completionSignal();
+    const [finalCheckRequested, announceFinalCheckRequest] = completionSignal();
+    const [removed, announceRemoval] = completionSignal();
     const httpFetch: HttpFetch = (input) => {
       const url = input.toString();
 
@@ -733,11 +733,15 @@ describe('BasementGuardianPlatform', () => {
       if (url.endsWith('/devices')) {
         inventories += 1;
 
+        if (inventories === 3) {
+          announceFinalCheckRequest();
+        }
+
         return inventories === 3 ? finalCheck : Promise.resolve(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
       }
 
       if (url.endsWith('/credentials/aws')) {
-        credentialsRequested = true;
+        announceCredentialsRequest();
 
         return Promise.resolve(
           new Response(
@@ -785,6 +789,7 @@ describe('BasementGuardianPlatform', () => {
         flood: flood.getCharacteristic(hap.Characteristic.LeakDetected).value,
         active: flood.getCharacteristic(hap.Characteristic.StatusActive).value,
       });
+      announceRemoval();
     });
     const expectedCached = {
       cachedIds: [ACCESSORY_UUID],
@@ -801,7 +806,7 @@ describe('BasementGuardianPlatform', () => {
     // act
     platform.configureAccessory(cachedAccessory);
     launch?.();
-    await until(() => credentialsRequested, 'the empty startup inventory to complete');
+    await credentialsRequested;
     await settle();
     const afterFirstAbsence = {
       cachedIds: [...platform.accessories.keys()],
@@ -815,7 +820,7 @@ describe('BasementGuardianPlatform', () => {
     await settle();
     const beforeConfirmation = { cachedIds: [...platform.accessories.keys()], removalStates: [...removalStates] };
     t.mock.timers.tick(1);
-    await until(() => inventories >= 2, 'the second healthy empty inventory');
+    await finalCheckRequested;
     await settle();
     const beforeFinalAnswer = {
       cachedIds: [...platform.accessories.keys()],
@@ -826,6 +831,7 @@ describe('BasementGuardianPlatform', () => {
       removalStates: [...removalStates],
     };
     completeFinalCheck(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
+    await removed;
     await settle();
     const afterFinalAnswer = { cachedIds: [...platform.accessories.keys()], removalStates: [...removalStates] };
     shutdown?.();
@@ -943,6 +949,7 @@ describe('BasementGuardianPlatform', () => {
   test('starts the cloud work on the launch event and releases it on shutdown', async (t) => {
     // arrange
     const requests: string[] = [];
+    const [launchRequestsCompleted, announceLaunchRequests] = completionSignal();
     const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
     when(() =>
       httpFetch('https://connectsense-staging.auth0.com/oauth/token', {
@@ -962,6 +969,11 @@ describe('BasementGuardianPlatform', () => {
           }
 
           requests.push('https://connectsense-staging.auth0.com/oauth/token');
+
+          if (requests.length === 2) {
+            announceLaunchRequests();
+          }
+
           return true;
         }),
       }),
@@ -978,7 +990,8 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await until(() => requests.length >= 2, 'the launch event to reach the vendor');
+    await launchRequestsCompleted;
+    await settle();
     const requestsAfterLaunch = requests.length;
     shutdown?.();
     await settle();
@@ -997,14 +1010,40 @@ describe('BasementGuardianPlatform', () => {
 
   test('AUTH-02 caches the granted token under the Homebridge storage directory', async (t) => {
     // arrange
-    t.mock.method(globalThis, 'fetch', (input: string | URL) =>
-      input.toString().endsWith('/oauth/token')
-        ? Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }))
-        : Promise.resolve(new Response('{}', { status: 503 })),
-    );
+    const [requestAfterGrant, announceRequestAfterGrant] = completionSignal();
+    t.mock.method(globalThis, 'fetch', (input: string | URL) => {
+      if (input.toString().endsWith('/oauth/token')) {
+        return Promise.resolve(new Response(JSON.stringify({ id_token: 'id-token-1', expires_in: 2_592_000 }), { status: 200 }));
+      }
+
+      announceRequestAfterGrant();
+
+      return Promise.resolve(new Response('{}', { status: 503 }));
+    });
     const listeners: (() => void)[] = [];
+    let watcher: ReturnType<typeof watch> | undefined;
+    // Teardown precedes setup and storage cleanup, including a refused watcher.
+    t.after(async () => {
+      listeners[1]?.();
+      watcher?.close();
+      watcher = undefined;
+      await settle();
+    });
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user, storagePath } = await expectStoragePath(t, api);
+    // Atomic renames publish these final files only after their writes finish.
+    const stored = [ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-token.json'].sort();
+    const pendingFiles = new Set(stored);
+    const [filesWritten, announceFilesWritten] = completionSignal();
+    watcher = watch(storagePath, { persistent: false }, (event, filename) => {
+      if (event === 'rename' && filename !== null) {
+        pendingFiles.delete(filename);
+
+        if (pendingFiles.size === 0) {
+          announceFilesWritten();
+        }
+      }
+    });
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
     new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
@@ -1012,14 +1051,11 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    // Both files the plugin keeps under the storage directory: the token cache,
-    // and the arrival anchors the silence measurement needs across a restart.
-    const stored = [ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-token.json'].sort();
-    await until(async () => {
-      const entries = await readdir(storagePath);
-
-      return stored.every((name) => entries.includes(name));
-    }, 'the stored files to be written');
+    await filesWritten;
+    await Promise.all(stored.map((filename) => readFile(join(storagePath, filename))));
+    watcher.close();
+    await requestAfterGrant;
+    await settle();
     shutdown?.();
     await settle();
 
@@ -1031,6 +1067,7 @@ describe('BasementGuardianPlatform', () => {
 
   test('registers a newly discovered device once the launch event succeeds', async (t) => {
     // arrange
+    const [registered, announceRegistration] = completionSignal();
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
       const url = input.toString();
 
@@ -1091,6 +1128,7 @@ describe('BasementGuardianPlatform', () => {
           }
 
           registeredAccessories.push(accessory);
+          announceRegistration();
           return true;
         }),
       );
@@ -1104,7 +1142,8 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
+    await registered;
+    await settle();
     shutdown?.();
     await settle();
 
@@ -1119,6 +1158,8 @@ describe('BasementGuardianPlatform', () => {
 
   test('withdraws the offline verdict from every published accessory once polling has failed twice', async (t) => {
     // arrange
+    const [registered, announceRegistration] = completionSignal();
+    const [offlineWithdrawn, announceOfflineWithdrawal] = completionSignal();
     t.mock.timers.enable({ apis: ['setTimeout'] });
     let deviceListCalls = 0;
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
@@ -1167,6 +1208,7 @@ describe('BasementGuardianPlatform', () => {
           }
 
           registeredAccessories.push(accessory);
+          announceRegistration();
           return true;
         }),
       );
@@ -1176,7 +1218,8 @@ describe('BasementGuardianPlatform', () => {
     });
     const [launch, shutdown] = listeners;
     launch?.();
-    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
+    await registered;
+    await settle();
     const accessory = registeredAccessories[0];
 
     if (accessory === undefined) {
@@ -1184,13 +1227,30 @@ describe('BasementGuardianPlatform', () => {
     }
 
     const beforeAnyFailure = statusActiveOf(accessory, 'Basement Guardian Offline');
+    const offlineService = accessory.getServiceById(HAP.Service.ContactSensor, 'basement-guardian-offline');
+
+    if (offlineService === undefined) {
+      throw new Error('the platform published no offline service');
+    }
+
+    // Preserve the service receiver while observing its real publication.
+    const updateCharacteristic = offlineService.updateCharacteristic.bind(offlineService);
+    t.mock.method(offlineService, 'updateCharacteristic', (characteristic: FakeCharacteristicClass, value: unknown) => {
+      const result = updateCharacteristic(characteristic, value);
+
+      if (characteristic.UUID === HAP.Characteristic.StatusActive.UUID && value === false) {
+        announceOfflineWithdrawal();
+      }
+
+      return result;
+    });
 
     // act
     t.mock.timers.tick(300_000);
     await settle();
     t.mock.timers.tick(300_000);
     await settle();
-    await until(() => statusActiveOf(accessory, 'Basement Guardian Offline') === false, 'the platform to withdraw the offline verdict');
+    await offlineWithdrawn;
     shutdown?.();
     await settle();
 
@@ -1210,6 +1270,8 @@ describe('BasementGuardianPlatform', () => {
 
   test('unregisters a confirmed-absent accessory once two trustworthy polls and a final check agree it is gone', async (t) => {
     // arrange
+    const [registered, announceRegistration] = completionSignal();
+    const [removed, announceRemoval] = completionSignal();
     t.mock.timers.enable({ apis: ['setTimeout'] });
     let deviceListCalls = 0;
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
@@ -1270,6 +1332,7 @@ describe('BasementGuardianPlatform', () => {
           }
 
           registeredAccessories.push(accessory);
+          announceRegistration();
           return true;
         }),
       );
@@ -1291,6 +1354,7 @@ describe('BasementGuardianPlatform', () => {
           }
 
           unregisteredAccessories.push(accessory);
+          announceRemoval();
           return true;
         }),
       );
@@ -1302,12 +1366,13 @@ describe('BasementGuardianPlatform', () => {
 
     // act
     launch?.();
-    await until(() => registeredAccessories.length > 0, 'the platform to register the discovered accessory');
-    t.mock.timers.tick(300_000);
+    await registered;
     await settle();
     t.mock.timers.tick(300_000);
     await settle();
-    await until(() => unregisteredAccessories.length > 0, 'the platform to unregister the confirmed-absent accessory');
+    t.mock.timers.tick(300_000);
+    await settle();
+    await removed;
     shutdown?.();
     await settle();
 

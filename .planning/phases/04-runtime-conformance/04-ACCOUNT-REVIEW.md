@@ -8264,3 +8264,174 @@ accepted,29 independently closed,15 OPEN030–044 pending that whole correction.
 RUN-01 remains Pending. WINDOWS46–55 remain OPEN/unwaived; the parent owns
 their process records. No review round, closure, shared record or later cause
 is changed here.
+
+## CR-04-ACCOUNT-038 execution — announced lifecycle completion
+
+This appendix records only task04-16-01 at baseline
+af6f9c9816f54ec157fd936900a317a7dbbd8547, features/code-review-sweep,
+isolation none. Cause038 is implemented, pending the WHOLE correction2 in17.
+It is not an independent review, partial clean result or finding closure.
+ACCOUNT counter1 remains44 accepted,29 independently closed,15 OPEN030–044.
+The actual correction1 D-03 predicates were false. A future non-reducing open
+round, reopened fixed cause or round4 even clean still requires immediate
+GLOBAL STOP before further work. RUN-01 remains Pending; WINDOWS46–56 remain
+OPEN and unwaived, with all shared records parent-owned.
+
+Actual changed paths are test/platform.test.ts and this append-only report.
+The precommitted04-16-PLAN.md is the third total cause path; it is unchanged
+here. No production file, helper, JSON, configuration, shared record or next
+cause changes. The full569108-byte report prefix, blob
+018448f2f8919fdf6893965f91e40a76534c9d7b, remains exact. All44 tracked src
+files retain their complete bytes and modes. The three directory symlinks
+retain literal target bytes and120000 modes in the native input snapshots.
+
+All13 lexical until call sites are replaced across eight authored case bodies
+(including the six invalid-context rows). Each case owns its deferred signal.
+HTTP signals come from the injected request actually reached; registration
+and removal signals follow the prescribed captured API operation. The offline
+signal follows the real fake service's completed StatusActive publication,
+with its receiver preserved through an explicitly bound original method.
+The observing t.mock.method retains the real value update and original whole
+offline/flood/contact-state assertion. No expected interaction becomes an
+unbounded allowance, and explicit verification still follows public results.
+
+The restored026 case now awaits the THIRD, held final inventory request before
+its beforeFinalAnswer observation. It still checks complete cached identity,
+context, primary observation, flood1/stale trust, pre-confirmation retention,
+the held-response retention, and final removal. Its removal callback still
+observes the accessory BEFORE pruning. Releasing the held response is followed
+by the announced actual removal before the final public read. The duplicate
+restore case likewise awaits actual removal, preserving three inventories,
+one physical removal and complete retained context. Invalid identity rows
+retain their independent whole contexts and no guessed identity.
+
+AUTH-02 storage remains real temporary filesystem I/O. A case-owned native
+directory watcher is installed before launch. Only the two final filenames'
+rename notifications announce the files-written boundary; both actual files
+are then read with awaited readFile promises. Both writers await their real
+writeFile before atomically renaming to those final paths. The original exact
+sorted directory assertion remains. The case also awaits its actual post-grant
+HTTP request and drains its existing continuations before normal shutdown.
+The watcher closes after readback, and teardown registered BEFORE watcher and
+platform setup closes any created watcher and stops any created runtime even
+when setup fails. That teardown runs before the unchanged helper's timer reset
+and real storage cleanup. There is no fake filesystem, polling, sleep, new
+dependency, source hook or production persistence API.
+
+Existing settle retains its exact eight-turn body for continuation/silence
+drains; positive checkpoints await the announced boundary first. Normal launch
+and registration cases retain a continuation drain before shutdown so the
+request/registration notification does not shorten their established normal
+lifecycle. The existing helper still resets owned mock timers before removing
+storage. All65 authored declarations,74 expanded cases and91 original assert
+calls are preserved; the installed TypeScript AST comparison proves each
+original assertion's complete tokens and all original titles unchanged.
+Existing function signatures/bodies and aliases/interfaces remain exact.
+Only the now-orphaned plain local until function is removed, AFTER the native
+AST proof found its declaration as the sole remaining lexical identifier.
+This narrow AGENTS orphan exception changes no alias/member/shared contract
+and waives no two-project consumer query.
+
+Every031 case body and real redacting-logger/registered-secret assertion stays
+byte-exact. The human choice1 uncertainty behavior, healthy neighbors,
+stable-map WeakMap suspension through reappearance, authoritative restored
+accessories and PRECALL026 retry remain active. No acceptance oracle,
+compensation, private Homebridge cache or restart recovery guarantee is added.
+030 readiness/watermark and044899999/900000 tests remain active. CONF-03
+wrapper-before-refusal and AUTH-02 password redaction remain exact. The two042
+global-fetch absence cases and039/040/041 work remain for their assigned causes.
+The037 helper remains176 lines,12 exports, blob
+ad02884ba05cadfa45959eb8c283720ca56eb27e. Its earlier12 test-project complete
+queries versus12 production unavailable/excluded results are not upgraded.
+
+Native evidence is under /private/tmp/guardian038-native. Each attempt retains
+argv, UTC start/end, source HEAD, Nodev26.11.1/npm11.20.0, raw exit, separate
+stdout/stderr, exact regular-input bytes/modes, literal symlinks, full binary
+input/staged patches and content-addressed input objects. The run/read tools
+were adapted only after reading the complete corrected037 examples. File-input
+git hash-object calls are bounded; no stdin hash hang or truncated read is
+claimed as complete. The real04-16 ledger and parent initial-ledger checkpoint
+were read directly and agree with af6f9c9; neither is reconstructed or rewritten.
+
+Final implementation checks run in this shared checkout, serially:
+
+| Native attempt | Command / result |
+| --- | --- |
+| build-complete | npm run build:test; raw0 |
+| owner-complete | node --test --test-reporter=tap dist-test/test/platform.test.js; raw0,74/74,zero fail/cancel/skip/todo |
+| coverage-complete | npm run test:coverage:direct -- src/platform.ts test/platform.test.ts; raw0, isolated100% all three metrics |
+| native-coverage-complete | Separate native TAP+LCOV, include dist-test/src/platform.js only; raw0,74/74 |
+| lint-cleanup-final | Installed eslint --no-cache src/platform.ts test/platform.test.ts; raw0 |
+| compiler-production / compiler-test | Separate installed tsc --noEmit --project tsconfig.json and tsconfig.test.json; each raw0; later final build covers final cleanup changes |
+| preservation-complete | Installed TypeScript AST, all tracked bytes/modes, complete read ranges and recursive historical classifier/Git proof; raw0 |
+
+Separate native LCOV is /private/tmp/guardian038-platform.lcov with exactly
+SF:dist-test/src/platform.js, LF508/LH508, FNF22/FNH22, BRF63/BRH63. These
+are compiled native denominators, not substituted merged/source-map counts.
+Parent owns the later full npm run check; no full-gate pass is claimed here.
+
+Both actual current RED JSON paths were checked by the SAME installed CLI,
+each returning raw0/RED_EVIDENCE_OK/target_test_failed. The same installed
+classifyRedEvidence recursively reclassified ALL16 ACCOUNT-RUNTIME and7
+PLATFORM records,23 total, with actual sourceCommit:path -> sourceBlob Git
+resolution and ancestor checks. Saved source/test text blobs, where recorded,
+match their declared objects. The immutable full-history blobs remain
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. No history was rewritten, no new
+genuine RED was inferred and no new assertion-maintenance mutation was made.
+
+All unsuccessful attempts remain unsuccessful. owner-tap-1/2/3 each failed
+AUTH-02 with native fs.watch EMFILE in the constrained sandbox, then needed
+owned-process termination because the setup exception preceded shutdown.
+The complete TAP and terminal raw1 are retained. My initial tail-only diagnosis
+incorrectly called all cases successful and attributed the live process to
+callback ordering; complete TAP inspection corrected that diagnosis. The
+isolated8-case diagnostic and temporary async_hooks resource capture confirmed
+the watcher exception and resulting ordinary runtime waits. Diagnostic
+supervisor exits are not owner passes. Sandbox ps/kill permission denials and
+their authorized exact-process retries remain in the tool transcript.
+
+Native filesystem access passed the full owner, selector and separate LCOV.
+After the early teardown correction, watcher-sandbox-cleanup and
+watcher-sandbox-complete each terminate naturally with raw1,1 failed case,
+EMFILE,zero cancelled/skipped cases; neither is called GREEN. This is an
+execution-environment limit, with no persistent repository permission/setup
+change or all-sandbox guarantee. The parent explicitly accepted native watch
+plus awaited readback within existing real-FS scope and will use the same
+routine native filesystem access for the combined gate. Node's fs.watch
+documentation describes final-name rename events and its platform/filename
+limits: https://nodejs.org/api/fs.html#fswatchfilename-options-listener .
+The local installed definitions and native Nodev26.11.1 run govern this proof;
+the retrieved documentation currently labels itselfv26.12.0. No universal
+filesystem notification or fsync durability guarantee is claimed.
+
+Initial uncached lint failed raw1 on the newly extracted unbound observer;
+the guarded receiver-binding repair passed. Cleanup lint then failed raw1 on
+prefer-const; teardown now clears its released optional watcher reference and
+the fresh uncached lint passes. The first temporary preservation proof failed
+raw1 because its expected count omitted the extra post-grant signal (actual15
+versus14); the corrected proof passes. An initial classifier command used the
+nonexistent04-ACCOUNT-RED-EVIDENCE.json and returned raw0/INVALID_RED/
+unreadable_record; only the corrected actual ACCOUNT-RUNTIME path establishes
+RED_EVIDENCE_OK. These are check/setup attempts, not behavior defects.
+
+Complete mandatory reads include all five books, AGENTS/bootstrap, current16
+plan, current context/protocol/research/patterns, canonical decisions/state/
+roadmap/requirements/findings, applicable01/02/03 history,13 human supersession
+and13–15 summaries, the whole8266-line report,3836-line original owner, all
+three complete production files and complete176-line helper. Actual arrival
+anchors/API/timers/fake HAP/API helpers and caller bodies were read. The native
+range/hash ledger verifies contiguous full primary reads,853533 original
+bytes, and unchanged source hashes across normal compaction. Truncated combined
+outputs were refilled; an initial wrong02 directory read was corrected.
+Some bootstrap/direct read/process-control calls have transcript-only evidence,
+without native UTC envelopes; no historical envelope is invented. The earlier
+premature FINAL cited output/reasoning budget without an observed host failure;
+the same cause resumed, normal compaction succeeded, and all required reads
+completed. Advisory forecasts/configured windows are not measured capacity.
+
+The subsequent real-base audit, exact clean pre-step BEFORE staging and plain
+foreground cause commit retain their own native outcomes and normal hooks.
+This pre-commit appendix does not declare those results in advance. No summary,
+shared-state edit, review closure, later-cause repair, PR, push or deployment is
+performed by038. Parent resumes the next serial cause only after actual final.
