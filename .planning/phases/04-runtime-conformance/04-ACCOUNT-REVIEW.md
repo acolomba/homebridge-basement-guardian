@@ -9821,3 +9821,152 @@ unclassified/unresolved and flagged, one edge = zero lifted + one flagged;
 descriptorless P-04-01/P-04-02 stay unverified, two authored and zero omitted.
 No independent closure, new review, human approval, full npm run check, phase,
 seal, release or real-home claim is made. The parent owns the combined gate.
+
+### CR-04-ACCOUNT-045 implementation: complete configured catalogue observation
+
+This is bounded assertion maintenance against input HEAD
+`d712771f9c67ad97088e085ce3d5b5ff7956bdbc`, on the existing
+`features/code-review-sweep` linked checkout. The parent granted the fixer the
+serial repository, build, control and Git lease. `workflow.use_worktrees=false`
+was honored. No checkout, configuration or recovery marker was created.
+
+The case `publishes every adapter but the one an administrator ignored` now
+compares the complete published catalogue with sixteen independently written
+literal names, in order, before `verify(context.api)`. The expected sequence is
+Sump Pit Flood; Sump Pit Level; Primary Pump; Primary Pump Running; Backup Pump;
+Backup Pump Running; Sump Mains Power; Backup Battery Level; Backup Battery;
+Primary Pump Fault; Backup Pump Fault; Water Sensor Fault; Pump Controller Link
+Lost; System Self-Test; Alarm Mute; Basement Guardian Offline.
+
+The original explicit ignored `mains-power-lost` subtype and present
+`primary-pump-fault` sibling comparison remains unchanged. So do the exact finite
+API expectations that check accessory identity, configured ownership, device
+context and persisted state. The existing `publishedServiceNames` observer is
+unchanged; the expected array calls no catalogue, filter, adapter or helper.
+Only eighteen assertion lines were added. Every other case and helper remains,
+including unknown-profile restart suppression and the accepted 031/026/043,
+redaction and architecture promises. No declaration, signature, visibility,
+mutability, shared alias or private interface changed; no contract-impact
+exception was invoked.
+
+#### Actual reads and preservation
+
+The same fixer read the whole 9,823-line report and all five complete project
+books: Google style, comments, unit writer, unit reviewer and local verification.
+It read complete AGENTS, 19 PLAN, CONTEXT, PROTOCOL, PROJECT, STATE, ROADMAP,
+REQUIREMENTS, decisions, RESEARCH, PATTERNS, 13/18 plans and 17 summary. Complete
+source/owner/seeds and publication helpers were read, including their headers:
+platform.ts, platform.test.ts, platformSeeds.ts, basementGuardian.ts,
+serviceCatalogue.ts and services.ts. Actual structural callers and support
+bodies were read in full: world.ts, realWorld.ts, shadow steps, index source and
+owner, fakeHap.ts, fakeHomebridgeApi.ts, logging source/owner and monitoringHealth
+source/owner. The feature instructions and complete Cucumber book were read.
+These supporting reads make no later subsystem or independent-review claim.
+
+Bounded contiguous displayed ranges and their exact file hashes/bytes/UTC are
+retained in `/private/tmp/guardian-045-0QMiiN/read-ledger.jsonl`. Truncated initial
+aggregate reads were refilled by smaller fully displayed ranges. The incomplete
+STATE aggregate attempts (251–500 and 501–748) and first interrupted 621–748
+attempt are not substitutes for their completed smaller/refilled reads.
+Normal host context continuation reconciled unchanged bytes and hashes.
+Required read coverage has no outstanding missing range.
+
+Before the control, `baseline/manifest.json` and
+`guard-control-input/manifest.json` saved all actual 718 tracked inputs, modes,
+nonignored untracked inventory (empty), patches and compiled inputs. File and
+literal symlink content lives under the same directory's content-addressed
+`objects/`. Directory links were not recursively followed. All 44 production
+files (43 TypeScript plus protocol.json), 464,915 bytes, were saved. The exact
+three directory-link bodies are:
+
+- `.claude/skills/new-gsd-milestone` -> `../../.agents/skills/new-gsd-milestone`
+- `.claude/skills/new-gsd-workspace` -> `../../.agents/skills/new-gsd-workspace`
+- `.claude/skills/babysit-pr` -> `../../.agents/skills/babysit-pr`
+
+The complete original report prefix is 679,013 bytes, SHA256
+`94ad7244c6f29bcab218939dff4def4f08e917b9b200e6731379d5fabd467375`.
+That includes every earlier implementation append, not only the planning-time
+prefix. Its exact saved bytes and canonical-root containment were checked
+before this append. All prior histories and both genuine evidence JSON files
+remain unchanged.
+
+#### Declared maintenance control and exact restoration
+
+Fresh reads and installed exact-path Fallow guards preceded the owner edit,
+temporary source edit, source restoration and this append. The sole control
+changed the `ignoredFaults` argument inside
+`createBasementGuardianAccessoryFor` to add `backup-pump-fault` only when the
+configured list was nonempty. The empty branch passed through unchanged and
+Primary Pump Fault stayed present. No other source or contract changed.
+
+After fresh compilation, the exact fully qualified anchored configured target
+executed once and failed at the new `deepStrictEqual` catalogue assertion:
+expected sixteen, actual fifteen, solely missing Backup Pump Fault. The prior
+ignored/sibling observation passed before that comparison. Native TAP records
+one failed test, zero cancelled/skipped/todo and no setup, mock, import or
+permission failure. This is a controlled wrong implementation, not genuine
+production RED or a new bug. No old-owner GREEN comparison was measured.
+
+Every owned control process reached terminal before restoration. After a fresh
+source read/guard, `git checkout -- src/platform.ts` restored the saved source.
+`restored-preservation.json` proves all 44 production byte/mode records and all
+three literal symlink records equal baseline, with no owned process left,
+BEFORE `green-build` started. Only the intended test changed at that point.
+No temporary control bytes are staged or committed.
+
+#### Current native checks and actual limits
+
+All commands ran serially in the existing linked checkout on Node v26.11.1,
+npm 11.20.0. Each named capture below has unique `.json`, full `.stdout` and
+`.stderr` files under `/private/tmp/guardian-045-0QMiiN/`, with exact argv/cwd,
+input HEAD, saved inputs/compiled bytes/modes, actual UTC and raw exit. Its owned
+process and process group were terminal before the next command.
+
+| Capture | UTC start–end on 2026-10-16 | Raw result |
+| --- | --- | --- |
+| control-build: `npm run build:test` | 07:05:05.505147–07:05:08.878152 | 0 |
+| control-target: qualified configured target, explicit TAP | 07:05:14.872484–07:05:15.456359 | 1; intended catalogue comparison |
+| restore-source: `git checkout -- src/platform.ts` | 07:05:48.156668–07:05:48.413979 | 0 |
+| green-build: `npm run build:test` | 07:05:50.604484–07:05:53.942666 | 0 |
+| green-target: same qualified configured target, TAP | 07:05:59.030160–07:05:59.622115 | 0; one pass |
+| green-whole-platform: `node --test --test-reporter=tap dist-test/test/platform.test.js` | 07:06:01.571657–07:06:02.274876 | 0; all 70 pass, zero fail/cancel/skip/todo |
+| isolated-platform-pair: `npm run test:coverage:direct -- src/platform.ts test/platform.test.ts` | 07:06:10.042779–07:06:14.267301 | 0; isolated source/owner selector |
+| native-platform-lcov: sole-source native coverage, TAP plus LCOV | 07:06:16.419127–07:06:17.199317 | 0; all 70 pass |
+| uncached-eslint: `node_modules/.bin/eslint . --max-warnings=0 --no-cache` | 07:06:24.982709–07:06:34.827429 | 0 |
+| typecheck-source: `node_modules/.bin/tsc --noEmit -p tsconfig.json` | 07:06:36.490145–07:06:37.941637 | 0 |
+| typecheck-test: `node_modules/.bin/tsc --noEmit -p tsconfig.test.json` | 07:06:39.986167–07:06:42.533509 | 0 |
+
+`platform-native.lcov` contains exactly one native source record,
+`SF:dist-test/src/platform.js`: LH/LF 508/508, FNH/FNF 22/22, BRH/BRF 63/63.
+All are 100%; aggregate or helper metrics do not substitute. Relative `.js`
+imports and the compiled layout are preserved.
+
+Initial read/discovery commands and direct patch-tool edits are transcript
+evidence, without invented native edit-process timestamps. One initial
+unqualified `fallow` discovery was unavailable on PATH; the installed
+`node_modules/.bin/fallow` was then used. The first guard capture's observer
+could not execute sandbox `ps`; its streams and partial running record remain,
+without reconstructing a missing end timestamp/raw verdict envelope. The
+fresh `guard-owner-native` capture completed natively with raw0 and no owned
+process. Reader range-bound failures and truncated aggregate displays were
+refilled; none supplies test evidence. No build or test attempt failed except
+the intended control. Historical watcher EMFILE/raw1 and packaging sandbox
+permission failures remain unwaived. Native filesystem checks do not establish
+universal sandbox support. No install, permission change or configuration
+workaround was used.
+
+Fallow guard reports no configured boundary zones/rule packs; that is not
+architecture coverage. After this append the final real-base audit, exact
+hook-path guard and clean `SKIP=npm-check` pre-step must precede exact staging
+and normal foreground Git commit with SKIP absent. Their actual native outcome
+and Git object establish completion; this appendix does not predict them.
+
+The bounded permanent change is owner plus this original report; the already
+committed 19 declaration and temporary restored platform source complete the
+four-path cause union. No SUMMARY, shared metadata, helper, config or JSON
+history changed. 045 awaits the ONE independent whole correction 3. Accepted
+IDs stay 48, independently closed 43, open exactly 041,045,046,047,048; the
+continuous counter remains 2. RUN-01 stays Pending, WINDOWS 46–58 OPEN/unwaived.
+E-04-01 remains unclassified/unresolved/flagged, one edge equals zero lifted
+plus one flagged; P-04-01/P-04-02 remain descriptorless/unverified, two authored
+and zero omitted. The parent owns readiness, full gates and independent review.

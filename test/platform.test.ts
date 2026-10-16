@@ -3385,6 +3385,24 @@ describe('registerDiscoveredDevices', () => {
       },
       { ignored: true, sibling: true },
     );
+    assert.deepStrictEqual(publishedServiceNames(accessory), [
+      'Sump Pit Flood',
+      'Sump Pit Level',
+      'Primary Pump',
+      'Primary Pump Running',
+      'Backup Pump',
+      'Backup Pump Running',
+      'Sump Mains Power',
+      'Backup Battery Level',
+      'Backup Battery',
+      'Primary Pump Fault',
+      'Backup Pump Fault',
+      'Water Sensor Fault',
+      'Pump Controller Link Lost',
+      'System Self-Test',
+      'Alarm Mute',
+      'Basement Guardian Offline',
+    ]);
     verify(context.api);
   });
 
