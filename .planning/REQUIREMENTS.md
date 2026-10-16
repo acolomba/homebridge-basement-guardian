@@ -29,7 +29,7 @@ Each covers the source modules and their paired tests against the style, comment
 
 - [x] **CLOUD-01**: `src/cloud/**` and `test/cloud/**` conform.
 - [x] **DEV-01**: `src/device/**`, `src/persistence/**`, and their tests conform.
-- [ ] **RUN-01**: `src/runtime/**` and `test/runtime/**` conform.
+- [x] **RUN-01**: `src/runtime/**` and `test/runtime/**` conform.
 - [ ] **ACC-01**: `src/accessories/**` and `test/accessories/**` conform.
 - [ ] **ROOT-01**: The root modules `src/*.ts` and their tests conform.
 - [ ] **FEAT-01**: `features/**/*.feature` follow the Gherkin rules in `features/CLAUDE.md` and `skills/cucumber-behavioral-testing`.
@@ -67,7 +67,7 @@ Each covers the source modules and their paired tests against the style, comment
 | SPOT-04 | Phase 1 | Complete |
 | CLOUD-01 | Phase 2 | Complete |
 | DEV-01 | Phase 3 | Complete |
-| RUN-01 | Phase 4 | Pending |
+| RUN-01 | Phase 4 | Complete |
 | ACC-01 | Phase 5 | Pending |
 | ROOT-01 | Phase 6 | Pending |
 | FEAT-01 | Phase 7 | Pending |
