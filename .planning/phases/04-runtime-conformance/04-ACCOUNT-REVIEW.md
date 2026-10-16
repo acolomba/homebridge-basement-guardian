@@ -7899,3 +7899,110 @@ correction verdict or count reset follows from this implementation: 44 accepted,
 29 independently closed,15 open030–044, counter 1. Whole correction 2 remains
 assigned to 17. RUN-01 stays Pending; WINDOWS 46–54 remain OPEN and unwaived.
 Parent owns the full combined gate, shared records, remaining causes and seal.
+
+### CR-04-ACCOUNT-035 implementation — public domain observations
+
+Task04-15-01 replaces incidental output assertions in nine platform cases with
+silent typed logs, complete independent public state and exact interactions.
+The missing-email case observes an empty accessory map and no API listener.
+Credential-refusal cases observe complete accessory/instance membership,
+retained control and leak readings, and the public trust-read failures. Three
+unsupported/unknown inventory cases retain complete literal canonical snapshots
+while publishing nothing. Per-device isolation observes both canonical devices
+and only the healthy device's accessory, instance and registration. Repeated
+polls preserve the exact same accessory and live instance references.
+
+CONF-03 wrapper-before-refusal and both AUTH-02 security cases remain explicit
+security observations, with public state checked before diagnostic output.
+Accepted-password registration still exercises the real redacting wrapper and
+its delegate. The complete generated 031 case body remains byte-identical,
+including both uncertain-registration rows, registered-secret redaction and
+the fixed actionable restart diagnostic. Its fail-visibly-until-restart policy
+is unchanged. Original 026 preparation/retry, ownership, listeners, restored
+accessories and healthy-neighbor outcomes remain active. No incidental log-only
+case substitutes for a domain outcome.
+
+Only test/platform.test.ts and this append change. All 44 production files,
+all 38 owner-local function declarations, all 44 fakeDiscoveryApi calls and
+all three tracked directory-symlink targets retain exact bytes and modes.
+The 65 authored test declarations remain; 12 bodies change (nine domain cases
+and three security-state/order adjustments), with 53 bodies byte-identical.
+The newly orphaned NOTHING_MARKED constant is removed after lexical inspection;
+no helper signature, private member, constructor, PlatformDeps, shared contract,
+source API, logging owner, evidence JSON or policy changes. The existing real
+logger/config proof suffices, so no optional production logger factory is needed.
+
+The earlier read-only constructor impact queries each returned raw2/unknown
+symbol in tsconfig.json and tsconfig.test.json. They remain unavailable and
+unmet; this contract-preserving route does not depend on them. PlatformDeps
+queries returned raw0 separately. No substitute query spelling or inferred
+constructor-consumer waiver is claimed. The prior feasibility terminal was
+followed by explicit same-cause authorization for this test-only route.
+
+Native evidence lives in /private/tmp/guardian035-native. Each captured command
+has actual UTC, argv, raw exit, Node/npm/HEAD and complete tracked/untracked
+byte/mode manifests, literal symlink bodies, patches and compiled inputs. The
+corrected runner waits for the actual child terminal and bounds Git children;
+hash-object reads saved files rather than an unclosed stdin. Verification ran
+in the existing linked checkout with isolation:none and worktrees disabled.
+Node was v26.11.1 and npm was 11.20.0. Actual checks on the final owner input:
+
+| Native attempt | Raw result |
+| --- | --- |
+| build-test | 0; fresh build:test,02:24:33.390376–02:24:37.006326UTC |
+| owners-tap | 0; whole platform and logging owners,107 pass (74+33),0 fail/cancel/skip/todo |
+| direct-pairs | 0; exact platform and logging source/owner pairs at100% |
+| typecheck-source / typecheck-test | 0 /0; separate nonincremental noEmit projects |
+| lint | 0; uncached platform owner/source, zero warnings |
+| native-platform | 0; exact SF dist-test/src/platform.js,508/508 lines,22/22 functions,63/63 branches |
+| native-logging | 0; exact SF dist-test/src/logging.js,127/127 lines,11/11 functions,29/29 branches |
+| red-account-cli / red-platform-cli | 0 /0; installed actual-file CLI, RED_EVIDENCE_OK |
+| preservation-proof | 0;02:26:40.634536–02:26:54.627631UTC; complete preservation and all23 histories |
+
+The SAME installed classifyRedEvidence function checks all recursive records,
+including priorEvidence: ACCOUNT16 and PLATFORM7. Each sourceCommit:path
+resolves to its recorded sourceBlob, is an ancestor of current HEAD, and saved
+source/owner texts match their recorded blobs. Immutable JSON blobs remain
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. This maintenance exposes no new
+production defect and invents no behavioral RED or assertion-maintenance control.
+Existing historical failures are retained. This report's original544928-byte
+prefix remains exact at blob2da3cec4b1ff546e45359ad84a1d0cdcb15b2dce.
+
+Mandatory complete reads include AGENTS, all five TypeScript/comment/test/local
+verification books, current15 plan/context/protocol and whole7901-line report,
+canonical830-line decisions, referenced planning context,13 supersession/summary,
+14 summary, full owned platform source/tests and logging/config read-first pairs,
+actual root/World callers, installed Fallow skill/help and applicable docs.
+The durable /private/tmp/guardian-035-read-ledger.jsonl records43 contiguous
+range emissions with HEAD/blob/SHA-256/size. Earlier complete direct tool reads
+are transcript evidence; they are not retroactively assigned native timestamps.
+Truncated combined displays were refilled. Same-cause compaction checked starting
+hashes, and no required read was dropped because of the advisory100k figure.
+No measured host-capacity or actual harness-token claim follows from configured1m.
+
+Capture limits remain explicit: the initial missing-python127, incorrect
+resolve-execution raw1, missing temporary proof-path read, and some read-only
+help/read commands have transcript outputs without separate native UTC envelopes.
+Fresh resolve-model was empty (model omitted), its correct effort query returned
+high, and fresh skills listed comments/unitwriter/google/local; the fifth review
+book was also read completely. These limits and unavailable constructor queries
+remain failures/limits, not successful API proof. Native builds/tests/compilers,
+coverage, lint and evidence checks above all reached their actual terminals.
+
+The subsequent captured audit uses the actual15 ledger base d8dc569. Exact clean
+pre-step, individual staging and normal foreground commit retain their own raw
+native records and hook output. Parent must run the combined full gate on the
+new inputs. No independent correction verdict or closure is recorded:44 accepted,
+29 independently closed,15 open030–044, counter1; whole correction2 remains in17.
+RUN-01 remains Pending and WINDOWS46–55 remain OPEN and unwaived. No shared
+record, summary, later cause or review round is changed by this implementation.
+
+The first cause-audit returned raw2 because the sandbox could not create its
+temporary baseline worktree through the linked Git directory. The authorized
+routine escalation rerun returned raw0/verdict pass at
+02:28:02.259182–02:28:03.252160UTC against the same actual15 base, with zero
+introduced dead-code, complexity or duplication findings. Its warning about
+two cache entry points remains in raw stderr. No architecture boundaries or
+rule packs are configured; zero such counts do not claim measured coverage.
+The raw2 attempt remains retained alongside the successful rerun.

@@ -504,12 +504,6 @@ function restoredAccessoryCarryingNoTrustReport(): { accessories: Map<string, Ba
   };
 }
 
-// The line the platform logs when a refusal reached nothing, written out here rather than imported,
-// so a reworded line fails this file as well as the source.
-const NOTHING_MARKED =
-  'The vendor refused the account credentials. No accessory shows this, because no cached service reports whether the plugin vouches for it. ' +
-  'Correct the account email and password in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
-
 /** One restored accessory with the live instance that publishes onto its services. */
 interface RepublishingAccessory {
   accessories: Map<string, BasementGuardianPlatformAccessory>;
@@ -1000,16 +994,14 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
-  test('logs one actionable refusal and registers no listener when the account email is missing', () => {
+  test('keeps the accessory map empty and registers no listener when the account email is missing', () => {
     // arrange
-    const messages: string[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
 
     // act
-    const platform = new BasementGuardianPlatform(createRecordingLog(messages), emptyConfig, api);
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig, api);
 
     // assert
-    assert.deepStrictEqual(messages, [`Not starting: the account email is missing. ${REFUSAL_ADVICE}`]);
     assert.deepStrictEqual(platform.accessories, new Map());
     verify(api);
   });
@@ -1024,8 +1016,8 @@ describe('BasementGuardianPlatform', () => {
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, pollInterval: 'Bearer leaked-token' }, api);
 
     // assert
-    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
     assert.deepStrictEqual(platform.accessories, new Map());
+    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
     verify(api);
   });
 
@@ -1039,8 +1031,8 @@ describe('BasementGuardianPlatform', () => {
     const platform = new BasementGuardianPlatform(createRecordingLog(messages), { ...accountConfig, email: 'jane.doe@company' }, api);
 
     // assert
-    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
     assert.deepStrictEqual(platform.accessories, new Map());
+    assert.deepStrictEqual(messages, [`Not starting: ${refusedReason} ${REFUSAL_ADVICE}`]);
     verify(api);
   });
 
@@ -1059,6 +1051,7 @@ describe('BasementGuardianPlatform', () => {
     platform.log.info('the grant used account-password');
 
     // assert
+    assert.deepStrictEqual(platform.accessories, new Map());
     assert.deepStrictEqual(messages, ['the grant used [redacted]']);
     verify(user);
     verify(api);
@@ -1825,18 +1818,14 @@ describe('applyMonitoringHealth', () => {
     );
   });
 
-  // The marking pass reaches every service that carries a trust report and no others, so a cache
-  // written before that row was published is refused credentials with nothing marked in HomeKit and,
-  // without this line, nothing anywhere else either (WR-08, D-10).
-  test('tells an operator when a credential refusal reached no service at all', () => {
+  test('retains a cached control without inventing a trust characteristic when credentials are refused', () => {
     // arrange
-    const messages: string[] = [];
     const restored = restoredAccessoryCarryingNoTrustReport();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: restored.accessories,
       registry: unknownRegistry(),
-      log: createRecordingLog(messages),
+      log: createSilentLog(),
     });
     when(() => context.api.hap).thenReturn(HAP_NAMESPACE);
 
@@ -1846,26 +1835,24 @@ describe('applyMonitoringHealth', () => {
     // assert
     assert.deepStrictEqual(
       {
-        messages,
+        accessoryIds: [...context.accessories.keys()],
+        instanceIds: [...context.basementGuardianAccessories.keys()],
         carriesTrust: restored.control.testCharacteristic(HAP.Characteristic.StatusActive),
         on: readOf(restored.control, HAP.Characteristic.On),
       },
-      { messages: [NOTHING_MARKED], carriesTrust: false, on: { value: true, threw: undefined } },
+      { accessoryIds: [ACCESSORY_UUID], instanceIds: [], carriesTrust: false, on: { value: true, threw: undefined } },
     );
     verify(context.api);
   });
 
-  // One line per refusal per accessory would be noise: a marked tile stops answering, which is the
-  // presentation itself. The line names the case that has no presentation, and nothing else.
-  test('says nothing extra when the refusal marked the services it reached', () => {
+  test('retains both cached accessories and their readings while refused credentials make trust unreadable', () => {
     // arrange
-    const messages: string[] = [];
     const restored = restoredAccessories();
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: restored.accessories,
       registry: unknownRegistry(),
-      log: createRecordingLog(messages),
+      log: createSilentLog(),
     });
     when(() => context.api.hap)
       .thenReturn(HAP_NAMESPACE)
@@ -1875,28 +1862,41 @@ describe('applyMonitoringHealth', () => {
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
-    assert.deepStrictEqual({ messages, statuses: statusesOf(restored.floods) }, { messages: [], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] });
+    assert.deepStrictEqual(
+      {
+        accessoryIds: [...context.accessories.keys()],
+        instanceIds: [...context.basementGuardianAccessories.keys()],
+        reads: trustReadsOf(restored.floods),
+      },
+      {
+        accessoryIds: [ACCESSORY_UUID, SECOND_ACCESSORY_UUID],
+        instanceIds: [],
+        reads: [
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        ],
+      },
+    );
     verify(context.api);
   });
 
-  // An empty accessory map is a zero too, and it says nothing is wrong: a launch the vendor refused
-  // before the first inventory has nothing to mark. The condition worth a line is a cache holding
-  // accessories and no trust report on any of them, so the count alone is not the test.
-  test('says nothing for a refusal that arrived before this run had any accessory to mark', () => {
+  test('creates no accessory or live instance when credentials are refused before discovery', () => {
     // arrange
-    const messages: string[] = [];
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: new Map<string, BasementGuardianPlatformAccessory>(),
       registry: unknownRegistry(),
-      log: createRecordingLog(messages),
+      log: createSilentLog(),
     });
 
     // act
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, NO_DEVICE_ANSWERED);
 
     // assert
-    assert.deepStrictEqual(messages, []);
+    assert.deepStrictEqual(
+      { accessories: context.accessories, instances: context.basementGuardianAccessories },
+      { accessories: new Map(), instances: new Map() },
+    );
     verify(context.api);
   });
 
@@ -2567,7 +2567,7 @@ describe('registerDiscoveredDevices', () => {
     verify(api);
   });
 
-  test('explains and skips an unsupported device, registering nothing for it', () => {
+  test('retains an unsupported device in canonical state without publishing an accessory', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
@@ -2575,46 +2575,33 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
-    const messages: string[] = [];
+    const context = discoveryContext({ api, accessories, registry: unsupportedRegistry(true), log: createSilentLog() });
 
     // act
-    registerDiscoveredDevices(
-      discoveryContext({ api, accessories, registry: unsupportedRegistry(true), log: createRecordingLog(messages) }),
-      [DEVICE_ID],
-      store,
-    );
-
-    // assert
-    const expectedMessage = `Skipping ${DEVICE_ID}: Wayne Water HALO (${DEVICE_TYPE_ID}) is a recognized but unsupported device family.`;
-    assert.deepStrictEqual(
-      { accessoryCount: accessories.size, registerCalls, messages },
-      { accessoryCount: 0, registerCalls: [], messages: [expectedMessage] },
-    );
-    verify(api);
-  });
-
-  test('explains and skips an unknown device, registering nothing for it', () => {
-    // arrange
-    const registerCalls: FakeApiCall[] = [];
-    const api = fakeDiscoveryApi(registerCalls);
-    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    when(() => api.hap).thenReturn(HAP_NAMESPACE);
-    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
-    store.applyDiscovery(geminiDevice());
-    const messages: string[] = [];
-
-    // act
-    registerDiscoveredDevices(discoveryContext({ api, accessories, registry: unknownRegistry(), log: createRecordingLog(messages) }), [DEVICE_ID], store);
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
-      { accessoryCount: accessories.size, registerCalls, messages },
-      { accessoryCount: 0, registerCalls: [], messages: [`Skipping ${DEVICE_ID}: ${DEVICE_TYPE_ID} is not a recognized device family.`] },
+      { accessories, instances: context.basementGuardianAccessories, canonical: store.snapshot(DEVICE_ID) },
+      {
+        accessories: new Map(),
+        instances: new Map(),
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: {},
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+      },
     );
+    assert.deepStrictEqual(registerCalls, []);
     verify(api);
   });
 
-  test('says nothing for a skipped device once the registry reports it already logged', () => {
+  test('retains an unknown device in canonical state without publishing an accessory', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
@@ -2622,17 +2609,63 @@ describe('registerDiscoveredDevices', () => {
     when(() => api.hap).thenReturn(HAP_NAMESPACE);
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
-    const messages: string[] = [];
+    const context = discoveryContext({ api, accessories, registry: unknownRegistry(), log: createSilentLog() });
 
     // act
-    registerDiscoveredDevices(
-      discoveryContext({ api, accessories, registry: unsupportedRegistry(false), log: createRecordingLog(messages) }),
-      [DEVICE_ID],
-      store,
-    );
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
 
     // assert
-    assert.deepStrictEqual({ accessoryCount: accessories.size, registerCalls, messages }, { accessoryCount: 0, registerCalls: [], messages: [] });
+    assert.deepStrictEqual(
+      { accessories, instances: context.basementGuardianAccessories, canonical: store.snapshot(DEVICE_ID) },
+      {
+        accessories: new Map(),
+        instances: new Map(),
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: {},
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+      },
+    );
+    assert.deepStrictEqual(registerCalls, []);
+    verify(api);
+  });
+
+  test('keeps an already explained unsupported device unregistered without removing canonical state', () => {
+    // arrange
+    const registerCalls: FakeApiCall[] = [];
+    const api = fakeDiscoveryApi(registerCalls);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    when(() => api.hap).thenReturn(HAP_NAMESPACE);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery(geminiDevice());
+    const context = discoveryContext({ api, accessories, registry: unsupportedRegistry(false), log: createSilentLog() });
+
+    // act
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { accessories, instances: context.basementGuardianAccessories, canonical: store.snapshot(DEVICE_ID) },
+      {
+        accessories: new Map(),
+        instances: new Map(),
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: {},
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+      },
+    );
+    assert.deepStrictEqual(registerCalls, []);
     verify(api);
   });
 
@@ -2725,22 +2758,47 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery({ ...geminiDevice(), deviceId: THROWING_DEVICE_ID });
     store.applyDiscovery(geminiDevice());
-    const messages: string[] = [];
     const registry: FamilyRegistry = { lookup: (): FamilyOutcome<unknown> => ({ kind: 'implemented', family: THROWING_FAMILY }), shouldLog: () => true };
+    const context = discoveryContext({ api, accessories, registry, log: createSilentLog() });
 
     // act
-    registerDiscoveredDevices(discoveryContext({ api, accessories, registry, log: createRecordingLog(messages) }), [THROWING_DEVICE_ID, DEVICE_ID], store);
+    registerDiscoveredDevices(context, [THROWING_DEVICE_ID, DEVICE_ID], store);
 
     // assert
     assert.deepStrictEqual(
       {
-        registeredDeviceIds: registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
-        messages,
+        accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+        instanceOwners: [...context.basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        canonical: store.deviceIds().map((deviceId) => store.snapshot(deviceId)),
       },
       {
-        registeredDeviceIds: [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }],
-        messages: [`Skipping ${THROWING_DEVICE_ID} on this inventory; every other device still updates.`],
+        accessoryOwners: [[ACCESSORY_UUID, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+        instanceOwners: [[ACCESSORY_UUID, DEVICE_ID]],
+        canonical: [
+          {
+            identity: { deviceId: THROWING_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+            connectivity: { connected: true, timestamp: 0 },
+            data: {},
+            metadata: {},
+            shadowVersion: undefined,
+            deviceTimestamp: 0,
+            receivedAt: 0,
+          },
+          {
+            identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+            connectivity: { connected: true, timestamp: 0 },
+            data: {},
+            metadata: {},
+            shadowVersion: undefined,
+            deviceTimestamp: 0,
+            receivedAt: 0,
+          },
+        ],
       },
+    );
+    assert.deepStrictEqual(
+      registerCalls.flatMap((call) => call.accessories.map((accessory) => accessory.context.device)),
+      [{ deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }],
     );
     verify(api);
   });
@@ -2812,7 +2870,7 @@ describe('registerDiscoveredDevices', () => {
     verify(api);
   });
 
-  test('reuses the same BasementGuardianAccessory across polls so the DEV-08 log-once state persists', () => {
+  test('reuses the same accessory and live instance across repeated polls', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
     const api = fakeDiscoveryApi(registerCalls);
@@ -2845,18 +2903,37 @@ describe('registerDiscoveredDevices', () => {
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     store.applyDiscovery(geminiDevice());
-    const messages: string[] = [];
-    const context = discoveryContext({ api, accessories, basementGuardianAccessories, registry: implementedRegistry(), log: createRecordingLog(messages) });
+    const context = discoveryContext({ api, accessories, basementGuardianAccessories, registry: implementedRegistry(), log: createSilentLog() });
 
     // act
     registerDiscoveredDevices(context, [DEVICE_ID], store);
+    const firstAccessory = accessories.get(ACCESSORY_UUID);
+    const firstInstance = builtAccessory(basementGuardianAccessories);
     registerDiscoveredDevices(context, [DEVICE_ID], store);
 
     // assert
-    const expectedMessage =
-      `Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
-      'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
-    assert.deepStrictEqual(messages, [expectedMessage]);
+    assert.deepStrictEqual(
+      {
+        accessoryOwners: [...accessories].map(([uuid, accessory]) => [uuid, accessory.context.device]),
+        instanceOwners: [...basementGuardianAccessories].map(([uuid, accessory]) => [uuid, accessory.deviceId]),
+        canonical: store.snapshot(DEVICE_ID),
+      },
+      {
+        accessoryOwners: [[ACCESSORY_UUID, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID }]],
+        instanceOwners: [[ACCESSORY_UUID, DEVICE_ID]],
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: {},
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+      },
+    );
+    assert.strictEqual(accessories.get(ACCESSORY_UUID), firstAccessory);
+    assert.strictEqual(builtAccessory(basementGuardianAccessories), firstInstance);
     verify(api);
   });
 
