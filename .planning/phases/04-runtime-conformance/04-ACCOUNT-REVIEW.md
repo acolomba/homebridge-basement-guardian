@@ -8006,3 +8006,108 @@ introduced dead-code, complexity or duplication findings. Its warning about
 two cache entry points remains in raw stderr. No architecture boundaries or
 rule packs are configured; zero such counts do not claim measured coverage.
 The raw2 attempt remains retained alongside the successful rerun.
+
+### CR-04-ACCOUNT-036 implementation — finite public interactions
+
+Task04-15-02 tightens the remaining platform interaction fixtures. The launch
+case prescribes two exact Auth0 requests through the existing HttpFetch port,
+including the complete request body, headers and live AbortSignal type/state.
+Its empty public accessory map precedes the request observations and explicit
+verification. The two known actual-transport-absence cases remain unchanged for
+042 in16; this change introduces no transport seam or new production API.
+
+Four accessory capture matchers now require one correctly named nominal harness
+accessory, its exact UUID and complete device identity before recording it.
+Six case-owned trust-notification mocks prescribe all four trust members, each
+once. They forward to the existing recording helpers so prior observations and
+helper contracts remain active. Every new mock is verified in its owning case
+after the complete existing public observations. The listener matcher checks
+the function type and zero-argument contract before capturing the callback.
+No unlimited expectation, isAny matcher or broad API cast is introduced.
+
+The 031 registration mocks now prescribe method invocations, complete plugin,
+platform and candidate arguments, and finite acceptance/failure outcomes. Both
+same-Error rows remain active: before acceptance and after acceptance. Their
+real redacting logger still observes registered-secret handling and the exact
+fixed actionable restart diagnostic. The stable platform-map ownership policy,
+rebuilt contexts, absence, removal, store.remove, reappearance, healthy neighbor,
+fresh-run ownership and authoritative configureAccessory outcomes remain.
+No acceptance oracle, automatic retry, compensation or restart guarantee is
+added. Original 026 preparation/retry assertions remain active. CONF-03 and
+accepted-password AUTH-02 security case bodies remain byte-identical to035.
+
+Real update spies retain their original implementations and observations.
+Three such cases now first assert complete independent canonical snapshots,
+public ownership and the relevant HomeKit contact value, or empty ownership
+after removal. A real spy is not replaced or presented as a canned stub.
+Existing exact registration/removal/update API expectations remain finite.
+No extra ordering timeline is invented for an unordered promise.
+
+Only test/platform.test.ts and this append change. The report's complete
+552201-byte prefix remains exact at blob772155e29c006eece6efb4459ed36ab6fcb87cac.
+All44 production files, non-owned tracked inputs, JSON evidence and three
+tracked directory-symlink targets retain bytes and modes. All38 local function
+names/signatures remain;37 declarations retain exact bodies and captureListener
+only adds its existing function-contract predicate. All44 fakeDiscoveryApi
+caller expressions and its overload remain exact. The65 authored declarations
+remain;13 case bodies change and52 retain exact bytes. Every original assertion
+remains exact after whitespace normalization except the launch request-count
+expression, which retains its independent expected2/0 outcome through the new
+typed request capture. No private contract is removed or reshaped.
+
+Native evidence is /private/tmp/guardian036-native. The corrected runner was
+read before reuse. Each captured attempt saves UTC, argv, raw exit, Node/npm,
+HEAD, full tracked/untracked byte/mode manifests, literal directory-symlink
+targets, patches and compiled inputs. Git children are bounded; hash-object
+reads saved files. Verification ran in the existing linked checkout with
+isolation:none, worktrees disabled, Node v26.11.1 and npm11.20.0.
+
+| Native attempt | Actual raw result |
+| --- | --- |
+| final-build | 0; fresh build:test,02:39:08.162266–02:39:11.226895UTC |
+| native-platform-final | 0; whole owner74 pass,0 fail/cancel/skip/todo |
+| native-platform-final | exact SF dist-test/src/platform.js;508/508 lines,22/22 functions,63/63 branches |
+| direct-platform-final | 0; exact src/platform.ts + test/platform.test.ts isolated100% |
+| compiler-production / compiler-tests-serialized | 0 /0; separate nonincremental noEmit projects |
+| lint-final | 0; uncached owner/source, zero warnings |
+| red-cli-account / red-cli-platform | 0 /0; current installed CLI on both actual JSON files |
+| preservation | 0; all23 recursive histories and Git source provenance |
+
+The SAME installed classifyRedEvidence implementation accepts ACCOUNT16 and
+PLATFORM7 recursive records, including priorEvidence. Every sourceCommit:path
+resolves to its actual sourceBlob and is an ancestor of HEAD; embedded source
+and owner texts match their recorded blobs. Immutable JSON blobs remain
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. Historical RED is retained without
+inventing a new production defect or assertion-maintenance control. The earlier
+constructor impact queries remain unavailable/unmet in both compiler projects
+and unused by this contract-preserving change; PlatformDeps results are unused.
+
+Complete mandatory reads covered AGENTS and all five books, the actual15 plan,
+context/protocol, whole8008-line report, canonical830-line decisions, referenced
+planning context,13 supersession/summary and14 summary. Full source673 lines,
+owner3673 lines, installed strong-mock declarations584 lines and README660 lines,
+actual callers and installed Fallow skill/help were read. Truncated displays
+were refilled. The read-completion inventory records revision/blob/hash/size and
+completed ranges from those transcript reads; the separate native read ledger
+retains subsequent range emissions. Neither byte capture nor configured1m is
+claimed as proof of a read or measured harness capacity. Same-cause compaction
+preserved completed reads; the advisory100k value omitted no mandatory scope.
+
+Capture limits are explicit. Initial direct read/help commands have transcript
+outputs without native UTC envelopes. One intermediate build returned raw2 for
+an optional fake characteristic access, and one lint returned raw1 for a missing
+blank line; both were fixed and fresh checks passed. An intermediate noEmit
+attempt overlapped a read-only guard; the serialized compiler-tests-serialized
+and guard-append-serialized reruns replace it as sequential evidence. The first
+read inventory used a wrong dispatcher path; the corrected inventory resolves
+src/cloud/httpDispatcher.ts with no missing path. All attempts remain retained.
+
+The actual15 ledger base remains d8dc569dff5264d21e0d451df382b89eb46633a0.
+Fallow audit, exact clean pre-step, individual staging and normal foreground
+commit are prerequisites recorded in the subsequent native attempts and terminal
+checkpoint. No claim here substitutes for their actual raw exits or hook output.
+Parent owns the combined full gate and whole correction2 in17. Continuous
+ACCOUNT1 remains44 accepted,29 independently closed,15 open030–044, counter1.
+RUN-01 remains Pending; WINDOWS46–55 remain OPEN and unwaived. No independent
+closure, new review round, summary, shared record or later cause is changed.

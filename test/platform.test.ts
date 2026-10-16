@@ -652,6 +652,10 @@ function registeredDevice(context: DiscoveryContext, accessories: Map<string, Ba
 // matcher doubles as the capture point for the registered listener.
 function captureListener(listeners: (() => void)[]): () => void {
   return It.matches((listener: () => void) => {
+    if (typeof listener !== 'function' || listener.length !== 0) {
+      return false;
+    }
+
     listeners.push(listener);
 
     return true;
@@ -1079,27 +1083,55 @@ describe('BasementGuardianPlatform', () => {
 
   test('starts the cloud work on the launch event and releases it on shutdown', async (t) => {
     // arrange
-    const requestSpy = t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('the vendor is unreachable')));
+    const requests: string[] = [];
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+    when(() =>
+      httpFetch('https://connectsense-staging.auth0.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'homebridge-basement-guardian' },
+        body: JSON.stringify({
+          grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
+          realm: 'wayne-water',
+          client_id: '6QsGT46CLgeTRGbDDGUwSANLPRA4n5Zs',
+          username: 'account@example.test',
+          password: 'account-password',
+          scope: 'openid profile email',
+        }),
+        signal: It.matches((signal: AbortSignal) => {
+          if (!(signal instanceof AbortSignal) || signal.aborted) {
+            return false;
+          }
+
+          requests.push('https://connectsense-staging.auth0.com/oauth/token');
+          return true;
+        }),
+      }),
+    )
+      .thenReject(new Error('the vendor is unreachable'))
+      .times(2);
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch: (input, init) => globalThis.fetch(input, init) });
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig, api, { httpFetch });
     const [launch, shutdown] = listeners;
 
     // act
     launch?.();
-    await until(() => requestSpy.mock.callCount() >= 2, 'the launch event to reach the vendor');
-    const requestsAfterLaunch = requestSpy.mock.callCount();
+    await until(() => requests.length >= 2, 'the launch event to reach the vendor');
+    const requestsAfterLaunch = requests.length;
     shutdown?.();
     await settle();
 
     // assert
+    assert.deepStrictEqual(platform.accessories, new Map());
     assert.deepStrictEqual(
-      { requestsAfterLaunch, requestsAfterShutdown: requestSpy.mock.callCount() - requestsAfterLaunch },
+      { requestsAfterLaunch, requestsAfterShutdown: requests.length - requestsAfterLaunch },
       { requestsAfterLaunch: 2, requestsAfterShutdown: 0 },
     );
+    assert.deepStrictEqual(requests, ['https://connectsense-staging.auth0.com/oauth/token', 'https://connectsense-staging.auth0.com/oauth/token']);
+    verify(httpFetch);
     verify(user);
     verify(api);
   });
@@ -1188,8 +1220,18 @@ describe('BasementGuardianPlatform', () => {
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
+          const accessory = accessories[0];
+          if (
+            accessories.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
 
+          registeredAccessories.push(accessory);
           return true;
         }),
       );
@@ -1254,8 +1296,18 @@ describe('BasementGuardianPlatform', () => {
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
+          const accessory = accessories[0];
+          if (
+            accessories.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
 
+          registeredAccessories.push(accessory);
           return true;
         }),
       );
@@ -1347,8 +1399,18 @@ describe('BasementGuardianPlatform', () => {
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          registeredAccessories.push(...(accessories as unknown as FakeAccessory[]));
+          const accessory = accessories[0];
+          if (
+            accessories.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
 
+          registeredAccessories.push(accessory);
           return true;
         }),
       );
@@ -1358,8 +1420,18 @@ describe('BasementGuardianPlatform', () => {
         PLUGIN_NAME,
         PLATFORM_NAME,
         It.matches((accessories: PlatformAccessory[]) => {
-          unregisteredAccessories.push(...(accessories as unknown as FakeAccessory[]));
+          const accessory = accessories[0];
+          if (
+            accessories.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
 
+          unregisteredAccessories.push(accessory);
           return true;
         }),
       );
@@ -1572,9 +1644,37 @@ describe('applyMonitoringHealth', () => {
   test('hands each accessory the answer for its own system', () => {
     // arrange
     const marks: string[] = [];
+    const firstAccessory = recordingBasementGuardianAccessory(DEVICE_ID, marks);
+    const firstNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'first accessory trust' });
+    when(() => {
+      firstNotification({ restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false });
+    }).thenReturn(undefined);
+    const secondAccessory = recordingBasementGuardianAccessory(SECOND_DEVICE_ID, marks);
+    const secondNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'second accessory trust' });
+    when(() => {
+      secondNotification({ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false });
+    }).thenReturn(undefined);
     const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>([
-      [ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)],
-      [SECOND_ACCESSORY_UUID, recordingBasementGuardianAccessory(SECOND_DEVICE_ID, marks)],
+      [
+        ACCESSORY_UUID,
+        {
+          ...firstAccessory,
+          markMonitoring: (trust) => {
+            firstNotification(trust);
+            firstAccessory.markMonitoring(trust);
+          },
+        },
+      ],
+      [
+        SECOND_ACCESSORY_UUID,
+        {
+          ...secondAccessory,
+          markMonitoring: (trust) => {
+            secondNotification(trust);
+            secondAccessory.markMonitoring(trust);
+          },
+        },
+      ],
     ]);
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
@@ -1596,6 +1696,8 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow false`]);
+    verify(firstNotification);
+    verify(secondNotification);
     verify(context.api);
   });
 
@@ -1613,13 +1715,41 @@ describe('applyMonitoringHealth', () => {
   test('makes an accessory the push never named decline to vouch, and hands it the account facts unchanged', () => {
     // arrange
     const heard = new Map<string, MonitoringTrust>();
+    const firstAccessory = trustRecordingBasementGuardianAccessory(DEVICE_ID, heard);
+    const firstNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'first accessory trust' });
+    when(() => {
+      firstNotification({ restDegraded: true, shadowSilent: false, commandTransportReady: false, credentialsRejected: false });
+    }).thenReturn(undefined);
+    const secondAccessory = trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard);
+    const secondNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'second accessory trust' });
+    when(() => {
+      secondNotification({ restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false });
+    }).thenReturn(undefined);
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: new Map<string, BasementGuardianPlatformAccessory>(),
       registry: unknownRegistry(),
       basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
-        [ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(DEVICE_ID, heard)],
-        [SECOND_ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard)],
+        [
+          ACCESSORY_UUID,
+          {
+            ...firstAccessory,
+            markMonitoring: (trust) => {
+              firstNotification(trust);
+              firstAccessory.markMonitoring(trust);
+            },
+          },
+        ],
+        [
+          SECOND_ACCESSORY_UUID,
+          {
+            ...secondAccessory,
+            markMonitoring: (trust) => {
+              secondNotification(trust);
+              secondAccessory.markMonitoring(trust);
+            },
+          },
+        ],
       ]),
     });
     // The account vouches for the live path here, and that is what makes the override observable: a
@@ -1639,6 +1769,8 @@ describe('applyMonitoringHealth', () => {
         unnamed: { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false },
       },
     );
+    verify(firstNotification);
+    verify(secondNotification);
     verify(context.api);
   });
 
@@ -1689,11 +1821,27 @@ describe('applyMonitoringHealth', () => {
     // arrange
     const marks: string[] = [];
     const restored = restoredAccessories();
+    const firstAccessory = recordingBasementGuardianAccessory(DEVICE_ID, marks);
+    const firstNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'first accessory trust' });
+    when(() => {
+      firstNotification({ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true });
+    }).thenReturn(undefined);
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: restored.accessories,
       registry: unknownRegistry(),
-      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [
+          ACCESSORY_UUID,
+          {
+            ...firstAccessory,
+            markMonitoring: (trust) => {
+              firstNotification(trust);
+              firstAccessory.markMonitoring(trust);
+            },
+          },
+        ],
+      ]),
     });
     when(() => context.api.hap)
       .thenReturn(HAP_NAMESPACE)
@@ -1720,6 +1868,7 @@ describe('applyMonitoringHealth', () => {
         ],
       },
     );
+    verify(firstNotification);
     verify(context.api);
   });
 
@@ -1730,11 +1879,27 @@ describe('applyMonitoringHealth', () => {
     // arrange
     const marks: string[] = [];
     const restored = restoredAccessories();
+    const firstAccessory = recordingBasementGuardianAccessory(DEVICE_ID, marks);
+    const firstNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'first accessory trust' });
+    when(() => {
+      firstNotification({ restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true });
+    }).thenReturn(undefined);
     const context = discoveryContext({
       api: fakeDiscoveryApi([]),
       accessories: restored.accessories,
       registry: unknownRegistry(),
-      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([[ACCESSORY_UUID, recordingBasementGuardianAccessory(DEVICE_ID, marks)]]),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [
+          ACCESSORY_UUID,
+          {
+            ...firstAccessory,
+            markMonitoring: (trust) => {
+              firstNotification(trust);
+              firstAccessory.markMonitoring(trust);
+            },
+          },
+        ],
+      ]),
     });
     when(() => context.api.hap)
       .thenReturn(HAP_NAMESPACE)
@@ -1748,6 +1913,7 @@ describe('applyMonitoringHealth', () => {
       { marks, statuses: statusesOf(restored.floods) },
       { marks: [`${DEVICE_ID} rest true shadow true`], statuses: [COMMUNICATION_FAILURE, COMMUNICATION_FAILURE] },
     );
+    verify(firstNotification);
     verify(context.api);
   });
 
@@ -1956,34 +2122,70 @@ describe('registerDiscoveredDevices', () => {
         delegate: Object.assign(createSilentLog(), {
           error: (message: string, ...parameters: unknown[]) => {
             diagnostic.error(message, ...parameters);
+            diagnostics.push([message, ...parameters]);
           },
         }),
         secrets: ['account-private', 'credential-private'],
       });
       log.registerSecret('token-private');
-      when(() => diagnostic.error).thenReturn((message: string, ...parameters: unknown[]) => {
-        diagnostics.push([message, ...parameters]);
-      });
-      when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
-        registrations.push({
-          plugin,
-          platform,
-          uuids: candidates.map((accessory) => accessory.UUID),
-          cached: candidates.map((accessory) => accessories.has(accessory.UUID)),
-          listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
-        });
-        accept(ACCESSORY_UUID, accepted);
-        throw registrationError;
-      });
-      when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
-        registrations.push({
-          plugin,
-          platform,
-          uuids: candidates.map((accessory) => accessory.UUID),
-          cached: candidates.map((accessory) => accessories.has(accessory.UUID)),
-          listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
-        });
-      });
+      when(() => {
+        diagnostic.error('Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.');
+      }).thenReturn(undefined);
+      when(() => {
+        registration.registerPlatformAccessories(
+          PLUGIN_NAME,
+          PLATFORM_NAME,
+          It.matches((candidates: PlatformAccessory[]) => {
+            const accessory = candidates[0];
+            if (
+              candidates.length !== 1 ||
+              !(accessory instanceof HarnessPlatformAccessory) ||
+              accessory.UUID !== ACCESSORY_UUID ||
+              accessory.displayName !== 'Sump System' ||
+              !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+            ) {
+              return false;
+            }
+
+            registrations.push({
+              plugin: PLUGIN_NAME,
+              platform: PLATFORM_NAME,
+              uuids: candidates.map((candidate) => candidate.UUID),
+              cached: candidates.map((candidate) => accessories.has(candidate.UUID)),
+              listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+            });
+            accept(ACCESSORY_UUID, accepted);
+            return true;
+          }),
+        );
+      }).thenThrow(registrationError);
+      when(() => {
+        registration.registerPlatformAccessories(
+          PLUGIN_NAME,
+          PLATFORM_NAME,
+          It.matches((candidates: PlatformAccessory[]) => {
+            const accessory = candidates[0];
+            if (
+              candidates.length !== 1 ||
+              !(accessory instanceof HarnessPlatformAccessory) ||
+              accessory.UUID !== SECOND_ACCESSORY_UUID ||
+              accessory.displayName !== 'Second System' ||
+              !isDeepStrictEqual(accessory.context.device, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+            ) {
+              return false;
+            }
+
+            registrations.push({
+              plugin: PLUGIN_NAME,
+              platform: PLATFORM_NAME,
+              uuids: candidates.map((candidate) => candidate.UUID),
+              cached: candidates.map((candidate) => accessories.has(candidate.UUID)),
+              listeners: subscribeSpy.mock.calls.map((call) => call.arguments[0]),
+            });
+            return true;
+          }),
+        );
+      }).thenReturn(undefined);
       const api: API = fakeDiscoveryApi([]);
       when(() => api.hap)
         .thenReturn(HAP_NAMESPACE)
@@ -2103,19 +2305,52 @@ describe('registerDiscoveredDevices', () => {
     // arrange
     const registration = mock<Pick<API, 'registerPlatformAccessories'>>({ exactParams: true, name: 'fresh registration' });
     const registrations: { plugin: string; platform: string; uuids: string[]; mainsLost: unknown }[] = [];
-    when(() => registration.registerPlatformAccessories).thenReturn(() => {
-      throw new Error('uncertain prior run');
-    });
-    when(() => registration.registerPlatformAccessories).thenReturn((plugin, platform, candidates) => {
-      registrations.push({
-        plugin,
-        platform,
-        uuids: candidates.map((accessory) => accessory.UUID),
-        mainsLost: candidates[0]
-          ?.getServiceById(HAP_NAMESPACE.Service.ContactSensor, 'mains-power-lost')
-          ?.getCharacteristic(HAP_NAMESPACE.Characteristic.ContactSensorState).value,
-      });
-    });
+    when(() => {
+      registration.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          return true;
+        }),
+      );
+    }).thenThrow(new Error('uncertain prior run'));
+    when(() => {
+      registration.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((candidates: PlatformAccessory[]) => {
+          const accessory = candidates[0];
+          if (
+            candidates.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== ACCESSORY_UUID ||
+            accessory.displayName !== 'Sump System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registrations.push({
+            plugin: PLUGIN_NAME,
+            platform: PLATFORM_NAME,
+            uuids: candidates.map((candidate) => candidate.UUID),
+            mainsLost: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost')?.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+          });
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
     const api: API = fakeDiscoveryApi([]);
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
@@ -3010,7 +3245,7 @@ describe('registerDiscoveredDevices', () => {
     })
       .thenReturn(undefined)
       .times(2);
-    registeredDevice(context, accessories, store);
+    const accessory = registeredDevice(context, accessories, store);
     const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
 
     // act
@@ -3018,6 +3253,22 @@ describe('registerDiscoveredDevices', () => {
     registerDiscoveredDevices(context, [DEVICE_ID], store);
 
     // assert
+    assert.deepStrictEqual(
+      { canonical: store.snapshot(DEVICE_ID), owners: [...accessories.keys()], mainsLost: contactStateOf(accessory, 'mains-power-lost') },
+      {
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: { ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+        owners: [ACCESSORY_UUID],
+        mainsLost: CONTACT_DETECTED,
+      },
+    );
     assert.deepStrictEqual(
       updateSpy.mock.calls.map((call) => call.arguments[1]),
       ['live', 'poll'],
@@ -3384,6 +3635,22 @@ describe('removeDiscoveredDevice', () => {
     store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: false }));
 
     // assert
+    assert.deepStrictEqual(
+      { canonical: store.snapshot(DEVICE_ID), accessories, basementGuardianAccessories },
+      {
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: { ac_power: false },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+        accessories: new Map(),
+        basementGuardianAccessories: new Map(),
+      },
+    );
     assert.strictEqual(updateSpy.mock.callCount(), 0);
     verify(context.api);
   });
@@ -3464,12 +3731,33 @@ describe('removeDiscoveredDevice', () => {
     removeDiscoveredDevice(context, DEVICE_ID, store);
     store.applyDiscovery(geminiDevice());
     registerDiscoveredDevices(context, [DEVICE_ID], store);
+    const accessory = accessories.get(ACCESSORY_UUID);
+    if (!(accessory instanceof HarnessPlatformAccessory)) {
+      throw new Error('the rediscovered device has no public accessory');
+    }
+
     const updateSpy = t.mock.method(builtAccessory(basementGuardianAccessories), 'update');
 
     // act
     store.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
 
     // assert
+    assert.deepStrictEqual(
+      { canonical: store.snapshot(DEVICE_ID), owners: [...accessories.keys()], mainsLost: contactStateOf(accessory, 'mains-power-lost') },
+      {
+        canonical: {
+          identity: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID, name: 'Sump System', serialNumber: 'serial-1' },
+          connectivity: { connected: true, timestamp: 0 },
+          data: { ac_power: true },
+          metadata: {},
+          shadowVersion: undefined,
+          deviceTimestamp: 0,
+          receivedAt: 0,
+        },
+        owners: [ACCESSORY_UUID],
+        mainsLost: CONTACT_DETECTED,
+      },
+    );
     assert.deepStrictEqual(
       updateSpy.mock.calls.map((call) => call.arguments[1]),
       ['live'],
