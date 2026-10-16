@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, test } from 'node:test';
+import { test } from 'node:test';
 
 import { ESLint } from 'eslint';
 import ts from 'typescript';
@@ -119,53 +119,52 @@ function bypassMonitoringBuilder(source: string): string {
   return source.slice(0, argument.getStart(file)) + `Object.assign({}, ${argument.getText(file)})` + source.slice(argument.end);
 }
 
-describe('ESLint platform wiring configuration', () => {
-  test('accepts the shared builder in all three callbacks and concrete timers in the platform', async () => {
-    // arrange
-    const source = readFileSync(resolve(ROOT, PLATFORM), 'utf8');
+test('accepts the shared builder in all three callbacks and concrete timers in the platform', async () => {
+  // arrange
+  const source = readFileSync(resolve(ROOT, PLATFORM), 'utf8');
 
-    // act
-    const result = await lintWiring(PLATFORM, source);
+  // act
+  const wiringDiagnostics = await lintWiring(PLATFORM, source);
 
-    // assert
-    assert.deepStrictEqual(result, { diagnostics: [], enabled: [CONTEXT_RULE, TIMER_RULE], messages: [] });
-  });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, { diagnostics: [], enabled: [CONTEXT_RULE, TIMER_RULE], messages: [] });
+});
 
-  for (const { order, properties } of [
-    {
-      order: 'original',
-      properties: `api: context.api, accessories: context.accessories, basementGuardianAccessories: context.basementGuardianAccessories,
+for (const { order, properties } of [
+  {
+    order: 'original',
+    properties: `api: context.api, accessories: context.accessories, basementGuardianAccessories: context.basementGuardianAccessories,
       registry: context.registry, log: context.log, ignoredFaults: context.ignoredFaults,
       offlineConfirmationPollCount: context.offlineConfirmationPollCount, timers: context.timers, commands: context.commands`,
-    },
-    {
-      order: 'reordered',
-      properties: `commands: context.commands, timers: context.timers, offlineConfirmationPollCount: context.offlineConfirmationPollCount,
+  },
+  {
+    order: 'reordered',
+    properties: `commands: context.commands, timers: context.timers, offlineConfirmationPollCount: context.offlineConfirmationPollCount,
       ignoredFaults: context.ignoredFaults, log: context.log, registry: context.registry,
       basementGuardianAccessories: context.basementGuardianAccessories, accessories: context.accessories, api: context.api`,
-    },
-  ]) {
-    test(`rejects a second context with ${order} properties`, async () => {
-      // arrange
-      const source = readFileSync(resolve(ROOT, PLATFORM), 'utf8') + secondContext(properties);
-
-      // act
-      const result = await lintWiring(PLATFORM, source);
-
-      // assert
-      assert.deepStrictEqual(result, {
-        diagnostics: [],
-        enabled: [CONTEXT_RULE, TIMER_RULE],
-        messages: [{ ruleId: CONTEXT_RULE, messageId: 'construction' }],
-      });
-    });
-  }
-
-  test('accepts an unrelated context property read and declaration', async () => {
+  },
+]) {
+  test(`rejects a second context with ${order} properties`, async () => {
     // arrange
-    const source =
-      readFileSync(resolve(ROOT, PLATFORM), 'utf8') +
-      `
+    const source = readFileSync(resolve(ROOT, PLATFORM), 'utf8') + secondContext(properties);
+
+    // act
+    const wiringDiagnostics = await lintWiring(PLATFORM, source);
+
+    // assert
+    assert.deepStrictEqual(wiringDiagnostics, {
+      diagnostics: [],
+      enabled: [CONTEXT_RULE, TIMER_RULE],
+      messages: [{ ruleId: CONTEXT_RULE, messageId: 'construction' }],
+    });
+  });
+}
+
+test('accepts an unrelated context property read and declaration', async () => {
+  // arrange
+  const source =
+    readFileSync(resolve(ROOT, PLATFORM), 'utf8') +
+    `
 function readContext(context: DiscoveryContext): unknown {
   return context.basementGuardianAccessories.get('unrelated');
 }
@@ -174,107 +173,106 @@ void readContext;
 void ({} as Unrelated);
 `;
 
-    // act
-    const result = await lintWiring(PLATFORM, source);
+  // act
+  const wiringDiagnostics = await lintWiring(PLATFORM, source);
 
-    // assert
-    assert.deepStrictEqual(result, { diagnostics: [], enabled: [CONTEXT_RULE, TIMER_RULE], messages: [] });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, { diagnostics: [], enabled: [CONTEXT_RULE, TIMER_RULE], messages: [] });
+});
+
+test('rejects a callback that bypasses the shared builder', async () => {
+  // arrange
+  const source = bypassMonitoringBuilder(readFileSync(resolve(ROOT, PLATFORM), 'utf8'));
+
+  // act
+  const wiringDiagnostics = await lintWiring(PLATFORM, source);
+
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, {
+    diagnostics: [],
+    enabled: [CONTEXT_RULE, TIMER_RULE],
+    messages: [{ ruleId: CONTEXT_RULE, messageId: 'callbacks' }],
   });
+});
 
-  test('rejects a callback that bypasses the shared builder', async () => {
-    // arrange
-    const source = bypassMonitoringBuilder(readFileSync(resolve(ROOT, PLATFORM), 'utf8'));
+test('accepts concrete timers in their own module', async () => {
+  // arrange
+  const source = readFileSync(resolve(ROOT, TIMERS), 'utf8');
 
-    // act
-    const result = await lintWiring(PLATFORM, source);
+  // act
+  const wiringDiagnostics = await lintWiring(TIMERS, source);
 
-    // assert
-    assert.deepStrictEqual(result, {
-      diagnostics: [],
-      enabled: [CONTEXT_RULE, TIMER_RULE],
-      messages: [{ ruleId: CONTEXT_RULE, messageId: 'callbacks' }],
-    });
-  });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
+});
 
-  test('accepts concrete timers in their own module', async () => {
-    // arrange
-    const source = readFileSync(resolve(ROOT, TIMERS), 'utf8');
-
-    // act
-    const result = await lintWiring(TIMERS, source);
-
-    // assert
-    assert.deepStrictEqual(result, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
-  });
-
-  test('rejects an actual timer import and its aliased reference elsewhere', async () => {
-    // arrange
-    const source =
-      readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
-      `
+test('rejects an actual timer import and its aliased reference elsewhere', async () => {
+  // arrange
+  const source =
+    readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
+    `
 import { systemTimers as concreteTimers } from './runtime/timers.js';
 void concreteTimers;
 `;
 
-    // act
-    const result = await lintWiring(OTHER_MODULE, source);
+  // act
+  const wiringDiagnostics = await lintWiring(OTHER_MODULE, source);
 
-    // assert
-    assert.deepStrictEqual(result, {
-      diagnostics: [],
-      enabled: [TIMER_RULE],
-      messages: [
-        { ruleId: TIMER_RULE, messageId: 'scope' },
-        { ruleId: TIMER_RULE, messageId: 'scope' },
-      ],
-    });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, {
+    diagnostics: [],
+    enabled: [TIMER_RULE],
+    messages: [
+      { ruleId: TIMER_RULE, messageId: 'scope' },
+      { ruleId: TIMER_RULE, messageId: 'scope' },
+    ],
   });
+});
 
-  test('rejects an actual timer reference through a namespace import', async () => {
-    // arrange
-    const source =
-      readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
-      `
+test('rejects an actual timer reference through a namespace import', async () => {
+  // arrange
+  const source =
+    readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
+    `
 import * as runtimeTimers from './runtime/timers.js';
 void runtimeTimers.systemTimers;
 `;
 
-    // act
-    const result = await lintWiring(OTHER_MODULE, source);
+  // act
+  const wiringDiagnostics = await lintWiring(OTHER_MODULE, source);
 
-    // assert
-    assert.deepStrictEqual(result, {
-      diagnostics: [],
-      enabled: [TIMER_RULE],
-      messages: [{ ruleId: TIMER_RULE, messageId: 'scope' }],
-    });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, {
+    diagnostics: [],
+    enabled: [TIMER_RULE],
+    messages: [{ ruleId: TIMER_RULE, messageId: 'scope' }],
   });
+});
 
-  test('accepts an unrelated binding named systemTimers', async () => {
-    // arrange
-    const source = readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') + '\nconst systemTimers = 1; void systemTimers;\n';
+test('accepts an unrelated binding named systemTimers', async () => {
+  // arrange
+  const source = readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') + '\nconst systemTimers = 1; void systemTimers;\n';
 
-    // act
-    const result = await lintWiring(OTHER_MODULE, source);
+  // act
+  const wiringDiagnostics = await lintWiring(OTHER_MODULE, source);
 
-    // assert
-    assert.deepStrictEqual(result, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
-  });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
+});
 
-  test('accepts timer names in comments and strings', async () => {
-    // arrange
-    const source =
-      readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
-      `
+test('accepts timer names in comments and strings', async () => {
+  // arrange
+  const source =
+    readFileSync(resolve(ROOT, OTHER_MODULE), 'utf8') +
+    `
 // systemTimers is mentioned without a runtime dependency.
 const timerDocumentation = 'systemTimers';
 void timerDocumentation;
 `;
 
-    // act
-    const result = await lintWiring(OTHER_MODULE, source);
+  // act
+  const wiringDiagnostics = await lintWiring(OTHER_MODULE, source);
 
-    // assert
-    assert.deepStrictEqual(result, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
-  });
+  // assert
+  assert.deepStrictEqual(wiringDiagnostics, { diagnostics: [], enabled: [TIMER_RULE], messages: [] });
 });

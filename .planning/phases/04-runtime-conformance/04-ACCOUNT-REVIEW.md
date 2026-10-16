@@ -9669,3 +9669,155 @@ All 43 closed IDs remain protected. The correction counter remains 2; RUN-01
 is Pending. WINDOWS 46–58 stay OPEN and unwaived. E-04-01 remains flagged and
 unresolved; descriptorless P-04-01/P-04-02 remain unverified. No independent
 review, human approval, clean batch, seal, release or real-home result is claimed.
+
+### CR-04-ACCOUNT-046/048 implementation: top-level named wiring controls
+
+This is ONE architecture-owner cause under 04-18-03, pending independent whole
+correction 3. The starting revision is
+`adce9ec5193351d0002460d465e4f8f0371258ab`, after the separate 041 and 047
+commits. Work uses the existing `features/code-review-sweep` linked checkout,
+the parent's exclusive serial lease and `workflow.use_worktrees=false`.
+The directly read initial plan ledger remains
+`0e6ad2de891d6dac3c8ea541d14791ac7c46c97c`; the persisted sentinel still says
+phase 04, plan 04-18, isolation none. No new checkout or configuration changes.
+
+**046 disposition:** implemented; pending independent whole correction 3.
+The nine authored case-local `result` bindings now read `wiringDiagnostics`.
+Each of their nine whole-value assertions uses its own renamed binding.
+The unit writer's Naming values and reviewer's Naming sections prohibit the
+generic observation name. No helper callback variable was renamed.
+
+**048 disposition:** implemented in the SAME cause; pending independent whole
+correction 3. The sole `describe('ESLint platform wiring configuration', ...)`
+wrapper is removed, and its existing cases and row loop are at module top level.
+The single-entrypoint Case structure rule applies to the configuration's one
+loader-required default export. The orphaned named `describe` import is removed
+after lexical proof: its only prior occurrences were that import and wrapper.
+No replacement wrapper or new entrypoint was introduced.
+
+#### Complete control and contract preservation
+
+There are still nine authored declarations and ten expanded controls. The saved
+before/after inventories have exactly these same titles and ordering:
+
+- accepts the shared builder in all three callbacks and concrete timers in the platform;
+- rejects a second context with original properties;
+- rejects a second context with reordered properties;
+- accepts an unrelated context property read and declaration;
+- rejects a callback that bypasses the shared builder;
+- accepts concrete timers in their own module;
+- rejects an actual timer import and its aliased reference elsewhere;
+- rejects an actual timer reference through a namespace import;
+- accepts an unrelated binding named systemTimers;
+- accepts timer names in comments and strings.
+
+Installed TypeScript compares every complete original/current test call's leaf
+token kind and raw spelling, allowing only the assigned local identifier rename.
+All nine comparisons pass. Both row expressions, their exact original/reordered
+property strings, every fixture literal, awaited lint call and full assertion
+payload remain exact. Dedenting preserves raw template-string indentation.
+Every complete expected object retains diagnostics=[], enabled rule IDs and
+all ruleId/messageId pairs, including both aliased-import scope messages.
+
+All four helper bodies and both interface declarations remain byte-exact:
+programFor, lintWiring, secondContext, bypassMonitoringBuilder, WiringResult
+and WiringMessage. The full pre-case prefix matches after only the orphan
+import removal. ROOT, PLATFORM, TIMERS, OTHER_MODULE and both rule constants
+retain their exact declarations. Fresh compiler hosts/programs, both per-call
+ESLint instances, the identical typed virtual/lint source and impliedNodeFormat
+preservation remain in those unchanged helpers. No existing shared/exported/
+private alias or member name, signature, presence, visibility or mutability
+changes; no two-project impact exception is claimed for the local rename.
+
+The complete approved MIT header, imports and compiled ESM layout remain.
+eslint.config.js is unchanged, including its loader default export and the
+previously accepted checkJs/strict:false proof's limits. No stricter JavaScript
+parameter policy or architecture rule is inferred. All earlier closed findings,
+including 032, 040 and 017, retain their distinct accepted dispositions.
+
+#### Required reads and native evidence
+
+Before editing, this fixer read complete AGENTS/bootstrap, all FIVE complete
+books, installed Fallow guidance/live help, full current 18 and 13 plans,
+17 summary, PROJECT/ROADMAP/STATE/REQUIREMENTS, all 830 canonical decision lines,
+context/protocol/research/patterns and every one of the report's 9,671 lines.
+The complete actual architecture owner, ESLint configuration, platform, timers,
+config and both compiler configurations were read, including full headers and
+all helper/caller bodies. The nine callback callers and only describe call
+were traced lexically before editing. No new external API behavior is assumed.
+
+The durable `read-ledger.json` records 29 complete files, displayed contiguous
+ranges, current/original identities, SHA256 and Git blobs, with no pending range.
+Its checkpoint SHA256 is
+`bfed2dcf2b1a024609b7a14f6cc9070cc9c732bd536e2065724f9eddcc32b68a`.
+The current read inventory is 1,223,765 bytes; this is byte volume, not measured
+harness tokens or effective context capacity. Report chunks 1–20 were displayed
+in full. Truncated aggregate protocol/platform displays were refilled completely.
+Initial transcript-only reads have no native UTC envelopes; later unchanged-hash
+reconciliation does not invent them. Captured bytes did not replace reads.
+
+Native artifacts are under `/private/tmp/guardian-account046048-native/`.
+Command records retain exact argv/cwd/input HEAD, UTC start/end, Node/npm,
+raw exit, full separate stdout/stderr and tracked/untracked input/output bytes
+and modes in content-addressed blobs. `owner.before.ts`, control-inventories.json
+and preservation-proof.json retain the complete comparison material.
+Direct patch-tool edits have transcript and before/after byte evidence, without
+a separate native edit-process UTC envelope. Initial discovery/read commands
+are transcript-only. The broad temporary-directory discovery had a permission
+error; no result from that failed discovery supplies test evidence.
+
+The saved original owner is 9,726 bytes, SHA256
+`858773800a2283400315ddf224b7afcd2040af6b1321ae8c6b202e50714777ca`.
+The revised owner is 9,633 bytes, SHA256
+`25b6fdf504d1e9bf71ceff5070adf35867f5da9b3175f510ad851edb1f1b237c`,
+Git blob `6f90d6c94bd21ae59afc34ea3d4b1422f73d3266`.
+All 44 production files retain their 464,915 bytes and modes. All three literal
+tracked `.claude/skills/` symlinks retain their targets and modes; no recursive
+read followed them. Every other tracked input is preserved, including platform
+041/047, all security assertions and both genuine evidence JSON histories.
+The whole saved report prefix is 669,077 bytes, SHA256
+`6fdf1f1bdf2dabc4efce7d8b9a072626b11eb8caac4a2ab9b7bd6743e1e12ab9`.
+It includes all 650,734 baseline bytes plus the entire 041 and 047 appends.
+Canonical containment and complete prefix equality passed before this append.
+
+#### Current checks and retained failure
+
+Checks ran serially in the existing linked checkout, with Node v26.11.1 and
+npm 11.20.0. Every owned process reached its terminal before the next command.
+
+| Capture / actual command | UTC start–end on 2026-10-16 | Raw result |
+| --- | --- | --- |
+| build-test: `npm run build:test` | 06:30:49.978251–06:30:53.394328 | 0; fresh compilation |
+| architecture-owner: `node --test dist-test/test/architecture/platformWiring.test.js` | 06:31:04.094967–06:31:27.983742 | 0; ten pass, zero suites/fail/cancel/skip/todo |
+| whole-lint: `node_modules/.bin/eslint . --max-warnings=0 --no-cache` | 06:31:30.637241–06:31:40.654378 | 0; whole tree, zero warnings |
+| pairing: `npm run test:corresponding` | 06:31:45.990316–06:31:46.876018 | 0; corresponding-tests gate passed |
+| unpaired: `npm run test:unpaired:compiled` | 06:31:49.647365–06:32:12.905432 | 1; 78/80, two packaging cache-permission failures |
+| unpaired-native: SAME command with native filesystem access | 06:32:18.413975–06:32:40.659126 | 0; successful detail suppressed by repository tooling |
+| cause-audit: installed Fallow against real initial base 0e6ad2de891d6dac3c8ea541d14791ac7c46c97c | 06:33:41.000226–06:33:42.210663 | 0; verdict pass, zero introduced issues |
+
+The failed sandbox unpaired run reports npm pack EPERM while accessing its
+existing cache in both packedArtifact cases. Its complete failure remains;
+the authorized native rerun changes no configuration, dependency or permission.
+No chown, sudo, install or cache workaround was used. The actual selector's
+architecture-root discovery includes this owner as unpaired. No fabricated
+source pair or production coverage percentage is assigned to these controls.
+The native pass is not a universal sandbox guarantee. Historical fs.watch
+EMFILE/raw1 and all prior capture/process limits remain unchanged and unwaived.
+
+Fallow's audit retains its warning about two skipped build-info entry points.
+Guard/audit boundary and policy zero counts reflect unconfigured zones/rule
+packs, not measured architecture coverage. Fresh exact guards precede the
+owner edit and report append. The final audit and guarded clean exact-file
+pre-step must run after this appendix BEFORE exact staging and a normal
+foreground commit with SKIP absent. Their terminal native outcomes and actual
+Git object establish completion; this pre-commit appendix does not predict them.
+Only the owner/report change; the precommitted 18 declaration is the third
+cause path. No production/helper/config/SUMMARY/shared-record path is added.
+
+046 and 048 await independent whole correction 3. Accepted IDs remain 48,
+independently closed 43, and open exactly 041,045,046,047,048. Counter 2 remains
+unchanged. RUN-01 is Pending; WINDOWS 46–58 are OPEN/unwaived. E-04-01 stays
+unclassified/unresolved and flagged, one edge = zero lifted + one flagged;
+descriptorless P-04-01/P-04-02 stay unverified, two authored and zero omitted.
+No independent closure, new review, human approval, full npm run check, phase,
+seal, release or real-home claim is made. The parent owns the combined gate.
