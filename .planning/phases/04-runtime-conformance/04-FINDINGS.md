@@ -981,3 +981,82 @@ and original026/030/044 promises remain. Counter1 still44accepted29closed15open
 pending whole correction2 in17; RUN-01 remains Pending. T-04-26/27 require the
 later security/seal judgment. Restore only workflow.use_worktrees=true before
 final milestone audit/handoff; numerical09 closes after17, not now.
+
+
+## Final seal projection at 3ed5af0
+
+This section is the current projection. Earlier sections and original batch
+reports retain their historical scope, counts and limits. The complete
+machine record is [04-SEAL-AUDIT.json](04-SEAL-AUDIT.json).
+
+The exact inventory contains 34 files: twenty core paths, the original
+thirteen-file ACCOUNT scope and its actual additions, plus the unchanged
+logging support pair. All applicable current headers and complete independent
+reviews have exact blob evidence. Eighteen paths use full ACCOUNT correction3;
+eight use PORTS correction3, six use POLICIES correction2, and two use TRUST
+correction2. Fifteen changed historical scope references are explicitly
+superseded; their old snapshots are preserved. Logging support is not recorded
+as an adapted logging sweep. The architecture owner has ten unpaired controls.
+
+| Batch | Accepted | Independently closed | Open | Continuous correction counter |
+| --- | ---: | ---: | ---: | ---: |
+| PORTS | 9 | 9 | 0 | 3 |
+| POLICIES | 13 | 13 | 0 | 2 |
+| TRUST | 17 | 17 | 0 | 2 |
+| ACCOUNT | 48 | 48 | 0 | 3 |
+
+All 87 stable findings retain their exact rules, original/current locations,
+dispositions and independent closure evidence in the canonical record. All
+eight seed candidates have explicit fixed or rejected outcomes. The rejected
+blanket optional-field and readonly proposals remain rejected.
+
+The ten historical review rounds reconcile without resetting counters.
+PORTS round2 triggered the actual global stop at 1→1. The actual option1
+decision authorized only cause009 and one full eight-file round3, retaining
+counter2. Its decision timestamp remains unknown. ACCOUNT correction3 closed
+041/045/046/047/048, found no new/reopened/open finding, and preserved all43
+earlier closures. Any fourth whole correction requires a new immediate stop.
+
+The canonical history contains 27 unchanged raw RED identities from three
+original roots and nine genuine source→planning-evidence→GREEN episodes.
+Each raw identity uses the same installed classifier and an independent
+assertion/patch/current-preservation judgment. The two auxiliary ARRIVAL
+attempts keep their missing metadata null and their exact parent context.
+Thirty-nine maintenance mutation attempts with43 intended leaf targets,
+five structured negative cases and ten unpaired architecture controls remain
+separate from production bug history. Source restoration precedes fresh build
+and owner GREEN. Existing caught controls are not called new blind spots.
+
+The commit inventory is99:90 CODE records with225 owned-path identities and
+nine planning-only evidence records with18 owned bodies. Each retains its
+actual base, command, inputs, clean pre-step before staging, normal hook,
+source/helper/event identity and original runtime context. Contextual version
+observations are distinct from separately measured child versions.
+
+The actual user accepted exactly three historical limits: ACCOUNT021
+ce3305e8ce53f92e5e4e24a12e1694e95ced4489 and ACCOUNT022
+5987504236d4292d05cb3b1c50ac4a4ce1197a9f retain unknown/null audit
+subprocess exits despite passJSON; ACCOUNT008
+84fd96017082503acc897521f2d458e82297266f retains its exact post-audit
+test-title wording change with no later retained audit. The original evidence
+and narrow authorization are embedded. No raw0, extra exception or future
+waiver is inferred. Current Fallow evidence is separately identified.
+
+Actual canonical tracer, automated seal and history audits passed with their
+required markers. Their full commands, raw streams, versions and input bodies
+are retained under /private/tmp/guardian-04-10-canonical/final-native/.
+Earlier schema projection failures remain in that same native record.
+
+All31 numeric threats plus SC have bounded evidence; all137 historical
+plan-qualified rows and the current declaration rows preserve old collisions.
+The applicable parent gate at2ffeb331eb60adf1ec47bec1ef909ad12184d4fd
+passed104 scenarios,1156 steps and43 isolated pairs on Node26.11.1.
+Twelve executable inventory pairs have isolated100% coverage; two declaration
+pairs retain honest null runtime coverage. A fresh license build/owner passed5/5.
+
+The E/P judgments remain pending: edges1=lifted0+flagged1 and
+prohibitions2=authored2+omitted0. E-04-01 remains unclassified/unresolved;
+both prohibitions remain exactly serializer-authored descriptorless unresolved
+items. RUN-01 remains Pending. WINDOWS46–58 remain OPEN/unwaived. Parent owns
+the final full gate, goal/security/Nyquist verification, actual human judgments,
+SUMMARY, commits and shared advancement. No phase completion is claimed here.

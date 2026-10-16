@@ -242,3 +242,59 @@ coverage result. Native capture:
 - [ ] wave_0_complete and nyquist_compliant change only after their obligations are met.
 
 **Approval:** Pending. This draft claims no executed PASS or Nyquist compliance.
+
+
+## Executed seal preparation at 3ed5af0
+
+This current execution projection supplements the historical draft above.
+It does not change its frontmatter, human approval or Nyquist flags.
+
+| Check | Actual result | Native evidence |
+| --- | --- | --- |
+| Tracer | raw0; RUNTIME_LEDGER_TRACER_OK | final-native/tracer-01 |
+| Automated canonical seal | raw0; RUNTIME_SEAL_AUTOMATED_AUDIT_OK | final-native/seal-03 |
+| Canonical history | raw0; RUNTIME_HISTORY_AUDIT_OK | final-native/history-02 |
+| Original99 integration and ten scope/D03 rounds | 308 checks, zero failures | final-integration-pass-1792164823783.json |
+| License fresh build and owner | raw0;5/5 | focused-current/license-build-and-owner.json |
+| Applicable parent full gate | raw0;104 scenarios/1156 steps/43 isolated pairs | /private/tmp/guardian-phase4-preseal-full-gate.* |
+
+Relative native paths above resolve under
+/private/tmp/guardian-04-10-canonical/. Full argv, UTC bounds, actual raw exits,
+stdout/stderr, Node/npm, exact input bodies/modes and compiled inputs are retained.
+The canonical record is audited again after final metadata updates.
+
+The first history projection omitted separate native stdout streams and failed
+with INVALID_RED. The first automated seal projection lacked ACCOUNT inventory
+membership; the second lacked comparator inputEvidence fields. These failed
+attempts are retained as history-01/seal-01/seal-02. Corrected projections use
+the original unchanged evidence. No classifier, predicate, report or raw payload
+was changed to obtain a pass. Earlier TMP setup failures remain in the actual
+tool transcript; missing separate UTC envelopes were not reconstructed.
+
+Current scope is34 exact reviewed paths with full applicable headers; all87
+findings are independently closed. Ten whole rounds retain the PORTS round2
+stop and narrowly authorized009 resolution, plus ACCOUNT's continuous counter3.
+The record includes27 genuine RED identities/nine bug episodes,39 maintenance
+attempts/43 intended targets, eight seed outcomes and31 numeric threats plus SC.
+Original threat-ID collisions remain plan/revision-qualified. Current caller,
+rulebook and checked-input comparisons support review/gate reuse.
+
+The user accepted only the exact021/022 unknown audit exits and008 post-audit
+title change. Null exits, original passJSON/commands, exact title patch, unknown
+inner times and missing auxiliary metadata remain explicit. Current Fallow and
+current gate evidence are separate from these historical qualifications.
+
+The full-gate reference is2ffeb331eb60adf1ec47bec1ef909ad12184d4fd,
+UTC2026-10-16T07:59:52.668809+00:00→08:00:48.586425+00:00,
+Node26.11.1/npm11.20.0. Exact executable inputs remain unchanged; only planning
+Markdown and this declared generated seal output differ. The generated output
+is excluded only by the exact approved predicate. Other JSON remains checked.
+Compiled inventory is397 current files:130 dist and267 dist-test; the original
+267-file historical capture described dist-test only.
+
+Three actual E/P human judgments, parent final gate, goal/security/Nyquist
+verification, SUMMARY and shared advancement remain pending. The original
+equations remain edges1=lifted0+flagged1 and prohibitions2=authored2+omitted0.
+No new descriptor, serializer, survey or inherited Phase3 approval is supplied.
+RUN-01 remains Pending; WINDOWS46–58 remain OPEN/unwaived. No vendor/hardware,
+install, release or cross-platform runtime certification is claimed.

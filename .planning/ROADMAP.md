@@ -135,7 +135,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 18/19 plans executed; 18 complete, 1 pending
+**Plans**: 19/19 plans executed; 19 complete, 0 pending
 
 **Wave 1**
 - [x] 04-01-PLAN.md
@@ -192,7 +192,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] 04-09-PLAN.md — Metadata closeout; original repairs and ledger preserved
 
 **Wave 19** *(blocked on Wave 18 completion)*
-- [ ] 04-10-PLAN.md — Current inventory, historical evidence and final seal
+- [x] 04-10-PLAN.md — Current inventory, historical evidence and final seal
 
 **Batching**: Ten pairs. `accountRuntime.ts` (1,283 lines; test 3,365 lines) is a batch of its own and can split across sequential waves if one plan cannot hold it; the nine small modules fit in two or three batches. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
 
@@ -277,7 +277,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 1. Known Findings and Loop Proof | code-review-sweep | 4/4 | Complete    | 2026-10-13 |
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
-| 4. Runtime Conformance | code-review-sweep | 18/19 | In Progress | - |
+| 4. Runtime Conformance | code-review-sweep | 19/19 | In Progress | - |
 | 5. Accessories Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
