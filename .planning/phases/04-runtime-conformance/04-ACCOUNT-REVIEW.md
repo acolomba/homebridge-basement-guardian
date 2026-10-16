@@ -7087,3 +7087,146 @@ OPEN/unwaived. No 031/044 repair, shared ledger/config update, summary or full
 parent gate occurred here. The previous full gate predates these source/test
 inputs; the parent owns the required combined gate and independent correction.
 The serial lease ends only with this fixer's actual final return.
+
+## ACCOUNT-031 user supersession and intended RED checkpoint
+
+This append preserves the entire preceding report, including the original031
+finding, correction1, the successful acceptance diagnostic and030 RED/GREEN
+history. It records the actual user's choice1 under committed revised13 plan
+`ad05d52f0d1088020a8666deeacd06842ebedad8`. No decision timestamp is inferred.
+
+The former conditional retry requirement is explicitly superseded. Every
+registration throw has an uncertain acceptance outcome: it earns no successful
+local accessory, instance or listener ownership and must not trigger another
+registration attempt during that platform run. Rebuilt DiscoveryContexts,
+empty inventories, removal, canonical store removal and reappearance must not
+clear that suspension. A fresh platform run releases only this in-memory
+suspension; actual configureAccessory restoration remains authoritative.
+Restart does not promise that a possibly accepted bridge accessory is absent
+or removed. Healthy devices and failures preparing an accessory before the
+registration call retain their existing behavior.
+
+The successful diagnostic remains historical evidence of uncertainty, not RED:
+`/private/tmp/guardian-04-account-031-contract-conflict-lUNlUK/` retains exit0,
+complete separate stdout/stderr, the actual installed API/BridgeService probe
+and its original conflict report. The policy conflict was resolved by explicit
+supersession, not disproved by a new acceptance discriminator.
+
+### Public contract and complete reads
+
+Current primary documentation was opened at
+[API.registerPlatformAccessories](https://developers.homebridge.io/homebridge/interfaces/API.html#registerPlatformAccessories)
+and [DynamicPlatformPlugin](https://developers.homebridge.io/homebridge/interfaces/DynamicPlatformPlugin.html).
+The current synchronous void registration and configureAccessory restoration
+contracts agree with installed Homebridge2.4.0 api.d.ts/api.js/bridgeService.js.
+Neither supplies a nonthrowing guarantee, atomic rejection, acceptance oracle,
+automatic rollback or restart recovery guarantee. The installed implementation
+governs the retained partial-acceptance diagnostic.
+
+Complete AGENTS/bootstrap and all five Google-style/comments/unit-writer/
+unit-reviewer/local-verification books were read. Unchanged tracked content was
+checked against6a90071 before reusing the preceding source1–664 and owner1–520
+reads. The resumed owner521–2684 and full report1–7089 were read in bounded
+contiguous ranges. Complete state/accessory/logging/World modules, World
+instructions/Cucumber book, protocol, current13 plan, context/research/patterns/
+findings, canonical830 decisions, project/requirements/applicable state,
+roadmap, full12 summary, all installed API/BridgeService definitions and
+implementations, strong-mock declarations and installed Fallow book were read.
+Truncation gaps were filled, including plan270–310 and roadmap45–100. The
+durable emitted-range/hash ledger is `read-emissions.jsonl` in the native folder.
+
+Actual root and World callbacks rebuild DiscoveryContext while retaining their
+platform-owned accessory/instance maps. configureAccessory records restored
+ownership in the root's stable map. Removal drops registered ownership and
+store listeners; it supplies no acceptance observation for an unowned uncertain
+attempt. These lifetimes support the plan's future private map-keyed ledger
+without changing DiscoveryContext. No existing name/signature/shape was changed
+and no D-06 compiler-impact exception is asserted.
+
+### Native intended RED on unchanged production
+
+Native folder: `/private/tmp/guardian-04-account-031-red-QBd86j/`.
+Source HEAD is `ad05d52f0d1088020a8666deeacd06842ebedad8`; platform source is
+`b7c1103e669d7d56f0a4b4c84dde7fb9248b23f5`. All44 production bodies and modes
+remain unchanged. Original owner is
+`1b29564013cf6483e0c885f04b46bbd9fc964659`; final active owner is
+`eefe895a1cc4aae261e0670ac2224d2c59872250`. All original71 cases remain byte-exact
+after removing only the new import and inserted031 block. Three cases were
+added, producing74 native tests. Node is v26.11.1; npm is11.20.0.
+
+The two row cases throw the same production-visible Error before versus after
+test-owned simulated acceptance. The acceptance marker never enters production.
+Their first independent whole-state assertion expects only the healthy second
+device to own accessory/instance/listener state. Both actually observe the
+uncertain first device retained in all three ownership observations, producing
+native ERR_ASSERTION. Later active assertions cover repeated/new contexts,
+absence/removal/store removal/reappearance, exact registration arguments/order,
+whole canonical snapshots, one healthy live listener and physical identity.
+The real redacting logger receives synthetic registered private inputs; its
+finite prescribed delegate interaction must contain exactly the fixed message
+`Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.`
+with no parameters or arbitrary thrown payload. This operator/security output
+is required031 behavior and remains active beyond incidental-log cleanup.
+The third case exercises a fresh run after an uncertain prior run, normal
+seed-before-registration success and actual configureAccessory restoration.
+Original026 preparation-retry and all original persistence/cleanup cases remain
+unchanged and pass. Later row assertions remain active although current
+production stops at the first intended ownership assertion.
+
+| Final native attempt | UTC start–end on2026-10-16 | Raw result |
+| --- | --- | --- |
+| build-05, npm run build:test | 00:39:34.057026–00:39:37.413153 | exit0 |
+| named-before-02, exact fully qualified anchored target | 00:39:53.393690–00:39:53.848405 | exit1;1 test,0 pass,1 intended fail |
+| named-after-02, exact fully qualified anchored target | 00:40:41.034114–00:40:41.395291 | exit1;1 test,0 pass,1 intended fail |
+| full-02, node --test --test-reporter=tap dist-test/test/platform.test.js | 00:40:50.200889–00:40:50.630303 | exit1;74 tests,72 pass,2 intended fails |
+
+All final test attempts have zero skips/cancellations/todo, no signal/timeout,
+and separate empty stderr. Full unmodified TAP includes complete expected and
+actual ownership states. The runner retained exact argv, UTC, raw exits,
+original/latest owner bytes, full patches, all tracked compiled inputs and
+compiled file bodies, plus baseline production bodies/modes and tool versions.
+Every native test process completed before any subsequent owner mutation.
+
+Preparations remain complete and separate: build-01 exited2 on the new test's
+callable Logging type; build-02/03/04/05 exited0. format-01/02 exited0 after
+fresh target reads/guards; lint-01/02 exited1 on new-test issues and lint-03
+exited0. full-01 executed74 tests with71 pass, the two intended failures and an
+unrelated inverted contact-state expectation in the new restoration case. That
+superseded full run is disclosed preparation, not pure full-owner RED; its
+complete stdout/stderr/owner/patch/inputs remain archived. named-before-01 and
+named-after-01 were genuine intended failures with their original patches and
+remain separate historical records. Evidence assembly first stopped before
+writing because an old compiled targetFile needed its actual source-owner path
+resolved; assembly-02 then completed. No setup/lint/assembly failure substitutes
+for RED. Native artifact/gate/provenance runs remain in the same folder.
+
+### Preserved history and parent-only disposition
+
+The new PLATFORM root preserves the entire previous two-record root exactly
+deep-equal under priorEvidence, including every nested raw string and archive.
+Five genuine031 records are present: the current full run, both current named
+runs and both preceding genuine named runs. PLATFORM therefore has seven
+recursive records. ACCOUNT remains byte-exact at
+`b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134` with16 records, for23 total.
+The SAME installed classifier accepted every record and independently checked
+actual sourceCommit:path/sourceBlob and retained owner/source bodies. The
+actual installed current-file PLATFORM CLI exited0 with RED_EVIDENCE_OK at
+00:42:12.020663–00:42:12.362533UTC. Its generic GREEN authorization does not
+replace the required actual parent evidence-only commit.
+
+The independent historical check verified all18 earlier source→evidence→first
+source-change ancestries;9 carry the exact RED owner at that first source
+change, while9 retain earlier superseded owner versions. Their full identities
+are disclosed in `historical-ancestries.json`; no old record was normalized or
+rewritten. Current final full/named records match the latest active owner/patch.
+The complete preceding488425-byte report prefix remains byte-exact.
+
+This is a PARENT-EVIDENCE-ONLY checkpoint. No production edit, GREEN, staging,
+commit,044 work, extra helper/API seam, summary, shared-state update, full gate
+or new independent review occurred. Parent independently verifies and commits
+only this report plus PLATFORM JSON before any GREEN edit; the active failing
+owner remains unstaged. Correction counter1 stays44 accepted/29 independently
+closed/15 open030–044 pending correction2, with no closure/reopen claim.
+RUN-01 remains Pending, D-03 predicates remain false, and WINDOWS46–54 remain
+OPEN/unwaived.030's focused GREEN evidence is prior evidence; the parent owns
+the combined gate after13 is terminal. The serial lease ends at actual FINAL.
