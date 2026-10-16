@@ -8589,3 +8589,41 @@ in advance here. The separately required config-header step follows that
 commit within the SAME cause. No actualFINAL, summary/shared-state edit, full
 parent gate,042/043 repair, next dispatch, PR, push or deployment is claimed.
 WINDOWS46–56 remain OPEN/unwaived; final checks do not erase historical limits.
+
+### Same cause — separate configuration-header completion
+
+The functional039/040/041 commit is
+fdc3b43a9b8d3bfbda84edc1d3ea9a8025d629ae, exactly the five declared paths.
+audit-functional-final returned0/verdict pass. functional-prestep returned0
+before all five individual stage commands. commit-functional returned0 with
+SKIP absent; ordinary check:commit, TruffleHog and gitlint passed. The checkout
+was clean before this header-only step. No partial index, manual stash,
+temporarily hidden owner or sixth path supplied header isolation.
+
+Parent confirmed that eslint.config.js is now actual local-rule source and
+requires D-01's approved header. A fresh current read and exact config/report
+guard preceded this separate change. The configuration gains only the approved
+10-line SPDX/copyright/overview prefix. header-preservation returns0: removing
+that exact prefix recovers the entire functional configuration byte-for-byte;
+all1609 compiler tokens and comment-free emitted JavaScript are identical.
+The purpose states that the file configures lint checks and platform composition
+boundaries. Original attribution is preserved; no functional rule changed.
+
+header-lint returns0 for the corrected whole-repository uncached command.
+header-rule-owner returns0 with10/10 complete typed architecture cases and no
+fail/cancel/skip/todo against the actual header-bearing configuration. Compiler
+and behavioral controls retain their exact public expectations. Existing
+platform/new-owner headers and this full configuration header now conform;
+the earlier PENDING header statement records the functional-commit checkpoint,
+and this separate completion supersedes it. All actual files remain in whole
+correction2/security/seal inventory; this is no independent fixed-ID review.
+
+The header commit changes only eslint.config.js and this continuing report,
+inside the same five-path cause union. Its final real-base audit, exact clean
+two-path pre-step BEFORE individual staging and ordinary foreground hooks are
+recorded separately under guardian039-native. Those subsequent terminal results
+are not fabricated in this pre-commit appendix. Original580754-byte history,
+all44 production files, all23 genuine records and retained promises remain
+unchanged. The parent still owns the full completed-plan gate and shared
+records. No042/043 work, counter increment, partial clean verdict or new task
+is included in this header completion.

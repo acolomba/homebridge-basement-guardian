@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Configures lint checks and platform composition boundaries.
+ */
+
 import { resolve } from 'node:path';
 
 import eslint from '@eslint/js';
