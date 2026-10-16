@@ -9,13 +9,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync, watch } from 'node:fs';
+import { watch } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
-import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import { It, mock, verify, when } from 'strong-mock';
@@ -113,41 +112,6 @@ function completionSignal(): [Promise<void>, () => void] {
   });
 
   return [completed, announce];
-}
-
-// Every module under `src/` that names a symbol, in path order. A module that wants to defer has to
-// take the port by injection, where a test can observe it, so the concrete process timers are wired
-// at the composition root and declared in their own module, and nowhere else (SAFE-07, D-18).
-async function modulesNaming(symbol: string): Promise<readonly string[]> {
-  const root = new URL('../../src/', import.meta.url);
-  const entries = await readdir(root, { recursive: true });
-  const naming: string[] = [];
-
-  for (const entry of entries.filter((candidate) => candidate.endsWith('.ts')).sort()) {
-    const source = await readFile(new URL(entry, root), 'utf8');
-
-    if (source.includes(symbol)) {
-      naming.push(entry);
-    }
-  }
-
-  return naming;
-}
-
-// A module read as text, for the one claim that is about what a comparison does not cover rather
-// than about what it answers. The name is interpolated so the path is a runtime value rather than a
-// static import.
-async function sourceOf(module: string): Promise<string> {
-  return readFile(new URL(`../../src/${module}`, import.meta.url), 'utf8');
-}
-
-// The keys one of the two change-detection state objects compares, read from the source. A key list
-// is what the claim is about: the record members are deliberately absent from it, and a value the
-// comparison never looks at cannot be shown missing by any call the comparison makes.
-function comparedKeys(source: string, name: string): readonly string[] {
-  const block = new RegExp(`const ${name} = \\{([\\s\\S]*?)\\n\\s*\\};`, 'u').exec(source)?.[1] ?? '';
-
-  return [...block.matchAll(/^\s*(\w+): .*,$/gmu)].map((match) => match[1] ?? '');
 }
 
 const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';
@@ -1402,14 +1366,6 @@ describe('BasementGuardianPlatform', () => {
     assert.strictEqual(requestSpy.mock.callCount(), 0);
     verify(user);
     verify(api);
-  });
-
-  test('wires the concrete process timers at the composition root alone', async () => {
-    // act
-    const wiring = await modulesNaming('systemTimers');
-
-    // assert
-    assert.deepStrictEqual(wiring, ['platform.ts', 'runtime/timers.ts']);
   });
 
   test('registers and removes no accessory across the whole lifecycle', async (t) => {
@@ -3260,8 +3216,10 @@ describe('registerDiscoveredDevices', () => {
   test('asks Homebridge to store the accessory whose snapshot counted an activation, and no other', () => {
     // arrange
     const updateCalls: FakeAccessory[][] = [];
+    const persistedContexts: unknown[] = [];
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();
-    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    let receivedAt = 1000;
+    const store = createDeviceStateStore({ clock: { now: () => receivedAt }, log: createSilentLog() });
     const context = discoveryContext({ api: fakeDiscoveryApi([], updateCalls), accessories, registry: powerRegistry() });
     when(() => context.api.hap)
       .thenReturn(HAP_NAMESPACE)
@@ -3324,6 +3282,7 @@ describe('registerDiscoveredDevices', () => {
             return false;
           }
 
+          persistedContexts.push(structuredClone(accessory.context));
           updateCalls.push([accessory]);
           return true;
         }),
@@ -3334,8 +3293,31 @@ describe('registerDiscoveredDevices', () => {
     store.applyDiscovery(secondDevice);
     registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
     const afterTheSeeds = updateCalls.length;
+    const seededContexts = [...accessories.values()].map((accessory) => structuredClone(accessory.context));
+    const expectedFirstContext = {
+      device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+      lastVendorName: 'Sump System',
+      primaryPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+      backupPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+      watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined },
+    };
+    const expectedSecondSeed = {
+      device: { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+      lastVendorName: 'Second System',
+      primaryPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+      backupPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+      watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined },
+    };
+    const expectedSecondContext = {
+      device: { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+      lastVendorName: 'Second System',
+      primaryPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+      backupPump: { observationStartedAt: 1000, activationCount: 1, lastActivationAt: 2000 },
+      watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined },
+    };
 
     // act
+    receivedAt = 2000;
     store.applyDiscovery({ ...secondDevice, data: { backup_pump_running: true } });
     registerDiscoveredDevices(context, [DEVICE_ID, SECOND_DEVICE_ID], store);
 
@@ -3347,24 +3329,15 @@ describe('registerDiscoveredDevices', () => {
       },
       { seeds: 0, sinceTheSeeds: [[SECOND_ACCESSORY_UUID]] },
     );
+    assert.deepStrictEqual(
+      { seededContexts, currentContexts: [...accessories.values()].map((accessory) => accessory.context), persistedContexts },
+      {
+        seededContexts: [expectedFirstContext, expectedSecondSeed],
+        currentContexts: [expectedFirstContext, expectedSecondContext],
+        persistedContexts: [expectedSecondContext],
+      },
+    );
     verify(context.api);
-  });
-
-  // The record members are deliberately absent from this comparison, which is the whole reason the
-  // persist port exists: a counted activation changes none of these four, so without a second and
-  // independent caller it would mutate the context and never reach disk (CTRL-01, D-010).
-  test('compares the display name, the vendor name, the device record, and the service list, and nothing else', async () => {
-    // arrange
-    const source = await sourceOf('platform.ts');
-
-    // act
-    const compared = { previous: comparedKeys(source, 'previousState'), next: comparedKeys(source, 'nextState') };
-
-    // assert
-    assert.deepStrictEqual(compared, {
-      previous: ['displayName', 'lastVendorName', 'device', 'services'],
-      next: ['displayName', 'lastVendorName', 'device', 'services'],
-    });
   });
 
   test('publishes every adapter but the one an administrator ignored', () => {
@@ -3781,121 +3754,5 @@ describe('removeDiscoveredDevice', () => {
       },
     );
     verify(api);
-  });
-});
-
-// The platform assembles one runtime context for discovery, removal and monitoring callbacks.
-// Sharing that assembly keeps configuration and command wiring consistent across those paths
-// (D-12, WR-07).
-//
-// This source-text detector counts the nine members in the listed declaration order, with no brace
-// between them. A property read such as `context.basementGuardianAccessories.get(uuid)` contains
-// no matching key chain. Reordered keys are outside this detector's observation.
-const DISCOVERY_CONTEXT_MEMBERS: readonly string[] = [
-  'api',
-  'accessories',
-  'basementGuardianAccessories',
-  'registry',
-  'log',
-  'ignoredFaults',
-  'offlineConfirmationPollCount',
-  'timers',
-  'commands',
-];
-
-/** The one source file the gate reads, as a repository-relative path so a failure names something openable. */
-const PLATFORM_SOURCE = 'src/platform.ts';
-
-// The compiled case runs from `dist-test/test`, which puts the repository root two levels up. The
-// floor below is what turns a wrong count of levels or a moved file into a named failure rather than
-// an empty read reporting the same green as a full one.
-const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-// The size floor rejects a platform source read shorter than 20,000 characters.
-const PLATFORM_SOURCE_FLOOR = 20000;
-
-// The expected count includes the interface declaration and the shared context literal. Both list
-// the nine members in the order this detector recognizes.
-const EXPECTED_DISCOVERY_CONTEXT_SHAPES = 2;
-
-// A comment line can hold a brace and would break the member chain below, and this file's own gate
-// commentary names every one of the nine members. Whole-line comments are dropped before the
-// detector runs, so the gate reads code.
-function withoutCommentLines(source: string): string {
-  return source
-    .split('\n')
-    .filter((line) => !/^\s*(\/\/|\*|\/\*)/u.test(line))
-    .join('\n');
-}
-
-function discoveryContextShapesIn(source: string): number {
-  const detector = new RegExp(DISCOVERY_CONTEXT_MEMBERS.map((member) => `\\b${member}:`).join('[^{}]*'), 'gu');
-
-  return (withoutCommentLines(source).match(detector) ?? []).length;
-}
-
-// A second literal, as a callback that re-inlined one would spell it. It is planted into a copy of
-// the file text held here rather than into the file, so the control cannot make the gate report
-// itself.
-const PLANTED_SECOND_LITERAL = `
-      onSomethingElse: (): void => {
-        somethingElse({
-          api: this.api,
-          accessories: this.accessories,
-          basementGuardianAccessories: this.basementGuardianAccessories,
-          registry: this.registry,
-          log: this.log,
-          ignoredFaults: validated.config.ignoredFaults,
-          offlineConfirmationPollCount: validated.config.offlineConfirmationPollCount,
-          timers: systemTimers,
-          commands: runtime.commands,
-        });
-      },
-`;
-
-// The control that separates this gate from a count over a field name: one more property read of a
-// context member, spelled the way the platform's own reads are. A name count moves on this; a shape
-// count must not.
-const PLANTED_PROPERTY_READ = `
-function readsOneMore(context: DiscoveryContext): unknown {
-  return context.basementGuardianAccessories.get(context.registry.toString());
-}
-`;
-
-describe('the platform builds its runtime context once', () => {
-  test('holds exactly one DiscoveryContext-shaped literal beside the declaration it satisfies (WR-07, D-12)', () => {
-    // arrange
-    const source = readFileSync(join(REPOSITORY_ROOT, PLATFORM_SOURCE), 'utf8');
-
-    // act
-    const shapes = discoveryContextShapesIn(source);
-
-    // assert
-    assert.ok(
-      source.length >= PLATFORM_SOURCE_FLOOR,
-      `the gate read ${String(source.length)} bytes of ${PLATFORM_SOURCE}, fewer than the ${String(PLATFORM_SOURCE_FLOOR)} it holds`,
-    );
-    assert.strictEqual(
-      shapes,
-      EXPECTED_DISCOVERY_CONTEXT_SHAPES,
-      `${PLATFORM_SOURCE} holds ${String(shapes)} DiscoveryContext-shaped literals where ` +
-        `${String(EXPECTED_DISCOVERY_CONTEXT_SHAPES)} are expected: the interface declaration and one literal. ` +
-        'Build the context once and call it from each of the three callbacks.',
-    );
-  });
-
-  test('reports a planted second literal and stays still for a planted property read (WR-07)', () => {
-    // arrange
-    const source = readFileSync(join(REPOSITORY_ROOT, PLATFORM_SOURCE), 'utf8');
-    const found = discoveryContextShapesIn(source);
-
-    // act & assert
-    assert.deepStrictEqual(
-      {
-        withASecondLiteral: discoveryContextShapesIn(source + PLANTED_SECOND_LITERAL),
-        withOneMorePropertyRead: discoveryContextShapesIn(source + PLANTED_PROPERTY_READ),
-      },
-      { withASecondLiteral: found + 1, withOneMorePropertyRead: found },
-    );
   });
 });

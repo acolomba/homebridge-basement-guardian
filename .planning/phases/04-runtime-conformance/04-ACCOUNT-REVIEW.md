@@ -8435,3 +8435,157 @@ foreground cause commit retain their own native outcomes and normal hooks.
 This pre-commit appendix does not declare those results in advance. No summary,
 shared-state edit, review closure, later-cause repair, PR, push or deployment is
 performed by038. Parent resumes the next serial cause only after actual final.
+
+## CR-04-ACCOUNT-039/040/041 overlapping implementation — task04-16-02
+
+At baseline251efe2f1cb200886735d4bcdf0f407c3cba723a, this is ONE overlapping
+cause implementation, pending whole correction2. Counter1 still has44 accepted,
+29 independently closed and15 OPEN030–044. No subset review, independent
+closure, counter change or RUN-01 completion follows. D-03 remains evaluated
+against actual full correction1; no new correction or stop waiver is inferred.
+
+039 replaces the private-source assertions with complete public persistence
+observations and the two original architecture protections in existing ESLint.
+The retained registration case independently expects both complete seeded
+contexts, both contexts after a backup activation, and the exact complete
+context handed to Homebridge for the second accessory. Distinct1000/2000 receipt
+times pin observation epochs and activation time. Its original UUID/update-call
+assertion and explicit mock verification remain exact. Existing vendor rename,
+custom-name, suppression, no-change and real persisted-record cases remain.
+
+040 is disposed by removing the private-concern describe and its source cases.
+All retained behavior remains under BasementGuardianPlatform, configureAccessory,
+applyMonitoringHealth, registerDiscoveredDevices or removeDiscoveredDevice.
+041 is disposed by that same removal of the mixed act/assert source control;
+the strengthened persistence case and every new rule control use separate,
+ordered arrange/act/assert. These dispositions share one functional commit;
+they do not invent duplicate fixes or independent closure.
+
+The context rule is enabled only for src/platform.ts. Installed TypeScript
+resolves the actual exported DiscoveryContext and tests object-literal type
+assignability independently of property order. Declarations and property reads
+are not object constructions. It requires one construction and resolves the
+actual runtime factory, exported consumer functions and enclosing builder
+bindings to check all three public callbacks. No private builder name is fixed.
+The timer rule is enabled for src/**/*.ts and resolves the actual systemTimers
+export/import/reference symbol, including aliases and namespace property reads.
+Only src/platform.ts and src/runtime/timers.ts are permitted. Unrelated local
+bindings, comments and strings do not create that dependency. These rules keep
+the original SAFE-07/shared-wiring obligations; no additional architecture
+policy, package, parser, configuration file or selector was introduced.
+
+NEW actual inventory: test/architecture/platformWiring.test.ts,280lines9726bytes,
+blob e8d25300b20f7ae1814690925c151a1b4eb4b38a, is an unpaired public ESLint API
+owner with the complete approved SPDX/copyright/overview header. Its10 expanded
+cases prove shared callbacks, original/reordered second constructions, unrelated
+property read/declaration, a bypassed callback, both allowed timer modules,
+forbidden aliased import/reference, namespace reference, unrelated binding and
+comment/string mentions. Every case independently expects zero compiler
+diagnostics and exact enabled rule IDs/diagnostic message IDs. The virtual
+source and lint input are identical; the complete test-project inputs and
+original Node ESM impliedNodeFormat are retained. Other lint rules are disabled
+only within these focused public-API controls; actual whole-tree lint remains
+fully enabled. No parser/setup error supplies an intended negative result.
+
+Existing eslint.config.js is now actual local-rule source and joins complete
+correction2/security/seal scope. Parent ruled that its approved header is
+REQUIRED in a separate header-only commit AFTER this functional commit. That
+step is PENDING here; D-01/config-header completion is not claimed. Both actual
+TypeScript owner headers were inspected and conform. The five new config
+helper declarations have actual post-creation symbol uses7/7/3/2/2, including
+their declarations; no pre-existence export-impact trace is invented. The four
+new owner helpers have direct actual callers. Separate public ESLint.Plugin
+configuration checking passes with --allowJs --checkJs --strict false --types
+node --noEmit --skipLibCheck --target es2022 --module nodenext --ignoreConfig.
+This checks the public plugin/configuration shape; it does not claim strict
+JavaScript helper-parameter typing. Actual compiler membership excludes the JS
+config from both existing projects and includes the new owner only in test.
+
+Preservation at /private/tmp/guardian039-native/preservation:65 authored platform
+cases become61,74 expanded become70; four removed source-only cases contained
+five assertions. All86 remaining original assertions survive exactly;60 retained
+case bodies are byte-identical, and only the persistence body is strengthened.
+All44 production files/permissions, all44 fakeDiscoveryApi calls, its compatibility
+overload/body, four existing private aliases/interfaces and the176-line12-export
+platformSeeds helper remain unchanged. Only plain local source-inspection
+functions/constants orphaned by those removed cases were deleted after actual
+lexical caller inspection. No private alias/member/shared-contract change uses
+an unavailable trace or a generic exception. The helper's prior12 complete test
+impacts versus12 unavailable/excluded production queries remain historical.
+
+The original026 cached retention/final removal, normal shutdown,038 real-watch
+completion/early teardown and timer-reset-before-storage-cleanup remain exact.
+031's human-selected uncertainty policy, stable-map suspension, preparation
+retry, healthy neighbors, authoritative restore and safe restart diagnostic
+through the real redacting logger/registered-secret proof remain exact. CONF-03,
+AUTH-02,030 ownership/readiness and044899999/900000 observations are retained.
+Both042 wrong-global-fetch cases remain unchanged for the next assigned cause.
+
+Native records are under /private/tmp/guardian039-native, with argv, UTC,
+raw exits, separate full streams, actual tracked/untracked/compiled bytes and
+modes, all three literal directory symlinks and full input/staged patches.
+All commands/processes were serial and terminal before dependent work. Checks
+ran in the existing main checkout under workflow.use_worktrees=false; no new
+worktree, branch, manual stash or install was used. Nodev26.11.1/npm11.20.0:
+
+| Native command record | Actual result |
+| --- | --- |
+| build-final; compiler-production; compiler-test | Each0; fresh build and separate noEmit projects |
+| owners-final |0; complete TAP80/80,70 platform+10 architecture; no fail/cancel/skip/todo |
+| lint-actual-final |0; actual whole-repository installed ESLint, --max-warnings=0 --no-cache |
+| pairing; unpaired | Each0; existing discovery runs the new architecture owner without a source pair |
+| direct |0; exact required isolated platform source/owner selector,100% |
+| native-coverage |0; sole SF dist-test/src/platform.js; LF/LH508/508,FNF/FNH22/22,BRF/BRH63/63 |
+| config-public-type-proof; preservation; read-completion | Each0; declared narrower JS proof, full retained behavior and complete read scope |
+| red-account-actual; red-platform; evidence-provenance | Each0; both actual files RED_EVIDENCE_OK and all23 recursive records/provenance accepted |
+| audit-before-report |0/verdict pass; actual16base af6f9c9816f54ec157fd936900a317a7dbbd8547 |
+
+The original literal npm run lint -- --no-cache returned2 BEFORE analysis:
+installed ESLint10.11.0 rejects the script's --cache-strategy with --no-cache.
+Parent authorized the minimal task02 verify-command correction in the already
+declared04-16-PLAN.md. The direct installed command preserves '.' whole-tree
+scope and the script's zero-warning limit while disabling the cache. The old
+literal remains a failed setup attempt, never a passing lint result. No sixth
+script/package path was edited. All five actual paths are owner/config/new
+architecture owner/report/PLAN; the declaration now changes only this command
+and its adjacent evidence note.
+
+Other retained draft failures: build-first returned2 for an optional rule value;
+owners-first returned1 (77/80) because the initial virtual program omitted Node
+and timer-module inputs in three positive controls. The corrected complete
+project passes every control. Initial direct uncached lint returned1 for three
+new owner style/type issues; guarded repairs pass. config-type-proof returned1
+for TypeScript6's explicit-file/config requirement; config-type-proof-explicit
+returned2 for missing node types/default strict JS parameters. The accurately
+scoped public plugin proof above passes. red-account mistakenly used the
+nonexistent shortened ACCOUNT filename: raw0 but INVALID_RED/unreadable_record,
+which is not accepted evidence. Only the corrected ACCOUNT-RUNTIME path passes.
+These are maintenance/setup attempts, not new production defects or genuine RED.
+
+Both immutable history blobs remain b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134
+(ACCOUNT-RUNTIME,16 records) and321b61af80c611fda8d825dd613a2537b16303e1
+(PLATFORM,7). The SAME installed current-file CLI and recursive classifier
+processed every record; actual Git sourceCommit:path resolves to sourceBlob,
+saved source/owner text agrees with its blobs and source ancestry reaches HEAD.
+No evidence JSON was written. Native filesystem access remains required for
+the accepted038 watcher case; sandbox EMFILE is the existing disclosed limit.
+
+Mandatory complete reads include all five books, AGENTS/bootstrap/discovery,
+current16PLAN/context/protocol/research/patterns,830canonical decisions, current
+state/project/roadmap/requirements/findings, full8437-line580754-byte report,
+whole3901-line original owner/673-line platform and every requested supporting
+file, actual helpers/callers,13 human supersession and applicable archived
+05-18 wiring/04-03 persistence history. Installed ESLint/parser/TypeScript
+definitions govern the APIs; no install or external unsupported API is assumed.
+/private/tmp/guardian039-read-ledger.jsonl and native read-completion retain
+bounded contiguous ranges/blob/hash checks; actual truncated display ranges
+were refilled. Some bootstrap/book/direct reads have transcript-only envelopes;
+no missing historical UTC is invented. Byte capture never replaces full reads.
+
+The complete580754-byte prior report prefix remains exact. Subsequent final
+audit, clean exact pre-step BEFORE staging and ordinary foreground functional
+commit have their own native terminal outcomes; those results are not declared
+in advance here. The separately required config-header step follows that
+commit within the SAME cause. No actualFINAL, summary/shared-state edit, full
+parent gate,042/043 repair, next dispatch, PR, push or deployment is claimed.
+WINDOWS46–56 remain OPEN/unwaived; final checks do not erase historical limits.
