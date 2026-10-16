@@ -8778,3 +8778,147 @@ ordinary foreground commit results follow in their native envelopes; no
 future result is asserted here. The parent owns the full completed-plan gate,
 shared records and metadata-only summary resume. No 043/17 dispatch, summary,
 whole-review acceptance, PR, push, deployment or new helper is included.
+
+## CR-04-ACCOUNT-043 — complete named-device monitoring trust
+
+Status: implemented, pending whole ACCOUNT correction2. This is task04-17-01
+at starting HEAD e996020c54f3f703820dd844a2bf1cd0a97e306d. The original
+correction1 location remains C:test/platform.test.ts:430–440,1573–1598;
+the current changed case begins at test/platform.test.ts:1519. Unit Assertions
+requires complete independent public values before explicit interaction
+verification. No production defect or new genuine RED is claimed.
+
+The named-device case now uses the EXISTING trustRecordingBasementGuardianAccessory
+fixture and compares its entire deviceId-keyed Map with two independently
+authored complete MonitoringTrust literals. Each contains restDegraded,
+shadowSilent, commandTransportReady and credentialsRejected. The physical
+deviceId/UUID join remains unchanged. The two controllers retain different
+silence answers; both named answers require commandTransportReady=true.
+The complete missing-entry case remains byte-identical: its independent named
+and unnamed answers require restDegraded=true, commandTransportReady=false,
+credentialsRejected=false and false/true shadowSilent respectively. Thus the
+named ready=true observations differ meaningfully from that missing-answer
+fixture's ready=false account facts without a new account default or policy.
+
+036 already supplied exactParams, finite four-field notification mocks in both
+cases. Those complete expectations, forwarding callbacks and explicit verify
+calls remain unchanged. The new whole-state assertion precedes every verify.
+Only the lossy string observation of deviceId/restDegraded/shadowSilent is
+replaced by its stronger whole-map equivalent. The original identity and
+two-field values are present in that complete expectation. All60 other authored
+case bodies, all helper bodies/signatures and every byte outside this one case
+remain exact. There are still61 authored declarations and70 expanded cases.
+No private fixture shape, alias, member, API, hook, port, helper file, expected
+production computation or new security meaning is introduced. Exact pre-edit
+symbol-impact queries are not triggered by using the unchanged existing helper.
+
+### Temporary false-ready control and exact restoration
+
+The parent normally committed the fourth-path declaration at e996020 before
+any control edit. The total cause union is test/platform.test.ts, this report,
+the precommitted04-17-PLAN.md and src/platform.ts for the temporary control only.
+Fresh source reads, exact installed Fallow guards and canonical containment
+preceded the source control and report append. All44 production files,
+464915 bytes, their modes, all tracked/untracked inputs and all three literal
+directory-symlink targets were saved before the control. No source header changed.
+
+The temporary argument at src/platform.ts:428 was precisely
+`markMonitoring({ ...trust, commandTransportReady: false })`.
+After a successful fresh controlled build, ONLY the fully qualified named
+fan-out target ran. At2026-10-16T04:46:44.322500–04:46:44.676349UTC it exited1:
+one executed test, zero pass, one intended mock failure, zero skip/cancel/todo.
+The native error identifies first accessory trust with false-ready received
+versus independently required true-ready; its stack reaches the actual exported
+applyMonitoringHealth at dist-test/src/platform.js:305:35. No parser, loader,
+setup failure or direct mock self-call supplies that observation. The earlier036
+notification expectations already discriminate this reconstruction; no old-owner
+passing-control result or newly discovered production bug is inferred.
+
+After collecting that terminal process, a fresh current source read/guard
+preceded restoration. All44 complete source contents and modes then matched
+the saved baseline before the restored build. Platform returned to blob
+8f48e059bce57d8ca320e6523d6beb0c0385eb03 and SHA256
+9730cb62264f75b1bb9154834ca8b54c209d6f15ce5272396211f26370926ced;
+the temporary blob was ad09631d1e475d0367c7544c557e88aabe79053b.
+No source/control bytes enter staging or Git. This maintenance control is
+separate from both immutable genuine RED histories.
+
+### Native checks, full reads and preserved history
+
+Checks ran serially in the existing linked features/code-review-sweep checkout
+with workflow.use_worktrees=false and the actual phase04/plan04-17 sentinel
+read directly as isolation:none. No new checkout, branch or recovery sentinel
+was created. Nodev26.11.1/npm11.20.0, exact argv, real UTC, raw child exits,
+separate full stdout/stderr, complete input bytes/modes, compiled inputs and
+full binary/index patches are retained under /private/tmp/guardian043-native.
+Every child reached terminal before the dependent operation. File-input Git
+hashing is bounded; no waiting stdin hash child was introduced.
+
+| Native capture | Actual result |
+| --- | --- |
+| build-owner; green-before-control | Fresh build0; named and missing-entry targets2/2 |
+| build-control; control-false-ready | Fresh build0; intended unique named mock failure1 |
+| restoration-proof; build-restored; green-restored | All44 sources/modes exact0; fresh build0; targets2/2 |
+| owner-whole | Native TAP0;70/70,zero fail/cancel/skip/todo |
+| direct | Exact npm run test:coverage:direct -- src/platform.ts test/platform.test.ts;0,isolated100% |
+| native-coverage | Native TAP/LCOV0;70/70;sole SF:dist-test/src/platform.js |
+| compiler-production; compiler-test | Separate installed tsc --noEmit projects;0/0 |
+| lint-pair | Installed exact source/owner eslint --max-warnings=0 --no-cache;0 |
+| red-account; red-platform | SAME installed CLI on both actual current JSON files;0/RED_EVIDENCE_OK |
+| proof; read-completion | Complete source/case/prefix/history provenance and required-read reconciliation;0/0 |
+
+Native LCOV at /private/tmp/guardian043-platform.lcov is LF/LH508/508,
+FNF/FNH22/22 and BRF/BRH63/63, all100%. Selected native coverage does not
+refresh merged all-pair source-map LCOV. Owner/direct/native runs used the
+authorized native filesystem access required by038's existing fs.watch case.
+No new watcher failure occurred here; the historical sandbox EMFILE and cleanup
+limits remain retained and unwaived. No full npm run check ran in this cause.
+
+The SAME installed classifyRedEvidence recursively accepts all16 ACCOUNT-RUNTIME
+and7 PLATFORM records. Every actual sourceCommit:path resolves to sourceBlob
+and is an ancestor of HEAD; present embedded original source/active-owner
+texts match their recorded Git blobs. Immutable whole JSON blobs remain
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and
+321b61af80c611fda8d825dd613a2537b16303e1. No raw record, nested history,
+old patch, native output or evidence file was rewritten. proof.json retains
+all23 detailed recursive verdict/provenance records and bounded summaries.
+
+Complete reads covered AGENTS/bootstrap, all FIVE complete TypeScript/comment/
+unit-writer/unit-reviewer/local-verification books, installed Fallow guidance,
+current17 plan and all its direct planning context, full13 plan with authoritative
+user_supersession_031 and13 summary, full8780-line603063-byte ACCOUNT history,
+all673 platform lines,3759 original owner lines,311 monitoringHealth lines,
+1066 basementGuardian lines and176 seed lines. Actual runtime trust projection,
+root callbacks, World callbacks and accessory consumers were traced; feature
+instructions and the full Cucumber book were read for those caller contexts.
+Caller ranges are contextual inspection, not a whole-feature/subsystem verdict.
+The existing031 restart diagnostic/security assertions,030 readiness,044 poll
+deadline,026 retention/removal and038 early watcher teardown remain byte-exact.
+
+/private/tmp/guardian043-read-ledger.jsonl and native read-completion.json
+retain emitted ranges, current hashes/blobs and empty required pending ranges.
+Initial direct/bootstrap/book/plan reads have transcript-only envelopes;
+their identity reconciliation does not invent earlier UTC captures. Oversized
+combined book output was refilled with the full standalone unit writer, and
+the13-plan tail390–449 was refilled. Initial exploratory unmatched-glob and
+missing prior-capture-file probes supply no test evidence. No native executable
+check failed except the deliberate control. Captures did not replace mandatory
+complete reads; configured1m/advisory100k are not measured capacity claims.
+
+The entire603063-byte prior report prefix, SHA256
+b51b4fcb86077ff5a419f82311538802aaa13f19e813e2eb7e23c10575fe87c5,
+remains exact. Owner blob is5a3e7c0632321b8c837961bdf15b011ad058ca60.
+Final real-base Fallow audit uses730df24537c42a453ff4e00ea254e7622b913c57.
+Its actual result, clean exact two-path pre-step BEFORE individual staging,
+normal foreground commit with SKIP absent and final clean-tree proof follow
+in their native envelopes. This append does not predeclare those outcomes.
+No GSD commit wrapper, hook bypass, amend, rebase or manual stash is used.
+
+ACCOUNT remains44 accepted,29 independently closed,15 OPEN030–044,counter1.
+Implementing043 does not independently close it or advance that counter.
+Whole correction2 and immediate D-03 evaluation remain parent-owned. E-04-01
+is unresolved/unclassified:1 surfaced=0 lifted+1 flagged; descriptorless
+prohibitions remain2 surfaced=2 authored+0 omitted, pending actual judgments.
+RUN-01 remains Pending; WINDOWS46–57 remain OPEN/unwaived. No task02 reviewer,
+summary, shared record, full combined gate, seal, PR, push or deployment is
+included. The serial lease ends only with this fixer's actual FINAL.

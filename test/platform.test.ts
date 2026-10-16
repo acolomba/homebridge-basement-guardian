@@ -1518,13 +1518,13 @@ describe('applyMonitoringHealth', () => {
   // catch that (D-01, D-01a).
   test('hands each accessory the answer for its own system', () => {
     // arrange
-    const marks: string[] = [];
-    const firstAccessory = recordingBasementGuardianAccessory(DEVICE_ID, marks);
+    const heard = new Map<string, MonitoringTrust>();
+    const firstAccessory = trustRecordingBasementGuardianAccessory(DEVICE_ID, heard);
     const firstNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'first accessory trust' });
     when(() => {
       firstNotification({ restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false });
     }).thenReturn(undefined);
-    const secondAccessory = recordingBasementGuardianAccessory(SECOND_DEVICE_ID, marks);
+    const secondAccessory = trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard);
     const secondNotification = mock<BasementGuardianAccessory['markMonitoring']>({ exactParams: true, name: 'second accessory trust' });
     when(() => {
       secondNotification({ restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false });
@@ -1570,7 +1570,13 @@ describe('applyMonitoringHealth', () => {
     );
 
     // assert
-    assert.deepStrictEqual(marks, [`${DEVICE_ID} rest false shadow true`, `${SECOND_DEVICE_ID} rest false shadow false`]);
+    assert.deepStrictEqual(
+      heard,
+      new Map<string, MonitoringTrust>([
+        [DEVICE_ID, { restDegraded: false, shadowSilent: true, commandTransportReady: true, credentialsRejected: false }],
+        [SECOND_DEVICE_ID, { restDegraded: false, shadowSilent: false, commandTransportReady: true, credentialsRejected: false }],
+      ]),
+    );
     verify(firstNotification);
     verify(secondNotification);
     verify(context.api);
