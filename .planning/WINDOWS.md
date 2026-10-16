@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 16
 waived_count: 19
 fixed_count: 21
-total_count: 55
-last_updated: 2026-10-16T02:12:35.820Z
+total_count: 56
+last_updated: 2026-10-16T03:09:09.875Z
 ---
 
 # Broken Windows Ledger
@@ -70,6 +70,7 @@ last_updated: 2026-10-16T02:12:35.820Z
 | 53 | 4 | deviation | .planning/state.json |  | [code-review-sweep] Parent state.advance-plan at 2026-10-15T18:15:57Z updated its generated state.json alongside STATE.md. The pre-command guard and first metadata commit/prestep listed STATE.md, ROADMAP and FINDINGS but omitted the generated JSON path. The JSON remained unstaged; later exact guard/checks/normal commit cannot supply pre-mutation proof. Record the omission openly, retain generated state, rerun full gate for JSON inputs, and leave this process gap open and unwaived. | open |  | 2026-10-15T18:16:50.338Z |  |
 | 54 | 4 | deviation | .planning/phases/04-runtime-conformance/04-13-PLAN.md |  | [code-review-sweep] Parent exact pre-commit step for follow-up declarations normalized end-of-file blank lines in new plans 13-17. Planner creation/revision guards existed, but parent did not refresh those five concrete path guards immediately before its formatter run; only ROADMAP/FINDINGS were freshly guarded. No source or semantic plan change occurred. Native guardian-04-followups-parent-prestep.stdout retains exit1 and exact file list; subsequent all-path guard and clean repeated checks do not supply historical pre-formatter proof. Leave open and unwaived. | open |  | 2026-10-15T21:45:31.998Z |  |
 | 55 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan 14 retains three native capture/order gaps: 032 display-only audit extraction had a syntax error without original UTC/separate streams; 033 preservation hash child required SIGTERM (01:42:47.662251-01:45:46.342230 UTC), and read-only audit overlapped it at 01:43:16.944439-01:43:17.750457 rather than running serially; 034 read-only sed/prettier check exited1 without a separate UTC/native envelope. Tool transcripts and original attempts remain. Corrected complete symlink manifests, serialized preservation/audit, final checks and normal hooks passed, but supply no missing historical capture or serial-order proof. No repository/build/index mutation occurred during the overlap. Report and native guardian032/033/034 directories disclose the limits. Leave open and unwaived. | open |  | 2026-10-16T02:12:35.820Z |  |
+| 56 | 4 | deviation | .planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md |  | [code-review-sweep] Plan15 retains read/help/query preparation outputs without separate original UTC/native envelopes across035-037. In036 an intermediate noEmit compiler attempt overlapped a read-only guard despite required serial order; final compiler-tests-serialized and guard-append-serialized reruns passed but do not provide historical ordering proof. Original transcripts, optional-access build failure, lint failures and failed temporary preservation proofs remain in guardian035/036/037 native records and report. No source/build/index mutation during the read-only overlap is claimed; corrected current proofs and passing hooks are not waivers. The037 pause was independently assessed as the explicitly declared local-builder/new-export relocation, not a new trace exception or historical pretrace pass. Leave actual capture/order gaps open and unwaived. | open |  | 2026-10-16T03:09:09.875Z |  |
 
 ````json
 [
@@ -740,6 +741,19 @@ last_updated: 2026-10-16T02:12:35.820Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-16T02:12:35.820Z",
+    "resolved_at": null,
+    "milestone": null
+  },
+  {
+    "id": 56,
+    "kind": "deviation",
+    "phase": "4",
+    "file": ".planning/phases/04-runtime-conformance/04-ACCOUNT-REVIEW.md",
+    "line": null,
+    "description": "[code-review-sweep] Plan15 retains read/help/query preparation outputs without separate original UTC/native envelopes across035-037. In036 an intermediate noEmit compiler attempt overlapped a read-only guard despite required serial order; final compiler-tests-serialized and guard-append-serialized reruns passed but do not provide historical ordering proof. Original transcripts, optional-access build failure, lint failures and failed temporary preservation proofs remain in guardian035/036/037 native records and report. No source/build/index mutation during the read-only overlap is claimed; corrected current proofs and passing hooks are not waivers. The037 pause was independently assessed as the explicitly declared local-builder/new-export relocation, not a new trace exception or historical pretrace pass. Leave actual capture/order gaps open and unwaived.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-16T03:09:09.875Z",
     "resolved_at": null,
     "milestone": null
   }

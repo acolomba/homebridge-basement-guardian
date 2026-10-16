@@ -886,3 +886,45 @@ Counter 1 still has 44 accepted, 29 independently closed and 15 open causes
 pending the whole correction 2 in 17. No partial clean or RUN-01 completion is
 claimed. T-04-24 remains subject to phase security/seal; restore only
 workflow.use_worktrees=true before the final milestone audit/handoff.
+
+
+## ACCOUNT stage C implementation and combined gate
+
+Plan 15 implements 035/036/037 in normal cause commits 8799eb3, bf7b47a and
+f1b7c58. All 44 production files remain unchanged. The real CONF-03 wrapper,
+AUTH-02 password registration and 031 safe restart diagnostic remain explicit
+security proofs. Other incidental log assertions now observe complete domain
+state. Finite exact mocks are verified after public answers. No logger-factory
+port or logging source/owner edit was needed; unavailable constructor queries
+remain unmet and unused, with no trace waiver.
+
+NEW test/platformSeeds.ts has 12 fresh factories, the complete approved header
+and actual whole-file/caller evidence. Eight trust Map uses are case-owned.
+All 12 test-project queries are complete and identify the platform owner;
+12 production queries remain exit1/unavailable, with exclusion proven by actual
+compiler membership. The local-builder relocation pause was independently
+checked against explicit 037 authority: names/signatures and existing private
+aliases/member shapes are preserved. No old pretrace pass, blanket visibility
+exception or reconstructed evidence follows. The new helper joins full current
+correction 2 and the seal inventory.
+
+035 passes 107 platform/logging tests and isolated platform 508/22/63 and
+logging 127/11/29 at 100 percent. 036 and 037 each pass all 74 platform tests
+and platform 508/22/63 at 100 percent. Both compilers, lint, preservation,
+all 23 immutable genuine histories, audits, clean prestaging steps and normal
+hooks pass. Shared-helper checks select all 43 pairs. Whole current logging
+subsystem review and phase security remain pending.
+
+The parent full npm run check passed at clean f1b7c584843e6695c87d84721a27043a81beb60b,
+Node v26.11.1, UTC 2026-10-16T03:08:08.992980+00:00 to 03:08:44.414905+00:00.
+Six static checks, 104 scenarios, 1156 steps and all 43 isolated pairs passed.
+Native metadata/streams: /private/tmp/guardian-phase4-plan15-full-gate.*.
+Metadata-only reuse requires the exact comparison and no new executable.
+
+WINDOW 56 retains preparation UTC/envelope gaps and 036's intermediate noEmit
+and read-only guard overlap. Current corrected serial evidence does not supply
+missing historical timestamps/order or waive the gap. WINDOWS 46–56 stay OPEN.
+Plan 16 is next. Counter 1 still has 44 accepted, 29 independently closed and
+15 pending causes until whole correction 2 in 17. No independent closure or
+RUN-01 readiness is claimed. Restore only workflow.use_worktrees=true before
+final milestone audit/handoff; numerical 09 remains a later metadata closeout.
