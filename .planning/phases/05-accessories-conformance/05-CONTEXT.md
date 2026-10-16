@@ -81,7 +81,7 @@ meaning, fallback state or persistence migration is in scope.
   place (pattern: `controls.test.ts:44-46` `HAP_NAMESPACE`; add e.g.
   `asService`/`asAccessory` helpers as needed). Inline `as unknown as` casts
   are replaced by those helpers. No production type changes to remove casts.
-- **D-12:** `features/support/fakeHap.ts` (722 lines, 15 consumers) stays
+- **D-12:** `features/support/fakeHap.ts` (722 lines, 14 importers) stays
   outside Phase 5's sweep. Edit it only when a confirmed accessory finding
   requires it, as a declared bounded consumer task (D-06). Its full review
   belongs to the phase that owns `features/**`.
@@ -111,8 +111,8 @@ meaning, fallback state or persistence migration is in scope.
   warnings; the four gates together; no two plans in one wave edit the same
   file).
 - Names of the per-file widening helpers.
-- Applying the D-01 header to the nine unheadered test files and the
-  `reconciliation.ts` header gap as ordinary findings.
+- Applying the D-01 header to the 21 files that lack it (nine sources and
+  twelve tests) as ordinary findings.
 
 </decisions>
 
@@ -142,6 +142,10 @@ meaning, fallback state or persistence migration is in scope.
 - `skills/typescript-unit-testing/SKILL.md`
 - `skills/typescript-unit-testing-review/SKILL.md`
 - `skills/local-verification/SKILL.md`
+- The `skills/` rulebooks are authoritative (AGENTS.md). The tracked
+  `.claude/rules/typescript-unit-testing.md` copy also allows
+  `// act & assert` for "a data row"; `skills/` allows it only for one
+  `assert.rejects`/`assert.throws`. Reviewers and fixers follow `skills/`.
 
 </canonical_refs>
 
@@ -155,7 +159,7 @@ meaning, fallback state or persistence migration is in scope.
   pattern D-11 extends.
 
 ### Established Patterns
-- 25 `as unknown as` casts across `controls` (7), `basementGuardian` (8),
+- 24 `as unknown as` casts across `controls` (7), `basementGuardian` (8),
   `staleMarking` (5), `serviceCatalogue` (2), `customServices` (1),
   `customCharacteristics` (1).
 - Static gates enumerate directories, assert a documented floor, and pair
@@ -163,10 +167,11 @@ meaning, fallback state or persistence migration is in scope.
 - `hapWriteFidelity.test.ts` is the only file allowed to import
   `@homebridge/hap-nodejs` (D-17 of the earlier milestone); it diffs real
   HAP and the stand-in on the same write script.
-- Headers: all ten sources start with SPDX; `reconciliation.ts` has a blank
-  line before its JSDoc. Only `controls.test.ts` and `reconciliation.test.ts`
-  carry SPDX; the four gates open with `@fileoverview`; eight tests open with
-  imports.
+- Headers: only `reconciliation.ts` has the full D-01 header; the other nine
+  sources put `@fileoverview` directly after SPDX, with no blank line and no
+  copyright block. Among tests only `controls.test.ts` and
+  `reconciliation.test.ts` conform; the four gates open with `@fileoverview`;
+  eight tests open with imports.
 
 ### Integration Points
 - ~13.7K lines total; `basementGuardian.test.ts` 3,456 and
