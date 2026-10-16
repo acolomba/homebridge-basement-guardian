@@ -24,7 +24,7 @@ const NOW = 1_700_000_000_000;
 // Logging is a callable interface with seven members, so the stub is a
 // no-op function that carries them rather than an object literal.
 function createSilentLog(): Logging {
-  const noop = (): void => {
+  const noop: () => void = (): void => {
     // logging is not this module's job; the stub discards every call
   };
 

@@ -62,7 +62,7 @@ function createSilentLog(): Logging {
 }
 
 function createRecordingLog(messages: string[]): Logging {
-  const record = (message: string): void => {
+  const record: (message: string) => void = (message: string): void => {
     messages.push(message);
   };
 
@@ -1791,7 +1791,9 @@ describe('applyMonitoringHealth', () => {
     const inPluginOrder = restoredAccessoryRepublishingItsRows();
     const inverted = restoredAccessoryRepublishingItsRows();
     const refusal = { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
-    const markUnreadable = (accessories: Map<string, BasementGuardianPlatformAccessory>): void => {
+    const markUnreadable: (accessories: Map<string, BasementGuardianPlatformAccessory>) => void = (
+      accessories: Map<string, BasementGuardianPlatformAccessory>,
+    ): void => {
       for (const accessory of accessories.values()) {
         markTrustReportsUnreadable(accessory, HAP_NAMESPACE, HAP_NAMESPACE.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
       }

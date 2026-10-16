@@ -3141,7 +3141,7 @@ describe('createAccountRuntime', () => {
     let rootSignal!: AbortSignal;
 
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const throttled = (): Promise<never> => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
+    const throttled: () => Promise<never> = (): Promise<never> => Promise.reject(new AuthThrottledError('the vendor answered HTTP 429.', THROTTLE_RETRY_MS));
     const { runtime, calls, advance, commandRequests } = harness(
       t,
       { devices: [throttled, throttled, () => Promise.resolve([geminiDevice()])], command: commands },
@@ -4296,7 +4296,8 @@ describe('createAccountRuntime', () => {
   test('D-13 keeps live telemetry through a poll that recovers from a REST degradation', async (t) => {
     // arrange
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const failing = (): Promise<ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const failing: () => Promise<ApiDevice[]> = (): Promise<ApiDevice[]> =>
+      Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
     const stoppedPump = { ...geminiDevice(), data: { ...geminiDevice().data, primary_pump_running: false } };
     const { runtime, shadows, store, advance, commandRequests } = harness(t, {
       pollIntervalMs: FAST_POLL_INTERVAL_MS,
@@ -5624,7 +5625,8 @@ describe('createAccountRuntime', () => {
     }).thenReturn(undefined);
 
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const failing: () => Promise<readonly ApiDevice[]> = (): Promise<readonly ApiDevice[]> =>
+      Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
     const { runtime, monitoringHealth, advance, commandRequests } = harness(
       t,
       {
@@ -5688,7 +5690,8 @@ describe('createAccountRuntime', () => {
     }).thenReturn(undefined);
 
     const commands = mock<CloudApi['sendCommand']>({ exactParams: true, name: 'command dispatch' });
-    const failing = (): Promise<readonly ApiDevice[]> => Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
+    const failing: () => Promise<readonly ApiDevice[]> = (): Promise<readonly ApiDevice[]> =>
+      Promise.reject(new CloudRequestError('GET /devices failed with HTTP 503.', 503, 'GET /devices'));
     const { runtime, monitoringHealth, advance, commandRequests } = harness(
       t,
       {

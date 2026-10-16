@@ -7397,3 +7397,158 @@ including the actual 031 human choice 1 policy. RUN-01 stays Pending and
 WINDOWS46–54 stay OPEN/unwaived. No source or JSON change, SUMMARY, shared
 state change, new review or combined full gate is included. The parent owns
 the combined gate after the actual 04-13 terminal handoff.
+
+### CR-04-ACCOUNT-032 implementation — explicit local callable bindings
+
+032 is implemented pending the whole independent correction2 in 04-17.
+This is the bounded 04-14-01 cause at clean starting revision
+cfd221ddcde1177e29dcb852d437d12bbf7fc478 on features/code-review-sweep.
+The exclusive serial lease covers this existing checkout; the actual
+workflow.use_worktrees=false and isolation:none opt-out remain unchanged.
+The actual Git-dir ledgers were read directly:09=8a700ac4b3594bf0c16af0a5e3ce35223ef3f574,
+13=abf7e7ce8e2c7df892a768c3697fb0fdd63987b7 and
+14=cfd221ddcde1177e29dcb852d437d12bbf7fc478. None was reconstructed or written.
+
+The applicable Google Functions rule permits a const arrow with an explicit
+function type. Exactly the seven confirmed bindings receive that type; the
+existing initializer parameter and return types, bodies, names and scopes
+remain. Constructor discoveryContext needs outer this and is untouched.
+
+| Correction C location | Starting/current location in the owned file | Binding type |
+| --- | --- | --- |
+| ACCOUNT owner2809 | test/runtime/accountRuntime.test.ts:3144/3144 | () => Promise<never> |
+| ACCOUNT owner3938 | test/runtime/accountRuntime.test.ts:4299/4299 | () => Promise<ApiDevice[]> |
+| ACCOUNT owner5266 | test/runtime/accountRuntime.test.ts:5627/5628 | () => Promise<readonly ApiDevice[]> |
+| ACCOUNT owner5330 | test/runtime/accountRuntime.test.ts:5691/5693 | () => Promise<readonly ApiDevice[]> |
+| reconciliation owner27 | test/accessories/reconciliation.test.ts:27/27 | () => void |
+| platform owner64 | test/platform.test.ts:65/65 | (message: string) => void |
+| platform owner1793 | test/platform.test.ts:1794/1794 | (accessories: Map<string, BasementGuardianPlatformAccessory>) => void |
+
+Before editing, installed TypeScript6.0.3 resolved each declaration symbol
+and every lexical reference in its complete owner. The four ACCOUNT bindings
+feed their cases' exact devices arrays:3147 twice,4303 twice,5631 twice and
+5695 once at the starting revision. The Script.devices contract passes them
+through harness -> answering -> answer(signal); the throttling case's
+explicit devices port overrides the scripted default. No extra invocation
+or change to that existing setup is inferred. Reconciliation noop supplies
+Object.assign and its six logging properties. Platform record supplies the
+callable logger and five logging properties; markUnreadable has the two
+explicit calls at1805/1806 in the ordering instrument case. Complete source
+and owner reads include those consumers and the runtime API composition.
+before-types.json retains full reference parent expressions and enclosing
+case names; after-types.json retains the current checker observations.
+
+Both actual compiler projects returned zero diagnostics before and after.
+tsconfig.json excludes these test bindings; that is explicit inapplicability,
+not a manufactured successful production symbol query. tsconfig.test.json
+includes all seven and reports exactly the same callable types before/after.
+No shared/exported/private alias or member contract changes, rename, deletion,
+new helper or unavailable-trace waiver was needed. The checker proof compares
+parameter/return contracts and entire initializer bodies. The complete owner
+files equal only the seven expected binding insertions followed by installed
+Prettier formatting. All three emitted JavaScript files are byte-identical
+to their saved pre-edit compiler emissions. Source maps can reflect moved
+TypeScript lines; no map-equivalence claim is made. All original cases,
+assertions, headers, fixtures and active genuine regressions are retained.
+All44 production file contents and modes equal the starting revision.
+No redundant annotation-only test or new genuine RED record was added.
+
+Full mandatory reads were completed before the first repository edit:
+AGENTS/bootstrap, all FIVE complete books, the installed Fallow book, full
+04-14/04-13 plans including user_supersession_031, context/protocol, the entire
+7399-line ACCOUNT report, canonical decisions, research/patterns,13summary,
+current PROJECT/REQUIREMENTS/ROADMAP/STATE,09plan and FINDINGS. All three full
+source/owner pairs were read: ACCOUNT1346/9401lines, reconciliation114/256 and
+platform676/2936. Native read-ranges.jsonl and read-completion.json retain
+bounded contiguous ranges, source Git blobs, SHA256 hashes, snapshots and
+empty pending ranges. Initial book/plan transcript reads have explicit saved
+current hash proofs; they are distinguished from native captured sed reads.
+Oversized ACCOUNT301–1300 output was refilled301–600/601–900/901–1300.
+An actual host context truncation at STATE251–500 caused ordinary compaction;
+the same cause resumed and refilled251–375/376–500, then completed501–747.
+Unchanged base blobs were rechecked; no capture alone substitutes for reading.
+The initial concern about a displayed work budget did not establish a host
+limit and caused no omission or edit. The actual full read inventory is
+1,716,201bytes across30files, or429,050.25 by bytes/4, excluding repeated
+reads/callers/tool output. Original scope1,204,839bytes and forecast400k–480k,
+arithmetic margin520k against configured1m, remain estimates, not observed
+token use, an effective host capacity or a guaranteed fit. Advisory100k did
+not reduce scope. Both JSON histories were machine-processed in full.
+
+Native evidence is /private/tmp/guardian032-900dzf_2. Each verification attempt
+has attempt.json with exact argv/cwd/HEAD/UTC/Node/npm/raw exit, separate
+complete stdout/stderr, input/staged patches, tracked/untracked/compiled input
+manifests and content-addressed full bodies under objects/. Installed tool
+inputs and temporary proof scripts are also retained. These checks ran in
+the main existing checkout with Nodev26.11.1/npm11.20.0; every child reached
+terminal before the next mutation. The baseline capture and each input patch
+distinguish clean pre-edit inputs from the actual annotated dirty inputs.
+
+| Actual native record | Command/scope | Raw exit / observed result |
+| --- | --- | --- |
+| before-types | Installed TypeScript checker and owner emit, both projects | 0; original types/callers/emit saved |
+| after-types-01 | Pre-formatter checker/emit preservation | 0; initial annotation-only preservation |
+| format-01; after-types-02 | Guarded installed formatter, then checker/exact whole-file/emit proof | 0; final seven annotations only, contracts/JS preserved |
+| build-test-01 | npm run build:test | 0; fresh compiled inputs |
+| owners-tap-01 | node --test --test-reporter=tap with all THREE complete compiled owners | 0;257pass,0fail/cancel/skip/todo |
+| direct-three-01 | npm run test:coverage:direct -- with all three declared source/owner pairs | 0; all three isolated pairs accepted |
+| native-account-01 | Native TAP plus exact-SF LCOV, all three100 thresholds, ACCOUNT alone | 0;169pass;1007/1007lines,58/58functions,195/195branches |
+| native-reconciliation-01 | Same native thresholds, reconciliation alone | 0;14pass;53/53lines,6/6functions,12/12branches |
+| native-platform-01 | Same native thresholds, platform alone | 0;74pass;511/511lines,22/22functions,63/63branches |
+| lint-uncached-01 | Installed ESLint --no-cache --max-warnings=0, all three owners | 0; no output/warnings |
+| red-cli-account-01; red-cli-platform-01 | SAME installed actual-file check tdd-red-evidence CLI, each immutable JSON | 0; both RED_EVIDENCE_OK |
+| preservation-01 | SAME installed recursive classifyRedEvidence plus actual Git sourceCommit:path -> sourceBlob | 0; all16ACCOUNT+7PLATFORM=23 accepted/provenance-verified |
+| audit-01 | Installed Fallow audit --base cfd221ddcde1177e29dcb852d437d12bbf7fc478 --format json --quiet --explain | 0; verdict pass, zero issues |
+| prestep-01 | SKIP=npm-check pre-commit run --files on the three owners and report, before staging | 0; clean; report had no new appendix yet |
+
+The three native LCOV files each contain exactly one SF, respectively
+dist-test/src/runtime/accountRuntime.js, dist-test/src/accessories/reconciliation.js
+and dist-test/src/platform.js. Their separate native100thresholds and exact
+LF/LH,FNF/FNH,BRF/BRH equality supplement the direct selector; aggregate
+coverage is not substituted. Full native TAP retains every case and metric.
+Verification UTC intervals run from01:28:35.267543 through01:32:07.932929
+on2026-10-16; each attempt retains its precise individual start/end.
+
+Both immutable complete histories remain exact: ACCOUNT
+b882b1502f0c1fe9ffe3ebd3c5af2f9ace68c134 and PLATFORM
+321b61af80c611fda8d825dd613a2537b16303e1. The recursive proof checks all
+current/nested records, Git source membership/ancestry and embedded source/
+active-owner hashes where supplied. The complete original report prefix is
+508,778bytes, blob6d05eccb2c5fca070d1a66a0e5ddd43a907eee94,
+SHA256ba51998a7bdf7b12ca389c7269c20a57662db8dc7d7e837d7c717a37024a208b.
+preservation-proof.json verifies that prefix byte for byte.
+
+One display-only node-e extraction of the already saved audit JSON had an
+extra closing parenthesis and exited1 before reading it. The full original
+combined tool output and exact argv are retained in display-only-syntax-error.json;
+its original UTC bounds and separate streams were not captured. Corrected
+audit-verdict-01 exited0 with full native streams and the actual pass verdict.
+No verification result depends on the failed display. Initial discovery/read
+tool transcript limits are not retroactively described as native captures.
+
+Canonical realpath containment was established before this first append in
+containment-before-append-01. Fresh exact guards preceded the seven edits,
+formatter, initial pre-step and this append. The declared cause budget is
+three owners + this report + precommitted04-14plan = five paths; only the
+three owners and report actually change. The plan, source, evidence JSONs,
+config and sentinel remain untouched. A fresh recorded-base audit and clean
+exact four-path pre-step must be repeated after this appendix before staging;
+their actual results and the ordinary foreground commit/hooks/clean-tree
+checkpoint are retained separately in this native directory. This appendix
+does not predeclare the future commit or hook outcome. Parent owns the
+combined npm run check after terminal14 and every shared record.
+
+The actual031 human choice1 remains authoritative: every uncertain registration
+throw requires visible fixed safe restart guidance and blocks retry for that
+platform accessoryMap run, across rebuilt contexts and removal/reappearance.
+Normal return earns local ownership; configureAccessory restored ownership
+remains authoritative. Healthy neighbors and pre-call preparation retries
+remain; no acceptance oracle, compensation or restart recovery guarantee is
+introduced. Later035 must preserve the real logger's actionable diagnostic.
+
+Counts remain44accepted,29independentlyclosed and15open030–044 at counter1.
+No new independent review, subset clean verdict or counter reset occurred.
+The next actual whole correction2 evaluates D-03 immediately; no-progress,
+reopening or round4 even clean requires the global stop. RUN-01 stays Pending;
+WINDOWS46–54 remain OPEN/unwaived. No summary, metadata/shared-state update,
+new helper, production policy or full combined-gate claim is included here.
