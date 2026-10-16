@@ -1,37 +1,83 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-13T18:02:30.392Z",
-  "phase": "1",
-  "phase_name": "Known Findings and Loop Proof",
-  "phase_dir": "",
+  "timestamp": "2026-10-16T18:43:51.350Z",
+  "phase": "5",
+  "phase_name": "Accessories Conformance",
+  "phase_dir": ".planning/phases/05-accessories-conformance",
   "plan": 0,
   "task": 0,
-  "total_tasks": 8,
+  "total_tasks": 0,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Spot-check review and findings seed", "status": "done", "commit": "5f621a7"},
-    {"id": 2, "name": "Close and archive v1.0 milestone", "status": "done", "commit": "0a4ae7a"},
-    {"id": 3, "name": "Start milestone code-review-sweep and define requirements", "status": "done", "commit": "2c786bf"},
-    {"id": 4, "name": "Create 8-phase roadmap", "status": "done", "commit": "5c5f00a"}
+    {
+      "id": 1,
+      "name": "Phases 1–3 complete and verified",
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "Phase 4: 19/19 plans; verification 27/27; UAT 25/25; RUN-01 Complete",
+      "status": "done",
+      "commit": "2835b1674cbcee36cd6ae365f22524dc7aed081f"
+    },
+    {
+      "id": 3,
+      "name": "Transition to Phase 5; full gate on current Node 26.12.0 passed",
+      "status": "done",
+      "commit": "ae88de84cb32935d6a519e6ca6a285fc7afdd8a2"
+    }
   ],
   "remaining_tasks": [
-    {"id": 5, "name": "Phase 1: Known Findings and Loop Proof", "status": "not_started"},
-    {"id": 6, "name": "Phases 2-7: subsystem and Cucumber conformance", "status": "not_started"},
-    {"id": 7, "name": "Phase 8: Final sweep and gate", "status": "not_started"}
+    {
+      "id": 4,
+      "name": "Resume unanswered Phase 5 discussion-area selection",
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "Phase 5 research, planning, execution and actual verification",
+      "status": "not_started"
+    },
+    {
+      "id": 6,
+      "name": "Phases 6–8, restore original worktree preference, milestone audit, closeout and cleanup",
+      "status": "not_started"
+    }
   ],
   "blockers": [],
   "async_jobs": [],
   "human_actions_pending": [
-    {"action": "Hand the milestone to the executing agent", "context": "The maintainer runs analysis and fixes with a different agent", "blocking": true}
+    {
+      "action": "Choose Phase 5 discussion areas: reply with numbers such as 1,2,3",
+      "context": "Pending choices: 1. Carrying earlier accessory reviews and fixes into this review. 2. Handling HAP test doubles and casts. 3. Strengthening the four static and fidelity tests.",
+      "blocking": true
+    }
   ],
   "decisions": [
-    {"decision": "Fix every finding, including headers and @fileoverview", "rationale": "User chose full scope", "phase": "all"},
-    {"decision": "Decide the header form in the Phase 1 discussion; keep the license-header gate passing", "rationale": "Parallel Phase 1 batches each apply it", "phase": "1"},
-    {"decision": "Include features/** under skills/cucumber-behavioral-testing and features/CLAUDE.md; real-pump static only", "rationale": "User scope choice", "phase": "7"},
-    {"decision": "Repo-level gate tests out of scope unless touched", "rationale": "User scope choice", "phase": "all"},
-    {"decision": "Phase 6 runs after Phase 5", "rationale": "platform.ts wires the accessories tier", "phase": "6"}
+    {
+      "decision": "Pause explicitly requested; do not continue autonomous execution until the user resumes",
+      "rationale": "Current user invoked gsd-pause-work",
+      "phase": "5"
+    },
+    {
+      "decision": "Carry forward Phase 4 D-01 through D-07; no Phase 5 decisions answered yet",
+      "rationale": "Existing sweep policies remain authoritative; no inferred discussion selection",
+      "phase": "5"
+    },
+    {
+      "decision": "Phase 4 E-04-01/P-04-01/P-04-02 each received a separate actual pass",
+      "rationale": "UAT records exact responses; taxonomy and automated-enforcement unknowns remain explicit",
+      "phase": "4"
+    },
+    {
+      "decision": "Keep three exact historical audit qualifications and other WINDOWS46–58 OPEN/unwaived",
+      "rationale": "Actual bounded maintainer acceptance does not create a future waiver",
+      "phase": "4"
+    }
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd-discuss-phase 1 in /Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
-  "context_notes": "Worktree has a manually copied, gitignored GSD install. Use plain git commit (gsd-tools commit can silently commit nothing). Seed findings are in .planning/research/SPOT-CHECK-FINDINGS.md."
+  "uncommitted_files_measured_at": "2026-10-16T18:43:51.350Z",
+  "uncommitted_files_scope": "Measured immediately before writing these two handoff artifacts; their later normal commit is verified separately.",
+  "next_action": "Run $gsd-resume-work; read this handoff and resume the unanswered Phase 5 area-selection question before writing CONTEXT, DISCUSSION-LOG or plans.",
+  "context_notes": "Original request: $gsd-autonomous --interactive across all remaining phases, now explicitly paused. Current branch features/code-review-sweep, no push/PR requested. Use PATH=/opt/homebrew/opt/node/bin:$PATH for a working installed Node 26.12.0; the old Cellar Node 26.11.1 path fails after Homebrew changed simdutf. Full gate current-runtime evidence is /private/tmp/guardian-phase4-verification-docs/native/transition-current-runtime-full-gate/. No background agent or owned process remains active. workflow.use_worktrees is temporarily false, original true: restore only that key through registered config-set at milestone end. Use ordinary foreground git commit, not GSD commit wrappers. Read the Markdown handoff for strict protocol and evidence details."
 }
