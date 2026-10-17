@@ -55,14 +55,20 @@ void ({ kind: 'backup-battery', subtype: 'backup-battery', name: 'Backup Battery
 void ({ kind: 'sump-pit-humidity', subtype: 'sump-pit-humidity', serviceUuid: PLACEHOLDER_UUID, name: 'Sump Pit Humidity' } satisfies ServiceDescriptor);
 
 test('CONF-06 lists the seven removable notification sensors in declaration order', () => {
-  // act & assert
-  assert.deepStrictEqual(NOTIFICATION_SERVICE_KINDS, REMOVABLE_SENSOR_NAMES);
+  // act
+  const removableKinds = NOTIFICATION_SERVICE_KINDS;
+
+  // assert
+  assert.deepStrictEqual(removableKinds, REMOVABLE_SENSOR_NAMES);
 });
 
 for (const sensorName of REMOVABLE_SENSOR_NAMES) {
   test(`recognises ${sensorName} as a removable notification sensor`, () => {
-    // act & assert
-    assert.strictEqual(isNotificationServiceKind(sensorName), true);
+    // act
+    const recognised = isNotificationServiceKind(sensorName);
+
+    // assert
+    assert.strictEqual(recognised, true);
   });
 }
 
@@ -73,7 +79,10 @@ for (const { described, supplied } of [
   { described: 'an absent value', supplied: undefined },
 ]) {
   test(`refuses ${described} as a removable notification sensor`, () => {
-    // act & assert
-    assert.strictEqual(isNotificationServiceKind(supplied), false);
+    // act
+    const recognised = isNotificationServiceKind(supplied);
+
+    // assert
+    assert.strictEqual(recognised, false);
   });
 }
