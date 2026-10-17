@@ -350,25 +350,19 @@ for (const reported of [true, false, undefined]) {
   });
 }
 
-test('registers one handler however many times a service is bound', () => {
+test('registers one handler however many times a service is bound', (t) => {
   // arrange
   const binder = createControlBinder(binderOptions());
   const service = switchService();
   const characteristic = onCharacteristic(service);
-  let registrations = 0;
-  const declared = characteristic.onSet.bind(characteristic);
-  characteristic.onSet = (handler) => {
-    registrations += 1;
-
-    return declared(handler);
-  };
+  const onSetSpy = t.mock.method(characteristic, 'onSet');
 
   // act
   binder.bind(service as unknown as Service, 'self-test', () => false);
   binder.bind(service as unknown as Service, 'self-test', () => false);
 
   // assert
-  assert.strictEqual(registrations, 1);
+  assert.strictEqual(onSetSpy.mock.callCount(), 1);
 });
 
 for (const { failure, status, pendingAfterRefusal } of [
