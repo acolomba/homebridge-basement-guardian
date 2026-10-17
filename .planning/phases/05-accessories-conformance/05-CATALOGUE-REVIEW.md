@@ -1,0 +1,229 @@
+---
+phase: 05-accessories-conformance
+batch: CATALOGUE
+review_round: 0
+reviewed: 2026-10-17T14:22:21Z
+depth: deep
+source_revision: ef7578f8c86c7f7b65adc3648cd7e404cfee7d12
+files_reviewed: 2
+files_reviewed_list:
+  - src/accessories/serviceCatalogue.ts
+  - test/accessories/serviceCatalogue.test.ts
+findings:
+  blocker: 5
+  warning: 10
+  total: 15
+status: issues_found
+reviewer: gsd-code-reviewer (round 0)
+---
+
+# Phase 5 CATALOGUE batch: round-0 review
+
+Every line of both files was read in full at `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12`. The
+review used the three `.agents/skills` books (each `SKILL.md` and every `rules/*.md` file),
+`05-CONTEXT.md`, `05-REVIEW-PROTOCOL.md`, the CATALOGUE ledger rows and leads, `features/lib/hap.ts`,
+`features/lib/homebridgeApi.ts`, `test/accessories/accessoryReadPathScope.test.ts`, and the pinned
+`@homebridge/hap-nodejs` 2.2.2 `Characteristic.js`, `Service.js`, `Accessory.js` and
+`ServiceDefinitions.js`.
+
+The production module behaves correctly on every input I probed (see Toolchain evidence). Every
+BLOCKER below is a test that a plausible wrong implementation passes. None is a D-04 production-bug
+candidate.
+
+## Findings
+
+### CR-05-CATALOGUE-001 - WARNING: The source/test pair does not have the D-01 header
+
+**Rule:** D-01; `.agents/skills/typescript-style/rules/modules-and-data.md` Files and modules (file order: copyright JSDoc, `@fileoverview` JSDoc, imports, each separated by exactly one blank line)
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:src/accessories/serviceCatalogue.ts:1-2; ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:1`
+**Issue:** In the source, the `/** @fileoverview` block starts on line 2, directly after the SPDX line. There is no blank line and no `Copyright (c) 2026 Alessandro Colomba` block. The test opens with `import assert` on line 1. It has no SPDX line, no copyright block and no overview.
+**Fix:** Source: insert an empty line 2, then lines 3-5 `/**` / ` * Copyright (c) 2026 Alessandro Colomba` / ` */`, then an empty line 6. Keep the existing long overview text as lines 7 onward, starting ` * @fileoverview One row per published service, ...`. Test: add the SPDX line, an empty line, the copyright block and an empty line. Then add `/**` / ` * @fileoverview <purpose>` / ` */`, one empty line and the first import. Make this a header-only commit.
+**Flags:** none
+
+### CR-05-CATALOGUE-002 - WARNING: 19 combined `// act & assert` markers do not sit above one `assert.throws()` or `assert.rejects()` call
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure ("Use `// act & assert` only when one `assert.rejects()` or `assert.throws()` expression performs both the action and assertion. Data rows still use separate phases.")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:1466, 1478, 1499, 1511, 1519, 1529, 1537, 1547, 1555, 1589, 1625, 1642, 1652, 1687, 1778, 1799, 1807, 1818, 1829`
+**Issue:** The file contains no `assert.throws` or `assert.rejects`. Each of the 19 markers sits above an `assert.strictEqual` or `assert.deepStrictEqual` that wraps the call under test. Four of them (1511, 1529, 1547, 1625) are data rows, which the rule says must use separate phases.
+**Fix:** In each case, assign the call to a role-named constant under `// act` (for example `const group = decodedGroup(decoded, 'pump');`, `const publishable = ...`, `const service = publishedService(...)`, `const missing = unprojectedRequiredCharacteristics(...)`). Assert that constant under `// assert`. Keep every expected value unchanged.
+**Flags:** none
+
+### CR-05-CATALOGUE-003 - BLOCKER: No case gives a row a decoded but factless battery, control or wrong-typed fault group, so a row that defaults the missing fact passes
+
+**Rule:** `.agents/skills/typescript-unit-tests/SKILL.md` (a wrong implementation makes the assertion fail); `.agents/skills/typescript-unit-tests/rules/review.md` Classifying findings (weak or missing assertions)
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:1053-1080 (rows 1061, 1062-1065), 826-917, 1082-1129, 172-174, 178-190`
+**Issue:** The absent-state matrix claims to cover "a group carrying none of its facts" and "facts of the wrong type" for every decoded-state row. Its decoded objects only hold `water`, `pump`, `power` and `fault` (1061), or `water`, `pump` and `power` (1064). So the two battery rows and the two control rows project `[]` only because their group is missing, which is the separate "did not decode" path. The fault rows are never given a wrong-typed fact. All other battery and control inputs carry a complete, correctly typed group (`batteryGroup()`, `decodedState()`, `activeControls()`). Take a row that reads a present group but defaults a missing fact, such as `battery === undefined ? undefined : lowBatteryState(hap, battery['low'] === true)` or `On: group['running'] === true` once the group exists. It publishes `BATTERY_LEVEL_NORMAL` or `On = false` for an undecoded fact and passes all 185 cases. This is review question 1: the withholding of an undecoded fact is not pinned for these rows. Production is correct today. A probe with `{ battery: { low: 'yes' }, 'self-test': {}, 'alarm-mute': { muted: 1 } }` projects `[]` on all four rows.
+**Fix:** Extend the matrix rows so each one covers every group that a decoded-state row reads. Row 1061: `{ water: {}, pump: {}, power: {}, battery: {}, fault: {}, 'self-test': {}, 'alarm-mute': {} }`. Row 1063-1065: add `battery: { low: 'no', levelPercent: '100', charging: 'yes', voltageLow: 'no', healthCode: '8', protectionHoursCode: '8' }`, a `fault` group with string facts, `'self-test': { running: 'no' }` and `'alarm-mute': { muted: 'no' }`. Keep the expected value as sixteen `[]`.
+**Flags:** none
+
+### CR-05-CATALOGUE-004 - BLOCKER: No case decouples the decoded level percentage and flood verdict from the level code, so a row that re-derives them passes; the source-text case does not test what its title says
+
+**Rule:** `.agents/skills/typescript-unit-tests/SKILL.md` (every case discriminates the behavior named in its title); `.agents/skills/typescript-unit-tests/rules/review.md` Classifying findings; `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure (titles state the public behavior)
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:141-150, 341-402, 1485-1491` (production contract at `src/accessories/serviceCatalogue.ts:6-12, 424-447`)
+**Issue:** The module promises that a published value is "read verbatim from decoded state". It also promises that the level meaning "lives behind the family boundary" (serviceCatalogue.ts:10-12, 424-427). Every water group the suite builds is a consistent ladder rung (`WATER_LADDER`, the `decodedState()` default `{ levelCode: 1, levelPercent: 20, flooded: false }`). Two wrong rows would pass every case: one that computes `levelPercent` or `flooded` from `levelCode` (an inline copy of the ladder, `levelCode === 31`), and one that publishes `RawWaterLevelCode` as `WaterLevel` for a ladder-equal code. The case at 1485-1491 is titled "reads the water level meaning from decoded state rather than from the level ladder". It only checks that the source text lacks the spelling `waterLevel.js`, so an inline ladder or arithmetic passes it. Production reads verbatim today. A probe with `{ levelCode: 31, levelPercent: 20, flooded: false }` projects `WaterLevel 20`, `RawWaterLevelCode 31` and `LeakDetected 0`.
+**Fix:** Add a sump-pit case and a flood case whose decoded group does not match the ladder, for example `{ levelCode: 31, levelPercent: 20, flooded: false }`. Expect the whole projections `[WaterLevel 20, RawWaterLevelCode 31, WaterSensorFaultReported false, StatusFault NO_FAULT]` and `[LeakDetected LEAK_NOT_DETECTED]`. Retitle 1485-1491 to what it checks, for example "imports nothing from the level ladder module", or remove it. Do not remove it until the new behavioral case is in place. No gate covers this import (see S-05-17), so P-05-03 requires the ledger to name the new case as the place where the protection lives.
+**Flags:** none
+
+### CR-05-CATALOGUE-005 - BLOCKER: The row-order case computes its expected value with production code and cannot fail
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Assertions ("Build expected values independently. Do not call the production formatter ..."); `.agents/skills/typescript-unit-tests/rules/review.md` Classifying findings (expected values computed by production code); `.agents/skills/typescript-unit-tests/rules/pairing-and-design.md` What not to test
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:1410-1428`
+**Issue:** "answers the same row order whatever the input carries" projects each row and then compares the kinds with `createServiceCatalogue(hap).map((row) => row.kind)`. The production call computes the expected value. `createServiceCatalogue` takes only `hap`, and `project` cannot reorder the returned array, so no implementation can fail this case. It only costs maintenance.
+**Fix:** Remove the case. The order is already pinned with independent literals at 1169-1196 (kinds and subtypes) and 1260-1287 (display names), and the signature takes no input. Record both locations in the ledger (P-05-03). Alternatively, keep the case and compare against a written-out kind list.
+**Flags:** none
+
+### CR-05-CATALOGUE-006 - BLOCKER: Two cases assert one picked property where the whole projection is the promise
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Assertions ("Compare whole values with `assert.deepStrictEqual()`. Do not assert existence, length, or one property at a time when the whole value is the promise."); `.agents/skills/typescript-unit-tests/rules/review.md` Classifying findings
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:372-382, 1737-1753`
+**Issue:** (a) 372-382, "publishes an integer water level for code N", asserts `Number.isInteger(valueOf(...)) === true`. The row reads `levelPercent` verbatim from the fixture, so the case only proves that `WATER_LADDER` holds integers. A row that publishes the level code as `WaterLevel` still passes. (b) 1737-1753, "activates no ... contact for a monitoring outage", picks only `ContactSensorState`. On the `Pump Controller Link Lost` row, `StatusFault`, `ControllerLinkPresent` and `ControllerDataLastTrustedAt` are not asserted during an all-scope `unreachable` outage. A row that raised `StatusFault = GENERAL_FAULT` for the outage, turning marking into a fault, would pass. The comment above the case promises that the outage "leaves both quiet". This is the review-question-2 gap: no case pins a fault adapter's `StatusFault = NO_FAULT` during a degraded-scope outage.
+**Fix:** (a) Remove 372-382. The exact value per rung is pinned at 342-358 (record that location under P-05-03). (b) Compare `summarise(row.project(input))` whole. For the link row, expect `[ContactSensorState CONTACT_DETECTED, StatusFault NO_FAULT, ControllerLinkPresent true, ControllerDataLastTrustedAt '']`. For the offline row, expect `[ContactSensorState CONTACT_DETECTED]`. Assert `active: false` as now. Because the expectations differ, split the two rows into two named cases instead of putting a conditional in the loop.
+**Flags:** none
+
+### CR-05-CATALOGUE-007 - BLOCKER: The type-level negative for `offlineConfirmed` also omits `pendingControls`, so it does not prove what its description says
+
+**Rule:** `.agents/skills/typescript-unit-tests/SKILL.md` (a wrong implementation makes the assertion fail); `.agents/skills/typescript-unit-tests/rules/boundaries.md` (`satisfies` checks and `@ts-expect-error` negatives as cases); `.agents/skills/typescript-unit-tests/rules/review.md` Classifying findings
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:157-158`
+**Issue:** `// @ts-expect-error a projection reads the offline confirmation the accessory counted` checks `{ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '' } satisfies ProjectionInput`. That literal lacks both `offlineConfirmed` and `pendingControls`. If `offlineConfirmed` became optional (`offlineConfirmed?: boolean`), the missing `pendingControls` would still raise the expected error, so the check stays green against the wrong contract. An optional `offlineConfirmed` lets a caller omit it, and `offlineValues` would then withhold the offline adapter.
+**Fix:** Add `pendingControls: new Set<DeviceCapability>()` to the negative literal so that `offlineConfirmed` is the only missing member. Then add a matching positive `void ({ ..., offlineConfirmed: false, pendingControls: new Set<DeviceCapability>() } satisfies ProjectionInput);` so the negative cannot pass for an unrelated reason.
+**Flags:** none
+
+### CR-05-CATALOGUE-008 - WARNING: `isRowTrusted` is exported only for the test
+
+**Rule:** `.agents/skills/typescript-style/rules/modules-and-data.md` Files and modules ("Every export is used outside its module"); `.agents/skills/typescript-unit-tests/rules/pairing-and-design.md` Design production code for its tests ("Do not export a symbol for a test ... Assert a private rule through the public export that uses it.")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:src/accessories/serviceCatalogue.ts:224-241; ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:17, 1553-1592, 1788`
+**Issue:** `fallow dead-code --trace src/accessories/serviceCatalogue.ts:isRowTrusted` lists one direct reference: `test/accessories/serviceCatalogue.test.ts`. `grep -rnw isRowTrusted src test features` finds no other caller. The only production caller is `isRowFullyTrusted` in the same module. Its JSDoc says it "drives the marking half ... the accessory publishes `StatusActive = false`". The accessory reads `isRowFullyTrusted` for that.
+**Fix:** Make `isRowTrusted` module-local. Move its four cases into `describe('isRowFullyTrusted')`, run against single-scope rows (for a row whose `readScopes` is `[scope]`, the two predicates agree). Rewrite 1788 so that it compares `isRowFullyTrusted` on the two-scope row with the same row narrowed to `readScopes: ['pump']`. Keep every expected value (P-05-03). This changes an exported contract: run both D-06 impact commands first. The only expected consumer is this test.
+**Flags:** D-06
+
+### CR-05-CATALOGUE-009 - WARNING: Cases sit under the `describe()` of an entrypoint they do not exercise
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure (one top-level `describe()` per entrypoint; do not group by anything else)
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:1396-1408, 1574-1586, 1598-1612, 1633-1689, 1693-1718, 1720-1731, 1737-1753, 1758-1770`
+**Issue:** 1396-1408 tests `ensureService` but sits under `describe('createServiceCatalogue')`. Under `describe('isRowPublishable')`, 1633-1689 call only `row.project`. 1598-1612, 1693-1718, 1720-1731 and 1737-1753 call `row.project` and `isRowFullyTrusted` and never `isRowPublishable`. 1758-1770 tests `ensureService`. Under `describe('isRowTrusted')`, 1574-1586 also asserts `row.project`. A reader cannot find a function's cases in its own `describe()`.
+**Fix:** Move each case, with its assertions unchanged, to the `describe()` of the entrypoint it calls. `row.project` cases go to `createServiceCatalogue`, `ensureService` cases to `ensureService`, and the trust-pair cases to `isRowFullyTrusted`. Where a case asserts two entrypoints, split it into one case per entrypoint.
+**Flags:** none
+
+### CR-05-CATALOGUE-010 - WARNING: `readOf` discards the Promise that `handleGetRequest` returns and depends on the stand-in throwing synchronously
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Assertions ("Await every promise and asynchronous assertion"); D-16
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:2103-2117` (used at 2142, 2169, 2189, 2206)
+**Issue:** The test types the service as Homebridge's `Service`. `handleGetRequest` is declared `Promise<Nullable<CharacteristicValue>>` (`hap-nodejs/dist/lib/Characteristic.d.ts:1545`), and real HAP 2.2.2 implements it as `async` and rejects with the stored status (`Characteristic.js:1683, 1729-1730`). `readOf` calls `void held.handleGetRequest()` inside a synchronous `try/catch`. That catches a status only because `features/lib/hap.ts:341-348` throws synchronously. Against real HAP, `threw` would always be `undefined` and the rejection would go unhandled. No production line is hidden: `hapWriteFidelity.test.ts:402-421` pins status parity for a pushed error against real HAP.
+**Fix:** Make `readOf` async: `try { await held.handleGetRequest(); } catch (error: unknown) { threw = error; }`. Make the four calling cases `async` and `await readOf(...)`. Keep their expected records unchanged.
+**Flags:** D-16
+
+### CR-05-CATALOGUE-011 - WARNING: The `seedConfiguredName` JSDoc gives a reason for the `testCharacteristic` guard that does not hold
+
+**Rule:** `.agents/skills/typescript-style/rules/comments.md` (comments describe what the code does and why); D-16
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:src/accessories/serviceCatalogue.ts:1027-1030, 1037`
+**Issue:** The JSDoc says the guard exists "because the real HAP creates a declared-but-absent characteristic on the way out of `getCharacteristic`, which would name a service the caller only meant to inspect". The function always declares `ConfiguredName` first (1035). When the characteristic is absent, it then writes the display name (1043). Without the guard, real HAP 2.2.2 `getCharacteristic` would add the declared characteristic at `''` (`Service.js:472-499`), and the function would name it on the next line anyway. The outcome is the same, so the stated harm never happens here. The only observable effect of the guard is that it avoids a `TypeError` from the stand-in, whose `getCharacteristic` returns `undefined` where real HAP creates (`features/lib/hap.ts:486-488`). The cases at 2225-2253 therefore prove the guard only against a crash that exists only in the stand-in.
+**Fix:** Restate the reason as a present-tense fact that holds. For example: the read must not depend on `getCharacteristic`'s create-on-miss, which differs between real HAP and the test stand-in. Or name the guard as the ordering that keeps a read from adding a characteristic. Keep the guard and its behavior (preservation). Record the stand-in's `getCharacteristic` create-on-miss gap for the GATES batch (D-16, hapWriteFidelity) and Phase 7 (D-12).
+**Flags:** D-16
+
+### CR-05-CATALOGUE-012 - WARNING: A test comment narrates code history
+
+**Rule:** `.agents/skills/typescript-style/rules/comments.md` Forbidden in comments ("Narration of code that no longer exists")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:699-700`
+**Issue:** "the live values each pump row published before it existed are compared against an inline list" describes the code before the pump record existed, not the code as it stands.
+**Fix:** Restate it as a present-tense fact, for example: "The record is additional and displaces nothing, so the live pump and fault values are compared against an inline list rather than against the row's own answer."
+**Flags:** none
+
+### CR-05-CATALOGUE-013 - WARNING: Two test comments describe behavior the code does not have
+
+**Rule:** `.agents/skills/typescript-style/rules/comments.md` (comments describe what the code does); `.agents/skills/typescript-unit-tests/rules/pairing-and-design.md` What not to test ("Usage is not a property of a type")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:90-92, 1053`
+**Issue:** (a) 90-92 says that because `TRUST_SCOPES` is written out, "a scope added to the union without a row reading it is visible at this boundary too". Nothing checks the list against the `TrustScope` union for completeness. A new scope that no row reads changes no assertion. Detecting an unread type member is also the use the rule forbids. (b) 1053 says `registerAbsentStateCases` holds "Every case about a group that did not decode and a scope that is not trustworthy". It also registers the control `On` projection and pending-request cases (1082-1129).
+**Fix:** (a) Say what the list does: "Every trust scope, so each trust-state case runs once per scope." (b) Either move the control cases (1082-1129) into their own `registerControlCases()` or widen the comment to name them.
+**Flags:** none
+
+### CR-05-CATALOGUE-014 - WARNING: The shared mutable seed `CLEAR_FAULTS` reaches a case by reference
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Test data ("Seeds reused across cases ... as functions that return fresh values, never shared mutable constants"); Case structure ("Each case gets fresh state")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:103-109, 130`
+**Issue:** `CLEAR_FAULTS` is a mutable module-level object literal, and many cases reuse it. The `a confirmed offline run` row passes it by reference (`fault: CLEAR_FAULTS`), so the decoded `fault` group of that case is the shared object.
+**Fix:** Replace it with `function clearFaults(): Record<string, boolean> { return { primaryPumpFault: false, ... }; }` and call it at every use: `{ ...clearFaults(), primaryPumpFault: true }`, `fault: clearFaults()`.
+**Flags:** none
+
+### CR-05-CATALOGUE-015 - WARNING: Projected values are named `value`
+
+**Rule:** `.agents/skills/typescript-unit-tests/rules/cases.md` Naming values ("Do not use `result`, `data`, `value`, ...")
+**Location:** `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318, 622, 639, 658, 677, 692, 714, 715, 752, 753`
+**Issue:** The callbacks name each projected or summarised element `value`, although the element itself carries a `value` member. Readers then see `value.uuid` next to `{ uuid, value }`.
+**Fix:** Name the element after its role, for example `(projectedValue) => projectedValue.characteristic.UUID` and `(published) => published.uuid === ...`.
+**Flags:** none
+
+## Seed and lead dispositions
+
+- **S-05-01 (CATALOGUE part):** confirmed as **CR-05-CATALOGUE-002**. `grep -c "// act & assert"` counts 19 markers. None sits above `assert.throws` or `assert.rejects`, and the file has neither call.
+- **S-05-17 (CATALOGUE part, serviceCatalogue.test.ts:1485-1491):** **rejected** under `.agents/skills/typescript-unit-tests/rules/pairing-and-design.md` ("Do not test what a gate already enforces"), because no gate enforces this check. The lead describes the case as an `onGet` / get-event check that repeats `accessoryReadPathScope.test.ts`. At this revision the case asserts `source.includes('waterLevel.js') === false`, which is an import-boundary check on the level ladder module. `accessoryReadPathScope.test.ts:93-116` matches only `../cloud/` and `../runtime/accountRuntime.js` imports and four read-handler spellings (`.onGet(`, `.on('get'`, `.on("get"`, `.on(CharacteristicEventTypes.GET`). It never reads `waterLevel.js`. No other gate (`test/device/gemini.test.ts:706-716`, `.fallowrc.json`, `eslint.config.js`) restricts that import. The case's actual weakness, a title it does not discriminate, is a separate cause: CR-05-CATALOGUE-004. The ACCESSORY part (`basementGuardian.test.ts:3400-3455`) is not judged here.
+
+## Header inspection
+
+- `src/accessories/serviceCatalogue.ts`: does not conform. Line 1 is `// SPDX-License-Identifier: MIT` (correct). Line 2 opens `/**` with ` * @fileoverview` on line 3, so the empty line 2, the copyright block (lines 3-5) and the empty line 6 are missing. The overview closes at 25, then one empty line (26), then the first import at 27, which conforms. Covered by CR-05-CATALOGUE-001.
+- `test/accessories/serviceCatalogue.test.ts`: does not conform. Line 1 is `import assert from 'node:assert/strict';`. The SPDX line, copyright block and `@fileoverview` block are all missing. Covered by CR-05-CATALOGUE-001.
+
+## Toolchain evidence
+
+Run from the repository root at HEAD `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12`. The tree held one unrelated modified planning file (`.planning/phases/05-accessories-conformance/05-FINDINGS.md`). Node `v26.12.0`, npm `11.20.0`, started 2026-10-17T14:20:29Z. Every command was prefixed with `export PATH="/opt/homebrew/opt/node/bin:$PATH" &&`.
+
+| Command | Raw exit | Result |
+| --- | --- | --- |
+| `npm run typecheck` | 0 | both `tsc --noEmit` passes clean |
+| `node_modules/.bin/eslint src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts --max-warnings=0` | 0 | no output |
+| `npm run build:test` | 0 | |
+| `node --test dist-test/test/accessories/serviceCatalogue.test.js` | 0 | tests 185, suites 13, pass 185, fail 0, cancelled 0, skipped 0, todo 0 |
+| `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` | 0 | printed nothing beyond the npm banner (100% direct pair coverage) |
+
+Read-only checks that support the findings, using made-up inputs only:
+
+- `node --input-type=module -e` against `dist-test/src/accessories/serviceCatalogue.js` and the stand-in. `{ water: { levelCode: 31, levelPercent: 20, flooded: false } }` projects `Sump Pit Flood [LeakDetected 0]` and `Sump Pit Level [WaterLevel 20, RawWaterLevelCode 31]`, so production reads verbatim (CR-05-CATALOGUE-004). `{ battery: { low: 'yes' }, 'self-test': {}, 'alarm-mute': { muted: 1 } }` projects `[]` on all four battery and control rows (CR-05-CATALOGUE-003).
+- `node_modules/.bin/fallow dead-code --trace src/accessories/serviceCatalogue.ts:isRowTrusted`: one direct reference, from `test/accessories/serviceCatalogue.test.ts` (CR-05-CATALOGUE-008).
+- Real HAP 2.2.2 `ServiceDefinitions.js` required lists (`Battery`: StatusLowBattery; `ContactSensor`: ContactSensorState; `LeakSensor`: LeakDetected; `Switch`: On) match the stand-in's lists at `features/lib/hap.ts:663-687`. So the required-characteristic case at 1462-1483 has no stand-in gap.
+
+## Out-of-scope observations
+
+- `features/lib/hap.ts:341-348` (Phase 7, D-12; parity case for the GATES batch, D-16): `handleGetRequest` is synchronous and throws, while real HAP 2.2.2 is `async` and rejects (`Characteristic.js:1683, 1729-1730`). Consumers that observe a read synchronously work only against the stand-in (see CR-05-CATALOGUE-010).
+- `features/lib/hap.ts:486-488` (Phase 7, D-12; GATES, D-16): `getCharacteristic` returns `undefined` for an absent characteristic, while real HAP 2.2.2 adds it, from the optional list or with a warning (`Service.js:472-499`). No fidelity case compares the two (see CR-05-CATALOGUE-011).
+- `features/lib/hap.ts:97-110` (Phase 7): two consecutive JSDoc blocks precede `FakeHapStatusError`. The first is orphaned.
+- `features/lib/hap.ts:375` (Phase 7): "fourteen near-identical class bodies", but `CHARACTERISTIC` defines 16 characteristics (387-418).
+- `features/lib/homebridgeApi.ts:166` (Phase 7): `public displayName` parameter property. `typescript-style/rules/classes.md` allows no `public` modifier.
+- `.planning/phases/05-accessories-conformance/05-FINDINGS.md` lead S-05-17 (coordinator ledger): the observation text misdescribes `serviceCatalogue.test.ts:1485-1491` as an `onGet` / get-event check. It is a `waterLevel.js` import check.
+
+## Coordinator triage
+
+Triaged on 2026-10-17 by the coordinator against the cited regions at
+`ef7578f8c86c7f7b65adc3648cd7e404cfee7d12`. All 15 findings are accepted as `open`; none is
+rejected and none is a genuine production bug (D-04), so each BLOCKER repair carries the
+protocol's assertion control.
+
+| ID | Severity | Disposition | Coordinator direction |
+| --- | --- | --- | --- |
+| CR-05-CATALOGUE-001 | WARNING | open | Header-only commit `style(serviceCatalogue): add the approved file headers`; the test overview reads like "Tests the service catalogue rows and their publish helpers." |
+| CR-05-CATALOGUE-002 | WARNING | open | One cause, one commit: separate `// act` and `// assert` phases with values named for their production role for all 19 markers. |
+| CR-05-CATALOGUE-003 | BLOCKER | open | Fix as the report says (matrix rows that carry every group a row reads). Control: make one battery or control row default a missing fact and observe the matrix case fail. |
+| CR-05-CATALOGUE-004 | BLOCKER | open | Add the off-ladder sump-pit and flood cases first, then retitle or remove the 1485-1491 source-text case; the ledger names the new cases as where the protection lives (P-05-03). Control: re-derive `levelPercent` or `flooded` from `levelCode` and observe the new cases fail. |
+| CR-05-CATALOGUE-005 | BLOCKER | open | Remove the case or compare against written-out kinds; if removed, the report names 1169-1196 and 1260-1287 as where the order protection lives (P-05-03). |
+| CR-05-CATALOGUE-006 | BLOCKER | open | Fix as the report says (remove the integer case, naming 342-358; split and compare the outage rows whole). Control: raise `StatusFault = GENERAL_FAULT` for the outage on the link row and observe the case fail. |
+| CR-05-CATALOGUE-007 | BLOCKER | open | Fix as the report says (only `offlineConfirmed` missing in the negative, plus a matching positive). Control: make `offlineConfirmed` optional in `ProjectionInput` and observe `npm run typecheck` fail on the unused `@ts-expect-error`. |
+| CR-05-CATALOGUE-008 | WARNING | open | D-06: run both impact commands before editing and keep their raw output; make `isRowTrusted` module-local and move its cases under `isRowFullyTrusted` with every expected value kept (P-05-03). Its consumer is the paired test only. |
+| CR-05-CATALOGUE-009 | WARNING | open | Move cases to the `describe()` of the entrypoint they call, assertions unchanged; a structural commit last among this file's causes. |
+| CR-05-CATALOGUE-010 | WARNING | open | Make `readOf` and its four callers async and await `handleGetRequest`, expected records unchanged. The stand-in's synchronous throw goes to GATES as lead S-05-23 (D-16). |
+| CR-05-CATALOGUE-011 | WARNING | open | Comment only: restate the guard's reason as a present-tense fact; keep the guard and its behavior. The stand-in's missing create-on-miss goes to GATES as lead S-05-23 (D-16). |
+| CR-05-CATALOGUE-012 | WARNING | open | Present-tense comment, no history. |
+| CR-05-CATALOGUE-013 | WARNING | open | Make both comments describe what the code does. |
+| CR-05-CATALOGUE-014 | WARNING | open | Fresh or read-only seed, as the report says. |
+| CR-05-CATALOGUE-015 | WARNING | open | Name callback elements for their production role. |
+
+Lead dispositions: S-05-01 (this batch's part) confirmed as CR-05-CATALOGUE-002 (19 markers).
+S-05-17 (this batch's part) rejected with the reviewer's reason, which the coordinator accepts:
+the case at serviceCatalogue.test.ts:1485-1491 checks the `waterLevel.js` import, not a read
+handler, and no gate covers that import, so the "gate already enforces" rule does not apply; the
+case's real weakness is CR-05-CATALOGUE-004.
+
+New lead for another batch: S-05-23 (GATES, D-16): two stand-in read-path disagreements with
+real HAP 2.2.2 that no fidelity case diffs: `handleGetRequest` throws synchronously in the
+stand-in (`features/lib/hap.ts:341-348`) but is `async` and rejects in real HAP
+(Characteristic.js:1683, 1729-1730); and the stand-in's `getCharacteristic` does not create a
+declared-but-absent characteristic, while real HAP's does (Service.js:472-499).
+
+Counter: round 0 opens at 0 (no seeds), adds 15 new, rejects 0, closes at 15: `initial`.
