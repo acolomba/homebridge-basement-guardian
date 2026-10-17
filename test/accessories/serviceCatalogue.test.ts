@@ -811,7 +811,11 @@ function registerPumpCases(): void {
   test('leaves the backup pump adapter quiet while every other condition is active', () => {
     // arrange
     const hap = hapNamespace();
-    const decoded = decodedState({ ...everyOtherConditionActive(), pump: { primaryRunning: true, backupRunning: false, backupActivatedAt: 1_700_000_000 } });
+    const decoded = decodedState({
+      ...everyOtherConditionActive(),
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      pump: { primaryRunning: true, backupRunning: false, backupActivatedAt: 1_700_000_000 },
+    });
 
     // act
     const projected = rowOf(hap, 'backup-pump-running').project(projectionInput({ decoded, offlineConfirmed: true }));

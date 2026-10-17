@@ -239,3 +239,9 @@ The row sweep (all 17 rows covered) and the candidates are accepted as reasoned.
 
 Counter (D-03 as amended, D-18): opening 2, fixed 1, rejected 0, new 0, reopened 0, closing 1.
 Closing (1) is below opening (2), no ID reopened and the round is below 10: `continue`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CATALOGUE-024 | `test/accessories/serviceCatalogue.test.ts` | Node v26.12.0: `node_modules/.bin/fallow guard test/accessories/serviceCatalogue.test.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/serviceCatalogue.test.js` exit 0 (212 tests, 12 suites, 212 pass, 0 fail); `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` exit 0 (no output); `node_modules/.bin/eslint test/accessories/serviceCatalogue.test.ts --max-warnings=0` exit 0; `node_modules/.bin/fallow audit --base ef7578f8c86c7f7b65adc3648cd7e404cfee7d12 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | flooding pit added to the arrange |
