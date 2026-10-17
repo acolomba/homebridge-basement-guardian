@@ -20,7 +20,7 @@
  * or one that call has just added. So one service list keeps feeding subtypes,
  * names, and descriptors (D-01).
  *
- * Two HAP behaviours govern the code below, both read out of the pinned
+ * These HAP behaviours govern the code below, both read out of the pinned
  * package's own source rather than assumed:
  *
  * - A rejected write never moves the stored value, so nothing here restores a
@@ -42,7 +42,7 @@
  *
  * The binder is not the only write handler this module owns. A restart the
  * vendor cloud never answers restores the control Switches from the Homebridge
- * cache long before any accessory exists to route a press, and HAP answers a
+ * cache before any accessory exists to route a press, and HAP answers a
  * write with no handler by storing the value and reporting success -- so the
  * toggle flips in Apple Home, an automation built on it fires, and nothing
  * happened. `bindRestoredControlRefusal` closes that window with a refusal
@@ -122,10 +122,11 @@ export interface ControlBinderOptions {
    * interval, so while that path is quiet the earliest confirmation is a poll
    * the configuration may put an hour away.
    *
-   * A press accepted then would reach a real sump pump and expire with a warning
-   * naming a device failure that did not happen, and the duplicate rule below
-   * would meanwhile be judging a reading up to a poll interval old, so a second
-   * press could start a test while one was already running (RES-04, D-07, D-08).
+   * A press accepted then would reach a real sump pump and could expire with a
+   * warning naming a device failure that did not happen, and the duplicate rule
+   * below would meanwhile be judging a reading up to a poll interval old, so a
+   * second press could start a test while one was already running (RES-04,
+   * D-07, D-08).
    */
   liveConfirmationObservable: () => boolean;
   /**
@@ -165,10 +166,10 @@ export interface ControlBinder {
   /**
    * Resolves a pending request against what the device now reports.
    *
-   * A reported value matching what was asked for clears the entry, and from
-   * then on the Switch follows reported state alone. A capability with no
-   * pending entry is a no-op, which is what makes an externally initiated test
-   * and a second confirming report both harmless (CTRL-03, D-037).
+   * A reported value matching what was asked for clears the entry. A capability
+   * with no pending entry is a no-op, which is what makes an externally
+   * initiated test and a second confirming report both harmless (CTRL-03,
+   * D-037).
    */
   reconcile(capability: DeviceCapability, reported: boolean | undefined): void;
 }
@@ -269,10 +270,10 @@ function hasNoCommandTransport(request: ControlRequest): boolean {
 }
 
 // The live path carrying the device's own confirmation has gone quiet, and the
-// wait for a confirmation closes long before the next poll could carry it.
-// Sending anyway would operate a real sump pump and then warn that the device
-// never confirmed it, for a condition on this side of the connection (RES-04,
-// D-07, D-08, WR-02).
+// wait for a confirmation is shorter than a poll interval. Sending anyway would
+// operate a real sump pump and could then warn that the device never confirmed
+// it, for a condition on this side of the connection (RES-04, D-07, D-08,
+// WR-02).
 function cannotSeeAConfirmation(request: ControlRequest): boolean {
   return !request.confirmationObservable;
 }
@@ -463,10 +464,7 @@ export function bindRestoredControlRefusal(options: RestoredControlRefusalOption
   const { hap, log, timers, service, accessoryName } = options;
 
   // `onSet` rather than `on('set', ...)`, matching the binder: HAP warns when a
-  // characteristic carries both and ignores the event listener. It is also what
-  // makes this refusal replaceable rather than permanent -- `setHandler` is one
-  // slot, so the binder's own handler takes it over when the accessory's
-  // publish pass binds the control row.
+  // characteristic carries both and ignores the event listener.
   service.getCharacteristic(hap.Characteristic.On).onSet(() => {
     timers.setTimeout(() => {
       clearRefusal(hap, service, nothingToRepublish, undefined);
@@ -603,7 +601,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }
 
     // From here the row withholds `On`, so the accessory's next update cannot
-    // snap the toggle back before the device confirms (D-05). The entry is
+    // snap the toggle back while the request waits (D-05). The entry is
     // created immediately before the request leaves, with its own deadline, so
     // no path can leave one behind with no way out.
     requested.set(capability, {
