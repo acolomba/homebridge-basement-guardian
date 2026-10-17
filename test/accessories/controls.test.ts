@@ -421,17 +421,24 @@ for (const { failure, status, pendingAfterRefusal } of [
   });
 }
 
+// The reported value changes between the refusal and the push, so a push of the value read at the
+// write fails here.
 test('pushes the reported value the accessory answers when the clearing push runs', async () => {
   // arrange
   const { timers, deferrals } = recordingTimers();
-  const { service } = boundSwitch({ timers }, () => true);
+  let reported = false;
+  const { service } = boundSwitch({ timers }, () => reported);
 
   // act
-  await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, false);
+  reported = true;
   deferrals[0]?.run();
 
   // assert
-  assert.deepStrictEqual({ value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode }, { value: true, statusCode: SUCCESS });
+  assert.deepStrictEqual(
+    { thrown, value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, value: true, statusCode: SUCCESS },
+  );
 });
 
 // A row publishes `On` only while it can vouch for the reported value, so a refusal answered while
@@ -1321,5 +1328,28 @@ for (const held of [true, false]) {
 
     // assert
     assert.deepStrictEqual(readOfSwitch(service), { value: held, threw: undefined });
+  });
+}
+
+// The held value changes between the refusal and the push, so a push of the value read at the
+// refusal fails here. The value is set on the characteristic directly, because a publish would
+// also clear the refusal status that the push exists to clear.
+for (const { heldAtRefusal, heldAtPush } of [
+  { heldAtRefusal: false, heldAtPush: true },
+  { heldAtRefusal: true, heldAtPush: false },
+]) {
+  test(`pushes ${String(heldAtPush)}, the value a restored control holds when the push runs, not ${String(heldAtRefusal)} from the refusal`, async () => {
+    // arrange
+    const { timers, deferrals } = recordingTimers();
+    const service = refusingRestoredSwitch({ timers });
+    service.updateCharacteristic(HAP.Characteristic.On, heldAtRefusal);
+
+    // act
+    const thrown = await writeRejection(service, true);
+    onCharacteristic(service).value = heldAtPush;
+    clearingPushesIn(deferrals)[0]?.run();
+
+    // assert
+    assert.deepStrictEqual({ thrown, read: readOfSwitch(service) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: heldAtPush, threw: undefined } });
   });
 }
