@@ -811,12 +811,7 @@ function registerPumpCases(): void {
   test('leaves the backup pump adapter quiet while every other condition is active', () => {
     // arrange
     const hap = hapNamespace();
-    const decoded = decodedState({
-      pump: { primaryRunning: true, backupRunning: false },
-      power: { mainsPresent: false },
-      fault: { primaryPumpFault: true, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: true, controllerLinkPresent: true },
-      'self-test': { running: true, testedAt: undefined },
-    });
+    const decoded = decodedState({ ...everyOtherConditionActive(), pump: { primaryRunning: true, backupRunning: false, backupActivatedAt: 1_700_000_000 } });
 
     // act
     const projected = rowOf(hap, 'backup-pump-running').project(projectionInput({ decoded, offlineConfirmed: true }));
