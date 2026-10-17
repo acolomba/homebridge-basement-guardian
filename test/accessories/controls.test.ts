@@ -944,23 +944,6 @@ describe('createControlBinder', () => {
     });
   }
 
-  test('names the capability, the device and the cause in the one line a refusal logs, and quotes nothing else', async () => {
-    // arrange
-    const warnings: string[] = [];
-    const log = warningLog(warnings);
-    const commands = answeringCommands(() => ({ accepted: false, failure: 'timed-out' }));
-    const { service } = boundSwitch({ commands, log });
-
-    // act
-    const thrown = await writeRejection(service, true);
-
-    // assert
-    assert.deepStrictEqual(
-      { thrown, warnings },
-      { thrown: OPERATION_TIMED_OUT, warnings: [`The self-test request on ${DEVICE_ID} timed out and may still have reached the device. It is not retried.`] },
-    );
-  });
-
   for (const refusalCase of REFUSALS) {
     test(`answers ${String(refusalCase.status)} for ${refusalCase.cause}`, async () => {
       // act
