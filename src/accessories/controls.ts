@@ -222,6 +222,8 @@ interface ControlRequest {
   offlineConfirmed: boolean;
   transportReady: boolean;
   confirmationObservable: boolean;
+  /** An earlier request for this capability still waits for the device's confirmation. */
+  pending: boolean;
 }
 
 // One refusal the plugin answers on its own: what decides it, the status that
@@ -303,6 +305,15 @@ function isAlreadyActive(request: ControlRequest): boolean {
   return request.reported === request.accepted;
 }
 
+// An earlier request for this capability still waits for the device to confirm
+// it. Only one request per control can wait at a time (D-037, CTRL-03, CTRL-05):
+// a second command can operate a real sump pump again while the first can
+// already be running. Nothing is sent, so the earlier request keeps its own
+// window.
+function isAwaitingConfirmation(request: ControlRequest): boolean {
+  return request.pending;
+}
+
 function notAllowedInCurrentState(hap: API['hap']): number {
   return hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE;
 }
@@ -339,6 +350,11 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 // equipment that is fine while the condition that actually blocked the press
 // went unnamed. It is refused all the same -- the plugin still could not tell a
 // running test from an idle one afterwards (D-07, D-08, WR-02).
+//
+// The pending rule comes last. When a request also waits, every other rule that
+// applies still names its own cause. The pending rule answers only a press that
+// no other rule refuses, which is the press that otherwise reaches the vendor a
+// second time (D-037).
 const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
   { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: NO_COMMAND_TRANSPORT_CAUSE },
@@ -346,6 +362,7 @@ const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: hasNoFreshState, status: notAllowedInCurrentState, cause: 'the plugin has no fresh state for it' },
   { applies: isConfirmedOffline, status: notAllowedInCurrentState, cause: 'the device is confirmed offline' },
   { applies: isAlreadyActive, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'it already reads active' },
+  { applies: isAwaitingConfirmation, status: (hap) => hap.HAPStatus.RESOURCE_BUSY, cause: 'an earlier request is still waiting for the device to confirm it' },
 ];
 
 function localRefusalFor(request: ControlRequest): LocalRefusal | undefined {
@@ -549,6 +566,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
       offlineConfirmed: offlineConfirmed(),
       transportReady: commandTransportReady(),
       confirmationObservable: liveConfirmationObservable(),
+      pending: requested.has(capability),
     });
 
     if (refusal !== undefined) {

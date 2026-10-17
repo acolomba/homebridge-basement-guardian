@@ -303,6 +303,37 @@ test('keeps the capability pending while the scope carrying its reported value h
   assert.deepStrictEqual([...binder.pending], ['self-test']);
 });
 
+test('refuses a second on request while the first waits for the device, and sends one command', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands({ accepted: true });
+  const { timers, deferrals, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
+  await onCharacteristic(service).handleSetRequest(true);
+
+  // act
+  let thrown: unknown = undefined;
+
+  try {
+    await onCharacteristic(service).handleSetRequest(true);
+  } catch (error: unknown) {
+    thrown = error;
+  }
+
+  // assert
+  assert.deepStrictEqual(
+    { thrown, sends, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
+    {
+      thrown: RESOURCE_BUSY,
+      sends: [`${DEVICE_ID} self-test true`],
+      pending: ['self-test'],
+      delays: [30000, 0],
+      cancelled: [],
+      warnings: [`Refused self-test on ${DEVICE_ID}: an earlier request is still waiting for the device to confirm it.`],
+    },
+  );
+});
+
 for (const reported of [true, false, undefined]) {
   test(`reconciles a capability that was never pending against a reported ${String(reported)} without creating one`, () => {
     // arrange
@@ -406,9 +437,12 @@ test('names the capability, the device and the cause in the one line a refusal l
   assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
 });
 
-// The eight ways one write can end, in the order the binder evaluates them: six the plugin answers
-// by itself and two the vendor answers. Every case below is read off this one table, so a cause
-// that stops being refused, or that starts answering a different status, fails by name.
+// The eight ways one write against an idle control can end, in the order the binder evaluates them:
+// six the plugin answers by itself and two the vendor answers. A press while an earlier request
+// waits is the binder's other local refusal. It needs that earlier press, so its own case, 'refuses
+// a second on request while the first waits for the device, and sends one command', covers it.
+// Every case below is read off this one table, so a cause that stops being refused, or that starts
+// answering a different status, fails by name.
 interface RefusalCase {
   cause: string;
   value: unknown;
