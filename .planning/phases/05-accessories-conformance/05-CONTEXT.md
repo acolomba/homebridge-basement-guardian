@@ -31,10 +31,10 @@ meaning, fallback state or persistence migration is in scope.
   Full-file reviewers and cause fixers use the complete rulebooks. Each cause
   fix is atomic and passes the pre-step and normal hooks.
 - **D-03:** Stop ALL work if an independent correction round with open
-  findings does not reduce the open count, a fixed finding reopens, or round
-  four is reached, even if clean. Report accurate IDs/counts first. A new
-  cause never resets an existing batch counter. Tracer checks and initial
-  clarifications are not correction rounds.
+  findings does not reduce the open count, or a fixed finding reopens.
+  Report accurate IDs/counts first. A new cause never resets an existing
+  batch counter. Tracer checks and initial clarifications are not correction
+  rounds. For Phase 5 the round cap is D-18, not Phase 4's round four.
 - **D-04:** Genuine bug: observe an active regression failure against
   unchanged production; commit planning-only RED evidence before the minimum
   GREEN commit. No failing code commit, hidden/skipped regression or hook
@@ -103,6 +103,21 @@ meaning, fallback state or persistence migration is in scope.
 - **D-17:** A unit-testing rule that cannot apply to a gate with no source
   module (e.g. one `describe()` per exported entrypoint) is recorded N/A in
   the ledger with a one-line reason. All other rules apply in full.
+
+### Correction round cap (maintainer decision during planning)
+
+- **D-18:** Each Phase 5 batch may run up to ten correction rounds. When a
+  round still has open findings but fewer than its opening count, repairs
+  continue and the next correction round runs. STOP ALL work on the
+  reviewer's terminal result when: a round with open findings does not
+  lower the open count; a fixed finding reopens; or correction round 10
+  ends with open findings. A clean round at any point closes the batch;
+  a clean round 10 closes it normally. This replaces Phase 4's
+  "round four is reached, even if clean" stop and the "about four rounds"
+  wording of PROC-02 and ROADMAP for Phase 5 only; Phases 6-8 keep the
+  four-round cap unless the maintainer extends this. — **Reversibility:**
+  reversible — a planning-policy change; no code or published contract
+  depends on it.
 
 ### Claude's Discretion
 

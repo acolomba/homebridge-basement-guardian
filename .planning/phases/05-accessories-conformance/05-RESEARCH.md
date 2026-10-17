@@ -310,7 +310,7 @@ flowchart TD
   B -->|No| FIX[Typed gsd-code-fixer: one cause, max five paths, atomic commit]
   GREEN --> CR[Independent full-batch correction review]
   FIX --> CR
-  CR --> S{D-03: open not reduced, reopen, or round 4?}
+  CR --> S{D-03/D-18: open not reduced, reopen, or round 10 still open?}
   S -->|Yes| STOP[Global stop: report IDs/counts, no further mutation]
   S -->|No, open > 0| FIX
   S -->|No, clean| G[Parent: npm run check on combined tree]
@@ -516,17 +516,16 @@ for (const refusalCase of REFUSALS) {
 | A3 | Finding volume will be on the order of Phase 4 (87 findings over 6.9K lines), so ~100–200 here, given the 21 header files and 36 AAA sites. | Summary / planning | Medium. Affects plan count and context budget. [ASSUMED] |
 | A4 | Phase 4's ASVS 5.0.0 category names (V2 Validation and Business Logic, V14 Data Protection, V16 Security Logging and Error Handling) still apply. | Security Domain | Low. They were not re-fetched this session. [CITED: 04-RESEARCH.md:506 → OWASP ASVS v5.0.0] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Which GSD runtime executes Phase 5?**
+All four were resolved by the plan-phase orchestrator within CONTEXT's discretion, and the plans adopt each resolution.
+
+1. **Which GSD runtime executes Phase 5?** — RESOLVED: Claude Code. Plans use `.claude/gsd-core/...` paths only, and the Wave 0 protocol (05-01) records the choice. Because `gsd-executor` has no Agent tool under Claude Code, batch plans run inline through `/gsd-execute-phase 5 --interactive`.
    - What we know: Phase 4 ran with `GSD_RUNTIME=codex` and `.codex/gsd-core` paths. This session is Claude Code, and `.claude/gsd-core/workflows/execute-plan.md` exists. Both RED checkers are identical and both work.
-   - Recommendation: the planner uses the paths of the runtime that dispatches execution, and records the choice in the protocol.
-2. **Is a generated seal JSON required?**
+2. **Is a generated seal JSON required?** — RESOLVED: no. 05-09 runs a smaller coordinator closeout (inventory, header audit, round arithmetic, ledger tracer, full gate).
    - What we know: Phase 4 produced `04-SEAL-AUDIT.json` (14 MB) and a three-part tracer. CONTEXT D-02 requires only a ledger with evidence.
-   - Recommendation: use a smaller coordinator closeout (inventory, header audit, round arithmetic, full gate) unless the maintainer asks for a seal.
-3. **Does S-05-07 (unused `clock`) justify a cross-subsystem contract edit?**
-   - Recommendation: if it is accepted, declare a bounded consumer task for `src/runtime/accountRuntime.ts:346` and its owner in the RECORDS wave. This does not affect Phase 4's closed ACCOUNT counter (D-10).
-4. **`.planning/HANDOFF.json` was deleted after the last full gate (ae88de8).** This is a non-Markdown difference, and the last gate ran in a different session. Recommendation: run a fresh `npm run check` as Wave 0 baseline evidence instead of reusing the old result.
+3. **Does S-05-07 (unused `clock`) justify a cross-subsystem contract edit?** — RESOLVED: only if a reviewer accepts it. 05-05 carries a conditional, bounded consumer task for `src/runtime/accountRuntime.ts:346` and its owner, gated on both TypeScript-project impact commands. This does not affect Phase 4's closed ACCOUNT counter (D-10).
+4. **`.planning/HANDOFF.json` was deleted after the last full gate (ae88de8).** — RESOLVED: 05-01 runs a fresh `npm run check` as Wave 0 baseline evidence; no earlier gate result is reused.
 
 ## Environment Availability
 

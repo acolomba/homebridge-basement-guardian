@@ -82,3 +82,21 @@ Batch grouping and wave order; widening-helper names; header findings.
 ## Deferred Ideas
 
 Full review of `features/support/fakeHap.ts` belongs to the `features/**` phase.
+
+---
+
+## Correction round cap (raised during plan-phase, 2026-10-16)
+
+The planner read D-03 as "stop when correction round 3 leaves open findings";
+the plan checker flagged it as stricter than the Phase 4 protocol.
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Run round 4, then stop | Locked Phase 4 rule: stop on round 4's result even if clean | |
+| Stop after round 3 | Planner's stricter reading | |
+
+**User's choice (free text):** "continue doing repairs", then, asked whether the
+cap stays: "let's max at 10 rounds".
+**Recorded as:** D-18 — up to ten correction rounds per Phase 5 batch; stop on a
+no-progress round, a reopened fix, or open findings after round 10. Phase 5
+only; Phases 6-8 keep the four-round cap unless the maintainer extends it.
