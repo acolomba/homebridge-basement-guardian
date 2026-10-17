@@ -880,10 +880,11 @@ test('names the quiet live connection when the route and the reported value are 
   verify(commands);
 });
 
-// The quiet live path and no route at all, which is the pair the new rule's placement decides. A
-// plugin with no route to send on cannot be helped by a channel to hear back on, so the more
-// fundamental truth keeps its place at the top of the table and this case is what stops an edit
-// moving the new rule above it from changing the answer silently (D-07, D-08).
+// The quiet live path and no route at all, which is the pair the placement of the quiet-live-path
+// rule decides. A plugin with no route to send on cannot be helped by a channel to hear back on, so
+// the more fundamental truth keeps its place at the top of the table. This case stops an edit that
+// moves the quiet-live-path rule above the transport rule from changing the answer silently (D-07,
+// D-08).
 test('names the missing transport alone when the plugin has neither a route to send on nor a live path to hear back on', async () => {
   // arrange
   const warnings: string[] = [];
@@ -907,7 +908,8 @@ test('names the missing transport alone when the plugin has neither a route to s
 // The other side of the placement. Here the state genuinely has not decoded and the live path is
 // also quiet, and the quiet path is named because it is the condition an owner can act on: a
 // reported field that never decoded is a symptom of the same silence more often than a fault of its
-// own. This case is what stops an edit moving the new rule below the state rule (D-07, D-08, WR-02).
+// own. This case stops an edit that moves the quiet-live-path rule below the state rule (D-07, D-08,
+// WR-02).
 test('names the quiet live connection alone when the reported field has also not decoded', async () => {
   // arrange
   const warnings: string[] = [];
