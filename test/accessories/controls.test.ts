@@ -334,7 +334,7 @@ const VENDOR_REFUSALS: readonly VendorRefusalCase[] = [
   },
   {
     cause: 'an exceeded deadline',
-    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: timed-out. It is not retried.',
+    expectedWarning: 'The self-test request on account-1_serial-1 timed out and may still have reached the device. It is not retried.',
     value: true,
     reported: false,
     offlineConfirmed: false,
@@ -781,10 +781,26 @@ describe('createControlBinder', () => {
         pending: ['self-test'],
         delays: [30000, 0],
         cancelled: [],
-        warnings: [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`],
+        warnings: [`The self-test request on ${DEVICE_ID} timed out and may still have reached the device. It is not retried.`],
       },
     );
     verify(commands);
+  });
+
+  test('warns that a timed-out request may still have reached the device', async () => {
+    // arrange
+    const warnings: string[] = [];
+    const commands = answeringCommands(() => ({ accepted: false, failure: 'timed-out' }));
+    const { service } = boundSwitch({ commands, log: warningLog(warnings) });
+
+    // act
+    const thrown = await writeRejection(service, true);
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, warnings },
+      { thrown: OPERATION_TIMED_OUT, warnings: [`The self-test request on ${DEVICE_ID} timed out and may still have reached the device. It is not retried.`] },
+    );
   });
 
   for (const reported of [true, false, undefined]) {
@@ -909,7 +925,7 @@ describe('createControlBinder', () => {
     // assert
     assert.deepStrictEqual(
       { thrown, warnings },
-      { thrown: OPERATION_TIMED_OUT, warnings: [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`] },
+      { thrown: OPERATION_TIMED_OUT, warnings: [`The self-test request on ${DEVICE_ID} timed out and may still have reached the device. It is not retried.`] },
     );
   });
 

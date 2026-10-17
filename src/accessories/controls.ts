@@ -375,6 +375,16 @@ function statusOf(hap: API['hap'], failure: CommandFailure): number {
   return failure === 'timed-out' ? hap.HAPStatus.OPERATION_TIMED_OUT : hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE;
 }
 
+// The line each cause logs. A vendor error is the vendor's own answer, so its
+// line says the request did not take effect. A timeout is no answer at all:
+// delivery is uncertain and the command may already have reached the device,
+// so its line states that uncertainty and claims no outcome (D-038).
+function outcomeWarning(capability: DeviceCapability, deviceId: string, failure: CommandFailure): string {
+  return failure === 'timed-out'
+    ? `The ${capability} request on ${deviceId} timed out and may still have reached the device. It is not retried.`
+    : `The ${capability} request on ${deviceId} did not take effect: ${failure}. It is not retried.`;
+}
+
 // Only a `HapStatusError` is ever thrown. A plain `Error` is converted to a
 // communication failure and emits a characteristic warning quoting its message,
 // which would put a cause the plugin chose into a channel it does not control.
@@ -562,7 +572,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }
 
     armClearingPush(service, reported);
-    log.warn(`The ${capability} request on ${deviceId} did not take effect: ${failure}. It is not retried.`);
+    log.warn(outcomeWarning(capability, deviceId, failure));
 
     return refuse(hap, statusOf(hap, failure));
   }
