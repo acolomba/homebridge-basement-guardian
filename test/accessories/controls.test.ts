@@ -83,7 +83,7 @@ function warningLog(warnings: string[]): Logging {
 
 function silentLog(): Logging {
   const noop = (): void => {
-    // logging is not this module's job; the stub discards every call
+    // the cases using this stub do not read the log; the stub discards every call
   };
 
   return Object.assign(noop, { prefix: 'basement guardian', debug: noop, error: noop, info: noop, log: noop, success: noop, warn: noop });
