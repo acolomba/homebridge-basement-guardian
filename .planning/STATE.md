@@ -622,7 +622,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 261016-wbo | Update Phase 5 planning files to the new skill and step paths | 2026-10-17 | 62007d3 | — | [261016-wbo-update-phase-5-planning-files-to-the-new](./quick/261016-wbo-update-phase-5-planning-files-to-the-new/) |
+| 261016-wbo | Update Phase 5 planning files to the new skill and step paths | 2026-10-17 | 2abef60 | — | [261016-wbo-update-phase-5-planning-files-to-the-new](./quick/261016-wbo-update-phase-5-planning-files-to-the-new/) |
 
 ## Deferred Items
 
