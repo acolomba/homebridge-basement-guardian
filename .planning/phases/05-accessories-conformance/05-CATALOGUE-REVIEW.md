@@ -227,3 +227,9 @@ stand-in (`features/lib/hap.ts:341-348`) but is `async` and rejects in real HAP
 declared-but-absent characteristic, while real HAP's does (Service.js:472-499).
 
 Counter: round 0 opens at 0 (no seeds), adds 15 new, rejects 0, closes at 15: `initial`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CATALOGUE-001 | `src/accessories/serviceCatalogue.ts`, `test/accessories/serviceCatalogue.test.ts` | Node v26.12.0: `npm run build:test` exit 0; `node --test dist-test/test/accessories/serviceCatalogue.test.js` exit 0 (185 tests, 13 suites, 0 failures); `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` exit 0; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch CATALOGUE` exit 0 (`ACCESSORIES_HEADERS_OK files=2`); `node_modules/.bin/fallow audit --base ef7578f8c86c7f7b65adc3648cd7e404cfee7d12 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | header-only |
