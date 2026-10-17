@@ -54,28 +54,47 @@ const RECORD_CHARACTERISTIC_NAMES: readonly string[] = [
 interface CharacteristicExpectation {
   name: string;
   displayName: string;
+  uuid: string;
   format: string;
 }
 
 // The whole declared set, in the order the factory answers it. The format strings are written out
-// rather than read off the namespace, so a declaration that changed format fails here.
+// rather than read off the namespace, so a declaration that changed format fails here. Each
+// identifier is copied by hand from the published declaration rather than imported, because a
+// cached accessory finds its characteristics by these exact strings: a swapped, regenerated, or
+// per-start identifier must fail here (D-015).
 const CHARACTERISTICS: readonly CharacteristicExpectation[] = [
-  { name: 'RawWaterLevelCode', displayName: 'Raw Water Level Code', format: 'uint8' },
-  { name: 'PumpRunning', displayName: 'Pump Running', format: 'bool' },
-  { name: 'PumpFault', displayName: 'Pump Fault', format: 'bool' },
-  { name: 'PumpFuseBlown', displayName: 'Pump Fuse Blown', format: 'bool' },
-  { name: 'WaterSensorFaultReported', displayName: 'Water Sensor Fault Reported', format: 'bool' },
-  { name: 'MainsPowerPresent', displayName: 'Mains Power Present', format: 'bool' },
-  { name: 'BatteryCharging', displayName: 'Battery Charging', format: 'bool' },
-  { name: 'BatteryVoltageLow', displayName: 'Battery Voltage Low', format: 'bool' },
-  { name: 'BatteryHealthCode', displayName: 'Battery Health Code', format: 'uint8' },
-  { name: 'ProtectionHoursCode', displayName: 'Protection Hours Code', format: 'uint8' },
-  { name: 'ControllerLinkPresent', displayName: 'Controller Link Present', format: 'bool' },
-  { name: 'ControllerDataLastTrustedAt', displayName: 'Controller Data Last Trusted At', format: 'string' },
-  { name: 'ObservationStartedAt', displayName: 'Observation Start', format: 'string' },
-  { name: 'ObservedActivationCount', displayName: 'Activations Observed Since Observation Start', format: 'uint32' },
-  { name: 'LastObservedActivationAt', displayName: 'Last Observed Activation At', format: 'string' },
-  { name: 'LastActivationWasTestActivity', displayName: 'Last Activation Was Self-Test', format: 'bool' },
+  { name: 'RawWaterLevelCode', displayName: 'Raw Water Level Code', uuid: 'f5c6e2da-7a4f-46c0-b02e-b501e90877cf', format: 'uint8' },
+  { name: 'PumpRunning', displayName: 'Pump Running', uuid: '5b3a4ee5-cb3f-4fd5-ab25-13c886fd0ad6', format: 'bool' },
+  { name: 'PumpFault', displayName: 'Pump Fault', uuid: 'c4f90c81-f8a4-43b1-a12f-c3eba16f9bba', format: 'bool' },
+  { name: 'PumpFuseBlown', displayName: 'Pump Fuse Blown', uuid: 'c33321c4-f8c8-4d85-ba22-16a2c282fec2', format: 'bool' },
+  { name: 'WaterSensorFaultReported', displayName: 'Water Sensor Fault Reported', uuid: '1d73fac4-3921-42e3-8d90-69065ab9c959', format: 'bool' },
+  { name: 'MainsPowerPresent', displayName: 'Mains Power Present', uuid: 'b014b110-41bb-4dec-a681-4a331455425e', format: 'bool' },
+  { name: 'BatteryCharging', displayName: 'Battery Charging', uuid: 'bc8b71e7-bbce-4fd7-aa00-fcd451cb451f', format: 'bool' },
+  { name: 'BatteryVoltageLow', displayName: 'Battery Voltage Low', uuid: '8278fb37-28fc-4550-a684-73000dcecf53', format: 'bool' },
+  { name: 'BatteryHealthCode', displayName: 'Battery Health Code', uuid: '89ff0a75-adab-4ec2-9254-446681dd5fa2', format: 'uint8' },
+  { name: 'ProtectionHoursCode', displayName: 'Protection Hours Code', uuid: '72432447-f7ae-4d5e-b551-7da3538267d0', format: 'uint8' },
+  { name: 'ControllerLinkPresent', displayName: 'Controller Link Present', uuid: '39f9112e-cdad-41f5-9247-f5379b0d6c11', format: 'bool' },
+  {
+    name: 'ControllerDataLastTrustedAt',
+    displayName: 'Controller Data Last Trusted At',
+    uuid: 'd4d0209b-1472-4a39-8d1b-1c48d94efc7f',
+    format: 'string',
+  },
+  { name: 'ObservationStartedAt', displayName: 'Observation Start', uuid: 'f36376db-47a7-4c59-a76f-6bdc234d5634', format: 'string' },
+  {
+    name: 'ObservedActivationCount',
+    displayName: 'Activations Observed Since Observation Start',
+    uuid: '88734156-8e55-4697-af69-68e9576d1352',
+    format: 'uint32',
+  },
+  { name: 'LastObservedActivationAt', displayName: 'Last Observed Activation At', uuid: '39226a7e-0b92-4f41-b9a4-a602cdc8cca3', format: 'string' },
+  {
+    name: 'LastActivationWasTestActivity',
+    displayName: 'Last Activation Was Self-Test',
+    uuid: '217042ab-ad7e-481b-8e7e-2510e9ad74d9',
+    format: 'bool',
+  },
 ];
 
 // The stand-in answers the members the plugin reads and nothing else, which no structural type can
@@ -116,7 +135,7 @@ describe('createCustomCharacteristics', () => {
     );
   });
 
-  for (const { name, displayName, format } of CHARACTERISTICS) {
+  for (const { name, displayName, uuid, format } of CHARACTERISTICS) {
     test(`declares ${name} as a read-only ${format} named ${displayName}`, () => {
       // arrange
       const characteristics = createCustomCharacteristics(hapNamespace());
@@ -136,22 +155,15 @@ describe('createCustomCharacteristics', () => {
       const characteristics = createCustomCharacteristics(hapNamespace());
 
       // act
-      const uuid = declaredAs(characteristics, name).UUID;
+      const declared = declaredAs(characteristics, name);
+      const typeUuid = declared.UUID;
+      const instanceUuid = new declared().UUID;
 
       // assert
       assert.deepStrictEqual(
-        { shape: RANDOM_V4_UUID.test(uuid), appleNamespace: uuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
-        { shape: true, appleNamespace: false },
+        { typeUuid, instanceUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
+        { typeUuid: uuid, instanceUuid: uuid, shape: true, appleNamespace: false },
       );
-    });
-
-    test(`answers the same ${name} identifier to every caller`, () => {
-      // arrange
-      const first = createCustomCharacteristics(hapNamespace());
-      const second = createCustomCharacteristics(hapNamespace());
-
-      // act & assert
-      assert.strictEqual(declaredAs(first, name).UUID, declaredAs(second, name).UUID);
     });
   }
 
@@ -170,16 +182,15 @@ describe('createCustomCharacteristics', () => {
     assert.deepStrictEqual(granted, []);
   });
 
-  test('identifies every vendor-defined characteristic distinctly', () => {
+  test('identifies every vendor-defined characteristic distinctly by its published identifier', () => {
     // arrange
     const characteristics = createCustomCharacteristics(hapNamespace());
 
     // act
-    const declared = declaredSet(characteristics);
-    const uuids = new Set(Object.values(declared).map((characteristic) => characteristic.UUID));
+    const identifiers = new Map(Object.entries(declaredSet(characteristics)).map(([name, characteristic]): [string, string] => [name, characteristic.UUID]));
 
     // assert
-    assert.strictEqual(uuids.size, Object.keys(declared).length);
+    assert.deepStrictEqual(identifiers, new Map(CHARACTERISTICS.map(({ name, uuid }): [string, string] => [name, uuid])));
   });
 
   test('gives no vendor-defined characteristic a name drawn from diagnostics or filter maintenance', () => {
