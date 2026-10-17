@@ -108,13 +108,16 @@ const FAULT_ADAPTERS: readonly ServiceKind[] = [
   'basement-guardian-offline',
 ];
 
-const CLEAR_FAULTS = {
-  primaryPumpFault: false,
-  backupPumpFault: false,
-  backupPumpFuseBlown: false,
-  waterSensorFault: false,
-  controllerLinkPresent: true,
-};
+// A decoded fault group that reports no condition, new on every call.
+function clearFaults(): Record<string, boolean> {
+  return {
+    primaryPumpFault: false,
+    backupPumpFault: false,
+    backupPumpFuseBlown: false,
+    waterSensorFault: false,
+    controllerLinkPresent: true,
+  };
+}
 
 /** One reported condition, and the single adapter it may activate. */
 interface FaultCase {
@@ -125,17 +128,17 @@ interface FaultCase {
 }
 
 const FAULT_CASES: readonly FaultCase[] = [
-  { label: 'a primary pump fault', fault: { ...CLEAR_FAULTS, primaryPumpFault: true }, offlineConfirmed: false, activated: 'primary-pump-fault' },
-  { label: 'a backup pump fault', fault: { ...CLEAR_FAULTS, backupPumpFault: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a blown backup pump fuse', fault: { ...CLEAR_FAULTS, backupPumpFuseBlown: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a water sensor fault', fault: { ...CLEAR_FAULTS, waterSensorFault: true }, offlineConfirmed: false, activated: 'water-sensor-fault' },
+  { label: 'a primary pump fault', fault: { ...clearFaults(), primaryPumpFault: true }, offlineConfirmed: false, activated: 'primary-pump-fault' },
+  { label: 'a backup pump fault', fault: { ...clearFaults(), backupPumpFault: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
+  { label: 'a blown backup pump fuse', fault: { ...clearFaults(), backupPumpFuseBlown: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
+  { label: 'a water sensor fault', fault: { ...clearFaults(), waterSensorFault: true }, offlineConfirmed: false, activated: 'water-sensor-fault' },
   {
     label: 'a lost controller link',
-    fault: { ...CLEAR_FAULTS, controllerLinkPresent: false },
+    fault: { ...clearFaults(), controllerLinkPresent: false },
     offlineConfirmed: false,
     activated: 'pump-controller-link-lost',
   },
-  { label: 'a confirmed offline run', fault: CLEAR_FAULTS, offlineConfirmed: true, activated: 'basement-guardian-offline' },
+  { label: 'a confirmed offline run', fault: clearFaults(), offlineConfirmed: true, activated: 'basement-guardian-offline' },
 ];
 
 /** One legal water-level code, the percentage it publishes, and the flood verdict it carries. */
@@ -196,7 +199,7 @@ function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record
     pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined, testRunning: false },
     power: { mainsPresent: true },
     battery: batteryGroup(),
-    fault: { ...CLEAR_FAULTS },
+    fault: clearFaults(),
     connectivity: { reportedOffline: false },
     'self-test': { running: false, testedAt: undefined },
     'alarm-mute': { muted: false },
@@ -742,7 +745,7 @@ function registerPumpRecordCases(): void {
     const live = new Set([PumpRunning.UUID, PumpFault.UUID, PumpFuseBlown.UUID, hap.Characteristic.StatusFault.UUID]);
     const decoded = decodedState({
       pump: { primaryRunning: true, backupRunning: true },
-      fault: { ...CLEAR_FAULTS, primaryPumpFault: true, backupPumpFuseBlown: true },
+      fault: { ...clearFaults(), primaryPumpFault: true, backupPumpFuseBlown: true },
     });
     const input = projectionInput({ decoded });
 
@@ -980,7 +983,7 @@ function registerFaultAdapterCases(): void {
     test(`faults the adapter service alongside its contact state, given a primary pump fault of ${String(primaryPumpFault)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const input = projectionInput({ decoded: decodedState({ fault: { ...CLEAR_FAULTS, primaryPumpFault, waterSensorFault } }) });
+      const input = projectionInput({ decoded: decodedState({ fault: { ...clearFaults(), primaryPumpFault, waterSensorFault } }) });
 
       // act
       const projected = { primary: rowOf(hap, 'primary-pump-fault').project(input), water: rowOf(hap, 'water-sensor-fault').project(input) };
@@ -1001,7 +1004,7 @@ function registerFaultAdapterCases(): void {
     const hap = hapNamespace();
     const { ControllerLinkPresent, ControllerDataLastTrustedAt } = createCustomCharacteristics(hap);
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 1_700_000_000_000 }],
       controllerDataLastTrustedAt: '2026-08-30T15:00:00Z',
     });
@@ -1022,7 +1025,7 @@ function registerFaultAdapterCases(): void {
     // arrange
     const hap = hapNamespace();
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 1_700_000_000_000 }],
     });
     const downstream: readonly ServiceKind[] = ['primary-pump-fault', 'backup-pump-fault', 'water-sensor-fault'];
@@ -1688,7 +1691,7 @@ describe('isRowPublishable', () => {
     const { ControllerLinkPresent } = createCustomCharacteristics(hap);
     const row = rowOf(hap, 'pump-controller-link-lost');
     const input = projectionInput({
-      decoded: decodedState({ fault: { ...CLEAR_FAULTS, controllerLinkPresent: false } }),
+      decoded: decodedState({ fault: { ...clearFaults(), controllerLinkPresent: false } }),
       untrustedScopes: [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }],
     });
 
