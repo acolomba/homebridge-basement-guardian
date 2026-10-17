@@ -1,0 +1,269 @@
+# Phase 5 findings ledger
+
+Requirement ACC-01 (with PROC-01, PROC-02 and BUG-01 applied) stays Pending until phase verification.
+Base revision: `e65382053a264f8003b96b1a4536e061338f07c8`.
+The procedures that write and check this ledger live in `05-REVIEW-PROTOCOL.md`.
+
+## Scope inventory
+
+| # | Path | Kind | Batch | First round | Lines at base | Header at base |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | src/accessories/alarmMute.ts | core | DECLARATIONS | 0 | 32 | SPDX+overview |
+| 2 | test/accessories/alarmMute.test.ts | core | DECLARATIONS | 0 | 64 | none |
+| 3 | src/accessories/services.ts | core | DECLARATIONS | 0 | 104 | SPDX+overview |
+| 4 | test/accessories/services.test.ts | core | DECLARATIONS | 0 | 69 | none |
+| 5 | src/accessories/customCharacteristics.ts | core | DECLARATIONS | 0 | 225 | SPDX+overview |
+| 6 | test/accessories/customCharacteristics.test.ts | core | DECLARATIONS | 0 | 354 | none |
+| 7 | src/accessories/customServices.ts | core | DECLARATIONS | 0 | 164 | SPDX+overview |
+| 8 | test/accessories/customServices.test.ts | core | DECLARATIONS | 0 | 260 | none |
+| 9 | src/accessories/serviceCatalogue.ts | core | CATALOGUE | 0 | 1044 | SPDX+overview |
+| 10 | test/accessories/serviceCatalogue.test.ts | core | CATALOGUE | 0 | 2291 | none |
+| 11 | src/accessories/controls.ts | core | CONTROLS | 0 | 595 | SPDX+overview |
+| 12 | test/accessories/controls.test.ts | core | CONTROLS | 0 | 1001 | conforms |
+| 13 | src/accessories/pumpRecords.ts | core | RECORDS | 0 | 361 | SPDX+overview |
+| 14 | test/accessories/pumpRecords.test.ts | core | RECORDS | 0 | 535 | none |
+| 15 | src/accessories/reconciliation.ts | core | RECORDS | 0 | 114 | conforms |
+| 16 | test/accessories/reconciliation.test.ts | core | RECORDS | 0 | 256 | conforms |
+| 17 | src/accessories/staleMarking.ts | core | RECORDS | 0 | 174 | SPDX+overview |
+| 18 | test/accessories/staleMarking.test.ts | core | RECORDS | 0 | 452 | none |
+| 19 | src/accessories/basementGuardian.ts | core | ACCESSORY | 0 | 1066 | SPDX+overview |
+| 20 | test/accessories/basementGuardian.test.ts | core | ACCESSORY | 0 | 3456 | none |
+| 21 | test/accessories/timerFreedom.test.ts | core | GATES | 0 | 136 | overview-only |
+| 22 | test/accessories/hapImportScope.test.ts | core | GATES | 0 | 190 | overview-only |
+| 23 | test/accessories/accessoryReadPathScope.test.ts | core | GATES | 0 | 236 | overview-only |
+| 24 | test/accessories/hapWriteFidelity.test.ts | core | GATES | 0 | 553 | overview-only |
+
+Kind `addition` is a new file under `src/accessories` or `test/accessories`. Its row is recorded in
+the commit right after the one that creates the file. Kind `adaptation` is any other path a batch
+edits under D-06 or D-12. Its row is recorded before the edit. The First round of an `addition` or
+`adaptation` row is the first correction round that must review it.
+
+## Batch counters
+
+| Batch | Round | Report | Revision | Opening | Fixed | Rejected | New | Reopened | Closing | Open IDs | D-03 result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
+the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
+correction rounds, and no batch records a round above 10 (D-18). The result vocabulary is
+`initial`, `continue`, `clean` and `STOP: <reason>`, where the reason is `no progress`,
+`reopened <IDs>` or `open after round 10`.
+
+## Findings
+
+| ID | Batch | Severity | Rule | Initial location | Current location | First reviewer | Disposition | Reason | Fix commits | Checks |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CR-05-CONTROLS-001 | CONTROLS | pending | Seed (a), whole-value check: `.agents/skills/typescript-unit-tests/rules/cases.md` Assertions | `64c4fea:test/accessories/controls.test.ts:831` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:817-830` (line 829 compares a warnings count) | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-002 | CONTROLS | pending | Seed (b), no `describe()` per exported entrypoint: `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure | `64c4fea:test/accessories/controls.test.ts` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:12` (exports `bindRestoredControlRefusal` at src/accessories/controls.ts:421 and `createControlBinder` at src/accessories/controls.ts:445) | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-003 | CONTROLS | pending | Seed (c), case tests the stand-in: `.agents/skills/typescript-unit-tests/SKILL.md` preamble (every case discriminates the module); D-13 | `64c4fea:test/accessories/controls.test.ts:217-238` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:216-243` | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-004 | CONTROLS | pending | Seed (d), hand-rolled `.bind` spy: `.agents/skills/typescript-unit-tests/rules/test-doubles.md` Spies; `.agents/skills/typescript-style/rules/review.md` Quick scan | `64c4fea:test/accessories/controls.test.ts:316-335` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:321-340` | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-005 | CONTROLS | pending | Seed (e), combined act-and-assert marker over two statements: `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure | `64c4fea:test/accessories/controls.test.ts:928-933` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:921-932, 975-982` | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-006 | CONTROLS | pending | Seed (f), undocumented `as unknown as Service` casts: `.agents/skills/typescript-style/rules/types.md`; `.agents/skills/typescript-unit-tests/rules/cases.md` Types and isolation; D-11 | `64c4fea:test/accessories/controls.test.ts:158, 330, 853, 874, 905` | `e65382053a264f8003b96b1a4536e061338f07c8:test/accessories/controls.test.ts:163, 335, 336, 851, 872, 903` | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+| CR-05-CONTROLS-007 | CONTROLS | pending | Seed (g), ordering comment on the wrong constant: `.agents/skills/typescript-style/rules/naming-and-docs.md` Comments and documentation; `.agents/skills/typescript-style/rules/comments.md` | `64c4fea:src/accessories/controls.ts:304-328` | `e65382053a264f8003b96b1a4536e061338f07c8:src/accessories/controls.ts:304-336` | spot check 64c4fea; Phase 1 handoff | pending |  |  |  |
+
+## Candidate leads
+
+| Lead | Owning batch | Location at base | Observation | Likely rule | Disposition |
+| --- | --- | --- | --- | --- | --- |
+| S-05-01 | DECLARATIONS, CATALOGUE, CONTROLS, GATES | ten files under test/accessories | 36 `// act & assert` markers are not followed by `assert.rejects` or `assert.throws`. Per file: serviceCatalogue 19, accessoryReadPathScope 3, hapImportScope 3, services 3, timerFreedom 2, controls 2, alarmMute 1, customCharacteristics 1, customServices 1, hapWriteFidelity 1. Phases 2 to 4 fixed this as a WARNING each time (CR-02-SHADOW-006, CR-02-AUTH-012, CR-04-PORTS-004, CR-04-POLICIES-006, CR-04-TRUST-013, CR-04-ACCOUNT-041). | unit, Case structure | unreviewed |
+| S-05-02 | DECLARATIONS, ACCESSORY | test/accessories/customCharacteristics.test.ts:94; test/accessories/customServices.test.ts:113; test/accessories/basementGuardian.test.ts:789 | A single runtime entrypoint is wrapped in one `describe`. The rule says a single-entrypoint module keeps its cases at the top level. | unit, Case structure | unreviewed |
+| S-05-03 | RECORDS | test/accessories/reconciliation.test.ts:52, 144, 227 | The `describe` blocks name methods of the returned object, not exported entrypoints. | unit, Case structure (reviewer judgment) | unreviewed |
+| S-05-04 | CONTROLS | test/accessories/controls.test.ts:547-557 | `'answers each of the eight refusal causes ...'` loops all rows inside one `test()` and has no `// arrange`. | unit, Data-driven cases | unreviewed |
+| S-05-05 | CONTROLS | src/accessories/controls.ts:145-147 | The JSDoc says HAP "keeps only the last handler registered while warning about the ones before it". Pinned HAP 2.2.2 `onSet` assigns one slot and gives no replacement warning; it warns only for a non-function and for ignored `on('set')` listeners (Characteristic.js:1346-1352, 1801-1803). | comments, accuracy | unreviewed |
+| S-05-06 | CONTROLS, ACCESSORY | src/accessories/controls.ts:97-103, 323-324; test/accessories/controls.test.ts:690, 693, 713; test/accessories/basementGuardian.test.ts:2947 | Narration of code history: "two refusals now answer it", "the new rule", "reconciliation used to read the value". | comments, Narration of code that no longer exists | unreviewed |
+| S-05-07 | RECORDS | src/accessories/reconciliation.ts:51-54 | `ReconciliationOptions.clock: Clock` is required, but nothing in the module reads `options.clock`. Its only production consumer passes it at src/runtime/accountRuntime.ts:346. Removing it is a D-06 contract change with a bounded consumer edit in a Phase 4 file. | style, unused dependency; unit, Design for tests | unreviewed |
+| S-05-08 | DECLARATIONS | src/accessories/customCharacteristics.ts:148 | The comment says "so twelve near-identical class bodies never exist"; the factory defines 16 characteristics. | comments, accuracy | unreviewed |
+| S-05-09 | GATES | test/accessories/hapImportScope.test.ts:60-63; test/accessories/accessoryReadPathScope.test.ts:72-76 | Floor comments state exact counts that research found stale at 1bcaddd: "a hundred and four TypeScript files" when the tree had 132 (`find src test features -name '*.ts' \| wc -l`), and "the production tree forty" when `src` had 43. D-14 keeps the `>=` floors; a stale stated count is a candidate for "wrong for the current tree". | D-14; comments, accuracy | unreviewed |
+| S-05-10 | GATES | test/accessories/timerFreedom.test.ts:13 | "Three modules in this repository already import that form" is true for `src/` (accountRuntime, retryPolicy, mqttTransport); repository-wide, 13 files import it, not counting the gate's own fixture. | comments, accuracy | unreviewed |
+| S-05-11 | GATES | test/accessories/hapWriteFidelity.test.ts:394-395 | `assert.notStrictEqual(real.statusCode, 0)` is a standalone negative that the next `strictEqual` makes redundant, and the case does not compare the whole record while every sibling does. | unit, Assertions | unreviewed |
+| S-05-12 | GATES | test/accessories/hapWriteFidelity.test.ts:51, 112, 94 | `require_` uses a trailing-underscore name; `catch {` has no `(error: unknown)`; `manifest as InstalledManifest` has no stated reason. | style, Naming, Errors and Types | unreviewed |
+| S-05-13 | GATES | test/accessories/hapWriteFidelity.test.ts:258-268 | A conditionally registered test. Under Homebridge 1.x it does not exist, which works like a skip. | unit, no conditional registration and no skip (reviewer judgment) | unreviewed |
+| S-05-14 | GATES | test/accessories/hapWriteFidelity.test.ts:481-494 | `'leaves the stand-in published flag ...'` exercises the stand-in only. | unit, test support needs no meta-tests; D-13 and D-16 | unreviewed |
+| S-05-15 | GATES | test/accessories/hapWriteFidelity.test.ts; features/lib/hap.ts:309-334 | D-16 parity gaps not diffed today: (1) a write with no handler stores the value and reports success, which staleMarking.ts:29-34 and controls.ts:36-41 rely on; (2) a second `onSet` replaces the first, which the `bindRestoredControlRefusal` handoff relies on (controls.ts:42-45, 424-428); (3) real HAP resets `statusCode` to 0 at entry to `handleSetRequest`, while the stand-in clears it only on success, so a read during an in-flight write can differ (Characteristic.js:1786-1787, 1838-1841). | D-16, confirmed gaps only | unreviewed |
+| S-05-16 | DECLARATIONS | test/accessories/alarmMute.test.ts:19-29, 52-64 | A source-text gate inside a paired test with no enumeration floor and no planted positive; an empty read would pass. | unit, would a wrong implementation pass? (BLOCKER class) | unreviewed |
+| S-05-17 | CATALOGUE, ACCESSORY | test/accessories/basementGuardian.test.ts:3400-3455; test/accessories/serviceCatalogue.test.ts:1485-1491 | Source-text cases inside paired tests. The `onGet` and get-event checks repeat accessoryReadPathScope.test.ts with a weaker pattern. | unit, Do not test what a gate already enforces | unreviewed |
+| S-05-18 | CONTROLS | test/accessories/controls.test.ts:104-118 and similar recorders | A hand-built `CommandPort` recorder asserts sends; the rules give command issuing to `strong-mock`. | unit, Test doubles (reviewer judgment; large refactor) | unreviewed |
+| S-05-19 | CONTROLS | test/accessories/controls.test.ts:30, reused at 433-488 | The module-level `ACCEPTED: CommandOutcome` object is shared across rows. | unit, Test data (seeds return fresh values) | unreviewed |
+| S-05-20 | ACCESSORY | src/accessories/basementGuardian.ts:177-180 | `DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT = 2` repeats the default in src/config.ts, as its comment says. | design (reviewer judgment; src/config.ts belongs to Phase 6) | unreviewed |
+| S-05-21 | DECLARATIONS | src/accessories/customCharacteristics.ts:111-114 | `type CharacteristicDomain = Pick<...>`; the style rules prefer interface extension over `Pick`. | style, Types | unreviewed |
+
+A lead is not a finding. It is a research observation that a reviewer confirms as a finding or
+rejects with rule and source evidence.
+
+## Rule applicability (D-14, D-17)
+
+| Gate | Rule | Applicability | Reason |
+| --- | --- | --- | --- |
+| test/accessories/timerFreedom.test.ts | Mirrored source pairing | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/timerFreedom.test.ts | One `describe()` per exported entrypoint | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/timerFreedom.test.ts | Isolated direct coverage | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapImportScope.test.ts | Mirrored source pairing | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapImportScope.test.ts | One `describe()` per exported entrypoint | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapImportScope.test.ts | Isolated direct coverage | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/accessoryReadPathScope.test.ts | Mirrored source pairing | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/accessoryReadPathScope.test.ts | One `describe()` per exported entrypoint | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/accessoryReadPathScope.test.ts | Isolated direct coverage | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapWriteFidelity.test.ts | Mirrored source pairing | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapWriteFidelity.test.ts | One `describe()` per exported entrypoint | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/hapWriteFidelity.test.ts | Isolated direct coverage | proposed N/A | the gate has no source module; scripts/test-coverage-direct.mjs lists it in repositoryTests |
+| test/accessories/timerFreedom.test.ts | Whole-value assertion for `ACCESSORIES_MODULE_FLOOR` | proposed N/A | D-14 keeps the documented >= floor; the gate asserts a lower bound by design |
+| test/accessories/hapImportScope.test.ts | Whole-value assertion for `SOURCE_FILE_FLOOR` | proposed N/A | D-14 keeps the documented >= floor; the gate asserts a lower bound by design |
+| test/accessories/accessoryReadPathScope.test.ts | Whole-value assertion for `ACCESSORIES_MODULE_FLOOR` | proposed N/A | D-14 keeps the documented >= floor; the gate asserts a lower bound by design |
+| test/accessories/accessoryReadPathScope.test.ts | Whole-value assertion for `SOURCE_MODULE_FLOOR` | proposed N/A | D-14 keeps the documented >= floor; the gate asserts a lower bound by design |
+
+The GATES plan confirms or changes each row.
+
+## Genuine bug histories
+
+| Finding | Owner test | RED evidence | Evidence commit | Fix commit | Classifier | Ancestry |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## Coordinator evidence
+
+### 05-01
+
+Base revision `e65382053a264f8003b96b1a4536e061338f07c8` on branch `features/code-review-sweep`,
+recorded 2026-10-17T04:18:03Z with an empty `git status --porcelain`. Runtime: Node v26.12.0 at
+`/opt/homebrew/opt/node/bin/node`, npm 11.20.0. `wc -l` and the first 12 lines of all 24 inventory
+files matched the expected counts and header states above; `git ls-files src/accessories test/accessories`
+lists exactly those 24 paths.
+
+#### Tracer proof (task 05-01-01)
+
+All runs from the repository root at base `e65382053a264f8003b96b1a4536e061338f07c8` with the
+tracer and ledger uncommitted, Node v26.12.0, 2026-10-17T04:25Z. Each output line is copied as
+printed (stdout and stderr together); `exit=` is the raw exit status.
+
+Real ledger and header controls:
+
+```text
+--- ledger mode on 05-FINDINGS.md
+ACCESSORIES_LEDGER_TRACER_OK inventory=24 findings=7 open=0 rounds=0
+exit=0
+--- --headers --paths src/runtime/clock.ts test/accessories/reconciliation.test.ts
+ACCESSORIES_HEADERS_OK files=2
+exit=0
+--- --headers --paths src/accessories/controls.ts
+HEADER_VIOLATION src/accessories/controls.ts: 2 expected an empty line after the SPDX line
+exit=1
+--- --headers (all inventory rows)
+HEADER_VIOLATION src/accessories/alarmMute.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/alarmMute.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/services.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/services.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/customCharacteristics.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/customCharacteristics.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/customServices.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/customServices.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/serviceCatalogue.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/serviceCatalogue.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/controls.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION src/accessories/pumpRecords.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/pumpRecords.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/staleMarking.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/staleMarking.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION src/accessories/basementGuardian.ts: 2 expected an empty line after the SPDX line
+HEADER_VIOLATION test/accessories/basementGuardian.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION test/accessories/timerFreedom.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION test/accessories/hapImportScope.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION test/accessories/accessoryReadPathScope.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+HEADER_VIOLATION test/accessories/hapWriteFidelity.test.ts: 1 expected "// SPDX-License-Identifier: MIT"
+exit=1
+```
+
+The 21 `HEADER_VIOLATION` paths are the nine sources and twelve tests the inventory marks
+`SPDX+overview`, `none` or `overview-only`; `src/accessories/reconciliation.ts`,
+`test/accessories/reconciliation.test.ts` and `test/accessories/controls.test.ts` are not named.
+
+Planted copies, written by a generator in the session scratch directory (never in the
+repository) and run with `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --ledger <scratch>/planted/<name>.md`.
+Each planted counter row uses the base revision as Revision and `05-DECLARATIONS-REVIEW.md` or
+`05-DECLARATIONS-REVIEW-R<N>.md` as Report; those reports do not exist, so L5 and L6 lines in the
+sequence runs are expected and ignored.
+
+| Copy | Planted change | Expected | Observed |
+| --- | --- | --- | --- |
+| defect-duplicate-seed | CR-05-CONTROLS-001 row duplicated | exit 1, L3 naming CR-05-CONTROLS-001 | exit 1, L3 line naming CR-05-CONTROLS-001 |
+| defect-counter-sum | DECLARATIONS round 0: Opening 0, New 2, Closing 3 | exit 1, L4-sum | exit 1, L4-sum line |
+| defect-missing-inventory-path | alarmMute.ts inventory row deleted | exit 1, L2 naming src/accessories/alarmMute.ts | exit 1, two L2 lines naming it |
+| sequence-d18-accept-ten-rounds | rounds 0 to 10, Closing 10 then one fix per round, `continue` to round 9, `clean` at round 10 | no line starting `LEDGER_VIOLATION L4` | no L4 line; only L6 lines |
+| sequence-d18-reject-round10-open | same from Closing 11; round 10 Closing 1 reads `continue` | L4-stop naming round 10 | L4-stop line naming DECLARATIONS round 10 |
+| sequence-d18-reject-round11 | round 10 reads `STOP: open after round 10; resolved by maintainer`, plus round 11 Opening 1, Fixed 1, Closing 0, `clean` | L4-cap naming round 11, no L4-stop | L4-cap line naming round 11; no L4-stop line |
+| sequence-d03-reject-no-progress | round 0 Closing 3; round 1 Opening 3, Fixed 1, New 1, Closing 3, `continue` | L4-stop naming round 1 | L4-stop line naming round 1 |
+| sequence-d03-reject-reopen | round 0 Closing 3; round 1 Opening 3, Fixed 2, Reopened 1, Closing 2, `continue` | L4-stop naming round 1 | L4-stop line naming round 1 |
+
+Raw output of the eight runs:
+
+```text
+--- defect-duplicate-seed
+LEDGER_VIOLATION L3: finding ID CR-05-CONTROLS-001 appears more than once
+exit=1
+--- defect-counter-sum
+LEDGER_VIOLATION L4-sum: DECLARATIONS round 0: Closing 3 differs from Opening - Fixed - Rejected + New + Reopened = 2
+LEDGER_VIOLATION L5: DECLARATIONS round 0: Closing 3 differs from the 0 findings with Disposition open
+LEDGER_VIOLATION L5: DECLARATIONS round 0: Open IDs "CR-05-DECLARATIONS-001, CR-05-DECLARATIONS-002, CR-05-DECLARATIONS-003" should be "None"
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+--- defect-missing-inventory-path
+LEDGER_VIOLATION L2: the core inventory row for src/accessories/alarmMute.ts is missing
+LEDGER_VIOLATION L2: src/accessories/alarmMute.ts is tracked under src/accessories or test/accessories but has no inventory row
+exit=1
+--- sequence-d18-accept-ten-rounds
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 2: report 05-DECLARATIONS-REVIEW-R2.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 3: report 05-DECLARATIONS-REVIEW-R3.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 4: report 05-DECLARATIONS-REVIEW-R4.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 5: report 05-DECLARATIONS-REVIEW-R5.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 6: report 05-DECLARATIONS-REVIEW-R6.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 7: report 05-DECLARATIONS-REVIEW-R7.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 8: report 05-DECLARATIONS-REVIEW-R8.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 9: report 05-DECLARATIONS-REVIEW-R9.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 10: report 05-DECLARATIONS-REVIEW-R10.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+--- sequence-d18-reject-round10-open
+LEDGER_VIOLATION L4-stop: DECLARATIONS round 10: D-03 result "continue" should be "STOP: <reason>"
+LEDGER_VIOLATION L5: DECLARATIONS round 10: Closing 1 differs from the 0 findings with Disposition open
+LEDGER_VIOLATION L5: DECLARATIONS round 10: Open IDs "CR-05-DECLARATIONS-001" should be "None"
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 2: report 05-DECLARATIONS-REVIEW-R2.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 3: report 05-DECLARATIONS-REVIEW-R3.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 4: report 05-DECLARATIONS-REVIEW-R4.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 5: report 05-DECLARATIONS-REVIEW-R5.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 6: report 05-DECLARATIONS-REVIEW-R6.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 7: report 05-DECLARATIONS-REVIEW-R7.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 8: report 05-DECLARATIONS-REVIEW-R8.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 9: report 05-DECLARATIONS-REVIEW-R9.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 10: report 05-DECLARATIONS-REVIEW-R10.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+--- sequence-d18-reject-round11
+LEDGER_VIOLATION L4-cap: DECLARATIONS round 11: no batch records a round above 10 (D-18)
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 2: report 05-DECLARATIONS-REVIEW-R2.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 3: report 05-DECLARATIONS-REVIEW-R3.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 4: report 05-DECLARATIONS-REVIEW-R4.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 5: report 05-DECLARATIONS-REVIEW-R5.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 6: report 05-DECLARATIONS-REVIEW-R6.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 7: report 05-DECLARATIONS-REVIEW-R7.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 8: report 05-DECLARATIONS-REVIEW-R8.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 9: report 05-DECLARATIONS-REVIEW-R9.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 10: report 05-DECLARATIONS-REVIEW-R10.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 11: report 05-DECLARATIONS-REVIEW-R11.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+--- sequence-d03-reject-no-progress
+LEDGER_VIOLATION L4-stop: DECLARATIONS round 1: D-03 result "continue" should be "STOP: <reason>"
+LEDGER_VIOLATION L5: DECLARATIONS round 1: Closing 3 differs from the 0 findings with Disposition open
+LEDGER_VIOLATION L5: DECLARATIONS round 1: Open IDs "CR-05-DECLARATIONS-001, CR-05-DECLARATIONS-002, CR-05-DECLARATIONS-003" should be "None"
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+--- sequence-d03-reject-reopen
+LEDGER_VIOLATION L4-stop: DECLARATIONS round 1: D-03 result "continue" should be "STOP: <reason>"
+LEDGER_VIOLATION L5: DECLARATIONS round 1: Closing 2 differs from the 0 findings with Disposition open
+LEDGER_VIOLATION L5: DECLARATIONS round 1: Open IDs "CR-05-DECLARATIONS-001, CR-05-DECLARATIONS-002" should be "None"
+LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does not exist under .planning/phases/05-accessories-conformance
+LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
+exit=1
+```
