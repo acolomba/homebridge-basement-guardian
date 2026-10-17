@@ -5,16 +5,16 @@ milestone_name: Code Review Sweep
 current_phase: 05
 current_phase_name: Accessories Conformance
 status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-10-17T17:17:56.348Z"
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-10-17T23:55:31.158Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 05 execution started
-state_head: 897bb6709c2a0fbb089e80ec56a737b7d4b48c63
+state_head: e7fe2195842346f3859a744c025b44c62de52daf
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 45
-  completed_plans: 39
+  completed_plans: 40
   percent: 50
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 05 (Accessories Conformance) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 05 execution started
 
@@ -113,6 +113,7 @@ Progress: [█████░░░░░] 50%
 | Phase 05 P01 | 13 min | 3 tasks | 4 files |
 | Phase 05 P02 | 2h 45m | 3 tasks | 14 files |
 | Phase 05 P03 | 3h 4m | 3 tasks | 10 files |
+| Phase 05 P04 | 6h 11m | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -442,6 +443,8 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 05]: Phase 5 Wave 0 base is e65382053a26 (phase-start state commit); every batch runs 05-ledger-tracer.mjs after each ledger change — The tracer accepts the ledger and rejects eight planted copies, so batch closure claims are checked mechanically
 - [Phase 05]: DECLARATIONS closed clean at correction round 4 (28 findings fixed); the maintainer resolved the round-2 D-03 no-progress stop with 'Resolve and continue' — Each new cause was a subtler gap in the same alarm-mute scan, not a failed repair; the 026 repair closed the whole naming class
 - [Phase 05]: CATALOGUE closed clean at correction round 6 (24 findings fixed); the maintainer resolved two D-03 no-progress stops at rounds 2 and 3 — Each stop surfaced pre-existing pin gaps of one class; a per-row coverage sweep from round 3 closed the class by round 5
+- [Phase 05]: 05-04: CONTROLS found three genuine control-path bugs (D-037, D-038): a second press while a request waits is refused with RESOURCE_BUSY, a timed-out command keeps its pending entry and window, and its warning says it may still have reached the device — Locked D-037 and D-038 name the behavior; each fix landed RED-to-GREEN with committed evidence, and no existing refusal changed its answer
+- [Phase 05]: 05-04: the maintainer resolved four CONTROLS D-03 no-progress stops (rounds 4, 6, 7, 8); comment-claims audits per sentence and per clause closed the batch at round 9 — Each stop came from one or two new comment claims or a pre-existing test gap; the audits made the class checkable
 
 ### Pending Todos
 
@@ -646,8 +649,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-17T17:17:55.869Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-10-17T23:55:30.638Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
