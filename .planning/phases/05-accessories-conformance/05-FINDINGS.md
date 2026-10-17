@@ -52,6 +52,7 @@ edits under D-06 or D-12. Its row is recorded before the edit. The First round o
 | CATALOGUE | 2 | 05-CATALOGUE-REVIEW-R2.md | ec755ee2e4e9df8c608f11829085db637a472258 | 2 | 2 | 0 | 2 | 0 | 2 | CR-05-CATALOGUE-018, CR-05-CATALOGUE-019 | STOP: no progress; resolved by maintainer |
 | CATALOGUE | 3 | 05-CATALOGUE-REVIEW-R3.md | 309d0da49c4866bef00d793477e4603b5c6146e4 | 2 | 2 | 0 | 3 | 0 | 3 | CR-05-CATALOGUE-020, CR-05-CATALOGUE-021, CR-05-CATALOGUE-022 | STOP: no progress; resolved by maintainer |
 | CATALOGUE | 4 | 05-CATALOGUE-REVIEW-R4.md | e790d20da2ce14d82304048c524159b23b7b9293 | 3 | 3 | 0 | 2 | 0 | 2 | CR-05-CATALOGUE-023, CR-05-CATALOGUE-024 | continue |
+| CATALOGUE | 5 | 05-CATALOGUE-REVIEW-R5.md | ddc645b1329990f3e9a652cfaa48767532d85186 | 2 | 1 | 0 | 0 | 0 | 1 | CR-05-CATALOGUE-024 | continue |
 
 The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
 the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
@@ -120,7 +121,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-020 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | gsd-code-reviewer round 3 | fixed |  | e565941a31 |  |
 | CR-05-CATALOGUE-021 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/cases.md Assertions (whole values) | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | gsd-code-reviewer round 3 | fixed |  | f55d0f09db |  |
 | CR-05-CATALOGUE-022 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | gsd-code-reviewer round 3 | fixed |  | 252b50ab4b |  |
-| CR-05-CATALOGUE-023 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | gsd-code-reviewer round 4 | open |  | b87ee68ab4 |  |
+| CR-05-CATALOGUE-023 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | gsd-code-reviewer round 4 | fixed |  | b87ee68ab4 |  |
 | CR-05-CATALOGUE-024 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles) | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | gsd-code-reviewer round 4 | open |  | da8ff2c5dd |  |
 
 ## Candidate leads
@@ -790,3 +791,11 @@ report, each failed the new rows and were restored to source blob
 both pumps). Coordinator check: each commit lists only the test and the R4 report,
 `git diff c79a40e..HEAD -- src features` is empty, the owner passes 212 tests with 0 failures,
 and `git status --porcelain` is empty.
+
+Correction round 5: dispatch 14, role `gsd-code-reviewer`, model omitted, effort `high`,
+foreground, over both batch files at `ddc645b1329990f3e9a652cfaa48767532d85186` with the opening
+set {023, 024} and the 22 earlier fixed IDs. Terminal result: `05-CATALOGUE-REVIEW-R5.md`, 023
+fixed, 024 still open (the arrange leaves the pit dry), 001 to 022 still fixed, all 17 rows
+covered, no new finding; its typecheck, ESLint, build, owner (212 tests, 0 failures), pair command
+and batch header check all exited 0 on Node v26.12.0. Stop rule applied first: opening 2, fixed 1,
+rejected 0, new 0, reopened 0, closing 1, result `continue`.
