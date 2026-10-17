@@ -22,10 +22,21 @@ const PROVISIONAL_PREFIX = 'PROVISIONAL_';
 // declaring list built on that read would prove nothing about the modules it missed.
 const SOURCE_MODULE_FLOOR = 43;
 
-// Any declaration of a CONSTANT_CASE name after `const`, `let`, `var`, `enum` or `readonly`, with
-// the name captured. A reference to a constant does not match. The scan keeps every name that
-// contains `MUTE`, `UNMUTE` included, because alarm mute is the only mute in the domain.
-const CONSTANT_DECLARATION = /(?:const|let|var|enum|readonly)\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)\b/g;
+// A module declares a mute value when one of these patterns captures a name that contains `mute` in
+// any case. `unmute` counts too, because alarm mute is the only mute in the domain. A read of a name
+// does not match. The scan leaves out type names, function and method names, object-literal keys and
+// string literals: those name types, behavior and wire fields, not values that govern mute.
+const VALUE_DECLARATIONS: readonly RegExp[] = [
+  // The name after `const`, `let`, `var` or `enum`, or a whole destructuring pattern, so every name
+  // in the pattern counts.
+  /\b(?:const\s+enum|const|let|var|enum)\s+([A-Za-z_$][\w$]*|\{[^;]*?\}|\[[^;]*?\])/g,
+  // A field name after `readonly`, `static`, `private`, `protected` or `public`, but not a method
+  // name. A `readonly` interface member counts too.
+  /\b(?:readonly|static|private|protected|public)\s+(?:(?:static|readonly)\s+)*([A-Za-z_$][\w$]*)(?=\s*[?!]?\s*[:=;])/g,
+  // A name at the start of a line that gets a value from `=`, which is the form of a class field
+  // without a modifier.
+  /^\s*([A-Za-z_$][\w$]*)\s*[?!]?\s*(?::[^=;]+)?(?<![<>!])=(?![=>])/gm,
+];
 
 // One `.ts` module under `src/`, by its path relative to `src/`, with its source text.
 interface SourceModule {
@@ -43,6 +54,11 @@ async function sourceModules(): Promise<readonly SourceModule[]> {
   }
 
   return modules;
+}
+
+// Answers whether a module's source declares a value whose name contains `mute` in any case.
+function declaresMuteValue(source: string): boolean {
+  return VALUE_DECLARATIONS.some((pattern) => [...source.matchAll(pattern)].some(([, name = '']) => name.toLowerCase().includes('mute')));
 }
 
 test('names every export it declares as provisional', () => {
@@ -75,9 +91,7 @@ test('is the only module under src that declares a constant governing alarm mute
   const modules = await sourceModules();
 
   // act
-  const declaring = modules
-    .filter((module) => [...module.source.matchAll(CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('MUTE')))
-    .map((module) => module.path);
+  const declaring = modules.filter((module) => declaresMuteValue(module.source)).map((module) => module.path);
 
   // assert
   assert.deepStrictEqual(
