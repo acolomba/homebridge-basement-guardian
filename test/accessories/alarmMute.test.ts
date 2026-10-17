@@ -22,10 +22,10 @@ const PROVISIONAL_PREFIX = 'PROVISIONAL_';
 // declaring list built on that read would prove nothing about the modules it missed.
 const SOURCE_MODULE_FLOOR = 43;
 
-// A constant *declaration* naming alarm mute, in the casing a constant is written in. A reference
-// to the one declared here is fine and expected; a second declaration anywhere else would put an
-// unmarked assumption about mute into the codebase.
-const MUTE_CONSTANT_DECLARATION = /(?:const|let|var|enum|readonly)\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)\b/g;
+// Any declaration of a CONSTANT_CASE name after `const`, `let`, `var`, `enum` or `readonly`, with
+// the name captured. A reference to a constant does not match. The scan keeps only the names that
+// contain both `ALARM` and `MUTE`.
+const CONSTANT_DECLARATION = /(?:const|let|var|enum|readonly)\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)\b/g;
 
 async function sourceModules(): Promise<readonly { path: string; source: string }[]> {
   const root = new URL('../../../src/', import.meta.url);
@@ -70,7 +70,7 @@ test('is the only module under src that declares a constant governing alarm mute
 
   // act
   const declaring = modules
-    .filter((module) => [...module.source.matchAll(MUTE_CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('ALARM') && name.includes('MUTE')))
+    .filter((module) => [...module.source.matchAll(CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('ALARM') && name.includes('MUTE')))
     .map((module) => module.path);
 
   // assert
