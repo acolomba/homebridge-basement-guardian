@@ -5,16 +5,16 @@ milestone_name: Code Review Sweep
 current_phase: 05
 current_phase_name: Accessories Conformance
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-10-17T14:06:38.072Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-10-17T17:17:56.348Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 05 execution started
-state_head: 016cea63ed4132065809dc8c95e87d68c1dbfa0b
+state_head: 897bb6709c2a0fbb089e80ec56a737b7d4b48c63
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 45
-  completed_plans: 38
+  completed_plans: 39
   percent: 50
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 05 (Accessories Conformance) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 05 execution started
 
@@ -112,6 +112,7 @@ Progress: [█████░░░░░] 50%
 | Phase quick-260905-whi P01 | ~10min | 2 tasks | 2 files |
 | Phase 05 P01 | 13 min | 3 tasks | 4 files |
 | Phase 05 P02 | 2h 45m | 3 tasks | 14 files |
+| Phase 05 P03 | 3h 4m | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -440,6 +441,7 @@ All 40 ADR-locked decisions are preserved in PROJECT.md `<decisions>` blocks. Cu
 - [Phase 4]: [code-review-sweep] Actual whole ACCOUNT correction3 at4a4e445: opening=fixed041/045/046/047/048=5; rejected/new/reopened/closing all0; continuouscounter3, accepted48 independentlyclosed48. Root FIRST applied D-03 before any next tool: all three predicates false. Subsequent full npm run check0 (104scenarios1156steps43pairs) permits19 closeout then09 metadata and10 seal. No original09 repair replay; immutable09ledger8a700ac preserved. RUN-01 Pending; WINDOWS46-58 OPEN/unwaived and E/P actual judgments remain later phase work.
 - [Phase 05]: Phase 5 Wave 0 base is e65382053a26 (phase-start state commit); every batch runs 05-ledger-tracer.mjs after each ledger change — The tracer accepts the ledger and rejects eight planted copies, so batch closure claims are checked mechanically
 - [Phase 05]: DECLARATIONS closed clean at correction round 4 (28 findings fixed); the maintainer resolved the round-2 D-03 no-progress stop with 'Resolve and continue' — Each new cause was a subtler gap in the same alarm-mute scan, not a failed repair; the 026 repair closed the whole naming class
+- [Phase 05]: CATALOGUE closed clean at correction round 6 (24 findings fixed); the maintainer resolved two D-03 no-progress stops at rounds 2 and 3 — Each stop surfaced pre-existing pin gaps of one class; a per-row coverage sweep from round 3 closed the class by round 5
 
 ### Pending Todos
 
@@ -644,8 +646,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-17T14:06:37.632Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-10-17T17:17:55.869Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
