@@ -90,7 +90,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CONTROLS-022 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md Forbidden (narration of code that no longer exists) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:690-693, 710-713` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:690-693, 710-713` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-CONTROLS-023 | CONTROLS | WARNING | .agents/skills/typescript-unit-tests/rules/test-doubles.md Mocks; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-CONTROLS-024 | CONTROLS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data and Case structure; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:28-30, 433, 444, 455, 466, 477, 488` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:28-30, 433, 444, 455, 466, 477, 488` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-CONTROLS-025 | CONTROLS | WARNING | D-01; .agents/skills/typescript-style/rules/modules-and-data.md Files and modules | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | gsd-code-reviewer round 0 | open |  |  |  |
+| CR-05-CONTROLS-025 | CONTROLS | WARNING | D-01; .agents/skills/typescript-style/rules/modules-and-data.md Files and modules | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | gsd-code-reviewer round 0 | open |  | 704a2ff760 |  |
 | CR-05-CONTROLS-026 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md; .agents/skills/typescript-style/rules/naming-and-docs.md Comments and documentation | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:21-23, 304-305` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:21-23, 304-305` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-CONTROLS-027 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:74-80` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:74-80` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-CONTROLS-028 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/functions.md | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:98, 154` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:98, 154` | gsd-code-reviewer round 0 | open |  |  |  |
@@ -888,3 +888,14 @@ classified CR-05-CONTROLS-008 and 009 as genuine production bugs under D-04 (loc
 D-038; the timed-out row of the original research expects the pending state to stay), added the
 SC-02 citation to 029 (D-10) and confirmed leads S-05-01 (CONTROLS part), 04, 05, 06 (CONTROLS
 part), 18 and 19.
+
+Dispatch 2 (CR-05-CONTROLS-025): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning `src/accessories/controls.ts` and the report. Terminal result: commit
+`704a2ff760107617250b372930a101355aef35a4` (`style(controls): add the approved source file
+header`), two owned paths. The owner keeps 63 tests (0 suites) with 0 failures; guard, build,
+pair coverage, ESLint, `--headers --batch CONTROLS` (`ACCESSORIES_HEADERS_OK files=2`) and
+`fallow audit --base 4c143eb` (verdict pass) exited 0 on Node v26.12.0; the pre-step passed on its
+first run and the hook passed. Coordinator check: two owned paths; `controls.ts` gains only the
+empty line, the copyright block and the empty line (5 added, 0 deleted); the review commit
+`eb15deb` precedes it; the GREEN header check `--headers --paths src/accessories/controls.ts`
+prints `ACCESSORIES_HEADERS_OK files=1` (exit 0); `git status --porcelain` is empty.
