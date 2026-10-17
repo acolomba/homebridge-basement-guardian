@@ -1,4 +1,4 @@
-exclude: ^(\.agents/|\.claude/|\.codex/|\.pi/)
+exclude: ^(\.agents/(?!skills/)|\.claude/(?!skills/)|\.codex/|\.pi/)
 
 default_install_hook_types:
   - pre-commit

@@ -65,42 +65,17 @@
     }
   },
   "agent_skills": {
-    "gsd-executor": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification",
-      "skills/cucumber-behavioral-testing"
+    "gsd-discuss-phase": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ],
-    "gsd-debugger": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification",
-      "skills/cucumber-behavioral-testing"
+    "gsd-advisor-researcher": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ],
-    "gsd-code-fixer": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review",
-      "skills/local-verification"
-    ],
-    "gsd-nyquist-auditor": [
-      "skills/typescript-comments",
-      "skills/typescript-unit-testing",
-      "skills/typescript-google-style-review"
-    ],
-    "gsd-code-reviewer": [
-      "skills/typescript-comments",
-      "skills/typescript-google-style-review",
-      "skills/typescript-unit-testing-review"
-    ],
-    "gsd-verifier": [
-      "skills/typescript-unit-testing-review",
-      "skills/local-verification"
-    ],
-    "gsd-planner": [
-      "skills/local-verification"
+    "gsd-assumptions-analyzer": [
+      ".agents/skills/typescript-unit-tests",
+      ".agents/skills/cucumber"
     ]
   },
   "mode": "interactive",
