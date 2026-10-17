@@ -150,7 +150,7 @@ export function createCustomCharacteristics(hap: API['hap']): CustomCharacterist
     return [hap.Perms.PAIRED_READ, hap.Perms.NOTIFY];
   }
 
-  // One class factory, so twelve near-identical class bodies never exist.
+  // One class factory, so no declaration repeats a class body.
   function define({ displayName, uuid, format, domain = {} }: CharacteristicDefinition): CharacteristicClass {
     return class extends hap.Characteristic {
       static readonly UUID = uuid;
