@@ -1355,3 +1355,26 @@ pair command and header tracer exited 0 on Node v26.12.0; no edit, no commit. Co
 opening 1, fixed 1, rejected 0, new 0, reopened 0, closing 0, `clean`. The batch closes at
 correction round 9. Lead S-05-24 widened; the `serviceCatalogue.ts:537-538` claim is recorded for
 the phase verifier.
+
+#### CONTROLS closure and wave gate (task 05-04-03)
+
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch CONTROLS`:
+  exit 0, `ACCESSORIES_HEADERS_OK files=2`.
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --require-clean CONTROLS`:
+  exit 0, `ACCESSORIES_LEDGER_TRACER_OK inventory=24 findings=97 open=0 rounds=22 clean=CONTROLS`.
+- CONTROLS closed at correction round 9 with 45 findings fixed and none rejected: 13 BLOCKER and
+  32 WARNING. Three were genuine production bugs fixed through RED-to-GREEN evidence (008, 009,
+  033). The maintainer resolved four D-03 stops (rounds 4, 6, 7 and 8) with "Resolve and
+  continue".
+
+| Field | Value |
+| --- | --- |
+| Command | `npm run check` |
+| Raw exit | 0 |
+| HEAD | `7e9613198aa455876e6cbbd3e9c69b4e801fb0fd` (`git status --porcelain` empty before the run) |
+| Runtime | Node v26.12.0, npm 11.20.0 |
+| UTC start | 2026-10-17T23:51:56Z |
+| UTC end | 2026-10-17T23:52:53Z |
+| Static checks | passed typecheck (3.5 s); passed lint (2.7 s); passed lint:workflows (0.4 s); passed fallow (3.5 s); passed format:check (0.9 s); passed test:corresponding (0.6 s) |
+| Cucumber | 104 scenarios (104 passed); 1156 steps (1156 passed) |
+| Coverage | `Merged LCOV: coverage/direct.lcov (43 pairs)` |
