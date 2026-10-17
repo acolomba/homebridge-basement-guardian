@@ -306,6 +306,19 @@ function notAllowedInCurrentState(hap: API['hap']): number {
   return hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE;
 }
 
+// The cause the missing-transport rule names, declared once because two
+// refusals now answer it. A restart the cloud has not answered is the same
+// condition under a different name -- the plugin has no route to send on -- and
+// one condition carrying two wordings is exactly the blur the per-cause table
+// exists to prevent (D-08).
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+
+// The cause the quiet-live-path rule names, declared beside the one above so the table below reads
+// as a table rather than as one wrapped line among short ones. It names the connection and what the
+// plugin cannot do because of it, and nothing else: no threshold, no interval, and no internal term
+// an owner would have to look up (D-08).
+const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
+
 // The rules in the order they are evaluated, cheapest and most local first. The
 // first that applies answers the write; the rest are never consulted.
 //
@@ -325,19 +338,6 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 // equipment that is fine while the condition that actually blocked the press
 // went unnamed. It is refused all the same -- the plugin still could not tell a
 // running test from an idle one afterwards (D-07, D-08, WR-02).
-// The cause the missing-transport rule names, declared once because two
-// refusals now answer it. A restart the cloud has not answered is the same
-// condition under a different name -- the plugin has no route to send on -- and
-// one condition carrying two wordings is exactly the blur the per-cause table
-// exists to prevent (D-08).
-const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
-
-// The cause the quiet-live-path rule names, declared beside the one above so the table below reads
-// as a table rather than as one wrapped line among short ones. It names the connection and what the
-// plugin cannot do because of it, and nothing else: no threshold, no interval, and no internal term
-// an owner would have to look up (D-08).
-const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
-
 const LOCAL_REFUSALS: readonly LocalRefusal[] = [
   { applies: isNotAnOnRequest, status: notAllowedInCurrentState, cause: 'only an on request is supported, and the device reports when the condition ends' },
   { applies: hasNoCommandTransport, status: notAllowedInCurrentState, cause: NO_COMMAND_TRANSPORT_CAUSE },
