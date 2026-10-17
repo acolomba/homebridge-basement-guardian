@@ -113,8 +113,8 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-015 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Naming values | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | gsd-code-reviewer round 0 | fixed |  | e131aad3d9 |  |
 | CR-05-CATALOGUE-016 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); Data-driven cases | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | gsd-code-reviewer round 1 | fixed |  | 1629e77f84 |  |
 | CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | fixed |  | 1a5c9ffcb5 |  |
-| CR-05-CATALOGUE-018 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | gsd-code-reviewer round 2 | open |  |  |  |
-| CR-05-CATALOGUE-019 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | gsd-code-reviewer round 2 | open |  |  |  |
+| CR-05-CATALOGUE-018 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | gsd-code-reviewer round 2 | open |  | 8a10ce94fe |  |
+| CR-05-CATALOGUE-019 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | gsd-code-reviewer round 2 | open |  | ae2ab2cb2e |  |
 
 ## Candidate leads
 
@@ -712,3 +712,17 @@ counts (opening 2, fixed 2, rejected 0, new 2, reopened 0, closing 2; open 018 a
 maintainer chose "Resolve and continue": record the resolution in the STOP cell, commit round 2,
 add the two missing pins with assertion controls, and run correction round 3. The D-18 cap still
 applies: no round above 10.
+
+Dispatch 9 (CR-05-CATALOGUE-018, 019): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the catalogue test and the R2 report. Terminal result: two commits,
+`8a10ce94fec8951ec619340741f8c485585cf98f` (018: three battery cases off the family derivation,
+comparing both battery rows whole) and `ae2ab2cb2e69e479ced075aa3500a74b16eb1038` (019: an offline
+case with `reportedOffline: true` and no confirmation). The owner went from 192 to 196 tests (12
+suites) with 0 failures. Guard, build, pair coverage, ESLint and `fallow audit --base ef7578f`
+(verdict pass) exited 0 on Node v26.12.0. Assertion controls, recorded in the R2 report, each
+failed the new case(s) on the intended whole-value assertion and were restored to source blob
+`cef0ebf54fdb34c06e069609b325db919e591718`: 018 A (`StatusLowBattery` from the raw codes), 018 B
+(`BatteryLevel` from the protection-hours band) and 019 (the offline adapter also firing on
+`reportedOffline`). Coordinator check: each commit lists only the test and the R2 report,
+`git diff 047c26c..HEAD -- src features` is empty, the owner passes 196 tests with 0 failures,
+and `git status --porcelain` is empty.
