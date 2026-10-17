@@ -116,9 +116,9 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | fixed |  | 1a5c9ffcb5 |  |
 | CR-05-CATALOGUE-018 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | gsd-code-reviewer round 2 | fixed |  | 8a10ce94fe |  |
 | CR-05-CATALOGUE-019 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | gsd-code-reviewer round 2 | fixed |  | ae2ab2cb2e |  |
-| CR-05-CATALOGUE-020 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | gsd-code-reviewer round 3 | open |  |  |  |
-| CR-05-CATALOGUE-021 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/cases.md Assertions (whole values) | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | gsd-code-reviewer round 3 | open |  |  |  |
-| CR-05-CATALOGUE-022 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | gsd-code-reviewer round 3 | open |  |  |  |
+| CR-05-CATALOGUE-020 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:229, 611-623, 639-653` | gsd-code-reviewer round 3 | open |  | e565941a31 |  |
+| CR-05-CATALOGUE-021 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/cases.md Assertions (whole values) | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | gsd-code-reviewer round 3 | open |  | f55d0f09db |  |
+| CR-05-CATALOGUE-022 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | gsd-code-reviewer round 3 | open |  | 252b50ab4b |  |
 
 ## Candidate leads
 
@@ -748,3 +748,19 @@ counts (opening 2, fixed 2, rejected 0, new 3, reopened 0, closing 3; open 020, 
 maintainer chose "Resolve and continue": record the resolution in the STOP cell, commit round 3,
 add the three pins with assertion controls, and run correction round 4 against the row coverage
 sweep. The D-18 cap still applies: no round above 10.
+
+Dispatch 11 (CR-05-CATALOGUE-020, 021, 022): role `gsd-code-fixer`, model omitted, effort
+`high`, foreground, owning the catalogue test and the R3 report. Terminal result: three commits,
+`e565941a31dbee75b44a7d4f5bea3b3bff886b51` (020: the meaningless `pump.testRunning` key removed;
+the real `'self-test'.running` signal driven through both activity adapters),
+`f55d0f09db20a0c58ffb7f938e83b2e877849f8b` (021: flood and level rows compared whole beside a
+sensor fault, a backup run and every other active condition) and
+`252b50ab4b6e1bc944b3ba74e90994bd1528793d` (022: the offline row projected with `decoded:
+undefined`). The owner went from 196 to 210 tests (12 suites) with 0 failures. Guard, build, pair
+coverage, ESLint and `fallow audit --base ef7578f` (verdict pass) exited 0 on Node v26.12.0.
+Assertion controls, recorded in the R3 report, each failed the intended cases and were restored to
+source blob `cef0ebf54fdb34c06e069609b325db919e591718`: 020 A (hide the alert during a test) and B
+(raise it), 021 A (flood withheld during a sensor fault) and B (level withheld), 022 (offline row
+withheld without a connectivity group). Coordinator check: each commit lists only the test and
+the R3 report, `git diff 520364a..HEAD -- src features` is empty, no ternary remains in the test,
+the owner passes 210 tests with 0 failures, and `git status --porcelain` is empty.
