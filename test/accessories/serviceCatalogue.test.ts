@@ -237,6 +237,21 @@ function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record
   };
 }
 
+// Every decoded group but `water` reporting its active condition: every equipment fault, a lost
+// controller link, both pumps running, mains lost, a low battery, a self-test running, the alarm
+// muted, and the device reporting itself offline.
+function everyOtherConditionActive(): Record<string, unknown> {
+  return {
+    pump: { primaryRunning: true, backupRunning: true, backupActivatedAt: 1_700_000_000 },
+    power: { mainsPresent: false },
+    battery: batteryGroup({ charging: false, voltageLow: true, healthCode: 1, protectionHoursCode: 1, levelPercent: 25, low: true }),
+    fault: { primaryPumpFault: true, backupPumpFault: true, backupPumpFuseBlown: true, waterSensorFault: true, controllerLinkPresent: false },
+    connectivity: { reportedOffline: true },
+    'self-test': { running: true, testedAt: 1_700_000_000 },
+    'alarm-mute': { muted: true },
+  };
+}
+
 /**
  * One pump's record as a row is handed it, declared here rather than read off the projection input.
  *
@@ -495,7 +510,7 @@ function registerWaterCases(): void {
     test(`faults the pit level service from a reported water sensor fault of ${String(waterSensorFault)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+      const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
       const decoded = decodedState({ fault: { waterSensorFault } });
       const row = rowOf(hap, 'sump-pit-level');
 
@@ -503,13 +518,105 @@ function registerWaterCases(): void {
       const projected = row.project(projectionInput({ decoded }));
 
       // assert
-      assert.deepStrictEqual(
-        {
-          reported: valueOf(projected, WaterSensorFaultReported),
-          fault: valueOf(projected, hap.Characteristic.StatusFault),
-        },
-        { reported: waterSensorFault, fault: statusFault },
-      );
+      assert.deepStrictEqual(summarise(projected), [
+        { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+        { uuid: RawWaterLevelCode.UUID, value: 1 },
+        { uuid: WaterSensorFaultReported.UUID, value: waterSensorFault },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: statusFault },
+      ]);
+    });
+  }
+
+  // The flood verdict reads the decoded `water` group alone. A reported water sensor fault does not
+  // put that verdict in doubt, and a backup run does not establish a flood, so no other group's
+  // active condition moves the flood sensor off what the water group reports.
+  for (const { label, water, groups, offlineConfirmed, leak } of [
+    {
+      label: 'a reported water sensor fault',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: { fault: { ...clearFaults(), waterSensorFault: true } },
+      offlineConfirmed: false,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'a reported water sensor fault',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: { fault: { ...clearFaults(), waterSensorFault: true } },
+      offlineConfirmed: false,
+      leak: LEAK_DETECTED,
+    },
+    {
+      label: 'a backup pump run',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'a backup pump run',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      leak: LEAK_DETECTED,
+    },
+    {
+      label: 'every other active condition',
+      water: { levelCode: 1, levelPercent: 20, flooded: false },
+      groups: everyOtherConditionActive(),
+      offlineConfirmed: true,
+      leak: LEAK_NOT_DETECTED,
+    },
+    {
+      label: 'every other active condition',
+      water: { levelCode: 31, levelPercent: 100, flooded: true },
+      groups: everyOtherConditionActive(),
+      offlineConfirmed: true,
+      leak: LEAK_DETECTED,
+    },
+  ]) {
+    test(`reports a decoded flood verdict of ${String(water.flooded)} unchanged beside ${label}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'sump-pit-flood');
+      const input = projectionInput({ decoded: decodedState({ ...groups, water }), offlineConfirmed });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: leak }]);
+    });
+  }
+
+  // The level and its raw code read the decoded `water` group alone, so they publish beside the
+  // fault-sourced values whatever any other group reports.
+  for (const { label, groups, offlineConfirmed, reported, status } of [
+    {
+      label: 'a backup pump run',
+      groups: { pump: { primaryRunning: false, backupRunning: true, backupActivatedAt: 1_700_000_000 } },
+      offlineConfirmed: false,
+      reported: false,
+      status: NO_FAULT,
+    },
+    { label: 'every other active condition', groups: everyOtherConditionActive(), offlineConfirmed: true, reported: true, status: GENERAL_FAULT },
+  ]) {
+    test(`publishes the reported pit level and its fault values beside ${label}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
+      const row = rowOf(hap, 'sump-pit-level');
+      const input = projectionInput({ decoded: decodedState({ ...groups, water: { levelCode: 1, levelPercent: 20, flooded: false } }), offlineConfirmed });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [
+        { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+        { uuid: RawWaterLevelCode.UUID, value: 1 },
+        { uuid: WaterSensorFaultReported.UUID, value: reported },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: status },
+      ]);
     });
   }
 }
