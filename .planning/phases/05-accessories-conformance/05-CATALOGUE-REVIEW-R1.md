@@ -188,3 +188,9 @@ The reviewer's other candidates (items 2 to 12) are accepted as reasoned rejecti
 
 Counter (D-03 as amended, D-18): opening 15, fixed 15, rejected 0, new 2, reopened 0, closing 2.
 Closing (2) is below opening (15), no ID reopened and the round is below 10: `continue`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CATALOGUE-016 | `test/accessories/serviceCatalogue.test.ts` | Node v26.12.0: `node_modules/.bin/fallow guard test/accessories/serviceCatalogue.test.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/serviceCatalogue.test.js` exit 0 (192 tests, 12 suites, 192 pass, 0 fail); `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` exit 0 (no output); `node_modules/.bin/eslint test/accessories/serviceCatalogue.test.ts --max-warnings=0` exit 0; `node_modules/.bin/fallow audit --base ef7578f8c86c7f7b65adc3648cd7e404cfee7d12 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | Split the two-row loop under `createServiceCatalogue` into two named cases (P-05-03: same assertions, new titles; count stays 192). "publishes the second scope group a row reads while that scope is untrusted for unreachable" became "keeps publishing the second scope group a row reads through an outage on that scope", which expects `{ level: 20, fault: false, status: NO_FAULT }`. "... untrusted for invalid" became "withholds the second scope group a row reads while that scope fails validation", which expects `{ level: 20, fault: undefined, status: undefined }`. No source change. |

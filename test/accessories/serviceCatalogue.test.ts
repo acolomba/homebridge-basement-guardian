@@ -1605,31 +1605,47 @@ describe('createServiceCatalogue', () => {
 
   // A row reading a second scope group answers the same question once per group, so an outage on the
   // second group keeps its values flowing while a validation failure on it still withholds them.
-  for (const { reason, waterSensorFault, statusFault } of [
-    { reason: 'unreachable' as const, waterSensorFault: false, statusFault: NO_FAULT },
-    { reason: 'invalid' as const, waterSensorFault: undefined, statusFault: undefined },
-  ]) {
-    test(`publishes the second scope group a row reads while that scope is untrusted for ${reason}`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
-      const row = rowOf(hap, 'sump-pit-level');
-      const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason, lastTrustedAt: 7 }] });
+  test('keeps publishing the second scope group a row reads through an outage on that scope', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason: 'unreachable', lastTrustedAt: 7 }] });
 
-      // act
-      const projected = row.project(input);
+    // act
+    const projected = row.project(input);
 
-      // assert
-      assert.deepStrictEqual(
-        {
-          level: valueOf(projected, hap.Characteristic.WaterLevel),
-          fault: valueOf(projected, WaterSensorFaultReported),
-          status: valueOf(projected, hap.Characteristic.StatusFault),
-        },
-        { level: 20, fault: waterSensorFault, status: statusFault },
-      );
-    });
-  }
+    // assert
+    assert.deepStrictEqual(
+      {
+        level: valueOf(projected, hap.Characteristic.WaterLevel),
+        fault: valueOf(projected, WaterSensorFaultReported),
+        status: valueOf(projected, hap.Characteristic.StatusFault),
+      },
+      { level: 20, fault: false, status: NO_FAULT },
+    );
+  });
+
+  test('withholds the second scope group a row reads while that scope fails validation', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+    const input = projectionInput({ untrustedScopes: [{ scope: 'fault', reason: 'invalid', lastTrustedAt: 7 }] });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        level: valueOf(projected, hap.Characteristic.WaterLevel),
+        fault: valueOf(projected, WaterSensorFaultReported),
+        status: valueOf(projected, hap.Characteristic.StatusFault),
+      },
+      { level: 20, fault: undefined, status: undefined },
+    );
+  });
 
   test('publishes a row nothing untrusts', () => {
     // arrange
