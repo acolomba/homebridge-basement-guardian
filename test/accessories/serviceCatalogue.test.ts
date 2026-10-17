@@ -2220,12 +2220,12 @@ describe('publishValue', () => {
 // What a characteristic holds after a push, and what a controller read of it answers. The read is
 // the whole difference between unreadable and merely marked, so it is driven rather than inferred
 // from the stored status.
-function readOf(service: Service, characteristic: CharacteristicClass): { value: unknown; statusCode: number; threw: unknown } {
+async function readOf(service: Service, characteristic: CharacteristicClass): Promise<{ value: unknown; statusCode: number; threw: unknown }> {
   const held = service.getCharacteristic(characteristic);
   let threw: unknown = undefined;
 
   try {
-    void held.handleGetRequest();
+    await held.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
@@ -2244,7 +2244,7 @@ void (new Error('no caller may publish this') satisfies Parameters<typeof publis
 describe('publishPersistentFailure', () => {
   // The standard Battery service declares neither status characteristic, so it is the row whose push
   // has to declare the characteristic before it can carry a status at all.
-  test('declares an undeclared characteristic and makes it answer the pushed status', () => {
+  test('declares an undeclared characteristic and makes it answer the pushed status', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2256,7 +2256,7 @@ describe('publishPersistentFailure', () => {
     // assert
     assert.deepStrictEqual(
       {
-        ...readOf(service, hap.Characteristic.StatusActive),
+        ...(await readOf(service, hap.Characteristic.StatusActive)),
         declared: service.optionalCharacteristics.filter((declared) => declared.UUID === hap.Characteristic.StatusActive.UUID).length,
       },
       {
@@ -2272,7 +2272,7 @@ describe('publishPersistentFailure', () => {
   // that erased the reading could not answer `true` here by accident. This is preserve-and-mark at
   // its strongest form: the tile is unreadable and still carries the last thing the plugin vouched
   // for (RES-04, D-10, D-014).
-  test('makes a read throw the pushed status and leaves the value the plugin last published', () => {
+  test('makes a read throw the pushed status and leaves the value the plugin last published', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2283,7 +2283,7 @@ describe('publishPersistentFailure', () => {
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.StatusActive), {
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.StatusActive), {
       value: true,
       statusCode: hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
       threw: hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
@@ -2292,7 +2292,7 @@ describe('publishPersistentFailure', () => {
 
   // Only the characteristic it was handed becomes unreadable. Every other reading on the same
   // service is still there and still answers, which is what bounds one push to one row.
-  test('leaves every other characteristic on the service readable and holding its value', () => {
+  test('leaves every other characteristic on the service readable and holding its value', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2303,12 +2303,12 @@ describe('publishPersistentFailure', () => {
     publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.BatteryLevel), { value: 80, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.BatteryLevel), { value: 80, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
   });
 
   // Nothing has to undo the status deliberately, and that is exactly why the platform pushes the
   // error after its boolean fan-out rather than before it.
-  test('returns the characteristic to readable on the next ordinary push', () => {
+  test('returns the characteristic to readable on the next ordinary push', async () => {
     // arrange
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
@@ -2320,7 +2320,7 @@ describe('publishPersistentFailure', () => {
     publishValue(service, hap.Characteristic.StatusActive, false);
 
     // assert
-    assert.deepStrictEqual(readOf(service, hap.Characteristic.StatusActive), { value: false, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
+    assert.deepStrictEqual(await readOf(service, hap.Characteristic.StatusActive), { value: false, statusCode: hap.HAPStatus.SUCCESS, threw: undefined });
   });
 });
 
