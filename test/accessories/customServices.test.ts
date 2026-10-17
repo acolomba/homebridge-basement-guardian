@@ -116,11 +116,21 @@ function hapNamespace(): API['hap'] {
   return createFakeHap() as unknown as API['hap'];
 }
 
-function displayNamesOf(characteristics: readonly { displayName: string }[]): readonly string[] {
+/** A characteristic, as far as the name a controller shows it by. */
+interface NamedCharacteristic {
+  displayName: string;
+}
+
+/** A published service or characteristic type, as far as its identifier. */
+interface PublishedType {
+  readonly UUID: string;
+}
+
+function displayNamesOf(characteristics: readonly NamedCharacteristic[]): readonly string[] {
   return characteristics.map((characteristic) => characteristic.displayName);
 }
 
-function publishedTypesOf(types: Readonly<Record<string, { readonly UUID: string }>>): readonly { readonly UUID: string }[] {
+function publishedTypesOf(types: Readonly<Record<string, PublishedType>>): readonly PublishedType[] {
   return Object.values(types);
 }
 
