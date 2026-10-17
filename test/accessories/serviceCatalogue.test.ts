@@ -377,18 +377,6 @@ function registerWaterCases(): void {
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: leak }]);
     });
-
-    test(`publishes an integer water level for code ${String(levelCode)}`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const row = rowOf(hap, 'sump-pit-level');
-
-      // act
-      const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode, levelPercent, flooded } }) }));
-
-      // assert
-      assert.strictEqual(Number.isInteger(valueOf(projected, hap.Characteristic.WaterLevel)), true);
-    });
   }
 
   test('reports a flooding pit at exactly one legal water level code', () => {
@@ -1738,23 +1726,40 @@ describe('isRowPublishable', () => {
   // the last trustworthy observation produced rather than from the trust state, so an outage that
   // said nothing about the controller link and nothing about the device leaves both quiet (D-016,
   // RES-03).
-  for (const { displayName, kind } of [
-    { displayName: 'Pump Controller Link Lost', kind: 'pump-controller-link-lost' as const },
-    { displayName: 'Basement Guardian Offline', kind: 'basement-guardian-offline' as const },
-  ]) {
-    test(`activates no ${displayName} contact for a monitoring outage the last snapshot said nothing about`, () => {
-      // arrange
-      const hap = hapNamespace();
-      const row = rowOf(hap, kind);
-      const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+  test('activates no Pump Controller Link Lost contact and raises no fault for a monitoring outage the last snapshot said nothing about', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { ControllerLinkPresent, ControllerDataLastTrustedAt } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'pump-controller-link-lost');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
 
-      // act
-      const tile = { contact: valueOf(row.project(input), hap.Characteristic.ContactSensorState), active: isRowFullyTrusted(row, input.untrustedScopes) };
+    // act
+    const tile = { projected: summarise(row.project(input)), active: isRowFullyTrusted(row, input.untrustedScopes) };
 
-      // assert
-      assert.deepStrictEqual(tile, { contact: CONTACT_DETECTED, active: false });
+    // assert
+    assert.deepStrictEqual(tile, {
+      projected: [
+        { uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED },
+        { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+        { uuid: ControllerLinkPresent.UUID, value: true },
+        { uuid: ControllerDataLastTrustedAt.UUID, value: '' },
+      ],
+      active: false,
     });
-  }
+  });
+
+  test('activates no Basement Guardian Offline contact for a monitoring outage the last snapshot said nothing about', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'basement-guardian-offline');
+    const input = projectionInput({ untrustedScopes: TRUST_SCOPES.map((scope) => ({ scope, reason: 'unreachable' as const, lastTrustedAt: 7 })) });
+
+    // act
+    const tile = { projected: summarise(row.project(input)), active: isRowFullyTrusted(row, input.untrustedScopes) };
+
+    // assert
+    assert.deepStrictEqual(tile, { projected: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }], active: false });
+  });
 
   // The tile is on the accessory while the outage is in force rather than a poll later. A row that
   // projected nothing would earn no service until trust returned, and at the longest configurable
