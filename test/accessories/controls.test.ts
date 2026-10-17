@@ -11,6 +11,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createFakeHap } from '../../features/lib/hap.js';
 import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 
@@ -109,20 +111,11 @@ function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: 
   return { timers, deferrals, cancelled };
 }
 
-// A `CommandPort` stand-in that records every send and answers a scripted outcome, built fresh for
-// each send. A refusal that sent nothing and one that sent a request and discarded the answer look
-// identical from HomeKit, so the recorder is what tells them apart.
-function recordingCommands(outcome: () => CommandOutcome = acceptedOutcome): { commands: CommandPort; sends: string[] } {
-  const sends: string[] = [];
-  const commands: CommandPort = {
-    send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
-      sends.push(`${deviceId} ${capability} ${String(requested)}`);
-
-      return Promise.resolve(outcome());
-    },
-  };
-
-  return { commands, sends };
+// A `CommandPort` stub for a case whose promise is not what was sent. It answers every send with a
+// fresh outcome and records nothing; a case that promises which commands were sent takes a strict
+// mock instead.
+function answeringCommands(outcome: () => CommandOutcome): CommandPort {
+  return { send: () => Promise.resolve(outcome()) };
 }
 
 function switchService(): FakeHapService {
@@ -154,7 +147,7 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
     hap: HAP_NAMESPACE,
     log: overrides.log ?? silentLog(),
     timers: overrides.timers ?? recordingTimers().timers,
-    commands: overrides.commands ?? recordingCommands().commands,
+    commands: overrides.commands ?? answeringCommands(acceptedOutcome),
     deviceId: DEVICE_ID,
     offlineConfirmed: overrides.offlineConfirmed ?? ((): boolean => false),
     commandTransportReady: overrides.commandTransportReady ?? ((): boolean => true),
@@ -203,19 +196,20 @@ async function writeRejection(service: FakeHapService, value: unknown): Promise<
 
 test('refuses a write of false, sends nothing, and leaves the stored value where HAP had it', async () => {
   // arrange
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { timers, deferrals } = recordingTimers();
   const { service } = boundSwitch({ commands, timers });
   onCharacteristic(service).value = true;
 
   // act
   await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
-  const afterRefusal = { value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode, sends: [...sends] };
+  const afterRefusal = { value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode };
   deferrals[0]?.run();
 
   // assert
-  assert.deepStrictEqual(afterRefusal, { value: true, statusCode: NOT_ALLOWED_IN_CURRENT_STATE, sends: [] });
+  assert.deepStrictEqual(afterRefusal, { value: true, statusCode: NOT_ALLOWED_IN_CURRENT_STATE });
   assert.strictEqual(onCharacteristic(service).statusCode, SUCCESS);
+  verify(commands);
 });
 
 test('arms the clearing push as a macrotask at delay 0 rather than running it inline', async () => {
@@ -235,7 +229,8 @@ test('arms the clearing push as a macrotask at delay 0 rather than running it in
 
 test('sends one on request, holds the capability pending, and pushes nothing back', async () => {
   // arrange
-  const { commands, sends } = recordingCommands(acceptedOutcome);
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+  when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
   const { timers, deferrals } = recordingTimers();
   const republished: string[] = [];
   const { binder, service } = boundSwitch({
@@ -250,12 +245,12 @@ test('sends one on request, holds the capability pending, and pushes nothing bac
   await onCharacteristic(service).handleSetRequest(true);
 
   // assert
-  assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
   assert.deepStrictEqual([...binder.pending], ['self-test']);
   assert.deepStrictEqual(
     { value: onCharacteristic(service).value, pushed: onCharacteristic(service).pushed, clearingPushes: clearingPushesIn(deferrals).length, republished },
     { value: true, pushed: false, clearingPushes: 0, republished: [] },
   );
+  verify(commands);
 });
 
 test('clears the pending entry on the reported value the request asked for', async () => {
@@ -297,7 +292,8 @@ test('keeps the capability pending while the scope carrying its reported value h
 test('refuses a second on request while the first waits for the device, and sends one command', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands(acceptedOutcome);
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+  when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
   const { timers, deferrals, cancelled } = recordingTimers();
   const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
   await onCharacteristic(service).handleSetRequest(true);
@@ -313,22 +309,23 @@ test('refuses a second on request while the first waits for the device, and send
 
   // assert
   assert.deepStrictEqual(
-    { thrown, sends, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
+    { thrown, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
     {
       thrown: RESOURCE_BUSY,
-      sends: [`${DEVICE_ID} self-test true`],
       pending: ['self-test'],
       delays: [30000, 0],
       cancelled: [],
       warnings: [`Refused self-test on ${DEVICE_ID}: an earlier request is still waiting for the device to confirm it.`],
     },
   );
+  verify(commands);
 });
 
 test('keeps the request pending when the vendor does not answer in time', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands(() => ({ accepted: false, failure: 'timed-out' }));
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+  when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure: 'timed-out' });
   const { timers, deferrals, cancelled } = recordingTimers();
   const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
 
@@ -343,16 +340,16 @@ test('keeps the request pending when the vendor does not answer in time', async 
 
   // assert
   assert.deepStrictEqual(
-    { thrown, sends, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
+    { thrown, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
     {
       thrown: OPERATION_TIMED_OUT,
-      sends: [`${DEVICE_ID} self-test true`],
       pending: ['self-test'],
       delays: [30000, 0],
       cancelled: [],
       warnings: [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`],
     },
   );
+  verify(commands);
 });
 
 for (const reported of [true, false, undefined]) {
@@ -391,7 +388,8 @@ for (const { failure, status, pendingAfterRefusal } of [
 ] as const) {
   test(`answers ${String(status)} for a ${failure} outcome, leaves pending [${pendingAfterRefusal.join(', ')}], and sends nothing further`, async () => {
     // arrange
-    const { commands, sends } = recordingCommands(() => ({ accepted: false, failure }));
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure });
     const { timers, deferrals } = recordingTimers();
     const { binder, service } = boundSwitch({ commands, timers });
 
@@ -400,9 +398,9 @@ for (const { failure, status, pendingAfterRefusal } of [
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
-    assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
     assert.deepStrictEqual([...binder.pending], pendingAfterRefusal);
     assert.strictEqual(onCharacteristic(service).statusCode, SUCCESS);
+    verify(commands);
   });
 }
 
@@ -442,7 +440,7 @@ test('names the capability, the device and the cause in the one line a refusal l
   // arrange
   const warnings: string[] = [];
   const log = warningLog(warnings);
-  const { commands } = recordingCommands(() => ({ accepted: false, failure: 'timed-out' }));
+  const commands = answeringCommands(() => ({ accepted: false, failure: 'timed-out' }));
   const { service } = boundSwitch({ commands, log });
 
   // act
@@ -576,11 +574,12 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
 
 const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS];
 
-// One write against one row of the table, with everything the assertions read back.
+// One write against one row of the table through the command port the case hands in, with
+// everything the assertions read back.
 async function refuse(
   refusalCase: RefusalCase,
-): Promise<{ thrown: unknown; sends: string[]; deferrals: Deferral[]; binder: ControlBinder; service: FakeHapService }> {
-  const { commands, sends } = recordingCommands(refusalCase.outcome);
+  commands: CommandPort,
+): Promise<{ thrown: unknown; deferrals: Deferral[]; binder: ControlBinder; service: FakeHapService }> {
   const { timers, deferrals } = recordingTimers();
   const { binder, service } = boundSwitch(
     {
@@ -600,13 +599,13 @@ async function refuse(
     thrown = error;
   }
 
-  return { thrown, sends, deferrals, binder, service };
+  return { thrown, deferrals, binder, service };
 }
 
 for (const refusalCase of REFUSALS) {
   test(`answers ${String(refusalCase.status)} for ${refusalCase.cause}`, async () => {
     // act
-    const { thrown } = await refuse(refusalCase);
+    const { thrown } = await refuse(refusalCase, answeringCommands(refusalCase.outcome));
 
     // assert
     assert.strictEqual(thrown, refusalCase.status);
@@ -615,18 +614,22 @@ for (const refusalCase of REFUSALS) {
 
 for (const refusalCase of LOCAL_REFUSALS) {
   test(`sends nothing at all for ${refusalCase.cause}`, async () => {
+    // arrange
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+
     // act
-    const { thrown, sends, binder } = await refuse(refusalCase);
+    const { thrown, binder } = await refuse(refusalCase, commands);
 
     // assert
-    assert.deepStrictEqual({ thrown, sends, pending: [...binder.pending] }, { thrown: refusalCase.status, sends: [], pending: [] });
+    assert.deepStrictEqual({ thrown, pending: [...binder.pending] }, { thrown: refusalCase.status, pending: [] });
+    verify(commands);
   });
 }
 
 for (const refusalCase of REFUSALS) {
   test(`arms one clearing push for ${refusalCase.cause} and leaves the characteristic readable`, async () => {
     // arrange
-    const { deferrals, service } = await refuse(refusalCase);
+    const { deferrals, service } = await refuse(refusalCase, answeringCommands(refusalCase.outcome));
 
     // act
     const pushes = clearingPushesIn(deferrals);
@@ -642,14 +645,16 @@ for (const refusalCase of REFUSALS) {
 
 for (const refusalCase of VENDOR_REFUSALS) {
   test(`attempts ${refusalCase.cause} exactly once and leaves pending [${refusalCase.pendingAfterRefusal.join(', ')}]`, async () => {
+    // arrange
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(refusalCase.outcome());
+
     // act
-    const { thrown, sends, binder } = await refuse(refusalCase);
+    const { thrown, binder } = await refuse(refusalCase, commands);
 
     // assert
-    assert.deepStrictEqual(
-      { thrown, sends, pending: [...binder.pending] },
-      { thrown: refusalCase.status, sends: [`${DEVICE_ID} self-test true`], pending: refusalCase.pendingAfterRefusal },
-    );
+    assert.deepStrictEqual({ thrown, pending: [...binder.pending] }, { thrown: refusalCase.status, pending: refusalCase.pendingAfterRefusal });
+    verify(commands);
   });
 }
 
@@ -657,7 +662,7 @@ for (const refusalCase of REFUSALS) {
   test(`logs the exact refusal for ${refusalCase.cause}`, async () => {
     // arrange
     const warnings: string[] = [];
-    const { commands } = recordingCommands(refusalCase.outcome);
+    const commands = answeringCommands(refusalCase.outcome);
     const { service } = boundSwitch(
       {
         commands,
@@ -688,27 +693,29 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 test('names the missing state when the capability has not decoded and there is a way to send', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => true }, () => undefined);
 
   // act
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`]);
+  verify(commands);
 });
 
 test('names the missing transport when the capability has decoded and there is no way to send', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => false);
 
   // act
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  verify(commands);
 });
 
 // Both conditions at once, which is the case the table's order decides. Naming the missing state to
@@ -718,14 +725,15 @@ test('names the missing transport when the capability has decoded and there is n
 test('names the missing transport alone when the plugin has neither fresh state nor a way to send', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => undefined);
 
   // act
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  verify(commands);
 });
 
 // The third fact of the gate, on its own. The route is proven and the capability's reported value is
@@ -734,14 +742,15 @@ test('names the missing transport alone when the plugin has neither fresh state 
 test('names the quiet live connection when the route and the reported value are both there', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => false);
 
   // act
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
+  verify(commands);
 });
 
 // The quiet live path and no route at all, which is the pair the new rule's placement decides. A
@@ -751,7 +760,7 @@ test('names the quiet live connection when the route and the reported value are 
 test('names the missing transport alone when the plugin has neither a route to send on nor a live path to hear back on', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch(
     { commands, log: warningLog(warnings), commandTransportReady: () => false, liveConfirmationObservable: () => false },
     () => false,
@@ -761,7 +770,8 @@ test('names the missing transport alone when the plugin has neither a route to s
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  verify(commands);
 });
 
 // The other side of the placement. Here the state genuinely has not decoded and the live path is
@@ -771,14 +781,15 @@ test('names the missing transport alone when the plugin has neither a route to s
 test('names the quiet live connection alone when the reported field has also not decoded', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => undefined);
 
   // act
   await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
 
   // assert
-  assert.deepStrictEqual({ warnings, sends }, { warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`], sends: [] });
+  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
+  verify(commands);
 });
 
 test('answers the transport refusal status to every read until the clearing push lands', async () => {
@@ -842,7 +853,8 @@ test('resumes reported state with one warning and no second request when the win
   // arrange
   const warnings: string[] = [];
   const republished: string[] = [];
-  const { commands, sends } = recordingCommands();
+  const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+  when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
   const { timers, deferrals } = recordingTimers();
   const { binder, service } = boundSwitch({
     commands,
@@ -859,14 +871,14 @@ test('resumes reported state with one warning and no second request when the win
 
   // assert
   assert.deepStrictEqual(
-    { pending: [...binder.pending], republished, warnings, sends },
+    { pending: [...binder.pending], republished, warnings },
     {
       pending: [],
       republished: ['republish'],
       warnings: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
-      sends: [`${DEVICE_ID} self-test true`],
     },
   );
+  verify(commands);
 });
 
 // Whichever of the two runs first wins and the second is a no-op, so a confirming report landing at
@@ -926,7 +938,8 @@ for (const capability of ['self-test', 'alarm-mute'] as const) {
     // arrange
     const { service } = boundSwitch();
     await onCharacteristic(service).handleSetRequest(true);
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, capability, true)).thenResolve(acceptedOutcome());
     const other = createControlBinder(binderOptions({ commands }));
     const otherService = new HAP.Service.Switch('Control', capability);
     other.bind(asService(otherService), capability, () => false);
@@ -936,7 +949,8 @@ for (const capability of ['self-test', 'alarm-mute'] as const) {
     await onCharacteristic(otherService).handleSetRequest(true);
 
     // assert
-    assert.deepStrictEqual({ beforeTheWrite, sends }, { beforeTheWrite: [], sends: [`${DEVICE_ID} ${capability} true`] });
+    assert.deepStrictEqual(beforeTheWrite, []);
+    verify(commands);
   });
 }
 
