@@ -496,6 +496,13 @@ interface RefusalCase {
   readonly pendingAfterRefusal: readonly DeviceCapability[];
 }
 
+// A vendor row also carries the timer record the refusal leaves: the delays the binder armed, in
+// order, and the handles it cancelled.
+interface VendorRefusalCase extends RefusalCase {
+  readonly delaysAfterRefusal: readonly number[];
+  readonly cancelledAfterRefusal: readonly number[];
+}
+
 const LOCAL_REFUSALS: readonly RefusalCase[] = [
   {
     cause: 'a write of anything but on',
@@ -571,7 +578,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
   },
 ];
 
-const VENDOR_REFUSALS: readonly RefusalCase[] = [
+const VENDOR_REFUSALS: readonly VendorRefusalCase[] = [
   {
     cause: 'a vendor error',
     expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: vendor-error. It is not retried.',
@@ -583,6 +590,8 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     outcome: () => ({ accepted: false, failure: 'vendor-error' }),
     status: SERVICE_COMMUNICATION_FAILURE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [30000, 0],
+    cancelledAfterRefusal: [0],
   },
   {
     cause: 'an exceeded deadline',
@@ -595,6 +604,8 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     outcome: () => ({ accepted: false, failure: 'timed-out' }),
     status: OPERATION_TIMED_OUT,
     pendingAfterRefusal: ['self-test'],
+    delaysAfterRefusal: [30000, 0],
+    cancelledAfterRefusal: [],
   },
 ];
 
@@ -605,8 +616,8 @@ const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS]
 async function refuse(
   refusalCase: RefusalCase,
   commands: CommandPort,
-): Promise<{ thrown: unknown; deferrals: Deferral[]; binder: ControlBinder; service: FakeHapService }> {
-  const { timers, deferrals } = recordingTimers();
+): Promise<{ thrown: unknown; deferrals: Deferral[]; cancelled: unknown[]; binder: ControlBinder; service: FakeHapService }> {
+  const { timers, deferrals, cancelled } = recordingTimers();
   const { binder, service } = boundSwitch(
     {
       commands,
@@ -625,7 +636,7 @@ async function refuse(
     thrown = error;
   }
 
-  return { thrown, deferrals, binder, service };
+  return { thrown, deferrals, cancelled, binder, service };
 }
 
 for (const refusalCase of REFUSALS) {
@@ -676,10 +687,26 @@ for (const refusalCase of VENDOR_REFUSALS) {
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(refusalCase.outcome());
 
     // act
-    const { thrown, binder } = await refuse(refusalCase, commands);
+    const { thrown, binder, deferrals, cancelled } = await refuse(refusalCase, commands);
+    const pending = [...binder.pending];
+    const delays = deferrals.map((deferral) => deferral.delayMs);
+    const cancelledAtRefusal = [...cancelled];
+
+    // Every deferral the refusal armed runs, so a send from any of them reaches the strict mock.
+    for (const deferral of deferrals) {
+      deferral.run();
+    }
 
     // assert
-    assert.deepStrictEqual({ thrown, pending: [...binder.pending] }, { thrown: refusalCase.status, pending: refusalCase.pendingAfterRefusal });
+    assert.deepStrictEqual(
+      { thrown, pending, delays, cancelled: cancelledAtRefusal },
+      {
+        thrown: refusalCase.status,
+        pending: refusalCase.pendingAfterRefusal,
+        delays: refusalCase.delaysAfterRefusal,
+        cancelled: refusalCase.cancelledAfterRefusal,
+      },
+    );
     verify(commands);
   });
 }
