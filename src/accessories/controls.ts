@@ -15,10 +15,10 @@
  * behind the family boundary by whoever implements the injected command port,
  * so nothing here knows what a Gemini calls anything (D-004, CTRL-05).
  *
- * The catalogue stays projection-only. This binder attaches to a service the
- * catalogue already published, through the one lookup an accessory reaches for
- * when it must act on what it already published, so one service list keeps
- * feeding subtypes, names, and descriptors (D-01).
+ * The catalogue stays projection-only. This binder attaches to the Switch that
+ * `ensureService` answers for a control row: one the Homebridge cache restored,
+ * or one that call has just added. So one service list keeps feeding subtypes,
+ * names, and descriptors (D-01).
  *
  * Two HAP behaviours govern the code below, both read out of the pinned
  * package's own source rather than assumed:
@@ -37,7 +37,8 @@
  *
  * Once `On` carries a handler, `setCharacteristic` on it routes through the
  * write path and becomes a command this plugin issued to itself. Every writer
- * here and every caller uses `publishValue`, which updates rather than sets.
+ * of `On`, here and in each caller, uses `publishValue`, which updates rather
+ * than sets.
  *
  * The binder is not the only write handler this module owns. A restart the
  * vendor cloud never answers restores the control Switches from the Homebridge
@@ -429,9 +430,9 @@ function nothingToRepublish(): void {
  * route it.
  *
  * A restart the vendor cloud never answers is the window `RES-04` names, and it
- * is unbounded: this plugin publishes nothing until the first REST inventory
- * succeeds, and the cached Switches are served by HAP from the moment the
- * bridge publishes. With no handler on `On`, HAP stores the written value and
+ * is unbounded: no binder exists until the first REST inventory succeeds, and
+ * the cached Switches are served by HAP from the moment the bridge publishes.
+ * With no handler on `On`, HAP stores the written value and
  * answers success, so a press reports that it worked, an automation watching
  * the Switch fires, and nothing was sent. Nothing reaching the vendor is
  * correct and stays correct here; what changes is that the owner is told.
