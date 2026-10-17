@@ -45,6 +45,12 @@ const HAP = createFakeHap();
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
+// The stand-in answers the members the binder reads and nothing else, which no structural type can
+// express; this is the one place a stand-in service stands where the binder takes a Service.
+function asService(service: FakeHapService): Service {
+  return service as unknown as Service;
+}
+
 /** One deferral the binder asked the injected port for. */
 interface Deferral {
   delayMs: number;
@@ -160,7 +166,7 @@ function boundSwitch(overrides: BinderOverrides = {}, reported: () => boolean | 
   const binder = createControlBinder(binderOptions(overrides));
   const service = switchService();
 
-  binder.bind(service as unknown as Service, 'self-test', reported);
+  binder.bind(asService(service), 'self-test', reported);
 
   return { binder, service };
 }
@@ -358,8 +364,8 @@ test('registers one handler however many times a service is bound', (t) => {
   const onSetSpy = t.mock.method(characteristic, 'onSet');
 
   // act
-  binder.bind(service as unknown as Service, 'self-test', () => false);
-  binder.bind(service as unknown as Service, 'self-test', () => false);
+  binder.bind(asService(service), 'self-test', () => false);
+  binder.bind(asService(service), 'self-test', () => false);
 
   // assert
   assert.strictEqual(onSetSpy.mock.callCount(), 1);
@@ -886,7 +892,7 @@ test('holds one independent entry per capability, so clearing one leaves the oth
   // arrange
   const { binder, service } = boundSwitch();
   const muteService = new HAP.Service.Switch('Alarm Mute', ALARM_MUTE);
-  binder.bind(muteService as unknown as Service, 'alarm-mute', () => false);
+  binder.bind(asService(muteService), 'alarm-mute', () => false);
   await onCharacteristic(service).handleSetRequest(true);
   await onCharacteristic(muteService).handleSetRequest(true);
 
@@ -907,7 +913,7 @@ for (const capability of ['self-test', 'alarm-mute'] as const) {
     const { commands, sends } = recordingCommands();
     const other = createControlBinder(binderOptions({ commands }));
     const otherService = new HAP.Service.Switch('Control', capability);
-    other.bind(otherService as unknown as Service, capability, () => false);
+    other.bind(asService(otherService), capability, () => false);
     const beforeTheWrite = [...other.pending];
 
     // act
@@ -938,7 +944,7 @@ function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapServi
     hap: HAP_NAMESPACE,
     log: overrides.log ?? silentLog(),
     timers: overrides.timers ?? recordingTimers().timers,
-    service: service as unknown as Service,
+    service: asService(service),
     accessoryName: RESTORED_ACCESSORY_NAME,
   });
 
