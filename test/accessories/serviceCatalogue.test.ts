@@ -1350,6 +1350,40 @@ function registerOfflineCases(): void {
     // assert
     assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
   });
+
+  // An accessory whose family stops resolving projects every row with no decoded state and every
+  // other scope distrusted. The offline row reads the accessory's own confirmation count, so it
+  // keeps publishing that verdict, and a device that then goes offline still raises the alert
+  // (RES-03).
+  for (const { offlineConfirmed, contactState } of [
+    { offlineConfirmed: true, contactState: CONTACT_NOT_DETECTED },
+    { offlineConfirmed: false, contactState: CONTACT_DETECTED },
+  ]) {
+    test(`projects Basement Guardian Offline from a confirmed offline run of ${String(offlineConfirmed)} while no decoded state exists`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const row = rowOf(hap, 'basement-guardian-offline');
+      const input = projectionInput({
+        decoded: undefined,
+        untrustedScopes: [
+          { scope: 'water', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'pump', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'power', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'battery', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'fault', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined },
+          { scope: 'alarm-mute', reason: 'invalid', lastTrustedAt: undefined },
+        ],
+        offlineConfirmed,
+      });
+
+      // act
+      const projected = row.project(input);
+
+      // assert
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }]);
+    });
+  }
 }
 
 // Every case about a group that did not decode, a scope that is not trustworthy, and the `On` value
