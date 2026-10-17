@@ -122,7 +122,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-021 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/cases.md Assertions (whole values) | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:388-515, 1647-1661, 1774-1785` | gsd-code-reviewer round 3 | fixed |  | f55d0f09db |  |
 | CR-05-CATALOGUE-022 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | gsd-code-reviewer round 3 | fixed |  | 252b50ab4b |  |
 | CR-05-CATALOGUE-023 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | gsd-code-reviewer round 4 | fixed |  | b87ee68ab4 |  |
-| CR-05-CATALOGUE-024 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles) | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | gsd-code-reviewer round 4 | open |  | da8ff2c5dd |  |
+| CR-05-CATALOGUE-024 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles) | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | gsd-code-reviewer round 4 | open |  | da8ff2c5dd, 46265a6a01 |  |
 
 ## Candidate leads
 
@@ -799,3 +799,12 @@ fixed, 024 still open (the arrange leaves the pit dry), 001 to 022 still fixed, 
 covered, no new finding; its typecheck, ESLint, build, owner (212 tests, 0 failures), pair command
 and batch header check all exited 0 on Node v26.12.0. Stop rule applied first: opening 2, fixed 1,
 rejected 0, new 0, reopened 0, closing 1, result `continue`.
+
+Dispatch 15 (CR-05-CATALOGUE-024 remainder): role `gsd-code-fixer`, model omitted, effort
+`high`, foreground, owning the catalogue test and the R5 report. Terminal result: commit
+`46265a6a019396b07e7d2bcff5731cec26d8c61f` (`test(serviceCatalogue): flood the pit in the quiet
+backup case`), two owned paths, the flooding water group added to the arrange with the title and
+expected value unchanged; the owner keeps 212 tests in 12 suites with 0 failures; guard, build,
+pair coverage, ESLint and `fallow audit --base ef7578f` (verdict pass) exited 0 on Node v26.12.0;
+the pre-step passed on its first run and the hook passed. Coordinator check: two owned paths,
+`git diff 64c57c7..HEAD -- src features` is empty, `git status --porcelain` is empty.
