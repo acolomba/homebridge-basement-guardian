@@ -892,6 +892,36 @@ describe('createControlBinder', () => {
     );
   });
 
+  // A row withholds `On` while a request waits, so this push alone decides what the Switch shows after
+  // the refusal. HAP still holds the `true` the accepted press left, and the push must replace it with
+  // the device's reported `false`: a requested value never shows as reported state (WR-02, D-037).
+  test('returns the Switch to the reported value when a press is refused while a request waits', async () => {
+    // arrange
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
+    const { timers, deferrals } = recordingTimers();
+    const { binder, service } = boundSwitch({ commands, timers }, () => false);
+    await onCharacteristic(service).handleSetRequest(true);
+    const afterTheAcceptedPress = onCharacteristic(service).value;
+
+    // act
+    const thrown = await writeRejection(service, true);
+    clearingPushesIn(deferrals)[0]?.run();
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        thrown,
+        afterTheAcceptedPress,
+        afterThePush: onCharacteristic(service).value,
+        statusCode: onCharacteristic(service).statusCode,
+        pending: [...binder.pending],
+      },
+      { thrown: RESOURCE_BUSY, afterTheAcceptedPress: true, afterThePush: false, statusCode: SUCCESS, pending: ['self-test'] },
+    );
+    verify(commands);
+  });
+
   // A row publishes `On` only while it can vouch for the reported value, so a refusal answered while
   // the control's own scope is untrustworthy would leave the status standing. The push falls back to
   // the value the characteristic already carries, which clears the status and states nothing new.
