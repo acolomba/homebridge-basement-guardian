@@ -468,11 +468,12 @@ export function bindRestoredControlRefusal(options: RestoredControlRefusalOption
 export function createControlBinder(options: ControlBinderOptions): ControlBinder {
   const { hap, log, timers, commands, deviceId, offlineConfirmed, commandTransportReady, liveConfirmationObservable, republish } = options;
 
-  // What was asked for, per capability, from the moment a write is accepted for
-  // sending until the device confirms it or the window closes. The value is kept
-  // beside the key because reconciliation compares the two: a report that does
-  // not match the request resolves nothing. The window's handle is kept beside
-  // it so a confirming report can cancel the deadline it no longer needs.
+  // What was asked for, per capability. An entry exists from the moment a write
+  // is accepted for sending until the device confirms it, the vendor refuses it,
+  // or the window closes. The value is kept beside the key because
+  // reconciliation compares the two: a report that does not match the request
+  // resolves nothing. The window's handle is kept beside it so a confirming
+  // report or a vendor refusal can cancel the deadline.
   //
   // One binder exists per accessory and one entry exists per capability, so the
   // window is per capability per accessory by construction rather than by a rule
@@ -527,10 +528,11 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     }, 0);
   }
 
-  // A refusal the plugin answered by itself. Nothing was sent, so nothing is
-  // pending to drop; the clearing push is armed before the throw because HAP
-  // stores the status on the characteristic and answers it to every later read
-  // until something pushes a value.
+  // A refusal the plugin answers by itself. Nothing is sent, so this write adds
+  // no pending entry and leaves an earlier entry and its window as they are.
+  // The clearing push is armed before the throw. HAP stores the status on the
+  // characteristic and answers it to every later read until something pushes a
+  // value.
   //
   // The line names the device, the capability and a cause, and nothing else: no
   // URL, header value, token, or response body (AUTH-02). The `deviceId` is
@@ -598,8 +600,9 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
       refuseOutcome(service, capability, reported, outcome.failure);
     }
 
-    // Accepted. Nothing is pushed: HAP keeps serving the value this write left,
-    // and the entry stays until the device's own report resolves it.
+    // Accepted. Nothing is pushed: HAP keeps serving the value this write
+    // left, and the entry stays until the device's own report or the window
+    // resolves it.
   }
 
   return {

@@ -232,3 +232,9 @@ closing 4. The open count fell from 29 to 4 with no reopen in round 1, so the re
   Phase 7.
 - **Repair order:** the source comments (032); then the D-04 bug (033); then the test comments
   (030) and the `noop` declarations (031).
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CONTROLS-032 | `src/accessories/controls.ts` | Node v26.12.0: `node_modules/.bin/fallow guard src/accessories/controls.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/controls.test.js` exit 0 (102 tests, 2 suites, 0 failures); `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` exit 0; `node_modules/.bin/eslint src/accessories/controls.ts --max-warnings=0` exit 0; `node_modules/.bin/fallow audit --base 4c143ebad681cf602e787b8c2ea09b050d8a9518 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | comment-only: the `requested` note says an entry ends when the device confirms it, the vendor refuses it, or the window closes, and that a confirming report or a vendor refusal cancels the deadline; the `refuseLocally` note says this write adds no entry and leaves an earlier entry and its window as they are; the accepted-path note says the device's report or the window resolves the entry |
