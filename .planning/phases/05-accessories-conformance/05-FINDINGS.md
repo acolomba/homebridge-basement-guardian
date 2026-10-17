@@ -1362,8 +1362,8 @@ the phase verifier.
   exit 0, `ACCESSORIES_HEADERS_OK files=2`.
 - `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --require-clean CONTROLS`:
   exit 0, `ACCESSORIES_LEDGER_TRACER_OK inventory=24 findings=97 open=0 rounds=22 clean=CONTROLS`.
-- CONTROLS closed at correction round 9 with 45 findings fixed and none rejected: 13 BLOCKER and
-  32 WARNING. Three were genuine production bugs fixed through RED-to-GREEN evidence (008, 009,
+- CONTROLS closed at correction round 9 with 45 findings fixed and none rejected: 11 BLOCKER and
+  34 WARNING. Three were genuine production bugs fixed through RED-to-GREEN evidence (008, 009,
   033). The maintainer resolved four D-03 stops (rounds 4, 6, 7 and 8) with "Resolve and
   continue".
 
