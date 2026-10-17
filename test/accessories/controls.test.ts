@@ -334,6 +334,36 @@ test('refuses a second on request while the first waits for the device, and send
   );
 });
 
+test('keeps the request pending when the vendor does not answer in time', async () => {
+  // arrange
+  const warnings: string[] = [];
+  const { commands, sends } = recordingCommands({ accepted: false, failure: 'timed-out' });
+  const { timers, deferrals, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
+
+  // act
+  let thrown: unknown = undefined;
+
+  try {
+    await onCharacteristic(service).handleSetRequest(true);
+  } catch (error: unknown) {
+    thrown = error;
+  }
+
+  // assert
+  assert.deepStrictEqual(
+    { thrown, sends, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
+    {
+      thrown: OPERATION_TIMED_OUT,
+      sends: [`${DEVICE_ID} self-test true`],
+      pending: ['self-test'],
+      delays: [30000, 0],
+      cancelled: [],
+      warnings: [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`],
+    },
+  );
+});
+
 for (const reported of [true, false, undefined]) {
   test(`reconciles a capability that was never pending against a reported ${String(reported)} without creating one`, () => {
     // arrange
@@ -370,11 +400,11 @@ test('registers one handler however many times a service is bound', () => {
   assert.strictEqual(registrations, 1);
 });
 
-for (const { failure, status } of [
-  { failure: 'vendor-error', status: SERVICE_COMMUNICATION_FAILURE },
-  { failure: 'timed-out', status: OPERATION_TIMED_OUT },
+for (const { failure, status, pendingAfterRefusal } of [
+  { failure: 'vendor-error', status: SERVICE_COMMUNICATION_FAILURE, pendingAfterRefusal: [] },
+  { failure: 'timed-out', status: OPERATION_TIMED_OUT, pendingAfterRefusal: ['self-test'] },
 ] as const) {
-  test(`answers ${String(status)} for a ${failure} outcome, drops the pending entry, and sends nothing further`, async () => {
+  test(`answers ${String(status)} for a ${failure} outcome, leaves pending [${pendingAfterRefusal.join(', ')}], and sends nothing further`, async () => {
     // arrange
     const { commands, sends } = recordingCommands({ accepted: false, failure });
     const { timers, deferrals } = recordingTimers();
@@ -386,7 +416,7 @@ for (const { failure, status } of [
 
     // assert
     assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
-    assert.deepStrictEqual([...binder.pending], []);
+    assert.deepStrictEqual([...binder.pending], pendingAfterRefusal);
     assert.strictEqual(onCharacteristic(service).statusCode, SUCCESS);
   });
 }
@@ -453,6 +483,7 @@ interface RefusalCase {
   outcome: CommandOutcome;
   status: number;
   expectedWarning: string;
+  pendingAfterRefusal: readonly DeviceCapability[];
 }
 
 const LOCAL_REFUSALS: readonly RefusalCase[] = [
@@ -466,6 +497,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'a runtime with no way to reach the vendor',
@@ -477,6 +509,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'a live path that cannot carry the device answer',
@@ -488,6 +521,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: false,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'a capability whose reported field has not decoded',
@@ -499,6 +533,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'a device confirmed offline',
@@ -510,6 +545,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: ACCEPTED,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'a duplicate request while the capability already reads active',
@@ -521,6 +557,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: ACCEPTED,
     status: RESOURCE_BUSY,
+    pendingAfterRefusal: [],
   },
 ];
 
@@ -535,6 +572,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: { accepted: false, failure: 'vendor-error' },
     status: SERVICE_COMMUNICATION_FAILURE,
+    pendingAfterRefusal: [],
   },
   {
     cause: 'an exceeded deadline',
@@ -546,6 +584,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     confirmationObservable: true,
     outcome: { accepted: false, failure: 'timed-out' },
     status: OPERATION_TIMED_OUT,
+    pendingAfterRefusal: ['self-test'],
   },
 ];
 
@@ -618,14 +657,14 @@ for (const refusalCase of REFUSALS) {
 }
 
 for (const refusalCase of VENDOR_REFUSALS) {
-  test(`attempts ${refusalCase.cause} exactly once and drops the pending entry`, async () => {
+  test(`attempts ${refusalCase.cause} exactly once and leaves pending [${refusalCase.pendingAfterRefusal.join(', ')}]`, async () => {
     // act
     const { thrown, sends, binder } = await refuse(refusalCase);
 
     // assert
     assert.deepStrictEqual(
       { thrown, sends, pending: [...binder.pending] },
-      { thrown: refusalCase.status, sends: [`${DEVICE_ID} self-test true`], pending: [] },
+      { thrown: refusalCase.status, sends: [`${DEVICE_ID} self-test true`], pending: refusalCase.pendingAfterRefusal },
     );
   });
 }

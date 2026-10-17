@@ -546,11 +546,19 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     return refuse(hap, refusal.status(hap));
   }
 
-  // The vendor refused or never answered. The pending entry is dropped first, so
-  // the row resumes publishing reported state, and nothing is retried: a command
-  // that outlived its deadline may already have reached the device (D-038).
+  // The vendor refused or never answered, and nothing is retried for either.
+  //
+  // The two failures treat the pending entry differently. A refusal ends the
+  // request, so the entry and its window go, and the row resumes publishing
+  // reported state (D-037). A timeout leaves delivery uncertain: the command may
+  // already have reached the device. So the entry and its window stay until the
+  // device's report or the window resolves the request, and a second press in
+  // that time is refused (D-037, D-038).
   function refuseOutcome(service: Service, capability: DeviceCapability, reported: () => boolean | undefined, failure: CommandFailure): never {
-    resolvePending(capability);
+    if (failure === 'vendor-error') {
+      resolvePending(capability);
+    }
+
     armClearingPush(service, reported);
     log.warn(`The ${capability} request on ${deviceId} did not take effect: ${failure}. It is not retried.`);
 
