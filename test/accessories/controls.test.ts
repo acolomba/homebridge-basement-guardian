@@ -1286,61 +1286,89 @@ function readOfSwitch(service: FakeHapService): { value: unknown; threw: unknown
   }
 }
 
-test('refuses a press on a restored control and leaves the toggle where the cache left it', async () => {
-  // arrange
-  const service = refusingRestoredSwitch();
-  service.updateCharacteristic(HAP.Characteristic.On, false);
+// A press of either value on a restored control, and the value the cache holds before it. The held
+// value is always the other one, so a press that went through would show in the stored value. A
+// press of false is what Apple Home writes to switch off a toggle the cache restored as on.
+interface RestoredPressCase {
+  readonly pressed: boolean;
+  readonly held: boolean;
+}
 
-  // act
-  const thrown = await writeRejection(service, true);
+const RESTORED_PRESSES: readonly RestoredPressCase[] = [
+  { pressed: true, held: false },
+  { pressed: false, held: true },
+];
 
-  // assert
-  assert.deepStrictEqual(
-    { thrown, value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
-    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, value: false, statusCode: NOT_ALLOWED_IN_CURRENT_STATE },
-  );
-});
+for (const { pressed, held } of RESTORED_PRESSES) {
+  test(`refuses a press on a restored control and leaves the toggle where the cache left it, for a press of ${String(pressed)}`, async () => {
+    // arrange
+    const service = refusingRestoredSwitch();
+    service.updateCharacteristic(HAP.Characteristic.On, held);
+
+    // act
+    const thrown = await writeRejection(service, pressed);
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
+      { thrown: NOT_ALLOWED_IN_CURRENT_STATE, value: held, statusCode: NOT_ALLOWED_IN_CURRENT_STATE },
+    );
+  });
+}
 
 // The same cause the transport rule gives a live accessory, because it is the same condition: after
 // a restart the cloud has not answered, so the plugin has no route to send on. One condition with
 // two wordings is what the per-cause table exists to prevent (D-07, D-08).
-test('names the service, the accessory and the cause in the one line a restored refusal logs', async () => {
-  // arrange
-  const warnings: string[] = [];
-  const service = refusingRestoredSwitch({ log: warningLog(warnings) });
+for (const { pressed, held } of RESTORED_PRESSES) {
+  test(`names the service, the accessory and the cause in the one line a restored refusal logs, for a press of ${String(pressed)}`, async () => {
+    // arrange
+    const warnings: string[] = [];
+    const service = refusingRestoredSwitch({ log: warningLog(warnings) });
+    service.updateCharacteristic(HAP.Characteristic.On, held);
 
-  // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+    // act
+    const thrown = await writeRejection(service, pressed);
 
-  // assert
-  assert.deepStrictEqual(warnings, [`Refused System Self-Test on ${RESTORED_ACCESSORY_NAME}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
-});
+    // assert
+    assert.deepStrictEqual(
+      { thrown, value: onCharacteristic(service).value, warnings },
+      {
+        thrown: NOT_ALLOWED_IN_CURRENT_STATE,
+        value: held,
+        warnings: [`Refused System Self-Test on ${RESTORED_ACCESSORY_NAME}: ${NO_COMMAND_TRANSPORT_CAUSE}.`],
+      },
+    );
+  });
+}
 
 // Without the clearing push the refused characteristic answers its status to every later read, which
 // Apple Home draws as "No Response" for the whole accessory -- the presentation this project
 // reserves for a refused credential, which never clears itself. A restart with the cloud down clears
 // itself the moment a poll succeeds (D-04, D-10).
-test('returns the refused control to a readable state once the clearing push has run', async () => {
-  // arrange
-  const { timers, deferrals } = recordingTimers();
-  const service = refusingRestoredSwitch({ timers });
-  service.updateCharacteristic(HAP.Characteristic.On, false);
+for (const { pressed, held } of RESTORED_PRESSES) {
+  test(`returns the refused control to a readable state once the clearing push has run, for a press of ${String(pressed)}`, async () => {
+    // arrange
+    const { timers, deferrals } = recordingTimers();
+    const service = refusingRestoredSwitch({ timers });
+    service.updateCharacteristic(HAP.Characteristic.On, held);
 
-  // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
-  const afterTheRefusal = readOfSwitch(service);
-  clearingPushesIn(deferrals)[0]?.run();
+    // act
+    const thrown = await writeRejection(service, pressed);
+    const afterTheRefusal = readOfSwitch(service);
+    clearingPushesIn(deferrals)[0]?.run();
 
-  // assert
-  assert.deepStrictEqual(
-    { delays: deferrals.map((deferral) => deferral.delayMs), afterTheRefusal, afterTheClearingPush: readOfSwitch(service) },
-    {
-      delays: [0],
-      afterTheRefusal: { value: undefined, threw: NOT_ALLOWED_IN_CURRENT_STATE },
-      afterTheClearingPush: { value: false, threw: undefined },
-    },
-  );
-});
+    // assert
+    assert.deepStrictEqual(
+      { thrown, delays: deferrals.map((deferral) => deferral.delayMs), afterTheRefusal, afterTheClearingPush: readOfSwitch(service) },
+      {
+        thrown: NOT_ALLOWED_IN_CURRENT_STATE,
+        delays: [0],
+        afterTheRefusal: { value: undefined, threw: NOT_ALLOWED_IN_CURRENT_STATE },
+        afterTheClearingPush: { value: held, threw: undefined },
+      },
+    );
+  });
+}
 
 test('leaves a restored control answering a read before any press reaches it', () => {
   // arrange
