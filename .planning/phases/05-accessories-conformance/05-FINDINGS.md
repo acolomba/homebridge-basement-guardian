@@ -86,7 +86,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-022 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/alarmMute.test.ts:19, 22` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/alarmMute.test.ts:19, 22` | gsd-code-reviewer round 0 | fixed |  | 69c7801d97 |  |
 | CR-05-DECLARATIONS-023 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | gsd-code-reviewer round 0 | fixed |  | 6472fa9690 |  |
 | CR-05-DECLARATIONS-024 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data; Case structure | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | gsd-code-reviewer round 0 | fixed |  | 960f812d00 |  |
-| CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | open |  |  |  |
+| CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | open |  | 00f7bd6a4c |  |
 
 ## Candidate leads
 
@@ -468,3 +468,15 @@ opening set of 24 IDs and their fix commits. Terminal result: `05-DECLARATIONS-R
 its typecheck, ESLint, build, owners (87 tests, 0 failures), four pair commands and batch header
 check all exited 0 on Node v26.12.0. Before any other action the coordinator applied the stop
 rule: opening 24, fixed 24, rejected 0, new 1, reopened 0, closing 1, result `continue`.
+
+Dispatch 10 (CR-05-DECLARATIONS-025): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning alarmMute.test.ts and the R1 report. Terminal result: commit
+`00f7bd6a4cfd19fc47ad61a0dc96cc54857826e0` (`test(alarmMute): flag any declared mute constant in
+the scan`), two owned paths; the owner keeps 3 tests with 0 failures; guard, build, pair coverage,
+ESLint and `fallow audit --base 053599a` (verdict pass) exited 0 on Node v26.12.0; the pre-step
+passed on its first run and the hook passed. Assertion control, recorded in the R1 report: a
+temporary `src/accessories/temporaryMuteControl.ts` declaring `MUTE_DURATION_MS` made the case
+fail with both modules in `declaring`, while the same plant passed the pre-fix filter; the file
+was deleted and `src` is clean. Coordinator check: the commit lists only the test and the R1
+report, it changes only the filter predicate and the pattern's comment, the temporary file is
+absent, and `git status --porcelain` is empty.
