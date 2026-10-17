@@ -90,7 +90,11 @@ interface ServiceDefinition {
   uuid: string;
   /** The facts the service always carries, so a reader never has to ask whether it declared them. */
   required: readonly CharacteristicClass[];
-  /** The facts only some subtypes of the service carry, beyond the two status characteristics every one declares. */
+  /**
+   * The facts the service declares but does not construct, beyond the three
+   * shared characteristics every one declares. Each appears only when the
+   * accessory first writes a value to it, so none shows a format default as fact.
+   */
   optional?: readonly CharacteristicClass[];
 }
 

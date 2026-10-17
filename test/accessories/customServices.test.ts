@@ -147,7 +147,7 @@ describe('createCustomServices', () => {
       assert.deepStrictEqual(displayNamesOf(service.characteristics), required);
     });
 
-    test(`declares the characteristics only some ${name} subtypes carry as optional`, () => {
+    test(`declares the ${name}-specific facts, then the three shared characteristics, as optional`, () => {
       // arrange
       const services = createCustomServices(hapNamespace());
 
