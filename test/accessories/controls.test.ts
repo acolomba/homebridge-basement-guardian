@@ -16,7 +16,7 @@ import { mock, verify, when } from 'strong-mock';
 import { createFakeHap } from '../../features/lib/hap.js';
 import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 
-import type { FakeHapCharacteristic, FakeHapService } from '../../features/lib/hap.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeSetHandler } from '../../features/lib/hap.js';
 import type { ControlBinder, ControlBinderOptions } from '../../src/accessories/controls.js';
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { CommandOutcome, CommandPort } from '../../src/runtime/commandPort.js';
@@ -192,6 +192,23 @@ async function writeRejection(service: FakeHapService, value: unknown): Promise<
   }
 
   return undefined;
+}
+
+/** One call a spy on `onSet` recorded. */
+interface OnSetCall {
+  readonly arguments: readonly [FakeSetHandler];
+}
+
+// The set handler the code under test registered, read off a spy on `onSet`, so a case can call it
+// directly and see the error it throws before the stand-in converts that error to a bare status.
+function registeredHandler(calls: readonly OnSetCall[]): FakeSetHandler {
+  const handler = calls[0]?.arguments[0];
+
+  if (handler === undefined) {
+    throw new Error('no set handler was registered');
+  }
+
+  return handler;
 }
 
 test('refuses a write of false, sends nothing, and leaves the stored value where HAP had it', async () => {
@@ -747,6 +764,41 @@ for (const refusalCase of REFUSALS) {
 
     // assert
     assert.deepStrictEqual(warnings, [refusalCase.expectedWarning]);
+  });
+}
+
+// HAP converts any error but a `HapStatusError` to a communication failure, and warns with its
+// message. The stand-in converts the same way, so a case that writes through it reads the same
+// status for a plain `Error` as for a vendor error. These cases call the registered handler
+// directly and read the error it throws.
+for (const refusalCase of REFUSALS) {
+  test(`throws a HapStatusError with status ${String(refusalCase.status)} from the bound handler for ${refusalCase.cause}`, async (t) => {
+    // arrange
+    const binder = createControlBinder(
+      binderOptions({
+        commands: answeringCommands(refusalCase.outcome),
+        offlineConfirmed: () => refusalCase.offlineConfirmed,
+        commandTransportReady: () => refusalCase.transportReady,
+        liveConfirmationObservable: () => refusalCase.confirmationObservable,
+      }),
+    );
+    const service = switchService();
+    const onSetSpy = t.mock.method(onCharacteristic(service), 'onSet');
+    binder.bind(asService(service), 'self-test', () => refusalCase.reported);
+    const handler = registeredHandler(onSetSpy.mock.calls);
+
+    // act & assert
+    await assert.rejects(
+      async () => {
+        await handler(refusalCase.value);
+      },
+      (error: unknown) => {
+        assert.ok(error instanceof HAP.HapStatusError);
+        assert.strictEqual(error.hapStatus, refusalCase.status);
+
+        return true;
+      },
+    );
   });
 }
 
@@ -1369,6 +1421,35 @@ for (const { pressed, held } of RESTORED_PRESSES) {
     );
   });
 }
+
+// The restored refusal's own handler, called directly, for the same reason as the bound handler's
+// cases: a write through the stand-in reads a plain `Error` as a status too.
+test('throws a HapStatusError with status -70412 from the handler a restored control carries', async (t) => {
+  // arrange
+  const service = switchService();
+  const onSetSpy = t.mock.method(onCharacteristic(service), 'onSet');
+  bindRestoredControlRefusal({
+    hap: HAP_NAMESPACE,
+    log: silentLog(),
+    timers: recordingTimers().timers,
+    service: asService(service),
+    accessoryName: RESTORED_ACCESSORY_NAME,
+  });
+  const handler = registeredHandler(onSetSpy.mock.calls);
+
+  // act & assert
+  await assert.rejects(
+    async () => {
+      await handler(true);
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof HAP.HapStatusError);
+      assert.strictEqual(error.hapStatus, NOT_ALLOWED_IN_CURRENT_STATE);
+
+      return true;
+    },
+  );
+});
 
 test('leaves a restored control answering a read before any press reaches it', () => {
   // arrange
