@@ -86,13 +86,13 @@ export interface ControlBinderOptions {
   /**
    * Whether the plugin currently has a proven way to reach the vendor at all.
    *
-   * This is a fact about the plugin, not about the device, and it is the other
-   * half of the gate: a press can be impossible either because the plugin
-   * cannot vouch for what the device is doing or because it has no route to
-   * send on, and the two fail independently. A fresh live report can arrive
-   * while REST authentication has not completed, and a poll can keep succeeding
-   * while the live path has gone quiet, so a single readiness answer would tell
-   * a user diagnosing a refused press the wrong thing half the time.
+   * This is a fact about the plugin, not about the device, and it is one fact
+   * of the gate: a press can be impossible because the plugin cannot vouch for
+   * what the device is doing or because it has no route to send on, and the two
+   * fail independently. A fresh live report can arrive while REST
+   * authentication has not completed, and a poll can keep succeeding while the
+   * live path has gone quiet, so a single readiness answer would tell a user
+   * diagnosing a refused press the wrong thing half the time.
    *
    * The accessory answers this from the account-wide monitoring trust it also
    * publishes its rows from, and it answers `reported` below through the same
@@ -401,12 +401,15 @@ function heldOn(hap: API['hap'], service: Service): CharacteristicValue {
 // The push that returns a refused characteristic's stored status to `0`.
 //
 // The republish re-asserts everything the control rows can currently vouch for.
-// The push after it closes the one case a republish cannot: a row publishes `On`
-// only while it can vouch for the reported value, so a refusal answered while
-// the control's own scope is untrustworthy would leave the status standing and
-// the Switch unreadable. Pushing the value the characteristic already carries
-// states nothing new -- HAP returns a stored status to `0` whatever value it is
-// given (D-04, D-014).
+// The push after it closes the cases a republish cannot. A row publishes `On`
+// only while it can vouch for the reported value and while no request for it
+// waits. While a request waits, the push publishes the reported value, so the
+// Switch shows what the device said, not what was asked for (WR-02). While the
+// control's own scope is untrustworthy, there is no reported value to publish,
+// and without a push the status would stand and the Switch would stay
+// unreadable. The push then carries the value the characteristic already
+// serves, which states nothing new: HAP returns a stored status to `0` whatever
+// value it is given (D-04, D-014).
 function clearRefusal(hap: API['hap'], service: Service, republish: () => void, reported: boolean | undefined): void {
   republish();
 
