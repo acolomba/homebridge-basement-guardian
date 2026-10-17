@@ -49,6 +49,7 @@ edits under D-06 or D-12. Its row is recorded before the edit. The First round o
 | DECLARATIONS | 4 | 05-DECLARATIONS-REVIEW-R4.md | 6fcd1c3aa8f98f9a2e02d1d351c62087b348668f | 1 | 1 | 0 | 0 | 0 | 0 | None | clean |
 | CATALOGUE | 0 | 05-CATALOGUE-REVIEW.md | ef7578f8c86c7f7b65adc3648cd7e404cfee7d12 | 0 | 0 | 0 | 15 | 0 | 15 | CR-05-CATALOGUE-001, CR-05-CATALOGUE-002, CR-05-CATALOGUE-003, CR-05-CATALOGUE-004, CR-05-CATALOGUE-005, CR-05-CATALOGUE-006, CR-05-CATALOGUE-007, CR-05-CATALOGUE-008, CR-05-CATALOGUE-009, CR-05-CATALOGUE-010, CR-05-CATALOGUE-011, CR-05-CATALOGUE-012, CR-05-CATALOGUE-013, CR-05-CATALOGUE-014, CR-05-CATALOGUE-015 | initial |
 | CATALOGUE | 1 | 05-CATALOGUE-REVIEW-R1.md | 700ce9ac61885e50bfa39d9f0e0774f6372da749 | 15 | 15 | 0 | 2 | 0 | 2 | CR-05-CATALOGUE-016, CR-05-CATALOGUE-017 | continue |
+| CATALOGUE | 2 | 05-CATALOGUE-REVIEW-R2.md | ec755ee2e4e9df8c608f11829085db637a472258 | 2 | 2 | 0 | 2 | 0 | 2 | CR-05-CATALOGUE-018, CR-05-CATALOGUE-019 | STOP: no progress; resolved by maintainer |
 
 The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
 the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
@@ -110,8 +111,10 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-013 | CATALOGUE | WARNING | .agents/skills/typescript-style/rules/comments.md | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:90-92, 1053` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:90-92, 1053` | gsd-code-reviewer round 0 | fixed |  | 7faf1c4c92 |  |
 | CR-05-CATALOGUE-014 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:103-109, 130` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:103-109, 130` | gsd-code-reviewer round 0 | fixed |  | 2cec494041 |  |
 | CR-05-CATALOGUE-015 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Naming values | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | gsd-code-reviewer round 0 | fixed |  | e131aad3d9 |  |
-| CR-05-CATALOGUE-016 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); Data-driven cases | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | gsd-code-reviewer round 1 | open |  | 1629e77f84 |  |
-| CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | open |  | 1a5c9ffcb5 |  |
+| CR-05-CATALOGUE-016 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); Data-driven cases | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | gsd-code-reviewer round 1 | fixed |  | 1629e77f84 |  |
+| CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | fixed |  | 1a5c9ffcb5 |  |
+| CR-05-CATALOGUE-018 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:75-99, 220-222, 908-963, 986-1002` | gsd-code-reviewer round 2 | open |  |  |  |
+| CR-05-CATALOGUE-019 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | `ec755ee2e4e9df8c608f11829085db637a472258:test/accessories/serviceCatalogue.test.ts:226-238, 1007-1019, 1116-1134, 1261-1271, 1729-1740` | gsd-code-reviewer round 2 | open |  |  |  |
 
 ## Candidate leads
 
@@ -693,3 +696,19 @@ coverage, ESLint and `fallow audit --base ef7578f` (verdict pass) exited 0 on No
 pre-steps passed on their first run and both hooks passed. Coordinator check: each commit lists
 only the test and the R1 report, `git diff f9b4b88..HEAD -- src features` is empty, the owner
 passes 192 tests with 0 failures, and `git status --porcelain` is empty.
+
+Correction round 2: dispatch 8, role `gsd-code-reviewer`, model omitted, effort `high`,
+foreground, over both batch files at `ec755ee2e4e9df8c608f11829085db637a472258` with the opening
+set {016, 017} and the 15 earlier fixed IDs. Terminal result: `05-CATALOGUE-REVIEW-R2.md`, 016 and
+017 fixed, 001 to 015 still fixed, two new BLOCKERs (018: battery `low` and `levelPercent` never
+decoupled from their raw codes; 019: `reportedOffline` never `true`); its typecheck, ESLint,
+build, owner (192 tests, 0 failures), pair command and batch header check all exited 0 on Node
+v26.12.0. Stop rule applied first: opening 2, fixed 2, rejected 0, new 2, reopened 0, closing 2,
+result `STOP: no progress`. The round-2 counter row, the two new finding rows, the 016 and 017
+dispositions and the report stay uncommitted; the phase waits for the maintainer.
+
+Maintainer resolution of the CATALOGUE round-2 STOP, 2026-10-17: asked with the exact IDs and
+counts (opening 2, fixed 2, rejected 0, new 2, reopened 0, closing 2; open 018 and 019), the
+maintainer chose "Resolve and continue": record the resolution in the STOP cell, commit round 2,
+add the two missing pins with assertion controls, and run correction round 3. The D-18 cap still
+applies: no round above 10.
