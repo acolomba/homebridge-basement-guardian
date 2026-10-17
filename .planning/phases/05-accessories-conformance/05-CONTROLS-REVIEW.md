@@ -376,3 +376,9 @@ Triaged 2026-10-17 by the coordinator. All 29 findings are accepted as `open`; n
   027, 028 and 029), with the reindent (002) last.
 - **Counts:** opening 7, fixed 0, rejected 0, new 22, reopened 0, closing 29 (9 BLOCKER, 20
   WARNING).
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CONTROLS-025 | `src/accessories/controls.ts` | Node v26.12.0: `node_modules/.bin/fallow guard src/accessories/controls.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/controls.test.js` exit 0 (63 tests, 0 suites, 0 failures); `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` exit 0; `node_modules/.bin/eslint src/accessories/controls.ts --max-warnings=0` exit 0; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch CONTROLS` exit 0 (`ACCESSORIES_HEADERS_OK files=2`); `node_modules/.bin/fallow audit --base 4c143ebad681cf602e787b8c2ea09b050d8a9518 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | header-only |
