@@ -734,8 +734,8 @@ function registerPumpRecordCases(): void {
     assert.deepStrictEqual(publishing, ['Primary Pump', 'Backup Pump']);
   });
 
-  // The record is additional and displaces nothing, so the live values each pump row published
-  // before it existed are compared against an inline list rather than against the row's own answer.
+  // The record is additional and displaces nothing, so the live pump and fault values are compared
+  // against an inline list rather than against the row's own answer.
   test('keeps publishing the live pump and fault values beside the record on both pump rows', () => {
     // arrange
     const hap = hapNamespace();
