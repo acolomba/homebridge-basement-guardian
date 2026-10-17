@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The services one accessory publishes, and how each one is keyed.
  *

@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the published service kinds and the removable notification sensor names.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
