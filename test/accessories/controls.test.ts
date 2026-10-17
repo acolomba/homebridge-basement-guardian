@@ -171,17 +171,6 @@ function clearingPushesIn(deferrals: readonly Deferral[]): readonly Deferral[] {
   return deferrals.filter((deferral) => deferral.delayMs === 0);
 }
 
-async function assertRefused(service: FakeHapService, value: unknown, status: number): Promise<void> {
-  await assert.rejects(
-    () => onCharacteristic(service).handleSetRequest(value),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, status);
-
-      return true;
-    },
-  );
-}
-
 // The rejection one write answers, captured as a value so a case can act first and assert it with
 // the rest of the outcome afterwards. A write that resolves answers `undefined`.
 async function writeRejection(service: FakeHapService, value: unknown): Promise<unknown> {
@@ -219,12 +208,15 @@ test('refuses a write of false, sends nothing, and leaves the stored value where
   onCharacteristic(service).value = true;
 
   // act
-  await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, false);
   const afterRefusal = { value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode };
   deferrals[0]?.run();
 
   // assert
-  assert.deepStrictEqual(afterRefusal, { value: true, statusCode: NOT_ALLOWED_IN_CURRENT_STATE });
+  assert.deepStrictEqual(
+    { thrown, afterRefusal },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, afterRefusal: { value: true, statusCode: NOT_ALLOWED_IN_CURRENT_STATE } },
+  );
   assert.strictEqual(onCharacteristic(service).statusCode, SUCCESS);
   verify(commands);
 });
@@ -235,13 +227,10 @@ test('arms the clearing push as a macrotask at delay 0 rather than running it in
   const { service } = boundSwitch({ timers });
 
   // act
-  await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, false);
 
   // assert
-  assert.deepStrictEqual(
-    deferrals.map((deferral) => deferral.delayMs),
-    [0],
-  );
+  assert.deepStrictEqual({ thrown, delays: deferrals.map((deferral) => deferral.delayMs) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, delays: [0] });
 });
 
 test('sends one on request, holds the capability pending, and pushes nothing back', async () => {
@@ -474,11 +463,14 @@ for (const held of [true, false]) {
     onCharacteristic(service).value = held;
 
     // act
-    await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
+    const thrown = await writeRejection(service, false);
     deferrals[0]?.run();
 
     // assert
-    assert.deepStrictEqual({ value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode }, { value: held, statusCode: SUCCESS });
+    assert.deepStrictEqual(
+      { thrown, value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
+      { thrown: NOT_ALLOWED_IN_CURRENT_STATE, value: held, statusCode: SUCCESS },
+    );
   });
 }
 
@@ -490,10 +482,13 @@ test('names the capability, the device and the cause in the one line a refusal l
   const { service } = boundSwitch({ commands, log });
 
   // act
-  await assertRefused(service, true, OPERATION_TIMED_OUT);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: OPERATION_TIMED_OUT, warnings: [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`] },
+  );
 });
 
 // The eight ways one write against an idle control can end: six the plugin answers by itself and two
@@ -760,10 +755,10 @@ for (const refusalCase of REFUSALS) {
     );
 
     // act
-    await assertRefused(service, refusalCase.value, refusalCase.status);
+    const thrown = await writeRejection(service, refusalCase.value);
 
     // assert
-    assert.deepStrictEqual(warnings, [refusalCase.expectedWarning]);
+    assert.deepStrictEqual({ thrown, warnings }, { thrown: refusalCase.status, warnings: [refusalCase.expectedWarning] });
   });
 }
 
@@ -817,10 +812,13 @@ test('names the missing state when the capability has not decoded and there is a
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => true }, () => undefined);
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -831,10 +829,13 @@ test('names the missing transport when the capability has decoded and there is n
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => false);
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -849,10 +850,13 @@ test('names the missing transport alone when the plugin has neither fresh state 
   const { service } = boundSwitch({ commands, log: warningLog(warnings), commandTransportReady: () => false }, () => undefined);
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -866,10 +870,13 @@ test('names the quiet live connection when the route and the reported value are 
   const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => false);
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -887,10 +894,13 @@ test('names the missing transport alone when the plugin has neither a route to s
   );
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -905,10 +915,13 @@ test('names the quiet live connection alone when the reported field has also not
   const { service } = boundSwitch({ commands, log: warningLog(warnings), liveConfirmationObservable: () => false }, () => undefined);
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  const thrown = await writeRejection(service, true);
 
   // assert
-  assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
+  assert.deepStrictEqual(
+    { thrown, warnings },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`] },
+  );
   verify(commands);
 });
 
@@ -1474,11 +1487,11 @@ for (const held of [true, false]) {
     service.updateCharacteristic(HAP.Characteristic.On, held);
 
     // act
-    await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+    const thrown = await writeRejection(service, true);
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
-    assert.deepStrictEqual(readOfSwitch(service), { value: held, threw: undefined });
+    assert.deepStrictEqual({ thrown, read: readOfSwitch(service) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: held, threw: undefined } });
   });
 }
 
