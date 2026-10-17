@@ -88,8 +88,8 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-023 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | gsd-code-reviewer round 0 | fixed |  | 6472fa9690 |  |
 | CR-05-DECLARATIONS-024 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data; Case structure | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | gsd-code-reviewer round 0 | fixed |  | 960f812d00 |  |
 | CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | fixed |  | 00f7bd6a4c |  |
-| CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | open |  |  |  |
-| CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | open |  |  |  |
+| CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | open |  | ae9647dda2 |  |
+| CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | open |  | c88bcca6eb |  |
 
 ## Candidate leads
 
@@ -498,3 +498,19 @@ Maintainer resolution of the round-2 STOP, 2026-10-17: asked with the exact IDs 
 chose "Resolve and continue": record the resolution in the STOP cell, commit round 2, repair 026
 (match any declared name containing `mute` in any case, closing the whole naming class) and 027,
 and run correction round 3. The D-18 cap still applies: no round above 10.
+
+Dispatch 12 (CR-05-DECLARATIONS-026, 027): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning alarmMute.test.ts, services.ts and the R2 report. Terminal result: two
+commits, `ae9647dda2f825ec92214c4fa80bb5b6ee8badfd` (026: three named value-declaration patterns
+and a `declaresMuteValue` predicate matching any-case `mute` names on variable, enum, field and
+destructured declarations, with type, function and method names, object-literal keys and string
+literals out of scope) and `c88bcca6eb05cde6d23e2bd7772bca75667f68b2` (027: comment text only).
+Owners keep 3 and 12 tests with 0 failures; guard, build, pair coverage, ESLint and
+`fallow audit --base 053599a` (verdict pass) exited 0 on Node v26.12.0. A read-only scan showed
+only `accessories/alarmMute.ts` matching the new scope among the 43 modules. Assertion controls,
+recorded in the R2 report and re-run on the final Prettier-formatted blob, each failed the case
+with both modules in `declaring` and were restored: (a) a function-local `muteWindowMs`, (b) an
+instance `private readonly muteWindowSeconds`, (c) a destructured `muteWindowMs`; the pre-fix
+pattern flagged none of the three. Coordinator check: each commit lists only its owned path and
+the R2 report, services.ts changes only comment lines, no temporary file remains, the two owners
+pass (15 tests, 0 failures), and `git status --porcelain` is empty.
