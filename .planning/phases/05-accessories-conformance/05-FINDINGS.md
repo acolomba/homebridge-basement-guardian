@@ -67,7 +67,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | ID | Batch | Severity | Rule | Initial location | Current location | First reviewer | Disposition | Reason | Fix commits | Checks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CR-05-CONTROLS-001 | CONTROLS | WARNING | Seed (a), whole-value check: `.agents/skills/typescript-unit-tests/rules/cases.md` Assertions | `64c4fea:test/accessories/controls.test.ts:831` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:817-830` (line 829 compares a warnings count) | spot check 64c4fea; Phase 1 handoff | open |  | 7929ddb303 |  |
-| CR-05-CONTROLS-002 | CONTROLS | WARNING | Seed (b), no `describe()` per exported entrypoint: `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure | `64c4fea:test/accessories/controls.test.ts` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:12` (cases for `createControlBinder` at 184-881 and for `bindRestoredControlRefusal` at 921-1001) | spot check 64c4fea; Phase 1 handoff | open |  |  |  |
+| CR-05-CONTROLS-002 | CONTROLS | WARNING | Seed (b), no `describe()` per exported entrypoint: `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure | `64c4fea:test/accessories/controls.test.ts` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:12` (cases for `createControlBinder` at 184-881 and for `bindRestoredControlRefusal` at 921-1001) | spot check 64c4fea; Phase 1 handoff | open |  | 41e0ca4f79, dbcbf0788d |  |
 | CR-05-CONTROLS-003 | CONTROLS | WARNING | Seed (c), case tests the stand-in: `.agents/skills/typescript-unit-tests/SKILL.md` preamble (every case discriminates the module); D-13 | `64c4fea:test/accessories/controls.test.ts:217-238` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:216-243` | spot check 64c4fea; Phase 1 handoff | open | after removal, test/accessories/hapWriteFidelity.test.ts 'survives a push queued as a microtask inside the handler, on both implementations' carries the protection (D-13) | 13d46f1810 |  |
 | CR-05-CONTROLS-004 | CONTROLS | WARNING | Seed (d), hand-rolled `.bind` spy: `.agents/skills/typescript-unit-tests/rules/test-doubles.md` Spies; `.agents/skills/typescript-style/rules/review.md` Quick scan | `64c4fea:test/accessories/controls.test.ts:316-335` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:321-340` (the spy at 326-332) | spot check 64c4fea; Phase 1 handoff | open |  | 014f6014ea |  |
 | CR-05-CONTROLS-005 | CONTROLS | WARNING | Seed (e), combined act-and-assert marker over two statements: `.agents/skills/typescript-unit-tests/rules/cases.md` Case structure | `64c4fea:test/accessories/controls.test.ts:928-933` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:926-931, 980-981` | spot check 64c4fea; Phase 1 handoff | open |  | 05b4b9ab25 |  |
@@ -1061,3 +1061,24 @@ lead S-05-23), `09882cfdfddb9439c667cca756305c4030280e12` (022: the quiet-live-p
 ESLint, typecheck and `fallow audit --base 4c143eb` (verdict pass) exited 0 after each on Node
 v26.12.0. Coordinator check: each commit lists the two owned paths; no `src` change;
 `assertRefused` no longer appears; `git status --porcelain` is empty.
+
+Dispatch 13 (CR-05-CONTROLS-002): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the test and the report. Terminal result: two test-only commits,
+`41e0ca4f794ea33c704cee90d2fe5533a7bbc507` (a pure move of the six declaration blocks that sat
+between cases to above the first case; the sorted lines before and after are identical, 1532
+lines, and the 43 `test(` calls keep their order) and `dbcbf0788d89ad38c63ceafb7b290e990496a632`
+(the reindent: `describe('createControlBinder')` and `describe('bindRestoredControlRefusal')`,
+not nested). `git diff -w` of the reindent shows only the `describe` import and the four wrapper
+lines. The owner keeps 102 tests, now in 2 suites, with 0 failures; guard, build, pair coverage,
+ESLint, typecheck and `fallow audit --base 4c143eb` (verdict pass) exited 0 on Node v26.12.0. The
+fixer reported that the move left two position words wrong: the `PRECEDENCE` comment says three
+other pairs "have their own cases above" and the `RefusalCase` comment says "Every case below";
+both cases now follow the tables. Coordinator check: two owned paths per commit; the sorted-line
+`diff` exits 0; the `-w` diff matches; `git status --porcelain` is empty. The position words are
+left for correction round 1 to judge.
+
+Round-0 repairs complete. Fresh checks at `dbcbf0788d89ad38c63ceafb7b290e990496a632` on Node
+v26.12.0: `npm run build:test` exit 0; `node --test dist-test/test/accessories/controls.test.js`
+exit 0 (tests 102, suites 2, pass 102, fail 0, cancelled 0, skipped 0, todo 0);
+`npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts`
+exit 0 (no output, the pair at 100% alone). Every round-0 finding has at least one fix commit.
