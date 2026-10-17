@@ -99,7 +99,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CONTROLS-030 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe the code as it stands) | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:test/accessories/controls.test.ts:52-53, 165, 209-216, 431-432, 581-583` | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:test/accessories/controls.test.ts:52-53, 165, 209-216, 431-432, 581-583` | gsd-code-reviewer round 1 | open | new cause from the 002 move and earlier repairs; not a reopen of 002 |  |  |
 | CR-05-CONTROLS-031 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/functions.md (a function declaration for a named function) | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:test/accessories/controls.test.ts:67, 85` | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:test/accessories/controls.test.ts:67, 85` | gsd-code-reviewer round 1 | open |  |  |  |
 | CR-05-CONTROLS-032 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md; .agents/skills/typescript-style/rules/naming-and-docs.md Comments and documentation | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:471-473, 530-531, 601-602` | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:471-473, 530-531, 601-602` | gsd-code-reviewer round 1 | open |  | 854d5d117c |  |
-| CR-05-CONTROLS-033 | CONTROLS | WARNING | D-038; D-037; CTRL-05; .agents/skills/typescript-style/rules/comments.md by analogy; D-04; D-10 (SC-02) | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:553-556, 563; test/accessories/controls.test.ts:337, 784, 912` | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:553-556, 563; test/accessories/controls.test.ts:337, 784, 912` | gsd-code-reviewer round 1 | open | D-04 genuine bug (coordinator): a timed-out command logs that it did not take effect, which D-038 says the plugin cannot know; only the timed-out line changes |  |  |
+| CR-05-CONTROLS-033 | CONTROLS | WARNING | D-038; D-037; CTRL-05; .agents/skills/typescript-style/rules/comments.md by analogy; D-04; D-10 (SC-02) | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:553-556, 563; test/accessories/controls.test.ts:337, 784, 912` | `b86e6b05549e3569ce3e4dae457efb97bd8d6485:src/accessories/controls.ts:553-556, 563; test/accessories/controls.test.ts:337, 784, 912` | gsd-code-reviewer round 1 | open | D-04 genuine bug (coordinator): a timed-out command logs that it did not take effect, which D-038 says the plugin cannot know; only the timed-out line changes | 11c32d23df, 7790818ee0 |  |
 | CR-05-DECLARATIONS-001 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/cases.md Assertions | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:43-69, 124-145, 163-173` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:43-69, 124-145, 163-173` | gsd-code-reviewer round 0 | fixed |  | 7bb76e693c |  |
 | CR-05-DECLARATIONS-002 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage; .agents/skills/typescript-unit-tests/rules/cases.md Assertions | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:44-93, 151-186, 249-259` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:44-93, 151-186, 249-259` | gsd-code-reviewer round 0 | fixed |  | 9fba016816 |  |
 | CR-05-DECLARATIONS-003 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/rules/cases.md Assertions (whole values, independent expected values); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:43-69, 109-122, 199-208, 279-293` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:43-69, 109-122, 199-208, 279-293` | gsd-code-reviewer round 0 | fixed |  | 9ef87cb48a |  |
@@ -213,6 +213,7 @@ The GATES plan confirms or changes each row.
 | --- | --- | --- | --- | --- | --- | --- |
 | CR-05-CONTROLS-008 | test/accessories/controls.test.ts `refuses a second on request while the first waits for the device, and sends one command` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 9b5cd20 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual) | 9b5cd207106e2f1370ab7d563986efccc6d8c9f0 | a2ae20acc02b310ad0c2037ce3489c0f7e338836 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays 7a9239714077956f50b9e5fa4eb0a971d03fd1d7 through the evidence commit, which changes only the evidence file |
 | CR-05-CONTROLS-009 | test/accessories/controls.test.ts `keeps the request pending when the vendor does not answer in time` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 1f85938 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual; `priorEvidence` holds the 008 record in full) | 1f8593865ec49ffeff13ebe33e75bbd1b2932c72 | 670ae8955b6b5cdd38e0a9d9ebeeac936481c972 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays e1fddbb00645b26d1e58a55ae2f91ba8869b8241 through the evidence commit, which changes only the evidence file |
+| CR-05-CONTROLS-033 | test/accessories/controls.test.ts `warns that a timed-out request may still have reached the device` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 11c32d2 (exit 1, tests 1, suites 1, fail 1, ERR_ASSERTION at the target deepStrictEqual; `priorEvidence` holds the 009 record, which holds the 008 record) | 11c32d23dfbd2f2c06e660200678e6ef0b5b2a71 | 7790818ee032874025f4629998e40d59fb3260dd | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays 2b0a51f03e7ccbe913ec30306ed8ee558ea419c4 through the evidence commit, which changes only the evidence file |
 
 ## Coordinator evidence
 
@@ -1112,4 +1113,31 @@ one alone, and the accepted-write comment names the window. It also opened the R
 `## Repair history`. Guard, build, owner (102 tests, 2 suites, 0 failures), pair coverage,
 ESLint and `fallow audit --base 4c143eb` (verdict pass) exited 0 on Node v26.12.0. Coordinator
 check: two owned paths; the non-comment lines equal those of its parent (`diff` exit 0);
+`git status --porcelain` is empty.
+
+Dispatch 16 (CR-05-CONTROLS-033, RED): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning only the test. It added 'warns that a timed-out request may still have reached
+the device' inside `describe('createControlBinder')` at HEAD
+`564e1661fd570df0a17d9a275a35f368d4cd578b`, built, and ran the target alone: raw exit 1, tests 1,
+suites 1, fail 1, empty stderr, a `testCodeFailure` `ERR_ASSERTION` at its own
+`deepStrictEqual` where only the warning line differs. It committed nothing; the production blob
+stayed `2b0a51f03e7ccbe913ec30306ed8ee558ea419c4`. The coordinator rewrote
+`05-CONTROLS-RED-EVIDENCE.json` with the committed 009 record in `priorEvidence`; `check
+tdd-red-evidence --raw` printed `RED_EVIDENCE_OK`; it was committed alone as
+`11c32d23dfbd2f2c06e660200678e6ef0b5b2a71` with the test left unstaged.
+
+Dispatch 17 (CR-05-CONTROLS-033, GREEN): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the pair and the R1 report. Terminal result: commit
+`7790818ee032874025f4629998e40d59fb3260dd` (`fix(controls): say a timed-out request may still
+reach the device`), three owned paths. A module-local `outcomeWarning` gives the timed-out line
+"timed out and may still have reached the device"; the `vendor-error` line is unchanged; the
+three expectations of the old timed-out line moved to the new one (the exceeded-deadline row is
+an SC-02 line, D-10). The target passes alone; owner 103 tests, 2 suites, 0 failures; pair
+coverage, ESLint, typecheck, the `basementGuardian` owner (157 tests, 0 failures) and pair, the
+whole Cucumber suite (104 scenarios, 1156 steps) and `fallow audit --base 4c143eb` (verdict pass)
+exited 0 on Node v26.12.0. Only `src/runtime/commandPort.ts:21` still says "did not take effect",
+the `CommandFailure` JSDoc outside this batch. The fixer observed that 'names the capability, the
+device and the cause in the one line a refusal logs, and quotes nothing else' now repeats the
+regression case. Coordinator check: three owned paths; the only removed source line is the old
+`log.warn`; the RED block is present verbatim; the evidence commit is its parent;
 `git status --porcelain` is empty.
