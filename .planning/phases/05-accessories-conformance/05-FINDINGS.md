@@ -74,7 +74,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CONTROLS-006 | CONTROLS | WARNING | Seed (f), undocumented `as unknown as Service` casts: `.agents/skills/typescript-style/rules/types.md`; `.agents/skills/typescript-unit-tests/rules/cases.md` Types and isolation; D-11 | `64c4fea:test/accessories/controls.test.ts:158, 330, 853, 874, 905` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:163, 335, 336, 851, 872, 903` | spot check 64c4fea; Phase 1 handoff | open |  |  |  |
 | CR-05-CONTROLS-007 | CONTROLS | WARNING | Seed (g), ordering comment on the wrong constant: `.agents/skills/typescript-style/rules/naming-and-docs.md` Comments and documentation; `.agents/skills/typescript-style/rules/comments.md` | `64c4fea:src/accessories/controls.ts:304-328` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:304-336` | spot check 64c4fea; Phase 1 handoff | open |  | c2026fe917 |  |
 | CR-05-CONTROLS-008 | CONTROLS | BLOCKER | D-037; CTRL-03; CTRL-05; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; D-04 | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:336-343, 492-499, 537-571; test/accessories/controls.test.ts:245-304, 754-881` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:336-343, 492-499, 537-571; test/accessories/controls.test.ts:245-304, 754-881` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator): a second on request while one is pending is sent, and D-037 says to reject it; the new refusal goes last and answers RESOURCE_BUSY | 9b5cd20710, a2ae20acc0 |  |
-| CR-05-CONTROLS-009 | CONTROLS | BLOCKER | D-038; D-037; CTRL-05; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; D-04; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:526-535; test/accessories/controls.test.ts:342-361, 505-515, 586-597` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:526-535; test/accessories/controls.test.ts:342-361, 505-515, 586-597` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator): a timed-out command drops its pending entry, and D-038 says to keep it |  |  |
+| CR-05-CONTROLS-009 | CONTROLS | BLOCKER | D-038; D-037; CTRL-05; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; D-04; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:526-535; test/accessories/controls.test.ts:342-361, 505-515, 586-597` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:526-535; test/accessories/controls.test.ts:342-361, 505-515, 586-597` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator): a timed-out command drops its pending entry, and D-038 says to keep it | 1f85938659, 670ae8955b |  |
 | CR-05-CONTROLS-010 | CONTROLS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (a plausible wrong implementation passes); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; D-05 refusal order | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:409-411, 631-725` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:409-411, 631-725` | gsd-code-reviewer round 0 | open | also pins the pending rule from 008 against every rule that can hold with it |  |  |
 | CR-05-CONTROLS-011 | CONTROLS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md; .agents/skills/typescript-unit-tests/rules/cases.md Assertions; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; D-05 one attempt; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:342-361, 586-597` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:342-361, 586-597` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-CONTROLS-012 | CONTROLS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md; .agents/skills/typescript-unit-tests/rules/cases.md Assertions; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:282-304` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:282-304` | gsd-code-reviewer round 0 | open |  |  |  |
@@ -207,6 +207,7 @@ The GATES plan confirms or changes each row.
 | Finding | Owner test | RED evidence | Evidence commit | Fix commit | Classifier | Ancestry |
 | --- | --- | --- | --- | --- | --- | --- |
 | CR-05-CONTROLS-008 | test/accessories/controls.test.ts `refuses a second on request while the first waits for the device, and sends one command` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 9b5cd20 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual) | 9b5cd207106e2f1370ab7d563986efccc6d8c9f0 | a2ae20acc02b310ad0c2037ce3489c0f7e338836 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays 7a9239714077956f50b9e5fa4eb0a971d03fd1d7 through the evidence commit, which changes only the evidence file |
+| CR-05-CONTROLS-009 | test/accessories/controls.test.ts `keeps the request pending when the vendor does not answer in time` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 1f85938 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual; `priorEvidence` holds the 008 record in full) | 1f8593865ec49ffeff13ebe33e75bbd1b2932c72 | 670ae8955b6b5cdd38e0a9d9ebeeac936481c972 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays e1fddbb00645b26d1e58a55ae2f91ba8869b8241 through the evidence commit, which changes only the evidence file |
 
 ## Coordinator evidence
 
@@ -943,3 +944,31 @@ scenarios, 1156 steps) and `fallow audit --base 4c143eb` (verdict pass) exited 0
 v26.12.0; no exported name changed, so D-06 did not apply. Coordinator check: three owned paths;
 no source line removed; the RED patch's added lines are all in the fix; the evidence commit is
 its parent; `git status --porcelain` is empty.
+
+Dispatch 6 (CR-05-CONTROLS-009, RED): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning only `test/accessories/controls.test.ts`. It added the active regression test
+'keeps the request pending when the vendor does not answer in time' at HEAD
+`df9c823f140eabfc638581f3bc0e123bf29aebf9`, built, and ran the target alone with the TAP
+reporter: raw exit 1, tests 1, pass 0, fail 1, empty stderr, a `testCodeFailure` `ERR_ASSERTION`
+at the target's own `deepStrictEqual`, where only `pending` (`[]`) and `cancelled` (`[0]`) differ.
+It committed nothing. Coordinator check: the production blob stayed
+`e1fddbb00645b26d1e58a55ae2f91ba8869b8241`; the only working-tree change was that test. The
+coordinator rewrote `05-CONTROLS-RED-EVIDENCE.json` for this cause with the committed 008 record
+in `priorEvidence` (deep-equal to it); `check tdd-red-evidence --raw` printed `RED_EVIDENCE_OK`
+(`target_test_failed`); the pre-step left it unchanged; it was committed alone as
+`1f8593865ec49ffeff13ebe33e75bbd1b2932c72` with the test left unstaged.
+
+Dispatch 7 (CR-05-CONTROLS-009, GREEN): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the pair and the report. Terminal result: commit
+`670ae8955b6b5cdd38e0a9d9ebeeac936481c972` (`fix(controls): keep a timed-out request pending`),
+three owned paths. `refuseOutcome` resolves the pending entry only for `vendor-error`; its
+comment now states what each outcome does to the entry. The clearing push, warning line, status,
+single attempt and throw are unchanged. The test keeps the regression case byte for byte; the
+inline failure table and `RefusalCase` gain a hand-written `pendingAfterRefusal` per row (`[]`
+except the exceeded deadline, `['self-test']`), and the two vendor-outcome titles interpolate it.
+Guard, build, the target alone (pass), the owner (65 tests, 0 failures), pair coverage, ESLint,
+typecheck, the `basementGuardian` owner (157 tests, 0 failures) and pair, the whole Cucumber suite
+(104 scenarios, 1156 steps) and `fallow audit --base 4c143eb` (verdict pass) exited 0 on Node
+v26.12.0; no exported name changed. Coordinator check: three owned paths; the source diff is the
+`refuseOutcome` comment and the `vendor-error` condition only; the RED test block is present
+verbatim; the evidence commit is its parent; `git status --porcelain` is empty.
