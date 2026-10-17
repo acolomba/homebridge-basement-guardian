@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The vendor-defined characteristics this plugin declares.
  *

@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the vendor-defined characteristic declarations.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
