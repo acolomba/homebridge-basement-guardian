@@ -64,7 +64,8 @@ export interface ControlBinderOptions {
   hap: API['hap'];
   log: Logging;
   /**
-   * Deferred execution, used on the write path and nowhere else.
+   * Deferred execution, scheduled on the write path and nowhere else. A
+   * confirming report only cancels a deadline that path scheduled.
    *
    * The clearing push has to run after HAP's own catch has stored the refusal
    * status, which is the next macrotask and no earlier. Taking the port rather
@@ -287,10 +288,9 @@ function hasNoFreshState(request: ControlRequest): boolean {
 //
 // Equipment faults are deliberately absent. The official client permits a
 // self-test while equipment faults are present and disables the command only
-// when the device is offline, so the binder reads confirmed-offline state and
-// the capability's own reported value and nothing else. Inventing a physical
-// eligibility rule the official client does not have would refuse exactly the
-// test an owner runs to check a suspect pump (D-018).
+// when the device is offline, so no refusal rule reads an equipment fault.
+// Inventing a physical eligibility rule the official client does not have would
+// refuse exactly the test an owner runs to check a suspect pump (D-018).
 function isConfirmedOffline(request: ControlRequest): boolean {
   return request.offlineConfirmed;
 }
