@@ -163,8 +163,15 @@ void ({ scope: 'power', toleratedDistrust: [] } satisfies RowTrust);
 void ({ toleratedDistrust: [] } satisfies RowTrust);
 // @ts-expect-error a projected value names the characteristic that carries it
 void ({ value: true } satisfies ProjectedValue);
+void ({
+  decoded: {},
+  untrustedScopes: [],
+  offlineConfirmed: false,
+  controllerDataLastTrustedAt: '',
+  pendingControls: new Set<DeviceCapability>(),
+} satisfies ProjectionInput);
 // @ts-expect-error a projection reads the offline confirmation the accessory counted
-void ({ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '' } satisfies ProjectionInput);
+void ({ decoded: {}, untrustedScopes: [], controllerDataLastTrustedAt: '', pendingControls: new Set<DeviceCapability>() } satisfies ProjectionInput);
 
 // The stand-ins answer the members the plugin reads and nothing else, which no structural type can
 // express; the widening is what lets each stand where the plugin takes the real object.
