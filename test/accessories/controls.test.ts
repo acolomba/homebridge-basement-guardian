@@ -758,6 +758,65 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
+  test('refuses a second on request while the first is still being sent, and sends one command', async () => {
+    // arrange
+    // The promise constructor assigns its resolver synchronously.
+    let releaseFirstSend!: (outcome: CommandOutcome) => void;
+    const firstSend = new Promise<CommandOutcome>((resolve) => {
+      releaseFirstSend = resolve;
+    });
+    const warnings: string[] = [];
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenReturn(firstSend);
+    const { timers, deferrals, cancelled } = recordingTimers();
+    const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
+    const firstPress = onCharacteristic(service).handleSetRequest(true);
+
+    // act
+    const thrown = await writeRejection(service, true);
+    releaseFirstSend(acceptedOutcome());
+    await firstPress;
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled, warnings },
+      {
+        thrown: RESOURCE_BUSY,
+        pending: ['self-test'],
+        delays: [30000, 0],
+        cancelled: [],
+        warnings: [`Refused self-test on ${DEVICE_ID}: an earlier request is still waiting for the device to confirm it.`],
+      },
+    );
+    verify(commands);
+  });
+
+  test('clears the request and its window when the device confirms it while the command is still being sent', async () => {
+    // arrange
+    // The promise constructor assigns its resolver synchronously.
+    let releaseSend!: (outcome: CommandOutcome) => void;
+    const send = new Promise<CommandOutcome>((resolve) => {
+      releaseSend = resolve;
+    });
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenReturn(send);
+    const { timers, deferrals, cancelled } = recordingTimers();
+    const { binder, service } = boundSwitch({ commands, timers });
+    const press = onCharacteristic(service).handleSetRequest(true);
+
+    // act
+    binder.reconcile('self-test', true);
+    releaseSend(acceptedOutcome());
+    await press;
+
+    // assert
+    assert.deepStrictEqual(
+      { pending: [...binder.pending], delays: deferrals.map((deferral) => deferral.delayMs), cancelled },
+      { pending: [], delays: [30000], cancelled: [0] },
+    );
+    verify(commands);
+  });
+
   test('keeps the request pending when the vendor does not answer in time', async () => {
     // arrange
     const warnings: string[] = [];
