@@ -1503,8 +1503,11 @@ describe('createServiceCatalogue', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, createServiceCatalogue(hap)), []);
+    // act
+    const unprojected = unprojectedRequiredCharacteristics(hap, createServiceCatalogue(hap));
+
+    // assert
+    assert.deepStrictEqual(unprojected, []);
   });
 
   // The negative control for the case above. A row whose service class requires a characteristic it
@@ -1515,8 +1518,11 @@ describe('createServiceCatalogue', () => {
     const hap = hapNamespace();
     const drifted: ServiceRow = { ...rowOf(hap, 'mains-power-lost'), serviceClass: createCustomServices(hap).SumpPitService };
 
-    // act & assert
-    assert.deepStrictEqual(unprojectedRequiredCharacteristics(hap, [drifted]), [
+    // act
+    const unprojected = unprojectedRequiredCharacteristics(hap, [drifted]);
+
+    // assert
+    assert.deepStrictEqual(unprojected, [
       'Mains Power Lost adds a service without publishing Water Level',
       'Mains Power Lost adds a service without publishing Raw Water Level Code',
     ]);
@@ -1536,8 +1542,11 @@ describe('createServiceCatalogue', () => {
 // a value the accessory's own observation never saw (D-003).
 describe('decodedGroup', () => {
   test('answers the group a decoded state carries for the scope asked for', () => {
-    // act & assert
-    assert.deepStrictEqual(decodedGroup({ pump: { primaryRunning: true }, water: { levelCode: 1 } }, 'pump'), { primaryRunning: true });
+    // act
+    const group = decodedGroup({ pump: { primaryRunning: true }, water: { levelCode: 1 } }, 'pump');
+
+    // assert
+    assert.deepStrictEqual(group, { primaryRunning: true });
   });
 
   for (const { label, decoded } of [
@@ -1548,16 +1557,22 @@ describe('decodedGroup', () => {
     { label: 'a group that is not a record', decoded: { pump: 'absent' } },
   ]) {
     test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(decodedGroup(decoded, 'pump'), undefined);
+      // act
+      const group = decodedGroup(decoded, 'pump');
+
+      // assert
+      assert.strictEqual(group, undefined);
     });
   }
 });
 
 describe('booleanOf', () => {
   test('answers a decoded boolean field', () => {
-    // act & assert
-    assert.strictEqual(booleanOf({ primaryRunning: false }, 'primaryRunning'), false);
+    // act
+    const primaryRunning = booleanOf({ primaryRunning: false }, 'primaryRunning');
+
+    // assert
+    assert.strictEqual(primaryRunning, false);
   });
 
   for (const { label, group } of [
@@ -1566,16 +1581,22 @@ describe('booleanOf', () => {
     { label: 'a field of the wrong type', group: { primaryRunning: 'yes' } },
   ]) {
     test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(booleanOf(group, 'primaryRunning'), undefined);
+      // act
+      const primaryRunning = booleanOf(group, 'primaryRunning');
+
+      // assert
+      assert.strictEqual(primaryRunning, undefined);
     });
   }
 });
 
 describe('numberOf', () => {
   test('answers a decoded number field', () => {
-    // act & assert
-    assert.strictEqual(numberOf({ backupActivatedAt: 1_700_000_000 }, 'backupActivatedAt'), 1_700_000_000);
+    // act
+    const backupActivatedAt = numberOf({ backupActivatedAt: 1_700_000_000 }, 'backupActivatedAt');
+
+    // assert
+    assert.strictEqual(backupActivatedAt, 1_700_000_000);
   });
 
   for (const { label, group } of [
@@ -1584,8 +1605,11 @@ describe('numberOf', () => {
     { label: 'a field of the wrong type', group: { backupActivatedAt: '1700000000' } },
   ]) {
     test(`answers nothing for ${label}`, () => {
-      // act & assert
-      assert.strictEqual(numberOf(group, 'backupActivatedAt'), undefined);
+      // act
+      const backupActivatedAt = numberOf(group, 'backupActivatedAt');
+
+      // assert
+      assert.strictEqual(backupActivatedAt, undefined);
     });
   }
 });
@@ -1621,11 +1645,11 @@ describe('isRowPublishable', () => {
       const row = rowOf(hap, 'sump-pit-flood');
       const untrustedScopes = [{ scope: 'water' as const, reason, lastTrustedAt: 7 }];
 
-      // act & assert
-      assert.deepStrictEqual(
-        { publishable: isRowPublishable(row, untrustedScopes), active: isRowFullyTrusted(row, untrustedScopes) },
-        { publishable: reason === 'unreachable', active: false },
-      );
+      // act
+      const verdict = { publishable: isRowPublishable(row, untrustedScopes), active: isRowFullyTrusted(row, untrustedScopes) };
+
+      // assert
+      assert.deepStrictEqual(verdict, { publishable: reason === 'unreachable', active: false });
     });
   }
 
@@ -1638,8 +1662,11 @@ describe('isRowPublishable', () => {
       untrustedScopes: [{ scope: 'water', reason: 'invalid', lastTrustedAt: 7 }],
     });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   test('publishes nothing for a scope a lost controller link poisoned', () => {
@@ -1648,8 +1675,11 @@ describe('isRowPublishable', () => {
     const row = rowOf(hap, 'sump-mains-power');
     const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   test('publishes through a lost controller link for the one row that tolerates it', () => {
@@ -1683,8 +1713,11 @@ describe('isRowPublishable', () => {
       ],
     });
 
-    // act & assert
-    assert.deepStrictEqual(row.project(input), []);
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(projected, []);
   });
 
   // A row reading a second scope group answers the same question once per group, so an outage on the
@@ -1791,8 +1824,11 @@ describe('isRowFullyTrusted', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'primary-pump'), []), true);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'primary-pump'), []);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 
   test('distrusts a two-scope row when the second scope it reads stops validating', () => {
@@ -1814,24 +1850,33 @@ describe('isRowFullyTrusted', () => {
     const hap = hapNamespace();
     const row: ServiceRow = { ...rowOf(hap, 'primary-pump'), toleratedDistrust: ['controller-link-lost'] };
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(row, [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }]), true);
+    // act
+    const trusted = isRowFullyTrusted(row, [{ scope: 'fault', reason: 'controller-link-lost', lastTrustedAt: 7 }]);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 
   test('distrusts a one-scope row when its own scope stops validating', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]), false);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]);
+
+    // assert
+    assert.strictEqual(trusted, false);
   });
 
   test('trusts a one-scope row whose scope carries no distrust at all', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), []), true);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), []);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 
   test('trusts a one-scope row through the one distrust reason it tolerates, and still projects its values', () => {
@@ -1867,8 +1912,11 @@ describe('isRowFullyTrusted', () => {
     // arrange
     const hap = hapNamespace();
 
-    // act & assert
-    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'basement-guardian-offline'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
+    // act
+    const trusted = isRowFullyTrusted(rowOf(hap, 'basement-guardian-offline'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]);
+
+    // assert
+    assert.strictEqual(trusted, true);
   });
 });
 
@@ -1878,8 +1926,11 @@ describe('publishedService', () => {
     const hap = hapNamespace();
     const accessory = accessoryStandIn();
 
-    // act & assert
-    assert.strictEqual(publishedService(accessory, rowOf(hap, 'mains-power-lost')), undefined);
+    // act
+    const service = publishedService(accessory, rowOf(hap, 'mains-power-lost'));
+
+    // assert
+    assert.strictEqual(service, undefined);
   });
 
   test('answers the service the accessory already carries for the row', () => {
@@ -1889,8 +1940,11 @@ describe('publishedService', () => {
     const row = rowOf(hap, 'mains-power-lost');
     const added = addedService(accessory, hap, row);
 
-    // act & assert
-    assert.strictEqual(publishedService(accessory, row), added);
+    // act
+    const service = publishedService(accessory, row);
+
+    // assert
+    assert.strictEqual(service, added);
   });
 
   test('tells two rows of one subtype apart by their service type', () => {
