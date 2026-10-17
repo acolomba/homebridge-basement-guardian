@@ -24,8 +24,9 @@
  * package's own source rather than assumed:
  *
  * - A rejected write never moves the stored value, so nothing here restores a
- *   refused toggle. A push before the throw would clear the status HAP is about
- *   to set and emit a change nobody asked for.
+ *   refused toggle. A push before the throw would only emit a change nobody
+ *   asked for: HAP assigns the refusal status after the handler throws, so the
+ *   push could not clear it.
  * - A rejected write does store its status on the characteristic, and every
  *   later read answers that status until something pushes a value. Left alone,
  *   one refused press makes the Switch unreadable until the next poll. Every
@@ -319,8 +320,8 @@ const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor ri
 // an owner would have to look up (D-08).
 const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
 
-// The rules in the order they are evaluated, cheapest and most local first. The
-// first that applies answers the write; the rest are never consulted.
+// The rules in the order they are evaluated. The first that applies answers the
+// write; the rest are never consulted.
 //
 // The order of the three middle rules is a decision, not an accident. Any two of
 // them can hold at once, and then this order decides which cause the user is
