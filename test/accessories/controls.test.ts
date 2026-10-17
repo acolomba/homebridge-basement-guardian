@@ -267,26 +267,28 @@ test('clears the pending entry on the reported value the request asked for', asy
 
 test('keeps the capability pending while the device still reports the old value', async () => {
   // arrange
-  const { binder, service } = boundSwitch();
+  const { timers, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch({ timers });
   await onCharacteristic(service).handleSetRequest(true);
 
   // act
   binder.reconcile('self-test', false);
 
   // assert
-  assert.deepStrictEqual([...binder.pending], ['self-test']);
+  assert.deepStrictEqual({ pending: [...binder.pending], cancelled }, { pending: ['self-test'], cancelled: [] });
 });
 
 test('keeps the capability pending while the scope carrying its reported value has not decoded', async () => {
   // arrange
-  const { binder, service } = boundSwitch();
+  const { timers, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch({ timers });
   await onCharacteristic(service).handleSetRequest(true);
 
   // act
   binder.reconcile('self-test', undefined);
 
   // assert
-  assert.deepStrictEqual([...binder.pending], ['self-test']);
+  assert.deepStrictEqual({ pending: [...binder.pending], cancelled }, { pending: ['self-test'], cancelled: [] });
 });
 
 test('refuses a second on request while the first waits for the device, and sends one command', async () => {
