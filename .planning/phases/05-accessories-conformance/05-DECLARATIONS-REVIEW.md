@@ -337,3 +337,9 @@ construction defaults. The four `features/lib/hap.ts` observations above stay ou
 Phase 7 (D-12).
 
 Counter: round 0 opens at 0 (no seeds), adds 24 new, rejects 0, closes at 24: `initial`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-DECLARATIONS-006 | `src/accessories/alarmMute.ts`, `test/accessories/alarmMute.test.ts` | Node v26.12.0: `npm run build:test` exit 0; `node --test dist-test/test/accessories/alarmMute.test.js` exit 0 (3 tests, 0 failures); `npm run test:coverage:direct -- src/accessories/alarmMute.ts test/accessories/alarmMute.test.ts` exit 0; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --paths src/accessories/alarmMute.ts test/accessories/alarmMute.test.ts` exit 0 (`ACCESSORIES_HEADERS_OK files=2`); `node_modules/.bin/fallow audit --base 053599a80557aa513b2d354833196408b92a4438 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | header-only |
