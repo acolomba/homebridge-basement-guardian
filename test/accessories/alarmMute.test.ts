@@ -27,10 +27,16 @@ const SOURCE_MODULE_FLOOR = 43;
 // contain both `ALARM` and `MUTE`.
 const CONSTANT_DECLARATION = /(?:const|let|var|enum|readonly)\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)\b/g;
 
-async function sourceModules(): Promise<readonly { path: string; source: string }[]> {
+// One `.ts` module under `src/`, by its path relative to `src/`, with its source text.
+interface SourceModule {
+  path: string;
+  source: string;
+}
+
+async function sourceModules(): Promise<readonly SourceModule[]> {
   const root = new URL('../../../src/', import.meta.url);
   const entries = await readdir(root, { recursive: true });
-  const modules: { path: string; source: string }[] = [];
+  const modules: SourceModule[] = [];
 
   for (const entry of entries.filter((candidate) => candidate.endsWith('.ts')).sort()) {
     modules.push({ path: entry, source: await readFile(new URL(entry, root), 'utf8') });
