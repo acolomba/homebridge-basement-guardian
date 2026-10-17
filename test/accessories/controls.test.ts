@@ -247,8 +247,13 @@ test('sends one on request, holds the capability pending, and pushes nothing bac
   // assert
   assert.deepStrictEqual([...binder.pending], ['self-test']);
   assert.deepStrictEqual(
-    { value: onCharacteristic(service).value, pushed: onCharacteristic(service).pushed, clearingPushes: clearingPushesIn(deferrals).length, republished },
-    { value: true, pushed: false, clearingPushes: 0, republished: [] },
+    {
+      value: onCharacteristic(service).value,
+      pushed: onCharacteristic(service).pushed,
+      delays: deferrals.map((deferral) => deferral.delayMs),
+      republished,
+    },
+    { value: true, pushed: false, delays: [30000], republished: [] },
   );
   verify(commands);
 });
@@ -494,12 +499,13 @@ interface RefusalCase {
   readonly status: number;
   readonly expectedWarning: string;
   readonly pendingAfterRefusal: readonly DeviceCapability[];
+  /** The delays the binder armed for the write, in order. */
+  readonly delaysAfterRefusal: readonly number[];
 }
 
-// A vendor row also carries the timer record the refusal leaves: the delays the binder armed, in
-// order, and the handles it cancelled.
+// A vendor row also carries the handles the refusal cancelled, the rest of the timer record it
+// leaves.
 interface VendorRefusalCase extends RefusalCase {
-  readonly delaysAfterRefusal: readonly number[];
   readonly cancelledAfterRefusal: readonly number[];
 }
 
@@ -515,6 +521,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
   {
     cause: 'a runtime with no way to reach the vendor',
@@ -527,6 +534,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
   {
     cause: 'a live path that cannot carry the device answer',
@@ -539,6 +547,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
   {
     cause: 'a capability whose reported field has not decoded',
@@ -551,6 +560,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
   {
     cause: 'a device confirmed offline',
@@ -563,6 +573,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
   {
     cause: 'a duplicate request while the capability already reads active',
@@ -575,6 +586,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     outcome: acceptedOutcome,
     status: RESOURCE_BUSY,
     pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
   },
 ];
 
@@ -676,7 +688,10 @@ for (const refusalCase of REFUSALS) {
     }
 
     // assert
-    assert.deepStrictEqual({ pushes: pushes.length, statusCode: onCharacteristic(service).statusCode }, { pushes: 1, statusCode: SUCCESS });
+    assert.deepStrictEqual(
+      { delays: deferrals.map((deferral) => deferral.delayMs), statusCode: onCharacteristic(service).statusCode },
+      { delays: refusalCase.delaysAfterRefusal, statusCode: SUCCESS },
+    );
   });
 }
 
