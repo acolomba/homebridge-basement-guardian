@@ -65,9 +65,9 @@ interface Deferral {
 
 // A log stand-in that collects the warnings a case reads back and discards every other level.
 function warningLog(warnings: string[]): Logging {
-  const noop = (): void => {
+  function noop(): void {
     // only the warning channel is read back
-  };
+  }
 
   return Object.assign(noop, {
     prefix: 'basement guardian',
@@ -83,9 +83,9 @@ function warningLog(warnings: string[]): Logging {
 }
 
 function silentLog(): Logging {
-  const noop = (): void => {
+  function noop(): void {
     // the cases using this stub do not read the log; the stub discards every call
-  };
+  }
 
   return Object.assign(noop, { prefix: 'basement guardian', debug: noop, error: noop, info: noop, log: noop, success: noop, warn: noop });
 }
