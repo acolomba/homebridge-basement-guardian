@@ -450,12 +450,14 @@ test('names the capability, the device and the cause in the one line a refusal l
   assert.deepStrictEqual(warnings, [`The self-test request on ${DEVICE_ID} did not take effect: timed-out. It is not retried.`]);
 });
 
-// The eight ways one write against an idle control can end, in the order the binder evaluates them:
-// six the plugin answers by itself and two the vendor answers. A press while an earlier request
-// waits is the binder's other local refusal. It needs that earlier press, so its own case, 'refuses
-// a second on request while the first waits for the device, and sends one command', covers it.
-// Every case below is read off this one table, so a cause that stops being refused, or that starts
-// answering a different status, fails by name.
+// The eight ways one write against an idle control can end: six the plugin answers by itself and two
+// the vendor answers. The local rows follow the binder's table order, but each row sets one
+// condition, so these rows pin each cause, status and log line, not the order. The precedence cases
+// pin the order: each sets two conditions and names the rule that must answer. A press while an
+// earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
+// case, 'refuses a second on request while the first waits for the device, and sends one command',
+// covers it. Every case below is read off this one table, so a cause that stops being refused, or
+// that starts answering a different status, fails by name.
 interface RefusalCase {
   readonly cause: string;
   readonly value: unknown;
@@ -720,8 +722,8 @@ test('names the missing transport when the capability has decoded and there is n
 
 // Both conditions at once, which is the case the table's order decides. Naming the missing state to
 // a user who has no way to send anything is the less actionable of the two truths, so the transport
-// rule is evaluated first -- and this case is what stops an unrelated reordering of the table from
-// changing the answer silently (D-07).
+// rule is evaluated first. This case pins that one pair; the precedence cases below pin the other
+// pairs that can hold together (D-07).
 test('names the missing transport alone when the plugin has neither fresh state nor a way to send', async () => {
   // arrange
   const warnings: string[] = [];
@@ -791,6 +793,221 @@ test('names the quiet live connection alone when the reported field has also not
   assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
   verify(commands);
 });
+
+// The facts the gate reads for one write. A clear gate sets no refusal condition: an on request, a
+// decoded reported value of off, a device not confirmed offline, a route to the vendor and a live
+// path to hear back on.
+interface GateConditions {
+  readonly value: boolean;
+  readonly reported: boolean | undefined;
+  readonly offlineConfirmed: boolean;
+  readonly transportReady: boolean;
+  readonly confirmationObservable: boolean;
+}
+
+function clearGate(): GateConditions {
+  return { value: true, reported: false, offlineConfirmed: false, transportReady: true, confirmationObservable: true };
+}
+
+// A bound Switch whose gate reads every fact from `gate` at each write, so a case can change a
+// condition between two writes.
+function gatedSwitch(gate: () => GateConditions, overrides: BinderOverrides): { binder: ControlBinder; service: FakeHapService } {
+  return boundSwitch(
+    {
+      ...overrides,
+      offlineConfirmed: () => gate().offlineConfirmed,
+      commandTransportReady: () => gate().transportReady,
+      liveConfirmationObservable: () => gate().confirmationObservable,
+    },
+    () => gate().reported,
+  );
+}
+
+// Two refusal conditions that hold at once, and the rule that must answer. The binder evaluates its
+// rules in a fixed order and the first that applies answers the write, so each row pins the order of
+// one pair. A missing fresh state and an active reading cannot hold together: one is an undefined
+// reported value and the other is a reported `true`.
+interface PrecedenceCase {
+  readonly winner: string;
+  readonly loser: string;
+  /** The conditions the row sets on a clear gate. */
+  readonly set: Partial<GateConditions>;
+  readonly status: number;
+  readonly expectedWarning: string;
+}
+
+// The pairs one write can carry. Three other pairs have their own cases above: transport over fresh
+// state, transport over the quiet path, and the quiet path over fresh state.
+const PRECEDENCE: readonly PrecedenceCase[] = [
+  {
+    winner: 'a write of anything but on',
+    loser: 'a capability that already reads active',
+    set: { value: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a missing route to the vendor',
+    set: { value: false, transportReady: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a quiet live connection',
+    set: { value: false, confirmationObservable: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a missing fresh state',
+    set: { value: false, reported: undefined },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a device confirmed offline',
+    set: { value: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'a device confirmed offline',
+    set: { transportReady: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'a capability that already reads active',
+    set: { transportReady: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'a device confirmed offline',
+    set: { confirmationObservable: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'a capability that already reads active',
+    set: { confirmationObservable: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a missing fresh state',
+    loser: 'a device confirmed offline',
+    set: { reported: undefined, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
+  },
+  {
+    winner: 'a device confirmed offline',
+    loser: 'a capability that already reads active',
+    set: { offlineConfirmed: true, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
+  },
+];
+
+for (const precedenceCase of PRECEDENCE) {
+  test(`answers ${String(precedenceCase.status)} and names ${precedenceCase.winner} over ${precedenceCase.loser}`, async () => {
+    // arrange
+    const warnings: string[] = [];
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    const conditions: GateConditions = { ...clearGate(), ...precedenceCase.set };
+    const { binder, service } = gatedSwitch(() => conditions, { commands, log: warningLog(warnings) });
+
+    // act
+    const thrown = await writeRejection(service, conditions.value);
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, pending: [...binder.pending], warnings },
+      { thrown: precedenceCase.status, pending: [], warnings: [precedenceCase.expectedWarning] },
+    );
+    verify(commands);
+  });
+}
+
+// The pending rule against each rule that can hold with it. The first press is accepted with a
+// clear gate, so the capability is pending; each row then sets one more condition for the second
+// press, and that condition's own rule must answer it.
+const PENDING_PRECEDENCE: readonly PrecedenceCase[] = [
+  {
+    winner: 'a write of anything but on',
+    loser: 'an earlier request that still waits',
+    set: { value: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'an earlier request that still waits',
+    set: { transportReady: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'an earlier request that still waits',
+    set: { confirmationObservable: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a missing fresh state',
+    loser: 'an earlier request that still waits',
+    set: { reported: undefined },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
+  },
+  {
+    winner: 'a device confirmed offline',
+    loser: 'an earlier request that still waits',
+    set: { offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
+  },
+  {
+    winner: 'a capability that already reads active',
+    loser: 'an earlier request that still waits',
+    set: { reported: true },
+    status: RESOURCE_BUSY,
+    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
+  },
+];
+
+for (const precedenceCase of PENDING_PRECEDENCE) {
+  test(`refuses a second press with ${String(precedenceCase.status)} and names ${precedenceCase.winner} over ${precedenceCase.loser}`, async () => {
+    // arrange
+    const warnings: string[] = [];
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
+    let conditions = clearGate();
+    const { binder, service } = gatedSwitch(() => conditions, { commands, log: warningLog(warnings) });
+    await onCharacteristic(service).handleSetRequest(conditions.value);
+    conditions = { ...clearGate(), ...precedenceCase.set };
+
+    // act
+    const thrown = await writeRejection(service, conditions.value);
+
+    // assert
+    assert.deepStrictEqual(
+      { thrown, pending: [...binder.pending], warnings },
+      { thrown: precedenceCase.status, pending: ['self-test'], warnings: [precedenceCase.expectedWarning] },
+    );
+    verify(commands);
+  });
+}
 
 test('answers the transport refusal status to every read until the clearing push lands', async () => {
   // arrange
