@@ -104,9 +104,9 @@ const OBSERVED_ACTIVATION_COUNT_UUID = '88734156-8e55-4697-af69-68e9576d1352';
 const LAST_OBSERVED_ACTIVATION_AT_UUID = '39226a7e-0b92-4f41-b9a4-a602cdc8cca3';
 const LAST_ACTIVATION_WAS_TEST_ACTIVITY_UUID = '217042ab-ad7e-481b-8e7e-2510e9ad74d9';
 
-// The four HAP formats these declarations use, named here rather than read from
-// `hap.Formats` so the definition table stays a plain module-level value; the
-// factory resolves each name against the injected namespace.
+// The four HAP formats these declarations use. Each definition names its
+// format as plain data, and the factory resolves the name against the injected
+// namespace.
 //
 // `uint32` exists for the activation count alone. `uint8` caps at 255 and HAP
 // *clamps* a larger value into the domain rather than refusing it, so a count
