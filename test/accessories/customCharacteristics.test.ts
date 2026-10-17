@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { test } from 'node:test';
 
 import { createFakeHap } from '../../features/lib/hap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
@@ -234,229 +234,225 @@ function declaredAs(characteristics: CustomCharacteristics, name: string): Chara
   return declared;
 }
 
-describe('createCustomCharacteristics', () => {
-  test('declares exactly the vendor-defined characteristics this plugin publishes', () => {
+test('declares exactly the vendor-defined characteristics this plugin publishes', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const names = Object.keys(characteristics);
+
+  // assert
+  assert.deepStrictEqual(
+    names,
+    CHARACTERISTICS.map((expectation) => expectation.name),
+  );
+});
+
+for (const { name, displayName, uuid, format, domain } of CHARACTERISTICS) {
+  test(`declares ${name} as a read-only ${format} named ${displayName} with its exact value domain`, () => {
     // arrange
     const characteristics = createCustomCharacteristics(hapNamespace());
 
     // act
-    const names = Object.keys(characteristics);
+    const characteristic = new (declaredAs(characteristics, name))();
+    const { minValue, maxValue, minStep, validValues } = characteristic.props;
 
     // assert
     assert.deepStrictEqual(
-      names,
-      CHARACTERISTICS.map((expectation) => expectation.name),
+      {
+        displayName: characteristic.displayName,
+        format: characteristic.props.format,
+        perms: characteristic.props.perms,
+        domain: { minValue, maxValue, minStep, validValues },
+      },
+      { displayName, format, perms: ['pr', 'ev'], domain },
     );
   });
 
-  for (const { name, displayName, uuid, format, domain } of CHARACTERISTICS) {
-    test(`declares ${name} as a read-only ${format} named ${displayName} with its exact value domain`, () => {
-      // arrange
-      const characteristics = createCustomCharacteristics(hapNamespace());
-
-      // act
-      const characteristic = new (declaredAs(characteristics, name))();
-      const { minValue, maxValue, minStep, validValues } = characteristic.props;
-
-      // assert
-      assert.deepStrictEqual(
-        {
-          displayName: characteristic.displayName,
-          format: characteristic.props.format,
-          perms: characteristic.props.perms,
-          domain: { minValue, maxValue, minStep, validValues },
-        },
-        { displayName, format, perms: ['pr', 'ev'], domain },
-      );
-    });
-
-    test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
-      // arrange
-      const characteristics = createCustomCharacteristics(hapNamespace());
-
-      // act
-      const declared = declaredAs(characteristics, name);
-      const typeUuid = declared.UUID;
-      const instanceUuid = new declared().UUID;
-
-      // assert
-      assert.deepStrictEqual(
-        { typeUuid, instanceUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
-        { typeUuid: uuid, instanceUuid: uuid, shape: true, appleNamespace: false },
-      );
-    });
-  }
-
-  test('grants no write permission on any vendor-defined characteristic', () => {
+  test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
     // arrange
     const characteristics = createCustomCharacteristics(hapNamespace());
 
     // act
-    const granted = CHARACTERISTICS.flatMap(({ name }) => {
-      const perms: readonly string[] = new (declaredAs(characteristics, name))().props.perms;
-
-      return perms.filter((permission) => !READ_ONLY_PERMS.includes(permission));
-    });
-
-    // assert
-    assert.deepStrictEqual(granted, []);
-  });
-
-  test('identifies every vendor-defined characteristic distinctly by its published identifier', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const identifiers = new Map(Object.entries(declaredSet(characteristics)).map(([name, characteristic]): [string, string] => [name, characteristic.UUID]));
-
-    // assert
-    assert.deepStrictEqual(identifiers, new Map(CHARACTERISTICS.map(({ name, uuid }): [string, string] => [name, uuid])));
-  });
-
-  test('gives no vendor-defined characteristic a name drawn from diagnostics or filter maintenance', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const named = CHARACTERISTICS.filter(({ name }) =>
-      FORBIDDEN_NAME_WORDS.some((word) => new (declaredAs(characteristics, name))().displayName.includes(word)),
-    );
-
-    // assert
-    assert.deepStrictEqual(named, []);
-  });
-
-  test('starts at the boolean construction default rather than a reported value', () => {
-    // arrange
-    const { MainsPowerPresent } = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const mainsPowerPresent = new MainsPowerPresent();
-
-    // assert
-    assert.strictEqual(mainsPowerPresent.value, false);
-  });
-
-  // A characteristic that starts outside its own declared domain hands HomeKit a code the plugin
-  // itself says the vendor cannot send, from the moment the service carrying it is added.
-  for (const { name, initial } of [
-    { name: 'RawWaterLevelCode', initial: 0 },
-    { name: 'BatteryHealthCode', initial: 1 },
-    { name: 'ProtectionHoursCode', initial: 1 },
-  ]) {
-    test(`starts ${name} at ${String(initial)}, a value its own validValues admits`, () => {
-      // arrange
-      const characteristics = createCustomCharacteristics(hapNamespace());
-
-      // act
-      const characteristic = new (declaredAs(characteristics, name))();
-      const validValues: readonly number[] = characteristic.props.validValues ?? [];
-
-      // assert
-      assert.deepStrictEqual(
-        { initial: characteristic.value, admitted: validValues.some((candidate) => candidate === characteristic.value) },
-        { initial, admitted: true },
-      );
-    });
-  }
-
-  test('starts the controller timestamp at the empty string rather than a time nothing reported', () => {
-    // arrange
-    const { ControllerDataLastTrustedAt } = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const controllerDataLastTrustedAt = new ControllerDataLastTrustedAt();
-
-    // assert
-    assert.strictEqual(controllerDataLastTrustedAt.value, '');
-  });
-
-  test('leaves one characteristic intact when another mutates its own permissions', () => {
-    // arrange
-    const hap = hapNamespace();
-    const { MainsPowerPresent, PumpRunning } = createCustomCharacteristics(hap);
-    const mainsPower = new MainsPowerPresent().props.perms;
-    const pumpRunning = new PumpRunning().props.perms;
-
-    // act
-    mainsPower.push(hap.Perms.PAIRED_WRITE);
-
-    // assert
-    assert.deepStrictEqual({ mainsPower, pumpRunning }, { mainsPower: ['pr', 'ev', 'pw'], pumpRunning: ['pr', 'ev'] });
-  });
-
-  // The count is the one record value HAP can quietly reshape. A `uint8` maximum of 255 does not
-  // refuse a larger push, it clamps it, so a count past 255 would stop advancing while still
-  // reading as a fact about the basement (D-12, CTRL-01). The clamping itself is demonstrated
-  // against the real pinned package in the fidelity case rather than argued about here.
-  test('counts observed activations on a format wide enough that HAP cannot clamp the number', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const { format, maxValue, minStep } = new (declaredAs(characteristics, 'ObservedActivationCount'))().props;
-
-    // assert
-    assert.deepStrictEqual({ format, maxValue, minStep }, { format: 'uint32', maxValue: undefined, minStep: undefined });
-  });
-
-  test('publishes every pump record read-only and outside the Apple base namespace', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const published = RECORD_CHARACTERISTIC_NAMES.map((name) => ({
-      name,
-      perms: new (declaredAs(characteristics, name))().props.perms,
-      appleNamespace: declaredAs(characteristics, name).UUID.endsWith(APPLE_BASE_UUID_SUFFIX),
-    }));
+    const declared = declaredAs(characteristics, name);
+    const typeUuid = declared.UUID;
+    const instanceUuid = new declared().UUID;
 
     // assert
     assert.deepStrictEqual(
-      published,
-      RECORD_CHARACTERISTIC_NAMES.map((name) => ({ name, perms: ['pr', 'ev'], appleNamespace: false })),
+      { typeUuid, instanceUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
+      { typeUuid: uuid, instanceUuid: uuid, shape: true, appleNamespace: false },
     );
   });
+}
 
-  test('claims no whole-of-life or device-reported figure in any pump record name', () => {
+test('grants no write permission on any vendor-defined characteristic', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const granted = CHARACTERISTICS.flatMap(({ name }) => {
+    const perms: readonly string[] = new (declaredAs(characteristics, name))().props.perms;
+
+    return perms.filter((permission) => !READ_ONLY_PERMS.includes(permission));
+  });
+
+  // assert
+  assert.deepStrictEqual(granted, []);
+});
+
+test('identifies every vendor-defined characteristic distinctly by its published identifier', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const identifiers = new Map(Object.entries(declaredSet(characteristics)).map(([name, characteristic]): [string, string] => [name, characteristic.UUID]));
+
+  // assert
+  assert.deepStrictEqual(identifiers, new Map(CHARACTERISTICS.map(({ name, uuid }): [string, string] => [name, uuid])));
+});
+
+test('gives no vendor-defined characteristic a name drawn from diagnostics or filter maintenance', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const named = CHARACTERISTICS.filter(({ name }) => FORBIDDEN_NAME_WORDS.some((word) => new (declaredAs(characteristics, name))().displayName.includes(word)));
+
+  // assert
+  assert.deepStrictEqual(named, []);
+});
+
+test('starts at the boolean construction default rather than a reported value', () => {
+  // arrange
+  const { MainsPowerPresent } = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const mainsPowerPresent = new MainsPowerPresent();
+
+  // assert
+  assert.strictEqual(mainsPowerPresent.value, false);
+});
+
+// A characteristic that starts outside its own declared domain hands HomeKit a code the plugin
+// itself says the vendor cannot send, from the moment the service carrying it is added.
+for (const { name, initial } of [
+  { name: 'RawWaterLevelCode', initial: 0 },
+  { name: 'BatteryHealthCode', initial: 1 },
+  { name: 'ProtectionHoursCode', initial: 1 },
+]) {
+  test(`starts ${name} at ${String(initial)}, a value its own validValues admits`, () => {
     // arrange
     const characteristics = createCustomCharacteristics(hapNamespace());
 
     // act
-    const claimed = RECORD_CHARACTERISTIC_NAMES.flatMap((name) => {
-      const displayName = new (declaredAs(characteristics, name))().displayName.toLowerCase();
-
-      return FORBIDDEN_COUNT_WORDS.filter((word) => displayName.includes(word));
-    });
+    const characteristic = new (declaredAs(characteristics, name))();
+    const validValues: readonly number[] = characteristic.props.validValues ?? [];
 
     // assert
-    assert.deepStrictEqual(claimed, []);
+    assert.deepStrictEqual(
+      { initial: characteristic.value, admitted: validValues.some((candidate) => candidate === characteristic.value) },
+      { initial, admitted: true },
+    );
+  });
+}
+
+test('starts the controller timestamp at the empty string rather than a time nothing reported', () => {
+  // arrange
+  const { ControllerDataLastTrustedAt } = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const controllerDataLastTrustedAt = new ControllerDataLastTrustedAt();
+
+  // assert
+  assert.strictEqual(controllerDataLastTrustedAt.value, '');
+});
+
+test('leaves one characteristic intact when another mutates its own permissions', () => {
+  // arrange
+  const hap = hapNamespace();
+  const { MainsPowerPresent, PumpRunning } = createCustomCharacteristics(hap);
+  const mainsPower = new MainsPowerPresent().props.perms;
+  const pumpRunning = new PumpRunning().props.perms;
+
+  // act
+  mainsPower.push(hap.Perms.PAIRED_WRITE);
+
+  // assert
+  assert.deepStrictEqual({ mainsPower, pumpRunning }, { mainsPower: ['pr', 'ev', 'pw'], pumpRunning: ['pr', 'ev'] });
+});
+
+// The count is the one record value HAP can quietly reshape. A `uint8` maximum of 255 does not
+// refuse a larger push, it clamps it, so a count past 255 would stop advancing while still
+// reading as a fact about the basement (D-12, CTRL-01). The clamping itself is demonstrated
+// against the real pinned package in the fidelity case rather than argued about here.
+test('counts observed activations on a format wide enough that HAP cannot clamp the number', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const { format, maxValue, minStep } = new (declaredAs(characteristics, 'ObservedActivationCount'))().props;
+
+  // assert
+  assert.deepStrictEqual({ format, maxValue, minStep }, { format: 'uint32', maxValue: undefined, minStep: undefined });
+});
+
+test('publishes every pump record read-only and outside the Apple base namespace', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const published = RECORD_CHARACTERISTIC_NAMES.map((name) => ({
+    name,
+    perms: new (declaredAs(characteristics, name))().props.perms,
+    appleNamespace: declaredAs(characteristics, name).UUID.endsWith(APPLE_BASE_UUID_SUFFIX),
+  }));
+
+  // assert
+  assert.deepStrictEqual(
+    published,
+    RECORD_CHARACTERISTIC_NAMES.map((name) => ({ name, perms: ['pr', 'ev'], appleNamespace: false })),
+  );
+});
+
+test('claims no whole-of-life or device-reported figure in any pump record name', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
+
+  // act
+  const claimed = RECORD_CHARACTERISTIC_NAMES.flatMap((name) => {
+    const displayName = new (declaredAs(characteristics, name))().displayName.toLowerCase();
+
+    return FORBIDDEN_COUNT_WORDS.filter((word) => displayName.includes(word));
   });
 
-  // A controller that shows this one characteristic and nothing else must still read true, which is
-  // why the qualification lives in the name rather than only in the README (D-12).
-  test('says in the count name itself that the number is what the plugin observed', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
+  // assert
+  assert.deepStrictEqual(claimed, []);
+});
 
-    // act
-    const displayName = new (declaredAs(characteristics, 'ObservedActivationCount'))().displayName.toLowerCase();
+// A controller that shows this one characteristic and nothing else must still read true, which is
+// why the qualification lives in the name rather than only in the README (D-12).
+test('says in the count name itself that the number is what the plugin observed', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
 
-    // assert
-    assert.strictEqual(displayName.includes('observed'), true);
-  });
+  // act
+  const displayName = new (declaredAs(characteristics, 'ObservedActivationCount'))().displayName.toLowerCase();
 
-  // Every one of these construction defaults is a claim the plugin has not earned -- a count of
-  // zero, an empty epoch, and a last activation that was not a self-test. That is why all four are
-  // declared optional on the pump service, so none is ever constructed before a record writes it.
-  test('starts every pump record at the format default its declaration gives it', () => {
-    // arrange
-    const characteristics = createCustomCharacteristics(hapNamespace());
+  // assert
+  assert.strictEqual(displayName.includes('observed'), true);
+});
 
-    // act
-    const initial = RECORD_CHARACTERISTIC_NAMES.map((name) => new (declaredAs(characteristics, name))().value);
+// Every one of these construction defaults is a claim the plugin has not earned -- a count of
+// zero, an empty epoch, and a last activation that was not a self-test. That is why all four are
+// declared optional on the pump service, so none is ever constructed before a record writes it.
+test('starts every pump record at the format default its declaration gives it', () => {
+  // arrange
+  const characteristics = createCustomCharacteristics(hapNamespace());
 
-    // assert
-    assert.deepStrictEqual(initial, ['', 0, '', false]);
-  });
+  // act
+  const initial = RECORD_CHARACTERISTIC_NAMES.map((name) => new (declaredAs(characteristics, name))().value);
+
+  // assert
+  assert.deepStrictEqual(initial, ['', 0, '', false]);
 });
