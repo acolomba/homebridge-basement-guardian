@@ -410,6 +410,40 @@ function registerWaterCases(): void {
     );
   });
 
+  // The water group below sits on no ladder rung: code 31 is the flooding rung, but the family
+  // reported 20 per cent. A row that derived the percentage from the code would publish 100.
+  test('publishes the decoded water level as reported rather than the ladder rung of its raw code', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { RawWaterLevelCode, WaterSensorFaultReported } = createCustomCharacteristics(hap);
+    const row = rowOf(hap, 'sump-pit-level');
+
+    // act
+    const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode: 31, levelPercent: 20, flooded: false } }) }));
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [
+      { uuid: hap.Characteristic.WaterLevel.UUID, value: 20 },
+      { uuid: RawWaterLevelCode.UUID, value: 31 },
+      { uuid: WaterSensorFaultReported.UUID, value: false },
+      { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+    ]);
+  });
+
+  // The water group below sits on no ladder rung: the family reported a flood at code 1 and 20 per
+  // cent. A row that derived the verdict from the code or the percentage would publish no leak.
+  test('reports the decoded flood verdict as reported rather than deriving it from the water level', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'sump-pit-flood');
+
+    // act
+    const projected = row.project(projectionInput({ decoded: decodedState({ water: { levelCode: 1, levelPercent: 20, flooded: true } }) }));
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.LeakDetected.UUID, value: LEAK_DETECTED }]);
+  });
+
   test('keeps publishing a trustworthy water level while the fault scope is untrusted', () => {
     // arrange
     const hap = hapNamespace();
@@ -1513,7 +1547,7 @@ describe('createServiceCatalogue', () => {
     ]);
   });
 
-  test('reads the water level meaning from decoded state rather than from the level ladder', async () => {
+  test('imports nothing from the water level ladder module', async () => {
     // act
     const source = await sourceOf('serviceCatalogue.ts');
 
