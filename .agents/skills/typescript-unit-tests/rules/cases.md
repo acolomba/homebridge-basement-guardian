@@ -1,6 +1,6 @@
 # Writing cases
 
-Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-test/SKILL.md`.
+Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-tests/SKILL.md`.
 
 Copy the **Good** form of the reference case below.
 

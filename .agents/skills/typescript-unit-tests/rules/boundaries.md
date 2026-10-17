@@ -1,6 +1,6 @@
 # Common boundaries
 
-Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-test/SKILL.md`.
+Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-tests/SKILL.md`.
 
 **Type-only modules.** The paired test module holds `satisfies` checks and `@ts-expect-error` negatives; `node --test` runs it with zero cases. Do not add runtime assertions to make it look active.
 

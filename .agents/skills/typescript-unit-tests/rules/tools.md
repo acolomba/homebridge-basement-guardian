@@ -1,6 +1,6 @@
 # Tools
 
-Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-test/SKILL.md`.
+Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-tests/SKILL.md`.
 
 A test module imports the tools like this:
 

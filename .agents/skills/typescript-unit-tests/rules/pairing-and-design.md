@@ -1,6 +1,6 @@
 # Pairing and production design
 
-Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-test/SKILL.md`.
+Part of the `typescript-unit-tests` skill: `.agents/skills/typescript-unit-tests/SKILL.md`.
 
 These rules decide which test modules exist, where they live, what they may reach, and how production code is shaped so its tests can reach it.
 

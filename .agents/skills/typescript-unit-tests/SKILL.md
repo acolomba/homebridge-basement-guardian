@@ -13,15 +13,15 @@ Use `node:test` for the runner, lifecycle, and the context's `t.mock`; `node:ass
 
 ## Read before you act
 
-| When you                                                                                   | Read                                                              |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| plan, add, move, or rename a source or test module                                         | `.agents/skills/typescript-unit-test/rules/pairing-and-design.md` |
-| write the imports of a test module                                                         | `.agents/skills/typescript-unit-test/rules/tools.md`              |
-| write or change a test case                                                                | `.agents/skills/typescript-unit-test/rules/cases.md`              |
-| use a fake, a spy, or a `strong-mock` mock                                                 | `.agents/skills/typescript-unit-test/rules/test-doubles.md`       |
-| test a type-only module, a barrel, the filesystem, HTTP, time, env, or an adapter contract | `.agents/skills/typescript-unit-test/rules/boundaries.md`         |
-| review a case or a source-test pair, or classify a finding                                 | `.agents/skills/typescript-unit-test/rules/review.md`             |
-| run tests or decide which checks a task needs                                              | `.agents/skills/local-verification/SKILL.md`                      |
+| When you                                                                                   | Read                                                               |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| plan, add, move, or rename a source or test module                                         | `.agents/skills/typescript-unit-tests/rules/pairing-and-design.md` |
+| write the imports of a test module                                                         | `.agents/skills/typescript-unit-tests/rules/tools.md`              |
+| write or change a test case                                                                | `.agents/skills/typescript-unit-tests/rules/cases.md`              |
+| use a fake, a spy, or a `strong-mock` mock                                                 | `.agents/skills/typescript-unit-tests/rules/test-doubles.md`       |
+| test a type-only module, a barrel, the filesystem, HTTP, time, env, or an adapter contract | `.agents/skills/typescript-unit-tests/rules/boundaries.md`         |
+| review a case or a source-test pair, or classify a finding                                 | `.agents/skills/typescript-unit-tests/rules/review.md`             |
+| run tests or decide which checks a task needs                                              | `.agents/skills/local-verification/SKILL.md`                       |
 
 ## Review
 
