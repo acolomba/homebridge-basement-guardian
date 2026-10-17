@@ -1029,10 +1029,11 @@ export function publishPersistentFailure(hap: API['hap'], service: Service, char
  * string `Name` already carries, so no second list of service names can drift
  * from the catalogue.
  *
- * `testCharacteristic` is asked before `getCharacteristic` because the real HAP
- * creates a declared-but-absent characteristic on the way out of
- * `getCharacteristic`, which would name a service the caller only meant to
- * inspect.
+ * The function reads the current value only when `testCharacteristic` finds
+ * the characteristic on the service. As a result, the read does not depend on
+ * what `getCharacteristic` does for a characteristic the service does not
+ * carry. The real HAP adds that characteristic, and the test stand-in answers
+ * `undefined`.
  */
 export function seedConfiguredName(hap: API['hap'], service: Service, displayName: string): void {
   const characteristic = hap.Characteristic.ConfiguredName;
