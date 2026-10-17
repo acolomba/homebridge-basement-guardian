@@ -18,8 +18,9 @@ import * as alarmMute from '../../src/accessories/alarmMute.js';
 // fails here rather than shipping as if `G-001` were closed.
 const PROVISIONAL_PREFIX = 'PROVISIONAL_';
 
-// The module that owns the mute contract. Every other module under `src/` is checked against it.
-const OWNING_MODULE = 'accessories/alarmMute.ts';
+// `src/` holds forty-three `.ts` modules. A scan that read fewer read the wrong tree, and the
+// declaring list built on that read would prove nothing about the modules it missed.
+const SOURCE_MODULE_FLOOR = 43;
 
 // A constant *declaration* naming alarm mute, in the casing a constant is written in. A reference
 // to the one declared here is fine and expected; a second declaration anywhere else would put an
@@ -58,17 +59,20 @@ test('requests exactly true and nothing else for alarm mute', () => {
 });
 
 // Closing `G-001` has to be one reviewable edit to one module, which it is only while no other
-// module declares an assumption of its own about mute (D-16).
+// module declares an assumption of its own about mute (D-16). The owning module's own declaration
+// is the match the scan must find, so a scan that reads nothing or matches nothing fails.
 test('is the only module under src that declares a constant governing alarm mute', async () => {
   // arrange
   const modules = await sourceModules();
 
   // act
   const declaring = modules
-    .filter((module) => module.path !== OWNING_MODULE)
     .filter((module) => [...module.source.matchAll(MUTE_CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('ALARM') && name.includes('MUTE')))
     .map((module) => module.path);
 
   // assert
-  assert.deepStrictEqual(declaring, []);
+  assert.deepStrictEqual(
+    { declaring, readsTheSourceTree: modules.length >= SOURCE_MODULE_FLOOR },
+    { declaring: ['accessories/alarmMute.ts'], readsTheSourceTree: true },
+  );
 });
