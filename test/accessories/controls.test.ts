@@ -105,7 +105,9 @@ function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: 
     clearTimeout: (handle: unknown) => {
       cancelled.push(handle);
     },
-    clearInterval: () => undefined,
+    clearInterval: () => {
+      // the binder arms no interval, so there is nothing to cancel
+    },
   };
 
   return { timers, deferrals, cancelled };
@@ -152,7 +154,11 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
     offlineConfirmed: overrides.offlineConfirmed ?? ((): boolean => false),
     commandTransportReady: overrides.commandTransportReady ?? ((): boolean => true),
     liveConfirmationObservable: overrides.liveConfirmationObservable ?? ((): boolean => true),
-    republish: overrides.republish ?? ((): void => undefined),
+    republish:
+      overrides.republish ??
+      ((): void => {
+        // the cases that take this default do not read the republish
+      }),
   };
 }
 
