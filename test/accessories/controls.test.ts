@@ -187,6 +187,18 @@ async function assertRefused(service: FakeHapService, value: unknown, status: nu
   );
 }
 
+// The rejection one write answers, captured as a value so a case can act first and assert it with
+// the rest of the outcome afterwards. A write that resolves answers `undefined`.
+async function writeRejection(service: FakeHapService, value: unknown): Promise<unknown> {
+  try {
+    await onCharacteristic(service).handleSetRequest(value);
+  } catch (error: unknown) {
+    return error;
+  }
+
+  return undefined;
+}
+
 test('refuses a write of false, sends nothing, and leaves the stored value where HAP had it', async () => {
   // arrange
   const { commands, sends } = recordingCommands();
@@ -967,11 +979,13 @@ test('refuses a press on a restored control and leaves the toggle where the cach
   const service = refusingRestoredSwitch();
   service.updateCharacteristic(HAP.Characteristic.On, false);
 
-  // act & assert
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
+  // act
+  const thrown = await writeRejection(service, true);
+
+  // assert
   assert.deepStrictEqual(
-    { value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
-    { value: false, statusCode: NOT_ALLOWED_IN_CURRENT_STATE },
+    { thrown, value: onCharacteristic(service).value, statusCode: onCharacteristic(service).statusCode },
+    { thrown: NOT_ALLOWED_IN_CURRENT_STATE, value: false, statusCode: NOT_ALLOWED_IN_CURRENT_STATE },
   );
 });
 
@@ -1021,8 +1035,11 @@ test('leaves a restored control answering a read before any press reaches it', (
   const service = refusingRestoredSwitch();
   service.updateCharacteristic(HAP.Characteristic.On, true);
 
-  // act & assert
-  assert.deepStrictEqual(readOfSwitch(service), { value: true, threw: undefined });
+  // act
+  const read = readOfSwitch(service);
+
+  // assert
+  assert.deepStrictEqual(read, { value: true, threw: undefined });
 });
 
 // The push carries the value the characteristic is already serving, because a restored control has
