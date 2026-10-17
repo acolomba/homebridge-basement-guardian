@@ -338,14 +338,15 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 // both conditions set, because an unrelated edit that reordered this table
 // would otherwise change the user-facing cause silently.
 //
-// The quiet live path sits between them for the same reason read the other way.
-// A plugin with no route at all is the more fundamental truth and keeps its
-// place at the top. But a quiet live path is named ahead of a missing state
-// because during that silence the state is not missing: the poll delivered it
-// and the tile is showing it, so naming the state would send an owner to inspect
-// equipment that is fine while the condition that actually blocked the press
-// went unnamed. It is refused all the same -- the plugin still could not tell a
-// running test from an idle one afterwards (D-07, D-08, WR-02).
+// The quiet-live-path rule sits between them. Of the three, the transport rule
+// is evaluated first, because a plugin with no route at all is the more
+// fundamental truth. When the live path is quiet and the reported value is
+// missing too, the quiet live path is named. It blocks a press of any
+// capability, whatever the reading says. The missing value is the capability's
+// own field and blocks only presses of that capability. So naming the state
+// would leave unnamed the condition that blocks every press. Both rules answer
+// the same status, so this order changes only the cause the user is told (D-07,
+// D-08, WR-02).
 //
 // The pending rule comes last. When a request also waits, every other rule that
 // applies still names its own cause. The pending rule answers only a press that
