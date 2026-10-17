@@ -393,15 +393,30 @@ for (const { failure, status, pendingAfterRefusal } of [
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure });
     const { timers, deferrals } = recordingTimers();
-    const { binder, service } = boundSwitch({ commands, timers });
+    const republished: string[] = [];
+    const { binder, service } = boundSwitch({
+      commands,
+      timers,
+      republish: () => {
+        republished.push('republish');
+      },
+    });
 
     // act
-    await assertRefused(service, true, status);
+    const thrown = await writeRejection(service, true);
+    const afterTheRefusal = { statusCode: onCharacteristic(service).statusCode, republished: [...republished] };
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
-    assert.deepStrictEqual([...binder.pending], pendingAfterRefusal);
-    assert.strictEqual(onCharacteristic(service).statusCode, SUCCESS);
+    assert.deepStrictEqual(
+      { thrown, pending: [...binder.pending], afterTheRefusal, afterTheClearingPush: { statusCode: onCharacteristic(service).statusCode, republished } },
+      {
+        thrown: status,
+        pending: pendingAfterRefusal,
+        afterTheRefusal: { statusCode: status, republished: [] },
+        afterTheClearingPush: { statusCode: SUCCESS, republished: ['republish'] },
+      },
+    );
     verify(commands);
   });
 }
@@ -1014,17 +1029,28 @@ for (const precedenceCase of PENDING_PRECEDENCE) {
 test('answers the transport refusal status to every read until the clearing push lands', async () => {
   // arrange
   const { timers, deferrals } = recordingTimers();
-  const { service } = boundSwitch({ timers, commandTransportReady: () => false });
+  const republished: string[] = [];
+  const { service } = boundSwitch({
+    timers,
+    commandTransportReady: () => false,
+    republish: () => {
+      republished.push('republish');
+    },
+  });
 
   // act
-  await assertRefused(service, true, NOT_ALLOWED_IN_CURRENT_STATE);
-  const afterTheRefusal = onCharacteristic(service).statusCode;
+  const thrown = await writeRejection(service, true);
+  const afterTheRefusal = { statusCode: onCharacteristic(service).statusCode, republished: [...republished] };
   clearingPushesIn(deferrals)[0]?.run();
 
   // assert
   assert.deepStrictEqual(
-    { afterTheRefusal, afterTheClearingPush: onCharacteristic(service).statusCode },
-    { afterTheRefusal: NOT_ALLOWED_IN_CURRENT_STATE, afterTheClearingPush: SUCCESS },
+    { thrown, afterTheRefusal, afterTheClearingPush: { statusCode: onCharacteristic(service).statusCode, republished } },
+    {
+      thrown: NOT_ALLOWED_IN_CURRENT_STATE,
+      afterTheRefusal: { statusCode: NOT_ALLOWED_IN_CURRENT_STATE, republished: [] },
+      afterTheClearingPush: { statusCode: SUCCESS, republished: ['republish'] },
+    },
   );
 });
 
