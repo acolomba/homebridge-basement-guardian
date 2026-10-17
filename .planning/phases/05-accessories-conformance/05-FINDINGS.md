@@ -88,7 +88,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CONTROLS-020 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md; .agents/skills/typescript-style/rules/naming-and-docs.md Comments and documentation | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:143-147` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:143-147` | gsd-code-reviewer round 0 | open |  | ee4969f0ec |  |
 | CR-05-CONTROLS-021 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md Forbidden (narration of code that no longer exists) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:97-103, 323-324` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:97-103, 323-324` | gsd-code-reviewer round 0 | open |  | b1a7668c7d |  |
 | CR-05-CONTROLS-022 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md Forbidden (narration of code that no longer exists) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:690-693, 710-713` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:690-693, 710-713` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-CONTROLS-023 | CONTROLS | WARNING | .agents/skills/typescript-unit-tests/rules/test-doubles.md Mocks; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | gsd-code-reviewer round 0 | open |  |  |  |
+| CR-05-CONTROLS-023 | CONTROLS | WARNING | .agents/skills/typescript-unit-tests/rules/test-doubles.md Mocks; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:104-118` | gsd-code-reviewer round 0 | open |  | dbad2c167a |  |
 | CR-05-CONTROLS-024 | CONTROLS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data and Case structure; D-10 (SC-02) | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:28-30, 433, 444, 455, 466, 477, 488` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:test/accessories/controls.test.ts:28-30, 433, 444, 455, 466, 477, 488` | gsd-code-reviewer round 0 | open |  | c6267b1f87 |  |
 | CR-05-CONTROLS-025 | CONTROLS | WARNING | D-01; .agents/skills/typescript-style/rules/modules-and-data.md Files and modules | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:1-2` | gsd-code-reviewer round 0 | open |  | 704a2ff760 |  |
 | CR-05-CONTROLS-026 | CONTROLS | WARNING | .agents/skills/typescript-style/rules/comments.md; .agents/skills/typescript-style/rules/naming-and-docs.md Comments and documentation | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:21-23, 304-305` | `4c143ebad681cf602e787b8c2ea09b050d8a9518:src/accessories/controls.ts:21-23, 304-305` | gsd-code-reviewer round 0 | open |  | e3c873166b |  |
@@ -993,3 +993,20 @@ failed the case on the warnings value; both restored to blob
 Coordinator check: each commit lists the two owned paths; no `src` change since `ced1d75`;
 `as unknown as` appears only on the `HAP_NAMESPACE` line and inside `asService`; the
 microtask-case title is gone; `git status --porcelain` is empty.
+
+Dispatch 9 (CR-05-CONTROLS-023): role `gsd-code-fixer`, model omitted, effort `high`, foreground,
+owning the test and the report. Terminal result: commit
+`dbad2c167a26b4c6ae321a8d8bfe52de472774c7` (`test(controls): verify issued commands with strict
+mocks`), two owned paths. Twenty-three cases whose promise includes the commands sent now create
+`mock<CommandPort>({ exactParams: true, name: 'commands' })` inside the case, state each promised
+send with exact arguments (or none) and call `verify(commands)` last; the other cases answer
+through a typed stub, `answeringCommands`, whose calls no case asserts. `recordingCommands` and
+every `sends` field are gone; `refuse()` takes the port as a parameter, so no loop body branches;
+no title, status, cause or warning line changed (D-10 SC-02). The owner keeps 71 tests with 0
+failures; guard, build, pair coverage, ESLint, typecheck and `fallow audit --base 4c143eb`
+(verdict pass) exited 0 on Node v26.12.0. Control: a second `commands.send` in `answerWrite`
+failed ten mock cases (an unexpected call, and with the extra call's error swallowed, `verify`
+reporting it); restored to blob `e28c52bc0f45b0e8a0c4e9e28fd673699bdc9dfb` with
+`git diff --exit-code` exit 0 and GREEN rebuilt. Coordinator check: two owned paths; no `src`
+change; no `recordingCommands`, `anyTimes` or `It.isAny` remains; `git status --porcelain` is
+empty.
