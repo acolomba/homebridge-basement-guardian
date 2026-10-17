@@ -45,6 +45,7 @@ edits under D-06 or D-12. Its row is recorded before the edit. The First round o
 | DECLARATIONS | 0 | 05-DECLARATIONS-REVIEW.md | 053599a80557aa513b2d354833196408b92a4438 | 0 | 0 | 0 | 24 | 0 | 24 | CR-05-DECLARATIONS-001, CR-05-DECLARATIONS-002, CR-05-DECLARATIONS-003, CR-05-DECLARATIONS-004, CR-05-DECLARATIONS-005, CR-05-DECLARATIONS-006, CR-05-DECLARATIONS-007, CR-05-DECLARATIONS-008, CR-05-DECLARATIONS-009, CR-05-DECLARATIONS-010, CR-05-DECLARATIONS-011, CR-05-DECLARATIONS-012, CR-05-DECLARATIONS-013, CR-05-DECLARATIONS-014, CR-05-DECLARATIONS-015, CR-05-DECLARATIONS-016, CR-05-DECLARATIONS-017, CR-05-DECLARATIONS-018, CR-05-DECLARATIONS-019, CR-05-DECLARATIONS-020, CR-05-DECLARATIONS-021, CR-05-DECLARATIONS-022, CR-05-DECLARATIONS-023, CR-05-DECLARATIONS-024 | initial |
 | DECLARATIONS | 1 | 05-DECLARATIONS-REVIEW-R1.md | 6a769c548826e4eefdfa809a5e1721ac5224a8e2 | 24 | 24 | 0 | 1 | 0 | 1 | CR-05-DECLARATIONS-025 | continue |
 | DECLARATIONS | 2 | 05-DECLARATIONS-REVIEW-R2.md | d9ad7272c514a6be2f244a1815266c771b68b57d | 1 | 1 | 0 | 2 | 0 | 2 | CR-05-DECLARATIONS-026, CR-05-DECLARATIONS-027 | STOP: no progress; resolved by maintainer |
+| DECLARATIONS | 3 | 05-DECLARATIONS-REVIEW-R3.md | 935b29044088a2fc0bd0f4e3e764dc4c21081fb7 | 2 | 2 | 0 | 1 | 0 | 1 | CR-05-DECLARATIONS-028 | continue |
 
 The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
 the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
@@ -88,8 +89,9 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-023 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | gsd-code-reviewer round 0 | fixed |  | 6472fa9690 |  |
 | CR-05-DECLARATIONS-024 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data; Case structure | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | gsd-code-reviewer round 0 | fixed |  | 960f812d00 |  |
 | CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | fixed |  | 00f7bd6a4c |  |
-| CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | open |  | ae9647dda2 |  |
-| CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | open |  | c88bcca6eb |  |
+| CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | fixed |  | ae9647dda2 |  |
+| CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | fixed |  | c88bcca6eb |  |
+| CR-05-DECLARATIONS-028 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); .agents/skills/typescript-style/rules/comments.md | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | gsd-code-reviewer round 3 | open |  |  |  |
 
 ## Candidate leads
 
@@ -514,3 +516,12 @@ instance `private readonly muteWindowSeconds`, (c) a destructured `muteWindowMs`
 pattern flagged none of the three. Coordinator check: each commit lists only its owned path and
 the R2 report, services.ts changes only comment lines, no temporary file remains, the two owners
 pass (15 tests, 0 failures), and `git status --porcelain` is empty.
+
+Correction round 3: dispatch 13, role `gsd-code-reviewer`, model omitted, effort `high`,
+foreground, over the eight batch files at `935b29044088a2fc0bd0f4e3e764dc4c21081fb7` with the
+opening set {026, 027} and the 25 earlier fixed IDs. Terminal result:
+`05-DECLARATIONS-REVIEW-R3.md`, 026 and 027 fixed, 001 to 025 still fixed, one new WARNING
+CR-05-DECLARATIONS-028, with reasoned rejections of further scan-evasion forms; its typecheck,
+ESLint, build, owners (87 tests, 0 failures), four pair commands and batch header check all
+exited 0 on Node v26.12.0. Stop rule applied first: opening 2, fixed 2, rejected 0, new 1,
+reopened 0, closing 1, result `continue`.
