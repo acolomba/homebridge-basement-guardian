@@ -600,17 +600,15 @@ async function refuse(
   return { thrown, sends, deferrals, binder, service };
 }
 
-test('answers each of the eight refusal causes with the status that describes it', async () => {
-  // act
-  const answered = [];
+for (const refusalCase of REFUSALS) {
+  test(`answers ${String(refusalCase.status)} for ${refusalCase.cause}`, async () => {
+    // act
+    const { thrown } = await refuse(refusalCase);
 
-  for (const refusalCase of REFUSALS) {
-    answered.push((await refuse(refusalCase)).thrown);
-  }
-
-  // assert
-  assert.deepStrictEqual(answered, [-70412, -70412, -70412, -70412, -70412, -70403, -70402, -70408]);
-});
+    // assert
+    assert.strictEqual(thrown, refusalCase.status);
+  });
+}
 
 for (const refusalCase of LOCAL_REFUSALS) {
   test(`sends nothing at all for ${refusalCase.cause}`, async () => {
