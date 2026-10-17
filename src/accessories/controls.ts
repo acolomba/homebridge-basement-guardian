@@ -27,13 +27,13 @@
  *   refused toggle. A push before the throw would only emit a change nobody
  *   asked for: HAP assigns the refusal status after the handler throws, so the
  *   push could not clear it.
- * - A rejected write does store its status on the characteristic, and every
- *   later read answers that status until something pushes a value. Left alone,
- *   one refused press makes the Switch unreadable until the next poll. Every
- *   refusal therefore arms a clearing push, and that push is a macrotask
- *   through the injected timer port: a microtask queued inside the handler runs
- *   before HAP's own catch assigns the status, so it would clear a status that
- *   has not been set yet (D-04).
+ * - A rejected write does store its status on the characteristic, and later
+ *   reads answer that status until a push or an accepted write clears it. Left
+ *   alone, one refused press can keep the Switch unreadable long after the
+ *   press. Every refusal therefore arms a clearing push, and that push is a
+ *   macrotask through the injected timer port: a microtask queued inside the
+ *   binder's asynchronous handler runs before HAP's own catch assigns the
+ *   status, so it would clear a status that has not been set yet (D-04).
  *
  * Once `On` carries a handler, `setCharacteristic` on it routes through the
  * write path and becomes a command this plugin issued to itself. Every writer
@@ -47,9 +47,10 @@
  * toggle flips in Apple Home, an automation built on it fires, and nothing
  * happened. `bindRestoredControlRefusal` closes that window with a refusal
  * carrying the same status and the same cause the transport rule gives a live
- * accessory, and the binder's own handler replaces it on the first publish
- * because a set handler is a single slot in HAP rather than a listener list
- * (RES-04, D-07, D-08).
+ * accessory. A set handler is a single slot in HAP rather than a listener list,
+ * so the binder's own handler replaces the refusal when the accessory's publish
+ * pass binds the control row, which happens only once the device's family
+ * resolves (RES-04, D-07, D-08).
  */
 
 import { PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE } from './alarmMute.js';
@@ -69,9 +70,10 @@ export interface ControlBinderOptions {
    * confirming report only cancels a deadline that path scheduled.
    *
    * The clearing push has to run after HAP's own catch has stored the refusal
-   * status, which is the next macrotask and no earlier. Taking the port rather
-   * than reaching for the process timers is what lets a test read back the
-   * delay the binder asked for instead of watching a wall clock (SAFE-07, D-18).
+   * status, and a microtask queued inside the binder's asynchronous handler
+   * runs before that catch. Taking the port rather than reaching for the
+   * process timers is what lets a test read back the delay the binder asked
+   * for instead of watching a wall clock (SAFE-07, D-18).
    */
   timers: Timers;
   commands: CommandPort;
@@ -100,8 +102,8 @@ export interface ControlBinderOptions {
    *
    * The accessory answers `reported` below through the same rule that decides
    * whether the control's row may publish that value. For that value, the fact a
-   * row publishes from and the fact a write is refused on cannot disagree: they
-   * are one stored value read through one rule.
+   * row publishes from and the fact a write is refused on cannot disagree: one
+   * rule decides both.
    *
    * If they could disagree, a press would be refused for a missing state while
    * the tile beside it showed that state. The case "WR-02 returns the Switch to
@@ -127,7 +129,7 @@ export interface ControlBinderOptions {
    */
   liveConfirmationObservable: () => boolean;
   /**
-   * Republishes the control rows, and only those.
+   * Republishes no more than the control rows.
    *
    * Nothing else changed when a write was refused, and a full republish from a
    * deferred callback would make the accessory's "two updates cannot interleave"
@@ -178,9 +180,8 @@ export interface RestoredControlRefusalOptions {
   /**
    * Deferred execution, for the clearing push and nothing else.
    *
-   * The same port the binder takes, for the same reason: the push has to land
-   * after HAP's own catch has stored the refusal status, which is the next
-   * macrotask and no earlier (SAFE-07, D-18).
+   * The same port the binder takes: the push has to land after HAP's own catch
+   * has stored the refusal status (SAFE-07, D-18).
    */
   timers: Timers;
   /** The restored Switch the refusal is attached to. */
@@ -255,14 +256,14 @@ function isNotAnOnRequest(request: ControlRequest): boolean {
   return request.value !== request.accepted;
 }
 
-// The plugin has no proven way to reach the vendor at all: the runtime is
-// stopped, authentication has halted for good, or the last poll did not
-// succeed. Sending anyway buys a round trip into a route that has just failed
-// and lands as a vendor error, which would tell the user the vendor refused the
-// command when nothing ever reached it. This is a fact about the plugin, not
-// about the device, and it fails independently of the one below -- a fresh live
-// report can arrive while authentication has not completed -- so it carries its
-// own cause (RES-04, D-07, D-08).
+// The plugin has no proven way to reach the vendor at all, for example because
+// the runtime is stopped, authentication has halted for good, or the last poll
+// did not succeed. Sending anyway buys a round trip into a route that has just
+// failed and lands as a vendor error, which would tell the user the vendor
+// refused the command when nothing ever reached it. This is a fact about the
+// plugin, not about the device, and it fails independently of the one below --
+// a fresh live report can arrive while authentication has not completed -- so
+// it carries its own cause (RES-04, D-07, D-08).
 function hasNoCommandTransport(request: ControlRequest): boolean {
   return !request.transportReady;
 }
@@ -404,30 +405,30 @@ function heldOn(hap: API['hap'], service: Service): CharacteristicValue {
 
 // The push that returns a refused characteristic's stored status to `0`.
 //
-// The republish re-asserts what the control rows may currently publish. A row
-// publishes `On` only while its field decoded, its scope is not withdrawn for a
-// doubtful reason, and no request for it waits, so the push after the
-// republish clears the status in the other cases. It publishes the reported
-// value when there is one, so the Switch shows what the device said (WR-02).
-// With no reported value it carries the value the characteristic already
-// serves, which states nothing new: HAP returns a stored status to `0`
-// whatever value it is given (D-04, D-014).
+// The republish re-asserts no more than the control rows. A row publishes `On`
+// only while its field decoded, its scope is not withdrawn for a doubtful
+// reason, and no request for it waits, so the push after the republish clears
+// the status in the other cases. It publishes the reported value when there is
+// one, so the Switch shows what the device said (WR-02). With no reported value
+// it carries the value the characteristic already serves, which states nothing
+// new and still returns the stored status to `0` (D-04, D-014).
 function clearRefusal(hap: API['hap'], service: Service, republish: () => void, reported: boolean | undefined): void {
   republish();
 
   publishValue(service, hap.Characteristic.On, reported ?? heldOn(hap, service));
 }
 
-// A restored service belongs to no accessory yet, so there are no control rows
-// to re-assert and nothing to republish from. The push alone is what the
-// refusal needs, and it is the half of `clearRefusal` that does the work.
+// The restored refusal is handed no rows to re-assert, so it republishes
+// nothing. The push alone is what the refusal needs, and it is the half of
+// `clearRefusal` that does the work.
 function nothingToRepublish(): void {
-  // no accessory exists to publish rows from
+  // the restored refusal is handed no rows to re-assert
 }
 
 /**
- * Refuses every press on one restored control until an accessory exists to
- * route it.
+ * Refuses every press on one restored control until the accessory's publish
+ * pass binds the control row, which happens only once the device's family
+ * resolves.
  *
  * A restart the vendor cloud never answers is the window `RES-04` names, and it
  * is unbounded: no binder exists until the first REST inventory succeeds, and
@@ -437,20 +438,22 @@ function nothingToRepublish(): void {
  * the Switch fires, and nothing was sent. Nothing reaching the vendor is
  * correct and stays correct here; what changes is that the owner is told.
  *
- * The status and the cause are the transport rule's own, because the condition
- * is the transport rule's own: the plugin has no proven way to reach the
- * vendor. Reusing both keeps one condition answering one status with one
- * wording (D-07, D-08).
+ * The status and the cause are the transport rule's own, because the window
+ * this refusal exists for is a restart the cloud has not answered, where the
+ * plugin has no proven way to reach the vendor. Reusing both keeps one
+ * condition answering one status with one wording (D-07, D-08). The refusal
+ * also stays, with the same line, while a cached accessory's family does not
+ * resolve, because only the publish pass of a resolved family binds the row.
  *
  * The clearing push is not optional. HAP stores a thrown status on the
- * characteristic and answers it to every later read, which Apple Home draws as
+ * characteristic and answers it to later reads, which Apple Home draws as
  * "No Response" for the whole accessory -- the presentation this project
  * reserves for a refused credential, which never clears itself and which an
  * automatic retry makes worse. A restart with the cloud down clears itself the
  * moment a poll succeeds, so it must not borrow that presentation. The push
  * carries the value the characteristic is already serving, because there is no
- * reported value to restore and HAP returns a stored status to `0` whatever
- * value it is given (D-04, D-10).
+ * reported value to restore, and a push of that value still returns the stored
+ * status to `0` (D-04, D-10).
  *
  * A write handler and nothing else. `RES-04` asks that reads answer from
  * memory, and the one path from HomeKit to the vendor is a write, so no read
@@ -462,8 +465,8 @@ export function bindRestoredControlRefusal(options: RestoredControlRefusalOption
   // `onSet` rather than `on('set', ...)`, matching the binder: HAP warns when a
   // characteristic carries both and ignores the event listener. It is also what
   // makes this refusal replaceable rather than permanent -- `setHandler` is one
-  // slot, so the binder's own handler takes it over on the first publish and a
-  // recovered plugin operates its controls normally.
+  // slot, so the binder's own handler takes it over when the accessory's
+  // publish pass binds the control row.
   service.getCharacteristic(hap.Characteristic.On).onSet(() => {
     timers.setTimeout(() => {
       clearRefusal(hap, service, nothingToRepublish, undefined);
@@ -515,9 +518,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     requested.delete(capability);
   }
 
-  // The window closed with no confirming report. The entry goes, the control
-  // rows republish so the Switch shows the reported value again wherever its row
-  // may publish one, and one warning names the capability.
+  // The window closed with no confirming report. The entry goes, the binder
+  // calls `republish`, and one warning names the capability.
   //
   // Nothing is retried: a command that outlived its deadline may already have
   // reached the device, and a second attempt would operate a real sump pump
@@ -527,9 +529,9 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   // false, and one more meaning would leave a user unable to tell which
   // happened (D-038, D-06).
   //
-  // The republish is the control rows alone, as `republish` documents: nothing
-  // else changed, and a full republish driven from a timer would make the
-  // accessory's "two updates cannot interleave" claim harder to hold.
+  // The republish is no more than the control rows, as `republish` documents:
+  // nothing else changed, and a full republish driven from a timer would make
+  // the accessory's "two updates cannot interleave" claim harder to hold.
   function expire(capability: DeviceCapability): void {
     if (!requested.delete(capability)) {
       return;
@@ -548,8 +550,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   // A refusal the plugin answers by itself. Nothing is sent, so this write adds
   // no pending entry and leaves an earlier entry and its window as they are.
   // The clearing push is armed before the throw. HAP stores the status on the
-  // characteristic and answers it to every later read until something pushes a
-  // value.
+  // characteristic and answers it to later reads until a push or an accepted
+  // write clears it.
   //
   // The line names the device, the capability and a cause, and nothing else: no
   // URL, header value, token, or response body (AUTH-02). The `deviceId` is
