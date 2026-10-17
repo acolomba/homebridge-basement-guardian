@@ -92,11 +92,15 @@ export interface ControlBinderOptions {
    * so the rule that reads this fact names its own cause, and a user diagnosing
    * a press it refuses learns that the plugin had no route to send on.
    *
-   * The accessory answers this from the account-wide monitoring trust it also
-   * publishes its rows from, and it answers `reported` below through the same
-   * rule that decides whether the control's row may publish that value. So the
-   * fact a row publishes from and the fact a write is refused on cannot
-   * disagree: they are one stored value read through one rule.
+   * The accessory answers this from the account-wide monitoring trust, but no
+   * row reads this fact. One failed poll clears it and withdraws no row's trust,
+   * so a press can be refused for a missing route while the control's tile
+   * still shows a value.
+   *
+   * The accessory answers `reported` below through the same rule that decides
+   * whether the control's row may publish that value. For that value, the fact a
+   * row publishes from and the fact a write is refused on cannot disagree: they
+   * are one stored value read through one rule.
    *
    * If they could disagree, a press would be refused for a missing state while
    * the tile beside it showed that state. The case "WR-02 returns the Switch to
