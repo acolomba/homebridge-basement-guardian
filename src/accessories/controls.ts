@@ -150,7 +150,8 @@ export interface ControlBinder {
    * update.
    *
    * `reported` answers what the device itself last said about this capability,
-   * or `undefined` when the scope owning it did not decode.
+   * or `undefined` when the control's row may not publish it: the field did not
+   * decode, or its scope is withdrawn for a doubtful reason.
    */
   bind(service: Service, capability: DeviceCapability, reported: () => boolean | undefined): void;
   /**
@@ -269,11 +270,12 @@ function cannotSeeAConfirmation(request: ControlRequest): boolean {
   return !request.confirmationObservable;
 }
 
-// The capability's own reported field has not decoded. Without a decoded value
-// the plugin cannot tell a running test from an idle one, and issuing a command
-// on that basis would operate a real sump pump on a guess, so this answers the
+// The capability has no reported value the plugin may act on: its field did not
+// decode, or its scope is withdrawn for a doubtful reason. Without one the
+// plugin cannot tell a running test from an idle one, and issuing a command on
+// that basis would operate a real sump pump on a guess, so this answers the
 // same status a confirmed-offline device does: the command is not allowed in
-// the state the plugin can actually vouch for (D-031, D-014).
+// the current state (D-031, D-014).
 function hasNoFreshState(request: ControlRequest): boolean {
   return request.reported === undefined;
 }
@@ -333,7 +335,7 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 // decision, not an accident. Any two of them can hold at once, and then this
 // order decides which cause the user is told. Naming the missing state to
 // someone who has no way to send anything is the less actionable of the two
-// truths -- there is nothing to do about a stale reading while the route is
+// truths -- there is nothing to do about a missing reading while the route is
 // down -- so the missing transport is named first. A unit case pins that with
 // both conditions set, because an unrelated edit that reordered this table
 // would otherwise change the user-facing cause silently.
@@ -397,13 +399,14 @@ function heldOn(hap: API['hap'], service: Service): CharacteristicValue {
 
 // The push that returns a refused characteristic's stored status to `0`.
 //
-// The republish re-asserts what the control rows can currently vouch for. A
-// row publishes `On` only while it can vouch for the reported value and while
-// no request for it waits, so the push after the republish clears the status
-// in the other cases. It publishes the reported value when there is one, so the
-// Switch shows what the device said (WR-02). With no reported value it carries
-// the value the characteristic already serves, which states nothing new: HAP
-// returns a stored status to `0` whatever value it is given (D-04, D-014).
+// The republish re-asserts what the control rows may currently publish. A row
+// publishes `On` only while its field decoded, its scope is not withdrawn for a
+// doubtful reason, and no request for it waits, so the push after the
+// republish clears the status in the other cases. It publishes the reported
+// value when there is one, so the Switch shows what the device said (WR-02).
+// With no reported value it carries the value the characteristic already
+// serves, which states nothing new: HAP returns a stored status to `0`
+// whatever value it is given (D-04, D-014).
 function clearRefusal(hap: API['hap'], service: Service, republish: () => void, reported: boolean | undefined): void {
   republish();
 
@@ -508,14 +511,16 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   }
 
   // The window closed with no confirming report. The entry goes, the control
-  // rows republish so the Switch returns to what the device says, and one
-  // warning names the capability.
+  // rows republish so the Switch shows the reported value again wherever its row
+  // may publish one, and one warning names the capability.
   //
   // Nothing is retried: a command that outlived its deadline may already have
   // reached the device, and a second attempt would operate a real sump pump
   // twice. `StatusActive` is deliberately not used to mark this either -- it
-  // already means the reported field did not decode, and one signal carrying two
-  // meanings would leave a user unable to tell which happened (D-038, D-06).
+  // already reports whether the row can vouch for what it publishes, which a
+  // failed field, a lost monitoring path or a lost controller link can make
+  // false, and one more meaning would leave a user unable to tell which
+  // happened (D-038, D-06).
   //
   // The republish is the control rows alone, as `republish` documents: nothing
   // else changed, and a full republish driven from a timer would make the
