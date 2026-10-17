@@ -226,7 +226,7 @@ function batteryGroup(overrides: Readonly<Record<string, unknown>> = {}): Record
 function decodedState(overrides: Readonly<Record<string, unknown>> = {}): Record<string, unknown> {
   return {
     water: { levelCode: 1, levelPercent: 20, flooded: false },
-    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined, testRunning: false },
+    pump: { primaryRunning: false, backupRunning: false, backupActivatedAt: undefined },
     power: { mainsPresent: true },
     battery: batteryGroup(),
     fault: clearFaults(),
@@ -608,17 +608,47 @@ function registerPumpCases(): void {
     );
   });
 
+  // The device reports a self-test in the `self-test` group, not in the `pump` group.
   for (const testRunning of [true, false]) {
     test(`activates the backup pump adapter during a self-test run of ${String(testRunning)}`, () => {
       // arrange
       const hap = hapNamespace();
-      const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning: false, backupRunning: true, testRunning } }) });
+      const decoded = decodedState({ pump: { primaryRunning: false, backupRunning: true }, 'self-test': { running: testRunning, testedAt: undefined } });
+      const input = projectionInput({ decoded });
 
       // act
       const projected = rowOf(hap, 'backup-pump-running').project(input);
 
       // assert
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_NOT_DETECTED }]);
+    });
+  }
+
+  // A self-test runs the backup pump, but the test itself never moves an activity adapter. Each
+  // adapter stays where its own running boolean puts it while a test is in progress (C-001).
+  for (const { primaryRunning, backupRunning, primaryState, backupState } of [
+    { primaryRunning: false, backupRunning: false, primaryState: CONTACT_DETECTED, backupState: CONTACT_DETECTED },
+    { primaryRunning: false, backupRunning: true, primaryState: CONTACT_DETECTED, backupState: CONTACT_NOT_DETECTED },
+    { primaryRunning: true, backupRunning: false, primaryState: CONTACT_NOT_DETECTED, backupState: CONTACT_DETECTED },
+    { primaryRunning: true, backupRunning: true, primaryState: CONTACT_NOT_DETECTED, backupState: CONTACT_NOT_DETECTED },
+  ]) {
+    test(`follows primary running ${String(primaryRunning)} and backup running ${String(backupRunning)} on both activity adapters during a self-test`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const decoded = decodedState({ pump: { primaryRunning, backupRunning }, 'self-test': { running: true, testedAt: undefined } });
+      const input = projectionInput({ decoded });
+
+      // act
+      const projected = {
+        primary: summarise(rowOf(hap, 'primary-pump-running').project(input)),
+        backup: summarise(rowOf(hap, 'backup-pump-running').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        primary: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: primaryState }],
+        backup: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: backupState }],
+      });
     });
   }
 
@@ -643,6 +673,7 @@ function registerPumpCases(): void {
       pump: { primaryRunning: true, backupRunning: false },
       power: { mainsPresent: false },
       fault: { primaryPumpFault: true, backupPumpFault: false, backupPumpFuseBlown: false, waterSensorFault: true, controllerLinkPresent: true },
+      'self-test': { running: true, testedAt: undefined },
     });
 
     // act
