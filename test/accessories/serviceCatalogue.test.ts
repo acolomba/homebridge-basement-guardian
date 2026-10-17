@@ -1197,6 +1197,21 @@ function registerOfflineCases(): void {
       assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }]);
     });
   }
+
+  // `reportedOffline` is what the device says about itself. An alert raised from it would fire on a
+  // transport hiccup, so only the run the accessory confirmed activates the adapter (RES-03, D-016).
+  test('activates no Basement Guardian Offline contact from the device reporting itself offline alone', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row = rowOf(hap, 'basement-guardian-offline');
+    const input = projectionInput({ decoded: decodedState({ connectivity: { reportedOffline: true } }), offlineConfirmed: false });
+
+    // act
+    const projected = row.project(input);
+
+    // assert
+    assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: CONTACT_DETECTED }]);
+  });
 }
 
 // Every case about a group that did not decode, a scope that is not trustworthy, and the `On` value
