@@ -44,6 +44,7 @@ edits under D-06 or D-12. Its row is recorded before the edit. The First round o
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DECLARATIONS | 0 | 05-DECLARATIONS-REVIEW.md | 053599a80557aa513b2d354833196408b92a4438 | 0 | 0 | 0 | 24 | 0 | 24 | CR-05-DECLARATIONS-001, CR-05-DECLARATIONS-002, CR-05-DECLARATIONS-003, CR-05-DECLARATIONS-004, CR-05-DECLARATIONS-005, CR-05-DECLARATIONS-006, CR-05-DECLARATIONS-007, CR-05-DECLARATIONS-008, CR-05-DECLARATIONS-009, CR-05-DECLARATIONS-010, CR-05-DECLARATIONS-011, CR-05-DECLARATIONS-012, CR-05-DECLARATIONS-013, CR-05-DECLARATIONS-014, CR-05-DECLARATIONS-015, CR-05-DECLARATIONS-016, CR-05-DECLARATIONS-017, CR-05-DECLARATIONS-018, CR-05-DECLARATIONS-019, CR-05-DECLARATIONS-020, CR-05-DECLARATIONS-021, CR-05-DECLARATIONS-022, CR-05-DECLARATIONS-023, CR-05-DECLARATIONS-024 | initial |
 | DECLARATIONS | 1 | 05-DECLARATIONS-REVIEW-R1.md | 6a769c548826e4eefdfa809a5e1721ac5224a8e2 | 24 | 24 | 0 | 1 | 0 | 1 | CR-05-DECLARATIONS-025 | continue |
+| DECLARATIONS | 2 | 05-DECLARATIONS-REVIEW-R2.md | d9ad7272c514a6be2f244a1815266c771b68b57d | 1 | 1 | 0 | 2 | 0 | 2 | CR-05-DECLARATIONS-026, CR-05-DECLARATIONS-027 | STOP: no progress; resolved by maintainer |
 
 The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
 the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
@@ -86,7 +87,9 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-022 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/alarmMute.test.ts:19, 22` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/alarmMute.test.ts:19, 22` | gsd-code-reviewer round 0 | fixed |  | 69c7801d97 |  |
 | CR-05-DECLARATIONS-023 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/types.md (array types) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:101, 105` | gsd-code-reviewer round 0 | fixed |  | 6472fa9690 |  |
 | CR-05-DECLARATIONS-024 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data; Case structure | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:10-18` | gsd-code-reviewer round 0 | fixed |  | 960f812d00 |  |
-| CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | open |  | 00f7bd6a4c |  |
+| CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | fixed |  | 00f7bd6a4c |  |
+| CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | open |  |  |  |
+| CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | open |  |  |  |
 
 ## Candidate leads
 
@@ -480,3 +483,18 @@ fail with both modules in `declaring`, while the same plant passed the pre-fix f
 was deleted and `src` is clean. Coordinator check: the commit lists only the test and the R1
 report, it changes only the filter predicate and the pattern's comment, the temporary file is
 absent, and `git status --porcelain` is empty.
+
+Correction round 2: dispatch 11, role `gsd-code-reviewer`, model omitted, effort `high`,
+foreground, over the eight batch files at `d9ad7272c514a6be2f244a1815266c771b68b57d` with the
+opening set {025} and the 24 earlier fixed IDs. Terminal result: `05-DECLARATIONS-REVIEW-R2.md`,
+025 fixed, 001 to 024 still fixed, two new findings (026 BLOCKER, 027 WARNING); its typecheck,
+ESLint, build, owners (87 tests, 0 failures), four pair commands and batch header check all
+exited 0 on Node v26.12.0. Stop rule applied first: opening 1, fixed 1, rejected 0, new 2,
+reopened 0, closing 2, result `STOP: no progress`. The round-2 counter row, the two new finding
+rows, the 025 disposition and the report stay uncommitted; the phase waits for the maintainer.
+
+Maintainer resolution of the round-2 STOP, 2026-10-17: asked with the exact IDs and counts
+(opening 1, fixed 1, rejected 0, new 2, reopened 0, closing 2; open 026 and 027), the maintainer
+chose "Resolve and continue": record the resolution in the STOP cell, commit round 2, repair 026
+(match any declared name containing `mute` in any case, closing the whole naming class) and 027,
+and run correction round 3. The D-18 cap still applies: no round above 10.
