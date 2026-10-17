@@ -882,7 +882,10 @@ test('ignores a confirming report that lands after the window already closed', a
   binder.reconcile('self-test', true);
 
   // assert
-  assert.deepStrictEqual({ warnings: warnings.length, pending: [...binder.pending] }, { warnings: 1, pending: [] });
+  assert.deepStrictEqual(
+    { warnings, pending: [...binder.pending] },
+    { warnings: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`], pending: [] },
+  );
 });
 
 test('ignores a window that closes after the device already confirmed the request', async () => {
