@@ -243,3 +243,9 @@ accepted as reasoned rejections; none becomes a finding.
 
 Counter (D-03 as amended, D-18): opening 2, fixed 2, rejected 0, new 1, reopened 0, closing 1.
 Closing (1) is below opening (2), no ID reopened and the round is below 10: `continue`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-DECLARATIONS-028 | `test/accessories/alarmMute.test.ts` | Node v26.12.0: `node_modules/.bin/fallow guard test/accessories/alarmMute.test.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/alarmMute.test.js` exit 0 (3 tests, 0 failures); `npm run test:coverage:direct -- src/accessories/alarmMute.ts test/accessories/alarmMute.test.ts` exit 0 (no output from the selector); `node_modules/.bin/eslint test/accessories/alarmMute.test.ts --max-warnings=0` exit 0; `node_modules/.bin/fallow audit --base 053599a80557aa513b2d354833196408b92a4438 --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | title only |

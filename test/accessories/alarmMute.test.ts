@@ -86,7 +86,7 @@ test('requests exactly true and nothing else for alarm mute', () => {
 // Closing `G-001` has to be one reviewable edit to one module, which it is only while no other
 // module declares an assumption of its own about mute (D-16). The owning module's own declaration
 // is the match the scan must find, so a scan that reads nothing or matches nothing fails.
-test('is the only module under src that declares a constant governing alarm mute', async () => {
+test('is the only module under src that declares a value governing alarm mute', async () => {
   // arrange
   const modules = await sourceModules();
 
