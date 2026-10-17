@@ -11,12 +11,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { SHADOW_TOPICS } from '../../../src/cloud/shadow.js';
-import { ROTATED_SHADOW_CREDENTIALS, SCENARIO_START_TIME, SHADOW_CREDENTIALS } from '../world.js';
+import { SHADOW_TOPICS } from '../../src/cloud/shadow.js';
+import { ROTATED_SHADOW_CREDENTIALS, SCENARIO_START_TIME, SHADOW_CREDENTIALS } from '../support/world.js';
 
-import type { DeviceSnapshot } from '../../../src/device/state.js';
-import type { ApiDevice } from '../fakeRestApi.js';
-import type { BasementGuardianWorld } from '../world.js';
+import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { ApiDevice } from '../lib/vendorRestApi.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
 
 const DEVICE_TYPE_ID = 'wayneWaterGemini';
@@ -172,6 +172,14 @@ async function acceptedConnections(this: BasementGuardianWorld): Promise<void> {
 }
 
 When('the broker accepts connections', acceptedConnections);
+
+async function closeEveryConnection(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  broker.disconnectAll();
+}
+
+When('the broker closes every connection', closeEveryConnection);
 
 // The vendor carries telemetry under `reported.data` and device metadata under `reported.state`, so
 // a report's fields go into one of those two sections rather than directly under `reported`. Each

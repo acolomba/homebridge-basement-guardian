@@ -19,8 +19,8 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { It, mock, verify, when } from 'strong-mock';
 
-import { createFakeHap } from '../features/support/fakeHap.js';
-import { HarnessPlatformAccessory } from '../features/support/fakeHomebridgeApi.js';
+import { createFakeHap } from '../features/lib/hap.js';
+import { HarnessPlatformAccessory } from '../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
@@ -47,8 +47,8 @@ import {
   unsupportedRegistry,
 } from './platformSeeds.js';
 
-import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '../features/support/fakeHap.js';
-import type { FakeAccessory } from '../features/support/fakeHomebridgeApi.js';
+import type { FakeCharacteristicClass, FakeHapService, FakeServiceClass } from '../features/lib/hap.js';
+import type { FakeAccessory } from '../features/lib/homebridgeApi.js';
 import type { BasementGuardianAccessory } from '../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../src/accessories/services.js';
 import type { HttpFetch } from '../src/cloud/httpDispatcher.js';

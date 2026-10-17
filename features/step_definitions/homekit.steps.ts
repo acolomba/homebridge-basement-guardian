@@ -16,12 +16,12 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Then } from '@cucumber/cucumber';
 
-import { createServiceCatalogue } from '../../../src/accessories/serviceCatalogue.js';
-import { currentAccessory, pushedValue, serviceOf, serviceOnNamed } from '../publishedServices.js';
+import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
+import { currentAccessory, pushedValue, serviceOf, serviceOnNamed } from '../lib/publishedServices.js';
 
-import type { FakeHapService, FakeServiceClass } from '../fakeHap.js';
-import type { FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
-import type { BasementGuardianWorld } from '../world.js';
+import type { FakeHapService, FakeServiceClass } from '../lib/hap.js';
+import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 import type { API } from 'homebridge';
 
 // A published value appears only once a poll has applied the vendor state a step just set, so every

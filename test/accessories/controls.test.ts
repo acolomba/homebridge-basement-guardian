@@ -11,10 +11,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
+import { createFakeHap } from '../../features/lib/hap.js';
 import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 
-import type { FakeHapCharacteristic, FakeHapService } from '../../features/support/fakeHap.js';
+import type { FakeHapCharacteristic, FakeHapService } from '../../features/lib/hap.js';
 import type { ControlBinder, ControlBinderOptions } from '../../src/accessories/controls.js';
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { CommandOutcome, CommandPort } from '../../src/runtime/commandPort.js';

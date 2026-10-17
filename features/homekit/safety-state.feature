@@ -1,4 +1,4 @@
-Feature: Publishing safety state to HomeKit
+Feature: HomeKit safety state
 
   A validated vendor field reaches Apple Home as the exact fact the device reported. The plugin
   invents no reading: a field that stops validating leaves the last trustworthy value published and

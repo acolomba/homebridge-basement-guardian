@@ -1,4 +1,4 @@
-Feature: Merging device state
+Feature: Shadow state merging
 
   A device reports its complete state once and then sends a partial heartbeat about every fifteen
   minutes. The plugin merges each report into what it already holds, so the fields a heartbeat omits

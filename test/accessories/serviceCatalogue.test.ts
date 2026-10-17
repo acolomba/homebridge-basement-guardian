@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 import { isDeepStrictEqual } from 'node:util';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
-import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import { createFakeHap } from '../../features/lib/hap.js';
+import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createCustomServices } from '../../src/accessories/customServices.js';
 import {

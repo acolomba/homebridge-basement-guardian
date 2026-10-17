@@ -1,4 +1,4 @@
-Feature: Signing in to the vendor account
+Feature: Account sign-in
 
   The plugin signs in once, reuses the cached token across a restart, and answers each way the
   vendor can refuse with the one response that is safe for it. No credential reaches the log.

@@ -18,12 +18,12 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { pushedValue, serviceOf } from '../publishedServices.js';
+import { pushedValue, serviceOf } from '../lib/publishedServices.js';
 
-import type { FakeHapCharacteristic } from '../fakeHap.js';
-import type { FakeHomebridgeApi } from '../fakeHomebridgeApi.js';
-import type { FakeRestRequest } from '../fakeRestApi.js';
-import type { BasementGuardianWorld } from '../world.js';
+import type { FakeHapCharacteristic } from '../lib/hap.js';
+import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import type { FakeRestRequest } from '../lib/vendorRestApi.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 
 // The command route's own suffix, so a step names what the vendor receives rather than a path this
 // module rebuilt.

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { createFakeHap } from '../features/support/fakeHap.js';
+import { createFakeHap } from '../features/lib/hap.js';
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { PLATFORM_NAME } from '../src/settings.js';
 

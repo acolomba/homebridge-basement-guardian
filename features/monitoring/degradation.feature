@@ -1,4 +1,4 @@
-Feature: Degraded monitoring
+Feature: Monitoring degradation
 
   A shadow connection the plugin cannot open costs latency, not correctness: the poll is already the
   reconciliation backstop. The plugin stays up, says once that it is seeing less, and says once more

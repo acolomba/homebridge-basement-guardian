@@ -57,7 +57,7 @@ export interface FakeRestApi {
   failNextWith(status: number): void;
 
   /**
-   * Holds the service failing every subsequent request with this status until `answerNormally`.
+   * Holds the service failing every subsequent request with this status for the rest of the scenario.
    *
    * A one-shot arm cannot produce the condition a consecutive-failure threshold is about: two
    * failures in a row is the fact under test, and `failNextWith` can only ever produce one. The
@@ -65,9 +65,6 @@ export interface FakeRestApi {
    * shape and an invented one would answer only itself.
    */
   failEveryRequestWith(status: number): void;
-
-  /** Stops the standing failure, so the next request is answered from the service's own state. */
-  answerNormally(): void;
 
   /**
    * Records the next request and never answers it.
@@ -376,9 +373,6 @@ export async function createFakeRestApi(): Promise<FakeRestApi> {
     },
     failEveryRequestWith(status: number): void {
       state.standingStatus = status;
-    },
-    answerNormally(): void {
-      state.standingStatus = undefined;
     },
     holdNextRequest(): void {
       state.holdNext = true;

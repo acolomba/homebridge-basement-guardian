@@ -4,7 +4,7 @@
  * The stand-in carries what the plugin reads while it registers accessories: the HAP namespace,
  * the storage path, the two lifecycle events, the accessory constructor, and the three
  * accessory-registration calls. The HAP namespace is the shared hand-built stand-in from
- * `./fakeHap.js` rather than the real `@homebridge/hap-nodejs`, matching every other external
+ * `./hap.js` rather than the real `@homebridge/hap-nodejs`, matching every other external
  * boundary in this codebase.
  *
  * The accessory answers the real HAP call shapes: `addService(serviceClass, displayName, subtype)`
@@ -18,14 +18,14 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createFakeHap, deserializeService, serializeService } from './fakeHap.js';
+import { createFakeHap, deserializeService, serializeService } from './hap.js';
 
-import type { FakeHap, FakeHapService, FakeServiceClass, SerializedService } from './fakeHap.js';
+import type { FakeHap, FakeHapService, FakeServiceClass, SerializedService } from './hap.js';
 import type { API } from 'homebridge';
 
 type LifecycleEvent = 'didFinishLaunching' | 'shutdown';
 
-// A published service is `FakeHapService` from `./fakeHap.js`. This module carries no service type
+// A published service is `FakeHapService` from `./hap.js`. This module carries no service type
 // of its own: a second name for one boundary is the first step toward a second stand-in of it.
 
 /** A minimal, hand-built stand-in for a HAP `PlatformAccessory`. */

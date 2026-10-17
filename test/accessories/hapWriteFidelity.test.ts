@@ -6,7 +6,7 @@
  * every HomeKit type comes from the injected `api.hap` namespace, and nothing here relaxes that.
  *
  * The exception exists because without it every write semantic this plugin relies on is one the
- * plugin itself authored. `features/support/fakeHap.ts` has the only `Switch`, `On`, `onSet` and
+ * plugin itself authored. `features/lib/hap.ts` has the only `Switch`, `On`, `onSet` and
  * status code the scenarios ever see, so a green suite over that stand-in would prove that the
  * stand-in agrees with itself and nothing more. The cases below run the same write script against
  * the real pinned package and against the stand-in and assert the two records are deep-equal, so a
@@ -22,9 +22,9 @@ import { test } from 'node:test';
 
 import { Characteristic, Formats, HAPStatus, HapStatusError, Perms, Service } from '@homebridge/hap-nodejs';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
+import { createFakeHap } from '../../features/lib/hap.js';
 
-import type { FakeHapService } from '../../features/support/fakeHap.js';
+import type { FakeHapService } from '../../features/lib/hap.js';
 import type { CharacteristicProps } from '@homebridge/hap-nodejs';
 
 const HAP_SPECIFIER = '@homebridge/hap-nodejs';

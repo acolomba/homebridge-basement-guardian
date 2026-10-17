@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { DEFAULT_ID_TOKEN } from '../fakeAuth0.js';
+import { DEFAULT_ID_TOKEN } from '../lib/auth0.js';
 import {
   ACCOUNT_EMAIL,
   ACCOUNT_PASSWORD,
@@ -23,9 +23,9 @@ import {
   HARNESS_REALM,
   SCENARIO_START_TIME,
   SHADOW_CREDENTIALS,
-} from '../world.js';
+} from '../support/world.js';
 
-import type { BasementGuardianWorld } from '../world.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 
 const REDACTED = '[redacted]';
 const REFUSED_STATUS = 403;

@@ -10,8 +10,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import type { FakeRestApi } from '../fakeRestApi.js';
-import type { BasementGuardianWorld } from '../world.js';
+import type { FakeRestApi } from '../lib/vendorRestApi.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 
 const CREDENTIALS_PATH = '/credentials/aws';
 const DEVICES_PATH = '/devices';
@@ -97,14 +97,6 @@ async function everyRequestFailing(this: BasementGuardianWorld, status: number):
 }
 
 Given('the service fails every request with status {int}', everyRequestFailing);
-
-async function normalAnswers(this: BasementGuardianWorld): Promise<void> {
-  const service = await this.restApi();
-
-  service.answerNormally();
-}
-
-Given('the service answers normally again', normalAnswers);
 
 async function startPlugin(this: BasementGuardianWorld): Promise<void> {
   this.startPlugin();

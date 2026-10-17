@@ -10,10 +10,10 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { isNotificationServiceKind } from '../../../src/accessories/services.js';
+import { isNotificationServiceKind } from '../../src/accessories/services.js';
 
-import type { NotificationServiceKind } from '../../../src/accessories/services.js';
-import type { BasementGuardianWorld } from '../world.js';
+import type { NotificationServiceKind } from '../../src/accessories/services.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
 
 const REFUSAL_ADVICE = 'Fix it in the Homebridge UI (Plugins -> Basement Guardian -> Settings).';

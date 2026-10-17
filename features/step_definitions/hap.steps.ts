@@ -13,10 +13,10 @@ import assert from 'node:assert/strict';
 
 import { Then } from '@cucumber/cucumber';
 
-import { createFakeHap } from '../fakeHap.js';
-import { createFakeAccessory } from '../fakeHomebridgeApi.js';
+import { createFakeHap } from '../lib/hap.js';
+import { createFakeAccessory } from '../lib/homebridgeApi.js';
 
-import type { FakeCharacteristicClass, FakeHapService } from '../fakeHap.js';
+import type { FakeCharacteristicClass, FakeHapService } from '../lib/hap.js';
 
 const HAP = createFakeHap();
 

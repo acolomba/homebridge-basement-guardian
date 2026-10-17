@@ -1,4 +1,4 @@
-Feature: Discovering a Gemini and publishing its accessory
+Feature: Accessory discovery
 
   A valid Gemini on the account becomes one HomeKit accessory, with a truthful AccessoryInformation
   service populated from validated vendor fields. A HALO or unrecognized device is explained and

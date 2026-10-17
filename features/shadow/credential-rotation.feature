@@ -1,4 +1,4 @@
-Feature: Credential rotation
+Feature: Shadow credential rotation
 
   The temporary credentials the shadow connection signs with last about an hour, and nothing
   re-signs a connection that is already established. The plugin refreshes the cache the next

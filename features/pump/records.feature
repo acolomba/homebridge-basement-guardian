@@ -1,4 +1,4 @@
-Feature: Keeping a record of what each pump did
+Feature: Pump records
 
   The cloud reports a pump running and one timestamp for the backup pump. It reports no count and no
   history, so the only count that can exist is the one this plugin built while it was watching, which

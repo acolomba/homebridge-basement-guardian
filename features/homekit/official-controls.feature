@@ -1,4 +1,4 @@
-Feature: Operating the official controls from HomeKit
+Feature: HomeKit official controls
 
   A controller can press System Self-Test, and the press reaches the vendor exactly once. The
   device's own report is what leaves the switch on: the plugin publishes what the system says it is

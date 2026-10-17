@@ -10,8 +10,8 @@
 
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from './fakeHap.js';
-import type { FakeAccessory, FakeHomebridgeApi } from './fakeHomebridgeApi.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from './hap.js';
+import type { FakeAccessory, FakeHomebridgeApi } from './homebridgeApi.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { API } from 'homebridge';
 

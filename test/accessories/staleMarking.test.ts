@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
-import { HarnessPlatformAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import { createFakeHap } from '../../features/lib/hap.js';
+import { HarnessPlatformAccessory } from '../../features/lib/homebridgeApi.js';
 import { createControlBinder } from '../../src/accessories/controls.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 
-import type { FakeCharacteristicClass, FakeHapService } from '../../features/support/fakeHap.js';
+import type { FakeCharacteristicClass, FakeHapService } from '../../features/lib/hap.js';
 import type { DeviceCapability } from '../../src/device/family.js';
 import type { Timers } from '../../src/runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';

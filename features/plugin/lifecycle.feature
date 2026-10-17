@@ -1,4 +1,4 @@
-Feature: Starting and shutting down
+Feature: Plugin lifecycle
 
   Homebridge starts and stops the plugin on its own schedule, so a shutdown can land on a pending
   retry, a request already in flight, or an open connection. Each one releases what it holds and

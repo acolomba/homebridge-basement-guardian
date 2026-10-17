@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
-import { createFakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import { createFakeHap } from '../../features/lib/hap.js';
+import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
@@ -11,8 +11,8 @@ import { markTrustReportsUnreadable } from '../../src/accessories/staleMarking.j
 import { geminiFamily } from '../../src/device/gemini.js';
 import { systemTimers } from '../../src/runtime/timers.js';
 
-import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../../features/support/fakeHap.js';
-import type { FakeAccessory } from '../../features/support/fakeHomebridgeApi.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../../features/lib/hap.js';
+import type { FakeAccessory } from '../../features/lib/homebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from '../../src/accessories/services.js';

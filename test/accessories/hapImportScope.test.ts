@@ -47,7 +47,7 @@ const HAP_PACKAGE_SPECIFIER = '@homebridge/hap-nodejs';
 const PERMITTED_IMPORTER = 'test/accessories/hapWriteFidelity.test.ts';
 
 /** The stand-in whose own file overview names the package in prose without importing it. */
-const PROSE_MENTION_WITHOUT_IMPORT = 'features/support/fakeHap.ts';
+const PROSE_MENTION_WITHOUT_IMPORT = 'features/lib/hap.ts';
 
 // The compiled case runs from `dist-test/test/accessories`, which puts the repository
 // root three levels up. The floor below is what turns a wrong count of levels into a
