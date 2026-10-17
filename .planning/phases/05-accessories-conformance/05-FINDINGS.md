@@ -46,6 +46,7 @@ edits under D-06 or D-12. Its row is recorded before the edit. The First round o
 | DECLARATIONS | 1 | 05-DECLARATIONS-REVIEW-R1.md | 6a769c548826e4eefdfa809a5e1721ac5224a8e2 | 24 | 24 | 0 | 1 | 0 | 1 | CR-05-DECLARATIONS-025 | continue |
 | DECLARATIONS | 2 | 05-DECLARATIONS-REVIEW-R2.md | d9ad7272c514a6be2f244a1815266c771b68b57d | 1 | 1 | 0 | 2 | 0 | 2 | CR-05-DECLARATIONS-026, CR-05-DECLARATIONS-027 | STOP: no progress; resolved by maintainer |
 | DECLARATIONS | 3 | 05-DECLARATIONS-REVIEW-R3.md | 935b29044088a2fc0bd0f4e3e764dc4c21081fb7 | 2 | 2 | 0 | 1 | 0 | 1 | CR-05-DECLARATIONS-028 | continue |
+| DECLARATIONS | 4 | 05-DECLARATIONS-REVIEW-R4.md | 6fcd1c3aa8f98f9a2e02d1d351c62087b348668f | 1 | 1 | 0 | 0 | 0 | 0 | None | clean |
 
 The rule is closing = opening - fixed - rejected + new + reopened. Round 0 is the initial review. Its Opening is
 the batch's pre-allocated seed IDs: 7 for CONTROLS and 0 for every other batch. Rounds 1 to 10 are
@@ -91,7 +92,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-025 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | `6a769c548826e4eefdfa809a5e1721ac5224a8e2:test/accessories/alarmMute.test.ts:25-28, 73-87` | gsd-code-reviewer round 1 | fixed |  | 00f7bd6a4c |  |
 | CR-05-DECLARATIONS-026 | DECLARATIONS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-style/rules/naming-and-docs.md Naming | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | `d9ad7272c514a6be2f244a1815266c771b68b57d:test/accessories/alarmMute.test.ts:25-28, 70-87` | gsd-code-reviewer round 2 | fixed |  | ae9647dda2 |  |
 | CR-05-DECLARATIONS-027 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | `d9ad7272c514a6be2f244a1815266c771b68b57d:src/accessories/services.ts:20-22, 58-64` | gsd-code-reviewer round 2 | fixed |  | c88bcca6eb |  |
-| CR-05-DECLARATIONS-028 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); .agents/skills/typescript-style/rules/comments.md | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | gsd-code-reviewer round 3 | open |  | bd39257f44 |  |
+| CR-05-DECLARATIONS-028 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); .agents/skills/typescript-style/rules/comments.md | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | `935b29044088a2fc0bd0f4e3e764dc4c21081fb7:test/accessories/alarmMute.test.ts:89` | gsd-code-reviewer round 3 | fixed |  | bd39257f44 |  |
 
 ## Candidate leads
 
@@ -534,3 +535,11 @@ build, pair coverage, ESLint and `fallow audit --base 053599a` (verdict pass) ex
 v26.12.0; the pre-step passed on its first run and the hook passed. Coordinator check: the commit
 lists only the test and the R3 report, its only test change is the title line, and
 `git status --porcelain` is empty.
+
+Correction round 4: dispatch 15, role `gsd-code-reviewer`, model omitted, effort `high`,
+foreground, over the eight batch files at `6fcd1c3aa8f98f9a2e02d1d351c62087b348668f` with the
+opening set {028} and the 27 earlier fixed IDs. Terminal result: `05-DECLARATIONS-REVIEW-R4.md`,
+`status: clean`, 028 fixed, 001 to 027 still fixed, no new finding; its typecheck, ESLint, build,
+owners (87 tests, 0 failures), four pair commands and batch header check all exited 0 on Node
+v26.12.0. Stop rule applied first: opening 1, fixed 1, rejected 0, new 0, reopened 0, closing 0,
+result `clean`; DECLARATIONS closes at correction round 4.
