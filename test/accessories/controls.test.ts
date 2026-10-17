@@ -25,9 +25,11 @@ const DEVICE_ID = 'account-1_serial-1';
 const SELF_TEST = 'system-self-test';
 const ALARM_MUTE = 'alarm-mute';
 
-// The outcome the command port answers for a write no local rule refuses. A local refusal never
-// reaches it, so the value it carries is irrelevant to those rows.
-const ACCEPTED: CommandOutcome = { accepted: true };
+// The outcome the command port answers for a write no local rule refuses, fresh on every call. A
+// local refusal never reaches it, so the value it carries is irrelevant to those rows.
+function acceptedOutcome(): CommandOutcome {
+  return { accepted: true };
+}
 
 // The statuses this binder answers, written out here rather than read off the namespace, so a
 // drifted mapping fails at the assertion as well as behind it (D-04).
@@ -107,16 +109,16 @@ function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: 
   return { timers, deferrals, cancelled };
 }
 
-// A `CommandPort` stand-in that records every send and answers a scripted outcome. A refusal that
-// sent nothing and one that sent a request and discarded the answer look identical from HomeKit,
-// so the recorder is what tells them apart.
-function recordingCommands(outcome: CommandOutcome = { accepted: true }): { commands: CommandPort; sends: string[] } {
+// A `CommandPort` stand-in that records every send and answers a scripted outcome, built fresh for
+// each send. A refusal that sent nothing and one that sent a request and discarded the answer look
+// identical from HomeKit, so the recorder is what tells them apart.
+function recordingCommands(outcome: () => CommandOutcome = acceptedOutcome): { commands: CommandPort; sends: string[] } {
   const sends: string[] = [];
   const commands: CommandPort = {
     send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
       sends.push(`${deviceId} ${capability} ${String(requested)}`);
 
-      return Promise.resolve(outcome);
+      return Promise.resolve(outcome());
     },
   };
 
@@ -233,7 +235,7 @@ test('arms the clearing push as a macrotask at delay 0 rather than running it in
 
 test('sends one on request, holds the capability pending, and pushes nothing back', async () => {
   // arrange
-  const { commands, sends } = recordingCommands({ accepted: true });
+  const { commands, sends } = recordingCommands(acceptedOutcome);
   const { timers, deferrals } = recordingTimers();
   const republished: string[] = [];
   const { binder, service } = boundSwitch({
@@ -295,7 +297,7 @@ test('keeps the capability pending while the scope carrying its reported value h
 test('refuses a second on request while the first waits for the device, and sends one command', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands({ accepted: true });
+  const { commands, sends } = recordingCommands(acceptedOutcome);
   const { timers, deferrals, cancelled } = recordingTimers();
   const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
   await onCharacteristic(service).handleSetRequest(true);
@@ -326,7 +328,7 @@ test('refuses a second on request while the first waits for the device, and send
 test('keeps the request pending when the vendor does not answer in time', async () => {
   // arrange
   const warnings: string[] = [];
-  const { commands, sends } = recordingCommands({ accepted: false, failure: 'timed-out' });
+  const { commands, sends } = recordingCommands(() => ({ accepted: false, failure: 'timed-out' }));
   const { timers, deferrals, cancelled } = recordingTimers();
   const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) });
 
@@ -389,7 +391,7 @@ for (const { failure, status, pendingAfterRefusal } of [
 ] as const) {
   test(`answers ${String(status)} for a ${failure} outcome, leaves pending [${pendingAfterRefusal.join(', ')}], and sends nothing further`, async () => {
     // arrange
-    const { commands, sends } = recordingCommands({ accepted: false, failure });
+    const { commands, sends } = recordingCommands(() => ({ accepted: false, failure }));
     const { timers, deferrals } = recordingTimers();
     const { binder, service } = boundSwitch({ commands, timers });
 
@@ -440,7 +442,7 @@ test('names the capability, the device and the cause in the one line a refusal l
   // arrange
   const warnings: string[] = [];
   const log = warningLog(warnings);
-  const { commands } = recordingCommands({ accepted: false, failure: 'timed-out' });
+  const { commands } = recordingCommands(() => ({ accepted: false, failure: 'timed-out' }));
   const { service } = boundSwitch({ commands, log });
 
   // act
@@ -457,16 +459,17 @@ test('names the capability, the device and the cause in the one line a refusal l
 // Every case below is read off this one table, so a cause that stops being refused, or that starts
 // answering a different status, fails by name.
 interface RefusalCase {
-  cause: string;
-  value: unknown;
-  reported: boolean | undefined;
-  offlineConfirmed: boolean;
-  transportReady: boolean;
-  confirmationObservable: boolean;
-  outcome: CommandOutcome;
-  status: number;
-  expectedWarning: string;
-  pendingAfterRefusal: readonly DeviceCapability[];
+  readonly cause: string;
+  readonly value: unknown;
+  readonly reported: boolean | undefined;
+  readonly offlineConfirmed: boolean;
+  readonly transportReady: boolean;
+  readonly confirmationObservable: boolean;
+  /** Builds the outcome the command port answers, fresh for every send. */
+  readonly outcome: () => CommandOutcome;
+  readonly status: number;
+  readonly expectedWarning: string;
+  readonly pendingAfterRefusal: readonly DeviceCapability[];
 }
 
 const LOCAL_REFUSALS: readonly RefusalCase[] = [
@@ -478,7 +481,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: true,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
   },
@@ -490,7 +493,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: false,
     confirmationObservable: true,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
   },
@@ -502,7 +505,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: false,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
   },
@@ -514,7 +517,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: true,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
   },
@@ -526,7 +529,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: true,
     transportReady: true,
     confirmationObservable: true,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: NOT_ALLOWED_IN_CURRENT_STATE,
     pendingAfterRefusal: [],
   },
@@ -538,7 +541,7 @@ const LOCAL_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: true,
-    outcome: ACCEPTED,
+    outcome: acceptedOutcome,
     status: RESOURCE_BUSY,
     pendingAfterRefusal: [],
   },
@@ -553,7 +556,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: true,
-    outcome: { accepted: false, failure: 'vendor-error' },
+    outcome: () => ({ accepted: false, failure: 'vendor-error' }),
     status: SERVICE_COMMUNICATION_FAILURE,
     pendingAfterRefusal: [],
   },
@@ -565,7 +568,7 @@ const VENDOR_REFUSALS: readonly RefusalCase[] = [
     offlineConfirmed: false,
     transportReady: true,
     confirmationObservable: true,
-    outcome: { accepted: false, failure: 'timed-out' },
+    outcome: () => ({ accepted: false, failure: 'timed-out' }),
     status: OPERATION_TIMED_OUT,
     pendingAfterRefusal: ['self-test'],
   },
