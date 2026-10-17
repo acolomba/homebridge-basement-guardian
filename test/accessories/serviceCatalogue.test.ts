@@ -24,7 +24,6 @@ import {
   ensureService,
   isRowFullyTrusted,
   isRowPublishable,
-  isRowTrusted,
   numberOf,
   publishedService,
   publishPersistentFailure,
@@ -1560,47 +1559,6 @@ describe('numberOf', () => {
   }
 });
 
-describe('isRowTrusted', () => {
-  test('trusts a row whose scope carries no distrust at all', () => {
-    // act & assert
-    assert.strictEqual(isRowTrusted({ scope: 'power', toleratedDistrust: [] }, []), true);
-  });
-
-  test('trusts a row through the one distrust reason it tolerates, and still projects its values', () => {
-    // arrange
-    const hap = hapNamespace();
-    const { MainsPowerPresent } = createCustomCharacteristics(hap);
-    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
-    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
-
-    // act
-    const trusted = isRowTrusted(row, input.untrustedScopes);
-
-    // assert
-    assert.strictEqual(trusted, true);
-    assert.deepStrictEqual(summarise(row.project(input)), [{ uuid: MainsPowerPresent.UUID, value: true }]);
-  });
-
-  test('distrusts the same row for a reason it does not tolerate, and projects nothing', () => {
-    // arrange
-    const hap = hapNamespace();
-    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
-    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'stale', lastTrustedAt: 7 }] });
-
-    // act
-    const trusted = isRowTrusted(row, input.untrustedScopes);
-
-    // assert
-    assert.strictEqual(trusted, false);
-    assert.deepStrictEqual(row.project(input), []);
-  });
-
-  test('trusts a row while a different scope is untrusted', () => {
-    // act & assert
-    assert.strictEqual(isRowTrusted({ scope: 'connectivity', toleratedDistrust: [] }, [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
-  });
-});
-
 describe('isRowPublishable', () => {
   // The reading an owner acts on, delivered by the transport that is still working while the other
   // one went quiet. Withholding it leaves Apple Home drawing "no leak" over a plugin holding "leak",
@@ -1792,10 +1750,12 @@ describe('isRowFullyTrusted', () => {
   test('distrusts a two-scope row when the second scope it reads stops validating', () => {
     // arrange
     const hap = hapNamespace();
+    const row = rowOf(hap, 'primary-pump');
+    const ownScopeOnly: ServiceRow = { ...row, readScopes: ['pump'] };
     const untrustedScopes = [{ scope: 'fault' as const, reason: 'invalid' as const, lastTrustedAt: 7 }];
 
     // act
-    const trusted = { own: isRowTrusted(rowOf(hap, 'primary-pump'), untrustedScopes), every: isRowFullyTrusted(rowOf(hap, 'primary-pump'), untrustedScopes) };
+    const trusted = { own: isRowFullyTrusted(ownScopeOnly, untrustedScopes), every: isRowFullyTrusted(row, untrustedScopes) };
 
     // assert
     assert.deepStrictEqual(trusted, { own: true, every: false });
@@ -1816,6 +1776,51 @@ describe('isRowFullyTrusted', () => {
 
     // act & assert
     assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 7 }]), false);
+  });
+
+  test('trusts a one-scope row whose scope carries no distrust at all', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act & assert
+    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'sump-mains-power'), []), true);
+  });
+
+  test('trusts a one-scope row through the one distrust reason it tolerates, and still projects its values', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { MainsPowerPresent } = createCustomCharacteristics(hap);
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'controller-link-lost', lastTrustedAt: 7 }] });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, true);
+    assert.deepStrictEqual(summarise(row.project(input)), [{ uuid: MainsPowerPresent.UUID, value: true }]);
+  });
+
+  test('distrusts a one-scope row for a reason it does not tolerate, and projects nothing', () => {
+    // arrange
+    const hap = hapNamespace();
+    const row: ServiceRow = { ...rowOf(hap, 'sump-mains-power'), toleratedDistrust: ['controller-link-lost'] };
+    const input = projectionInput({ untrustedScopes: [{ scope: 'power', reason: 'stale', lastTrustedAt: 7 }] });
+
+    // act
+    const trusted = isRowFullyTrusted(row, input.untrustedScopes);
+
+    // assert
+    assert.strictEqual(trusted, false);
+    assert.deepStrictEqual(row.project(input), []);
+  });
+
+  test('trusts a one-scope row while a different scope is untrusted', () => {
+    // arrange
+    const hap = hapNamespace();
+
+    // act & assert
+    assert.strictEqual(isRowFullyTrusted(rowOf(hap, 'basement-guardian-offline'), [{ scope: 'power', reason: 'invalid', lastTrustedAt: 1 }]), true);
   });
 });
 

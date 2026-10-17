@@ -231,9 +231,9 @@ const SEEING_LESS_REASONS: ReadonlySet<DistrustReason> = new Set<DistrustReason>
  *
  * A row is trustworthy while no untrusted scope of its own carries a reason it
  * does not tolerate. Every reason counts here, including the one that says only
- * that the plugin is seeing less, because this drives the marking half of the
- * safety contract: the accessory publishes `StatusActive = false` for an
- * untrustworthy row.
+ * that the plugin is seeing less. This is the marking half of the safety
+ * contract. `isRowFullyTrusted` asks it once for each scope a row reads, and
+ * `StatusActive` reports that answer.
  *
  * The withholding half is `isRowPublishable`'s, and the two rules differ on
  * exactly that one reason. Marking answers "can the plugin call this current?",
@@ -241,7 +241,7 @@ const SEEING_LESS_REASONS: ReadonlySet<DistrustReason> = new Set<DistrustReason>
  * this overwrite a good value with a doubtful one?", which a lost transport
  * does not make true (D-014, D-05).
  */
-export function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
+function isRowTrusted(row: RowTrust, untrustedScopes: readonly UntrustedScope[]): boolean {
   return !untrustedScopes.some((untrusted) => untrusted.scope === row.scope && !row.toleratedDistrust.includes(untrusted.reason));
 }
 
