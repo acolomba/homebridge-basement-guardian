@@ -41,17 +41,16 @@ const SERVICE_COMMUNICATION_FAILURE = -70402;
 const OPERATION_TIMED_OUT = -70408;
 const SUCCESS = 0;
 
-// The namespace holds no per-case state: a service and its characteristics live on the service that
-// added them, so one stand-in serves every case.
+// The namespace holds no per-case state: each case builds its own services, and a characteristic
+// lives on the service that carries it, so one stand-in serves every case.
 const HAP = createFakeHap();
 
-// The stand-in answers the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets it stand where the plugin takes the real namespace.
+// The stand-in carries only part of the real namespace, so no structural type admits it; the
+// widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
-// The stand-in answers the members the code under test reads and nothing else, which no structural
-// type can express; this is the one place a stand-in service stands where the code under test takes
-// a Service.
+// The stand-in service carries only part of a real `Service`, so no structural type admits it; this
+// is the one place a stand-in service stands where the code under test takes a Service.
 function asService(service: FakeHapService): Service {
   return service as unknown as Service;
 }
@@ -207,15 +206,15 @@ function registeredHandler(calls: readonly OnSetCall[]): FakeSetHandler {
   return handler;
 }
 
-// The eight refusals one write against an idle control can meet: six the plugin answers by itself
-// and two the vendor answers. The local rows follow the binder's table order, but each row sets one
-// condition, so these rows pin each cause, status and log line, not the order. The precedence cases
-// pin the order: each sets two conditions and names the rule that must answer. A press while an
-// earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
-// case, 'refuses a second on request while the first waits for the device, and sends one command',
-// covers it. The cases that loop over `REFUSALS`, `LOCAL_REFUSALS` or `VENDOR_REFUSALS` read these
-// rows, so a cause that stops being refused, or that starts answering a different status, fails by
-// name.
+// The eight refusals one write can meet while no earlier request waits: six the plugin answers by
+// itself and two the vendor answers. The local rows follow the binder's table order, but each row
+// sets one condition, so these rows pin each cause, status and log line, not the order. The
+// precedence cases pin the order: each sets two conditions and names the rule that must answer. A
+// press while an earlier request waits is the binder's other local refusal. It needs that earlier
+// press, so its own case, 'refuses a second on request while the first waits for the device, and
+// sends one command', covers it. The cases that loop over `REFUSALS`, `LOCAL_REFUSALS` or
+// `VENDOR_REFUSALS` read these rows, so a cause that stops being refused, or that starts answering
+// a different status, fails by name.
 interface RefusalCase {
   readonly cause: string;
   readonly value: unknown;
@@ -388,9 +387,9 @@ const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
 
-// The facts the gate reads for one write. A clear gate sets no refusal condition: an on request, a
-// decoded reported value of off, a device not confirmed offline, a route to the vendor and a live
-// path to hear back on.
+// The facts a case sets on the gate for one write. A clear gate sets no refusal condition: an on
+// request, a decoded reported value of off, a device not confirmed offline, a route to the vendor
+// and a live path to hear back on.
 interface GateConditions {
   readonly value: boolean;
   readonly reported: boolean | undefined;
@@ -403,8 +402,8 @@ function clearGate(): GateConditions {
   return { value: true, reported: false, offlineConfirmed: false, transportReady: true, confirmationObservable: true };
 }
 
-// A bound Switch whose gate reads every fact from `gate` at each write, so a case can change a
-// condition between two writes.
+// A bound Switch that reads the reported value and the offline, transport and live-path facts from
+// `gate` at each write, so a case can change a condition between two writes.
 function gatedSwitch(gate: () => GateConditions, overrides: BinderOverrides): { binder: ControlBinder; service: FakeHapService } {
   return boundSwitch(
     {
@@ -1103,10 +1102,10 @@ describe('createControlBinder', () => {
     });
   }
 
-  // HAP converts any error but a `HapStatusError` to a communication failure, and warns with its
-  // message. The stand-in converts the same way, so a case that writes through it reads the same
-  // status for a plain `Error` as for a vendor error. These cases call the registered handler
-  // directly and read the error it throws.
+  // HAP converts a plain `Error` to a communication failure, and warns with its message. The
+  // stand-in converts the same way, so a case that writes through it reads the same status for a
+  // plain `Error` as for a vendor error. These cases call the registered handler directly and read
+  // the error it throws.
   for (const refusalCase of REFUSALS) {
     test(`throws a HapStatusError with status ${String(refusalCase.status)} from the bound handler for ${refusalCase.cause}`, async (t) => {
       // arrange
@@ -1479,9 +1478,9 @@ describe('bindRestoredControlRefusal', () => {
     });
   }
 
-  // The same cause the transport rule gives a live accessory, because it is the same condition: after
-  // a restart the cloud has not answered, so the plugin has no route to send on. One condition with
-  // two wordings is what the per-cause table exists to prevent (D-07, D-08).
+  // The same cause the transport rule gives a live accessory. The refusal exists for a restart the
+  // cloud has not answered, where the plugin has no route to send on, and one condition with two
+  // wordings is what the per-cause table exists to prevent (D-07, D-08).
   for (const { pressed, held } of RESTORED_PRESSES) {
     test(`names the service, the accessory and the cause in the one line a restored refusal logs, for a press of ${String(pressed)}`, async () => {
       // arrange
@@ -1504,7 +1503,7 @@ describe('bindRestoredControlRefusal', () => {
     });
   }
 
-  // Without the clearing push the refused characteristic answers its status to every later read, which
+  // Without the clearing push the refused characteristic answers its status to later reads, which
   // Apple Home draws as "No Response" for the whole accessory -- the presentation this project
   // reserves for a refused credential, which never clears itself. A restart with the cloud down clears
   // itself the moment a poll succeeds (D-04, D-10).
