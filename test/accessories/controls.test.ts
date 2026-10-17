@@ -1342,10 +1342,12 @@ function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapServi
 
 // What a controller read of the control answers: the value, or the status a refusal left standing.
 // The read is the whole difference between a tile that is merely marked and one Apple Home greys
-// out, so it is driven rather than inferred from the stored status.
-function readOfSwitch(service: FakeHapService): { value: unknown; threw: unknown } {
+// out, so it is driven rather than inferred from the stored status. HAP's read is asynchronous and
+// rejects with the status, so the read is awaited inside the `try`; that also catches a read that
+// throws at once.
+async function readOfSwitch(service: FakeHapService): Promise<{ value: unknown; threw: unknown }> {
   try {
-    return { value: onCharacteristic(service).handleGetRequest(), threw: undefined };
+    return { value: await onCharacteristic(service).handleGetRequest(), threw: undefined };
   } catch (error: unknown) {
     return { value: undefined, threw: error };
   }
@@ -1419,12 +1421,12 @@ for (const { pressed, held } of RESTORED_PRESSES) {
 
     // act
     const thrown = await writeRejection(service, pressed);
-    const afterTheRefusal = readOfSwitch(service);
+    const afterTheRefusal = await readOfSwitch(service);
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
     assert.deepStrictEqual(
-      { thrown, delays: deferrals.map((deferral) => deferral.delayMs), afterTheRefusal, afterTheClearingPush: readOfSwitch(service) },
+      { thrown, delays: deferrals.map((deferral) => deferral.delayMs), afterTheRefusal, afterTheClearingPush: await readOfSwitch(service) },
       {
         thrown: NOT_ALLOWED_IN_CURRENT_STATE,
         delays: [0],
@@ -1464,13 +1466,13 @@ test('throws a HapStatusError with status -70412 from the handler a restored con
   );
 });
 
-test('leaves a restored control answering a read before any press reaches it', () => {
+test('leaves a restored control answering a read before any press reaches it', async () => {
   // arrange
   const service = refusingRestoredSwitch();
   service.updateCharacteristic(HAP.Characteristic.On, true);
 
   // act
-  const read = readOfSwitch(service);
+  const read = await readOfSwitch(service);
 
   // assert
   assert.deepStrictEqual(read, { value: true, threw: undefined });
@@ -1491,7 +1493,7 @@ for (const held of [true, false]) {
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
-    assert.deepStrictEqual({ thrown, read: readOfSwitch(service) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: held, threw: undefined } });
+    assert.deepStrictEqual({ thrown, read: await readOfSwitch(service) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: held, threw: undefined } });
   });
 }
 
@@ -1514,6 +1516,9 @@ for (const { heldAtRefusal, heldAtPush } of [
     clearingPushesIn(deferrals)[0]?.run();
 
     // assert
-    assert.deepStrictEqual({ thrown, read: readOfSwitch(service) }, { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: heldAtPush, threw: undefined } });
+    assert.deepStrictEqual(
+      { thrown, read: await readOfSwitch(service) },
+      { thrown: NOT_ALLOWED_IN_CURRENT_STATE, read: { value: heldAtPush, threw: undefined } },
+    );
   });
 }
