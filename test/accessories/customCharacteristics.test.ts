@@ -50,12 +50,23 @@ const RECORD_CHARACTERISTIC_NAMES: readonly string[] = [
   'LastActivationWasTestActivity',
 ];
 
+// The value domain a declaration publishes. Every member is required, though most are undefined,
+// because the case compares the domain as one whole value: a row that left a member out would not
+// match the `undefined` member the characteristic's props answer.
+interface DomainExpectation {
+  minValue: number | undefined;
+  maxValue: number | undefined;
+  minStep: number | undefined;
+  validValues: readonly number[] | undefined;
+}
+
 /** One vendor-defined characteristic and the identity a caller reads it under. */
 interface CharacteristicExpectation {
   name: string;
   displayName: string;
   uuid: string;
   format: string;
+  domain: DomainExpectation;
 }
 
 // The whole declared set, in the order the factory answers it. The format strings are written out
@@ -63,37 +74,122 @@ interface CharacteristicExpectation {
 // identifier is copied by hand from the published declaration rather than imported, because a
 // cached accessory finds its characteristics by these exact strings: a swapped, regenerated, or
 // per-start identifier must fail here (D-015).
+//
+// The three coded rows are bounded to the codes the vendor can legally send. Every other row
+// declares no domain, written out member by member. HAP clamps a numeric update to `maxValue` and
+// rounds it to `minStep`, so an added bound would quietly reshape a reported value; it fails here.
 const CHARACTERISTICS: readonly CharacteristicExpectation[] = [
-  { name: 'RawWaterLevelCode', displayName: 'Raw Water Level Code', uuid: 'f5c6e2da-7a4f-46c0-b02e-b501e90877cf', format: 'uint8' },
-  { name: 'PumpRunning', displayName: 'Pump Running', uuid: '5b3a4ee5-cb3f-4fd5-ab25-13c886fd0ad6', format: 'bool' },
-  { name: 'PumpFault', displayName: 'Pump Fault', uuid: 'c4f90c81-f8a4-43b1-a12f-c3eba16f9bba', format: 'bool' },
-  { name: 'PumpFuseBlown', displayName: 'Pump Fuse Blown', uuid: 'c33321c4-f8c8-4d85-ba22-16a2c282fec2', format: 'bool' },
-  { name: 'WaterSensorFaultReported', displayName: 'Water Sensor Fault Reported', uuid: '1d73fac4-3921-42e3-8d90-69065ab9c959', format: 'bool' },
-  { name: 'MainsPowerPresent', displayName: 'Mains Power Present', uuid: 'b014b110-41bb-4dec-a681-4a331455425e', format: 'bool' },
-  { name: 'BatteryCharging', displayName: 'Battery Charging', uuid: 'bc8b71e7-bbce-4fd7-aa00-fcd451cb451f', format: 'bool' },
-  { name: 'BatteryVoltageLow', displayName: 'Battery Voltage Low', uuid: '8278fb37-28fc-4550-a684-73000dcecf53', format: 'bool' },
-  { name: 'BatteryHealthCode', displayName: 'Battery Health Code', uuid: '89ff0a75-adab-4ec2-9254-446681dd5fa2', format: 'uint8' },
-  { name: 'ProtectionHoursCode', displayName: 'Protection Hours Code', uuid: '72432447-f7ae-4d5e-b551-7da3538267d0', format: 'uint8' },
-  { name: 'ControllerLinkPresent', displayName: 'Controller Link Present', uuid: '39f9112e-cdad-41f5-9247-f5379b0d6c11', format: 'bool' },
+  {
+    name: 'RawWaterLevelCode',
+    displayName: 'Raw Water Level Code',
+    uuid: 'f5c6e2da-7a4f-46c0-b02e-b501e90877cf',
+    format: 'uint8',
+    domain: { minValue: 0, maxValue: 31, minStep: 1, validValues: [0, 1, 3, 7, 15, 31] },
+  },
+  {
+    name: 'PumpRunning',
+    displayName: 'Pump Running',
+    uuid: '5b3a4ee5-cb3f-4fd5-ab25-13c886fd0ad6',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'PumpFault',
+    displayName: 'Pump Fault',
+    uuid: 'c4f90c81-f8a4-43b1-a12f-c3eba16f9bba',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'PumpFuseBlown',
+    displayName: 'Pump Fuse Blown',
+    uuid: 'c33321c4-f8c8-4d85-ba22-16a2c282fec2',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'WaterSensorFaultReported',
+    displayName: 'Water Sensor Fault Reported',
+    uuid: '1d73fac4-3921-42e3-8d90-69065ab9c959',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'MainsPowerPresent',
+    displayName: 'Mains Power Present',
+    uuid: 'b014b110-41bb-4dec-a681-4a331455425e',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'BatteryCharging',
+    displayName: 'Battery Charging',
+    uuid: 'bc8b71e7-bbce-4fd7-aa00-fcd451cb451f',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'BatteryVoltageLow',
+    displayName: 'Battery Voltage Low',
+    uuid: '8278fb37-28fc-4550-a684-73000dcecf53',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
+  {
+    name: 'BatteryHealthCode',
+    displayName: 'Battery Health Code',
+    uuid: '89ff0a75-adab-4ec2-9254-446681dd5fa2',
+    format: 'uint8',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: [1, 2, 4, 8, 16, 32] },
+  },
+  {
+    name: 'ProtectionHoursCode',
+    displayName: 'Protection Hours Code',
+    uuid: '72432447-f7ae-4d5e-b551-7da3538267d0',
+    format: 'uint8',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: [1, 2, 4, 8] },
+  },
+  {
+    name: 'ControllerLinkPresent',
+    displayName: 'Controller Link Present',
+    uuid: '39f9112e-cdad-41f5-9247-f5379b0d6c11',
+    format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
   {
     name: 'ControllerDataLastTrustedAt',
     displayName: 'Controller Data Last Trusted At',
     uuid: 'd4d0209b-1472-4a39-8d1b-1c48d94efc7f',
     format: 'string',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
   },
-  { name: 'ObservationStartedAt', displayName: 'Observation Start', uuid: 'f36376db-47a7-4c59-a76f-6bdc234d5634', format: 'string' },
+  {
+    name: 'ObservationStartedAt',
+    displayName: 'Observation Start',
+    uuid: 'f36376db-47a7-4c59-a76f-6bdc234d5634',
+    format: 'string',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
   {
     name: 'ObservedActivationCount',
     displayName: 'Activations Observed Since Observation Start',
     uuid: '88734156-8e55-4697-af69-68e9576d1352',
     format: 'uint32',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
   },
-  { name: 'LastObservedActivationAt', displayName: 'Last Observed Activation At', uuid: '39226a7e-0b92-4f41-b9a4-a602cdc8cca3', format: 'string' },
+  {
+    name: 'LastObservedActivationAt',
+    displayName: 'Last Observed Activation At',
+    uuid: '39226a7e-0b92-4f41-b9a4-a602cdc8cca3',
+    format: 'string',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
+  },
   {
     name: 'LastActivationWasTestActivity',
     displayName: 'Last Activation Was Self-Test',
     uuid: '217042ab-ad7e-481b-8e7e-2510e9ad74d9',
     format: 'bool',
+    domain: { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
   },
 ];
 
@@ -135,18 +231,24 @@ describe('createCustomCharacteristics', () => {
     );
   });
 
-  for (const { name, displayName, uuid, format } of CHARACTERISTICS) {
-    test(`declares ${name} as a read-only ${format} named ${displayName}`, () => {
+  for (const { name, displayName, uuid, format, domain } of CHARACTERISTICS) {
+    test(`declares ${name} as a read-only ${format} named ${displayName} with its exact value domain`, () => {
       // arrange
       const characteristics = createCustomCharacteristics(hapNamespace());
 
       // act
       const characteristic = new (declaredAs(characteristics, name))();
+      const { minValue, maxValue, minStep, validValues } = characteristic.props;
 
       // assert
       assert.deepStrictEqual(
-        { displayName: characteristic.displayName, format: characteristic.props.format, perms: characteristic.props.perms },
-        { displayName, format, perms: ['pr', 'ev'] },
+        {
+          displayName: characteristic.displayName,
+          format: characteristic.props.format,
+          perms: characteristic.props.perms,
+          domain: { minValue, maxValue, minStep, validValues },
+        },
+        { displayName, format, perms: ['pr', 'ev'], domain },
       );
     });
 
@@ -204,42 +306,6 @@ describe('createCustomCharacteristics', () => {
 
     // assert
     assert.deepStrictEqual(named, []);
-  });
-
-  test('bounds the raw water level to the legal thermometer codes', () => {
-    // arrange
-    const { RawWaterLevelCode } = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const { minValue, maxValue, minStep, validValues } = new RawWaterLevelCode().props;
-
-    // assert
-    assert.deepStrictEqual({ minValue, maxValue, minStep, validValues }, { minValue: 0, maxValue: 31, minStep: 1, validValues: [0, 1, 3, 7, 15, 31] });
-  });
-
-  test('bounds the two battery codes to the values the vendor can legally send', () => {
-    // arrange
-    const { BatteryHealthCode, ProtectionHoursCode } = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const validValues = { health: new BatteryHealthCode().props.validValues, protectionHours: new ProtectionHoursCode().props.validValues };
-
-    // assert
-    assert.deepStrictEqual(validValues, { health: [1, 2, 4, 8, 16, 32], protectionHours: [1, 2, 4, 8] });
-  });
-
-  test('declares no domain at all on a boolean characteristic', () => {
-    // arrange
-    const { MainsPowerPresent } = createCustomCharacteristics(hapNamespace());
-
-    // act
-    const { minValue, maxValue, minStep, validValues } = new MainsPowerPresent().props;
-
-    // assert
-    assert.deepStrictEqual(
-      { minValue, maxValue, minStep, validValues },
-      { minValue: undefined, maxValue: undefined, minStep: undefined, validValues: undefined },
-    );
   });
 
   test('starts at the boolean construction default rather than a reported value', () => {
@@ -303,14 +369,13 @@ describe('createCustomCharacteristics', () => {
   // against the real pinned package in the fidelity case rather than argued about here.
   test('counts observed activations on a format wide enough that HAP cannot clamp the number', () => {
     // arrange
-    const hap = hapNamespace();
-    const characteristics = createCustomCharacteristics(hap);
+    const characteristics = createCustomCharacteristics(hapNamespace());
 
     // act
-    const observedActivationCount = new (declaredAs(characteristics, 'ObservedActivationCount'))();
+    const { format, maxValue, minStep } = new (declaredAs(characteristics, 'ObservedActivationCount'))().props;
 
     // assert
-    assert.strictEqual(observedActivationCount.props.format, hap.Formats.UINT32);
+    assert.deepStrictEqual({ format, maxValue, minStep }, { format: 'uint32', maxValue: undefined, minStep: undefined });
   });
 
   test('publishes every pump record read-only and outside the Apple base namespace', () => {
