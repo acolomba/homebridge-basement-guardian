@@ -99,12 +99,10 @@ export interface ControlBinderOptions {
    * fact a row publishes from and the fact a write is refused on cannot
    * disagree: they are one stored value read through one rule.
    *
-   * That was written here as an invariant before it was one. The row was widened
-   * to keep publishing what a working transport delivered and the write path was
-   * not, so a press was refused for a missing state while the tile beside it
-   * showed that state. The case holding this up is "returns the Switch to the
-   * value the device reported when a press is refused during shadow silence",
-   * which reads the write path's own answer where a controller can see it
+   * If they could disagree, a press would be refused for a missing state while
+   * the tile beside it showed that state. The case "WR-02 returns the Switch to
+   * the value the device reported when a press is refused during shadow
+   * silence" reads the write path's own answer where a controller can see it
    * (RES-04, D-07, WR-02).
    */
   commandTransportReady: () => boolean;
@@ -309,7 +307,7 @@ function notAllowedInCurrentState(hap: API['hap']): number {
 }
 
 // The cause the missing-transport rule names, declared once because two
-// refusals now answer it. A restart the cloud has not answered is the same
+// refusals answer it. A restart the cloud has not answered is the same
 // condition under a different name -- the plugin has no route to send on -- and
 // one condition carrying two wordings is exactly the blur the per-cause table
 // exists to prevent (D-08).
