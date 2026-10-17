@@ -17,7 +17,7 @@ import type { CoreServiceKind, NotificationServiceKind, ServiceDescriptor, Servi
 
 // The seven removable names are written out here rather than read from the production list, so a
 // case fails when the two disagree instead of agreeing with whatever the module now declares.
-const REMOVABLE_SENSOR_NAMES = [
+const REMOVABLE_SENSOR_NAMES: readonly string[] = [
   'backup-pump-running',
   'mains-power-lost',
   'primary-pump-fault',
