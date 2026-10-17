@@ -647,6 +647,41 @@ function registerPumpCases(): void {
     });
   }
 
+  // The two pumps run in opposite states here. A backup row that reads the primary pump's running
+  // fact, or both pumps' facts, then publishes a state the backup pump did not report.
+  for (const { primaryRunning, backupRunning, pumpRunning, contactState } of [
+    { primaryRunning: false, backupRunning: true, pumpRunning: true, contactState: CONTACT_NOT_DETECTED },
+    { primaryRunning: true, backupRunning: false, pumpRunning: false, contactState: CONTACT_DETECTED },
+  ]) {
+    test(`publishes the reported backup pump running state of ${String(backupRunning)} on both backup rows`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { PumpRunning, PumpFault, PumpFuseBlown, ObservationStartedAt, ObservedActivationCount, LastObservedActivationAt } =
+        createCustomCharacteristics(hap);
+      const input = projectionInput({ decoded: decodedState({ pump: { primaryRunning, backupRunning } }) });
+
+      // act
+      const projected = {
+        pump: summarise(rowOf(hap, 'backup-pump').project(input)),
+        adapter: summarise(rowOf(hap, 'backup-pump-running').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        pump: [
+          { uuid: PumpRunning.UUID, value: pumpRunning },
+          { uuid: PumpFault.UUID, value: false },
+          { uuid: PumpFuseBlown.UUID, value: false },
+          { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
+          { uuid: ObservationStartedAt.UUID, value: OBSERVATION_START },
+          { uuid: ObservedActivationCount.UUID, value: 0 },
+          { uuid: LastObservedActivationAt.UUID, value: '' },
+        ],
+        adapter: [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }],
+      });
+    });
+  }
+
   for (const { primaryPumpFault, status } of [
     { primaryPumpFault: true, status: GENERAL_FAULT },
     { primaryPumpFault: false, status: NO_FAULT },
