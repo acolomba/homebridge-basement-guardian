@@ -333,7 +333,7 @@ function unprojectedRequiredCharacteristics(hap: API['hap'], rows: readonly Serv
   ];
   const drifted = rows.flatMap((row) =>
     inputs.flatMap((input) => {
-      const projected = new Set(row.project(input).map((value) => value.characteristic.UUID));
+      const projected = new Set(row.project(input).map((projectedValue) => projectedValue.characteristic.UUID));
 
       if (projected.size === 0) {
         return [];
@@ -659,7 +659,7 @@ function registerPumpRecordCases(): void {
 
     // assert
     assert.deepStrictEqual(
-      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
       [],
     );
   });
@@ -676,7 +676,7 @@ function registerPumpRecordCases(): void {
 
       // assert
       assert.deepStrictEqual(
-        summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+        summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
         [{ uuid: LastActivationWasTestActivity.UUID, value: lastActivationWasTestActivity }],
       );
     });
@@ -695,7 +695,7 @@ function registerPumpRecordCases(): void {
 
     // assert
     assert.deepStrictEqual(
-      summarise(projected).filter((value) => value.uuid === LastActivationWasTestActivity.UUID),
+      summarise(projected).filter((published) => published.uuid === LastActivationWasTestActivity.UUID),
       [],
     );
   });
@@ -714,7 +714,7 @@ function registerPumpRecordCases(): void {
 
       // assert
       assert.deepStrictEqual(
-        summarise(projected).filter((value) => value.uuid === LastObservedActivationAt.UUID),
+        summarise(projected).filter((published) => published.uuid === LastObservedActivationAt.UUID),
         [{ uuid: LastObservedActivationAt.UUID, value: '' }],
       );
     });
@@ -729,7 +729,7 @@ function registerPumpRecordCases(): void {
 
     // act
     const publishing = createServiceCatalogue(hap)
-      .filter((row) => row.project(input).some((value) => recordUuids.has(value.characteristic.UUID)))
+      .filter((row) => row.project(input).some((projectedValue) => recordUuids.has(projectedValue.characteristic.UUID)))
       .map((row) => row.displayName);
 
     // assert
@@ -751,8 +751,8 @@ function registerPumpRecordCases(): void {
 
     // act
     const projected = {
-      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => live.has(value.uuid)),
-      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => live.has(value.uuid)),
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((published) => live.has(published.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((published) => live.has(published.uuid)),
     };
 
     // assert
@@ -789,8 +789,8 @@ function registerPumpRecordCases(): void {
 
     // act
     const projected = {
-      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
-      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((value) => recordUuids.has(value.uuid)),
+      primary: summarise(rowOf(hap, 'primary-pump').project(input)).filter((published) => recordUuids.has(published.uuid)),
+      backup: summarise(rowOf(hap, 'backup-pump').project(input)).filter((published) => recordUuids.has(published.uuid)),
     };
 
     // assert
