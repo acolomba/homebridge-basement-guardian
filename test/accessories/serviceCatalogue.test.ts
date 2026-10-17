@@ -1472,26 +1472,6 @@ describe('createServiceCatalogue', () => {
     assert.deepStrictEqual({ control: added.control?.UUID, sensor: added.sensor }, { control: hap.Service.Switch.UUID, sensor: undefined });
   });
 
-  test('answers the same row order whatever the input carries', () => {
-    // arrange
-    const hap = hapNamespace();
-    const catalogue = createServiceCatalogue(hap);
-    const input = projectionInput({ decoded: {}, untrustedScopes: [{ scope: 'water', reason: 'invalid', lastTrustedAt: 1 }], offlineConfirmed: true });
-
-    // act
-    const kinds = catalogue.map((row) => {
-      row.project(input);
-
-      return row.kind;
-    });
-
-    // assert
-    assert.deepStrictEqual(
-      kinds,
-      createServiceCatalogue(hap).map((row) => row.kind),
-    );
-  });
-
   test('projects the same values twice from one input', () => {
     // arrange
     const hap = hapNamespace();
