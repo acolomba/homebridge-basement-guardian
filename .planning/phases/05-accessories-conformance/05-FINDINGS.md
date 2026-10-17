@@ -74,8 +74,8 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-DECLARATIONS-011 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (act-and-assert marker) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:47-50, 52-57, 59-69` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/services.test.ts:47-50, 52-57, 59-69` | gsd-code-reviewer round 0 | open |  | 9cedd4da95 |  |
 | CR-05-DECLARATIONS-012 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (act-and-assert marker) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:138-145` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:138-145` | gsd-code-reviewer round 0 | open |  | 7bb76e693c |  |
 | CR-05-DECLARATIONS-013 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (act-and-assert marker) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:179-186` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:179-186` | gsd-code-reviewer round 0 | open |  | 9fba016816 |  |
-| CR-05-DECLARATIONS-014 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (single-entrypoint module at top level) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:2, 94-354` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:2, 94-354` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-DECLARATIONS-015 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (single-entrypoint module at top level) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:2, 113-260` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:2, 113-260` | gsd-code-reviewer round 0 | open |  |  |  |
+| CR-05-DECLARATIONS-014 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (single-entrypoint module at top level) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:2, 94-354` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customCharacteristics.test.ts:2, 94-354` | gsd-code-reviewer round 0 | open |  | 7cb0069f78 |  |
+| CR-05-DECLARATIONS-015 | DECLARATIONS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (single-entrypoint module at top level) | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:2, 113-260` | `053599a80557aa513b2d354833196408b92a4438:test/accessories/customServices.test.ts:2, 113-260` | gsd-code-reviewer round 0 | open |  | 96d5b19061 |  |
 | CR-05-DECLARATIONS-016 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `053599a80557aa513b2d354833196408b92a4438:src/accessories/customCharacteristics.ts:148` | `053599a80557aa513b2d354833196408b92a4438:src/accessories/customCharacteristics.ts:148` | gsd-code-reviewer round 0 | open |  | 644df7da5f |  |
 | CR-05-DECLARATIONS-017 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md (narration of code that does not exist) | `053599a80557aa513b2d354833196408b92a4438:src/accessories/customCharacteristics.ts:102-104` | `053599a80557aa513b2d354833196408b92a4438:src/accessories/customCharacteristics.ts:102-104` | gsd-code-reviewer round 0 | open |  | a9d9c4aea8 |  |
 | CR-05-DECLARATIONS-018 | DECLARATIONS | WARNING | .agents/skills/typescript-style/rules/comments.md | `053599a80557aa513b2d354833196408b92a4438:src/accessories/services.ts:10-13` | `053599a80557aa513b2d354833196408b92a4438:src/accessories/services.ts:10-13` | gsd-code-reviewer round 0 | open |  | dfcd54710f |  |
@@ -437,3 +437,24 @@ cross-factory case fails). Coordinator check: each commit lists only the test an
 `git diff 3baea31..HEAD -- src features` is empty, the test's 4 service literals equal the
 source's 4, no `// act & assert` remains, the owner passes 25 tests with 0 failures, and
 `git status --porcelain` is empty.
+
+Dispatch 8 (CR-05-DECLARATIONS-014, 015): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the two custom test files and the report. Terminal result: two style-only
+commits, `7cb0069f78ec90334133608bac968e431f7d08a7` (014) and
+`96d5b190618ac8a055d4723bebc0078736efe1ee` (015), each removing one `describe` wrapper and its
+import; owner counts unchanged (47 and 25 tests, now 0 suites) with identical title sets; guard,
+build, pair coverage, ESLint and `fallow audit --base 053599a` (verdict pass) exited 0 on Node
+v26.12.0. The Prettier hook joined one statement per file once the dedent let it fit; the fixer
+kept the hook's formatting. Coordinator check: each commit lists only its test and the report;
+with all whitespace removed, the customServices file differs from its parent only by the
+wrapper and the import, and the customCharacteristics file differs additionally only by one
+trailing comma in a call's argument list that Prettier dropped when it joined the line (no
+semantic change); `git status --porcelain` is empty.
+
+Round-0 repair pass complete: every DECLARATIONS finding has at least one fix commit (012 and 013
+were closed by the 001 and 002 commits). Batch checks at HEAD
+`96d5b190618ac8a055d4723bebc0078736efe1ee`, Node v26.12.0, 2026-10-17T12:33:07Z to 12:33:30Z:
+`npm run build:test` exit 0; the four owners in one `node --test` run exit 0 (tests 87, suites 0,
+pass 87, fail 0, cancelled 0, skipped 0, todo 0); `npm run test:coverage:direct --` with the four
+sources exit 0; each pair command alone exit 0 (alarmMute, services, customCharacteristics,
+customServices).
