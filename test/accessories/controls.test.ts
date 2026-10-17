@@ -213,9 +213,9 @@ function registeredHandler(calls: readonly OnSetCall[]): FakeSetHandler {
 // pin the order: each sets two conditions and names the rule that must answer. A press while an
 // earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
 // case, 'refuses a second on request while the first waits for the device, and sends one command',
-// covers it. The cases that loop over `REFUSALS`, `LOCAL_REFUSALS` or `VENDOR_REFUSALS` read this
-// one table, so a cause that stops being refused, or that starts answering a different status, fails
-// by name.
+// covers it. The cases that loop over `REFUSALS`, `LOCAL_REFUSALS` or `VENDOR_REFUSALS` read these
+// rows, so a cause that stops being refused, or that starts answering a different status, fails by
+// name.
 interface RefusalCase {
   readonly cause: string;
   readonly value: unknown;
@@ -430,7 +430,7 @@ interface PrecedenceCase {
   readonly expectedWarning: string;
 }
 
-// The pairs one write can carry. Three other pairs have their own cases: transport over fresh state,
+// The pairs one write can carry, but for three that have their own cases: transport over fresh state,
 // transport over the quiet path, and the quiet path over fresh state.
 const PRECEDENCE: readonly PrecedenceCase[] = [
   {
@@ -1114,8 +1114,7 @@ describe('createControlBinder', () => {
 
   // Both conditions at once, which is the case the table's order decides. Naming the missing state to
   // a user who has no way to send anything is the less actionable of the two truths, so the transport
-  // rule is evaluated first. This case pins that one pair; the `PRECEDENCE` cases pin the other
-  // pairs that can hold together (D-07).
+  // rule is evaluated first (D-07).
   test('names the missing transport alone when the plugin has neither fresh state nor a way to send', async () => {
     // arrange
     const warnings: string[] = [];
@@ -1133,9 +1132,8 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // The third fact of the gate, on its own. The route is proven and the capability's reported value is
-  // right there, so neither of the other two rules can be what refused this press: what the plugin
-  // lacks is the channel the device answers on (D-07, D-08, WR-02).
+  // The quiet live path on its own. The route is proven and the capability's reported value is right
+  // there, so what the plugin lacks is the channel the device answers on (D-07, D-08, WR-02).
   test('names the quiet live connection when the route and the reported value are both there', async () => {
     // arrange
     const warnings: string[] = [];
@@ -1153,9 +1151,8 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // The quiet live path and no route at all, which is the pair the placement of the quiet-live-path
-  // rule decides. A plugin with no route to send on cannot be helped by a channel to hear back on, so
-  // the more fundamental truth keeps its place at the top of the table. This case stops an edit that
+  // The quiet live path and no route at all. A plugin with no route to send on cannot be helped by a
+  // channel to hear back on, so the transport rule is evaluated first. This case stops an edit that
   // moves the quiet-live-path rule above the transport rule from changing the answer silently (D-07,
   // D-08).
   test('names the missing transport alone when the plugin has neither a route to send on nor a live path to hear back on', async () => {
@@ -1178,11 +1175,11 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // The other side of the placement. Here the state genuinely has not decoded and the live path is
-  // also quiet, and the quiet path is named because it is the condition an owner can act on: a
-  // reported field that never decoded is a symptom of the same silence more often than a fault of its
-  // own. This case stops an edit that moves the quiet-live-path rule below the state rule (D-07, D-08,
-  // WR-02).
+  // The quiet live path and a missing state. Here the state genuinely has not decoded and the live
+  // path is also quiet, and the quiet path is named because it is the condition an owner can act on:
+  // a reported field that never decoded is a symptom of the same silence more often than a fault of
+  // its own. This case stops an edit that moves the quiet-live-path rule below the state rule (D-07,
+  // D-08, WR-02).
   test('names the quiet live connection alone when the reported field has also not decoded', async () => {
     // arrange
     const warnings: string[] = [];
