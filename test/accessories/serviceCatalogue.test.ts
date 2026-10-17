@@ -96,8 +96,7 @@ const PROTECTION_BANDS: readonly { protectionHoursCode: number; levelPercent: nu
   { protectionHoursCode: 8, levelPercent: 100 },
 ];
 
-// Every scope a row can read, written out here rather than imported, so a scope added to the union
-// without a row reading it is visible at this boundary too.
+// Every trust scope a row can read, so a case can untrust each scope in turn or all of them at once.
 const TRUST_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'battery', 'fault', 'connectivity', 'self-test', 'alarm-mute'];
 
 // Every equipment-fault adapter, in the order the catalogue publishes them.
@@ -1088,7 +1087,8 @@ function registerOfflineCases(): void {
   }
 }
 
-// Every case about a group that did not decode and a scope that is not trustworthy.
+// Every case about a group that did not decode, a scope that is not trustworthy, and the `On` value
+// a control row projects with or without a pending request.
 function registerAbsentStateCases(): void {
   for (const { label, decoded } of [
     { label: 'a decoded state that is not a record', decoded: null },
