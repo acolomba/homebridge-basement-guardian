@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { test } from 'node:test';
 
 import { createFakeHap } from '../../features/lib/hap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
@@ -138,154 +138,150 @@ function characteristicNamesOf(service: Service): readonly string[] {
   return [...displayNamesOf(service.characteristics), ...displayNamesOf(service.optionalCharacteristics)];
 }
 
-describe('createCustomServices', () => {
-  test('declares exactly the vendor-defined services this plugin publishes', () => {
+test('declares exactly the vendor-defined services this plugin publishes', () => {
+  // arrange
+  const services = createCustomServices(hapNamespace());
+
+  // act
+  const names = Object.keys(services);
+
+  // assert
+  assert.deepStrictEqual(
+    names,
+    SERVICES.map((expectation) => expectation.name),
+  );
+});
+
+for (const { name, displayName, subtype, uuid, required, optional } of SERVICES) {
+  test(`carries the exact vendor facts ${name} always reports as required characteristics`, () => {
     // arrange
     const services = createCustomServices(hapNamespace());
 
     // act
-    const names = Object.keys(services);
+    const service = new services[name](displayName, subtype);
+
+    // assert
+    assert.deepStrictEqual(displayNamesOf(service.characteristics), required);
+  });
+
+  test(`declares the ${name}-specific facts, then the three shared characteristics, as optional`, () => {
+    // arrange
+    const services = createCustomServices(hapNamespace());
+
+    // act
+    const service = new services[name](displayName, subtype);
+
+    // assert
+    assert.deepStrictEqual(displayNamesOf(service.optionalCharacteristics), optional);
+  });
+
+  test(`keeps the display name and the subtype ${name} is constructed with`, () => {
+    // arrange
+    const services = createCustomServices(hapNamespace());
+
+    // act
+    const service = new services[name](displayName, subtype);
+
+    // assert
+    assert.deepStrictEqual({ displayName: service.displayName, subtype: service.subtype, uuid: service.UUID }, { displayName, subtype, uuid });
+  });
+
+  test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
+    // arrange
+    const services = createCustomServices(hapNamespace());
+
+    // act
+    const typeUuid = services[name].UUID;
 
     // assert
     assert.deepStrictEqual(
-      names,
-      SERVICES.map((expectation) => expectation.name),
+      { typeUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
+      { typeUuid: uuid, shape: true, appleNamespace: false },
     );
   });
 
-  for (const { name, displayName, subtype, uuid, required, optional } of SERVICES) {
-    test(`carries the exact vendor facts ${name} always reports as required characteristics`, () => {
-      // arrange
-      const services = createCustomServices(hapNamespace());
-
-      // act
-      const service = new services[name](displayName, subtype);
-
-      // assert
-      assert.deepStrictEqual(displayNamesOf(service.characteristics), required);
-    });
-
-    test(`declares the ${name}-specific facts, then the three shared characteristics, as optional`, () => {
-      // arrange
-      const services = createCustomServices(hapNamespace());
-
-      // act
-      const service = new services[name](displayName, subtype);
-
-      // assert
-      assert.deepStrictEqual(displayNamesOf(service.optionalCharacteristics), optional);
-    });
-
-    test(`keeps the display name and the subtype ${name} is constructed with`, () => {
-      // arrange
-      const services = createCustomServices(hapNamespace());
-
-      // act
-      const service = new services[name](displayName, subtype);
-
-      // assert
-      assert.deepStrictEqual({ displayName: service.displayName, subtype: service.subtype, uuid: service.UUID }, { displayName, subtype, uuid });
-    });
-
-    test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
-      // arrange
-      const services = createCustomServices(hapNamespace());
-
-      // act
-      const typeUuid = services[name].UUID;
-
-      // assert
-      assert.deepStrictEqual(
-        { typeUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
-        { typeUuid: uuid, shape: true, appleNamespace: false },
-      );
-    });
-
-    test(`names no ${name} characteristic after diagnostics or filter maintenance`, () => {
-      // arrange
-      const services = createCustomServices(hapNamespace());
-
-      // act
-      const named = characteristicNamesOf(new services[name](displayName, subtype)).filter((characteristicName) =>
-        FORBIDDEN_NAME_WORDS.some((word) => characteristicName.includes(word)),
-      );
-
-      // assert
-      assert.deepStrictEqual(named, []);
-    });
-  }
-
-  test('carries both pumps on one service class, each under its own subtype', () => {
+  test(`names no ${name} characteristic after diagnostics or filter maintenance`, () => {
     // arrange
-    const hap = hapNamespace();
-    const { PumpRunning, PumpFuseBlown } = createCustomCharacteristics(hap);
-    const { PumpService } = createCustomServices(hap);
+    const services = createCustomServices(hapNamespace());
 
     // act
-    const pumps = [new PumpService('Primary Pump', 'primary-pump'), new PumpService('Backup Pump', 'backup-pump')];
-
-    // assert
-    assert.deepStrictEqual(
-      pumps.map((pump) => ({ subtype: pump.subtype, running: pump.testCharacteristic(PumpRunning), fuseBlown: pump.testCharacteristic(PumpFuseBlown) })),
-      [
-        { subtype: 'primary-pump', running: true, fuseBlown: false },
-        { subtype: 'backup-pump', running: true, fuseBlown: false },
-      ],
+    const named = characteristicNamesOf(new services[name](displayName, subtype)).filter((characteristicName) =>
+      FORBIDDEN_NAME_WORDS.some((word) => characteristicName.includes(word)),
     );
-  });
-
-  // The record values come from the plugin's own observation rather than from the `pump` scope the
-  // row publishes from, so a record characteristic declared *required* would be constructed the
-  // moment the row published its pump boolean and left at HAP's format default -- presenting a
-  // count of zero and an empty observation start as fact (CTRL-01, D-009, SAFE-08).
-  test('declares every pump record optional, so none is constructed before a record writes it', () => {
-    // arrange
-    const hap = hapNamespace();
-    const declared: Readonly<Record<string, CharacteristicClass>> = { ...createCustomCharacteristics(hap) };
-    const { PumpService } = createCustomServices(hap);
-
-    // act
-    const pump = new PumpService('Backup Pump', 'backup-pump');
 
     // assert
-    assert.deepStrictEqual(
-      RECORD_CHARACTERISTIC_NAMES.map((key) => {
-        const record = declared[key];
-
-        return {
-          key,
-          constructed: record !== undefined && pump.testCharacteristic(record),
-          declaredOptional: record !== undefined && pump.optionalCharacteristics.some((optional) => optional.UUID === record.UUID),
-        };
-      }),
-      RECORD_CHARACTERISTIC_NAMES.map((key) => ({ key, constructed: false, declaredOptional: true })),
-    );
+    assert.deepStrictEqual(named, []);
   });
+}
 
-  test('identifies every vendor-defined service distinctly by its published identifier', () => {
-    // arrange
-    const services: Readonly<Record<string, { readonly UUID: string }>> = { ...createCustomServices(hapNamespace()) };
+test('carries both pumps on one service class, each under its own subtype', () => {
+  // arrange
+  const hap = hapNamespace();
+  const { PumpRunning, PumpFuseBlown } = createCustomCharacteristics(hap);
+  const { PumpService } = createCustomServices(hap);
 
-    // act
-    const identifiers = new Map(Object.entries(services).map(([name, service]): [string, string] => [name, service.UUID]));
+  // act
+  const pumps = [new PumpService('Primary Pump', 'primary-pump'), new PumpService('Backup Pump', 'backup-pump')];
 
-    // assert
-    assert.deepStrictEqual(identifiers, new Map(SERVICES.map(({ name, uuid }): [string, string] => [name, uuid])));
-  });
+  // assert
+  assert.deepStrictEqual(
+    pumps.map((pump) => ({ subtype: pump.subtype, running: pump.testCharacteristic(PumpRunning), fuseBlown: pump.testCharacteristic(PumpFuseBlown) })),
+    [
+      { subtype: 'primary-pump', running: true, fuseBlown: false },
+      { subtype: 'backup-pump', running: true, fuseBlown: false },
+    ],
+  );
+});
 
-  // The table above pins the service identifiers, and the characteristic test pins its own. This case
-  // proves that no identifier repeats across the two factories.
-  test('gives every published type of either factory its own identifier', () => {
-    // arrange
-    const hap = hapNamespace();
-    const published = publishedTypesOf({ ...createCustomCharacteristics(hap), ...createCustomServices(hap) });
+// The record values come from the plugin's own observation rather than from the `pump` scope the
+// row publishes from, so a record characteristic declared *required* would be constructed the
+// moment the row published its pump boolean and left at HAP's format default -- presenting a
+// count of zero and an empty observation start as fact (CTRL-01, D-009, SAFE-08).
+test('declares every pump record optional, so none is constructed before a record writes it', () => {
+  // arrange
+  const hap = hapNamespace();
+  const declared: Readonly<Record<string, CharacteristicClass>> = { ...createCustomCharacteristics(hap) };
+  const { PumpService } = createCustomServices(hap);
 
-    // act
-    const repeated = published
-      .map((publishedClass) => publishedClass.UUID)
-      .filter((identifier, index, identifiers) => identifiers.indexOf(identifier) !== index);
+  // act
+  const pump = new PumpService('Backup Pump', 'backup-pump');
 
-    // assert
-    assert.deepStrictEqual(repeated, []);
-  });
+  // assert
+  assert.deepStrictEqual(
+    RECORD_CHARACTERISTIC_NAMES.map((key) => {
+      const record = declared[key];
+
+      return {
+        key,
+        constructed: record !== undefined && pump.testCharacteristic(record),
+        declaredOptional: record !== undefined && pump.optionalCharacteristics.some((optional) => optional.UUID === record.UUID),
+      };
+    }),
+    RECORD_CHARACTERISTIC_NAMES.map((key) => ({ key, constructed: false, declaredOptional: true })),
+  );
+});
+
+test('identifies every vendor-defined service distinctly by its published identifier', () => {
+  // arrange
+  const services: Readonly<Record<string, { readonly UUID: string }>> = { ...createCustomServices(hapNamespace()) };
+
+  // act
+  const identifiers = new Map(Object.entries(services).map(([name, service]): [string, string] => [name, service.UUID]));
+
+  // assert
+  assert.deepStrictEqual(identifiers, new Map(SERVICES.map(({ name, uuid }): [string, string] => [name, uuid])));
+});
+
+// The table above pins the service identifiers, and the characteristic test pins its own. This case
+// proves that no identifier repeats across the two factories.
+test('gives every published type of either factory its own identifier', () => {
+  // arrange
+  const hap = hapNamespace();
+  const published = publishedTypesOf({ ...createCustomCharacteristics(hap), ...createCustomServices(hap) });
+
+  // act
+  const repeated = published.map((publishedClass) => publishedClass.UUID).filter((identifier, index, identifiers) => identifiers.indexOf(identifier) !== index);
+
+  // assert
+  assert.deepStrictEqual(repeated, []);
 });
