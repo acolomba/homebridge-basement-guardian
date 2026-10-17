@@ -55,17 +55,22 @@ interface ServiceExpectation {
   name: keyof CustomServices;
   displayName: string;
   subtype: string;
+  uuid: string;
   required: readonly string[];
   optional: readonly string[];
 }
 
 // The whole declared set, in the order the factory answers it. `Name` leads every required list
 // because a service constructed with a display name carries one, exactly as the real HAP does.
+// Each identifier is copied by hand from the published declaration rather than imported, because a
+// cached accessory finds its services by these exact strings: a swapped, regenerated, or per-start
+// identifier must fail here (D-015).
 const SERVICES: readonly ServiceExpectation[] = [
   {
     name: 'SumpPitService',
     displayName: 'Sump Pit Level',
     subtype: 'sump-pit-level',
+    uuid: 'ed31d704-44c8-4f20-9de0-6f29b33ef607',
     required: ['Name', 'Water Level', 'Raw Water Level Code'],
     optional: ['Water Sensor Fault Reported', STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
@@ -73,6 +78,7 @@ const SERVICES: readonly ServiceExpectation[] = [
     name: 'PumpService',
     displayName: 'Primary Pump',
     subtype: 'primary-pump',
+    uuid: '523f059e-deaa-4674-bbb2-980f9f7da7ec',
     required: ['Name', 'Pump Running'],
     optional: [
       'Pump Fault',
@@ -90,6 +96,7 @@ const SERVICES: readonly ServiceExpectation[] = [
     name: 'SumpMainsPowerService',
     displayName: 'Sump Mains Power',
     subtype: 'sump-mains-power',
+    uuid: 'fbb41424-0697-4ebe-ba89-7ba8ea254623',
     required: ['Name', 'Mains Power Present'],
     optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
@@ -97,6 +104,7 @@ const SERVICES: readonly ServiceExpectation[] = [
     name: 'BackupBatteryService',
     displayName: 'Backup Battery',
     subtype: 'backup-battery',
+    uuid: 'eb139c1e-aa1d-4318-bee9-60a338d99686',
     required: ['Name', 'Battery Charging', 'Battery Voltage Low', 'Battery Health Code', 'Protection Hours Code'],
     optional: [STATUS_ACTIVE_NAME, STATUS_FAULT_NAME, CONFIGURED_NAME],
   },
@@ -135,7 +143,7 @@ describe('createCustomServices', () => {
     );
   });
 
-  for (const { name, displayName, subtype, required, optional } of SERVICES) {
+  for (const { name, displayName, subtype, uuid, required, optional } of SERVICES) {
     test(`carries the exact vendor facts ${name} always reports as required characteristics`, () => {
       // arrange
       const services = createCustomServices(hapNamespace());
@@ -166,10 +174,7 @@ describe('createCustomServices', () => {
       const service = new services[name](displayName, subtype);
 
       // assert
-      assert.deepStrictEqual(
-        { displayName: service.displayName, subtype: service.subtype, uuid: service.UUID },
-        { displayName, subtype, uuid: services[name].UUID },
-      );
+      assert.deepStrictEqual({ displayName: service.displayName, subtype: service.subtype, uuid: service.UUID }, { displayName, subtype, uuid });
     });
 
     test(`identifies ${name} with a fixed v4 identifier outside Apple's namespace`, () => {
@@ -177,22 +182,13 @@ describe('createCustomServices', () => {
       const services = createCustomServices(hapNamespace());
 
       // act
-      const uuid = services[name].UUID;
+      const typeUuid = services[name].UUID;
 
       // assert
       assert.deepStrictEqual(
-        { shape: RANDOM_V4_UUID.test(uuid), appleNamespace: uuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
-        { shape: true, appleNamespace: false },
+        { typeUuid, shape: RANDOM_V4_UUID.test(typeUuid), appleNamespace: typeUuid.endsWith(APPLE_BASE_UUID_SUFFIX) },
+        { typeUuid: uuid, shape: true, appleNamespace: false },
       );
-    });
-
-    test(`answers the same ${name} identifier to every caller`, () => {
-      // arrange
-      const first = createCustomServices(hapNamespace());
-      const second = createCustomServices(hapNamespace());
-
-      // act & assert
-      assert.strictEqual(first[name].UUID, second[name].UUID);
     });
 
     test(`names no ${name} characteristic after diagnostics or filter maintenance`, () => {
@@ -256,15 +252,30 @@ describe('createCustomServices', () => {
     );
   });
 
+  test('identifies every vendor-defined service distinctly by its published identifier', () => {
+    // arrange
+    const services: Readonly<Record<string, { readonly UUID: string }>> = { ...createCustomServices(hapNamespace()) };
+
+    // act
+    const identifiers = new Map(Object.entries(services).map(([name, service]): [string, string] => [name, service.UUID]));
+
+    // assert
+    assert.deepStrictEqual(identifiers, new Map(SERVICES.map(({ name, uuid }): [string, string] => [name, uuid])));
+  });
+
+  // The table above pins the service identifiers, and the characteristic test pins its own. This case
+  // proves that no identifier repeats across the two factories.
   test('gives every published type of either factory its own identifier', () => {
     // arrange
     const hap = hapNamespace();
     const published = publishedTypesOf({ ...createCustomCharacteristics(hap), ...createCustomServices(hap) });
 
     // act
-    const uuids = new Set(published.map((publishedClass) => publishedClass.UUID));
+    const repeated = published
+      .map((publishedClass) => publishedClass.UUID)
+      .filter((identifier, index, identifiers) => identifiers.indexOf(identifier) !== index);
 
     // assert
-    assert.strictEqual(uuids.size, published.length);
+    assert.deepStrictEqual(repeated, []);
   });
 });
