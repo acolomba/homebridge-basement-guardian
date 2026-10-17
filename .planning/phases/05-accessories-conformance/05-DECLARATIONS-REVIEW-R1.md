@@ -170,3 +170,15 @@ CONSTANT_CASE `MUTE` declaration under `src/`.
 Counter (D-03 as amended, D-18): opening 24, fixed 24, rejected 0, new 1, reopened 0, closing 1.
 The round has open findings, closing (1) is below opening (24), no ID reopened and the round is
 below 10, so the result is `continue`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-DECLARATIONS-025 | `test/accessories/alarmMute.test.ts` | Node v26.12.0: `node_modules/.bin/fallow guard test/accessories/alarmMute.test.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/alarmMute.test.js` exit 0 (3 tests, 0 failures); `npm run test:coverage:direct -- src/accessories/alarmMute.ts test/accessories/alarmMute.test.ts` exit 0 (no output from the selector); `node_modules/.bin/eslint test/accessories/alarmMute.test.ts --max-warnings=0` exit 0; `node_modules/.bin/fallow audit --base 053599a80557aa513b2d354833196408b92a4438 --format json --quiet --explain` exit 0, verdict pass | see ## Assertion controls | the filter keeps every declared CONSTANT_CASE name that contains `MUTE` (`.some(([, name = '']) => name.includes('MUTE'))`), so the `ALARM` condition is gone; the `CONSTANT_DECLARATION` comment says so; the title, `SOURCE_MODULE_FLOOR = 43` and the expected `{ declaring: ['accessories/alarmMute.ts'], readsTheSourceTree: true }` are unchanged |
+
+## Assertion controls
+
+| ID | Control | Plausible wrong behavior | Mutation | Blob before | Failing assertion of the named case | Blob after, restoration |
+| --- | --- | --- | --- | --- | --- | --- |
+| CR-05-DECLARATIONS-025 | A | A second module under `src/` declares its own mute duration, a name without `ALARM` | With the fix in the working tree (`test/accessories/alarmMute.test.ts` blob `06323345b87bbb1ab890e2eb647dec293d9267e2`), a temporary untracked `src/accessories/temporaryMuteControl.ts` holding `export const MUTE_DURATION_MS = 300_000;` (blob `eb81c2d0850202fbd07bd23940ffa666c7b56d71`); `npm run build:test` exit 0. Before the edit, the same planted file and build let the case pass (exit 0, 1 test, 0 failures) on the committed blob `6db988bc6a136f896cdb1c6d8eb4ff9755054d4b`. A `node -e` run of the old and new predicates on `export const MUTE_DURATION_MS = 300_000;` gave `oldFlagged: false`, `fixedFlagged: true` | `git status --porcelain -- src` empty; `src/accessories/alarmMute.ts` `d635ddde5e0ad1396941ba54e078b37a511697a0` | `node --test --test-name-pattern='is the only module under src that declares a constant governing alarm mute' dist-test/test/accessories/alarmMute.test.js` exit 1 (1 test, 1 failure): `AssertionError [ERR_ASSERTION]`, actual `{ declaring: [ 'accessories/alarmMute.ts', 'accessories/temporaryMuteControl.ts' ], readsTheSourceTree: true }`, expected `{ declaring: [ 'accessories/alarmMute.ts' ], readsTheSourceTree: true }` | File deleted; `git status --porcelain -- src` empty; `src/accessories/alarmMute.ts` `d635ddde5e0ad1396941ba54e078b37a511697a0`, equal to the recorded blob; `git diff --exit-code -- src` exit 0; rebuilt (exit 0), the case passes (exit 0) |

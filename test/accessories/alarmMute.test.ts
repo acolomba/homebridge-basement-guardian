@@ -23,8 +23,8 @@ const PROVISIONAL_PREFIX = 'PROVISIONAL_';
 const SOURCE_MODULE_FLOOR = 43;
 
 // Any declaration of a CONSTANT_CASE name after `const`, `let`, `var`, `enum` or `readonly`, with
-// the name captured. A reference to a constant does not match. The scan keeps only the names that
-// contain both `ALARM` and `MUTE`.
+// the name captured. A reference to a constant does not match. The scan keeps every name that
+// contains `MUTE`, `UNMUTE` included, because alarm mute is the only mute in the domain.
 const CONSTANT_DECLARATION = /(?:const|let|var|enum|readonly)\s+([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*)\b/g;
 
 // One `.ts` module under `src/`, by its path relative to `src/`, with its source text.
@@ -76,7 +76,7 @@ test('is the only module under src that declares a constant governing alarm mute
 
   // act
   const declaring = modules
-    .filter((module) => [...module.source.matchAll(CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('ALARM') && name.includes('MUTE')))
+    .filter((module) => [...module.source.matchAll(CONSTANT_DECLARATION)].some(([, name = '']) => name.includes('MUTE')))
     .map((module) => module.path);
 
   // assert
