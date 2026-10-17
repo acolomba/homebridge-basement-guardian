@@ -1065,12 +1065,34 @@ function registerAbsentStateCases(): void {
     { label: 'a decoded state that is not a record', decoded: null },
     { label: 'a decoded state that is an array', decoded: [] },
     { label: 'a decoded state carrying no group at all', decoded: {} },
-    { label: 'a group that did not decode', decoded: { water: undefined, pump: undefined, power: undefined, fault: undefined } },
-    { label: 'a group that is not a record', decoded: { water: 'absent', pump: 'absent', power: 'absent', fault: 'absent' } },
-    { label: 'a group carrying none of its facts', decoded: { water: {}, pump: {}, power: {}, fault: {} } },
+    {
+      label: 'a group that did not decode',
+      decoded: {
+        water: undefined,
+        pump: undefined,
+        power: undefined,
+        battery: undefined,
+        fault: undefined,
+        'self-test': undefined,
+        'alarm-mute': undefined,
+      },
+    },
+    {
+      label: 'a group that is not a record',
+      decoded: { water: 'absent', pump: 'absent', power: 'absent', battery: 'absent', fault: 'absent', 'self-test': 'absent', 'alarm-mute': 'absent' },
+    },
+    { label: 'a group carrying none of its facts', decoded: { water: {}, pump: {}, power: {}, battery: {}, fault: {}, 'self-test': {}, 'alarm-mute': {} } },
     {
       label: 'facts of the wrong type',
-      decoded: { water: { levelCode: '1', levelPercent: '20', flooded: 'no' }, pump: { primaryRunning: 'yes' }, power: { mainsPresent: 'yes' } },
+      decoded: {
+        water: { levelCode: '1', levelPercent: '20', flooded: 'no' },
+        pump: { primaryRunning: 'yes', backupRunning: 'no' },
+        power: { mainsPresent: 'yes' },
+        battery: { low: 'no', levelPercent: '100', charging: 'yes', voltageLow: 'no', healthCode: '8', protectionHoursCode: '8' },
+        fault: { primaryPumpFault: 'no', backupPumpFault: 'no', backupPumpFuseBlown: 'no', waterSensorFault: 'no', controllerLinkPresent: 'yes' },
+        'self-test': { running: 'no' },
+        'alarm-mute': { muted: 'no' },
+      },
     },
   ]) {
     test(`projects nothing on any decoded-state row from ${label}`, () => {
