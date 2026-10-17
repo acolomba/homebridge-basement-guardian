@@ -564,5 +564,5 @@ result `clean`; DECLARATIONS closes at correction round 4.
 | Direct coverage | Merged LCOV: coverage/direct.lcov (43 pairs) |
 | Stderr | `Random order using seed: 312850` |
 
-DECLARATIONS is clean at correction round 4: 28 findings (6 BLOCKER, 22 WARNING), all fixed in
+DECLARATIONS is clean at correction round 4: 28 findings (7 BLOCKER, 21 WARNING), all fixed in
 their own commits, none rejected or reopened; one maintainer-resolved D-03 stop at round 2.
