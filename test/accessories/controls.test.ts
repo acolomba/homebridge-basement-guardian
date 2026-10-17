@@ -981,11 +981,12 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // A row publishes `On` only while it can vouch for the reported value, so a refusal answered while
-  // the control's own scope is untrustworthy would leave the status standing. The push falls back to
-  // the value the characteristic already carries, which clears the status and states nothing new.
+  // With no reported value the row publishes no `On`: the field did not decode, or its scope is
+  // withdrawn for a doubtful reason. A republish alone would then leave the status standing, so the
+  // push falls back to the value the characteristic already carries, which clears the status and
+  // states nothing new.
   for (const held of [true, false]) {
-    test(`clears the refusal status from the held value of ${String(held)} when no reported value can be vouched for`, async () => {
+    test(`clears the refusal status from the held value of ${String(held)} when there is no reported value`, async () => {
       // arrange
       const { timers, deferrals } = recordingTimers();
       const { service } = boundSwitch({ timers }, () => undefined);
@@ -1210,10 +1211,9 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // The quiet live path and no route at all. A plugin with no route to send on cannot be helped by a
-  // channel to hear back on, so the transport rule is evaluated first. This case stops an edit that
-  // moves the quiet-live-path rule above the transport rule from changing the answer silently (D-07,
-  // D-08).
+  // The quiet live path and no route at all. The transport rule is evaluated first, because a plugin
+  // with no route at all is the more fundamental truth. This case stops an edit that moves the
+  // quiet-live-path rule above the transport rule from changing the answer silently (D-07, D-08).
   test('names the missing transport alone when the plugin has neither a route to send on nor a live path to hear back on', async () => {
     // arrange
     const warnings: string[] = [];
@@ -1234,11 +1234,9 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
-  // The quiet live path and a missing state. Here the state genuinely has not decoded and the live
-  // path is also quiet, and the quiet path is named because it is the condition an owner can act on:
-  // a reported field that never decoded is a symptom of the same silence more often than a fault of
-  // its own. This case stops an edit that moves the quiet-live-path rule below the state rule (D-07,
-  // D-08, WR-02).
+  // The quiet live path and a missing reported value at once. The quiet path is named because it
+  // blocks a press of any capability, while the missing value blocks only this one. This case stops an
+  // edit that moves the quiet-live-path rule below the state rule (D-07, D-08, WR-02).
   test('names the quiet live connection alone when the reported field has also not decoded', async () => {
     // arrange
     const warnings: string[] = [];
