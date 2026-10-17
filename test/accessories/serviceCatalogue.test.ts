@@ -962,6 +962,72 @@ function registerBatteryCases(): void {
     );
   });
 
+  // The battery groups below break the `D-07` rule on purpose: each decoded verdict is the opposite
+  // of the verdict its health code and low voltage give. A row that derived the verdict from those
+  // codes would publish the other status.
+  for (const { healthCode, voltageLow, low, status } of [
+    { healthCode: 8, voltageLow: false, low: true, status: BATTERY_LEVEL_LOW },
+    { healthCode: 1, voltageLow: true, low: false, status: BATTERY_LEVEL_NORMAL },
+  ]) {
+    test(`reports a decoded low verdict ${String(low)}, not one derived from health code ${String(healthCode)} and low voltage ${String(voltageLow)}`, () => {
+      // arrange
+      const hap = hapNamespace();
+      const { BatteryCharging, BatteryVoltageLow, BatteryHealthCode, ProtectionHoursCode } = createCustomCharacteristics(hap);
+      const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ healthCode, voltageLow, low }) }) });
+
+      // act
+      const projected = {
+        battery: summarise(rowNamed(hap, 'Backup Battery Level').project(input)),
+        facts: summarise(rowNamed(hap, 'Backup Battery').project(input)),
+      };
+
+      // assert
+      assert.deepStrictEqual(projected, {
+        battery: [
+          { uuid: hap.Characteristic.StatusLowBattery.UUID, value: status },
+          { uuid: hap.Characteristic.BatteryLevel.UUID, value: 100 },
+          { uuid: hap.Characteristic.ChargingState.UUID, value: CHARGING },
+        ],
+        facts: [
+          { uuid: BatteryCharging.UUID, value: true },
+          { uuid: BatteryVoltageLow.UUID, value: voltageLow },
+          { uuid: BatteryHealthCode.UUID, value: healthCode },
+          { uuid: ProtectionHoursCode.UUID, value: 8 },
+        ],
+      });
+    });
+  }
+
+  // The battery group below sits on no protection band: code 8 is the 100 per cent band, but the
+  // family reported 25 per cent. A row that derived the level from the code would publish 100.
+  test('publishes the decoded battery level as reported rather than the band of its protection hours code', () => {
+    // arrange
+    const hap = hapNamespace();
+    const { BatteryCharging, BatteryVoltageLow, BatteryHealthCode, ProtectionHoursCode } = createCustomCharacteristics(hap);
+    const input = projectionInput({ decoded: decodedState({ battery: batteryGroup({ protectionHoursCode: 8, levelPercent: 25 }) }) });
+
+    // act
+    const projected = {
+      battery: summarise(rowNamed(hap, 'Backup Battery Level').project(input)),
+      facts: summarise(rowNamed(hap, 'Backup Battery').project(input)),
+    };
+
+    // assert
+    assert.deepStrictEqual(projected, {
+      battery: [
+        { uuid: hap.Characteristic.StatusLowBattery.UUID, value: BATTERY_LEVEL_NORMAL },
+        { uuid: hap.Characteristic.BatteryLevel.UUID, value: 25 },
+        { uuid: hap.Characteristic.ChargingState.UUID, value: CHARGING },
+      ],
+      facts: [
+        { uuid: BatteryCharging.UUID, value: true },
+        { uuid: BatteryVoltageLow.UUID, value: false },
+        { uuid: BatteryHealthCode.UUID, value: 8 },
+        { uuid: ProtectionHoursCode.UUID, value: 8 },
+      ],
+    });
+  });
+
   for (const { charging, chargingState } of [
     { charging: true, chargingState: CHARGING },
     { charging: false, chargingState: NOT_CHARGING },
