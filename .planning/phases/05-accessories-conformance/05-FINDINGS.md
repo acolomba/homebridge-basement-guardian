@@ -267,3 +267,22 @@ LEDGER_VIOLATION L6: DECLARATIONS round 0: report 05-DECLARATIONS-REVIEW.md does
 LEDGER_VIOLATION L6: DECLARATIONS round 1: report 05-DECLARATIONS-REVIEW-R1.md does not exist under .planning/phases/05-accessories-conformance
 exit=1
 ```
+
+#### Baseline gate (task 05-01-03)
+
+| Field | Value |
+| --- | --- |
+| Command | `npm run check` |
+| Raw exit | 0 |
+| HEAD | `97e80a58ba8c271fbf295162d5016a81e7074ee8` (the protocol commit; `git status --porcelain` empty before the run) |
+| Runtime | Node v26.12.0, npm 11.20.0 |
+| UTC start | 2026-10-17T04:29:02Z |
+| UTC end | 2026-10-17T04:30:01Z |
+| Static checks | passed typecheck (3.5 s); passed lint (2.7 s); passed lint:workflows (0.4 s); passed fallow (3.5 s); passed format:check (0.8 s); passed test:corresponding (0.6 s) |
+| Cucumber | 104 scenarios (104 passed); 1156 steps (1156 passed); 0m 24.198s (0m 24.87s executing your code) |
+| Direct coverage | Merged LCOV: coverage/direct.lcov (43 pairs) |
+| Stderr | `Random order using seed: 200367` |
+
+This is a fresh run in this session; no earlier gate is reused. The stages are static checks,
+`build:test`, `test:unpaired:compiled`, Cucumber and `test:coverage:direct:compiled --all`, and
+each reached its summary line above.

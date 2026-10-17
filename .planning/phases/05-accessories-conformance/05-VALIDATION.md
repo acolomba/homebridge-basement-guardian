@@ -5,7 +5,7 @@ slug: "accessories-conformance"
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: "2026-10-16"
 ---
 
@@ -45,8 +45,8 @@ created: "2026-10-16"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| W0 baseline | coordinator | 0 | ACC-01 | — | N/A | full | `npm run check` | ✅ | ⬜ pending |
-| W0 ledger tracer | coordinator | 0 | ACC-01 (PROC-01/02 applied) | — | Ledger counts match reports and Git | ledger tracer | authored in the coordinator plan | ❌ W0 | ⬜ pending |
+| W0 baseline | coordinator | 0 | ACC-01 | — | N/A | full | `npm run check` | ✅ | ✅ green (`05-FINDINGS.md` `### 05-01`) |
+| W0 ledger tracer | coordinator | 0 | ACC-01 (PROC-01/02 applied) | — | Ledger counts match reports and Git | ledger tracer | `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs` | ✅ | ✅ green (`05-FINDINGS.md` `### 05-01`) |
 | DECLARATIONS | batch | per plan | ACC-01 | per plan | N/A | unit + coverage | PAIR commands for alarmMute, services, customCharacteristics, customServices | ✅ | ⬜ pending |
 | CATALOGUE | batch | per plan | ACC-01 | per plan | Rows withhold doubtful values; no default projection | unit + coverage | `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` | ✅ | ⬜ pending |
 | CONTROLS | batch | per plan | ACC-01 | per plan | Refusal order and status unchanged; one attempt; no secrets in logs | unit + coverage | `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` | ✅ | ⬜ pending |
@@ -62,10 +62,10 @@ created: "2026-10-16"
 
 ## Wave 0 Requirements
 
-- [ ] `05-REVIEW-PROTOCOL.md` — batches, roles, rulebook authority (`.agents/skills/` over `.claude/rules/`), D-03 arithmetic, five-path cause budget, runtime paths
-- [ ] `05-FINDINGS.md` — 24-path inventory, CR-05-CONTROLS-001…007 at current locations, S-05 candidates as unaccepted leads
-- [ ] Ledger tracer predicate — a concrete command written in the coordinator plan
-- [ ] Fresh baseline `npm run check` — the last full gate ran in another session and inputs changed since
+- [x] `05-REVIEW-PROTOCOL.md` — batches, roles, rulebook authority (`.agents/skills/` over `.claude/rules/`), D-03 arithmetic, five-path cause budget, runtime paths
+- [x] `05-FINDINGS.md` — 24-path inventory, CR-05-CONTROLS-001…007 at current locations, S-05 candidates as unaccepted leads
+- [x] Ledger tracer predicate — a concrete command written in the coordinator plan
+- [x] Fresh baseline `npm run check` — the last full gate ran in another session and inputs changed since
 
 *No framework install is needed.*
 
