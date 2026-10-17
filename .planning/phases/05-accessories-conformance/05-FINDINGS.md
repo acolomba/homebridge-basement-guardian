@@ -817,3 +817,26 @@ set {024} and the 23 earlier fixed IDs. Terminal result: `05-CATALOGUE-REVIEW-R6
 typecheck, ESLint, build, owner (212 tests, 0 failures), pair command and batch header check all
 exited 0 on Node v26.12.0. Stop rule applied first: opening 1, fixed 1, rejected 0, new 0,
 reopened 0, closing 0, result `clean`; CATALOGUE closes at correction round 6.
+
+#### CATALOGUE closure and wave gate (task 05-03-03)
+
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch CATALOGUE`:
+  exit 0, `ACCESSORIES_HEADERS_OK files=2`.
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --require-clean CATALOGUE`:
+  exit 0, `ACCESSORIES_LEDGER_TRACER_OK inventory=24 findings=59 open=0 rounds=12 clean=CATALOGUE`.
+
+| Field | Value |
+| --- | --- |
+| Command | `npm run check` |
+| Raw exit | 0 |
+| HEAD | `d9ddb347909abef1558cae8c66b8f8d097daf5f6` (`git status --porcelain` empty before the run) |
+| Runtime | Node v26.12.0, npm 11.20.0 |
+| UTC start | 2026-10-17T17:15:51Z |
+| UTC end | 2026-10-17T17:16:47Z |
+| Static checks | passed typecheck (2.7 s); passed lint (1.4 s); passed lint:workflows (0.3 s); passed fallow (3.1 s); passed format:check (0.8 s); passed test:corresponding (0.6 s) |
+| Cucumber | 104 scenarios (104 passed); 1156 steps (1156 passed) |
+| Direct coverage | Merged LCOV: coverage/direct.lcov (43 pairs) |
+| Stderr | `Random order using seed: 714783` |
+
+CATALOGUE is clean at correction round 6: 24 findings (11 BLOCKER, 13 WARNING), all fixed, none
+rejected or reopened; two maintainer-resolved D-03 stops (rounds 2 and 3).
