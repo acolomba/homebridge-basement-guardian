@@ -86,13 +86,10 @@ export interface ControlBinderOptions {
   /**
    * Whether the plugin currently has a proven way to reach the vendor at all.
    *
-   * This is a fact about the plugin, not about the device, and it is one fact
-   * of the gate: a press can be impossible because the plugin cannot vouch for
-   * what the device is doing or because it has no route to send on, and the two
-   * fail independently. A fresh live report can arrive while REST
-   * authentication has not completed, and a poll can keep succeeding while the
-   * live path has gone quiet, so a single readiness answer would tell a user
-   * diagnosing a refused press the wrong thing half the time.
+   * This is a fact about the plugin, not about the device. The route can be
+   * missing while the plugin still holds a reported value for the capability,
+   * so the rule that reads this fact names its own cause, and a user diagnosing
+   * a press it refuses learns that the plugin had no route to send on.
    *
    * The accessory answers this from the account-wide monitoring trust it also
    * publishes its rows from, and it answers `reported` below through the same
@@ -110,12 +107,12 @@ export interface ControlBinderOptions {
   /**
    * Whether the live path can currently carry the device's own confirmation.
    *
-   * A third fact rather than a shade of the other two, because all three fail
-   * independently. The plugin can hold a route to send on and a freshly reported
-   * value to act from and still be unable to see the answer: a confirmation
-   * travels on the live path, and the window a request waits in is shorter than
-   * a poll interval, so while that path is quiet the earliest confirmation is a
-   * poll the configuration may put an hour away.
+   * A fact of its own rather than a shade of the route or the reported value.
+   * The plugin can hold a route to send on and a freshly reported value to act
+   * from and still be unable to see the answer: a confirmation travels on the
+   * live path, and the window a request waits in is shorter than a poll
+   * interval, so while that path is quiet the earliest confirmation is a poll
+   * the configuration may put an hour away.
    *
    * A press accepted then would reach a real sump pump and expire with a warning
    * naming a device failure that did not happen, and the duplicate rule below
@@ -263,13 +260,11 @@ function hasNoCommandTransport(request: ControlRequest): boolean {
   return !request.transportReady;
 }
 
-// The live path carrying the device's own confirmation has gone quiet, while the
-// plugin still has a route to send on and a value the poll delivered. Nothing
-// the plugin holds is missing here; what is missing is the channel an answer
-// comes back on, and the wait for one closes long before the next poll could
-// carry it. Sending anyway would operate a real sump pump and then warn that the
-// device never confirmed it, for a condition on this side of the connection
-// (RES-04, D-07, D-08, WR-02).
+// The live path carrying the device's own confirmation has gone quiet, and the
+// wait for a confirmation closes long before the next poll could carry it.
+// Sending anyway would operate a real sump pump and then warn that the device
+// never confirmed it, for a condition on this side of the connection (RES-04,
+// D-07, D-08, WR-02).
 function cannotSeeAConfirmation(request: ControlRequest): boolean {
   return !request.confirmationObservable;
 }
@@ -334,13 +329,14 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 // The rules in the order they are evaluated. The first that applies answers the
 // write; the rest are never consulted.
 //
-// The order of the three middle rules is a decision, not an accident. Any two of
-// them can hold at once, and then this order decides which cause the user is
-// told. Naming the missing state to someone who has no way to send anything is
-// the less actionable of the two truths -- there is nothing to do about a stale
-// reading while the route is down -- so the missing transport is named first. A
-// unit case pins that with both conditions set, because an unrelated edit that
-// reordered this table would otherwise change the user-facing cause silently.
+// The order of the transport, quiet-live-path and fresh-state rules is a
+// decision, not an accident. Any two of them can hold at once, and then this
+// order decides which cause the user is told. Naming the missing state to
+// someone who has no way to send anything is the less actionable of the two
+// truths -- there is nothing to do about a stale reading while the route is
+// down -- so the missing transport is named first. A unit case pins that with
+// both conditions set, because an unrelated edit that reordered this table
+// would otherwise change the user-facing cause silently.
 //
 // The quiet live path sits between them for the same reason read the other way.
 // A plugin with no route at all is the more fundamental truth and keeps its
@@ -400,16 +396,13 @@ function heldOn(hap: API['hap'], service: Service): CharacteristicValue {
 
 // The push that returns a refused characteristic's stored status to `0`.
 //
-// The republish re-asserts everything the control rows can currently vouch for.
-// The push after it closes the cases a republish cannot. A row publishes `On`
-// only while it can vouch for the reported value and while no request for it
-// waits. While a request waits, the push publishes the reported value, so the
-// Switch shows what the device said, not what was asked for (WR-02). While the
-// control's own scope is untrustworthy, there is no reported value to publish,
-// and without a push the status would stand and the Switch would stay
-// unreadable. The push then carries the value the characteristic already
-// serves, which states nothing new: HAP returns a stored status to `0` whatever
-// value it is given (D-04, D-014).
+// The republish re-asserts what the control rows can currently vouch for. A
+// row publishes `On` only while it can vouch for the reported value and while
+// no request for it waits, so the push after the republish clears the status
+// in the other cases. It publishes the reported value when there is one, so the
+// Switch shows what the device said (WR-02). With no reported value it carries
+// the value the characteristic already serves, which states nothing new: HAP
+// returns a stored status to `0` whatever value it is given (D-04, D-014).
 function clearRefusal(hap: API['hap'], service: Service, republish: () => void, reported: boolean | undefined): void {
   republish();
 

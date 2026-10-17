@@ -329,3 +329,9 @@ closing 2. The open count fell from 3 to 2 with no reopen in round 3, so the res
   overlap needs a branch for that overlap that pushes an invented value. No plausible change makes
   that branch.
 - **Repair order:** 037 (source comments), then 038 (test comment).
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-CONTROLS-037 | `src/accessories/controls.ts` | Node v26.12.0. `fallow guard src/accessories/controls.ts` 0; `npm run build:test` 0; `node --test dist-test/test/accessories/controls.test.js` 0 (tests 103, suites 2, pass 103, fail 0); `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` 0; `eslint src/accessories/controls.ts test/accessories/controls.test.ts --max-warnings=0` 0 (fresh cache); `fallow audit --base 4c143eb` 0, verdict pass | n/a (WARNING) | Comment lines only. `commandTransportReady` JSDoc: drops the two-fact split, both examples and "half the time"; keeps one true reason (the route can be missing while a reported value is held, so the rule names its own cause). `clearRefusal` note: states what `reported ?? heldOn(...)` pushes (the reported value when there is one, else the held value) and drops the waiting-request claim. Same class, same file: `liveConfirmationObservable` "A third fact rather than a shade of the other two, because all three fail independently" becomes "A fact of its own rather than a shade of the route or the reported value" (the gate reads more than three facts); `cannotSeeAConfirmation` drops "a value the poll delivered" and "Nothing the plugin holds is missing here" (the rule also answers with no reported value, as the owner case 'names the quiet live connection alone when the reported field has also not decoded' shows); the order note's "three middle rules" names the transport, quiet-live-path and fresh-state rules (they are rows 2-4 of 7), with its paragraph reflowed. |
