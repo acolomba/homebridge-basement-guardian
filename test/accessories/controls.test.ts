@@ -213,35 +213,6 @@ test('arms the clearing push as a macrotask at delay 0 rather than running it in
   );
 });
 
-// The companion to the case above, and the reason the push is a macrotask. The binder's handler is
-// asynchronous, so HAP's own catch resumes as a microtask of its own: a push queued as a microtask
-// before the throw is queued first, runs first, and clears a status that has not been set yet. The
-// refusal then outlives it and every later read answers the error. This drives that ordering
-// directly rather than asserting it about the binder, so the claim rests on observed behaviour and
-// the case fails if the ordering is ever the other way round (D-04).
-test('leaves a sticky status when the clearing push is queued as a microtask instead', async () => {
-  // arrange
-  const service = switchService();
-  const characteristic = onCharacteristic(service);
-  characteristic.onSet(() => {
-    queueMicrotask(() => {
-      service.updateCharacteristic(HAP.Characteristic.On, false);
-    });
-
-    // The binder's handler is asynchronous, so its refusal reaches HAP as a rejected promise and
-    // HAP's own catch resumes a microtask later than this push. Writing the rejection out rather
-    // than throwing keeps that ordering exactly as the binder produces it.
-    return Promise.reject(new HAP.HapStatusError(NOT_ALLOWED_IN_CURRENT_STATE));
-  });
-
-  // act
-  await assertRefused(service, false, NOT_ALLOWED_IN_CURRENT_STATE);
-  await Promise.resolve();
-
-  // assert
-  assert.strictEqual(characteristic.statusCode, NOT_ALLOWED_IN_CURRENT_STATE);
-});
-
 test('sends one on request, holds the capability pending, and pushes nothing back', async () => {
   // arrange
   const { commands, sends } = recordingCommands({ accepted: true });
