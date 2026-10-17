@@ -147,9 +147,11 @@ export interface ControlBinder {
   /**
    * Attaches the write handler to a Switch the catalogue already published.
    *
-   * Calling it again on the same service registers no second handler, because
-   * the accessory walks its whole catalogue on every update and HAP keeps only
-   * the last handler registered while warning about the ones before it.
+   * Calling it again on the same service registers no second handler. HAP keeps
+   * one set handler per characteristic, and a later `onSet` replaces the
+   * earlier one in that slot without any warning, so the guard is what keeps
+   * `bind` idempotent while the accessory walks its whole catalogue on every
+   * update.
    *
    * `reported` answers what the device itself last said about this capability,
    * or `undefined` when the scope owning it did not decode.
