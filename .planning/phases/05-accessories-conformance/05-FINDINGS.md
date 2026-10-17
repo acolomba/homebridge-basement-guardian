@@ -110,8 +110,8 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-013 | CATALOGUE | WARNING | .agents/skills/typescript-style/rules/comments.md | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:90-92, 1053` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:90-92, 1053` | gsd-code-reviewer round 0 | fixed |  | 7faf1c4c92 |  |
 | CR-05-CATALOGUE-014 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Test data | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:103-109, 130` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:103-109, 130` | gsd-code-reviewer round 0 | fixed |  | 2cec494041 |  |
 | CR-05-CATALOGUE-015 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Naming values | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | `ef7578f8c86c7f7b65adc3648cd7e404cfee7d12:test/accessories/serviceCatalogue.test.ts:318-753` | gsd-code-reviewer round 0 | fixed |  | e131aad3d9 |  |
-| CR-05-CATALOGUE-016 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); Data-driven cases | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | gsd-code-reviewer round 1 | open |  |  |  |
-| CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | open |  |  |  |
+| CR-05-CATALOGUE-016 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles); Data-driven cases | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:1606-1632` | gsd-code-reviewer round 1 | open |  | 1629e77f84 |  |
+| CR-05-CATALOGUE-017 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Data-driven cases (no conditional in the loop body) | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | `700ce9ac61885e50bfa39d9f0e0774f6372da749:test/accessories/serviceCatalogue.test.ts:478, 502, 524, 857, 883, 936, 974, 997, 1087, 1812` | gsd-code-reviewer round 1 candidate, accepted by coordinator triage | open |  | 1a5c9ffcb5 |  |
 
 ## Candidate leads
 
@@ -681,3 +681,15 @@ ESLint, build, owner (192 tests, 12 suites, 0 failures), pair command and batch 
 exited 0 on Node v26.12.0. Coordinator triage accepted 016 and accepted candidate 1 as
 CR-05-CATALOGUE-017 (conditionals in data-loop bodies, against the Data-driven cases rule). Stop
 rule: opening 15, fixed 15, rejected 0, new 2, reopened 0, closing 2, result `continue`.
+
+Dispatch 7 (CR-05-CATALOGUE-016, 017): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the catalogue test and the R1 report. Terminal result: two commits,
+`1629e77f84b1b4b9ef8141f4566fffdce556e4eb` (016: the second-scope loop split into two named cases,
+expected values kept) and `1a5c9ffcb5f2fe03614b8fa9d6aec1ccef37d836` (017: every data loop's
+expected value moved into its rows; no ternary left in any test-registering loop body; the
+remaining `===`/`!==` tokens select actual values in `.filter` callbacks). The owner keeps 192
+tests in 12 suites with 0 failures and an identical title set for 017. Guard, build, pair
+coverage, ESLint and `fallow audit --base ef7578f` (verdict pass) exited 0 on Node v26.12.0; both
+pre-steps passed on their first run and both hooks passed. Coordinator check: each commit lists
+only the test and the R1 report, `git diff f9b4b88..HEAD -- src features` is empty, the owner
+passes 192 tests with 0 failures, and `git status --porcelain` is empty.
