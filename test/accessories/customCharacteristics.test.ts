@@ -14,6 +14,7 @@ import { describe, test } from 'node:test';
 import { createFakeHap } from '../../features/lib/hap.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 
+import type { FakeCharacteristicProps, FakeHap } from '../../features/lib/hap.js';
 import type { CharacteristicClass, CustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import type { API } from 'homebridge';
 
@@ -195,8 +196,25 @@ const CHARACTERISTICS: readonly CharacteristicExpectation[] = [
 
 // The stand-in answers the members the plugin reads and nothing else, which no structural type can
 // express; the widening is what lets it stand where the plugin takes the real namespace.
+//
+// The stand-in's base characteristic starts every value at its format default, but the real HAP
+// base leaves `value` null, and each definition assigns its own default. So this namespace swaps
+// in a base that leaves `value` null, as the real one does. A vendor characteristic that does not
+// assign its own construction default then starts at null, and the "starts ..." cases fail.
 function hapNamespace(): API['hap'] {
-  return createFakeHap() as unknown as API['hap'];
+  const standIn = createFakeHap();
+
+  class NullValueCharacteristic extends standIn.Characteristic {
+    constructor(displayName: string, uuid: string, props: FakeCharacteristicProps) {
+      super(displayName, uuid, props);
+
+      this.value = null;
+    }
+  }
+
+  const namespace: FakeHap = { ...standIn, Characteristic: NullValueCharacteristic };
+
+  return namespace as unknown as API['hap'];
 }
 
 // The declared set as a plain lookup, so a characteristic is found by the key it is published under
@@ -321,8 +339,12 @@ describe('createCustomCharacteristics', () => {
 
   // A characteristic that starts outside its own declared domain hands HomeKit a code the plugin
   // itself says the vendor cannot send, from the moment the service carrying it is added.
-  for (const { name } of CHARACTERISTICS.filter((expectation) => expectation.format === 'uint8')) {
-    test(`starts ${name} at a value its own validValues admits`, () => {
+  for (const { name, initial } of [
+    { name: 'RawWaterLevelCode', initial: 0 },
+    { name: 'BatteryHealthCode', initial: 1 },
+    { name: 'ProtectionHoursCode', initial: 1 },
+  ]) {
+    test(`starts ${name} at ${String(initial)}, a value its own validValues admits`, () => {
       // arrange
       const characteristics = createCustomCharacteristics(hapNamespace());
 
@@ -333,7 +355,7 @@ describe('createCustomCharacteristics', () => {
       // assert
       assert.deepStrictEqual(
         { initial: characteristic.value, admitted: validValues.some((candidate) => candidate === characteristic.value) },
-        { initial: validValues[0], admitted: true },
+        { initial, admitted: true },
       );
     });
   }
