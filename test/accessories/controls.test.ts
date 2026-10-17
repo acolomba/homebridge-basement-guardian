@@ -206,6 +206,421 @@ function registeredHandler(calls: readonly OnSetCall[]): FakeSetHandler {
   return handler;
 }
 
+// The eight ways one write against an idle control can end: six the plugin answers by itself and two
+// the vendor answers. The local rows follow the binder's table order, but each row sets one
+// condition, so these rows pin each cause, status and log line, not the order. The precedence cases
+// pin the order: each sets two conditions and names the rule that must answer. A press while an
+// earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
+// case, 'refuses a second on request while the first waits for the device, and sends one command',
+// covers it. Every case below is read off this one table, so a cause that stops being refused, or
+// that starts answering a different status, fails by name.
+interface RefusalCase {
+  readonly cause: string;
+  readonly value: unknown;
+  readonly reported: boolean | undefined;
+  readonly offlineConfirmed: boolean;
+  readonly transportReady: boolean;
+  readonly confirmationObservable: boolean;
+  /** Builds the outcome the command port answers, fresh for every send. */
+  readonly outcome: () => CommandOutcome;
+  readonly status: number;
+  readonly expectedWarning: string;
+  readonly pendingAfterRefusal: readonly DeviceCapability[];
+  /** The delays the binder armed for the write, in order. */
+  readonly delaysAfterRefusal: readonly number[];
+}
+
+// A vendor row also carries the handles the refusal cancelled, the rest of the timer record it
+// leaves.
+interface VendorRefusalCase extends RefusalCase {
+  readonly cancelledAfterRefusal: readonly number[];
+}
+
+const LOCAL_REFUSALS: readonly RefusalCase[] = [
+  {
+    cause: 'a write of anything but on',
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+    value: false,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: acceptedOutcome,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+  {
+    cause: 'a runtime with no way to reach the vendor',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: false,
+    confirmationObservable: true,
+    outcome: acceptedOutcome,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+  {
+    cause: 'a live path that cannot carry the device answer',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: false,
+    outcome: acceptedOutcome,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+  {
+    cause: 'a capability whose reported field has not decoded',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
+    value: true,
+    reported: undefined,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: acceptedOutcome,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+  {
+    cause: 'a device confirmed offline',
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
+    value: true,
+    reported: false,
+    offlineConfirmed: true,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: acceptedOutcome,
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+  {
+    cause: 'a duplicate request while the capability already reads active',
+    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
+    value: true,
+    reported: true,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: acceptedOutcome,
+    status: RESOURCE_BUSY,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [0],
+  },
+];
+
+const VENDOR_REFUSALS: readonly VendorRefusalCase[] = [
+  {
+    cause: 'a vendor error',
+    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: vendor-error. It is not retried.',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: () => ({ accepted: false, failure: 'vendor-error' }),
+    status: SERVICE_COMMUNICATION_FAILURE,
+    pendingAfterRefusal: [],
+    delaysAfterRefusal: [30000, 0],
+    cancelledAfterRefusal: [0],
+  },
+  {
+    cause: 'an exceeded deadline',
+    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: timed-out. It is not retried.',
+    value: true,
+    reported: false,
+    offlineConfirmed: false,
+    transportReady: true,
+    confirmationObservable: true,
+    outcome: () => ({ accepted: false, failure: 'timed-out' }),
+    status: OPERATION_TIMED_OUT,
+    pendingAfterRefusal: ['self-test'],
+    delaysAfterRefusal: [30000, 0],
+    cancelledAfterRefusal: [],
+  },
+];
+
+const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS];
+
+// One write against one row of the table through the command port the case hands in, with
+// everything the assertions read back.
+async function refuse(
+  refusalCase: RefusalCase,
+  commands: CommandPort,
+): Promise<{ thrown: unknown; deferrals: Deferral[]; cancelled: unknown[]; binder: ControlBinder; service: FakeHapService }> {
+  const { timers, deferrals, cancelled } = recordingTimers();
+  const { binder, service } = boundSwitch(
+    {
+      commands,
+      timers,
+      offlineConfirmed: () => refusalCase.offlineConfirmed,
+      commandTransportReady: () => refusalCase.transportReady,
+      liveConfirmationObservable: () => refusalCase.confirmationObservable,
+    },
+    () => refusalCase.reported,
+  );
+  let thrown: unknown = undefined;
+
+  try {
+    await onCharacteristic(service).handleSetRequest(refusalCase.value);
+  } catch (error: unknown) {
+    thrown = error;
+  }
+
+  return { thrown, deferrals, cancelled, binder, service };
+}
+
+// The exact cause text each half of the command gate writes. They are written out here rather than
+// read off the module, so a reworded line fails at the assertion as well as behind it: the whole
+// content of the two-predicate gate is that a user diagnosing a refused press learns which of the
+// two blocked it (D-07, D-08).
+const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
+
+// The facts the gate reads for one write. A clear gate sets no refusal condition: an on request, a
+// decoded reported value of off, a device not confirmed offline, a route to the vendor and a live
+// path to hear back on.
+interface GateConditions {
+  readonly value: boolean;
+  readonly reported: boolean | undefined;
+  readonly offlineConfirmed: boolean;
+  readonly transportReady: boolean;
+  readonly confirmationObservable: boolean;
+}
+
+function clearGate(): GateConditions {
+  return { value: true, reported: false, offlineConfirmed: false, transportReady: true, confirmationObservable: true };
+}
+
+// A bound Switch whose gate reads every fact from `gate` at each write, so a case can change a
+// condition between two writes.
+function gatedSwitch(gate: () => GateConditions, overrides: BinderOverrides): { binder: ControlBinder; service: FakeHapService } {
+  return boundSwitch(
+    {
+      ...overrides,
+      offlineConfirmed: () => gate().offlineConfirmed,
+      commandTransportReady: () => gate().transportReady,
+      liveConfirmationObservable: () => gate().confirmationObservable,
+    },
+    () => gate().reported,
+  );
+}
+
+// Two refusal conditions that hold at once, and the rule that must answer. The binder evaluates its
+// rules in a fixed order and the first that applies answers the write, so each row pins the order of
+// one pair. A missing fresh state and an active reading cannot hold together: one is an undefined
+// reported value and the other is a reported `true`.
+interface PrecedenceCase {
+  readonly winner: string;
+  readonly loser: string;
+  /** The conditions the row sets on a clear gate. */
+  readonly set: Partial<GateConditions>;
+  readonly status: number;
+  readonly expectedWarning: string;
+}
+
+// The pairs one write can carry. Three other pairs have their own cases above: transport over fresh
+// state, transport over the quiet path, and the quiet path over fresh state.
+const PRECEDENCE: readonly PrecedenceCase[] = [
+  {
+    winner: 'a write of anything but on',
+    loser: 'a capability that already reads active',
+    set: { value: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a missing route to the vendor',
+    set: { value: false, transportReady: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a quiet live connection',
+    set: { value: false, confirmationObservable: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a missing fresh state',
+    set: { value: false, reported: undefined },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a write of anything but on',
+    loser: 'a device confirmed offline',
+    set: { value: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'a device confirmed offline',
+    set: { transportReady: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'a capability that already reads active',
+    set: { transportReady: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'a device confirmed offline',
+    set: { confirmationObservable: false, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'a capability that already reads active',
+    set: { confirmationObservable: false, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a missing fresh state',
+    loser: 'a device confirmed offline',
+    set: { reported: undefined, offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
+  },
+  {
+    winner: 'a device confirmed offline',
+    loser: 'a capability that already reads active',
+    set: { offlineConfirmed: true, reported: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
+  },
+];
+
+// The pending rule against each rule that can hold with it. The first press is accepted with a
+// clear gate, so the capability is pending; each row then sets one more condition for the second
+// press, and that condition's own rule must answer it.
+const PENDING_PRECEDENCE: readonly PrecedenceCase[] = [
+  {
+    winner: 'a write of anything but on',
+    loser: 'an earlier request that still waits',
+    set: { value: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
+  },
+  {
+    winner: 'a missing route to the vendor',
+    loser: 'an earlier request that still waits',
+    set: { transportReady: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
+  },
+  {
+    winner: 'a quiet live connection',
+    loser: 'an earlier request that still waits',
+    set: { confirmationObservable: false },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
+  },
+  {
+    winner: 'a missing fresh state',
+    loser: 'an earlier request that still waits',
+    set: { reported: undefined },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
+  },
+  {
+    winner: 'a device confirmed offline',
+    loser: 'an earlier request that still waits',
+    set: { offlineConfirmed: true },
+    status: NOT_ALLOWED_IN_CURRENT_STATE,
+    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
+  },
+  {
+    winner: 'a capability that already reads active',
+    loser: 'an earlier request that still waits',
+    set: { reported: true },
+    status: RESOURCE_BUSY,
+    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
+  },
+];
+
+// The window a request waits in for the device's own confirming report. Thirty seconds against an
+// observed test duration of about sixteen: long enough for the device to answer, short enough that
+// a Switch never stops following reported state for long (D-037, D-06).
+const PENDING_WINDOW_MS = 30_000;
+
+// The deferral the pending window is armed with, told apart from the clearing push by its delay.
+function windowsIn(deferrals: readonly Deferral[]): readonly Deferral[] {
+  return deferrals.filter((deferral) => deferral.delayMs === PENDING_WINDOW_MS);
+}
+
+// The accessory a restored control came back on, which is all the identity the refusal has to work
+// with: the restart passes read nothing from the accessory context, and a cache an older release
+// wrote names no device in it at all.
+const RESTORED_ACCESSORY_NAME = 'Sump Guardian';
+
+interface RestoredOverrides {
+  log?: Logging;
+  timers?: Timers;
+}
+
+// A restored control carrying the refusal, which is the shape every case below starts from. No
+// command port reaches it, and that is deliberate: the refusal takes none, so a press cannot reach
+// the vendor by any route rather than by a rule that has to hold.
+function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapService {
+  const service = switchService();
+
+  bindRestoredControlRefusal({
+    hap: HAP_NAMESPACE,
+    log: overrides.log ?? silentLog(),
+    timers: overrides.timers ?? recordingTimers().timers,
+    service: asService(service),
+    accessoryName: RESTORED_ACCESSORY_NAME,
+  });
+
+  return service;
+}
+
+// What a controller read of the control answers: the value, or the status a refusal left standing.
+// The read is the whole difference between a tile that is merely marked and one Apple Home greys
+// out, so it is driven rather than inferred from the stored status. HAP's read is asynchronous and
+// rejects with the status, so the read is awaited inside the `try`; that also catches a read that
+// throws at once.
+async function readOfSwitch(service: FakeHapService): Promise<{ value: unknown; threw: unknown }> {
+  try {
+    return { value: await onCharacteristic(service).handleGetRequest(), threw: undefined };
+  } catch (error: unknown) {
+    return { value: undefined, threw: error };
+  }
+}
+
+// A press of either value on a restored control, and the value the cache holds before it. The held
+// value is always the other one, so a press that went through would show in the stored value. A
+// press of false is what Apple Home writes to switch off a toggle the cache restored as on.
+interface RestoredPressCase {
+  readonly pressed: boolean;
+  readonly held: boolean;
+}
+
+const RESTORED_PRESSES: readonly RestoredPressCase[] = [
+  { pressed: true, held: false },
+  { pressed: false, held: true },
+];
+
 test('refuses a write of false, sends nothing, and leaves the stored value where HAP had it', async () => {
   // arrange
   const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
@@ -497,178 +912,6 @@ test('names the capability, the device and the cause in the one line a refusal l
   );
 });
 
-// The eight ways one write against an idle control can end: six the plugin answers by itself and two
-// the vendor answers. The local rows follow the binder's table order, but each row sets one
-// condition, so these rows pin each cause, status and log line, not the order. The precedence cases
-// pin the order: each sets two conditions and names the rule that must answer. A press while an
-// earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
-// case, 'refuses a second on request while the first waits for the device, and sends one command',
-// covers it. Every case below is read off this one table, so a cause that stops being refused, or
-// that starts answering a different status, fails by name.
-interface RefusalCase {
-  readonly cause: string;
-  readonly value: unknown;
-  readonly reported: boolean | undefined;
-  readonly offlineConfirmed: boolean;
-  readonly transportReady: boolean;
-  readonly confirmationObservable: boolean;
-  /** Builds the outcome the command port answers, fresh for every send. */
-  readonly outcome: () => CommandOutcome;
-  readonly status: number;
-  readonly expectedWarning: string;
-  readonly pendingAfterRefusal: readonly DeviceCapability[];
-  /** The delays the binder armed for the write, in order. */
-  readonly delaysAfterRefusal: readonly number[];
-}
-
-// A vendor row also carries the handles the refusal cancelled, the rest of the timer record it
-// leaves.
-interface VendorRefusalCase extends RefusalCase {
-  readonly cancelledAfterRefusal: readonly number[];
-}
-
-const LOCAL_REFUSALS: readonly RefusalCase[] = [
-  {
-    cause: 'a write of anything but on',
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-    value: false,
-    reported: false,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: acceptedOutcome,
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-  {
-    cause: 'a runtime with no way to reach the vendor',
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
-    value: true,
-    reported: false,
-    offlineConfirmed: false,
-    transportReady: false,
-    confirmationObservable: true,
-    outcome: acceptedOutcome,
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-  {
-    cause: 'a live path that cannot carry the device answer',
-    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
-    value: true,
-    reported: false,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: false,
-    outcome: acceptedOutcome,
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-  {
-    cause: 'a capability whose reported field has not decoded',
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
-    value: true,
-    reported: undefined,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: acceptedOutcome,
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-  {
-    cause: 'a device confirmed offline',
-    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
-    value: true,
-    reported: false,
-    offlineConfirmed: true,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: acceptedOutcome,
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-  {
-    cause: 'a duplicate request while the capability already reads active',
-    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
-    value: true,
-    reported: true,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: acceptedOutcome,
-    status: RESOURCE_BUSY,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [0],
-  },
-];
-
-const VENDOR_REFUSALS: readonly VendorRefusalCase[] = [
-  {
-    cause: 'a vendor error',
-    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: vendor-error. It is not retried.',
-    value: true,
-    reported: false,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: () => ({ accepted: false, failure: 'vendor-error' }),
-    status: SERVICE_COMMUNICATION_FAILURE,
-    pendingAfterRefusal: [],
-    delaysAfterRefusal: [30000, 0],
-    cancelledAfterRefusal: [0],
-  },
-  {
-    cause: 'an exceeded deadline',
-    expectedWarning: 'The self-test request on account-1_serial-1 did not take effect: timed-out. It is not retried.',
-    value: true,
-    reported: false,
-    offlineConfirmed: false,
-    transportReady: true,
-    confirmationObservable: true,
-    outcome: () => ({ accepted: false, failure: 'timed-out' }),
-    status: OPERATION_TIMED_OUT,
-    pendingAfterRefusal: ['self-test'],
-    delaysAfterRefusal: [30000, 0],
-    cancelledAfterRefusal: [],
-  },
-];
-
-const REFUSALS: readonly RefusalCase[] = [...LOCAL_REFUSALS, ...VENDOR_REFUSALS];
-
-// One write against one row of the table through the command port the case hands in, with
-// everything the assertions read back.
-async function refuse(
-  refusalCase: RefusalCase,
-  commands: CommandPort,
-): Promise<{ thrown: unknown; deferrals: Deferral[]; cancelled: unknown[]; binder: ControlBinder; service: FakeHapService }> {
-  const { timers, deferrals, cancelled } = recordingTimers();
-  const { binder, service } = boundSwitch(
-    {
-      commands,
-      timers,
-      offlineConfirmed: () => refusalCase.offlineConfirmed,
-      commandTransportReady: () => refusalCase.transportReady,
-      liveConfirmationObservable: () => refusalCase.confirmationObservable,
-    },
-    () => refusalCase.reported,
-  );
-  let thrown: unknown = undefined;
-
-  try {
-    await onCharacteristic(service).handleSetRequest(refusalCase.value);
-  } catch (error: unknown) {
-    thrown = error;
-  }
-
-  return { thrown, deferrals, cancelled, binder, service };
-}
-
 for (const refusalCase of REFUSALS) {
   test(`answers ${String(refusalCase.status)} for ${refusalCase.cause}`, async () => {
     // act
@@ -803,14 +1046,6 @@ for (const refusalCase of REFUSALS) {
   });
 }
 
-// The exact cause text each half of the command gate writes. They are written out here rather than
-// read off the module, so a reworded line fails at the assertion as well as behind it: the whole
-// content of the two-predicate gate is that a user diagnosing a refused press learns which of the
-// two blocked it (D-07, D-08).
-const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
-const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
-const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
-
 test('names the missing state when the capability has not decoded and there is a way to send', async () => {
   // arrange
   const warnings: string[] = [];
@@ -933,130 +1168,6 @@ test('names the quiet live connection alone when the reported field has also not
   verify(commands);
 });
 
-// The facts the gate reads for one write. A clear gate sets no refusal condition: an on request, a
-// decoded reported value of off, a device not confirmed offline, a route to the vendor and a live
-// path to hear back on.
-interface GateConditions {
-  readonly value: boolean;
-  readonly reported: boolean | undefined;
-  readonly offlineConfirmed: boolean;
-  readonly transportReady: boolean;
-  readonly confirmationObservable: boolean;
-}
-
-function clearGate(): GateConditions {
-  return { value: true, reported: false, offlineConfirmed: false, transportReady: true, confirmationObservable: true };
-}
-
-// A bound Switch whose gate reads every fact from `gate` at each write, so a case can change a
-// condition between two writes.
-function gatedSwitch(gate: () => GateConditions, overrides: BinderOverrides): { binder: ControlBinder; service: FakeHapService } {
-  return boundSwitch(
-    {
-      ...overrides,
-      offlineConfirmed: () => gate().offlineConfirmed,
-      commandTransportReady: () => gate().transportReady,
-      liveConfirmationObservable: () => gate().confirmationObservable,
-    },
-    () => gate().reported,
-  );
-}
-
-// Two refusal conditions that hold at once, and the rule that must answer. The binder evaluates its
-// rules in a fixed order and the first that applies answers the write, so each row pins the order of
-// one pair. A missing fresh state and an active reading cannot hold together: one is an undefined
-// reported value and the other is a reported `true`.
-interface PrecedenceCase {
-  readonly winner: string;
-  readonly loser: string;
-  /** The conditions the row sets on a clear gate. */
-  readonly set: Partial<GateConditions>;
-  readonly status: number;
-  readonly expectedWarning: string;
-}
-
-// The pairs one write can carry. Three other pairs have their own cases above: transport over fresh
-// state, transport over the quiet path, and the quiet path over fresh state.
-const PRECEDENCE: readonly PrecedenceCase[] = [
-  {
-    winner: 'a write of anything but on',
-    loser: 'a capability that already reads active',
-    set: { value: false, reported: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a write of anything but on',
-    loser: 'a missing route to the vendor',
-    set: { value: false, transportReady: false },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a write of anything but on',
-    loser: 'a quiet live connection',
-    set: { value: false, confirmationObservable: false },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a write of anything but on',
-    loser: 'a missing fresh state',
-    set: { value: false, reported: undefined },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a write of anything but on',
-    loser: 'a device confirmed offline',
-    set: { value: false, offlineConfirmed: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a missing route to the vendor',
-    loser: 'a device confirmed offline',
-    set: { transportReady: false, offlineConfirmed: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
-  },
-  {
-    winner: 'a missing route to the vendor',
-    loser: 'a capability that already reads active',
-    set: { transportReady: false, reported: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
-  },
-  {
-    winner: 'a quiet live connection',
-    loser: 'a device confirmed offline',
-    set: { confirmationObservable: false, offlineConfirmed: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
-  },
-  {
-    winner: 'a quiet live connection',
-    loser: 'a capability that already reads active',
-    set: { confirmationObservable: false, reported: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
-  },
-  {
-    winner: 'a missing fresh state',
-    loser: 'a device confirmed offline',
-    set: { reported: undefined, offlineConfirmed: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
-  },
-  {
-    winner: 'a device confirmed offline',
-    loser: 'a capability that already reads active',
-    set: { offlineConfirmed: true, reported: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
-  },
-];
-
 for (const precedenceCase of PRECEDENCE) {
   test(`answers ${String(precedenceCase.status)} and names ${precedenceCase.winner} over ${precedenceCase.loser}`, async () => {
     // arrange
@@ -1076,54 +1187,6 @@ for (const precedenceCase of PRECEDENCE) {
     verify(commands);
   });
 }
-
-// The pending rule against each rule that can hold with it. The first press is accepted with a
-// clear gate, so the capability is pending; each row then sets one more condition for the second
-// press, and that condition's own rule must answer it.
-const PENDING_PRECEDENCE: readonly PrecedenceCase[] = [
-  {
-    winner: 'a write of anything but on',
-    loser: 'an earlier request that still waits',
-    set: { value: false },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: only an on request is supported, and the device reports when the condition ends.',
-  },
-  {
-    winner: 'a missing route to the vendor',
-    loser: 'an earlier request that still waits',
-    set: { transportReady: false },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no way to reach the vendor right now.',
-  },
-  {
-    winner: 'a quiet live connection',
-    loser: 'an earlier request that still waits',
-    set: { confirmationObservable: false },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the live connection is quiet, so the plugin cannot see the device confirm the command.',
-  },
-  {
-    winner: 'a missing fresh state',
-    loser: 'an earlier request that still waits',
-    set: { reported: undefined },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the plugin has no fresh state for it.',
-  },
-  {
-    winner: 'a device confirmed offline',
-    loser: 'an earlier request that still waits',
-    set: { offlineConfirmed: true },
-    status: NOT_ALLOWED_IN_CURRENT_STATE,
-    expectedWarning: 'Refused self-test on account-1_serial-1: the device is confirmed offline.',
-  },
-  {
-    winner: 'a capability that already reads active',
-    loser: 'an earlier request that still waits',
-    set: { reported: true },
-    status: RESOURCE_BUSY,
-    expectedWarning: 'Refused self-test on account-1_serial-1: it already reads active.',
-  },
-];
 
 for (const precedenceCase of PENDING_PRECEDENCE) {
   test(`refuses a second press with ${String(precedenceCase.status)} and names ${precedenceCase.winner} over ${precedenceCase.loser}`, async () => {
@@ -1175,16 +1238,6 @@ test('answers the transport refusal status to every read until the clearing push
     },
   );
 });
-
-// The window a request waits in for the device's own confirming report. Thirty seconds against an
-// observed test duration of about sixteen: long enough for the device to answer, short enough that
-// a Switch never stops following reported state for long (D-037, D-06).
-const PENDING_WINDOW_MS = 30_000;
-
-// The deferral the pending window is armed with, told apart from the clearing push by its delay.
-function windowsIn(deferrals: readonly Deferral[]): readonly Deferral[] {
-  return deferrals.filter((deferral) => deferral.delayMs === PENDING_WINDOW_MS);
-}
 
 test('arms one 30000 millisecond window when a command is sent', async () => {
   // arrange
@@ -1320,59 +1373,6 @@ for (const capability of ['self-test', 'alarm-mute'] as const) {
     verify(commands);
   });
 }
-
-// The accessory a restored control came back on, which is all the identity the refusal has to work
-// with: the restart passes read nothing from the accessory context, and a cache an older release
-// wrote names no device in it at all.
-const RESTORED_ACCESSORY_NAME = 'Sump Guardian';
-
-interface RestoredOverrides {
-  log?: Logging;
-  timers?: Timers;
-}
-
-// A restored control carrying the refusal, which is the shape every case below starts from. No
-// command port reaches it, and that is deliberate: the refusal takes none, so a press cannot reach
-// the vendor by any route rather than by a rule that has to hold.
-function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapService {
-  const service = switchService();
-
-  bindRestoredControlRefusal({
-    hap: HAP_NAMESPACE,
-    log: overrides.log ?? silentLog(),
-    timers: overrides.timers ?? recordingTimers().timers,
-    service: asService(service),
-    accessoryName: RESTORED_ACCESSORY_NAME,
-  });
-
-  return service;
-}
-
-// What a controller read of the control answers: the value, or the status a refusal left standing.
-// The read is the whole difference between a tile that is merely marked and one Apple Home greys
-// out, so it is driven rather than inferred from the stored status. HAP's read is asynchronous and
-// rejects with the status, so the read is awaited inside the `try`; that also catches a read that
-// throws at once.
-async function readOfSwitch(service: FakeHapService): Promise<{ value: unknown; threw: unknown }> {
-  try {
-    return { value: await onCharacteristic(service).handleGetRequest(), threw: undefined };
-  } catch (error: unknown) {
-    return { value: undefined, threw: error };
-  }
-}
-
-// A press of either value on a restored control, and the value the cache holds before it. The held
-// value is always the other one, so a press that went through would show in the stored value. A
-// press of false is what Apple Home writes to switch off a toggle the cache restored as on.
-interface RestoredPressCase {
-  readonly pressed: boolean;
-  readonly held: boolean;
-}
-
-const RESTORED_PRESSES: readonly RestoredPressCase[] = [
-  { pressed: true, held: false },
-  { pressed: false, held: true },
-];
 
 for (const { pressed, held } of RESTORED_PRESSES) {
   test(`refuses a press on a restored control and leaves the toggle where the cache left it, for a press of ${String(pressed)}`, async () => {
