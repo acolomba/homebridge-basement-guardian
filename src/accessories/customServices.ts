@@ -26,13 +26,12 @@
  * every service here rather than added on first use, because HAP warns on every
  * restored accessory when a service receives a characteristic its definition
  * never declared, and because a service restored from the Homebridge cache is a
- * plain `Service` whose class the running code no longer recognises. The same
- * rule is what lets a later release add the pump observation-epoch,
- * observed-count, and last-activation characteristics to an already-published
- * `PumpService` without changing its subtype: the accessory's
- * characteristic-repair guard declares an undeclared characteristic before
- * pushing it, which suppresses the warning HAP otherwise emits, and the subtype
- * -- the one string that must never change -- is untouched.
+ * plain `Service` whose class the running code no longer recognises. A
+ * `PumpService` restored from an older cache can lack the pump record
+ * declarations. The accessory's characteristic-repair guard declares an
+ * undeclared characteristic before it pushes the value, which suppresses HAP's
+ * warning, and the subtype -- the one string that must never change -- stays
+ * untouched.
  *
  * `PumpService` declares `PumpFuseBlown` optional for the same reason: the
  * backup pump reports a fuse fact and the primary pump does not, so one service
