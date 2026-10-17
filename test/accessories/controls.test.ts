@@ -33,7 +33,7 @@ function acceptedOutcome(): CommandOutcome {
   return { accepted: true };
 }
 
-// The statuses this binder answers, written out here rather than read off the namespace, so a
+// The statuses the code under test answers, written out here rather than read off the namespace, so a
 // drifted mapping fails at the assertion as well as behind it (D-04).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
 const RESOURCE_BUSY = -70403;
@@ -49,13 +49,14 @@ const HAP = createFakeHap();
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
-// The stand-in answers the members the binder reads and nothing else, which no structural type can
-// express; this is the one place a stand-in service stands where the binder takes a Service.
+// The stand-in answers the members the code under test reads and nothing else, which no structural
+// type can express; this is the one place a stand-in service stands where the code under test takes
+// a Service.
 function asService(service: FakeHapService): Service {
   return service as unknown as Service;
 }
 
-/** One deferral the binder asked the injected port for. */
+/** One deferral the code under test asked the injected port for. */
 interface Deferral {
   delayMs: number;
   run: () => void;
@@ -90,7 +91,7 @@ function silentLog(): Logging {
 }
 
 // A `Timers` stand-in that records the deferral rather than arming one, so a case reads back the
-// delay the binder asked for and runs the handler itself.
+// delay the code under test asked for and runs the handler itself.
 function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: unknown[] } {
   const deferrals: Deferral[] = [];
   const cancelled: unknown[] = [];
@@ -106,7 +107,7 @@ function recordingTimers(): { timers: Timers; deferrals: Deferral[]; cancelled: 
       cancelled.push(handle);
     },
     clearInterval: () => {
-      // the binder arms no interval, so there is nothing to cancel
+      // the code under test arms no interval, so there is nothing to cancel
     },
   };
 
@@ -162,7 +163,7 @@ function binderOptions(overrides: BinderOverrides = {}): ControlBinderOptions {
   };
 }
 
-// A bound Switch, with the binder that owns it, which is the shape every case starts from.
+// A bound Switch, with the binder that owns it, which most `createControlBinder` cases start from.
 function boundSwitch(overrides: BinderOverrides = {}, reported: () => boolean | undefined = () => false): { binder: ControlBinder; service: FakeHapService } {
   const binder = createControlBinder(binderOptions(overrides));
   const service = switchService();
@@ -206,14 +207,15 @@ function registeredHandler(calls: readonly OnSetCall[]): FakeSetHandler {
   return handler;
 }
 
-// The eight ways one write against an idle control can end: six the plugin answers by itself and two
-// the vendor answers. The local rows follow the binder's table order, but each row sets one
+// The eight refusals one write against an idle control can meet: six the plugin answers by itself
+// and two the vendor answers. The local rows follow the binder's table order, but each row sets one
 // condition, so these rows pin each cause, status and log line, not the order. The precedence cases
 // pin the order: each sets two conditions and names the rule that must answer. A press while an
 // earlier request waits is the binder's other local refusal. It needs that earlier press, so its own
 // case, 'refuses a second on request while the first waits for the device, and sends one command',
-// covers it. Every case below is read off this one table, so a cause that stops being refused, or
-// that starts answering a different status, fails by name.
+// covers it. The cases that loop over `REFUSALS`, `LOCAL_REFUSALS` or `VENDOR_REFUSALS` read this
+// one table, so a cause that stops being refused, or that starts answering a different status, fails
+// by name.
 interface RefusalCase {
   readonly cause: string;
   readonly value: unknown;
@@ -378,10 +380,10 @@ async function refuse(
   return { thrown, deferrals, cancelled, binder, service };
 }
 
-// The exact cause text each half of the command gate writes. They are written out here rather than
-// read off the module, so a reworded line fails at the assertion as well as behind it: the whole
-// content of the two-predicate gate is that a user diagnosing a refused press learns which of the
-// two blocked it (D-07, D-08).
+// The exact cause text the fresh-state, transport and quiet-live-path rules write. They are written
+// out here rather than read off the module, so a reworded line fails at the assertion as well as
+// behind it: the whole content of these causes is that a user diagnosing a refused press learns
+// which fact of the command gate blocked it (D-07, D-08).
 const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
 const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
@@ -428,8 +430,8 @@ interface PrecedenceCase {
   readonly expectedWarning: string;
 }
 
-// The pairs one write can carry. Three other pairs have their own cases above: transport over fresh
-// state, transport over the quiet path, and the quiet path over fresh state.
+// The pairs one write can carry. Three other pairs have their own cases: transport over fresh state,
+// transport over the quiet path, and the quiet path over fresh state.
 const PRECEDENCE: readonly PrecedenceCase[] = [
   {
     winner: 'a write of anything but on',
@@ -578,8 +580,8 @@ interface RestoredOverrides {
   timers?: Timers;
 }
 
-// A restored control carrying the refusal, which is the shape every case below starts from. No
-// command port reaches it, and that is deliberate: the refusal takes none, so a press cannot reach
+// A restored control carrying the refusal, which most `bindRestoredControlRefusal` cases start from.
+// No command port reaches it, and that is deliberate: the refusal takes none, so a press cannot reach
 // the vendor by any route rather than by a rule that has to hold.
 function refusingRestoredSwitch(overrides: RestoredOverrides = {}): FakeHapService {
   const service = switchService();
@@ -1099,7 +1101,7 @@ describe('createControlBinder', () => {
 
   // Both conditions at once, which is the case the table's order decides. Naming the missing state to
   // a user who has no way to send anything is the less actionable of the two truths, so the transport
-  // rule is evaluated first. This case pins that one pair; the precedence cases below pin the other
+  // rule is evaluated first. This case pins that one pair; the `PRECEDENCE` cases pin the other
   // pairs that can hold together (D-07).
   test('names the missing transport alone when the plugin has neither fresh state nor a way to send', async () => {
     // arrange
