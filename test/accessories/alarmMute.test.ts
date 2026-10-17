@@ -54,8 +54,11 @@ test('names every export it declares as provisional', () => {
 // The whole of the measured command body is `{"alarm_audio_muted": true}`, and this is the value in
 // it. Nothing else has ever been sent to a real device (D-019, CTRL-04).
 test('requests exactly true and nothing else for alarm mute', () => {
-  // act & assert
-  assert.strictEqual(alarmMute.PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE, true);
+  // act
+  const requestedValue = alarmMute.PROVISIONAL_ALARM_MUTE_REQUESTED_VALUE;
+
+  // assert
+  assert.strictEqual(requestedValue, true);
 });
 
 // Closing `G-001` has to be one reviewable edit to one module, which it is only while no other
