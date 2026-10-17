@@ -63,28 +63,30 @@ const FILTER_MAINTENANCE_UUID = '000000BA-0000-1000-8000-0026BB765291';
 // it survived cannot be satisfied by a seed.
 const USER_RENAME = 'Fuse Box';
 
-/** One backup-battery reading, and the low-battery verdict `D-07` gives it. */
+/** One backup-battery reading, the low-battery verdict `D-07` gives it, and the status HomeKit shows for it. */
 interface BatteryReading {
   healthCode: number;
   voltageLow: boolean;
   low: boolean;
+  verdict: 'low' | 'normal';
+  status: number;
 }
 
 // The `D-07` sources, written out here rather than derived: LOW for a low voltage, or for health
 // 1 (Replace), 2 (Poor), or 32 (NotDetected); NORMAL for 4 (Okay), 8 (Good), and 16 (NA).
 const BATTERY_READINGS: readonly BatteryReading[] = [
-  { healthCode: 1, voltageLow: false, low: true },
-  { healthCode: 2, voltageLow: false, low: true },
-  { healthCode: 4, voltageLow: false, low: false },
-  { healthCode: 8, voltageLow: false, low: false },
-  { healthCode: 16, voltageLow: false, low: false },
-  { healthCode: 32, voltageLow: false, low: true },
-  { healthCode: 1, voltageLow: true, low: true },
-  { healthCode: 2, voltageLow: true, low: true },
-  { healthCode: 4, voltageLow: true, low: true },
-  { healthCode: 8, voltageLow: true, low: true },
-  { healthCode: 16, voltageLow: true, low: true },
-  { healthCode: 32, voltageLow: true, low: true },
+  { healthCode: 1, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 2, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 4, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 8, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 16, voltageLow: false, low: false, verdict: 'normal', status: BATTERY_LEVEL_NORMAL },
+  { healthCode: 32, voltageLow: false, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 1, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 2, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 4, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 8, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 16, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
+  { healthCode: 32, voltageLow: true, low: true, verdict: 'low', status: BATTERY_LEVEL_LOW },
 ];
 
 // The documented protection-duration bands, published as reported and never arbitrated against the
@@ -119,26 +121,54 @@ function clearFaults(): Record<string, boolean> {
   };
 }
 
-/** One reported condition, and the single adapter it may activate. */
+/**
+ * One reported condition, and the contact state each fault adapter publishes for it, in
+ * `FAULT_ADAPTERS` order. Exactly one adapter reads `CONTACT_NOT_DETECTED`.
+ */
 interface FaultCase {
   label: string;
   fault: Readonly<Record<string, boolean>>;
   offlineConfirmed: boolean;
-  activated: ServiceKind;
+  contactStates: readonly number[];
 }
 
 const FAULT_CASES: readonly FaultCase[] = [
-  { label: 'a primary pump fault', fault: { ...clearFaults(), primaryPumpFault: true }, offlineConfirmed: false, activated: 'primary-pump-fault' },
-  { label: 'a backup pump fault', fault: { ...clearFaults(), backupPumpFault: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a blown backup pump fuse', fault: { ...clearFaults(), backupPumpFuseBlown: true }, offlineConfirmed: false, activated: 'backup-pump-fault' },
-  { label: 'a water sensor fault', fault: { ...clearFaults(), waterSensorFault: true }, offlineConfirmed: false, activated: 'water-sensor-fault' },
+  {
+    label: 'a primary pump fault',
+    fault: { ...clearFaults(), primaryPumpFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a backup pump fault',
+    fault: { ...clearFaults(), backupPumpFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a blown backup pump fuse',
+    fault: { ...clearFaults(), backupPumpFuseBlown: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
+  {
+    label: 'a water sensor fault',
+    fault: { ...clearFaults(), waterSensorFault: true },
+    offlineConfirmed: false,
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED],
+  },
   {
     label: 'a lost controller link',
     fault: { ...clearFaults(), controllerLinkPresent: false },
     offlineConfirmed: false,
-    activated: 'pump-controller-link-lost',
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED, CONTACT_DETECTED],
   },
-  { label: 'a confirmed offline run', fault: clearFaults(), offlineConfirmed: true, activated: 'basement-guardian-offline' },
+  {
+    label: 'a confirmed offline run',
+    fault: clearFaults(),
+    offlineConfirmed: true,
+    contactStates: [CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_DETECTED, CONTACT_NOT_DETECTED],
+  },
 ];
 
 /** One legal water-level code, the percentage it publishes, and the flood verdict it carries. */
@@ -458,7 +488,10 @@ function registerWaterCases(): void {
     ]);
   });
 
-  for (const waterSensorFault of [true, false]) {
+  for (const { waterSensorFault, statusFault } of [
+    { waterSensorFault: true, statusFault: GENERAL_FAULT },
+    { waterSensorFault: false, statusFault: NO_FAULT },
+  ]) {
     test(`faults the pit level service from a reported water sensor fault of ${String(waterSensorFault)}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -475,7 +508,7 @@ function registerWaterCases(): void {
           reported: valueOf(projected, WaterSensorFaultReported),
           fault: valueOf(projected, hap.Characteristic.StatusFault),
         },
-        { reported: waterSensorFault, fault: waterSensorFault ? GENERAL_FAULT : NO_FAULT },
+        { reported: waterSensorFault, fault: statusFault },
       );
     });
   }
@@ -483,7 +516,10 @@ function registerWaterCases(): void {
 
 // Every case about the two pump services and the two live activity adapters.
 function registerPumpCases(): void {
-  for (const primaryRunning of [true, false]) {
+  for (const { primaryRunning, contactState } of [
+    { primaryRunning: true, contactState: CONTACT_NOT_DETECTED },
+    { primaryRunning: false, contactState: CONTACT_DETECTED },
+  ]) {
     test(`publishes the reported primary pump running state of ${String(primaryRunning)} on both primary rows`, () => {
       // arrange
       const hap = hapNamespace();
@@ -499,12 +535,15 @@ function registerPumpCases(): void {
           running: valueOf(projected.pump, PumpRunning),
           adapter: valueOf(projected.adapter, hap.Characteristic.ContactSensorState),
         },
-        { running: primaryRunning, adapter: primaryRunning ? CONTACT_NOT_DETECTED : CONTACT_DETECTED },
+        { running: primaryRunning, adapter: contactState },
       );
     });
   }
 
-  for (const primaryPumpFault of [true, false]) {
+  for (const { primaryPumpFault, status } of [
+    { primaryPumpFault: true, status: GENERAL_FAULT },
+    { primaryPumpFault: false, status: NO_FAULT },
+  ]) {
     test(`faults the primary pump service from a reported primary pump fault of ${String(primaryPumpFault)}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -521,7 +560,7 @@ function registerPumpCases(): void {
           fuseBlown: valueOf(projected, PumpFuseBlown),
           status: valueOf(projected, hap.Characteristic.StatusFault),
         },
-        { fault: primaryPumpFault, fuseBlown: undefined, status: primaryPumpFault ? GENERAL_FAULT : NO_FAULT },
+        { fault: primaryPumpFault, fuseBlown: undefined, status },
       );
     });
   }
@@ -830,7 +869,10 @@ function registerPumpRecordCases(): void {
 
 // Every case about mains power at the controller and the adapter that follows it.
 function registerPowerCases(): void {
-  for (const mainsPresent of [true, false]) {
+  for (const { mainsPresent, contactState } of [
+    { mainsPresent: true, contactState: CONTACT_DETECTED },
+    { mainsPresent: false, contactState: CONTACT_NOT_DETECTED },
+  ]) {
     test(`projects the reported ac_power ${String(mainsPresent)} verbatim onto Mains Power Present`, () => {
       // arrange
       const hap = hapNamespace();
@@ -854,7 +896,7 @@ function registerPowerCases(): void {
 
       // assert
       assert.deepStrictEqual(summarise(projected), [
-        { uuid: hap.Characteristic.ContactSensorState.UUID, value: mainsPresent ? CONTACT_DETECTED : CONTACT_NOT_DETECTED },
+        { uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState },
         { uuid: hap.Characteristic.StatusFault.UUID, value: NO_FAULT },
       ]);
     });
@@ -863,8 +905,8 @@ function registerPowerCases(): void {
 
 // Every case about the standard battery service and the exact vendor codes beside it.
 function registerBatteryCases(): void {
-  for (const { healthCode, voltageLow, low } of BATTERY_READINGS) {
-    test(`reports the backup battery as ${low ? 'low' : 'normal'} for health code ${String(healthCode)} with a low voltage of ${String(voltageLow)}`, () => {
+  for (const { healthCode, voltageLow, low, verdict, status } of BATTERY_READINGS) {
+    test(`reports the backup battery as ${verdict} for health code ${String(healthCode)} with a low voltage of ${String(voltageLow)}`, () => {
       // arrange
       const hap = hapNamespace();
       const { BatteryHealthCode, BatteryVoltageLow } = createCustomCharacteristics(hap);
@@ -880,7 +922,7 @@ function registerBatteryCases(): void {
           health: valueOf(projected.facts, BatteryHealthCode),
           voltage: valueOf(projected.facts, BatteryVoltageLow),
         },
-        { status: low ? BATTERY_LEVEL_LOW : BATTERY_LEVEL_NORMAL, health: healthCode, voltage: voltageLow },
+        { status, health: healthCode, voltage: voltageLow },
       );
     });
   }
@@ -920,7 +962,10 @@ function registerBatteryCases(): void {
     );
   });
 
-  for (const charging of [true, false]) {
+  for (const { charging, chargingState } of [
+    { charging: true, chargingState: CHARGING },
+    { charging: false, chargingState: NOT_CHARGING },
+  ]) {
     test(`reports the backup battery charging state of ${String(charging)} on both battery rows`, () => {
       // arrange
       const hap = hapNamespace();
@@ -933,7 +978,7 @@ function registerBatteryCases(): void {
       // assert
       assert.deepStrictEqual(
         { state: valueOf(projected.battery, hap.Characteristic.ChargingState), reported: valueOf(projected.facts, BatteryCharging) },
-        { state: charging ? CHARGING : NOT_CHARGING, reported: charging },
+        { state: chargingState, reported: charging },
       );
     });
   }
@@ -959,7 +1004,7 @@ function registerBatteryCases(): void {
 
 // Every case about the five equipment-fault adapters transitioning independently.
 function registerFaultAdapterCases(): void {
-  for (const { label, fault, offlineConfirmed, activated } of FAULT_CASES) {
+  for (const { label, fault, offlineConfirmed, contactStates } of FAULT_CASES) {
     test(`activates one fault adapter alone for ${label}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -969,16 +1014,13 @@ function registerFaultAdapterCases(): void {
       const states = FAULT_ADAPTERS.map((kind) => valueOf(rowOf(hap, kind).project(input), hap.Characteristic.ContactSensorState));
 
       // assert
-      assert.deepStrictEqual(
-        states,
-        FAULT_ADAPTERS.map((kind) => (kind === activated ? CONTACT_NOT_DETECTED : CONTACT_DETECTED)),
-      );
+      assert.deepStrictEqual(states, contactStates);
     });
   }
 
-  for (const { primaryPumpFault, waterSensorFault } of [
-    { primaryPumpFault: true, waterSensorFault: false },
-    { primaryPumpFault: false, waterSensorFault: true },
+  for (const { primaryPumpFault, waterSensorFault, primaryStatus, waterStatus } of [
+    { primaryPumpFault: true, waterSensorFault: false, primaryStatus: GENERAL_FAULT, waterStatus: NO_FAULT },
+    { primaryPumpFault: false, waterSensorFault: true, primaryStatus: NO_FAULT, waterStatus: GENERAL_FAULT },
   ]) {
     test(`faults the adapter service alongside its contact state, given a primary pump fault of ${String(primaryPumpFault)}`, () => {
       // arrange
@@ -994,7 +1036,7 @@ function registerFaultAdapterCases(): void {
           primary: valueOf(projected.primary, hap.Characteristic.StatusFault),
           water: valueOf(projected.water, hap.Characteristic.StatusFault),
         },
-        { primary: primaryPumpFault ? GENERAL_FAULT : NO_FAULT, water: waterSensorFault ? GENERAL_FAULT : NO_FAULT },
+        { primary: primaryStatus, water: waterStatus },
       );
     });
   }
@@ -1073,7 +1115,10 @@ function registerFaultAdapterCases(): void {
 
 // Every case about the confirmed-offline adapter.
 function registerOfflineCases(): void {
-  for (const offlineConfirmed of [true, false]) {
+  for (const { offlineConfirmed, contactState } of [
+    { offlineConfirmed: true, contactState: CONTACT_NOT_DETECTED },
+    { offlineConfirmed: false, contactState: CONTACT_DETECTED },
+  ]) {
     test(`activates Basement Guardian Offline from a confirmed offline run of ${String(offlineConfirmed)}`, () => {
       // arrange
       const hap = hapNamespace();
@@ -1083,9 +1128,7 @@ function registerOfflineCases(): void {
       const projected = row.project(projectionInput({ offlineConfirmed }));
 
       // assert
-      assert.deepStrictEqual(summarise(projected), [
-        { uuid: hap.Characteristic.ContactSensorState.UUID, value: offlineConfirmed ? CONTACT_NOT_DETECTED : CONTACT_DETECTED },
-      ]);
+      assert.deepStrictEqual(summarise(projected), [{ uuid: hap.Characteristic.ContactSensorState.UUID, value: contactState }]);
     });
   }
 }
@@ -1814,7 +1857,12 @@ describe('isRowPublishable', () => {
   // overwrite a good value with a doubtful one; vouching, which `isRowFullyTrusted` answers, asks
   // whether the plugin can still call the value current. Only a monitoring outage answers no to the
   // second and yes to the first, so `stale`, which nothing assigns, publishes nothing either.
-  for (const reason of ['invalid', 'controller-link-lost', 'unreachable', 'stale'] as const) {
+  for (const { reason, publishes } of [
+    { reason: 'invalid', publishes: false },
+    { reason: 'controller-link-lost', publishes: false },
+    { reason: 'unreachable', publishes: true },
+    { reason: 'stale', publishes: false },
+  ] as const) {
     test(`publishes a scope untrusted for ${reason} only while the value itself is not in doubt`, () => {
       // arrange
       const hap = hapNamespace();
@@ -1825,7 +1873,7 @@ describe('isRowPublishable', () => {
       const publishable = isRowPublishable(row, untrustedScopes);
 
       // assert
-      assert.strictEqual(publishable, reason === 'unreachable');
+      assert.strictEqual(publishable, publishes);
     });
   }
 });
