@@ -6,10 +6,10 @@
 **Analogs found:** all files have an analog; no file lacks one
 
 All analog paths below are git-tracked (`git ls-files` checked for
-`src/runtime/clock.ts`, `.claude/rules/typescript-unit-testing.md` and the
-Phase 4 artifacts). The `skills/*/SKILL.md` rulebooks are authoritative over
-`.claude/rules/*` (AGENTS.md). The `.claude/rules` unit-testing copy also allows
-`// act & assert` for "a data row". `skills/` allows it only for one
+`src/runtime/clock.ts`, `.claude/rules/typescript-unit-testing.md` (deleted in `f68df73`) and the
+Phase 4 artifacts). The `.agents/skills/*/SKILL.md` rulebooks are authoritative over
+`.claude/rules/*` (AGENTS.md). The `.claude/rules` unit-testing copy (deleted in `f68df73`) also allows
+`// act & assert` for "a data row". `.agents/skills/` allows it only for one
 `assert.rejects`/`assert.throws`.
 
 ## File Classification
@@ -68,8 +68,8 @@ Stop arithmetic to copy verbatim (lines 153-163): `closing = opening - fixed -
 rejected + new + reopened`. Stop on a correction round with open findings and no
 reduction, on any reopen, or at round four.
 
-Phase 5 additions: (1) a paragraph that states `skills/` is authoritative over
-`.claude/rules/typescript-unit-testing.md` for `// act & assert`; (2) the D-17
+Phase 5 additions: (1) a paragraph that states `.agents/skills/` is authoritative over
+`.claude/rules/typescript-unit-testing.md` (deleted in `f68df73`) for `// act & assert`; (2) the D-17
 N/A rules for the four gates (mirrored pairing, one `describe` per export,
 isolated direct coverage); (3) the D-10 citation rule (cite SC-02 /
 CR-04-ACCOUNT-0xx); (4) the runtime path choice (`.claude/gsd-core` vs
@@ -198,7 +198,7 @@ of their own.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { createFakeHap } from '../../features/support/fakeHap.js';
+import { createFakeHap } from '../../features/lib/hap.js';
 import { bindRestoredControlRefusal, createControlBinder } from '../../src/accessories/controls.js';
 ```
 
@@ -335,12 +335,12 @@ for floors, with the D-14 reason.
 **Apply to:** all 21 non-conforming files. Keep `.js` relative imports.
 
 ### HAP only through the injected namespace
-**Source:** `controls.test.ts:44-46` and `features/support/fakeHap.ts`
+**Source:** `controls.test.ts:44-46` and `features/lib/hap.ts`
 (`createFakeHap`). Only `hapWriteFidelity.test.ts` imports `@homebridge/hap-nodejs`.
-Do not edit `fakeHap.ts` unless a declared bounded task needs it (D-12).
+Do not edit `features/lib/hap.ts` unless a declared bounded task needs it (D-12).
 
 ### AAA markers
-**Source:** `skills/typescript-unit-testing/SKILL.md:42` (authoritative).
+**Source:** `.agents/skills/typescript-unit-tests/rules/cases.md:15` (authoritative).
 Use `// arrange`, `// act`, `// assert`. Use `// act & assert` only for one
 `assert.rejects`/`assert.throws`.
 

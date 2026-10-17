@@ -72,7 +72,7 @@ Copied verbatim from `.planning/phases/05-accessories-conformance/05-CONTEXT.md:
   place (pattern: `controls.test.ts:44-46` `HAP_NAMESPACE`; add e.g.
   `asService`/`asAccessory` helpers as needed). Inline `as unknown as` casts
   are replaced by those helpers. No production type changes to remove casts.
-- **D-12:** `features/support/fakeHap.ts` (722 lines, 15 consumers) stays
+- **D-12:** `features/lib/hap.ts` (722 lines, 15 consumers) stays
   outside Phase 5's sweep. Edit it only when a confirmed accessory finding
   requires it, as a declared bounded consumer task (D-06). Its full review
   belongs to the phase that owns `features/**`.
@@ -107,7 +107,7 @@ Copied verbatim from `.planning/phases/05-accessories-conformance/05-CONTEXT.md:
 
 ### Deferred Ideas (OUT OF SCOPE)
 
-- Full conformance review of `features/support/fakeHap.ts`: belongs to the
+- Full conformance review of `features/lib/hap.ts`: belongs to the
   phase that owns `features/**`.
 </user_constraints>
 
@@ -117,7 +117,7 @@ Phase 5 is a full-file conformance sweep of 24 files: ten accessory source modul
 
 The baseline at `1bcaddd8d20d73316f6298d6ce5eb53aa6b2ee46` on Node v26.12.0 is green. `npm run build:test` exited 0. All 14 accessory owners ran in one `node --test` call with 609 tests, 22 suites, 0 failures. Isolated direct coverage for all ten pairs exited 0 with no output, which is the selector's success mode. `npm run test:unpaired:compiled` exited 0. This is research-time evidence. It is not a phase gate and does not replace the full `npm run check`. [VERIFIED: native runs 2026-10-16T19:32:44Z–19:32:58Z]
 
-Three facts in CONTEXT need correction before planning. (1) The header gap is the opposite of what the discretion bullet says. `src/accessories/reconciliation.ts` is the only source that already has the full D-01 header. The other nine sources have `// SPDX-License-Identifier: MIT` followed directly by the `@fileoverview` block, with no blank line and no copyright block. Twelve of the fourteen tests also need the header, not nine. (2) There are 24 `as unknown as` casts, not 25. (3) `features/support/fakeHap.ts` is imported by 14 files, not 15. The discussion premises were recorded this way, so the planner should use the verified values. [VERIFIED: head reads of all 24 files; `grep -o "as unknown as" test/accessories/*.ts | wc -l` = 24; `grep -rln "fakeHap.js" src test features` = 14 files]
+Three facts in CONTEXT need correction before planning. (1) The header gap is the opposite of what the discretion bullet says. `src/accessories/reconciliation.ts` is the only source that already has the full D-01 header. The other nine sources have `// SPDX-License-Identifier: MIT` followed directly by the `@fileoverview` block, with no blank line and no copyright block. Twelve of the fourteen tests also need the header, not nine. (2) There are 24 `as unknown as` casts, not 25. (3) `features/lib/hap.ts` is imported by 14 files, not 15. The discussion premises were recorded this way, so the planner should use the verified values. [VERIFIED: head reads of all 24 files; `grep -o "as unknown as" test/accessories/*.ts | wc -l` = 24; `grep -rln "hap.js" src test features` = 14 files]
 
 **Primary recommendation:** Reuse the Phase 4 protocol shape, with fewer process artifacts. Create a Wave 0 protocol and ledger. Pre-allocate CR-05-CONTROLS-001…007 for seeds (a)–(g). Run six serial batches in leaf-first order: DECLARATIONS → CATALOGUE → CONTROLS → RECORDS → ACCESSORY → GATES. End with a coordinator closeout that audits the 24-path inventory and headers and runs `npm run check`. Use one writer in the existing checkout.
 
@@ -142,8 +142,8 @@ CLAUDE.md contains only `@AGENTS.md`. These are the directives that apply to thi
 - Never commit to `main`. Do not rebase or rewrite history. Never use `--no-verify`. Do not `--amend` after a failed hook.
 - Commit messages follow Conventional Commits. The title is 5–72 characters, each body line is at most 80, and no GSD milestone or phase text appears. Each commit ends with the attribution line given in the session.
 - Before each commit, run `SKIP=npm-check pre-commit run --files <changed files>`. Restage until it is clean, then run `git commit` in the foreground. The hook runs `npm run check:commit`.
-- TypeScript rules are under `skills/`. Read `typescript-google-style-review` and `typescript-comments` for every `.ts` file. Read `typescript-unit-testing` (write) and `typescript-unit-testing-review` (check) for `test/**/*.ts`. Preserve `.js` imports and the compiled test layout.
-- Build verification follows `skills/local-verification/SKILL.md`. Run the full `npm run check` at wave, phase and merge gates. A passing commit hook does not replace a full gate.
+- TypeScript rules are under `.agents/skills/`. Read `typescript-style` for every `.ts` file. Read `typescript-unit-tests` (write and check) for `test/**/*.ts`. Preserve `.js` imports and the compiled test layout.
+- Build verification follows `.agents/skills/local-verification/SKILL.md`. Run the full `npm run check` at wave, phase and merge gates. A passing commit hook does not replace a full gate.
 - Every plan `SUMMARY.md` includes `## Threat Flags`, with the exact None text when it applies.
 - Each `gsd-tools windows append --description` starts with `[code-review-sweep]`. Do not hand-edit `.planning/WINDOWS.md`.
 - Use Fallow per the task map: run `fallow guard <files>` before edits, `fallow dead-code --type-aware --symbol-impact` before you change an exported symbol, `fallow dead-code --trace` before a deletion, and `fallow audit --base <ref>` before a commit.
@@ -225,7 +225,7 @@ All seven seeds are still present. Pre-allocate CR-05-CONTROLS-001…007 in this
 | CR-05-CONTROLS-003 | (c) case tests the fake | 217-238 | `controls.test.ts:216-243`, `'leaves a sticky status when the clearing push is queued as a microtask instead'`. It drives only `switchService()` from the stand-in and never calls a controls export. | unit, "a case must discriminate the module"; D-13 |
 | CR-05-CONTROLS-004 | (d) `.bind` spy | 316-335 | `controls.test.ts:321-340`, `'registers one handler however many times a service is bound'`; line 327 `const declared = characteristic.onSet.bind(characteristic);` and lines 328-332 reassign `characteristic.onSet` | unit, Test doubles (spies via `t.mock.method`); style quick-scan `.bind(` |
 | CR-05-CONTROLS-005 | (e) `// act & assert` over two statements | 928-933 | `controls.test.ts:921-932`. The marker covers `await assertRefused(...)` and then a separate `assert.deepStrictEqual(...)`. A second instance of the same rule is at 975-982: the marker covers a plain `assert.deepStrictEqual(readOfSwitch(service), ...)`. | unit writer, Case structure |
-| CR-05-CONTROLS-006 | (f) undocumented `as unknown as Service` | 158, 330, 853, 874, 905 | `controls.test.ts:163, 335, 336, 851, 872, 903` (six inline casts). The seventh at line 46 is the documented `HAP_NAMESPACE` widening that D-11 names as the pattern. | style, Types (`as` with a reason); unit, Types and hermeticity; D-11 |
+| CR-05-CONTROLS-006 | (f) undocumented `as unknown as Service` | 158, 330, 853, 874, 905 | `controls.test.ts:163, 335, 336, 851, 872, 903` (six inline casts). The seventh at line 46 is the documented `HAP_NAMESPACE` widening that D-11 names as the pattern. | style, Types (`as` with a reason); unit, Types and isolation; D-11 |
 | CR-05-CONTROLS-007 | (g) misplaced ordering comment | controls.ts:304-328 | `src/accessories/controls.ts:304-322`. The `LOCAL_REFUSALS` ordering comment is followed with no blank line by the `NO_COMMAND_TRANSPORT_CAUSE` comment (323-327), the constant (328), `QUIET_LIVE_CONNECTION_CAUSE` (330-334) and then `const LOCAL_REFUSALS` (336). | style/comments, documentation placement |
 
 Verbatim anchors [VERIFIED: src/accessories/controls.ts:304-305,328,336]:
@@ -239,7 +239,7 @@ const LOCAL_REFUSALS: readonly LocalRefusal[] = [
 
 Disposition evidence for seed (c) under D-13: `hapWriteFidelity.test.ts` already contains the same ordering experiment against real HAP and the stand-in. It is `'survives a push queued as a microtask inside the handler, on both implementations'` at lines 375-396. Removing the controls case with a ledger reason ("duplicated against both implementations at hapWriteFidelity.test.ts:375-396") loses nothing. Moving it would add a duplicate parity case, which D-16 forbids. [VERIFIED: test/accessories/hapWriteFidelity.test.ts:370-396]
 
-Fix technique for seed (d), verified natively: `t.mock.method(instance, 'onSet')` with no replacement spies an inherited prototype method, runs the real behavior and exposes `mock.callCount()`. The stand-in's `onSet` is a prototype method of `StandInCharacteristic`. [VERIFIED: node v26.12.0 probe in the scratchpad; features/support/fakeHap.ts:286,303-307]
+Fix technique for seed (d), verified natively: `t.mock.method(instance, 'onSet')` with no replacement spies an inherited prototype method, runs the real behavior and exposes `mock.callCount()`. The stand-in's `onSet` is a prototype method of `StandInCharacteristic`. [VERIFIED: node v26.12.0 probe in the scratchpad; features/lib/hap.ts:286,303-307]
 
 ### Unaccepted review candidates (leads for reviewers, S-05-NN)
 
@@ -261,7 +261,7 @@ These are observations from reading the files this session. They are not finding
 | S-05-12 | hapWriteFidelity.test.ts:51,112,94 | `require_` uses a trailing-underscore name. `catch {` has no `(error: unknown)`. `manifest as InstalledManifest` has no stated reason. | style, Naming / Errors / Types |
 | S-05-13 | hapWriteFidelity.test.ts:258-268 | A conditionally registered test. Under Homebridge 1.x it does not exist, which works like a skip. | unit, no conditional in registration / no skip (reviewer judgment) |
 | S-05-14 | hapWriteFidelity.test.ts:481-494 | `'leaves the stand-in published flag ...'` exercises the stand-in only. | unit, "test support needs no meta-tests"; D-13/D-16 |
-| S-05-15 | D-16 parity gaps, not diffed today: (1) a write with **no** handler stores the value and reports success, which `staleMarking.ts:29-34` and `controls.ts:36-41` rely on; (2) a second `onSet` replaces the first, which `bindRestoredControlRefusal` handoff relies on (controls.ts:42-45,424-428); (3) real HAP resets `statusCode` to 0 at **entry** to `handleSetRequest`, while the stand-in clears it only on success, so a read during an in-flight write can differ. | D-16, confirmed gaps only | [VERIFIED: Characteristic.js:1786-1787,1838-1841; features/support/fakeHap.ts:309-334] |
+| S-05-15 | D-16 parity gaps, not diffed today: (1) a write with **no** handler stores the value and reports success, which `staleMarking.ts:29-34` and `controls.ts:36-41` rely on; (2) a second `onSet` replaces the first, which `bindRestoredControlRefusal` handoff relies on (controls.ts:42-45,424-428); (3) real HAP resets `statusCode` to 0 at **entry** to `handleSetRequest`, while the stand-in clears it only on success, so a read during an in-flight write can differ. | D-16, confirmed gaps only | [VERIFIED: Characteristic.js:1786-1787,1838-1841; features/lib/hap.ts:309-334] |
 | S-05-16 | alarmMute.test.ts:19-29,52-64 | A source-text gate inside a paired test with no enumeration floor and no planted positive. An empty read would pass. | unit, "would a wrong implementation pass?" (BLOCKER class) |
 | S-05-17 | basementGuardian.test.ts:3400-3455; serviceCatalogue.test.ts:1485-1491 | Source-text cases inside paired tests. The `onGet` and get-event checks repeat `accessoryReadPathScope.test.ts`, with a weaker pattern. | unit, "Do not test what a gate already enforces" |
 | S-05-18 | controls.test.ts:104-118 (and similar recorders) | A hand-built `CommandPort` recorder asserts sends. The rules give command issuing to `strong-mock`. | unit, Test doubles (reviewer judgment; large refactor) |
@@ -269,7 +269,7 @@ These are observations from reading the files this session. They are not finding
 | S-05-20 | src/accessories/basementGuardian.ts:177-180 | `DEFAULT_OFFLINE_CONFIRMATION_POLL_COUNT = 2` repeats `src/config.ts`'s default (the comment says so). | design (reviewer judgment; `src/config.ts` belongs to Phase 6) |
 | S-05-21 | customCharacteristics.ts:111-114 | `type CharacteristicDomain = Pick<...>`. Style prefers interface extension over `Pick`. | style, Types |
 
-Rulebook note for S-05-01: two rule texts disagree. `skills/typescript-unit-testing/SKILL.md:42` says: "Use `// act & assert` only when one `assert.rejects()` or `assert.throws()` expression performs both the action and assertion. Data rows still use separate phases." The tracked `.claude/rules/typescript-unit-testing.md` (last changed in `04ab77d`) says: "When act and assertion are one expression (`assert.rejects()`, `assert.throws()`, a data row), use `// act & assert`." AGENTS.md and `.planning/config.json` `agent_skills` name the `skills/` copies, and Phases 2–4 applied them. Claude Code also loads `.claude/rules/*.md` into every agent automatically. Dispatch prompts must say that `skills/` is authoritative. [VERIFIED: diff of the two files this session; `git ls-files --error-unmatch .claude/rules/typescript-unit-testing.md` exits 0 (corrected by the orchestrator; the first research pass recorded this file as untracked)]
+Rulebook note for S-05-01: two rule texts disagree. `.agents/skills/typescript-unit-tests/rules/cases.md:15` says: "Use `// act & assert` only when one `assert.rejects()` or `assert.throws()` expression performs both the action and assertion. Data rows still use separate phases." The tracked `.claude/rules/typescript-unit-testing.md` (last changed in `04ab77d`; deleted in `f68df73`) says: "When act and assertion are one expression (`assert.rejects()`, `assert.throws()`, a data row), use `// act & assert`." AGENTS.md and `.planning/config.json` `agent_skills` name the `.agents/skills/` copies, and Phases 2–4 applied them. Claude Code also loads `.claude/rules/*.md` into every agent automatically. Dispatch prompts must say that `.agents/skills/` is authoritative. [VERIFIED: diff of the two files this session; `git ls-files --error-unmatch .claude/rules/typescript-unit-testing.md` exits 0 (corrected by the orchestrator; the first research pass recorded this file as untracked)]
 
 ## Standard Stack
 
@@ -363,10 +363,10 @@ Import sites for each accessory module outside its own pair [VERIFIED: grep of `
 | Module | External importers |
 | --- | --- |
 | alarmMute | src/accessories/controls.ts |
-| services | src/platform.ts, src/config.ts, src/accessories/basementGuardian.ts, src/accessories/serviceCatalogue.ts, test/platform.test.ts, test/config.test.ts, test/accessories/serviceCatalogue.test.ts, test/accessories/basementGuardian.test.ts, features/support/world.ts, features/support/steps/configuration.ts |
+| services | src/platform.ts, src/config.ts, src/accessories/basementGuardian.ts, src/accessories/serviceCatalogue.ts, test/platform.test.ts, test/config.test.ts, test/accessories/serviceCatalogue.test.ts, test/accessories/basementGuardian.test.ts, features/support/world.ts, features/step_definitions/configuration.steps.ts |
 | customCharacteristics | src/accessories/customServices.ts, serviceCatalogue.ts, staleMarking.ts; tests: serviceCatalogue, customServices, basementGuardian |
 | customServices | src/accessories/serviceCatalogue.ts; test/accessories/serviceCatalogue.test.ts |
-| serviceCatalogue | src/accessories/basementGuardian.ts, staleMarking.ts, controls.ts; test/platform.test.ts, test/configSchema.test.ts, test/accessories/basementGuardian.test.ts; features/support/publishedServices.ts, features/support/steps/homekit.ts |
+| serviceCatalogue | src/accessories/basementGuardian.ts, staleMarking.ts, controls.ts; test/platform.test.ts, test/configSchema.test.ts, test/accessories/basementGuardian.test.ts; features/lib/publishedServices.ts, features/step_definitions/homekit.steps.ts |
 | controls | src/accessories/basementGuardian.ts, staleMarking.ts; test/accessories/staleMarking.test.ts |
 | pumpRecords | src/accessories/basementGuardian.ts |
 | reconciliation | src/runtime/accountRuntime.ts |
@@ -424,8 +424,8 @@ Conformance repairs can rename symbols or reshape types. A source rename does no
 **How to avoid:** Use the inventory table. 21 files need D-01. `reconciliation.ts`, `reconciliation.test.ts` and `controls.test.ts` already conform.
 
 ### Two disagreeing `// act & assert` rules
-**What goes wrong:** A Claude-run reviewer applies `.claude/rules/typescript-unit-testing.md` ("a data row" may use the combined marker) and rejects S-05-01, unlike Phases 2–4.
-**How to avoid:** Every dispatch names `skills/*/SKILL.md` as authoritative per AGENTS.md. Record the conflict once in the protocol.
+**What goes wrong:** A Claude-run reviewer applies `.claude/rules/typescript-unit-testing.md` (deleted in `f68df73`; "a data row" may use the combined marker) and rejects S-05-01, unlike Phases 2–4.
+**How to avoid:** Every dispatch names `.agents/skills/*/SKILL.md` as authoritative per AGENTS.md. Record the conflict once in the protocol.
 
 ### Stale floors that still pass
 **What goes wrong:** `SOURCE_FILE_FLOOR = 104` passes against 132 files, so a gate that read only 104 would still pass. D-14 keeps `>=` floors but allows a fix "if it is wrong for the current tree".
@@ -485,7 +485,7 @@ The pattern comes from controls.test.ts:44-46. [VERIFIED]
 ### Data-driven rows, one sibling test each (S-05-04)
 
 ```typescript
-// Pattern: skills/typescript-unit-testing/SKILL.md "Data-driven cases"
+// Pattern: .agents/skills/typescript-unit-tests/rules/cases.md "Data-driven cases"
 for (const refusalCase of REFUSALS) {
   test(`answers ${String(refusalCase.status)} for ${refusalCase.cause}`, async () => {
     // act
@@ -623,7 +623,7 @@ git commit                                             # foreground; hook runs n
 
 ### Wave 0 Gaps
 
-- [ ] `05-REVIEW-PROTOCOL.md`: batches, roles, rulebook authority (skills/ over .claude/rules), D-03 arithmetic, five-path budget, runtime paths.
+- [ ] `05-REVIEW-PROTOCOL.md`: batches, roles, rulebook authority (.agents/skills/ over .claude/rules), D-03 arithmetic, five-path budget, runtime paths.
 - [ ] `05-FINDINGS.md`: the 24-path inventory, CR-05-CONTROLS-001…007 with current locations, S-05 candidates as unaccepted leads.
 - [ ] Ledger tracer predicate (concrete command, written in the coordinator plan).
 - [ ] A fresh baseline `npm run check` result (see Open Question 4).
@@ -662,9 +662,9 @@ git commit                                             # foreground; hook runs n
 ### Primary (HIGH confidence, observed this session)
 - 05-CONTEXT.md, 05-DISCUSSION-LOG.md, .continue-here.md, REQUIREMENTS.md, ROADMAP.md §Phase 5, config.json.
 - Phase 4: 04-RESEARCH.md, 04-REVIEW-PROTOCOL.md, 04-FINDINGS.md (first 200 lines), 04-VALIDATION.md, 04-PATTERNS.md, 04-01-PLAN.md. Phase 1: 01-CONTROLS-REVIEW.md. SPOT-CHECK-FINDINGS.md.
-- All five `skills/*/SKILL.md` rulebooks. `.claude/rules/typescript-unit-testing.md` (for the divergence).
+- All five rulebooks (now under `.agents/skills/`). `.claude/rules/typescript-unit-testing.md` (for the divergence; deleted in `f68df73`).
 - Full reads: all ten sources except basementGuardian.ts and serviceCatalogue.ts (headers, public types and selected regions read), controls.test.ts, timerFreedom, hapImportScope, accessoryReadPathScope, hapWriteFidelity. Selected regions of the other tests.
-- `scripts/test-coverage-direct.mjs`, `scripts/check-corresponding-tests.mjs`, `test/packaging/licenseHeaders.test.ts`, package.json, `.fallowrc.json`, `.pre-commit-config.yaml`, `features/support/fakeHap.ts` (selected regions).
+- `scripts/test-coverage-direct.mjs`, `scripts/check-corresponding-tests.mjs`, `test/packaging/licenseHeaders.test.ts`, package.json, `.fallowrc.json`, `.pre-commit-config.yaml`, `features/lib/hap.ts` (selected regions).
 - Pinned `node_modules/@homebridge/hap-nodejs/dist/lib/Characteristic.js` 2.2.2 (lines 1340-1362, 1786-1880).
 - Native runs: build, 14 owners (609/609), ten-pair direct coverage (exit 0), unpaired gates (exit 0), `fallow dupes` (2 clone groups, none in accessories, tests skipped by default), `fallow guard`, the RED checker on both runtimes, and a `t.mock.method` probe.
 

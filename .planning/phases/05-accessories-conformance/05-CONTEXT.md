@@ -81,7 +81,7 @@ meaning, fallback state or persistence migration is in scope.
   place (pattern: `controls.test.ts:44-46` `HAP_NAMESPACE`; add e.g.
   `asService`/`asAccessory` helpers as needed). Inline `as unknown as` casts
   are replaced by those helpers. No production type changes to remove casts.
-- **D-12:** `features/support/fakeHap.ts` (722 lines, 14 importers) stays
+- **D-12:** `features/lib/hap.ts` (722 lines, 14 importers) stays
   outside Phase 5's sweep. Edit it only when a confirmed accessory finding
   requires it, as a declared bounded consumer task (D-06). Its full review
   belongs to the phase that owns `features/**`.
@@ -152,15 +152,13 @@ meaning, fallback state or persistence migration is in scope.
   reconciliation edits
 
 ### Rulebooks
-- `skills/typescript-google-style-review/SKILL.md`
-- `skills/typescript-comments/SKILL.md`
-- `skills/typescript-unit-testing/SKILL.md`
-- `skills/typescript-unit-testing-review/SKILL.md`
-- `skills/local-verification/SKILL.md`
-- The `skills/` rulebooks are authoritative (AGENTS.md). The tracked
-  `.claude/rules/typescript-unit-testing.md` copy also allows
-  `// act & assert` for "a data row"; `skills/` allows it only for one
-  `assert.rejects`/`assert.throws`. Reviewers and fixers follow `skills/`.
+- `.agents/skills/typescript-style/SKILL.md`
+- `.agents/skills/typescript-unit-tests/SKILL.md`
+- `.agents/skills/local-verification/SKILL.md`
+- The `.agents/skills/` rulebooks are authoritative (AGENTS.md). The tracked
+  `.claude/rules/typescript-unit-testing.md` copy (deleted in `f68df73`) also allows
+  `// act & assert` for "a data row"; `.agents/skills/` allows it only for one
+  `assert.rejects`/`assert.throws`. Reviewers and fixers follow `.agents/skills/`.
 
 </canonical_refs>
 
@@ -168,7 +166,7 @@ meaning, fallback state or persistence migration is in scope.
 ## Existing Code Insights
 
 ### Reusable Assets
-- `features/support/fakeHap.ts` `createFakeHap`, `FakeHapService`,
+- `features/lib/hap.ts` `createFakeHap`, `FakeHapService`,
   `FakeHapCharacteristic`: the shared HAP stand-in used by tests and Cucumber.
 - `controls.test.ts:44-46` `HAP_NAMESPACE`: the commented single-widening
   pattern D-11 extends.
@@ -204,7 +202,7 @@ No specific requirements beyond the decisions above.
 <deferred>
 ## Deferred Ideas
 
-- Full conformance review of `features/support/fakeHap.ts`: belongs to the
+- Full conformance review of `features/lib/hap.ts`: belongs to the
   phase that owns `features/**`.
 
 </deferred>

@@ -36,7 +36,7 @@ created: "2026-10-16"
 
 - **After every cause commit:** the owner command and the pair coverage command for every touched pair, including each consumer pair; `npm run test:unpaired` when a gate or the `src/` file set changes.
 - **After every plan wave:** the parent runs `npm run check` on the combined tree.
-- **Before `/gsd-verify-work`:** a current full `npm run check` on the final inputs; reuse only exact unchanged inputs in the same session (`skills/local-verification/SKILL.md`).
+- **Before `/gsd-verify-work`:** a current full `npm run check` on the final inputs; reuse only exact unchanged inputs in the same session (`.agents/skills/local-verification/SKILL.md`).
 - **Max feedback latency:** about 70 seconds for the full gate; seconds for an owner run.
 
 ---
@@ -62,7 +62,7 @@ created: "2026-10-16"
 
 ## Wave 0 Requirements
 
-- [ ] `05-REVIEW-PROTOCOL.md` — batches, roles, rulebook authority (`skills/` over `.claude/rules/`), D-03 arithmetic, five-path cause budget, runtime paths
+- [ ] `05-REVIEW-PROTOCOL.md` — batches, roles, rulebook authority (`.agents/skills/` over `.claude/rules/`), D-03 arithmetic, five-path cause budget, runtime paths
 - [ ] `05-FINDINGS.md` — 24-path inventory, CR-05-CONTROLS-001…007 at current locations, S-05 candidates as unaccepted leads
 - [ ] Ledger tracer predicate — a concrete command written in the coordinator plan
 - [ ] Fresh baseline `npm run check` — the last full gate ran in another session and inputs changed since
