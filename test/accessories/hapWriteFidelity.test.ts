@@ -451,6 +451,34 @@ test('answers the stored status to a read issued after a refusal, on both implem
   assert.deepStrictEqual(real, { rejectedWith: HAPStatus.RESOURCE_BUSY, value: true, statusCode: HAPStatus.RESOURCE_BUSY });
 });
 
+test('returns a rejecting promise for a refused read, on both implementations', async () => {
+  // arrange
+  const realService = new Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
+  const realOn = realService.getCharacteristic(Characteristic.On);
+  const fakeService = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
+  const fakeOn = fakeService.getCharacteristic(FAKE.Characteristic.On);
+  assert.ok(fakeOn !== undefined);
+  realOn.onSet(() => Promise.reject(new HapStatusError(HAPStatus.RESOURCE_BUSY)));
+  fakeOn.onSet(() => Promise.reject(new FAKE.HapStatusError(HAPStatus.RESOURCE_BUSY)));
+  await assert.rejects(realOn.handleSetRequest(true), (status: unknown) => status === HAPStatus.RESOURCE_BUSY);
+  await assert.rejects(fakeOn.handleSetRequest(true), (status: unknown) => status === HAPStatus.RESOURCE_BUSY);
+
+  // act
+  for (const characteristic of [realOn, fakeOn]) {
+    let read: unknown;
+    assert.doesNotThrow(() => {
+      read = characteristic.handleGetRequest();
+    });
+
+    // assert
+    assert.ok(read instanceof Promise);
+    await assert.rejects(read, (status: unknown) => {
+      assert.deepStrictEqual(status, HAPStatus.RESOURCE_BUSY);
+      return true;
+    });
+  }
+});
+
 test('returns the stored status to zero on a push of the value already held, on both implementations', async () => {
   // act
   const { real, fake } = await bothRecords(async (subject, refuse) => {

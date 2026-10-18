@@ -229,12 +229,12 @@ async function assertSwitchReadsOn(this: BasementGuardianWorld, displayName: str
 Then('the {string} switch reads on', assertSwitchReadsOn);
 
 // A refused write leaves its status on the characteristic and HAP answers that status to every
-// later read, so a switch that stopped answering reads is the failure this asserts the absence of
+// later read, so a switch that rejects a read is the failure this asserts the absence of
 // (D-04). An absent switch raises from inside the callback and fails the step by name.
 async function assertSwitchAnswersARead(this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
 
-  assert.doesNotThrow(() => publishedSwitch(homebridge, displayName).handleGetRequest());
+  await publishedSwitch(homebridge, displayName).handleGetRequest();
 }
 
 Then('the {string} switch answers a read', assertSwitchAnswersARead);

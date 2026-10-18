@@ -343,15 +343,15 @@ class StandInCharacteristic implements FakeHapCharacteristic {
     this.value = value;
   }
 
-  // A stored status answers before the value is ever read, which is what makes a refused write
-  // outlive the press that caused it.
+  // A stored status rejects the read promise before the value is read, which makes a refused
+  // write outlive the press that caused it.
   handleGetRequest(): unknown {
     if (this.statusCode !== HAP_STATUS.SUCCESS) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- reproducing the real HAP read path, which throws a bare status number
-      throw this.statusCode;
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- real HAP rejects reads with the bare numeric status
+      return Promise.reject(this.statusCode);
     }
 
-    return this.value;
+    return Promise.resolve(this.value);
   }
 
   // The real HAP answers `false` for a bool; for a string, one of four named defaults by identifier

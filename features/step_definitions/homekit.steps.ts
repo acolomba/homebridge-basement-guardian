@@ -172,13 +172,13 @@ const READ_OUTCOMES: Readonly<Record<ReadOutcome, string>> = {
 };
 
 // Which of the three a controller read of this characteristic meets. A characteristic made
-// unreadable throws the status the plugin stored on it ahead of the value, which is what Apple Home
+// unreadable rejects with the status the plugin stored on it ahead of the value, which is what Apple Home
 // draws as No Response, and reading the stored value alone cannot tell that apart from a value the
 // service answered. A characteristic the service does not carry answers neither, and that is its own
 // outcome rather than a shade of either: a step asserting an answer and a step asserting a refusal
 // both fail on an absence, because a service that never published the characteristic is a scenario
 // examining nothing (WR-06).
-function readOutcome(service: FakeHapService | undefined, displayName: string): ReadOutcome {
+async function readOutcome(service: FakeHapService | undefined, displayName: string): Promise<ReadOutcome> {
   const characteristic = service?.characteristics.find((candidate) => candidate.displayName === displayName);
 
   if (characteristic === undefined) {
@@ -186,7 +186,7 @@ function readOutcome(service: FakeHapService | undefined, displayName: string): 
   }
 
   try {
-    characteristic.handleGetRequest();
+    await characteristic.handleGetRequest();
   } catch {
     return 'refused';
   }
@@ -199,13 +199,18 @@ function readOutcome(service: FakeHapService | undefined, displayName: string): 
 // the wait's error as its cause so nothing about the timing is lost.
 async function untilReadOutcome(world: BasementGuardianWorld, serviceName: string, characteristicName: string, expected: ReadOutcome): Promise<void> {
   const homebridge = await world.homebridge();
-  const read = (): ReadOutcome => readOutcome(serviceOf(homebridge, serviceName), characteristicName);
+  const read = (): Promise<ReadOutcome> => readOutcome(serviceOf(homebridge, serviceName), characteristicName);
   const failure = `the ${serviceName} service never ${READ_OUTCOMES[expected]} for ${characteristicName}`;
+  const deadline = Date.now() + PUBLISH_DEADLINE_MS;
+  let outcome = await read();
 
-  try {
-    await world.untilTrue(() => read() === expected, PUBLISH_DEADLINE_MS, failure);
-  } catch (thrown) {
-    throw new Error(`${failure}: it ${READ_OUTCOMES[read()]}`, { cause: thrown });
+  while (outcome !== expected && Date.now() < deadline) {
+    await delay(10);
+    outcome = await read();
+  }
+
+  if (outcome !== expected) {
+    throw new Error(`${failure}: it ${READ_OUTCOMES[outcome]}`, { cause: new Error(`${failure} within ${String(PUBLISH_DEADLINE_MS)} ms`) });
   }
 }
 
