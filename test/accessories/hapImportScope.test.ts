@@ -41,7 +41,22 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { createPrinter, createSourceFile, ScriptTarget } from 'typescript';
+import {
+  createPrinter,
+  createSourceFile,
+  forEachChild,
+  isCallExpression,
+  isFunctionDeclaration,
+  isIdentifier,
+  isNoSubstitutionTemplateLiteral,
+  isObjectBindingPattern,
+  isPropertyAccessExpression,
+  isStringLiteral,
+  isVariableDeclaration,
+  ScriptTarget,
+  type Node,
+  type SourceFile,
+} from 'typescript';
 
 import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
 
@@ -84,17 +99,68 @@ function importsHapPackage(source: string): boolean {
   return importSpecifiers(source).some((specifier) => specifier === HAP_PACKAGE_SPECIFIER || specifier.startsWith(`${HAP_PACKAGE_SPECIFIER}/`));
 }
 
-// Module overviews explain forbidden idioms, so the HAP source checks inspect code without comments.
+// The printer control checks that comments are removed without changing string literals.
 function codeOf(source: string): string {
   return createPrinter({ removeComments: true }).printFile(createSourceFile('accessory.ts', source, ScriptTarget.Latest, true));
 }
 
-function accessoryCodeOf(module: string): string {
-  return codeOf(readFileSync(join(REPOSITORY_ROOT, 'src', 'accessories', module), 'utf8'));
+function sourceFileOf(source: string): SourceFile {
+  return createSourceFile('accessory.ts', source, ScriptTarget.Latest, true);
 }
 
-function occurrences(code: string, needle: string): number {
-  return code.split(needle).length - 1;
+function accessorySourceOf(module: string): SourceFile {
+  return sourceFileOf(readFileSync(join(REPOSITORY_ROOT, 'src', 'accessories', module), 'utf8'));
+}
+
+function countIdentifiers(node: Node, name: string): number {
+  let count = isIdentifier(node) && node.text === name ? 1 : 0;
+  forEachChild(node, (child) => {
+    count += countIdentifiers(child, name);
+  });
+  return count;
+}
+
+function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberCall: boolean; destructuredCall: boolean } {
+  const uses = { onSet: false, setEvent: false, memberCall: false, destructuredCall: false };
+
+  function visit(node: Node): void {
+    if (isPropertyAccessExpression(node) && node.name.text === 'onSet') {
+      uses.onSet = true;
+    }
+
+    if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
+      const member = node.expression;
+      const firstArgument = node.arguments[0];
+      if (
+        member.name.text === 'on' &&
+        firstArgument &&
+        (isStringLiteral(firstArgument) || isNoSubstitutionTemplateLiteral(firstArgument)) &&
+        firstArgument.text === 'set'
+      ) {
+        uses.setEvent = true;
+      }
+
+      if (member.name.text === 'generate' && isPropertyAccessExpression(member.expression) && member.expression.name.text === 'uuid') {
+        uses.memberCall = true;
+      }
+    }
+
+    if (
+      isVariableDeclaration(node) &&
+      isObjectBindingPattern(node.name) &&
+      node.name.elements.some((element) => isIdentifier(element.name) && element.name.text === 'generate') &&
+      node.initializer &&
+      isPropertyAccessExpression(node.initializer) &&
+      node.initializer.name.text === 'uuid'
+    ) {
+      uses.destructuredCall = true;
+    }
+
+    forEachChild(node, visit);
+  }
+
+  visit(file);
+  return uses;
 }
 
 // One fixture per spelling the detector has to catch, each written out rather than
@@ -220,25 +286,58 @@ test('ignores a trailing HAP status comment while preserving a string literal', 
   assert.strictEqual(code, 'const status = "HapStatusError";\n');
 });
 
+test('does not count HAP names inside diagnostic strings', () => {
+  // arrange
+  const source = 'const diagnostic = "HapStatusError onSet uuid.generate( .on(\'set\', callback)";';
+
+  // act
+  const file = sourceFileOf(source);
+  const uses = { erroredCharacteristic: countIdentifiers(file, ERRORED_CHARACTERISTIC), ...hapUses(file) };
+
+  // assert
+  assert.deepStrictEqual(uses, { erroredCharacteristic: 0, onSet: false, setEvent: false, memberCall: false, destructuredCall: false });
+});
+
+test('counts HAP identifiers, setter registrations and UUID uses in executable code', () => {
+  // arrange
+  const source = `
+new hap.HapStatusError(status);
+characteristic.onSet(handler);
+characteristic.on('set', handler);
+hap.uuid.generate(deviceId);
+const { generate } = hap.uuid;
+`;
+
+  // act
+  const file = sourceFileOf(source);
+  const uses = { erroredCharacteristic: countIdentifiers(file, ERRORED_CHARACTERISTIC), ...hapUses(file) };
+
+  // assert
+  assert.deepStrictEqual(uses, { erroredCharacteristic: 1, onSet: true, setEvent: true, memberCall: true, destructuredCall: true });
+});
+
 for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
   test(`${module} signals no untrusted scope through an errored characteristic`, () => {
     // act
-    const code = accessoryCodeOf(module);
+    const file = accessorySourceOf(module);
 
     // assert
-    assert.strictEqual(occurrences(code, ERRORED_CHARACTERISTIC), 0);
+    assert.strictEqual(countIdentifiers(file, ERRORED_CHARACTERISTIC), 0);
   });
 }
 
 // D-10 permits one persistent failure. Pin both the file count and the call's function location.
 test('serviceCatalogue.ts names an errored characteristic once, inside publishPersistentFailure', () => {
   // act
-  const code = accessoryCodeOf('serviceCatalogue.ts');
-  const persistentFailure = /export function publishPersistentFailure\b[\s\S]*?\n\}/.exec(code)?.[0] ?? '';
+  const file = accessorySourceOf('serviceCatalogue.ts');
+  const persistentFailure = file.statements.find((statement) => isFunctionDeclaration(statement) && statement.name?.text === 'publishPersistentFailure');
 
   // assert
   assert.deepStrictEqual(
-    { file: occurrences(code, ERRORED_CHARACTERISTIC), insidePublishPersistentFailure: occurrences(persistentFailure, ERRORED_CHARACTERISTIC) },
+    {
+      file: countIdentifiers(file, ERRORED_CHARACTERISTIC),
+      insidePublishPersistentFailure: persistentFailure ? countIdentifiers(persistentFailure, ERRORED_CHARACTERISTIC) : 0,
+    },
     { file: 1, insidePublishPersistentFailure: 1 },
   );
 });
@@ -247,23 +346,19 @@ for (const module of ACCESSORY_MODULES) {
   // Switch `On` writes use the control binder. No accessory module registers a direct set handler.
   test(`${module} has no direct onSet or set-event registration`, () => {
     // act
-    const code = accessoryCodeOf(module);
+    const file = accessorySourceOf(module);
+    const uses = hapUses(file);
 
     // assert
-    assert.deepStrictEqual({ onSet: code.includes('onSet'), setEvent: /\.on\(\s*['"`]set/i.test(code) }, { onSet: false, setEvent: false });
+    assert.deepStrictEqual({ onSet: uses.onSet, setEvent: uses.setEvent }, { onSet: false, setEvent: false });
   });
 
   test(`${module} contains no direct HAP UUID generation call`, () => {
     // act
-    const code = accessoryCodeOf(module);
+    const file = accessorySourceOf(module);
+    const uses = hapUses(file);
 
     // assert
-    assert.deepStrictEqual(
-      {
-        memberCall: /\buuid\s*\.\s*generate\s*\(/u.test(code),
-        destructuredCall: /\{\s*generate\s*\}\s*=\s*[\w.]+\.uuid\b/u.test(code),
-      },
-      { memberCall: false, destructuredCall: false },
-    );
+    assert.deepStrictEqual({ memberCall: uses.memberCall, destructuredCall: uses.destructuredCall }, { memberCall: false, destructuredCall: false });
   });
 }
