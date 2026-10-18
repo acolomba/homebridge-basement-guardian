@@ -16,7 +16,7 @@
  * Node timers module: awaiting it schedules nothing on `globalThis`, so a global
  * timer spy records zero calls while the publish is genuinely deferred.
  *
- * Three modules in this repository already import that form, so it is the
+ * Three production modules under `src/` already import that form, so it is the
  * spelling a future author would reach for without thinking about it. Reading
  * the source text is the only layer that can name that failure, and it names it
  * cheaply: an accessories module either imports deferred execution or it does
