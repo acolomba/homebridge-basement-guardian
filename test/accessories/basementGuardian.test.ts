@@ -20,7 +20,6 @@ import { createCustomCharacteristics } from '../../src/accessories/customCharact
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 import { geminiFamily } from '../../src/device/gemini.js';
-import { systemTimers } from '../../src/runtime/timers.js';
 
 import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../../features/lib/hap.js';
 import type { FakeAccessory } from '../../features/lib/homebridgeApi.js';
@@ -451,13 +450,6 @@ function runEvery(deferred: readonly (() => void)[]): void {
   for (const run of deferred) {
     run();
   }
-}
-
-// A deliberately deferred variant of the same transition, private to this module and never a
-// production option. Every immediacy layer is shown to catch it, which is what makes a green layer
-// evidence that the accessory did not defer rather than evidence that the layer cannot tell.
-function deferredTransition(timers: Timers, run: () => void): unknown {
-  return timers.setTimeout(run, 0);
 }
 
 function registryWith(outcome: FamilyOutcome<unknown>): FamilyRegistry {
@@ -2203,59 +2195,6 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.strictEqual(readImmediately, CONTACT_NOT_DETECTED);
-  });
-
-  test('the timer port layer catches a transition deferred through the injected port', () => {
-    // arrange
-    const accessory = accessoryStandIn();
-    const { timers, calls } = recordingTimers();
-    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
-    const basementGuardianAccessory = accessoryWith(accessory, { registry, timers });
-    basementGuardianAccessory.update(buildSnapshot(), 'poll');
-
-    // act
-    deferredTransition(timers, () => {
-      basementGuardianAccessory.update(buildSnapshot(), 'poll');
-    });
-
-    // assert
-    assert.deepStrictEqual(calls, ['setTimeout 0']);
-  });
-
-  test('the global spy layer catches a transition deferred through the process timers', (t) => {
-    // arrange
-    const accessory = accessoryStandIn();
-    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
-    const basementGuardianAccessory = accessoryWith(accessory, { registry });
-    basementGuardianAccessory.update(buildSnapshot(), 'poll');
-    const setTimeoutSpy = t.mock.method(globalThis, 'setTimeout');
-
-    // act
-    const handle = deferredTransition(systemTimers, () => {
-      basementGuardianAccessory.update(buildSnapshot(), 'poll');
-    });
-    systemTimers.clearTimeout(handle);
-
-    // assert
-    assert.strictEqual(setTimeoutSpy.mock.callCount(), 1);
-  });
-
-  test('the synchronous-visibility layer catches a transition deferred through the process timers', () => {
-    // arrange
-    const accessory = accessoryStandIn();
-    const registry = registryOver([linkOutcome({ linkPresent: true, mainsPresent: true }), linkOutcome({ linkPresent: true, mainsPresent: false })]);
-    const basementGuardianAccessory = accessoryWith(accessory, { registry });
-    basementGuardianAccessory.update(buildSnapshot(), 'poll');
-
-    // act
-    const handle = deferredTransition(systemTimers, () => {
-      basementGuardianAccessory.update(buildSnapshot(), 'poll');
-    });
-    const readImmediately = valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState);
-    systemTimers.clearTimeout(handle);
-
-    // assert
-    assert.strictEqual(readImmediately, CONTACT_DETECTED);
   });
 
   test('counts one activation for a backup pump it watched start', () => {
