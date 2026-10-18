@@ -96,9 +96,9 @@ function freshRecord(): PumpRecordValues {
 }
 
 // A context as an already-running installation left it: both pumps observed since `OBSERVED_AT`
-// with nothing counted yet, and both device timestamps already accounted for. Starting the
-// self-test cases here is what keeps the very first device timestamp from being recovered as an
-// activation and confusing what those cases measure.
+// with nothing counted yet, and both device timestamps already accounted for. A case starts here
+// so that a device timestamp has a watermark to be compared with. A newer timestamp is then a
+// recovered or absorbed run, not the first-seen baseline.
 function storedContext(): PumpRecordsContext {
   return {
     primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 0, lastActivationAt: undefined },
