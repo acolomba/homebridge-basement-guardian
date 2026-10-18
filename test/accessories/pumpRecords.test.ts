@@ -199,17 +199,24 @@ test('counts an activation across a snapshot whose running value did not decode'
   assert.strictEqual(records.primary.activationCount, 1);
 });
 
+// The recovered timestamp also moves the stored watermark, and the observation asks for a write.
+// Without that write, a restart would recover the same run again.
 test('recovers one activation from a device timestamp and stores it in milliseconds', () => {
   // arrange
-  const { records } = pumpRecords(storedContext());
+  const { records, context, persistCount } = pumpRecords(storedContext());
 
   // act
   records.observe(observation({ backupActivatedAt: NEW_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual(
-    { count: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt },
-    { count: 1, lastActivationAt: NEW_BACKUP_MS },
+    {
+      count: records.backup.activationCount,
+      lastActivationAt: records.backup.lastActivationAt,
+      watermark: context.watermarks?.backupPumpTimestamp,
+      persisted: persistCount(),
+    },
+    { count: 1, lastActivationAt: NEW_BACKUP_MS, watermark: NEW_BACKUP_SECONDS, persisted: 1 },
   );
 });
 
@@ -279,19 +286,30 @@ test('recovers exactly one activation from a device timestamp one second past th
 // The device publishes a new backup-pump timestamp only after the pump stops, so the advance that
 // follows a watched edge describes the run that edge already counted. Counting both would report
 // one physical run as two, and taking the device time would write one run's record from two clocks.
+// The record starts with a stored watermark, so the advance is absorbed and is not the baseline.
+// Absorbing moves the stored watermark and asks for a write, so the same timestamp on the next poll
+// counts nothing.
 test('absorbs the device timestamp that follows a watched backup activation', () => {
   // arrange
-  const { records } = pumpRecords();
+  const { records, context, persistCount } = pumpRecords(storedContext());
   records.observe(observation({ backupRunning: false }));
   records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupRunning: true }));
+  const beforeTheAbsorb = persistCount();
 
   // act
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS }));
+  const persistedForTheAbsorb = persistCount() - beforeTheAbsorb;
   records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual(
-    { count: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt },
-    { count: 1, lastActivationAt: OBSERVED_NEXT_AT },
+    {
+      count: records.backup.activationCount,
+      lastActivationAt: records.backup.lastActivationAt,
+      watermark: context.watermarks?.backupPumpTimestamp,
+      persistedForTheAbsorb,
+    },
+    { count: 1, lastActivationAt: OBSERVED_NEXT_AT, watermark: NEW_BACKUP_SECONDS, persistedForTheAbsorb: 1 },
   );
 });
 
