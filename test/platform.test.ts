@@ -3316,7 +3316,7 @@ describe('registerDiscoveredDevices', () => {
       lastVendorName: 'Second System',
       primaryPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
       backupPump: { observationStartedAt: 1000, activationCount: 1, lastActivationAt: 2000 },
-      watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined },
+      watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined, backupEdgeAwaitingTimestamp: true },
     };
 
     // act
