@@ -894,13 +894,13 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     controllerLinkLost = true;
   }
 
-  // A scope's last trusted time advances only while nothing untrusts it, so a
-  // scope poisoned by a lost link keeps the receipt time of the last snapshot
-  // that arrived with the link present -- which is what a service publishes as
-  // the moment trustworthy controller data last arrived (RES-02).
-  function recordTrustedScopes(reasons: ReadonlyMap<TrustScope, DistrustReason>, receivedAt: number): void {
+  // A scope's last trusted time advances only while nothing untrusts it. A
+  // live update does not reobserve connectivity, so only a REST poll advances
+  // that scope. A lost link keeps controller-derived scopes at their last
+  // trustworthy snapshot receipt time (RES-02).
+  function recordTrustedScopes(reasons: ReadonlyMap<TrustScope, DistrustReason>, receivedAt: number, source: SnapshotSource): void {
     for (const scope of TRUST_SCOPES) {
-      if (!reasons.has(scope)) {
+      if (!reasons.has(scope) && (scope !== 'connectivity' || source === 'poll')) {
         lastTrustedAt.set(scope, receivedAt);
       }
     }
@@ -1020,7 +1020,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       const reasons = reasonsNow();
       const metadata = decodedMetadataOf(decoded);
 
-      recordTrustedScopes(reasons, snapshot.receivedAt);
+      recordTrustedScopes(reasons, snapshot.receivedAt, source);
       untrusted = untrustedScopesOf(reasons, lastTrustedAt);
 
       // Only a successful REST inventory response observed whether the vendor

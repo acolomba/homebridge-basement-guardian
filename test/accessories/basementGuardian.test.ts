@@ -3263,6 +3263,27 @@ test('withdraws connectivity alone when only the polling path is degraded', () =
   assert.deepStrictEqual(distrustOf(basementGuardianAccessory), ['connectivity unreachable']);
 });
 
+test('keeps the last REST connectivity time after a later live update', () => {
+  // arrange
+  const accessory = accessoryStandIn();
+  const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+  const poll = buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT });
+  const live = {
+    ...poll,
+    data: { ...poll.data, water_level: FLOODING_LEVEL_CODE },
+    receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS,
+  } satisfies DeviceSnapshot;
+  basementGuardianAccessory.update(poll, 'poll');
+
+  // act
+  basementGuardianAccessory.update(live, 'live');
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // assert
+  assert.strictEqual(valueOf(accessory, 'Sump Pit Level', HAP.Characteristic.WaterLevel), FLOODING_LEVEL_PERCENT);
+  assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'connectivity', reason: 'unreachable', lastTrustedAt: RECORD_RECEIVED_AT }]);
+});
+
 test('withdraws every scope when both transports are lost', () => {
   // arrange
   const accessory = accessoryStandIn();
