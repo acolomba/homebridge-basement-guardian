@@ -3144,33 +3144,32 @@ test('keeps a requested self-test value through poll and trust republish until i
 // An accepted press leaves HAP serving the requested true until the device confirms it or the
 // window closes. Each withdrawal below prevents the control row from publishing On at expiry, so
 // the binder must restore the last reported false itself (D-037).
-test('restores the reported self-test value when an accepted press expires under three withdrawals', async () => {
-  const withdrawals: readonly {
-    path: string;
-    apply: (accessory: FakeAccessory, guardian: BasementGuardianAccessory) => void;
-  }[] = [
-    {
-      path: 'credentials refused',
-      apply: (accessory, guardian) => {
-        refuseTheCredentials(accessory, guardian);
-      },
+const EXPIRY_WITHDRAWALS: readonly {
+  path: string;
+  apply: (accessory: FakeAccessory, guardian: BasementGuardianAccessory) => void;
+}[] = [
+  {
+    path: 'credentials refused',
+    apply: (accessory, guardian) => {
+      refuseTheCredentials(accessory, guardian);
     },
-    {
-      path: 'controller link lost',
-      apply: (_accessory, guardian) => {
-        guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, serial_communications: false } }), 'poll');
-      },
+  },
+  {
+    path: 'controller link lost',
+    apply: (_accessory, guardian) => {
+      guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, serial_communications: false } }), 'poll');
     },
-    {
-      path: 'self-test field undecoded',
-      apply: (_accessory, guardian) => {
-        guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: 'x' } }), 'poll');
-      },
+  },
+  {
+    path: 'self-test field undecoded',
+    apply: (_accessory, guardian) => {
+      guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: 'x' } }), 'poll');
     },
-  ];
-  const observed: unknown[] = [];
+  },
+];
 
-  for (const withdrawal of withdrawals) {
+for (const { path, apply } of EXPIRY_WITHDRAWALS) {
+  test(`restores the reported self-test value when an accepted press expires with ${path}`, async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
@@ -3196,51 +3195,29 @@ test('restores the reported self-test value when an accepted press expires under
     // act
     await on.handleSetRequest(true);
     const afterAcceptedPress = on.value;
-    withdrawal.apply(accessory, guardian);
+    apply(accessory, guardian);
     runEvery(windowClosings);
-    observed.push({
-      path: withdrawal.path,
+    const observed = {
       beforePress,
       afterAcceptedPress,
       windowClosings: windowClosings.length,
       afterExpiry: on.value,
       readAfterExpiry: await on.handleGetRequest(),
       unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')),
+    };
+
+    // assert
+    assert.deepStrictEqual(observed, {
+      beforePress: false,
+      afterAcceptedPress: true,
+      windowClosings: 1,
+      afterExpiry: false,
+      readAfterExpiry: false,
+      unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
     });
     verify(commands);
-  }
-
-  // assert
-  assert.deepStrictEqual(observed, [
-    {
-      path: 'credentials refused',
-      beforePress: false,
-      afterAcceptedPress: true,
-      windowClosings: 1,
-      afterExpiry: false,
-      readAfterExpiry: false,
-      unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
-    },
-    {
-      path: 'controller link lost',
-      beforePress: false,
-      afterAcceptedPress: true,
-      windowClosings: 1,
-      afterExpiry: false,
-      readAfterExpiry: false,
-      unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
-    },
-    {
-      path: 'self-test field undecoded',
-      beforePress: false,
-      afterAcceptedPress: true,
-      windowClosings: 1,
-      afterExpiry: false,
-      readAfterExpiry: false,
-      unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
-    },
-  ]);
-});
+  });
+}
 
 // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that
 // assumed it could would send the first press of a run into a route that has never answered
