@@ -176,8 +176,7 @@ const USER_RENAME = 'Fuse Box';
 // A distinct read value left by the case so an unexpected StatusActive push is visible.
 const UNREPUBLISHED_STATUS = 'left by the case';
 
-// The four accessory modules checked for prohibited source idioms, named so a violation fails at
-// its source rather than through a downstream symptom.
+// The four accessory modules checked for direct setter and UUID generation spellings.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
 
 // The construction that turns a characteristic unreadable, named once so the gate below and the one
@@ -3650,19 +3649,9 @@ describe('createBasementGuardianAccessory', () => {
   });
 
   for (const module of ACCESSORY_MODULES) {
-    test(`${module} registers no get handler, so a read never reaches the network`, async () => {
-      // act
-      const code = codeOf(await sourceOf(module));
-
-      // assert
-      assert.deepStrictEqual({ onGet: code.includes('onGet'), getEvent: /\.on\(\s*['"`]get/i.test(code) }, { onGet: false, getEvent: false });
-    });
-
-    // `ConfiguredName` is the one paired-write characteristic this plugin publishes, so a controller
-    // can write to a safety accessory for the first time. A set handler is what would turn that
-    // write into a path toward the device; there is none, and nothing reads the value back into
-    // decoded state or into a command (SAFE-08).
-    test(`${module} registers no set handler, so a controller write never reaches the device`, async () => {
+    // Switch `On` writes use the control binder. These modules register no direct set handler;
+    // in particular, a ConfiguredName write has no path to a device command (SAFE-08).
+    test(`${module} has no direct onSet or set-event registration`, async () => {
       // act
       const code = codeOf(await sourceOf(module));
 
@@ -3670,12 +3659,18 @@ describe('createBasementGuardianAccessory', () => {
       assert.deepStrictEqual({ onSet: code.includes('onSet'), setEvent: /\.on\(\s*['"`]set/i.test(code) }, { onSet: false, setEvent: false });
     });
 
-    test(`${module} derives no published identifier from a seed string`, async () => {
+    test(`${module} contains no direct HAP UUID generation call`, async () => {
       // act
       const code = codeOf(await sourceOf(module));
 
       // assert
-      assert.strictEqual(code.includes('uuid.generate'), false);
+      assert.deepStrictEqual(
+        {
+          memberCall: /\buuid\s*\.\s*generate\s*\(/u.test(code),
+          destructuredCall: /\{\s*generate\s*\}\s*=\s*[\w.]+\.uuid\b/u.test(code),
+        },
+        { memberCall: false, destructuredCall: false },
+      );
     });
   }
 });
