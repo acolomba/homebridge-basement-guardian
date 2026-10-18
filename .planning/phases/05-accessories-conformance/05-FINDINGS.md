@@ -40,6 +40,11 @@ The procedures that write and check this ledger live in `05-REVIEW-PROTOCOL.md`.
 | 30 | features/step_definitions/controls.steps.ts | adaptation | GATES | 1 | 311 | overview-only |
 | 31 | features/step_definitions/homekit.steps.ts | adaptation | GATES | 1 | 240 | overview-only |
 
+Inventory row 26 already declares `test/platform.test.ts` as an adaptation before the GATES
+read-refusal repair. CR-05-GATES-017 also requires a bounded change to its read assertions.
+The existing RECORDS scope and its correction reports retain their row; the GATES correction
+review includes only the changed platform-test hunks and their enclosing declarations.
+
 Kind `addition` is a new file under `src/accessories` or `test/accessories`. Its row is recorded in
 the commit right after the one that creates the file. Kind `adaptation` is any other path a batch
 edits under D-06 or D-12. Its row is recorded before the edit. The First round of an `addition` or
