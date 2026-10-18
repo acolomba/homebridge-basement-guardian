@@ -107,7 +107,8 @@ function reachesTheNetworkTier(source: string, sourceFile: string = FIXTURE_ACCE
       return false;
     }
 
-    const target = resolve(REPOSITORY_ROOT, dirname(sourceFile), specifier);
+    const pathname = specifier.replace(/[?#].*$/, '');
+    const target = resolve(REPOSITORY_ROOT, dirname(sourceFile), pathname);
     return target.startsWith(`${CLOUD_DIRECTORY}${sep}`) || target === ACCOUNT_RUNTIME_FILE;
   });
 }
@@ -233,6 +234,15 @@ import { createCloudApi } from '${CLOUD_DIRECTORY_SPECIFIER}api.js';
 `;
 const ACCOUNT_RUNTIME_IMPORT = `
 import { createAccountRuntime } from '${ACCOUNT_RUNTIME_SPECIFIER}';
+`;
+const QUERY_DYNAMIC_ACCOUNT_RUNTIME_IMPORT = `
+const runtime = await import('${ACCOUNT_RUNTIME_SPECIFIER}?probe');
+`;
+const FRAGMENT_ACCOUNT_RUNTIME_IMPORT = `
+import { createAccountRuntime } from '${ACCOUNT_RUNTIME_SPECIFIER}#probe';
+`;
+const QUERY_NEIGHBOURING_RUNTIME_IMPORT = `
+const timers = await import('../runtime/timers.js?probe');
 `;
 const ALTERNATE_CLOUD_CLIENT_IMPORT = `
 import { createCloudApi } from '../../src/cloud/api.js';
@@ -432,6 +442,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
   const imports = {
     cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT),
     accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT),
+    queryDynamicAccountRuntime: reachesTheNetworkTier(QUERY_DYNAMIC_ACCOUNT_RUNTIME_IMPORT),
+    fragmentAccountRuntime: reachesTheNetworkTier(FRAGMENT_ACCOUNT_RUNTIME_IMPORT),
     alternateCloudClient: reachesTheNetworkTier(ALTERNATE_CLOUD_CLIENT_IMPORT),
     alternateAccountRuntime: reachesTheNetworkTier(ALTERNATE_ACCOUNT_RUNTIME_IMPORT),
     nestedCloudClient: reachesTheNetworkTier(NESTED_CLOUD_CLIENT_IMPORT, NESTED_FIXTURE_ACCESSORY_FILE),
@@ -453,6 +465,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
   assert.deepStrictEqual(imports, {
     cloudClient: true,
     accountRuntime: true,
+    queryDynamicAccountRuntime: true,
+    fragmentAccountRuntime: true,
     alternateCloudClient: true,
     alternateAccountRuntime: true,
     nestedCloudClient: true,
@@ -476,6 +490,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
   const detections = {
     comment: registersReadHandler(COMMENT_NAMING_THE_SPELLINGS),
     unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
+    queryNeighbouringRuntime: reachesTheNetworkTier(QUERY_NEIGHBOURING_RUNTIME_IMPORT),
     shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
     shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
     unrelatedLoaderCall: reachesTheNetworkTier(UNRELATED_LOADER_CALL),
@@ -486,6 +501,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
   assert.deepStrictEqual(detections, {
     comment: false,
     unrelatedImport: false,
+    queryNeighbouringRuntime: false,
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
