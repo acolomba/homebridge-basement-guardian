@@ -1744,8 +1744,9 @@ no commit. Coordinator triage: opening 4, fixed 4, rejected 0, new 0, reopened 0
 - `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --require-clean RECORDS`:
   exit 0, `ACCESSORIES_LEDGER_TRACER_OK inventory=27 findings=138 open=0 rounds=26 clean=RECORDS`.
 - RECORDS closed at correction round 3 with 41 findings: 40 fixed and 1 rejected by the
-  maintainer's decision (032). Four genuine bugs were fixed through RED-to-GREEN evidence (001, 002,
-  038 in pumpRecords, and the consumer follow-up of 002 in the platform test). The S-05-07 branch
+  maintainer's decision (032): 13 BLOCKER and 27 WARNING fixed, 1 BLOCKER rejected. Three genuine
+  bugs in pumpRecords were fixed through RED-to-GREEN evidence (001, 002, 038), and 002 needed one
+  consumer follow-up in the platform test. The S-05-07 branch
   removed the unread `clock` option (D-06, adaptation row 27). Adaptation rows 25 and 26 cover the
   persisted awaiting mark and its platform-test expectation.
 
