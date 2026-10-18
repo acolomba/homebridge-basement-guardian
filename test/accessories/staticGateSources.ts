@@ -24,8 +24,10 @@ import {
   isExportDeclaration,
   isIdentifier,
   isImportDeclaration,
+  isMetaProperty,
   isNamedImports,
   isNamespaceImport,
+  isNewExpression,
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
   isParenthesizedExpression,
@@ -228,7 +230,39 @@ function callsImportedCreator(call: CallExpression, checker: TypeChecker, named:
   return false;
 }
 
-function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Symbol>, namespaces: ReadonlySet<Symbol>): Symbol | undefined {
+function isImportMetaUrl(node: Node): boolean {
+  return (
+    isPropertyAccessExpression(node) &&
+    node.name.text === 'url' &&
+    isMetaProperty(node.expression) &&
+    node.expression.keywordToken === SyntaxKind.ImportKeyword &&
+    node.expression.name.text === 'meta'
+  );
+}
+
+function requireBase(call: CallExpression, checker: TypeChecker): string | undefined {
+  const argument = call.arguments[0];
+  if (argument && isImportMetaUrl(argument)) {
+    return '';
+  }
+
+  if (argument && isNewExpression(argument) && isIdentifier(argument.expression) && argument.expression.text === 'URL') {
+    const [pathname, parent] = argument.arguments ?? [];
+    const fixed = pathname ? fixedSpecifier(pathname, checker) : undefined;
+    if (fixed?.startsWith('.') && parent && isImportMetaUrl(parent)) {
+      return fixed;
+    }
+  }
+
+  return undefined;
+}
+
+function requireBinding(
+  node: Node,
+  checker: TypeChecker,
+  named: ReadonlySet<Symbol>,
+  namespaces: ReadonlySet<Symbol>,
+): { symbol: Symbol; base: string | undefined } | undefined {
   if (!isVariableDeclaration(node) || !isIdentifier(node.name) || !node.initializer || !isCallExpression(node.initializer)) {
     return undefined;
   }
@@ -237,7 +271,8 @@ function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Sym
     return undefined;
   }
 
-  return checker.getSymbolAtLocation(node.name);
+  const symbol = checker.getSymbolAtLocation(node.name);
+  return symbol ? { symbol, base: requireBase(node.initializer, checker) } : undefined;
 }
 
 function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = new Set<Symbol>()): string | undefined {
@@ -291,9 +326,28 @@ function fixedTemplateSpecifier(node: TemplateExpression, checker: TypeChecker, 
   return specifier;
 }
 
-/** Lists fixed module specifiers and rejects unresolved dynamic loads. */
-export function importSpecifiers(source: string): readonly string[] {
-  const specifiers: string[] = [];
+function loadBase(
+  call: CallExpression,
+  checker: TypeChecker,
+  named: ReadonlySet<Symbol>,
+  namespaces: ReadonlySet<Symbol>,
+  requireBases: ReadonlyMap<Symbol, string | undefined>,
+): { base: string | undefined } | undefined {
+  const callee = call.expression;
+  if (callee.kind === SyntaxKind.ImportKeyword) {
+    return { base: '' };
+  }
+
+  if (isCallExpression(callee) && callsImportedCreator(callee, checker, named, namespaces)) {
+    return { base: requireBase(callee, checker) };
+  }
+
+  const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
+  return symbol && requireBases.has(symbol) ? { base: requireBases.get(symbol) } : undefined;
+}
+
+function collectModuleLoads(source: string, resolveBases: boolean): readonly { specifier: string; base: string }[] {
+  const loads: { specifier: string; base: string }[] = [];
   const file = createSourceFile('staticGate.ts', source, ScriptTarget.Latest, true);
   // Local symbols distinguish a loader from a parameter with the same name.
   const options = { noLib: true, noResolve: true };
@@ -301,13 +355,13 @@ export function importSpecifiers(source: string): readonly string[] {
   host.getSourceFile = (fileName) => (fileName === file.fileName ? file : undefined);
   const checker = createProgram([file.fileName], options, host).getTypeChecker();
   const { named, namespaces } = importedCreators(file, checker);
-  const requireSymbols = new Set<Symbol>();
+  const requireBases = new Map<Symbol, string | undefined>();
   const requireAliases: { source: Symbol; alias: Symbol }[] = [];
 
   function collectRequire(node: Node): void {
-    const symbol = requireBinding(node, checker, named, namespaces);
-    if (symbol) {
-      requireSymbols.add(symbol);
+    const binding = requireBinding(node, checker, named, namespaces);
+    if (binding) {
+      requireBases.set(binding.symbol, binding.base);
     }
 
     if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer && isIdentifier(node.initializer)) {
@@ -326,34 +380,37 @@ export function importSpecifiers(source: string): readonly string[] {
   while (added) {
     added = false;
     for (const { source, alias } of requireAliases) {
-      if (requireSymbols.has(source) && !requireSymbols.has(alias)) {
-        requireSymbols.add(alias);
+      const base = requireBases.get(source);
+      if (requireBases.has(source) && !requireBases.has(alias)) {
+        requireBases.set(alias, base);
         added = true;
       }
     }
   }
 
   function recordLoad(node: CallExpression): void {
-    const callee = node.expression;
-    const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
-    const dynamicImport = callee.kind === SyntaxKind.ImportKeyword;
-    const immediateRequire = isCallExpression(callee) && callsImportedCreator(callee, checker, named, namespaces);
-    if (!dynamicImport && !immediateRequire && !(symbol && requireSymbols.has(symbol))) {
+    const load = loadBase(node, checker, named, namespaces, requireBases);
+    if (!load) {
       return;
     }
 
     const argument = node.arguments[0];
     const specifier = argument ? fixedSpecifier(argument, checker) : undefined;
     if (specifier === undefined) {
+      const dynamicImport = node.expression.kind === SyntaxKind.ImportKeyword;
       throw new Error(`cannot resolve module specifier in ${dynamicImport ? 'dynamic import' : 'createRequire load'}`);
     }
 
-    specifiers.push(specifier);
+    if (load.base === undefined && resolveBases) {
+      throw new Error('cannot resolve base in createRequire load');
+    }
+
+    loads.push({ specifier, base: load.base ?? '' });
   }
 
   function visit(node: Node): void {
     if ((isImportDeclaration(node) || isExportDeclaration(node)) && node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {
-      specifiers.push(node.moduleSpecifier.text);
+      loads.push({ specifier: node.moduleSpecifier.text, base: '' });
     }
 
     if (isCallExpression(node)) {
@@ -364,5 +421,15 @@ export function importSpecifiers(source: string): readonly string[] {
   }
 
   visit(file);
-  return specifiers;
+  return loads;
+}
+
+/** Lists fixed module loads with their bases and rejects unresolved dynamic loads. */
+export function moduleLoads(source: string): readonly { specifier: string; base: string }[] {
+  return collectModuleLoads(source, true);
+}
+
+/** Lists fixed module specifiers and rejects unresolved dynamic loads. */
+export function importSpecifiers(source: string): readonly string[] {
+  return collectModuleLoads(source, false).map((load) => load.specifier);
 }

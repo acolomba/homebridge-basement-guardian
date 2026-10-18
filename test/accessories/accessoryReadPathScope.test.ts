@@ -53,7 +53,7 @@ import {
   type Node,
 } from 'typescript';
 
-import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
+import { moduleLoads, typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * The cloud tier, as a module in the accessories tier would reach it.
@@ -106,13 +106,13 @@ const ACCESSORIES_MODULE_FLOOR = 10;
 const SOURCE_MODULE_FLOOR = 43;
 
 function reachesTheNetworkTier(source: string, sourceFile: string = FIXTURE_ACCESSORY_FILE): boolean {
-  return importSpecifiers(source).some((specifier) => {
+  return moduleLoads(source).some(({ specifier, base }) => {
     if (!specifier.startsWith('.')) {
       return false;
     }
 
     const pathname = specifier.replace(/[?#].*$/, '');
-    const target = resolve(REPOSITORY_ROOT, dirname(sourceFile), pathname);
+    const target = resolve(REPOSITORY_ROOT, dirname(sourceFile), dirname(base), pathname);
     return target.startsWith(`${CLOUD_DIRECTORY}${sep}`) || target === ACCOUNT_RUNTIME_FILE;
   });
 }
@@ -461,6 +461,21 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(new URL('./probe.js', import.meta.url));
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const PARENT_BASE_CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(new URL('../probe.js', import.meta.url));
+const cloud = loadModule('./cloud/api.js');
+`;
+const PARENT_BASE_CREATE_REQUIRE_NEIGHBOUR_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(new URL('../probe.js', import.meta.url));
+const timers = loadModule('./runtime/timers.js');
+`;
+const UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(process.env.BASE);
+const cloud = loadModule('./cloud/api.js');
+`;
 const LOADER_ALIAS_CLOUD_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -658,6 +673,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
     aliasedCreateRequireCloud: reachesTheNetworkTier(ALIASED_CREATE_REQUIRE_CLOUD_IMPORT),
     alternateBaseCreateRequireCloud: reachesTheNetworkTier(ALTERNATE_BASE_CREATE_REQUIRE_CLOUD_IMPORT),
+    parentBaseCreateRequireCloud: reachesTheNetworkTier(PARENT_BASE_CREATE_REQUIRE_CLOUD_IMPORT),
     loaderAliasCloud: reachesTheNetworkTier(LOADER_ALIAS_CLOUD_IMPORT),
   };
 
@@ -690,6 +706,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     defaultCreateRequireCloud: true,
     aliasedCreateRequireCloud: true,
     alternateBaseCreateRequireCloud: true,
+    parentBaseCreateRequireCloud: true,
     loaderAliasCloud: true,
   });
 });
@@ -710,6 +727,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     unrelatedConstantDynamic: reachesTheNetworkTier(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: reachesTheNetworkTier(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: reachesTheNetworkTier(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
+    parentBaseNeighbour: reachesTheNetworkTier(PARENT_BASE_CREATE_REQUIRE_NEIGHBOUR_IMPORT),
   };
 
   // assert
@@ -727,6 +745,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,
+    parentBaseNeighbour: false,
   });
 });
 
@@ -743,4 +762,9 @@ test('rejects an accessory network loader call with an unresolved target', () =>
 test('rejects an immediate accessory network loader call with an unresolved target', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
+});
+
+test('rejects an accessory network loader call with an unresolved base', () => {
+  // act & assert
+  assert.throws(() => reachesTheNetworkTier(UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve base in createRequire load' });
 });
