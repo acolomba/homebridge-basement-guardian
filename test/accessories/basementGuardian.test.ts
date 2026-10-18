@@ -1035,6 +1035,32 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(warnings.length, 2);
   });
 
+  test('reports degraded services without claiming refreshed metadata stayed unchanged', () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { log, warnings } = recordingLog();
+    const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }), log });
+    basementGuardianAccessory.update({ ...buildSnapshot({ data: GEMINI_TELEMETRY }), metadata: { mcu_firmware_version: '1.0' } }, 'poll');
+    const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
+    const before = accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value;
+
+    // act
+    basementGuardianAccessory.update(
+      { ...buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: 'x' } }), metadata: { mcu_firmware_version: '2.0' } },
+      'poll',
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { before, after: accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value },
+      { before: '1.0', after: '2.0' },
+    );
+    assert.deepStrictEqual(warnings, [
+      'Degraded account-1_serial-1: the profile or payload stopped validating. ' +
+        'The affected services keep their last valid values until a family-valid update recovers them.',
+    ]);
+  });
+
   test('asks the family for its verdict before it asks the family to decode', () => {
     // arrange
     const calls: string[] = [];

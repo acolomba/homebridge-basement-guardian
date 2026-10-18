@@ -818,7 +818,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
 
     log.warn(
       `Degraded ${deviceId}: the profile or payload stopped validating. ` +
-        'AccessoryInformation keeps its last valid values until a family-valid update recovers it.',
+        'The affected services keep their last valid values until a family-valid update recovers them.',
     );
     degraded = true;
   }

@@ -266,7 +266,7 @@ Then('the plugin never unregisters the accessory', assertPluginNeverUnregistersT
 
 const EXPECTED_DEGRADATION_EXPLANATION =
   `warn Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
-  'AccessoryInformation keeps its last valid values until a family-valid update recovers it.';
+  'The affected services keep their last valid values until a family-valid update recovers them.';
 
 // Waits for the poll that carries the out-of-domain telemetry to actually run, then asserts the
 // degradation transition logged exactly once (DEV-08) -- not once per poll.
