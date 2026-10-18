@@ -38,21 +38,16 @@
  * is the false normal on the control surface, which is why the second restart
  * pass exists (RES-04, D-07).
  *
- * The passes therefore run where Homebridge hands each cached accessory back
- * rather than on the first update: `configureAccessory` is the only code that
- * runs while a restored accessory exists and no fresh data does, and every
- * publishing path is downstream of an inventory that may never arrive (D-06).
+ * The two restart passes therefore run where Homebridge hands each cached
+ * accessory back rather than on the first update: `configureAccessory` is the
+ * only code that runs while a restored accessory exists and no fresh data does,
+ * and every publishing path is downstream of an inventory that may never arrive
+ * (D-06).
  *
- * They construct no `BasementGuardianAccessory` and read nothing from the
- * accessory context. That constructor throws when the context carries no
- * device, which is exactly what a cache written before that context existed
- * carries, so constructing here would fail on the upgrade path this behaviour
- * protects.
- *
- * The passes are exported rather than written inside the platform method
- * because the Cucumber harness stands in for `configureAccessory` and calls
- * these same functions. A copy inside the platform would leave the harness
- * asserting against its own copy of the behaviour (D-12).
+ * The two restart passes are exported rather than written inside the platform
+ * method because the Cucumber harness stands in for `configureAccessory` and
+ * calls these same functions. A copy inside the platform would leave the
+ * harness asserting against its own copy of the behaviour (D-12).
  */
 
 import { bindRestoredControlRefusal } from './controls.js';
@@ -152,13 +147,10 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * service that reports whether the plugin vouches for it is made unreadable
  * together (D-10).
  *
- * The pass lives here, beside the restart pass, for the same two reasons that
- * one does. It walks the accessory's own services and constructs no
- * `BasementGuardianAccessory`: a run whose first grant the vendor refused never
- * reaches discovery, so none exists to walk, and building one would throw on a
- * context that names no device anyway. And it is exported rather than written
- * inside the platform, so the Cucumber harness drives this code rather than a
- * copy of it (D-12).
+ * Like the restart passes, it walks the accessory's own services and constructs
+ * no `BasementGuardianAccessory`: a run whose first grant the vendor refused
+ * never reaches discovery, so none exists to walk, and building one would throw
+ * on a context that names no device anyway.
  *
  * `testCharacteristic` guards each push exactly as it does above, so an upgrade
  * over a cache an older release wrote adds no characteristic to a service that
