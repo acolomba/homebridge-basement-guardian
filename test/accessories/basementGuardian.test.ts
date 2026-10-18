@@ -664,8 +664,7 @@ function rowNamed(displayName: string): ServiceRow {
   return row;
 }
 
-// A row resolved by the slug it publishes under, so a case that is about the published name writes
-// no name of its own: the expected value is read back from the row.
+// A row resolved by its kind; cases that assert names keep their expected names independent.
 function rowOfKind(kind: ServiceKind): ServiceRow {
   const row = CATALOGUE.find((candidate) => candidate.kind === kind);
 
@@ -2487,8 +2486,7 @@ describe('createBasementGuardianAccessory', () => {
 
   // Apple Home labels a secondary service of a bridged accessory by `ConfiguredName`, so a sensor
   // published without one reads as "Contact Sensor 4" where SAFE-04 promised a named cause. The
-  // expected names are read from the catalogue rather than restated here, because a second list of
-  // fifteen names is exactly the drift this case exists to catch.
+  // expected names come from the independent descriptor list, so a catalogue rename fails here.
   test('names every published service with the catalogue display name it publishes under', () => {
     // arrange
     const accessory = accessoryStandIn();
@@ -2500,7 +2498,7 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       CATALOGUE.map((row) => valueOf(accessory, row.displayName, HAP.Characteristic.ConfiguredName)),
-      CATALOGUE.map((row) => row.displayName),
+      PUBLISHED_SERVICES.map((descriptor) => descriptor.name),
     );
   });
 
@@ -2527,7 +2525,7 @@ describe('createBasementGuardianAccessory', () => {
         renamed: valueOf(accessory, renamed.displayName, HAP.Characteristic.ConfiguredName),
         sibling: valueOf(accessory, sibling.displayName, HAP.Characteristic.ConfiguredName),
       },
-      { renamed: USER_RENAME, sibling: sibling.displayName },
+      { renamed: USER_RENAME, sibling: 'Primary Pump Fault' },
     );
   });
 
@@ -2554,7 +2552,7 @@ describe('createBasementGuardianAccessory', () => {
         reseeded: valueOf(accessory, unnamed.displayName, HAP.Characteristic.ConfiguredName),
         retained: valueOf(accessory, retained.displayName, HAP.Characteristic.ConfiguredName),
       },
-      { reseeded: unnamed.displayName, retained: retained.displayName },
+      { reseeded: 'Mains Power Lost', retained: 'Primary Pump Fault' },
     );
   });
 
