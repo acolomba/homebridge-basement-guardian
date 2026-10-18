@@ -234,10 +234,10 @@ function dropTestActivityLabel(pump: PumpObservation): void {
 /**
  * Creates the pump records over one accessory's stored context.
  *
- * Creating them touches nothing outside itself: nothing is read from disk,
- * nothing is scheduled, and no value is written until the first observation
- * arrives. A context carrying a readable record is resumed as it stands and
- * asks for no write of its own.
+ * Creating them reads nothing from disk, schedules nothing, and writes no
+ * value until the first observation arrives. An unreadable stored record is
+ * reported with one warning, at creation. A context carrying a readable record
+ * is resumed as it stands and asks for no write of its own.
  */
 export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   const { context, store, log } = options;
