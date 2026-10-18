@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the passes that stop a cached accessory from claiming a false normal state.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 

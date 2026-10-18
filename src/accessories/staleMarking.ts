@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The three passes over an accessory the plugin cannot vouch for,
  * none of which constructs a `BasementGuardianAccessory`.
