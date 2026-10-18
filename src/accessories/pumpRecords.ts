@@ -165,9 +165,10 @@ function rememberedRunning(previousRunning: boolean | undefined, reportedRunning
   return reportedRunning ?? previousRunning;
 }
 
-// The device evidences an activation the plugin never watched when it reports a timestamp past the
-// one already accounted for. The comparison is strictly greater-than, so the same timestamp
-// arriving again on every later payload recovers nothing (D-010).
+// A device timestamp past the one already accounted for can evidence an activation the plugin never
+// watched; the caller rules out the baseline and the timestamp of a run it already counted. The
+// comparison is strictly greater-than, so the same timestamp arriving again on every later payload
+// recovers nothing (D-010).
 function evidencesAMissedActivation(watermark: number | undefined, reportedAt: number | undefined): reportedAt is number {
   return reportedAt !== undefined && (watermark === undefined || reportedAt > watermark);
 }
@@ -301,13 +302,12 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
     stored.watermarks.backupPumpTimestamp = reportedAt;
 
-    // The first timestamp this record ever sees establishes the baseline; it is not a recovered
-    // activation. The device times it from before the observation start that the same first
-    // observation seeded, so counting it would report a run from before the plugin was watching --
-    // a number an owner reads describing something nobody observed. Any edge already awaiting its
-    // timestamp is accounted for by the same seed, so the awaiting mark clears here too rather than
-    // leaking into the next advance. The mark is removed rather than set to `false`, because the
-    // stored shape declares it optional.
+    // The first timestamp this record ever sees establishes the baseline and is never counted,
+    // whichever observation brings it. The plugin cannot tell whether the device timed it before
+    // observation began, and comparing it with local time is forbidden, so the count abstains. The
+    // baseline also stands for the timestamp of any watched edge that awaits one, so the awaiting
+    // mark clears here too and a later advance is counted rather than absorbed. The mark is removed
+    // rather than set to `false`, because the stored shape declares it optional.
     if (seedingTheFirstWatermark) {
       delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
