@@ -1,0 +1,44 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-10-18T10:59:53.926Z",
+  "phase": "05",
+  "phase_name": "Accessories Conformance",
+  "phase_dir": ".planning/phases/05-accessories-conformance",
+  "plan": 6,
+  "task": 1,
+  "total_tasks": 2,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": "05-04", "name": "CONTROLS batch (controls pair), clean at correction round 9", "status": "done", "commit": "0c0930e" },
+    { "id": "05-05", "name": "RECORDS batch (pumpRecords, reconciliation, staleMarking pairs), clean at correction round 3", "status": "done", "commit": "9cb164b" },
+    { "id": "05-06-01", "name": "Review the whole accessory pair and land its header cause", "status": "in_progress", "progress": "Round-0 review and triage committed (79108d4): 29 findings open, 7 BLOCKER and 22 WARNING; resume point recorded (ca3e0b7). The pair-header fixer for CR-05-ACCESSORY-009 has not run." }
+  ],
+  "remaining_tasks": [
+    { "id": "05-06-01", "name": "Pair-header fixer for CR-05-ACCESSORY-009 and its ledger commit", "status": "not_started" },
+    { "id": "05-06-02", "name": "Source-side ACCESSORY causes 011, 012, 028 and the D-04 bugs 002, 003 (and 001 as decided), then the 05-06 full gate", "status": "not_started" },
+    { "id": "05-07", "name": "Test-side ACCESSORY causes and the ACCESSORY correction rounds", "status": "not_started" },
+    { "id": "05-08", "name": "GATES batch (four static and fidelity gates; leads S-05-09 to S-05-15, S-05-22, S-05-23)", "status": "not_started" },
+    { "id": "05-09", "name": "Phase 5 closeout", "status": "not_started" },
+    { "id": "phase-5-verify", "name": "Phase 5 verification and transition", "status": "not_started" },
+    { "id": "phases-6-8", "name": "Phases 6, 7 and 8 (discuss, plan, execute)", "status": "not_started" },
+    { "id": "milestone", "name": "Milestone audit, complete and cleanup; restore workflow.use_worktrees=true through config-set", "status": "not_started" }
+  ],
+  "blockers": [
+    { "description": "CR-05-ACCESSORY-001 needs the maintainer's decision: fix now (the binder keeps the pre-press value and expiry pushes reported() ?? that value, a bounded edit to the closed CONTROLS module src/accessories/controls.ts) or defer it.", "type": "human_action", "workaround": "Other 05-06 causes (009 header, 011, 012, 028, D-04 002 and 003) can proceed first." }
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    { "action": "Decide CR-05-ACCESSORY-001: fix now (recommended) or defer.", "context": "After an unconfirmed press expires under a credential halt, a doubtful scope or an undecoded field, HAP keeps serving the requested true, against D-037.", "blocking": true },
+    { "action": "Optionally review the coordinator-chosen wordings: CONTROLS pending-refusal cause 'an earlier request is still waiting for the device to confirm it' and timed-out line 'The <capability> request on <deviceId> timed out and may still have reached the device. It is not retried.'", "context": "Chosen under D-04 for CR-05-CONTROLS-008 and 033.", "blocking": false },
+    { "action": "Optionally decide whether deviceId belongs in the control log lines.", "context": "AGENTS.md keeps account identifiers out of logs; the vendor deviceId carries the account identifier; ruling 263cae0 put deviceId in all three control lines, and Phase 5 preserves them (D-05).", "blocking": false }
+  ],
+  "decisions": [
+    { "decision": "CONTROLS: 008, 009 and 033 fixed as genuine bugs (pending refusal RESOURCE_BUSY appended last; timed-out command keeps its pending entry and window; timed-out warning says it may still have reached the device).", "rationale": "Locked D-037 and D-038; RED-to-GREEN evidence in 05-CONTROLS-RED-EVIDENCE.json.", "phase": "05" },
+    { "decision": "CONTROLS: the maintainer resolved four D-03 no-progress stops (rounds 4, 6, 7, 8) with 'Resolve and continue'.", "rationale": "Comment-claim churn; sentence-level and clause-level audits closed the class at round 9.", "phase": "05" },
+    { "decision": "RECORDS: maintainer chose to fix 001 and 002 (label removal and withholding; persisted optional watermarks.backupEdgeAwaitingTimestamp) and to keep the 032 first-timestamp trade-off.", "rationale": "Recorded in the RECORDS triage; 038 was classified within the 001 class.", "phase": "05" },
+    { "decision": "ACCESSORY: 002 and 003 classified as genuine bugs (D-04) with fixes inside basementGuardian.ts; S-05-20 rejected; S-05-24 and S-05-25 confirmed.", "rationale": "05-ACCESSORY-REVIEW.md coordinator triage.", "phase": "05" }
+  ],
+  "uncommitted_files": [],
+  "next_action": "Resume with /gsd-resume-work. Read the `#### Resume point` entry under `### 05-06` in 05-FINDINGS.md, ask the maintainer to decide CR-05-ACCESSORY-001, then dispatch the pair-header fixer for CR-05-ACCESSORY-009.",
+  "context_notes": "Running /gsd-autonomous --from 5 --interactive; phase 5 execute-phase --interactive inline (per-plan Execute/Review/Skip/Stop menu). The protocol 05-REVIEW-PROTOCOL.md governs every dispatch, commit, D-04 sequence and stop. uncommitted_files was measured clean (git status --porcelain empty) at ca3e0b7 before these handoff writes."
+}
