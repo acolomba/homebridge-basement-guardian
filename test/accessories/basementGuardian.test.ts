@@ -184,14 +184,24 @@ const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian
 // accessory that added them, so one stand-in serves every case.
 const HAP = createFakeHap();
 
-// The stand-in answers the members the plugin reads and nothing else, which no structural type can
-// express; the widening is what lets it stand where the plugin takes the real namespace.
+// The stand-ins answer the members the accessory reads and nothing else, which no structural type
+// can express. These widenings let them stand where the accessory takes real Homebridge or HAP types.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
 
 // The accessory stand-in implements the Homebridge members this test uses. This widening lets the
 // restored-control pass act on the same cached services as the accessory under test.
 function asPlatformAccessory(accessory: FakeAccessory): PlatformAccessory {
   return accessory as unknown as PlatformAccessory;
+}
+
+// Catalogue rows hold the runtime service class; the stand-in lookup types that class differently.
+function asStandInServiceClass(serviceClass: ServiceRow['serviceClass']): FakeServiceClass {
+  return serviceClass as unknown as FakeServiceClass;
+}
+
+// A null context reaches the identity guard even though constructed accessories carry a record.
+function contextlessAccessory(): PlatformAccessory {
+  return { context: null } as unknown as PlatformAccessory;
 }
 
 const {
@@ -494,7 +504,7 @@ function buildOptions(
     store: recordingStore().store,
     commands: recordingCommands().commands,
     ...rest,
-    accessory: accessory as unknown as PlatformAccessory,
+    accessory: asPlatformAccessory(accessory),
   };
 }
 
@@ -658,9 +668,7 @@ function rowOfKind(kind: ServiceKind): ServiceRow {
 
 function serviceOf(accessory: FakeAccessory, displayName: string): FakeHapService {
   const row = rowNamed(displayName);
-  // The catalogue declares its classes against the real HAP types while the accessory stand-in
-  // answers its own; the class is one runtime object, so the lookup needs the stand-in's view of it.
-  const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+  const service = accessory.getServiceById(asStandInServiceClass(row.serviceClass), row.subtype);
 
   if (service === undefined) {
     throw new Error(`the accessory publishes no ${displayName} service`);
@@ -690,7 +698,7 @@ function publishedValues(accessory: FakeAccessory): ReadonlyMap<string, unknown>
   const values = new Map<string, unknown>();
 
   for (const row of CATALOGUE) {
-    const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+    const service = accessory.getServiceById(asStandInServiceClass(row.serviceClass), row.subtype);
 
     for (const characteristic of service?.characteristics ?? []) {
       values.set(`${row.displayName} / ${characteristic.displayName}`, characteristic.value);
@@ -760,7 +768,7 @@ function haltableAccessory(commands: CommandPort): {
 // what an owner is actually shown (D-10).
 function refuseTheCredentials(accessory: FakeAccessory, basementGuardianAccessory: BasementGuardianAccessory): void {
   basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
-  markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 }
 
 // The `On` characteristic of a published Switch, which is where a controller write enters.
@@ -825,9 +833,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('throws when the accessory context itself is not a record', () => {
     // arrange
-    // A context that is not a record at all, which no accessory stand-in can express because every
-    // constructed accessory carries one. It reaches the identity guard and nothing further.
-    const accessory = { context: null } as unknown as PlatformAccessory;
+    const accessory = contextlessAccessory();
 
     // act & assert
     assert.throws(() => createBasementGuardianAccessory({ ...buildOptions({ accessory: accessoryStandIn() }), accessory }), Error);
@@ -1347,8 +1353,8 @@ describe('createBasementGuardianAccessory', () => {
     );
     assert.deepStrictEqual(
       {
-        reported: accessory.getServiceById(rowNamed('Sump Mains Power').serviceClass as unknown as FakeServiceClass, 'sump-mains-power'),
-        adapter: accessory.getServiceById(rowNamed('Mains Power Lost').serviceClass as unknown as FakeServiceClass, 'mains-power-lost'),
+        reported: accessory.getServiceById(asStandInServiceClass(rowNamed('Sump Mains Power').serviceClass), 'sump-mains-power'),
+        adapter: accessory.getServiceById(asStandInServiceClass(rowNamed('Mains Power Lost').serviceClass), 'mains-power-lost'),
       },
       { reported: undefined, adapter: undefined },
     );
