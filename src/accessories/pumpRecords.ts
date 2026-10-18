@@ -25,8 +25,10 @@
  * There is exactly one count per pump and every observed run is in it,
  * self-tests included. Whether the last activation was self-test activity is a
  * label on the record and nothing more: it never delays or suppresses a live
- * activation, and it is left unwritten rather than set to `false` when the
- * inputs it needs did not decode (D-013, C-001).
+ * activation. It describes the last counted backup activation only, so each
+ * newly counted backup activation removes it. It stays unwritten, rather than
+ * set to `false`, until the device timestamps describe that activation and the
+ * inputs it needs decode (D-013, C-001).
  *
  * Nothing here defers and nothing here reads a clock. Every time it uses
  * arrives on the observation, and the only write to disk is one `persist()` per
@@ -211,6 +213,13 @@ function countWatchedActivation(pump: PumpObservation, receivedAt: number): void
   pump.lastActivationAt = receivedAt;
 }
 
+// A newly counted backup activation is one that the stored label does not describe, so the label
+// goes. The member is removed rather than set to `undefined`, because the stored shape declares it
+// optional.
+function dropTestActivityLabel(pump: PumpObservation): void {
+  delete pump.lastActivationWasTestActivity;
+}
+
 /**
  * Creates the pump records over one accessory's stored context.
  *
@@ -300,13 +309,21 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
     stored.backupPump.activationCount += 1;
     stored.backupPump.lastActivationAt = millisecondsOf(reportedAt);
+    dropTestActivityLabel(stored.backupPump);
 
     return true;
   }
 
   // Classification labels the record and touches nothing else: no count, no last activation, and no
-  // watermark but the self-test one it consumed.
+  // watermark but the self-test one it consumed. It runs only when the record holds a backup
+  // activation and that activation's device timestamp has arrived. Before then, the settled
+  // self-test values describe an earlier run or no run at all, so a label from them would be a
+  // claim about the wrong activation.
   function reconcileClassification(stored: StoredRecord, observation: PumpRecordsObservation): boolean {
+    if (backupEdgeAwaitingItsTimestamp || stored.backupPump.lastActivationAt === undefined) {
+      return false;
+    }
+
     const classified = classifiedAsTestActivity(observation, previousDeviceTimes);
 
     if (classified === undefined) {
@@ -337,6 +354,7 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
       if (watchedAnActivation(previousBackupRunning, observation.backupRunning)) {
         countWatchedActivation(stored.backupPump, observation.receivedAt);
+        dropTestActivityLabel(stored.backupPump);
         backupEdgeAwaitingItsTimestamp = true;
         changed = true;
       }

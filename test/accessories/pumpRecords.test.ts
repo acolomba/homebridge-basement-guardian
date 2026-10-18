@@ -369,18 +369,38 @@ test('labels the last activation as not self-test activity when the backup times
 test('keeps the self-test label it already carries when the self-test timestamp did not decode', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS };
+  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
   records.observe(observation(settled));
   records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
   const beforeTheUndecodedSnapshot = records.backup.lastActivationWasTestActivity;
 
   // act
-  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS }));
 
   // assert
   assert.deepStrictEqual(
     { beforeTheUndecodedSnapshot, after: records.backup.lastActivationWasTestActivity },
     { beforeTheUndecodedSnapshot: true, after: true },
+  );
+});
+
+// Settled self-test values describe a run only when the record holds one. A record with no
+// activation gives the label nothing to describe, so the values change nothing, not even the
+// self-test watermark.
+test('withholds the self-test label from a record that holds no activation even when the self-test values have settled', () => {
+  // arrange
+  const context = storedContext();
+  const { records, persistCount } = pumpRecords(context);
+  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+
+  // act
+  records.observe(observation(settled));
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
+
+  // assert
+  assert.deepStrictEqual(
+    { backup: records.backup, watermark: context.watermarks?.testTimestamp, persisted: persistCount() },
+    { backup: freshRecord(), watermark: PRIOR_TEST_SECONDS, persisted: 0 },
   );
 });
 
@@ -402,6 +422,33 @@ test('advances the self-test watermark when the label it computes is the one alr
   assert.deepStrictEqual(
     { watermark: context.watermarks?.testTimestamp, label: records.backup.lastActivationWasTestActivity, persistedAgain: persistCount() - afterTheLabel },
     { watermark: NEW_TEST_SECONDS, label: true, persistedAgain: 0 },
+  );
+});
+
+// A real backup run after a self-test is a new activation, and the settled self-test timestamps do
+// not describe it. Until the device publishes the timestamp of that run, the record holds no label,
+// so HomeKit does not report a real basement run as a self-test.
+test('withholds the self-test label from a watched backup run whose device timestamp has not arrived', () => {
+  // arrange
+  const { records } = pumpRecords(storedContext());
+  const laterBackupSeconds = 1_700_000_160;
+  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+  const running = { ...settled, backupRunning: true };
+  const timestamped = { ...settled, backupActivatedAt: laterBackupSeconds };
+  records.observe(observation(settled));
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
+  const labels: (boolean | undefined)[] = [records.backup.lastActivationWasTestActivity];
+
+  // act
+  for (const phase of [running, running, settled, timestamped]) {
+    records.observe(observation({ receivedAt: OBSERVED_LAST_AT, ...phase }));
+    labels.push(records.backup.lastActivationWasTestActivity);
+  }
+
+  // assert
+  assert.deepStrictEqual(
+    { activationCount: records.backup.activationCount, lastActivationAt: records.backup.lastActivationAt, labels },
+    { activationCount: 2, lastActivationAt: OBSERVED_LAST_AT, labels: [true, undefined, undefined, undefined, undefined] },
   );
 });
 
