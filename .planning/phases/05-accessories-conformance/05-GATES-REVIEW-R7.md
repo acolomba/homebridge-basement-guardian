@@ -128,6 +128,12 @@ reopened. Opening 5, fixed 5, rejected 0, new 5, reopened 0, closing 5:
 task after the stop was reported; the resolution is recorded in the ledger STOP
 cell before any round-7 repair begins.
 
+## Repair history
+
+| ID | Change | Evidence |
+| --- | --- | --- |
+| CR-05-GATES-045 | Resolved fixed template spans and made unresolved dynamic imports and recognized `createRequire` loads throw. Added fixed forbidden templates, unresolved loads, and unrelated fixed templates to all three owning gates. | The three owners had nine intended RED failures (exit 1) before the helper change. After the change, `npm run build:test` exited 0, all four compiled gate owners passed 78/78, `npm run test:unpaired` exited 0, and `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9 --format json --quiet --explain` passed. Node `v26.12.0`. |
+
 ---
 
 _Reviewed: 2026-10-18T20:09:39Z_

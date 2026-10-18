@@ -109,6 +109,13 @@ const COMPUTED_CONSTANT_DYNAMIC_IMPORT = `
 const target = 'node:timers/' + 'promises';
 const timers = await import(target);
 `;
+const FIXED_TEMPLATE_DYNAMIC_IMPORT = 'const timers = await import(`node:timers/${"promises"}`);';
+const UNRESOLVED_DYNAMIC_IMPORT = 'const timers = await import(process.env.MODULE);';
+const UNRESOLVED_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const timers = loadModule(process.env.MODULE);
+`;
 const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
 const target = 'node:fs';
 const files = await import(target);
@@ -116,6 +123,7 @@ const files = await import(target);
 const UNRELATED_COMPUTED_DYNAMIC_IMPORT = `
 const files = await import('node:' + 'fs');
 `;
+const UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT = 'const files = await import(`node:${"fs"}`);';
 const BACKTICK_DYNAMIC_IMPORT = 'const timers = await import(`node:timers`);';
 const CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
@@ -271,6 +279,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     constantDynamic: importsDeferredExecution(CONSTANT_DYNAMIC_IMPORT),
     computedDynamic: importsDeferredExecution(COMPUTED_DYNAMIC_IMPORT),
     computedConstantDynamic: importsDeferredExecution(COMPUTED_CONSTANT_DYNAMIC_IMPORT),
+    fixedTemplateDynamic: importsDeferredExecution(FIXED_TEMPLATE_DYNAMIC_IMPORT),
     backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
     constantCreateRequire: importsDeferredExecution(CONSTANT_CREATE_REQUIRE_IMPORT),
@@ -298,6 +307,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     constantDynamic: true,
     computedDynamic: true,
     computedConstantDynamic: true,
+    fixedTemplateDynamic: true,
     backtickDynamic: true,
     createRequire: true,
     constantCreateRequire: true,
@@ -324,6 +334,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
     unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsDeferredExecution(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
+    unrelatedFixedTemplateDynamic: importsDeferredExecution(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -335,5 +346,16 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     unrelatedLoaderCall: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
+    unrelatedFixedTemplateDynamic: false,
   });
+});
+
+test('rejects a deferred-execution import with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsDeferredExecution(UNRESOLVED_DYNAMIC_IMPORT), { message: 'cannot resolve module specifier in dynamic import' });
+});
+
+test('rejects a deferred-execution loader call with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsDeferredExecution(UNRESOLVED_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });

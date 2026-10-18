@@ -29,6 +29,7 @@ import {
   isParenthesizedExpression,
   isPropertyAccessExpression,
   isStringLiteral,
+  isTemplateExpression,
   isVariableDeclaration,
   isVariableDeclarationList,
   NodeFlags,
@@ -40,6 +41,7 @@ import {
   type Node,
   type SourceFile,
   type Symbol,
+  type TemplateExpression,
   type TypeChecker,
 } from 'typescript';
 
@@ -174,6 +176,10 @@ function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = ne
     return left !== undefined && right !== undefined ? left + right : undefined;
   }
 
+  if (isTemplateExpression(node)) {
+    return fixedTemplateSpecifier(node, checker, seen);
+  }
+
   if (!isIdentifier(node)) {
     return undefined;
   }
@@ -192,7 +198,21 @@ function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = ne
   return fixedSpecifier(declaration.initializer, checker, seen);
 }
 
-/** Lists fixed module specifiers loaded by imports and createRequire bindings. */
+function fixedTemplateSpecifier(node: TemplateExpression, checker: TypeChecker, seen: Set<Symbol>): string | undefined {
+  let specifier = node.head.text;
+  for (const span of node.templateSpans) {
+    const part = fixedSpecifier(span.expression, checker, new Set(seen));
+    if (part === undefined) {
+      return undefined;
+    }
+
+    specifier += part + span.literal.text;
+  }
+
+  return specifier;
+}
+
+/** Lists fixed module specifiers and rejects unresolved dynamic loads. */
 export function importSpecifiers(source: string): readonly string[] {
   const specifiers: string[] = [];
   const file = createSourceFile('staticGate.ts', source, ScriptTarget.Latest, true);
@@ -234,21 +254,30 @@ export function importSpecifiers(source: string): readonly string[] {
     }
   }
 
+  function recordLoad(node: CallExpression): void {
+    const callee = node.expression;
+    const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
+    const dynamicImport = callee.kind === SyntaxKind.ImportKeyword;
+    if (!dynamicImport && !(symbol && requireSymbols.has(symbol))) {
+      return;
+    }
+
+    const argument = node.arguments[0];
+    const specifier = argument ? fixedSpecifier(argument, checker) : undefined;
+    if (specifier === undefined) {
+      throw new Error(`cannot resolve module specifier in ${dynamicImport ? 'dynamic import' : 'createRequire load'}`);
+    }
+
+    specifiers.push(specifier);
+  }
+
   function visit(node: Node): void {
     if ((isImportDeclaration(node) || isExportDeclaration(node)) && node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {
       specifiers.push(node.moduleSpecifier.text);
     }
 
     if (isCallExpression(node)) {
-      const callee = node.expression;
-      const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
-      const argument = node.arguments[0];
-      if ((callee.kind === SyntaxKind.ImportKeyword || (symbol && requireSymbols.has(symbol))) && argument) {
-        const specifier = fixedSpecifier(argument, checker);
-        if (specifier !== undefined) {
-          specifiers.push(specifier);
-        }
-      }
+      recordLoad(node);
     }
 
     forEachChild(node, visit);

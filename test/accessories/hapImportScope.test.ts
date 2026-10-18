@@ -332,6 +332,13 @@ const COMPUTED_CONSTANT_DYNAMIC_IMPORT = `
 const target = '@homebridge/' + 'hap-nodejs';
 const hap = await import(target);
 `;
+const FIXED_TEMPLATE_DYNAMIC_IMPORT = 'const hap = await import(`@homebridge/${"hap-nodejs"}`);';
+const UNRESOLVED_DYNAMIC_IMPORT = 'const hap = await import(process.env.MODULE);';
+const UNRESOLVED_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const hap = loadModule(process.env.MODULE);
+`;
 const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
 const target = 'homebridge';
 const homebridge = await import(target);
@@ -339,6 +346,7 @@ const homebridge = await import(target);
 const UNRELATED_COMPUTED_DYNAMIC_IMPORT = `
 const homebridge = await import('home' + 'bridge');
 `;
+const UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT = 'const homebridge = await import(`home${"bridge"}`);';
 const DOUBLE_QUOTED_DYNAMIC_IMPORT = `
 const hap = await import("${HAP_PACKAGE_SPECIFIER}");
 `;
@@ -459,6 +467,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     constantDynamic: importsHapPackage(CONSTANT_DYNAMIC_IMPORT),
     computedDynamic: importsHapPackage(COMPUTED_DYNAMIC_IMPORT),
     computedConstantDynamic: importsHapPackage(COMPUTED_CONSTANT_DYNAMIC_IMPORT),
+    fixedTemplateDynamic: importsHapPackage(FIXED_TEMPLATE_DYNAMIC_IMPORT),
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
     backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
@@ -486,6 +495,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     constantDynamic: true,
     computedDynamic: true,
     computedConstantDynamic: true,
+    fixedTemplateDynamic: true,
     doubleQuotedDynamic: true,
     backtickDynamic: true,
     createRequire: true,
@@ -513,6 +523,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     unrelatedLoaderCall: importsHapPackage(UNRELATED_LOADER_CALL),
     unrelatedConstantDynamic: importsHapPackage(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsHapPackage(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
+    unrelatedFixedTemplateDynamic: importsHapPackage(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -524,7 +535,18 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     unrelatedLoaderCall: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
+    unrelatedFixedTemplateDynamic: false,
   });
+});
+
+test('rejects a HAP import with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsHapPackage(UNRESOLVED_DYNAMIC_IMPORT), { message: 'cannot resolve module specifier in dynamic import' });
+});
+
+test('rejects a HAP loader call with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsHapPackage(UNRESOLVED_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
