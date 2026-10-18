@@ -2012,3 +2012,10 @@ has 43 files under `src`, 68 under `test`, 22 under `features`, and 10 under
 `src/accessories`; the HAP gate's three roots contain 133 files in total. The RED header
 tracer exited 1 and named each of the four gates at line 1 for its missing SPDX line.
 `fallow guard` on all four gates exited 0.
+
+After all 17 round-0 findings received repair commits, clean HEAD
+`9a4aa25dc44132aa28401b2d90df13fd4768bdc7` passed fresh pre-round-1 checks by
+2026-10-18T15:20:05Z with Node v26.12.0 and npm 11.20.0: `npm run build:test` exited 0;
+the four compiled gate owners exited 0 with 46/46 tests; `npm run test:unpaired` exited 0;
+and the ledger tracer exited 0 (`inventory=31 findings=189 open=17 rounds=32`). Each finding
+remains `open` until an independent correction-round review confirms its repair.
