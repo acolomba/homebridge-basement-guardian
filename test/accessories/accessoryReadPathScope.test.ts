@@ -39,6 +39,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createSourceFile,
   forEachChild,
+  isBinaryExpression,
   isBlock,
   isCallExpression,
   isElementAccessExpression,
@@ -47,12 +48,15 @@ import {
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
   isObjectLiteralExpression,
+  isParenthesizedExpression,
   isPropertyAssignment,
   isPropertyAccessExpression,
   isStringLiteral,
+  isTemplateExpression,
   isVariableDeclaration,
   NodeFlags,
   ScriptTarget,
+  SyntaxKind,
   type Node,
   type ObjectBindingPattern,
 } from 'typescript';
@@ -142,6 +146,38 @@ function registersReadHandler(source: string): boolean {
     return node && (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) ? node.text : undefined;
   }
 
+  function fixedEventText(node: Node | undefined): string | undefined {
+    if (!node) {
+      return undefined;
+    }
+
+    if (isParenthesizedExpression(node)) {
+      return fixedEventText(node.expression);
+    }
+
+    if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.PlusToken) {
+      const left = fixedEventText(node.left);
+      const right = fixedEventText(node.right);
+      return left === undefined || right === undefined ? undefined : left + right;
+    }
+
+    if (isTemplateExpression(node)) {
+      let text = node.head.text;
+      for (const span of node.templateSpans) {
+        const part = fixedEventText(span.expression);
+        if (part === undefined) {
+          return undefined;
+        }
+
+        text += part + span.literal.text;
+      }
+
+      return text;
+    }
+
+    return literalText(node);
+  }
+
   function methodAlias(name: string): string | undefined {
     for (let index = methodScopes.length - 1; index >= 0; index--) {
       if (methodScopes[index]?.has(name)) {
@@ -171,7 +207,7 @@ function registersReadHandler(source: string): boolean {
       return false;
     }
 
-    if (literalText(node) === READ_HANDLER_EVENT) {
+    if (fixedEventText(node) === READ_HANDLER_EVENT) {
       return true;
     }
 
@@ -770,6 +806,33 @@ test('resolves HAP read event enum aliases and destructuring without following s
     shadowedObject: false,
     shadowedEvent: false,
   });
+});
+
+test('resolves fixed computed read event names without following unrelated names', () => {
+  // arrange
+  const concatenated = `
+const event = 'g' + 'et'; characteristic.on(event, handler);
+`;
+  const direct = `
+characteristic.on('g' + 'et', handler);
+`;
+  const template = 'const event = `g${"e"}t`; characteristic.on(event, handler);';
+  const unrelated = `
+const event = 'ch' + 'ange'; characteristic.on(event, handler);
+`;
+  const unresolved = 'const event = prefix + "et"; characteristic.on(event, handler);';
+
+  // act
+  const registrations = {
+    concatenated: registersReadHandler(concatenated),
+    direct: registersReadHandler(direct),
+    template: registersReadHandler(template),
+    unrelated: registersReadHandler(unrelated),
+    unresolved: registersReadHandler(unresolved),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { concatenated: true, direct: true, template: true, unrelated: false, unresolved: false });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {

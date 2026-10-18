@@ -45,6 +45,7 @@ import {
   createPrinter,
   createSourceFile,
   forEachChild,
+  isBinaryExpression,
   isBlock,
   isCallExpression,
   isElementAccessExpression,
@@ -54,9 +55,11 @@ import {
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
   isObjectLiteralExpression,
+  isParenthesizedExpression,
   isPropertyAssignment,
   isPropertyAccessExpression,
   isStringLiteral,
+  isTemplateExpression,
   isVariableDeclaration,
   ScriptTarget,
   SyntaxKind,
@@ -143,12 +146,40 @@ function staticMemberName(node: Node): string | undefined {
   return undefined;
 }
 
+function fixedEventText(node: Node): string | undefined {
+  if (isParenthesizedExpression(node)) {
+    return fixedEventText(node.expression);
+  }
+
+  if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.PlusToken) {
+    const left = fixedEventText(node.left);
+    const right = fixedEventText(node.right);
+    return left === undefined || right === undefined ? undefined : left + right;
+  }
+
+  if (isTemplateExpression(node)) {
+    let text = node.head.text;
+    for (const span of node.templateSpans) {
+      const part = fixedEventText(span.expression);
+      if (part === undefined) {
+        return undefined;
+      }
+
+      text += part + span.literal.text;
+    }
+
+    return text;
+  }
+
+  return isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node) ? node.text : undefined;
+}
+
 function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined, isHapNamespace: (node: Node) => boolean): boolean {
   if (isIdentifier(node) && aliasOf(node.text) === 'setEvent') {
     return true;
   }
 
-  if ((isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) && node.text === 'set') {
+  if (fixedEventText(node) === 'set') {
     return true;
   }
 
@@ -925,6 +956,33 @@ test('counts HAP set event enum aliases and destructuring without following shad
     shadowedObject: false,
     shadowedEvent: false,
   });
+});
+
+test('counts fixed computed set event names without following unrelated names', () => {
+  // arrange
+  const concatenated = sourceFileOf(`
+const event = 's' + 'et'; characteristic.on(event, handler);
+`);
+  const direct = sourceFileOf(`
+characteristic.on('s' + 'et', handler);
+`);
+  const template = sourceFileOf('const event = `s${"e"}t`; characteristic.on(event, handler);');
+  const unrelated = sourceFileOf(`
+const event = 'ch' + 'ange'; characteristic.on(event, handler);
+`);
+  const unresolved = sourceFileOf('const event = prefix + "et"; characteristic.on(event, handler);');
+
+  // act
+  const uses = {
+    concatenated: hapUses(concatenated).setEvent,
+    direct: hapUses(direct).setEvent,
+    template: hapUses(template).setEvent,
+    unrelated: hapUses(unrelated).setEvent,
+    unresolved: hapUses(unresolved).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { concatenated: true, direct: true, template: true, unrelated: false, unresolved: false });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {
