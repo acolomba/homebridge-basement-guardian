@@ -1922,3 +1922,12 @@ v26.12.0 (all raw exits 0):
 | `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | 2026-10-18T12:50:32.410095Z | 2026-10-18T12:50:36.914640Z | direct pair at 100% |
 
 The ledger tracer exits 0 before correction review, with the ACCESSORY counter still at round 0.
+
+Round-1 repairs are committed through `d3815f99f53f324b326305ed7d56fa23255fc610`.
+The 017 HAP source checks moved to the existing GATES owner under the bounded 05-07
+amendment; its inventory batch remains GATES. On this clean HEAD, fresh pre-round-2 checks
+completed by 2026-10-18T13:11:52Z with Node v26.12.0: `npm run build:test` exited 0;
+`node --test dist-test/test/accessories/basementGuardian.test.js` exited 0 with 144 tests,
+144 passed and 0 failed; `npm run test:coverage:direct -- src/accessories/basementGuardian.ts
+test/accessories/basementGuardian.test.ts` exited 0 with the direct pair at 100%. All five
+round-1 open IDs have repair hashes and remain `open` until independent round-2 review.
