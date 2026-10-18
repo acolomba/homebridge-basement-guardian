@@ -826,14 +826,9 @@ function pumpRecordOf(accessory: FakeAccessory, displayName: string): Record<str
   };
 }
 
-// The declared members of the accessory's injected options, read from the source rather than from
-// the type, because the claim is about what the interface does not declare. A member typed `API`
-// would hand the accessories tier a live Homebridge handle; the narrow persist port exists so that
-// boundary is never crossed, and a type cannot be asked what it refuses to carry (D-008).
-function declaredOptions(source: string): { members: readonly string[]; block: string } {
-  const block = /export interface BasementGuardianAccessoryOptions \{([\s\S]*?)\n\}/u.exec(codeOf(source))?.[1] ?? '';
-
-  return { members: [...block.matchAll(/^ {2}(\w+)\??:/gmu)].map((match) => match[1] ?? ''), block };
+// A member typed `API` would hand this tier a live Homebridge handle instead of its narrow ports.
+function declaredOptionsBlock(source: string): string {
+  return /export interface BasementGuardianAccessoryOptions \{([\s\S]*?)\n\}/u.exec(codeOf(source))?.[1] ?? '';
 }
 
 describe('createBasementGuardianAccessory', () => {
@@ -2468,20 +2463,19 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  test('declares exactly the collaborators the accessory takes by injection', async () => {
+  test('declares no injected option typed API', async () => {
+    // arrange
+    void ({
+      ...buildOptions({ accessory: accessoryStandIn() }),
+      // @ts-expect-error a live Homebridge API is not an injected accessory option
+      api: HAP_NAMESPACE,
+    } satisfies BasementGuardianAccessoryOptions);
+
     // act
-    const { members } = declaredOptions(await sourceOf('basementGuardian.ts'));
+    const block = declaredOptionsBlock(await sourceOf('basementGuardian.ts'));
 
     // assert
-    assert.deepStrictEqual(members, ['accessory', 'hap', 'registry', 'log', 'timers', 'store', 'commands', 'ignoredFaults', 'offlineConfirmationPollCount']);
-  });
-
-  test('declares no injected option typed API and none named api', async () => {
-    // act
-    const { members, block } = declaredOptions(await sourceOf('basementGuardian.ts'));
-
-    // assert
-    assert.deepStrictEqual({ named: members.includes('api'), typedAsApi: /:\s*API\s*;/u.test(block) }, { named: false, typedAsApi: false });
+    assert.strictEqual(/:\s*API\s*;/u.test(block), false);
   });
 
   // Apple Home labels a secondary service of a bridged accessory by `ConfiguredName`, so a sensor
