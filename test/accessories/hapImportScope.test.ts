@@ -187,22 +187,57 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     return (isIdentifier(node.expression) && node.expression.text === 'hap') || staticMemberName(node.expression) === 'hap';
   }
 
-  function recordAlias(node: Node): void {
-    if (isVariableDeclaration(node) && isIdentifier(node.name)) {
-      let capability: string | undefined;
-      if (node.initializer && isUuidApi(node.initializer)) {
-        capability = 'uuid';
-      } else if (node.initializer && isSetEvent(node.initializer, aliasOf)) {
-        capability = 'setEvent';
-      }
+  function capabilityOf(node: Node | undefined): string | undefined {
+    if (!node) {
+      return undefined;
+    }
 
-      scopes[scopes.length - 1]?.set(node.name.text, capability);
+    if (isUuidApi(node)) {
+      return 'uuid';
+    }
+
+    if (isSetEvent(node, aliasOf)) {
+      return 'setEvent';
+    }
+
+    if (isIdentifier(node) && aliasOf(node.text) === 'generate') {
+      return 'generate';
+    }
+
+    if ((isPropertyAccessExpression(node) || isElementAccessExpression(node)) && staticMemberName(node) === 'generate' && isUuidApi(node.expression)) {
+      return 'generate';
+    }
+
+    return undefined;
+  }
+
+  function recordAlias(node: Node): void {
+    if (!isVariableDeclaration(node)) {
+      return;
+    }
+
+    if (isIdentifier(node.name)) {
+      scopes[scopes.length - 1]?.set(node.name.text, capabilityOf(node.initializer));
+      return;
+    }
+
+    if (isObjectBindingPattern(node.name) && node.initializer && isUuidApi(node.initializer)) {
+      for (const element of node.name.elements) {
+        const sourceName = element.propertyName ?? element.name;
+        if ((isIdentifier(sourceName) || isStringLiteral(sourceName)) && sourceName.text === 'generate' && isIdentifier(element.name)) {
+          scopes[scopes.length - 1]?.set(element.name.text, 'generate');
+        }
+      }
     }
   }
 
   function recordUse(node: Node): void {
     if (staticMemberName(node) === 'onSet') {
       uses.onSet = true;
+    }
+
+    if (isCallExpression(node) && isIdentifier(node.expression) && aliasOf(node.expression.text) === 'generate') {
+      uses.destructuredCall = true;
     }
 
     if (isCallExpression(node) && (isPropertyAccessExpression(node.expression) || isElementAccessExpression(node.expression))) {
@@ -213,22 +248,9 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
         uses.setEvent = true;
       }
 
-      if (staticMemberName(member) === 'generate' && (staticMemberName(member.expression) === 'uuid' || isUuidApi(member.expression))) {
+      if (staticMemberName(member) === 'generate' && isUuidApi(member.expression)) {
         uses.memberCall = true;
       }
-    }
-
-    if (
-      isVariableDeclaration(node) &&
-      isObjectBindingPattern(node.name) &&
-      node.name.elements.some((element) => {
-        const sourceName = element.propertyName ?? element.name;
-        return (isIdentifier(sourceName) || isStringLiteral(sourceName)) && sourceName.text === 'generate';
-      }) &&
-      node.initializer &&
-      staticMemberName(node.initializer) === 'uuid'
-    ) {
-      uses.destructuredCall = true;
     }
   }
 
@@ -508,6 +530,7 @@ characteristic.onSet(handler);
 characteristic.on('set', handler);
 hap.uuid.generate(deviceId);
 const { generate } = hap.uuid;
+generate(deviceId);
 `;
 
   // act
@@ -547,6 +570,38 @@ test('counts local aliases of HAP UUID generation and set events', () => {
 
   // assert
   assert.deepStrictEqual(uses, { uuidAlias: true, setEventAlias: true });
+});
+
+test('counts calls through HAP UUID generate function bindings', () => {
+  // arrange
+  const memberBinding = sourceFileOf('const generate = hap.uuid.generate; generate(deviceId);');
+  const destructuredAlias = sourceFileOf('const uuidApi = hap.uuid; const { generate } = uuidApi; generate(deviceId);');
+
+  // act
+  const uses = {
+    memberBinding: hapUses(memberBinding).destructuredCall,
+    destructuredAlias: hapUses(destructuredAlias).destructuredCall,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { memberBinding: true, destructuredAlias: true });
+});
+
+test('ignores unused and unrelated UUID generate bindings', () => {
+  // arrange
+  const unused = sourceFileOf('const { generate } = hap.uuid;');
+  const unrelated = sourceFileOf('const { generate } = other.uuid; generate(deviceId);');
+  const unrelatedMember = sourceFileOf('other.uuid.generate(deviceId);');
+
+  // act
+  const uses = {
+    unused: hapUses(unused).destructuredCall,
+    unrelated: hapUses(unrelated).destructuredCall,
+    unrelatedMember: hapUses(unrelatedMember).memberCall,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { unused: false, unrelated: false, unrelatedMember: false });
 });
 
 test('counts EventEmitter methods that register set listeners', () => {
