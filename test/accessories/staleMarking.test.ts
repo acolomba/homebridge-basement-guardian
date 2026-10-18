@@ -199,13 +199,14 @@ function refuseControlsWith(accessory: HarnessPlatformAccessory, log: Logging, t
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
 // difference between unreadable and merely marked, so it is driven rather than inferred from the
+// stored status. The read is awaited because real HAP answers it asynchronously and rejects with the
 // stored status.
-function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): { value: unknown; threw: unknown } {
+async function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): Promise<{ value: unknown; threw: unknown }> {
   const held = service.getCharacteristic(characteristicClass);
   let threw: unknown = undefined;
 
   try {
-    held?.handleGetRequest();
+    await held?.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
@@ -323,7 +324,7 @@ describe('markRestoredServicesStale', () => {
 });
 
 describe('markTrustReportsUnreadable', () => {
-  test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', () => {
+  test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', async () => {
     // arrange
     const accessory = restoredAccessory();
     floodSensorReporting(accessory, true);
@@ -335,7 +336,7 @@ describe('markTrustReportsUnreadable', () => {
 
     // assert
     assert.deepStrictEqual(
-      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: readOf(control, HAP.Characteristic.On) },
+      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: await readOf(control, HAP.Characteristic.On) },
       { marked: 2, carriesTrust: false, on: { value: true, threw: undefined } },
     );
   });
@@ -343,7 +344,7 @@ describe('markTrustReportsUnreadable', () => {
   // The whole content of the presentation: a controller read answers the status rather than a
   // value, and the value the previous run published is still underneath it. A pass that erased the
   // reading would satisfy the first half of this and fail the second (RES-04, D-10, D-014).
-  test('makes a read of every marked service throw the status it was given, and leaves the value it held', () => {
+  test('makes a read of every marked service throw the status it was given, and leaves the value it held', async () => {
     // arrange
     const accessory = restoredAccessory();
     const flood = floodSensorReporting(accessory, true);
@@ -355,8 +356,8 @@ describe('markTrustReportsUnreadable', () => {
     // assert
     assert.deepStrictEqual(
       {
-        flood: readOf(flood, HAP.Characteristic.StatusActive),
-        battery: readOf(battery, HAP.Characteristic.StatusActive),
+        flood: await readOf(flood, HAP.Characteristic.StatusActive),
+        battery: await readOf(battery, HAP.Characteristic.StatusActive),
       },
       {
         flood: { value: true, threw: RESOURCE_BUSY },
@@ -365,7 +366,7 @@ describe('markTrustReportsUnreadable', () => {
     );
   });
 
-  test('retains every other reading on a service it marks, so the tile keeps its last values', () => {
+  test('retains every other reading on a service it marks, so the tile keeps its last values', async () => {
     // arrange
     const accessory = restoredAccessory();
     const flood = floodSensorReporting(accessory, true);
@@ -377,8 +378,8 @@ describe('markTrustReportsUnreadable', () => {
     // assert
     assert.deepStrictEqual(
       {
-        leakDetected: readOf(flood, HAP.Characteristic.LeakDetected),
-        batteryLevel: readOf(battery, HAP.Characteristic.BatteryLevel),
+        leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+        batteryLevel: await readOf(battery, HAP.Characteristic.BatteryLevel),
       },
       {
         leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
@@ -449,13 +450,13 @@ describe('refuseRestoredControls', () => {
     // act
     const armed = refuseControlsWith(accessory, warningLog(warnings), recordingTimers(deferrals));
     const press = await pressOutcomeOf(control);
-    const readBeforePush = readOf(control, HAP.Characteristic.On);
+    const readBeforePush = await readOf(control, HAP.Characteristic.On);
 
     for (const deferral of deferrals) {
       deferral.run();
     }
 
-    const readAfterPush = readOf(control, HAP.Characteristic.On);
+    const readAfterPush = await readOf(control, HAP.Characteristic.On);
 
     // assert
     assert.deepStrictEqual(
@@ -507,7 +508,7 @@ describe('refuseRestoredControls', () => {
 
   // A write handler and nothing else. `RES-04` asks that a read answers from memory, so the pass
   // must leave every control it arms answering one (D-09).
-  test('leaves every control it arms answering a read', () => {
+  test('leaves every control it arms answering a read', async () => {
     // arrange
     const accessory = restoredAccessory();
     const control = switchCarryingNoTrust(accessory);
@@ -516,7 +517,7 @@ describe('refuseRestoredControls', () => {
     const armed = refuseControls(accessory);
 
     // assert
-    assert.deepStrictEqual({ armed, on: readOf(control, HAP.Characteristic.On) }, { armed: 1, on: { value: true, threw: undefined } });
+    assert.deepStrictEqual({ armed, on: await readOf(control, HAP.Characteristic.On) }, { armed: 1, on: { value: true, threw: undefined } });
   });
 
   // A set handler is one slot in HAP rather than a listener list, so the accessory's own binder
