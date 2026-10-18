@@ -143,6 +143,7 @@ STOP cell before any round-8 repair begins.
 | ID | Change | Evidence |
 | --- | --- | --- |
 | CR-05-GATES-050 | Recognize direct `createRequire(...)('target')` loads and add positive, negative, and unresolved-target controls to all three import gates. | Control: removal of direct-call recognition made the timer positive fail (`immediateCreateRequire: false`, raw exit 1); restored helper blob `311d98308d5a91e93d8e9efb0bcbfe26f2657d49`. `build:test`, four compiled gates (83 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
+| CR-05-GATES-051 | Propagate `node:module` namespace through fixed local aliases; add positive and unrelated-object controls to all three gates. | Control: dropping namespace propagation made the timer positive fail (`aliasedNamespaceCreateRequire: false`, raw exit 1); restored helper blob `80ef5a84c025b5c1dfe2032de073ae777fc32fe5`. `build:test`, four compiled gates (83 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
 
 ---
 

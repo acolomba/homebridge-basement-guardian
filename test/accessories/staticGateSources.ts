@@ -118,6 +118,40 @@ function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Sy
   visit(file);
 }
 
+function addNamespaceAliases(file: SourceFile, checker: TypeChecker, namespaces: Set<Symbol>): void {
+  const aliases: { source: Symbol; alias: Symbol }[] = [];
+  function visit(node: Node): void {
+    if (
+      isVariableDeclaration(node) &&
+      isIdentifier(node.name) &&
+      node.initializer &&
+      isIdentifier(node.initializer) &&
+      isVariableDeclarationList(node.parent) &&
+      node.parent.flags & NodeFlags.Const
+    ) {
+      const source = checker.getSymbolAtLocation(node.initializer);
+      const alias = checker.getSymbolAtLocation(node.name);
+      if (source && alias) {
+        aliases.push({ source, alias });
+      }
+    }
+
+    forEachChild(node, visit);
+  }
+
+  visit(file);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const { source, alias } of aliases) {
+      if (namespaces.has(source) && !namespaces.has(alias)) {
+        namespaces.add(alias);
+        added = true;
+      }
+    }
+  }
+}
+
 function addDefaultCreator(statement: ImportDeclaration, checker: TypeChecker, namespaces: Set<Symbol>): void {
   const defaultName = statement.importClause?.name;
   const symbol = defaultName ? checker.getSymbolAtLocation(defaultName) : undefined;
@@ -155,6 +189,7 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
     }
   }
 
+  addNamespaceAliases(file, checker, namespaces);
   addDestructuredCreators(file, checker, named, namespaces);
   addCreatorAliases(file, checker, named);
   return { named, namespaces };
