@@ -268,8 +268,11 @@ if (hapVersionTheHostDeclares !== undefined) {
     // arrange
     const installed = readManifest(require_.resolve(`${HAP_SPECIFIER}/package.json`));
 
-    // act & assert
-    assert.strictEqual(installed.version, hapVersionTheHostDeclares);
+    // act
+    const installedVersion = installed.version;
+
+    // assert
+    assert.strictEqual(installedVersion, hapVersionTheHostDeclares);
   });
 }
 

@@ -210,33 +210,33 @@ test('no module under src registers a HomeKit read handler in any spelling that 
 });
 
 test('reports a planted read handler in every spelling it is meant to catch (D-09)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    {
-      fluentMethod: registersReadHandler(FLUENT_METHOD_HANDLER),
-      singleQuotedEvent: registersReadHandler(SINGLE_QUOTED_EVENT_HANDLER),
-      doubleQuotedEvent: registersReadHandler(DOUBLE_QUOTED_EVENT_HANDLER),
-      eventTypesMember: registersReadHandler(EVENT_TYPES_MEMBER_HANDLER),
-    },
-    { fluentMethod: true, singleQuotedEvent: true, doubleQuotedEvent: true, eventTypesMember: true },
-  );
+  // act
+  const registrations = {
+    fluentMethod: registersReadHandler(FLUENT_METHOD_HANDLER),
+    singleQuotedEvent: registersReadHandler(SINGLE_QUOTED_EVENT_HANDLER),
+    doubleQuotedEvent: registersReadHandler(DOUBLE_QUOTED_EVENT_HANDLER),
+    eventTypesMember: registersReadHandler(EVENT_TYPES_MEMBER_HANDLER),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { fluentMethod: true, singleQuotedEvent: true, doubleQuotedEvent: true, eventTypesMember: true });
 });
 
 test('reports a planted import of the cloud client and of the account runtime (D-09)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    { cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT), accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT) },
-    { cloudClient: true, accountRuntime: true },
-  );
+  // act
+  const imports = { cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT), accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT) };
+
+  // assert
+  assert.deepStrictEqual(imports, { cloudClient: true, accountRuntime: true });
 });
 
 test('reports neither a comment naming the forbidden spellings nor an unrelated neighbouring import (D-09)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    {
-      comment: registersReadHandler(COMMENT_NAMING_THE_SPELLINGS),
-      unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
-    },
-    { comment: false, unrelatedImport: false },
-  );
+  // act
+  const detections = {
+    comment: registersReadHandler(COMMENT_NAMING_THE_SPELLINGS),
+    unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false });
 });

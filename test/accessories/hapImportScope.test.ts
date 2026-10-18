@@ -174,46 +174,46 @@ test('exactly one file under src, test and features imports the pinned HAP packa
 });
 
 test('reports a planted HAP import in every spelling and quote style it is meant to catch (D-17)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    {
-      named: importsHapPackage(NAMED_IMPORT),
-      doubleQuotedNamed: importsHapPackage(DOUBLE_QUOTED_NAMED_IMPORT),
-      typeOnly: importsHapPackage(TYPE_ONLY_IMPORT),
-      sideEffect: importsHapPackage(SIDE_EFFECT_IMPORT),
-      doubleQuotedSideEffect: importsHapPackage(DOUBLE_QUOTED_SIDE_EFFECT_IMPORT),
-      dynamic: importsHapPackage(DYNAMIC_IMPORT),
-      doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
-    },
-    {
-      named: true,
-      doubleQuotedNamed: true,
-      typeOnly: true,
-      sideEffect: true,
-      doubleQuotedSideEffect: true,
-      dynamic: true,
-      doubleQuotedDynamic: true,
-    },
-  );
+  // act
+  const imports = {
+    named: importsHapPackage(NAMED_IMPORT),
+    doubleQuotedNamed: importsHapPackage(DOUBLE_QUOTED_NAMED_IMPORT),
+    typeOnly: importsHapPackage(TYPE_ONLY_IMPORT),
+    sideEffect: importsHapPackage(SIDE_EFFECT_IMPORT),
+    doubleQuotedSideEffect: importsHapPackage(DOUBLE_QUOTED_SIDE_EFFECT_IMPORT),
+    dynamic: importsHapPackage(DYNAMIC_IMPORT),
+    doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
+  };
+
+  // assert
+  assert.deepStrictEqual(imports, {
+    named: true,
+    doubleQuotedNamed: true,
+    typeOnly: true,
+    sideEffect: true,
+    doubleQuotedSideEffect: true,
+    dynamic: true,
+    doubleQuotedDynamic: true,
+  });
 });
 
 test('reports neither a comment naming the package nor an unrelated import (D-17)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    { comment: importsHapPackage(COMMENT_NAMING_THE_PACKAGE), unrelatedImport: importsHapPackage(UNRELATED_IMPORT) },
-    { comment: false, unrelatedImport: false },
-  );
+  // act
+  const imports = { comment: importsHapPackage(COMMENT_NAMING_THE_PACKAGE), unrelatedImport: importsHapPackage(UNRELATED_IMPORT) };
+
+  // assert
+  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
   // arrange
   const standIn = readFileSync(join(REPOSITORY_ROOT, PROSE_MENTION_WITHOUT_IMPORT), 'utf8');
 
-  // act & assert
-  assert.deepStrictEqual(
-    { namesThePackage: standIn.includes(HAP_PACKAGE_SPECIFIER), importsThePackage: importsHapPackage(standIn) },
-    { namesThePackage: true, importsThePackage: false },
-  );
+  // act
+  const standInImport = { namesThePackage: standIn.includes(HAP_PACKAGE_SPECIFIER), importsThePackage: importsHapPackage(standIn) };
+
+  // assert
+  assert.deepStrictEqual(standInImport, { namesThePackage: true, importsThePackage: false });
 });
 
 for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {

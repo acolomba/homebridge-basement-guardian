@@ -117,26 +117,26 @@ test('no module in the accessories tier imports deferred execution from the node
 });
 
 test('reports a planted deferred-execution import in every spelling it is meant to catch (SAFE-07)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    {
-      namedPromises: importsDeferredExecution(NAMED_PROMISES_IMPORT),
-      namedBare: importsDeferredExecution(NAMED_BARE_IMPORT),
-      doubleQuoted: importsDeferredExecution(DOUBLE_QUOTED_IMPORT),
-      sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
-      dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
-    },
-    { namedPromises: true, namedBare: true, doubleQuoted: true, sideEffect: true, dynamic: true },
-  );
+  // act
+  const imports = {
+    namedPromises: importsDeferredExecution(NAMED_PROMISES_IMPORT),
+    namedBare: importsDeferredExecution(NAMED_BARE_IMPORT),
+    doubleQuoted: importsDeferredExecution(DOUBLE_QUOTED_IMPORT),
+    sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
+    dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
+  };
+
+  // assert
+  assert.deepStrictEqual(imports, { namedPromises: true, namedBare: true, doubleQuoted: true, sideEffect: true, dynamic: true });
 });
 
 test('reports neither a comment naming the modules nor an unrelated node import (SAFE-07)', () => {
-  // act & assert
-  assert.deepStrictEqual(
-    {
-      comment: importsDeferredExecution(COMMENT_NAMING_THE_MODULES),
-      unrelatedImport: importsDeferredExecution(UNRELATED_NODE_IMPORT),
-    },
-    { comment: false, unrelatedImport: false },
-  );
+  // act
+  const imports = {
+    comment: importsDeferredExecution(COMMENT_NAMING_THE_MODULES),
+    unrelatedImport: importsDeferredExecution(UNRELATED_NODE_IMPORT),
+  };
+
+  // assert
+  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false });
 });
