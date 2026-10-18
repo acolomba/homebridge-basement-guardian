@@ -32,7 +32,7 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -55,8 +55,8 @@ import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
  * The cloud tier, as a module in the accessories tier would reach it.
  *
  * A directory rather than one module: every client under it talks to the vendor, so an accessory
- * module has no business importing any of them. Declared once and consumed by the detector and by
- * the planted fixture, so the rule and the control that proves it cannot drift apart.
+ * module has no business importing any of them. The fixtures use this canonical spelling; the
+ * detector compares resolved paths so equivalent relative spellings have the same result.
  */
 const CLOUD_DIRECTORY_SPECIFIER = '../cloud/';
 
@@ -89,6 +89,10 @@ const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..'
 
 const ACCESSORIES_DIRECTORY = 'src/accessories';
 const SOURCE_DIRECTORY = 'src';
+const FIXTURE_ACCESSORY_FILE = 'src/accessories/basementGuardian.ts';
+const NESTED_FIXTURE_ACCESSORY_FILE = 'src/accessories/nested/fixture.ts';
+const CLOUD_DIRECTORY = join(REPOSITORY_ROOT, 'src', 'cloud');
+const ACCOUNT_RUNTIME_FILE = join(REPOSITORY_ROOT, 'src', 'runtime', 'accountRuntime.js');
 
 // The accessories tier holds ten modules and the production tree forty-three. A gate that enumerated
 // fewer than either read the wrong directory, and both assertions built on that read would pass
@@ -96,8 +100,15 @@ const SOURCE_DIRECTORY = 'src';
 const ACCESSORIES_MODULE_FLOOR = 10;
 const SOURCE_MODULE_FLOOR = 43;
 
-function reachesTheNetworkTier(source: string): boolean {
-  return importSpecifiers(source).some((specifier) => specifier.startsWith(CLOUD_DIRECTORY_SPECIFIER) || specifier === ACCOUNT_RUNTIME_SPECIFIER);
+function reachesTheNetworkTier(source: string, sourceFile: string = FIXTURE_ACCESSORY_FILE): boolean {
+  return importSpecifiers(source).some((specifier) => {
+    if (!specifier.startsWith('.')) {
+      return false;
+    }
+
+    const target = resolve(REPOSITORY_ROOT, dirname(sourceFile), specifier);
+    return target.startsWith(`${CLOUD_DIRECTORY}${sep}`) || target === ACCOUNT_RUNTIME_FILE;
+  });
 }
 
 function registersReadHandler(source: string): boolean {
@@ -151,9 +162,9 @@ function registersReadHandler(source: string): boolean {
   return registered;
 }
 
-function offendersUnder(relativeDirectory: string, offends: (source: string) => boolean): readonly string[] {
+function offendersUnder(relativeDirectory: string, offends: (source: string, sourceFile: string) => boolean): readonly string[] {
   return typeScriptFilesUnder(relativeDirectory)
-    .filter((file) => offends(readFileSync(join(REPOSITORY_ROOT, file), 'utf8')))
+    .filter((file) => offends(readFileSync(join(REPOSITORY_ROOT, file), 'utf8'), file))
     .sort();
 }
 
@@ -208,6 +219,15 @@ import { createCloudApi } from '${CLOUD_DIRECTORY_SPECIFIER}api.js';
 `;
 const ACCOUNT_RUNTIME_IMPORT = `
 import { createAccountRuntime } from '${ACCOUNT_RUNTIME_SPECIFIER}';
+`;
+const ALTERNATE_CLOUD_CLIENT_IMPORT = `
+import { createCloudApi } from '../../src/cloud/api.js';
+`;
+const ALTERNATE_ACCOUNT_RUNTIME_IMPORT = `
+import { createAccountRuntime } from '../../src/runtime/accountRuntime.js';
+`;
+const NESTED_CLOUD_CLIENT_IMPORT = `
+import { createCloudApi } from '../../cloud/api.js';
 `;
 const COMMENT_INTERLEAVED_CLOUD_IMPORT = `
 import { createCloudApi } from /* a valid comment */ '${CLOUD_DIRECTORY_SPECIFIER}api.js';
@@ -352,6 +372,9 @@ test('reports a planted import of the cloud client and of the account runtime (D
   const imports = {
     cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT),
     accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT),
+    alternateCloudClient: reachesTheNetworkTier(ALTERNATE_CLOUD_CLIENT_IMPORT),
+    alternateAccountRuntime: reachesTheNetworkTier(ALTERNATE_ACCOUNT_RUNTIME_IMPORT),
+    nestedCloudClient: reachesTheNetworkTier(NESTED_CLOUD_CLIENT_IMPORT, NESTED_FIXTURE_ACCESSORY_FILE),
     commentInterleavedCloud: reachesTheNetworkTier(COMMENT_INTERLEAVED_CLOUD_IMPORT),
     commentInterleavedRuntime: reachesTheNetworkTier(COMMENT_INTERLEAVED_RUNTIME_IMPORT),
     backtickDynamicCloud: reachesTheNetworkTier(BACKTICK_DYNAMIC_CLOUD_IMPORT),
@@ -366,6 +389,9 @@ test('reports a planted import of the cloud client and of the account runtime (D
   assert.deepStrictEqual(imports, {
     cloudClient: true,
     accountRuntime: true,
+    alternateCloudClient: true,
+    alternateAccountRuntime: true,
+    nestedCloudClient: true,
     commentInterleavedCloud: true,
     commentInterleavedRuntime: true,
     backtickDynamicCloud: true,
