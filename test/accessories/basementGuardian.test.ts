@@ -721,9 +721,9 @@ function movedSince(before: ReadonlyMap<string, unknown>, accessory: FakeAccesso
 // value, or the status HAP stored on the characteristic and throws ahead of the value. It is read
 // through the get path rather than off a flag, because the refusal is the whole thing the owner is
 // looking at (D-10).
-function statusActiveReadOf(accessory: FakeAccessory, displayName: string): unknown {
+async function statusActiveReadOf(accessory: FakeAccessory, displayName: string): Promise<unknown> {
   try {
-    return serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.StatusActive)?.handleGetRequest();
+    return await serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.StatusActive)?.handleGetRequest();
   } catch (thrown: unknown) {
     return `refused ${String(thrown)}`;
   }
@@ -732,11 +732,11 @@ function statusActiveReadOf(accessory: FakeAccessory, displayName: string): unkn
 // The same read over both controls and one sensor beside them. A control write that reached past
 // the controls would show here, and a claim about "both controls" made from one of them would not
 // be a claim about the pair (CR-02).
-function trustReportReadsOf(accessory: FakeAccessory): Record<string, unknown> {
+async function trustReportReadsOf(accessory: FakeAccessory): Promise<Record<string, unknown>> {
   return {
-    selfTest: statusActiveReadOf(accessory, SELF_TEST_ROW),
-    alarmMute: statusActiveReadOf(accessory, ALARM_MUTE_ROW),
-    flood: statusActiveReadOf(accessory, 'Sump Pit Flood'),
+    selfTest: await statusActiveReadOf(accessory, SELF_TEST_ROW),
+    alarmMute: await statusActiveReadOf(accessory, ALARM_MUTE_ROW),
+    flood: await statusActiveReadOf(accessory, 'Sump Pit Flood'),
   };
 }
 
@@ -2647,7 +2647,7 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    assert.deepStrictEqual(await trustReportReadsOf(accessory), STILL_REFUSED);
     verify(commands);
   });
 
@@ -2663,7 +2663,7 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    assert.deepStrictEqual(await trustReportReadsOf(accessory), STILL_REFUSED);
     verify(commands);
   });
 
@@ -2687,7 +2687,7 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    assert.deepStrictEqual(await trustReportReadsOf(accessory), STILL_REFUSED);
     verify(commands);
   });
 
