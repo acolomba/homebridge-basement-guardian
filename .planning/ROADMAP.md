@@ -221,7 +221,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 6/9 plans executed in 9 serial waves (one writer; every plan ends with a full gate)
+**Plans**: 7/9 plans executed in 9 serial waves (one writer; every plan ends with a full gate)
 **Wave 1**
 - [x] 05-01-PLAN.md — Wave 0: findings ledger, ledger tracer, review protocol and fresh baseline gate
 
@@ -241,7 +241,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 05-06-PLAN.md — ACCESSORY part 1: full review, header and source-side causes
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 05-07-PLAN.md — ACCESSORY part 2: test-side causes and correction rounds (same counter)
+- [x] 05-07-PLAN.md — ACCESSORY part 2: test-side causes and correction rounds (same counter)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 05-08-PLAN.md — GATES: timerFreedom, hapImportScope, accessoryReadPathScope and hapWriteFidelity
@@ -309,7 +309,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
 | 4. Runtime Conformance | code-review-sweep | 19/19 | Complete    | 2026-10-16 |
-| 5. Accessories Conformance | code-review-sweep | 6/9 | In Progress | - |
+| 5. Accessories Conformance | code-review-sweep | 7/9 | In Progress | - |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |
