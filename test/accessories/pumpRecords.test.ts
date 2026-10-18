@@ -501,24 +501,31 @@ test('withholds the self-test label from a record that holds no activation even 
   );
 });
 
-// Classification consumed a self-test timestamp the record had not accounted for, so the watermark
-// moves even though the label it computed is the one already stored.
+// The record already carries the label that classification computes, so only the self-test
+// watermark changes. Classification consumed a self-test timestamp the record had not accounted
+// for, so the watermark moves and that move alone asks for a write.
 test('advances the self-test watermark when the label it computes is the one already stored', () => {
   // arrange
-  const context = storedContext();
+  const context: PumpRecordsContext = {
+    ...storedContextWithAnActivation(),
+    backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS, lastActivationWasTestActivity: true },
+  };
   const { records, persistCount } = pumpRecords(context);
   const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
   records.observe(observation(settled));
-  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
-  const afterTheLabel = persistCount();
+  const beforeTheClassification = persistCount();
 
   // act
-  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, ...settled }));
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
 
   // assert
   assert.deepStrictEqual(
-    { watermark: context.watermarks?.testTimestamp, label: records.backup.lastActivationWasTestActivity, persistedAgain: persistCount() - afterTheLabel },
-    { watermark: NEW_TEST_SECONDS, label: true, persistedAgain: 0 },
+    {
+      watermark: context.watermarks?.testTimestamp,
+      label: records.backup.lastActivationWasTestActivity,
+      persistedForTheClassification: persistCount() - beforeTheClassification,
+    },
+    { watermark: NEW_TEST_SECONDS, label: true, persistedForTheClassification: 1 },
   );
 });
 
