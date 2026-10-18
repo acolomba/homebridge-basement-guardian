@@ -18,7 +18,7 @@ Six batches cover the 24 inventory paths in `05-FINDINGS.md`:
 | GATES | 05-08 | `05-GATES-REVIEW.md` |
 
 05-01 and 05-09 are coordinator plans with no batch. The round-0 report is
-`05-<BATCH>-REVIEW.md`; correction round N, from 1 to 10 (D-18), writes
+`05-<BATCH>-REVIEW.md`; correction round N, from 1 to the batch cap (D-18), writes
 `05-<BATCH>-REVIEW-R<N>.md`.
 
 Every inventory file gets a fresh full-file review. That includes `test/accessories/controls.test.ts`
@@ -262,24 +262,25 @@ Counters are per batch and start fresh in Phase 5 (D-10); a new cause never rese
 The arithmetic is closing = opening - fixed - rejected + new + reopened. The ID sets must
 reconcile, and IDs are never renamed.
 
-D-18: each batch may run up to ten correction rounds, numbered 1 to 10. For Phase 5 only, this
-replaces Phase 4's round-four stop and the "about four rounds" wording of PROC-02 and the ROADMAP.
+D-18: each batch may run up to ten correction rounds, numbered 1 to 10. The maintainer's
+2026-10-18 amendment extends GATES alone to fifteen rounds, numbered 1 to 15. The other five
+batches retain ten. For Phase 5 only, this replaces Phase 4's round-four stop and the "about four
+rounds" wording of PROC-02 and the ROADMAP.
 
 On the reviewer's final result, before any other action, compute the counts and apply D-03 as
 amended and D-18:
 
-- A round whose closing is 0 is `clean` and closes the batch at any round from 0 to 10, correction
-  round 10 included.
+- A round whose closing is 0 is `clean` and closes the batch at any round through its cap.
 - STOP when the round has open findings and closing >= opening (`STOP: no progress`).
 - STOP when any fixed ID reopened (`STOP: reopened <IDs>`).
-- STOP when correction round 10 ends with open findings (`STOP: open after round 10`).
-- Otherwise the open count fell, findings remain and the round is below 10, so the result is
+- STOP when the batch's cap round ends with open findings (`STOP: open after round <cap>`).
+- Otherwise the open count fell, findings remain and the round is below its cap, so the result is
   `continue`: repair the open findings and run the next round.
 
-No batch runs more than ten correction rounds. STOP means: write the round's counter row with its
+No batch runs beyond its correction-round cap. STOP means: write the round's counter row with its
 `STOP: <reason>` in the ledger, leave it uncommitted, run nothing else, commit nothing, and end
 the plan with a blocking report of exact IDs and counts. Only a maintainer resolution recorded in
-that STOP cell (`resolved by maintainer`) lets a later row follow it, and never past round 10.
+that STOP cell (`resolved by maintainer`) lets a later row follow it, and never past the batch cap.
 
 D-10: a new cause on lines a Phase 1 or Phase 4 fix touched gets a new ID that cites SC-02 or the
 CR-04-ACCOUNT ID. Only the return of the same fixed defect is a reopen.

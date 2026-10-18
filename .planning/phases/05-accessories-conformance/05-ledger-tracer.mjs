@@ -54,8 +54,8 @@ const SEED_COUNTS = new Map([
   ['GATES', 0],
 ]);
 
-// D-18: correction rounds run from 1 to 10; no batch records a round above it.
-const ROUND_CAP = 10;
+// D-18: the maintainer extended GATES alone from ten to fifteen correction rounds.
+const ROUND_CAPS = new Map(BATCHES.map((batch) => [batch, batch === 'GATES' ? 15 : 10]));
 
 const KINDS = new Set(['core', 'addition', 'adaptation']);
 const DISPOSITIONS = new Set(['pending', 'open', 'fixed', 'rejected']);
@@ -398,11 +398,11 @@ function checkFindings(findings, countersByBatch, violate) {
 }
 
 // What D-03 as amended and D-18 make a round's result, from that round's own counts.
-function expectedResult(round, opening, closing, reopened) {
+function expectedResult(batch, round, opening, closing, reopened) {
   if (round === 0) {
     return closing > 0 ? 'initial' : 'clean';
   }
-  if (reopened > 0 || (closing > 0 && closing >= opening) || (round >= ROUND_CAP && closing > 0)) {
+  if (reopened > 0 || (closing > 0 && closing >= opening) || (round >= ROUND_CAPS.get(batch) && closing > 0)) {
     return 'STOP';
   }
 
@@ -458,15 +458,15 @@ function checkCounters(countersByBatch, violate) {
       if (closing !== sum) {
         violate('L4-sum', `${name}: Closing ${String(closing)} differs from Opening - Fixed - Rejected + New + Reopened = ${String(sum)}`);
       }
-      if (round > ROUND_CAP) {
-        violate('L4-cap', `${name}: no batch records a round above ${String(ROUND_CAP)} (D-18)`);
+      if (round > ROUND_CAPS.get(batch)) {
+        violate('L4-cap', `${name}: ${batch} records no round above ${String(ROUND_CAPS.get(batch))} (D-18)`);
       }
 
       const result = row['D-03 result'];
       if (previous !== undefined && previous.result.startsWith('STOP') && !previous.result.includes('resolved by maintainer')) {
         violate('L4-stop', `${name}: follows the STOP at round ${String(previous.round)}, which no maintainer resolution releases`);
       }
-      const expected = expectedResult(round, opening, closing, reopened);
+      const expected = expectedResult(batch, round, opening, closing, reopened);
       if (expected === 'STOP' ? !result.startsWith('STOP') : result !== expected) {
         violate('L4-stop', `${name}: D-03 result "${result}" should be ${expected === 'STOP' ? '"STOP: <reason>"' : `"${expected}"`}`);
       }

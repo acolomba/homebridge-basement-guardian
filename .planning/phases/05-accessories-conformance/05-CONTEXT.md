@@ -119,6 +119,12 @@ meaning, fallback state or persistence migration is in scope.
   reversible — a planning-policy change; no code or published contract
   depends on it.
 
+  **Maintainer amendment, 2026-10-18:** The GATES batch alone may run up to
+  fifteen correction rounds. Its cap stop moves to round 15; the no-progress
+  and reopened-finding stops still apply at every round. The round-10 STOP
+  remains historical and requires the maintainer resolution recorded in the
+  ledger before round 11. The other five batches retain the ten-round cap.
+
 ### Claude's Discretion
 
 - Batch grouping and wave order, within the roadmap batching note
