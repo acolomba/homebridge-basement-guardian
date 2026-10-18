@@ -1386,6 +1386,39 @@ describe('createControlBinder', () => {
     verify(commands);
   });
 
+  // A field that stops decoding cannot give the binder a reported value at expiry. HAP still holds
+  // the accepted press, so the binder must restore the value it served before that press (D-037).
+  test('restores the pre-press switch value when reported state disappears before the window closes', async () => {
+    // arrange
+    const warnings: string[] = [];
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve(acceptedOutcome());
+    const { timers, deferrals } = recordingTimers();
+    let reported: boolean | undefined = false;
+    const { binder, service } = boundSwitch({ commands, timers, log: warningLog(warnings) }, () => reported);
+    service.updateCharacteristic(HAP.Characteristic.On, false);
+    const beforePress = await readOfSwitch(service);
+
+    // act
+    await onCharacteristic(service).handleSetRequest(true);
+    const afterAcceptedPress = await readOfSwitch(service);
+    reported = undefined;
+    windowsIn(deferrals)[0]?.run();
+
+    // assert
+    assert.deepStrictEqual(
+      { beforePress, afterAcceptedPress, afterExpiry: await readOfSwitch(service), pending: [...binder.pending], warnings },
+      {
+        beforePress: { value: false, threw: undefined },
+        afterAcceptedPress: { value: true, threw: undefined },
+        afterExpiry: { value: false, threw: undefined },
+        pending: [],
+        warnings: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
+      },
+    );
+    verify(commands);
+  });
+
   // Whichever of the two runs first wins and the second is a no-op, so a confirming report landing at
   // the instant the window closes needs no ordering rule beyond that (D-06).
   test('ignores a confirming report that lands after the window already closed', async () => {

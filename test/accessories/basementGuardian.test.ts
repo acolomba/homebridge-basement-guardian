@@ -3135,6 +3135,109 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // An accepted press leaves HAP serving the requested true until the device confirms it or the
+  // window closes. Each withdrawal below prevents the control row from publishing On at expiry, so
+  // the binder must restore the last reported false itself (D-037).
+  test('restores the reported self-test value when an accepted press expires under three withdrawals', async () => {
+    const withdrawals: readonly {
+      path: string;
+      apply: (accessory: FakeAccessory, guardian: BasementGuardianAccessory) => void;
+    }[] = [
+      {
+        path: 'credentials refused',
+        apply: (accessory, guardian) => {
+          refuseTheCredentials(accessory, guardian);
+        },
+      },
+      {
+        path: 'controller link lost',
+        apply: (_accessory, guardian) => {
+          guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, serial_communications: false } }), 'poll');
+        },
+      },
+      {
+        path: 'self-test field undecoded',
+        apply: (_accessory, guardian) => {
+          guardian.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: 'x' } }), 'poll');
+        },
+      },
+    ];
+    const observed: unknown[] = [];
+
+    for (const withdrawal of withdrawals) {
+      // arrange
+      const accessory = accessoryStandIn();
+      const { timers } = recordingTimers();
+      const { log, warnings } = recordingLog();
+      const { commands, sends } = recordingCommands();
+      const windowClosings: (() => void)[] = [];
+      const controlTimers: Timers = {
+        ...timers,
+        setTimeout: (handler, delayMs) => {
+          if (delayMs === PENDING_WINDOW_MS) {
+            windowClosings.push(handler);
+          }
+
+          return timers.setTimeout(handler, delayMs);
+        },
+      };
+      const guardian = geminiAccessory(accessory, { test_running: false }, { timers: controlTimers, commands, log });
+      guardian.markMonitoring(EVERY_TRANSPORT_WORKING);
+      const on = onCharacteristicOf(accessory, SELF_TEST_ROW);
+      const beforePress = on.value;
+
+      // act
+      await on.handleSetRequest(true);
+      const afterAcceptedPress = on.value;
+      withdrawal.apply(accessory, guardian);
+      runEvery(windowClosings);
+      observed.push({
+        path: withdrawal.path,
+        beforePress,
+        afterAcceptedPress,
+        windowClosings: windowClosings.length,
+        afterExpiry: on.value,
+        readAfterExpiry: await on.handleGetRequest(),
+        sends,
+        unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')),
+      });
+    }
+
+    // assert
+    assert.deepStrictEqual(observed, [
+      {
+        path: 'credentials refused',
+        beforePress: false,
+        afterAcceptedPress: true,
+        windowClosings: 1,
+        afterExpiry: false,
+        readAfterExpiry: false,
+        sends: [`${DEVICE_ID} self-test true`],
+        unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
+      },
+      {
+        path: 'controller link lost',
+        beforePress: false,
+        afterAcceptedPress: true,
+        windowClosings: 1,
+        afterExpiry: false,
+        readAfterExpiry: false,
+        sends: [`${DEVICE_ID} self-test true`],
+        unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
+      },
+      {
+        path: 'self-test field undecoded',
+        beforePress: false,
+        afterAcceptedPress: true,
+        windowClosings: 1,
+        afterExpiry: false,
+        readAfterExpiry: false,
+        sends: [`${DEVICE_ID} self-test true`],
+        unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
+      },
+    ]);
+  });
+
   // Nothing has told this accessory the runtime can reach the vendor yet, and an accessory that
   // assumed it could would send the first press of a run into a route that has never answered
   // (RES-04, D-07).

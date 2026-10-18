@@ -517,7 +517,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   }
 
   // The window closed with no confirming report. The entry goes, the binder
-  // calls `republish`, and one warning names the capability.
+  // restores `On` from a report or the value HAP served before the press, and
+  // one warning names the capability.
   //
   // Nothing is retried: a command that outlived its deadline may already have
   // reached the device, and a second attempt would operate a real sump pump
@@ -530,12 +531,13 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
   // The republish is no more than the control rows, as `republish` documents:
   // nothing else changed, and a full republish driven from a timer would make
   // the accessory's "two updates cannot interleave" claim harder to hold.
-  function expire(capability: DeviceCapability): void {
+  function expire(capability: DeviceCapability, service: Service, reported: () => boolean | undefined, previousValue: CharacteristicValue): void {
     if (!requested.delete(capability)) {
       return;
     }
 
     republish();
+    publishValue(service, hap.Characteristic.On, reported() ?? previousValue);
     log.warn(`The ${capability} request on ${deviceId} was never confirmed by the device. It is not retried.`);
   }
 
@@ -600,6 +602,8 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
       refuseLocally(service, capability, reported, refusal);
     }
 
+    // HAP stores an accepted write only after this handler returns.
+    const previousValue = heldOn(hap, service);
     // From here the row withholds `On`, so the accessory's next update cannot
     // snap the toggle back while the request waits (D-05). The entry is
     // created immediately before the request leaves, with its own deadline, so
@@ -607,7 +611,7 @@ export function createControlBinder(options: ControlBinderOptions): ControlBinde
     requested.set(capability, {
       value: accepted,
       handle: timers.setTimeout(() => {
-        expire(capability);
+        expire(capability, service, reported, previousValue);
       }, PENDING_WINDOW_MS),
     });
 
