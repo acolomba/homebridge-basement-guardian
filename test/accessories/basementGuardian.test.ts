@@ -1527,7 +1527,7 @@ describe('createBasementGuardianAccessory', () => {
       }
 
       // assert
-      assert.deepStrictEqual(readings, [...Array<unknown>(threshold - 1).fill(CONTACT_DETECTED), CONTACT_NOT_DETECTED]);
+      assert.deepStrictEqual(readings, [...Array.from({ length: threshold - 1 }, () => CONTACT_DETECTED), CONTACT_NOT_DETECTED]);
     });
   }
 
@@ -1602,7 +1602,10 @@ describe('createBasementGuardianAccessory', () => {
     }
 
     // assert
-    assert.deepStrictEqual(readings, Array<unknown>(7).fill(CONTACT_DETECTED));
+    assert.deepStrictEqual(
+      readings,
+      Array.from({ length: 7 }, () => CONTACT_DETECTED),
+    );
   });
 
   test('never activates the offline adapter from the device reporting itself offline', () => {
