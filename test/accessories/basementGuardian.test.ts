@@ -274,9 +274,17 @@ const GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
   offline: false,
 };
 
-// Every `TrustScope` member, written out here rather than imported, so the accessory's own list and
-// the union cannot drift apart without a case saying so.
-const EVERY_TRUST_SCOPE: readonly TrustScope[] = ['alarm-mute', 'battery', 'connectivity', 'fault', 'power', 'pump', 'self-test', 'water'];
+// This complete map makes a new `TrustScope` member a type error until the expected set names it.
+const EVERY_TRUST_SCOPE: Record<TrustScope, true> = {
+  'alarm-mute': true,
+  battery: true,
+  connectivity: true,
+  fault: true,
+  power: true,
+  pump: true,
+  'self-test': true,
+  water: true,
+};
 
 // Every scope in the stable order `untrusted` exposes them, written out here so
 // a case naming the whole set does not read it back off the production list.
@@ -2528,7 +2536,7 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       [...reported, 'connectivity'].sort((left, right) => left.localeCompare(right)),
-      [...EVERY_TRUST_SCOPE],
+      Object.keys(EVERY_TRUST_SCOPE),
     );
   });
 
