@@ -66,7 +66,7 @@ interface WriteRecord {
 /** The write surface both implementations answer, so one script drives each in turn. */
 interface WriteSubject {
   /** Registers the one write handler this characteristic answers through. */
-  onSet(handler: () => Promise<void>): void;
+  onSet(handler: (value: unknown) => Promise<void>): void;
   /** Drives a controller write and answers what it left behind. */
   set(value: boolean): Promise<WriteRecord>;
   /** Drives a controller read and answers what it left behind. */
@@ -329,6 +329,29 @@ test('stores the value and clears the status on an accepted write, on both imple
   // assert
   assert.deepStrictEqual(real, fake);
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
+});
+
+test('delivers requested values to onSet in order, on both implementations', async () => {
+  // arrange
+  const expectedRequestedValues = [true, false];
+
+  // act
+  const { real, fake } = await bothRecords(async (subject) => {
+    const requestedValues: unknown[] = [];
+    subject.pushOn(false);
+    subject.onSet((value) => {
+      requestedValues.push(value);
+      return Promise.resolve();
+    });
+    await subject.set(true);
+    await subject.set(false);
+
+    return requestedValues;
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, expectedRequestedValues);
 });
 
 test('stores a write without a handler, on both implementations', async () => {
