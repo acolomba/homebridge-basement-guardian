@@ -235,9 +235,9 @@ function fakeSubject(): WriteSubject {
 // One write script, run against each implementation in turn. Neither record is the expected value:
 // the assertion is that the two agree, so a semantic the stand-in got wrong would have to be wrong
 // the same way in the real HAP source, which is the point of comparing rather than restating.
-type WriteScript = (subject: WriteSubject, refuse: (status: number) => Error) => Promise<WriteRecord>;
+type WriteScript<T> = (subject: WriteSubject, refuse: (status: number) => Error) => Promise<T>;
 
-async function bothRecords(script: WriteScript): Promise<{ real: WriteRecord; fake: WriteRecord }> {
+async function bothRecords<T>(script: WriteScript<T>): Promise<{ real: T; fake: T }> {
   const real = await script(realSubject(), (status) => new HapStatusError(status));
   const fake = await script(fakeSubject(), (status) => new FAKE.HapStatusError(status));
 
@@ -357,6 +357,45 @@ test('uses the latest onSet handler for a write, on both implementations', async
   // assert
   assert.deepStrictEqual(real, fake);
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
+});
+
+test('clears a refused status while the next write is pending, on both implementations', async () => {
+  // arrange
+  const expectedRecords = {
+    prior: { rejectedWith: HAPStatus.RESOURCE_BUSY, value: true, statusCode: HAPStatus.RESOURCE_BUSY },
+    inFlight: {
+      stored: { rejectedWith: undefined, value: true, statusCode: 0 },
+      read: { rejectedWith: undefined, value: true, statusCode: 0 },
+    },
+    settled: { rejectedWith: undefined, value: false, statusCode: 0 },
+  };
+
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(true);
+    subject.onSet(() => Promise.reject(refuse(HAPStatus.RESOURCE_BUSY)));
+    const prior = await subject.set(false);
+    let releaseWrite: () => void = () => {
+      throw new Error('the pending write handler was not entered');
+    };
+
+    subject.onSet(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseWrite = resolve;
+        }),
+    );
+
+    const writing = subject.set(false);
+    const inFlight = { stored: subject.read(), read: await subject.get() };
+    releaseWrite();
+
+    return { prior, inFlight, settled: await writing };
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, expectedRecords);
 });
 
 // The held value is pushed to `true` first, deliberately away from the `bool` format default. A

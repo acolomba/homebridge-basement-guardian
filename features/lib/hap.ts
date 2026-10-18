@@ -312,14 +312,15 @@ class StandInCharacteristic implements FakeHapCharacteristic {
     return this;
   }
 
-  // The real order matters and is reproduced exactly: the handler runs first, the status is
-  // cleared and the value stored only on the success path, and a rejection leaves the value
-  // untouched. Nothing snaps a refused toggle back, because HAP never moved it.
+  // The real order matters: status clears as the write starts, before the handler settles. A
+  // successful handler stores the new value; a refusal leaves the published value untouched.
   //
   // `pushed` deliberately stays where it was. It marks a value the plugin published, and a
   // controller write is not that; a scenario reading a control back is reading a characteristic the
   // plugin already published to.
   async handleSetRequest(value: unknown): Promise<void> {
+    this.statusCode = HAP_STATUS.SUCCESS;
+
     if (this.setHandler === undefined) {
       this.statusCode = HAP_STATUS.SUCCESS;
       this.value = value;
