@@ -14,12 +14,10 @@ import { describe, test } from 'node:test';
 import { createReconciliation } from '../../src/accessories/reconciliation.js';
 
 import type { Reconciliation, ReconciliationOptions } from '../../src/accessories/reconciliation.js';
-import type { Clock } from '../../src/runtime/clock.js';
 import type { Logging } from 'homebridge';
 
 const DEVICE_ID = 'account-1_serial-1';
 const OTHER_DEVICE_ID = 'account-1_serial-2';
-const NOW = 1_700_000_000_000;
 
 // Logging is a callable interface with seven members, so the stub is a
 // no-op function that carries them rather than an object literal.
@@ -40,9 +38,7 @@ function createSilentLog(): Logging {
 }
 
 function reconciliationOptions(): ReconciliationOptions {
-  const clock: Clock = { now: () => NOW };
-
-  return { clock, log: createSilentLog() };
+  return { log: createSilentLog() };
 }
 
 function reconciliation(): Reconciliation {

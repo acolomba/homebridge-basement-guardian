@@ -19,7 +19,6 @@
  * any current or future device family without change.
  */
 
-import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
 /** How many consecutive trustworthy responses must omit a deviceId before it counts as confirmed absent (D-029). */
@@ -46,9 +45,8 @@ export interface Reconciliation {
   forget(deviceId: string): void;
 }
 
-/** Everything the reconciliation state machine needs, by injection. */
+/** The injected log, which gets one debug line each time `observe` reports a deviceId confirmed absent. */
 export interface ReconciliationOptions {
-  clock: Clock;
   log: Logging;
 }
 

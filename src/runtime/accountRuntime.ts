@@ -343,7 +343,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   const root = new AbortController();
   const connectRetry = options.createRetry(root.signal);
   const shadowRetry = options.createRetry(root.signal);
-  const reconciliation = createReconciliation({ clock: options.clock, log: options.log });
+  const reconciliation = createReconciliation({ log: options.log });
   const health = createMonitoringHealth({ clock: options.clock, monotonic: options.monotonic, anchors: options.anchors });
   let credentials: MutableCredentialCache | undefined;
   let shadow: ShadowClient | undefined;
