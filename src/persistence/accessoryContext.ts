@@ -35,8 +35,9 @@ export interface PumpObservation {
    * Milliseconds, local, at which the plugin began observing this pump.
    *
    * The count below is meaningless without it: the plugin cannot see
-   * activations from before it ran, so it reports what it watched rather than
-   * a lifetime total the device never supplied.
+   * activations from before it began observing, so it reports what it
+   * watched, plus backup runs it recovered from the device timestamp, rather
+   * than a lifetime total the device never supplied.
    */
   observationStartedAt: number;
   /** Activations observed since `observationStartedAt`. */
@@ -71,7 +72,8 @@ export interface PumpObservation {
 }
 
 /**
- * The highest device timestamp already turned into an activation record.
+ * The device timestamps already accounted for, and whether a counted backup
+ * run still awaits a device timestamp.
  *
  * A device timestamp can recover an activation that fell between polls, and
  * the same timestamp arrives again on every later payload. Keeping the
@@ -91,8 +93,8 @@ export interface ActivationWatermarks {
    * Whether a watched backup run is counted and its device timestamp has not
    * arrived yet.
    *
-   * When `true`, the next backup timestamp past the watermark describes that
-   * same run, so it moves the watermark and counts nothing. It is stored
+   * When `true`, the next backup timestamp past the watermark is taken as that
+   * same run's own, so it moves the watermark and counts nothing. It is stored
    * because a restart can fall inside that window. Absent means no counted run
    * waits for its timestamp (D-010).
    */
