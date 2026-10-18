@@ -54,7 +54,7 @@ const MANIFEST_SEARCH_DEPTH = 4;
 
 const FAKE = createFakeHap();
 
-const require_ = createRequire(import.meta.url);
+const testRequire = createRequire(import.meta.url);
 
 /** One write or read, as both implementations report it. */
 interface WriteRecord {
@@ -246,10 +246,10 @@ test('clamps a count past 255 on the narrow numeric format and keeps it whole on
 
 test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
   // arrange
-  const homebridgeRequire = createRequire(require_.resolve(HOMEBRIDGE_SPECIFIER));
+  const homebridgeRequire = createRequire(testRequire.resolve(HOMEBRIDGE_SPECIFIER));
 
   // act
-  const resolved = { here: require_.resolve(HAP_SPECIFIER), throughTheHost: homebridgeRequire.resolve(HAP_SPECIFIER) };
+  const resolved = { here: testRequire.resolve(HAP_SPECIFIER), throughTheHost: homebridgeRequire.resolve(HAP_SPECIFIER) };
 
   // assert
   assert.strictEqual(resolved.here, resolved.throughTheHost);
@@ -261,12 +261,12 @@ test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
 // this file tests against. The two lines share no version to compare, so this
 // case is registered only once the host has migrated to the scoped package --
 // a Homebridge 1.x run has nothing here to assert against.
-const hapVersionTheHostDeclares = manifestOwning(require_.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER).dependencies?.[HAP_SPECIFIER];
+const hapVersionTheHostDeclares = manifestOwning(testRequire.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER).dependencies?.[HAP_SPECIFIER];
 
 if (hapVersionTheHostDeclares !== undefined) {
   test('D-17 runs against the HAP version the plugin host declares', () => {
     // arrange
-    const installed = readManifest(require_.resolve(`${HAP_SPECIFIER}/package.json`));
+    const installed = readManifest(testRequire.resolve(`${HAP_SPECIFIER}/package.json`));
 
     // act
     const installedVersion = installed.version;
