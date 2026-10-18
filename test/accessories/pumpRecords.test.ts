@@ -694,11 +694,15 @@ test('names no device or account identifier in the line about an unreadable reco
 // The accessory observes a snapshot before it publishes one, so a read before the first observation
 // is a wiring mistake rather than a record with nothing in it. Answering a zero count and an epoch
 // of 1970 instead would publish both as fact.
-test('refuses to answer a record before it has observed anything', () => {
-  // arrange
-  const { records } = pumpRecords();
+for (const pump of ['primary', 'backup'] as const) {
+  test(`refuses to answer the ${pump} record before it has observed anything`, () => {
+    // arrange
+    const { records } = pumpRecords();
 
-  // act & assert
-  assert.throws(() => records.primary, { message: /before anything was observed/ });
-  assert.throws(() => records.backup, { message: /before anything was observed/ });
-});
+    // act & assert
+    assert.throws(() => records[pump], {
+      name: 'Error',
+      message: 'a pump record was read before anything was observed; the accessory observes a snapshot before it publishes one',
+    });
+  });
+}
