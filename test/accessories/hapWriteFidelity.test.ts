@@ -89,15 +89,44 @@ interface WriteSubject {
 }
 
 interface InstalledManifest {
-  name?: string;
-  version?: string;
+  name: string;
+  version: string;
   dependencies?: Readonly<Record<string, string>>;
 }
 
 function readManifest(path: string): InstalledManifest {
   const manifest: unknown = JSON.parse(readFileSync(path, 'utf8'));
 
-  return manifest as InstalledManifest;
+  if (
+    typeof manifest !== 'object' ||
+    manifest === null ||
+    Array.isArray(manifest) ||
+    !('name' in manifest) ||
+    typeof manifest.name !== 'string' ||
+    !('version' in manifest) ||
+    typeof manifest.version !== 'string'
+  ) {
+    throw new Error(`invalid installed manifest at ${path}`);
+  }
+
+  let dependencies: Record<string, string> | undefined;
+  if ('dependencies' in manifest) {
+    const declared = manifest.dependencies;
+    if (typeof declared !== 'object' || declared === null || Array.isArray(declared)) {
+      throw new Error(`invalid installed dependencies at ${path}`);
+    }
+
+    dependencies = {};
+    for (const [specifier, version] of Object.entries(declared)) {
+      if (typeof version !== 'string') {
+        throw new Error(`invalid installed dependency ${specifier} at ${path}`);
+      }
+
+      dependencies[specifier] = version;
+    }
+  }
+
+  return dependencies === undefined ? { name: manifest.name, version: manifest.version } : { name: manifest.name, version: manifest.version, dependencies };
 }
 
 // The manifest that owns a resolved entry point, found by walking up from it rather than by a fixed
