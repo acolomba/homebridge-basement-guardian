@@ -39,12 +39,16 @@ import { fileURLToPath } from 'node:url';
 import {
   createSourceFile,
   forEachChild,
+  isBlock,
   isCallExpression,
   isElementAccessExpression,
+  isFunctionLike,
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
   isPropertyAccessExpression,
   isStringLiteral,
+  isVariableDeclaration,
+  NodeFlags,
   ScriptTarget,
   type Node,
 } from 'typescript';
@@ -116,6 +120,17 @@ function reachesTheNetworkTier(source: string, sourceFile: string = FIXTURE_ACCE
 function registersReadHandler(source: string): boolean {
   const file = createSourceFile('readHandler.ts', source, ScriptTarget.Latest, true);
   let registered = false;
+  const scopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+
+  function readAlias(name: string): boolean {
+    for (let index = scopes.length - 1; index >= 0; index--) {
+      if (scopes[index]?.has(name)) {
+        return scopes[index]?.get(name) ?? false;
+      }
+    }
+
+    return false;
+  }
 
   function literalText(node: Node | undefined): string | undefined {
     return node && (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) ? node.text : undefined;
@@ -139,6 +154,14 @@ function registersReadHandler(source: string): boolean {
       return false;
     }
 
+    if (literalText(node) === READ_HANDLER_EVENT) {
+      return true;
+    }
+
+    if (isIdentifier(node)) {
+      return readAlias(node.text);
+    }
+
     const member = staticMember(node);
     if (member?.name !== EVENT_TYPES_READ_MEMBER) {
       return false;
@@ -148,19 +171,44 @@ function registersReadHandler(source: string): boolean {
     return (isIdentifier(owner) && owner.text === EVENT_TYPES_ENUM) || staticMember(owner)?.name === EVENT_TYPES_ENUM;
   }
 
-  function visit(node: Node): void {
+  function recordAlias(node: Node): void {
+    if (isVariableDeclaration(node) && isIdentifier(node.name)) {
+      const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
+      scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
+    }
+  }
+
+  function recordUse(node: Node): void {
     if (isCallExpression(node)) {
       const method = staticMember(node.expression)?.name;
       const event = node.arguments[0];
-      if (
-        method === READ_HANDLER_METHOD ||
-        (method && READ_EVENT_LISTENER_METHODS.has(method) && event && (literalText(event) === READ_HANDLER_EVENT || isReadEvent(event)))
-      ) {
+      if (method === READ_HANDLER_METHOD || (method && READ_EVENT_LISTENER_METHODS.has(method) && isReadEvent(event))) {
         registered = true;
       }
     }
+  }
 
+  function visit(node: Node): void {
+    const ownScope = isBlock(node) || isFunctionLike(node);
+    if (ownScope) {
+      const scope = new Map<string, boolean>();
+      if (isFunctionLike(node)) {
+        for (const parameter of node.parameters) {
+          if (isIdentifier(parameter.name)) {
+            scope.set(parameter.name.text, false);
+          }
+        }
+      }
+
+      scopes.push(scope);
+    }
+
+    recordAlias(node);
+    recordUse(node);
     forEachChild(node, visit);
+    if (ownScope) {
+      scopes.pop();
+    }
   }
 
   visit(file);
@@ -197,6 +245,18 @@ characteristic.on(${EVENT_TYPES_ENUM}['${EVENT_TYPES_READ_MEMBER}'], (callback) 
 `;
 const QUALIFIED_COMPUTED_EVENT_TYPES_MEMBER_HANDLER = `
 characteristic.on(hap['${EVENT_TYPES_ENUM}']['${EVENT_TYPES_READ_MEMBER}'], (callback) => { callback(null, false); });
+`;
+const FIXED_READ_EVENT_HANDLER = `
+const event = '${READ_HANDLER_EVENT}';
+characteristic.on(event, handler);
+`;
+const FIXED_ENUM_READ_EVENT_HANDLER = `
+const event = ${EVENT_TYPES_READ_REFERENCE};
+characteristic.on(event, handler);
+`;
+const OTHER_FIXED_EVENT_HANDLER = `
+const event = 'change';
+characteristic.on(event, handler);
 `;
 const COMMENT_INTERLEAVED_METHOD_HANDLER = `
 characteristic.${READ_HANDLER_METHOD} /* comment */ (() => false);
@@ -400,6 +460,8 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     qualifiedEventTypesMember: registersReadHandler(QUALIFIED_EVENT_TYPES_MEMBER_HANDLER),
     computedEventTypesMember: registersReadHandler(COMPUTED_EVENT_TYPES_MEMBER_HANDLER),
     qualifiedComputedEventTypesMember: registersReadHandler(QUALIFIED_COMPUTED_EVENT_TYPES_MEMBER_HANDLER),
+    fixedReadEvent: registersReadHandler(FIXED_READ_EVENT_HANDLER),
+    fixedEnumReadEvent: registersReadHandler(FIXED_ENUM_READ_EVENT_HANDLER),
     commentInterleavedMethod: registersReadHandler(COMMENT_INTERLEAVED_METHOD_HANDLER),
     commentInterleavedEvent: registersReadHandler(COMMENT_INTERLEAVED_EVENT_HANDLER),
     computedMethod: registersReadHandler(COMPUTED_METHOD_HANDLER),
@@ -422,6 +484,8 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     qualifiedEventTypesMember: true,
     computedEventTypesMember: true,
     qualifiedComputedEventTypesMember: true,
+    fixedReadEvent: true,
+    fixedEnumReadEvent: true,
     commentInterleavedMethod: true,
     commentInterleavedEvent: true,
     computedMethod: true,
@@ -438,10 +502,13 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
 
 test('ignores other EventEmitter events in the read-handler gate', () => {
   // act
-  const registration = registersReadHandler(OTHER_EVENT_LISTENERS);
+  const registrations = {
+    direct: registersReadHandler(OTHER_EVENT_LISTENERS),
+    fixed: registersReadHandler(OTHER_FIXED_EVENT_HANDLER),
+  };
 
   // assert
-  assert.strictEqual(registration, false);
+  assert.deepStrictEqual(registrations, { direct: false, fixed: false });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {
