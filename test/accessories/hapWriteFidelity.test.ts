@@ -457,20 +457,27 @@ test('returns a rejecting promise for a refused read, on both implementations', 
   const realOn = realService.getCharacteristic(Characteristic.On);
   const fakeService = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
   const fakeOn = fakeService.getCharacteristic(FAKE.Characteristic.On);
-  assert.ok(fakeOn !== undefined);
+  if (fakeOn === undefined) {
+    throw new Error('the stand-in Switch carries no On characteristic');
+  }
+
   realOn.onSet(() => Promise.reject(new HapStatusError(HAPStatus.RESOURCE_BUSY)));
   fakeOn.onSet(() => Promise.reject(new FAKE.HapStatusError(HAPStatus.RESOURCE_BUSY)));
-  await assert.rejects(realOn.handleSetRequest(true), (status: unknown) => status === HAPStatus.RESOURCE_BUSY);
-  await assert.rejects(fakeOn.handleSetRequest(true), (status: unknown) => status === HAPStatus.RESOURCE_BUSY);
+  const realWriteStatus: unknown = await realOn.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+  const fakeWriteStatus: unknown = await fakeOn.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
 
   // act
-  for (const characteristic of [realOn, fakeOn]) {
-    let read: unknown;
-    assert.doesNotThrow(() => {
-      read = characteristic.handleGetRequest();
-    });
+  const reads = [realOn.handleGetRequest(), fakeOn.handleGetRequest()];
 
-    // assert
+  // assert
+  assert.deepStrictEqual([realWriteStatus, fakeWriteStatus], [HAPStatus.RESOURCE_BUSY, HAPStatus.RESOURCE_BUSY]);
+  for (const read of reads) {
     assert.ok(read instanceof Promise);
     await assert.rejects(read, (status: unknown) => {
       assert.deepStrictEqual(status, HAPStatus.RESOURCE_BUSY);
