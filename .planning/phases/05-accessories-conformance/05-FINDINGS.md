@@ -2026,3 +2026,10 @@ After all 17 round-0 findings received repair commits, clean HEAD
 the four compiled gate owners exited 0 with 46/46 tests; `npm run test:unpaired` exited 0;
 and the ledger tracer exited 0 (`inventory=31 findings=189 open=17 rounds=32`). Each finding
 remains `open` until an independent correction-round review confirms its repair.
+
+After the six round-1 findings received repair commits, clean HEAD
+`57d199b9c913f0862103346e3832e5326a831638` passed fresh pre-round-2 checks by
+2026-10-18T15:59:28Z on Node v26.12.0: `npm run build:test` exited 0; the four compiled gate
+owners exited 0 with 48/48 tests; `npm run test:unpaired` exited 0; and the ledger tracer
+exited 0 (`inventory=31 findings=195 open=6 rounds=33`). These six IDs remain `open` until
+the independent round-2 review confirms their repairs.
