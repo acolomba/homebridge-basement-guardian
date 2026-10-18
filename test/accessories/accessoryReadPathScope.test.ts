@@ -185,7 +185,7 @@ function registersReadHandler(source: string): boolean {
     }
 
     const owner = member.receiver;
-    return (isIdentifier(owner) && owner.text === EVENT_TYPES_ENUM) || staticMember(owner)?.name === EVENT_TYPES_ENUM;
+    return (isIdentifier(owner) && owner.text === EVENT_TYPES_ENUM) || isReadEventObject(owner);
   }
 
   function isReadEventObject(node: Node | undefined): boolean {
@@ -195,6 +195,11 @@ function registersReadHandler(source: string): boolean {
           return objectScopes[index]?.get(node.text) ?? false;
         }
       }
+    }
+
+    const member = node && staticMember(node);
+    if (member?.name === EVENT_TYPES_ENUM && isIdentifier(member.receiver) && member.receiver.text === 'hap') {
+      return true;
     }
 
     return (
@@ -732,6 +737,39 @@ function run(GET: string) { characteristic.on(GET, handler); }
 
   // assert
   assert.deepStrictEqual(registrations, { direct: true, renamed: true, unrelated: false, shadowedObject: false, shadowedEvent: false });
+});
+
+test('resolves HAP read event enum aliases and destructuring without following shadowed names', () => {
+  // arrange
+  const alias = `const events = hap.${EVENT_TYPES_ENUM}; characteristic.on(events.GET, handler);`;
+  const forwarded = `const events = hap.${EVENT_TYPES_ENUM}; const next = events; characteristic.on(next.GET, handler);`;
+  const direct = `const { GET } = hap.${EVENT_TYPES_ENUM}; characteristic.on(GET, handler);`;
+  const renamed = `const { GET: readEvent } = hap.${EVENT_TYPES_ENUM}; characteristic.on(readEvent, handler);`;
+  const unrelated = 'const events = other.CharacteristicEventTypes; characteristic.on(events.GET, handler);';
+  const shadowedObject = `const events = hap.${EVENT_TYPES_ENUM}; function run(events: Events) { characteristic.on(events.GET, handler); }`;
+  const shadowedEvent = `const { GET } = hap.${EVENT_TYPES_ENUM}; function run(GET: string) { characteristic.on(GET, handler); }`;
+
+  // act
+  const registrations = {
+    alias: registersReadHandler(alias),
+    forwarded: registersReadHandler(forwarded),
+    direct: registersReadHandler(direct),
+    renamed: registersReadHandler(renamed),
+    unrelated: registersReadHandler(unrelated),
+    shadowedObject: registersReadHandler(shadowedObject),
+    shadowedEvent: registersReadHandler(shadowedEvent),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, {
+    alias: true,
+    forwarded: true,
+    direct: true,
+    renamed: true,
+    unrelated: false,
+    shadowedObject: false,
+    shadowedEvent: false,
+  });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {

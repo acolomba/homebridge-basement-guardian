@@ -158,7 +158,7 @@ function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined, i
 
   const owner = node.expression;
   if (isIdentifier(owner)) {
-    return owner.text === 'CharacteristicEventTypes';
+    return owner.text === 'CharacteristicEventTypes' || aliasOf(owner.text) === 'setEventObject';
   }
 
   if (staticMemberName(owner) !== 'CharacteristicEventTypes' || (!isPropertyAccessExpression(owner) && !isElementAccessExpression(owner))) {
@@ -206,6 +206,31 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     return isHapNamespace(node.expression);
   }
 
+  function isSetEventObject(node: Node): boolean {
+    if (isIdentifier(node) && aliasOf(node.text) === 'setEventObject') {
+      return true;
+    }
+
+    if (
+      (isPropertyAccessExpression(node) || isElementAccessExpression(node)) &&
+      staticMemberName(node) === 'CharacteristicEventTypes' &&
+      isHapNamespace(node.expression)
+    ) {
+      return true;
+    }
+
+    return (
+      isObjectLiteralExpression(node) &&
+      node.properties.some(
+        (property) =>
+          isPropertyAssignment(property) &&
+          (isIdentifier(property.name) || isStringLiteral(property.name)) &&
+          property.name.text === 'SET' &&
+          isSetEvent(property.initializer, aliasOf, isHapNamespace),
+      )
+    );
+  }
+
   function capabilityOf(node: Node | undefined): string | undefined {
     if (!node) {
       return undefined;
@@ -223,20 +248,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       return 'setEvent';
     }
 
-    if (isIdentifier(node) && aliasOf(node.text) === 'setEventObject') {
-      return 'setEventObject';
-    }
-
-    if (
-      isObjectLiteralExpression(node) &&
-      node.properties.some(
-        (property) =>
-          isPropertyAssignment(property) &&
-          (isIdentifier(property.name) || isStringLiteral(property.name)) &&
-          property.name.text === 'SET' &&
-          isSetEvent(property.initializer, aliasOf, isHapNamespace),
-      )
-    ) {
+    if (isSetEventObject(node)) {
       return 'setEventObject';
     }
 
@@ -880,6 +892,39 @@ test('resolves fixed set events through object bindings without following unrela
 
   // assert
   assert.deepStrictEqual(uses, { direct: true, renamed: true, unrelated: false, shadowedObject: false, shadowedEvent: false });
+});
+
+test('counts HAP set event enum aliases and destructuring without following shadowed names', () => {
+  // arrange
+  const alias = sourceFileOf('const events = hap.CharacteristicEventTypes; characteristic.on(events.SET, handler);');
+  const forwarded = sourceFileOf('const events = hap.CharacteristicEventTypes; const next = events; characteristic.on(next.SET, handler);');
+  const direct = sourceFileOf('const { SET } = hap.CharacteristicEventTypes; characteristic.on(SET, handler);');
+  const renamed = sourceFileOf('const { SET: writeEvent } = hap.CharacteristicEventTypes; characteristic.on(writeEvent, handler);');
+  const unrelated = sourceFileOf('const events = other.CharacteristicEventTypes; characteristic.on(events.SET, handler);');
+  const shadowedObject = sourceFileOf('const events = hap.CharacteristicEventTypes; function run(events: Events) { characteristic.on(events.SET, handler); }');
+  const shadowedEvent = sourceFileOf('const { SET } = hap.CharacteristicEventTypes; function run(SET: string) { characteristic.on(SET, handler); }');
+
+  // act
+  const uses = {
+    alias: hapUses(alias).setEvent,
+    forwarded: hapUses(forwarded).setEvent,
+    direct: hapUses(direct).setEvent,
+    renamed: hapUses(renamed).setEvent,
+    unrelated: hapUses(unrelated).setEvent,
+    shadowedObject: hapUses(shadowedObject).setEvent,
+    shadowedEvent: hapUses(shadowedEvent).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, {
+    alias: true,
+    forwarded: true,
+    direct: true,
+    renamed: true,
+    unrelated: false,
+    shadowedObject: false,
+    shadowedEvent: false,
+  });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {
