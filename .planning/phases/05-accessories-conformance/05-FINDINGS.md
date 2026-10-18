@@ -2152,3 +2152,11 @@ authorized extending only GATES to fifteen correction rounds. D-03's no-progress
 and reopen stops remain active, the other five batches retain ten, and the
 round-10 STOP cell records the resolution. The four new causes are open until an
 independent later round confirms their repairs.
+
+After the four round-10 findings received repair commits under the GATES-only
+cap amendment, clean HEAD `5e7c6a60365eb41d3ca0da164b151a861444e1c5` passed fresh
+pre-round-11 checks by 2026-10-18T23:56:35Z on Node v26.12.0 and npm 11.20.0:
+`npm run build:test` exited 0; the four compiled gate owners exited 0 with
+98/98 tests; `npm run test:unpaired:compiled` exited 0; and the ledger tracer
+exited 0 (`inventory=31 findings=233 open=4 rounds=42`). These four IDs remain
+`open` until the independent round-11 review confirms their repairs.
