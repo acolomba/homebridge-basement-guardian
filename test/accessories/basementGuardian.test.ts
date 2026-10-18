@@ -921,6 +921,29 @@ test('degrades every non-connectivity scope and publishes nothing when no adapte
   assert.deepStrictEqual(accessoryInformationOf(accessory), beforeUpdate);
 });
 
+test('keeps a successful unresolved-family REST poll time for connectivity', () => {
+  // arrange
+  const accessory = accessoryStandIn();
+  const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }) });
+  const poll = buildSnapshot({ receivedAt: RECORD_RECEIVED_AT });
+
+  // act
+  basementGuardianAccessory.update(poll, 'poll');
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // assert
+  assert.deepStrictEqual(basementGuardianAccessory.untrusted, [
+    { scope: 'water', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'pump', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'power', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'battery', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'fault', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'connectivity', reason: 'unreachable', lastTrustedAt: RECORD_RECEIVED_AT },
+    { scope: 'self-test', reason: 'invalid', lastTrustedAt: undefined },
+    { scope: 'alarm-mute', reason: 'invalid', lastTrustedAt: undefined },
+  ]);
+});
+
 test('deactivates every service derived from the profile and leaves the offline sensor active when the family stops resolving', () => {
   // arrange
   const accessory = accessoryStandIn();

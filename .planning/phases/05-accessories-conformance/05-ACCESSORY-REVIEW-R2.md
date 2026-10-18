@@ -110,3 +110,9 @@ At HEAD `7a169429373d331a96698fc5e8bcefaf5aae4c31`, `node --version` printed `v2
 ## Out-of-scope observations
 
 The bounded 017 transfer in `test/accessories/hapImportScope.test.ts:65-71,103-114,213-259` retains the source-text protections and is listed here only as context. Its own header and unrelated cases belong to the GATES batch's later full review. The `features/lib/hap.ts` stand-in belongs to Phase 7. The missing-device and missing-snapshot restored-refusal variants in `src/platform.ts` remain Phase 6 observations from round 0. No ID is assigned to those paths in this batch.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Note |
+| --- | --- | --- | --- |
+| CR-05-ACCESSORY-033 | `src/accessories/basementGuardian.ts`, `test/accessories/basementGuardian.test.ts`, `.planning/phases/05-accessories-conformance/05-ACCESSORY-REVIEW-R2.md` | Node v26.12.0: Fallow guard exit 0; `npm run build:test` exit 0; named GREEN exit 0 (1 pass); prior live-update regression exit 0 (1 pass); accessory owner exit 0 (145 tests, 145 pass; before 144); direct pair exit 0 (100%); unpaired suite with writable temporary npm cache exit 0; Fallow audit against `9cb164b1299249c2d2083ea81677c83e28e66916` exit 0, verdict pass | After standalone RED evidence commit `8fc2983`, the unresolved-family branch records trusted connectivity only for a successful REST poll while connectivity is trusted. It derives the full untrusted scope list from those same reasons; controller-derived scopes remain untrusted, and live updates still do not advance connectivity. |

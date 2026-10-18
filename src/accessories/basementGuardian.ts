@@ -1001,7 +1001,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
         }
 
         deviceDistrust = { violated: NON_CONNECTIVITY_SCOPES, controllerLinkLost: false };
-        untrusted = untrustedScopesOf(reasonsNow(), lastTrustedAt);
+        const reasons = reasonsNow();
+        recordTrustedScopes(reasons, snapshot.receivedAt, source);
+        untrusted = untrustedScopesOf(reasons, lastTrustedAt);
         republishPublishedRows(projectionInputOf(undefined, controls.pending));
         reportDegradation();
 
