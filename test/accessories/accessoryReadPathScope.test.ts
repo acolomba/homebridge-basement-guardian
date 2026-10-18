@@ -869,6 +869,23 @@ test('rejects an immediate accessory network loader call with an unresolved targ
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });
 
+test('detects a network loader made from an awaited module expression', () => {
+  // act
+  const detections = {
+    module: reachesTheNetworkTier(`
+const load = (await import('node:module')).createRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+    unrelated: reachesTheNetworkTier(`
+const load = (await import('node:fs')).createRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { module: true, unrelated: false });
+});
+
 test('rejects an accessory network loader call with an unresolved base', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve base in createRequire load' });

@@ -458,3 +458,20 @@ test('rejects an immediate deferred-execution loader call with an unresolved tar
     message: 'cannot resolve module specifier in createRequire load',
   });
 });
+
+test('detects a loader made from an awaited module expression', () => {
+  // act
+  const detections = {
+    module: importsDeferredExecution(`
+const load = (await import('node:module')).createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    unrelated: importsDeferredExecution(`
+const load = (await import('node:fs')).createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { module: true, unrelated: false });
+});

@@ -688,6 +688,23 @@ test('rejects an immediate HAP loader call with an unresolved target', () => {
   assert.throws(() => importsHapPackage(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });
 
+test('detects a HAP loader made from an awaited module expression', () => {
+  // act
+  const detections = {
+    module: importsHapPackage(`
+const load = (await import('node:module')).createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelated: importsHapPackage(`
+const load = (await import('node:fs')).createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { module: true, unrelated: false });
+});
+
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
   // arrange
   const standIn = readFileSync(join(REPOSITORY_ROOT, PROSE_MENTION_WITHOUT_IMPORT), 'utf8');

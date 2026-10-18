@@ -123,6 +123,7 @@ before any round-10 repair begins. The other batches retain their ten-round cap.
 
 | ID | Change | Evidence |
 | --- | --- | --- |
+| CR-05-GATES-058 | Recognize an immediate `createRequire` call on a parenthesized awaited `node:module` namespace; test forbidden and unrelated loads in all three import gates. | Three new owner cases failed before the helper fix (raw exit 1) and passed afterward. A planted `node:timers/promises` load in `alarmMute.ts` failed its gate (raw exit 1); the source returned to SHA-256 `6cb3a48c922f857da289cebd0e89574b39b2fa78cf6908f525d52908a000522c` and the gate passed (raw exit 0). `build:test`, four compiled gates (91 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
 
 ---
 

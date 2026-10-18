@@ -77,6 +77,10 @@ function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: 
 }
 
 function isDynamicModuleNamespace(initializer: Expression, checker: TypeChecker): boolean {
+  if (isParenthesizedExpression(initializer)) {
+    return isDynamicModuleNamespace(initializer.expression, checker);
+  }
+
   if (!isAwaitExpression(initializer) || !isCallExpression(initializer.expression) || initializer.expression.expression.kind !== SyntaxKind.ImportKeyword) {
     return false;
   }
@@ -224,8 +228,12 @@ function callsImportedCreator(call: CallExpression, checker: TypeChecker, named:
       (isElementAccessExpression(callee) &&
         (isStringLiteral(callee.argumentExpression) || isNoSubstitutionTemplateLiteral(callee.argumentExpression)) &&
         callee.argumentExpression.text === 'createRequire')) &&
-    isIdentifier(callee.expression)
+    (isIdentifier(callee.expression) || isDynamicModuleNamespace(callee.expression, checker))
   ) {
+    if (isDynamicModuleNamespace(callee.expression, checker)) {
+      return true;
+    }
+
     const symbol = checker.getSymbolAtLocation(callee.expression);
     return symbol !== undefined && namespaces.has(symbol);
   }
