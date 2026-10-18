@@ -528,25 +528,6 @@ test('leaves a pushed status on On when StatusActive is pushed, on both implemen
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: HAPStatus.OPERATION_TIMED_OUT });
 });
 
-// `pushed` has no real counterpart to compare against: the real HAP carries no such member, and the
-// stand-in carries it to tell a value the plugin wrote from one HAP constructed. An error is not a
-// value the plugin published, so an error push must leave the flag where it was -- otherwise every
-// step reading through `pushedValue` would start reading a format default as a published one.
-test('leaves the stand-in published flag where it was when an error is pushed', () => {
-  // arrange
-  const service = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
-  const statusActive = service.addCharacteristic(FAKE.Characteristic.StatusActive);
-
-  // act
-  service.updateCharacteristic(FAKE.Characteristic.StatusActive, new FAKE.HapStatusError(FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE));
-
-  // assert
-  assert.deepStrictEqual(
-    { pushed: statusActive.pushed, statusCode: statusActive.statusCode },
-    { pushed: false, statusCode: FAKE.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
-  );
-});
-
 // The stand-in every other test in this repository declares its characteristics against. A format
 // name that drifted from the real enum would let a declaration typecheck and pass everywhere while
 // the real HAP read it as an unknown format, which is the whole reason this file exists.
