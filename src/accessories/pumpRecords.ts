@@ -30,8 +30,10 @@
  * label on the record and nothing more: it never delays or suppresses a live
  * activation. It describes the last counted backup activation only, so each
  * newly counted backup activation removes it. It stays unwritten, rather than
- * set to `false`, until the device timestamps describe that activation and the
- * inputs it needs decode (D-013, C-001).
+ * set to `false`, until the record holds a device timestamp that it takes as
+ * that activation's own and the inputs it needs decode (D-013, C-001). The
+ * record can take a timestamp older than the run in this way; the backup
+ * timestamp rule below states when and why.
  *
  * Nothing here defers and nothing here reads a clock. Every time it uses
  * arrives on the observation, and the only write to disk is one `persist()` per
@@ -166,7 +168,7 @@ function rememberedRunning(previousRunning: boolean | undefined, reportedRunning
 }
 
 // A device timestamp past the one already accounted for can evidence an activation the plugin never
-// watched; the caller rules out the baseline and the timestamp of a run it already counted. The
+// watched; the caller rules out the baseline and a timestamp it takes as a counted run's own. The
 // comparison is strictly greater-than, so the same timestamp arriving again on every later payload
 // recovers nothing (D-010).
 function evidencesAMissedActivation(watermark: number | undefined, reportedAt: number | undefined): reportedAt is number {
@@ -286,13 +288,13 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
     return seeded;
   }
 
-  // The device publishes a new backup-pump timestamp only after the pump stops, so the first
-  // advance following a watched backup edge describes the run that edge already counted. Absorbing
-  // it -- moving the watermark without counting and without moving the last activation -- is what
-  // keeps one physical run from being reported as two, and leaves that run's record written from
-  // one clock rather than two (D-010). The mark that an edge awaits its timestamp is stored with the
-  // watermarks, so a record resumed after a restart still absorbs the timestamp of the run it
-  // already counted.
+  // The device publishes a new backup-pump timestamp only after the pump stops, so the record takes
+  // the first advance following a watched backup edge as the run that edge already counted.
+  // Absorbing it -- moving the watermark without counting and without moving the last activation --
+  // is what keeps one physical run from being reported as two, and leaves that run's record written
+  // from one clock rather than two (D-010). The mark that an edge awaits its timestamp is stored
+  // with the watermarks, so a record resumed after a restart still counts nothing for the next new
+  // backup timestamp.
   function reconcileBackupTimestamp(stored: StoredRecord, reportedAt: number | undefined): boolean {
     if (!evidencesAMissedActivation(stored.watermarks.backupPumpTimestamp, reportedAt)) {
       return false;
@@ -304,10 +306,16 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
     // The first timestamp this record ever sees establishes the baseline and is never counted,
     // whichever observation brings it. The plugin cannot tell whether the device timed it before
-    // observation began, and comparing it with local time is forbidden, so the count abstains. The
-    // baseline also stands for the timestamp of any watched edge that awaits one, so the awaiting
-    // mark clears here too and a later advance is counted rather than absorbed. The mark is removed
-    // rather than set to `false`, because the stored shape declares it optional.
+    // observation began, and comparing it with local time is forbidden, so the count abstains.
+    //
+    // The record also takes this first timestamp as the own timestamp of any watched run that
+    // awaits one, so the awaiting mark clears here and no later advance is absorbed for it. This is an
+    // assumption: without that same comparison, the record cannot tell an older timestamp from the
+    // run's own. If the timestamp is older, the run's own timestamp counts that run a second time,
+    // and an older settled self-test pair that arrives with it can label the run a self-test.
+    // Keeping the mark instead would absorb the next advance when this timestamp is the run's own,
+    // and a missed run would go uncounted. The mark is removed rather than set to `false`, because
+    // the stored shape declares it optional.
     if (seedingTheFirstWatermark) {
       delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
@@ -329,9 +337,9 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
   // Classification labels the record and touches nothing else: no count, no last activation, and no
   // watermark but the self-test one it consumed. It runs only when the record holds a backup
-  // activation and that activation's device timestamp has arrived. Before then, the settled
-  // self-test values describe an earlier run or no run at all, so a label from them would be a
-  // claim about the wrong activation.
+  // activation and the awaiting mark is clear, which it is once the record holds a device timestamp
+  // that it takes as that activation's own. Before then, the settled self-test values describe an
+  // earlier run or no run at all, so a label from them would be a claim about the wrong activation.
   function reconcileClassification(stored: StoredRecord, observation: PumpRecordsObservation): boolean {
     if (stored.watermarks.backupEdgeAwaitingTimestamp === true || stored.backupPump.lastActivationAt === undefined) {
       return false;
