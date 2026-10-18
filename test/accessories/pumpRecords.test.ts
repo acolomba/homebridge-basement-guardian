@@ -107,6 +107,17 @@ function storedContext(): PumpRecordsContext {
   };
 }
 
+// The same installation after one recovered backup activation. Its device timestamp is already
+// accounted for and no label is earned yet, so settled self-test values describe that activation
+// and only the classification rule decides whether the record gets a label.
+function storedContextWithAnActivation(): PumpRecordsContext {
+  return {
+    ...storedContext(),
+    backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS },
+    watermarks: { backupPumpTimestamp: NEW_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS },
+  };
+}
+
 // A restored context holds whatever JSON was on disk, whatever the declared type promises. Taking
 // the stored shape as a plain record is what lets a case put a half-written one there, which is
 // exactly what the module's structural check exists to survive.
@@ -424,6 +435,51 @@ test('keeps the self-test label it already carries when the self-test timestamp 
     { beforeTheUndecodedSnapshot: true, after: true },
   );
 });
+
+// One row of the cases below: two snapshots and the backup record that the second leaves.
+interface WithheldLabelRow {
+  cause: string;
+  first: Partial<PumpRecordsObservation>;
+  second: Partial<PumpRecordsObservation>;
+  backup: PumpRecordValues;
+}
+
+// Each row breaks one input that the classification rule checks. The other inputs are decoded,
+// the test is finished, and the values are stable. A rule that skips the broken check writes a
+// label from inputs that do not support it, which is a claim the plugin has not earned. In the
+// first row, the moving timestamp is also a new run, so the record counts it.
+for (const { cause, first, second, backup } of [
+  {
+    cause: 'the backup-pump timestamp moves while the test is finished and the self-test timestamp holds still',
+    first: { testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS },
+    second: { testRunning: false, backupActivatedAt: 1_700_000_160, testedAt: NEW_TEST_SECONDS },
+    backup: { observationStartedAt: OBSERVED_AT, activationCount: 2, lastActivationAt: 1_700_000_160_000, lastActivationWasTestActivity: undefined },
+  },
+  {
+    cause: 'the backup-pump timestamp did not decode',
+    first: { testRunning: false, backupActivatedAt: undefined, testedAt: NEW_TEST_SECONDS },
+    second: { testRunning: false, backupActivatedAt: undefined, testedAt: NEW_TEST_SECONDS },
+    backup: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS, lastActivationWasTestActivity: undefined },
+  },
+  {
+    cause: 'the test-running flag did not decode',
+    first: { testRunning: undefined, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS },
+    second: { testRunning: undefined, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS },
+    backup: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS, lastActivationWasTestActivity: undefined },
+  },
+] satisfies readonly WithheldLabelRow[]) {
+  test(`withholds the self-test label when ${cause}`, () => {
+    // arrange
+    const { records } = pumpRecords(storedContextWithAnActivation());
+    records.observe(observation(first));
+
+    // act
+    records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...second }));
+
+    // assert
+    assert.deepStrictEqual(records.backup, backup);
+  });
+}
 
 // Settled self-test values describe a run only when the record holds one. A record with no
 // activation gives the label nothing to describe, so the values change nothing, not even the
