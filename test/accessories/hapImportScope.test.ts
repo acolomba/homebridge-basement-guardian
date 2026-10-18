@@ -45,9 +45,11 @@ import {
   createPrinter,
   createSourceFile,
   forEachChild,
+  isBlock,
   isCallExpression,
   isElementAccessExpression,
   isFunctionDeclaration,
+  isFunctionLike,
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
@@ -133,7 +135,11 @@ function staticMemberName(node: Node): string | undefined {
   return undefined;
 }
 
-function isSetEvent(node: Node): boolean {
+function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined): boolean {
+  if (isIdentifier(node) && aliasOf(node.text) === 'setEvent') {
+    return true;
+  }
+
   if ((isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) && node.text === 'set') {
     return true;
   }
@@ -143,13 +149,57 @@ function isSetEvent(node: Node): boolean {
   }
 
   const owner = node.expression;
-  return (isIdentifier(owner) && owner.text === 'CharacteristicEventTypes') || staticMemberName(owner) === 'CharacteristicEventTypes';
+  if (isIdentifier(owner)) {
+    return owner.text === 'CharacteristicEventTypes';
+  }
+
+  if (staticMemberName(owner) !== 'CharacteristicEventTypes' || (!isPropertyAccessExpression(owner) && !isElementAccessExpression(owner))) {
+    return false;
+  }
+
+  return (isIdentifier(owner.expression) && owner.expression.text === 'hap') || staticMemberName(owner.expression) === 'hap';
 }
 
 function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberCall: boolean; destructuredCall: boolean } {
   const uses = { onSet: false, setEvent: false, memberCall: false, destructuredCall: false };
+  const scopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
 
-  function visit(node: Node): void {
+  function aliasOf(name: string): string | undefined {
+    for (let index = scopes.length - 1; index >= 0; index--) {
+      if (scopes[index]?.has(name)) {
+        return scopes[index]?.get(name);
+      }
+    }
+
+    return undefined;
+  }
+
+  function isUuidApi(node: Node): boolean {
+    if (isIdentifier(node)) {
+      return aliasOf(node.text) === 'uuid';
+    }
+
+    if (staticMemberName(node) !== 'uuid' || (!isPropertyAccessExpression(node) && !isElementAccessExpression(node))) {
+      return false;
+    }
+
+    return (isIdentifier(node.expression) && node.expression.text === 'hap') || staticMemberName(node.expression) === 'hap';
+  }
+
+  function recordAlias(node: Node): void {
+    if (isVariableDeclaration(node) && isIdentifier(node.name)) {
+      let capability: string | undefined;
+      if (node.initializer && isUuidApi(node.initializer)) {
+        capability = 'uuid';
+      } else if (node.initializer && isSetEvent(node.initializer, aliasOf)) {
+        capability = 'setEvent';
+      }
+
+      scopes[scopes.length - 1]?.set(node.name.text, capability);
+    }
+  }
+
+  function recordUse(node: Node): void {
     if (staticMemberName(node) === 'onSet') {
       uses.onSet = true;
     }
@@ -157,11 +207,11 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     if (isCallExpression(node) && (isPropertyAccessExpression(node.expression) || isElementAccessExpression(node.expression))) {
       const member = node.expression;
       const firstArgument = node.arguments[0];
-      if (staticMemberName(member) === 'on' && firstArgument && isSetEvent(firstArgument)) {
+      if (staticMemberName(member) === 'on' && firstArgument && isSetEvent(firstArgument, aliasOf)) {
         uses.setEvent = true;
       }
 
-      if (staticMemberName(member) === 'generate' && staticMemberName(member.expression) === 'uuid') {
+      if (staticMemberName(member) === 'generate' && (staticMemberName(member.expression) === 'uuid' || isUuidApi(member.expression))) {
         uses.memberCall = true;
       }
     }
@@ -178,8 +228,29 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     ) {
       uses.destructuredCall = true;
     }
+  }
 
+  function visit(node: Node): void {
+    const ownScope = isBlock(node) || isFunctionLike(node);
+    if (ownScope) {
+      const scope = new Map<string, string | undefined>();
+      if (isFunctionLike(node)) {
+        for (const parameter of node.parameters) {
+          if (isIdentifier(parameter.name)) {
+            scope.set(parameter.name.text, undefined);
+          }
+        }
+      }
+
+      scopes.push(scope);
+    }
+
+    recordAlias(node);
+    recordUse(node);
     forEachChild(node, visit);
+    if (ownScope) {
+      scopes.pop();
+    }
   }
 
   visit(file);
@@ -415,6 +486,30 @@ test('counts computed setters, enum set events and aliased UUID generation', () 
 
   // assert
   assert.deepStrictEqual(uses, { computedOnSet: true, enumSetEvent: true, computedUuidCall: true, aliasedUuidCall: true });
+});
+
+test('counts local aliases of HAP UUID generation and set events', () => {
+  // arrange
+  const uuidAlias = sourceFileOf('const uuidApi = hap.uuid; uuidApi.generate(deviceId);');
+  const setEventAlias = sourceFileOf('const writeEvent = hap.CharacteristicEventTypes.SET; characteristic.on(writeEvent, handler);');
+
+  // act
+  const uses = { uuidAlias: hapUses(uuidAlias).memberCall, setEventAlias: hapUses(setEventAlias).setEvent };
+
+  // assert
+  assert.deepStrictEqual(uses, { uuidAlias: true, setEventAlias: true });
+});
+
+test('ignores aliases of unrelated UUID and event APIs', () => {
+  // arrange
+  const source =
+    'const uuidApi = other.uuid; const writeEvent = other.CharacteristicEventTypes.SET; uuidApi.generate(deviceId); characteristic.on(writeEvent, handler);';
+
+  // act
+  const uses = hapUses(sourceFileOf(source));
+
+  // assert
+  assert.deepStrictEqual(uses, { onSet: false, setEvent: false, memberCall: false, destructuredCall: false });
 });
 
 test('ignores other HAP methods and uncalled UUID members', () => {
