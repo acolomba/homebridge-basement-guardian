@@ -3291,6 +3291,55 @@ test('keeps the last REST connectivity time after a later live update', () => {
   assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'connectivity', reason: 'unreachable', lastTrustedAt: RECORD_RECEIVED_AT }]);
 });
 
+test('records the first recovered REST poll as connectivity last trusted time', () => {
+  // arrange
+  const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+  basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // act
+  basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
+  basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // assert
+  assert.deepStrictEqual(basementGuardianAccessory.untrusted, [
+    { scope: 'connectivity', reason: 'unreachable', lastTrustedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS },
+  ]);
+});
+
+test('keeps the last trusted connectivity time when a recovered poll reports invalid connectivity', () => {
+  // arrange
+  const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+  basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // act
+  basementGuardianAccessory.update(
+    buildSnapshot({ data: { ...GEMINI_TELEMETRY, offline: 'unknown' }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }),
+    'poll',
+  );
+  basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+  // assert
+  assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'connectivity', reason: 'invalid', lastTrustedAt: RECORD_RECEIVED_AT }]);
+});
+
+test('keeps the last trusted connectivity time while credentials are rejected', () => {
+  // arrange
+  const basementGuardianAccessory = accessoryWith(accessoryStandIn(), { registry: registryWith({ kind: 'implemented', family: geminiFamily }) });
+  basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
+  basementGuardianAccessory.markMonitoring(CREDENTIALS_REFUSED);
+
+  // act
+  basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
+  basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+  basementGuardianAccessory.markMonitoring(REST_DEGRADED);
+
+  // assert
+  assert.deepStrictEqual(basementGuardianAccessory.untrusted, [{ scope: 'connectivity', reason: 'unreachable', lastTrustedAt: RECORD_RECEIVED_AT }]);
+});
+
 test('withdraws every scope when both transports are lost', () => {
   // arrange
   const accessory = accessoryStandIn();

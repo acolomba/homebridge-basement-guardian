@@ -894,13 +894,15 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     controllerLinkLost = true;
   }
 
-  // A scope's last trusted time advances only while nothing untrusts it. A
-  // live update does not reobserve connectivity, so only a REST poll advances
-  // that scope. A lost link keeps controller-derived scopes at their last
-  // trustworthy snapshot receipt time (RES-02).
+  // A recovered REST poll observes connectivity before monitoring clears its
+  // previous failure. That stale reason does not block its trusted time, but
+  // invalid telemetry, rejected credentials and live updates do. Other scopes
+  // keep their last trustworthy snapshot time while withdrawn (RES-02).
   function recordTrustedScopes(reasons: ReadonlyMap<TrustScope, DistrustReason>, receivedAt: number, source: SnapshotSource): void {
+    const connectivityObserved = source === 'poll' && !deviceDistrust.violated.has('connectivity') && !monitoring.credentialsRejected;
+
     for (const scope of TRUST_SCOPES) {
-      if (!reasons.has(scope) && (scope !== 'connectivity' || source === 'poll')) {
+      if (scope === 'connectivity' ? connectivityObserved : !reasons.has(scope)) {
         lastTrustedAt.set(scope, receivedAt);
       }
     }

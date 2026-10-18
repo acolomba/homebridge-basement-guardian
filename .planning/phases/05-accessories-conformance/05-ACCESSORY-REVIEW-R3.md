@@ -111,3 +111,9 @@ At HEAD `530da8016ae53d470b226fde15b29e40be9836dc`, `node --version` printed `v2
 ## Out-of-scope observations
 
 The `accountRuntime.ts` and `platform.ts` ordering above was read to establish reachability of the accessory defect; those paths were not added to `files_reviewed_list` or assigned independent findings. `test/accessories/hapImportScope.test.ts` retains the 017 safety checks and belongs to the GATES batch's full review. The HAP stand-in under `features/lib/hap.ts` belongs to Phase 7. No source or test file was modified in this review.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Note |
+| --- | --- | --- | --- |
+| CR-05-ACCESSORY-034 | `src/accessories/basementGuardian.ts`, `test/accessories/basementGuardian.test.ts`, `.planning/phases/05-accessories-conformance/05-ACCESSORY-REVIEW-R3.md` | Node v26.12.0: Fallow guard exit 0; `npm run build:test` exit 0; named GREEN exit 0 (1 pass); previous 030 and 033 regressions exit 0 (1 pass each); invalid-connectivity and credential-boundary cases exit 0 (2 pass); accessory owner exit 0 (148 tests, 148 pass; before 145); direct pair exit 0 (100%); unpaired suite with writable temporary npm cache exit 0; Fallow audit against `9cb164b1299249c2d2083ea81677c83e28e66916` exit 0, verdict pass | After standalone RED evidence commit `b0ffac0`, a valid REST recovery poll advances connectivity's trusted time before monitoring clears its old degraded flag. Live updates, invalid device connectivity telemetry and rejected credentials cannot advance it. Controller-derived scopes still follow their own current distrust reasons. |
