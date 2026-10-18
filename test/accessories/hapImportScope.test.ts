@@ -43,7 +43,7 @@ import { fileURLToPath } from 'node:url';
 
 import { createPrinter, createSourceFile, ScriptTarget } from 'typescript';
 
-import { typeScriptFilesUnder } from './staticGateSources.js';
+import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * The package no module may reach except the one named below.
@@ -80,20 +80,8 @@ const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian
 
 const ERRORED_CHARACTERISTIC = 'HapStatusError';
 
-// A comment naming a package is not an import of it, and this gate's own overview names
-// the package repeatedly, so the detector reads the three spellings that actually reach a
-// module -- `from '<specifier>'`, a side-effect `import '<specifier>'`, and a dynamic
-// `import('<specifier>')` -- rather than the package name wherever it appears. Either
-// quote character is accepted: a file that reached for the real package is already a file
-// that got something wrong, so the gate does not also assume it obeyed the quote style.
-// The specifier carries no regular-expression metacharacter, so it goes into the pattern
-// as it is written.
-function importsModule(source: string, specifier: string): boolean {
-  return new RegExp(`(\\bfrom\\s+|\\bimport\\s+|\\bimport\\s*\\(\\s*)['"]${specifier}['"]`, 'u').test(source);
-}
-
 function importsHapPackage(source: string): boolean {
-  return importsModule(source, HAP_PACKAGE_SPECIFIER);
+  return importSpecifiers(source).some((specifier) => specifier === HAP_PACKAGE_SPECIFIER || specifier.startsWith(`${HAP_PACKAGE_SPECIFIER}/`));
 }
 
 // Module overviews explain forbidden idioms, so the HAP source checks inspect code without comments.
@@ -136,6 +124,15 @@ const hap = await import('${HAP_PACKAGE_SPECIFIER}');
 const DOUBLE_QUOTED_DYNAMIC_IMPORT = `
 const hap = await import("${HAP_PACKAGE_SPECIFIER}");
 `;
+const COMMENT_INTERLEAVED_IMPORT = `
+import { Characteristic } from /* a valid comment */ '${HAP_PACKAGE_SPECIFIER}';
+`;
+const HAP_SUBPATH_IMPORT = `
+import { Characteristic } from '${HAP_PACKAGE_SPECIFIER}/dist/lib/Characteristic.js';
+`;
+const RE_EXPORTED_IMPORT = `
+export { Characteristic } from '${HAP_PACKAGE_SPECIFIER}';
+`;
 
 // One fixture per way the detector has to stay quiet: naming the package in prose is what
 // this very file and three others do, and an unrelated bare import is what most modules in
@@ -173,6 +170,9 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: importsHapPackage(DOUBLE_QUOTED_SIDE_EFFECT_IMPORT),
     dynamic: importsHapPackage(DYNAMIC_IMPORT),
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
+    commentInterleaved: importsHapPackage(COMMENT_INTERLEAVED_IMPORT),
+    subpath: importsHapPackage(HAP_SUBPATH_IMPORT),
+    reExported: importsHapPackage(RE_EXPORTED_IMPORT),
   };
 
   // assert
@@ -184,6 +184,9 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: true,
     dynamic: true,
     doubleQuotedDynamic: true,
+    commentInterleaved: true,
+    subpath: true,
+    reExported: true,
   });
 });
 

@@ -34,6 +34,8 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { importSpecifiers } from './staticGateSources.js';
+
 /**
  * Every Node standard-library module that hands a caller deferred execution.
  *
@@ -54,21 +56,8 @@ const ACCESSORIES_DIRECTORY = join(REPOSITORY_ROOT, 'src', 'accessories');
 // pass without examining a single accessory module.
 const ACCESSORIES_MODULE_FLOOR = 10;
 
-// A comment naming a module is not an import of it, and this gate's whole
-// content is that something does not exist, so the detector reads the three
-// spellings that actually reach a module -- `from '<specifier>'`, a side-effect
-// `import '<specifier>'`, and a dynamic `import('<specifier>')` -- rather than
-// the module name wherever it appears. Either quote character is accepted: a
-// module that reached for deferred execution is already a module that got
-// something wrong, so the gate does not also assume it obeyed the quote style.
-// Neither specifier carries a regular-expression metacharacter, so each goes
-// into the pattern as it is written.
-function importsModule(source: string, specifier: string): boolean {
-  return new RegExp(`(\\bfrom\\s+|\\bimport\\s+|\\bimport\\s*\\(\\s*)['"]${specifier}['"]`, 'u').test(source);
-}
-
 function importsDeferredExecution(source: string): boolean {
-  return DEFERRED_EXECUTION_MODULES.some((specifier) => importsModule(source, specifier));
+  return importSpecifiers(source).some((specifier) => DEFERRED_EXECUTION_MODULES.includes(specifier));
 }
 
 // One fixture per spelling the detector has to catch, written out rather than
@@ -89,6 +78,12 @@ import 'node:timers';
 `;
 const DYNAMIC_PROMISES_IMPORT = `
 const timers = await import('node:timers/promises');
+`;
+const COMMENT_INTERLEAVED_IMPORT = `
+import { setTimeout } from /* a valid comment */ 'node:timers/promises';
+`;
+const RE_EXPORTED_IMPORT = `
+export { setTimeout } from 'node:timers';
 `;
 
 // One fixture per way the detector has to stay quiet: naming the modules in
@@ -124,10 +119,20 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     doubleQuoted: importsDeferredExecution(DOUBLE_QUOTED_IMPORT),
     sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
     dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
+    commentInterleaved: importsDeferredExecution(COMMENT_INTERLEAVED_IMPORT),
+    reExported: importsDeferredExecution(RE_EXPORTED_IMPORT),
   };
 
   // assert
-  assert.deepStrictEqual(imports, { namedPromises: true, namedBare: true, doubleQuoted: true, sideEffect: true, dynamic: true });
+  assert.deepStrictEqual(imports, {
+    namedPromises: true,
+    namedBare: true,
+    doubleQuoted: true,
+    sideEffect: true,
+    dynamic: true,
+    commentInterleaved: true,
+    reExported: true,
+  });
 });
 
 test('reports neither a comment naming the modules nor an unrelated node import (SAFE-07)', () => {

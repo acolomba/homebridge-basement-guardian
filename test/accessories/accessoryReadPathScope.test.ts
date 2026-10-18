@@ -36,7 +36,7 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { typeScriptFilesUnder } from './staticGateSources.js';
+import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * The cloud tier, as a module in the accessories tier would reach it.
@@ -91,19 +91,8 @@ function asPattern(literal: string): string {
   return literal.replaceAll('.', '\\.');
 }
 
-// Matched by prefix, so an import of anything under the cloud directory is caught rather than only
-// the one client this repository happens to hold today. The three spellings that actually reach a
-// module are read -- `from '<specifier>'`, a side-effect `import '<specifier>'`, and a dynamic
-// `import('<specifier>')` -- rather than the path wherever it appears, because a comment naming a
-// directory is not an import of it. Either quote character is accepted: a module that reached for
-// the cloud is already a module that got something wrong, so the gate does not also assume it
-// obeyed the quote style.
-function importsFrom(source: string, specifierPrefix: string): boolean {
-  return new RegExp(`(\\bfrom\\s+|\\bimport\\s+|\\bimport\\s*\\(\\s*)['"]${asPattern(specifierPrefix)}`, 'u').test(source);
-}
-
 function reachesTheNetworkTier(source: string): boolean {
-  return importsFrom(source, CLOUD_DIRECTORY_SPECIFIER) || importsFrom(source, ACCOUNT_RUNTIME_SPECIFIER);
+  return importSpecifiers(source).some((specifier) => specifier.startsWith(CLOUD_DIRECTORY_SPECIFIER) || specifier === ACCOUNT_RUNTIME_SPECIFIER);
 }
 
 // The four spellings that register a read handler: the fluent method, the event name in either
@@ -152,6 +141,12 @@ import { createCloudApi } from '${CLOUD_DIRECTORY_SPECIFIER}api.js';
 `;
 const ACCOUNT_RUNTIME_IMPORT = `
 import { createAccountRuntime } from '${ACCOUNT_RUNTIME_SPECIFIER}';
+`;
+const COMMENT_INTERLEAVED_CLOUD_IMPORT = `
+import { createCloudApi } from /* a valid comment */ '${CLOUD_DIRECTORY_SPECIFIER}api.js';
+`;
+const COMMENT_INTERLEAVED_RUNTIME_IMPORT = `
+import { createAccountRuntime } from /* a valid comment */ '${ACCOUNT_RUNTIME_SPECIFIER}';
 `;
 
 // One fixture per way the detector has to stay quiet: naming a forbidden spelling in prose is what
@@ -212,10 +207,15 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
 
 test('reports a planted import of the cloud client and of the account runtime (D-09)', () => {
   // act
-  const imports = { cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT), accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT) };
+  const imports = {
+    cloudClient: reachesTheNetworkTier(CLOUD_CLIENT_IMPORT),
+    accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT),
+    commentInterleavedCloud: reachesTheNetworkTier(COMMENT_INTERLEAVED_CLOUD_IMPORT),
+    commentInterleavedRuntime: reachesTheNetworkTier(COMMENT_INTERLEAVED_RUNTIME_IMPORT),
+  };
 
   // assert
-  assert.deepStrictEqual(imports, { cloudClient: true, accountRuntime: true });
+  assert.deepStrictEqual(imports, { cloudClient: true, accountRuntime: true, commentInterleavedCloud: true, commentInterleavedRuntime: true });
 });
 
 test('reports neither a comment naming the forbidden spellings nor an unrelated neighbouring import (D-09)', () => {
