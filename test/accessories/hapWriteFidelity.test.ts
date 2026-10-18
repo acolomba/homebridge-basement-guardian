@@ -331,6 +331,19 @@ test('stores the value and clears the status on an accepted write, on both imple
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
 });
 
+test('stores a write without a handler, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject) => {
+    subject.pushOn(true);
+
+    return subject.set(false);
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: false, statusCode: 0 });
+});
+
 // The held value is pushed to `true` first, deliberately away from the `bool` format default. A
 // case that refused a write from the default could not tell an implementation that leaves the value
 // alone from one that resets it, and resetting it is exactly what a hand-built stand-in would do.
