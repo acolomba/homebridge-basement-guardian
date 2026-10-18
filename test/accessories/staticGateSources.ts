@@ -28,6 +28,8 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
+  isVariableDeclarationList,
+  NodeFlags,
   ScriptTarget,
   SyntaxKind,
   type CallExpression,
@@ -155,6 +157,29 @@ function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Sym
   return checker.getSymbolAtLocation(node.name);
 }
 
+function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = new Set<Symbol>()): string | undefined {
+  if (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
+
+  if (!isIdentifier(node)) {
+    return undefined;
+  }
+
+  const symbol = checker.getSymbolAtLocation(node);
+  if (!symbol || seen.has(symbol)) {
+    return undefined;
+  }
+
+  const declaration = symbol.declarations?.find(isVariableDeclaration);
+  if (!declaration?.initializer || !isVariableDeclarationList(declaration.parent) || !(declaration.parent.flags & NodeFlags.Const)) {
+    return undefined;
+  }
+
+  seen.add(symbol);
+  return fixedSpecifier(declaration.initializer, checker, seen);
+}
+
 /** Lists fixed module specifiers loaded by imports and createRequire bindings. */
 export function importSpecifiers(source: string): readonly string[] {
   const specifiers: string[] = [];
@@ -206,12 +231,11 @@ export function importSpecifiers(source: string): readonly string[] {
       const callee = node.expression;
       const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
       const argument = node.arguments[0];
-      if (
-        (callee.kind === SyntaxKind.ImportKeyword || (symbol && requireSymbols.has(symbol))) &&
-        argument &&
-        (isStringLiteral(argument) || isNoSubstitutionTemplateLiteral(argument))
-      ) {
-        specifiers.push(argument.text);
+      if ((callee.kind === SyntaxKind.ImportKeyword || (symbol && requireSymbols.has(symbol))) && argument) {
+        const specifier = fixedSpecifier(argument, checker);
+        if (specifier !== undefined) {
+          specifiers.push(specifier);
+        }
       }
     }
 

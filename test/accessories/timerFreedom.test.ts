@@ -84,11 +84,25 @@ const timers = await import('node:timers/promises');
 const DYNAMIC_BARE_PROMISES_IMPORT = `
 const timers = await import('timers/promises');
 `;
+const CONSTANT_DYNAMIC_IMPORT = `
+const target = 'node:timers/promises';
+const timers = await import(target);
+`;
+const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
+const target = 'node:fs';
+const files = await import(target);
+`;
 const BACKTICK_DYNAMIC_IMPORT = 'const timers = await import(`node:timers`);';
 const CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
+`;
+const CONSTANT_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const target = 'node:timers/promises';
+const timers = loadModule(target);
 `;
 const NAMESPACE_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
@@ -190,8 +204,10 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
     dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
     dynamicBarePromises: importsDeferredExecution(DYNAMIC_BARE_PROMISES_IMPORT),
+    constantDynamic: importsDeferredExecution(CONSTANT_DYNAMIC_IMPORT),
     backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
+    constantCreateRequire: importsDeferredExecution(CONSTANT_CREATE_REQUIRE_IMPORT),
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsDeferredExecution(DEFAULT_CREATE_REQUIRE_IMPORT),
@@ -212,8 +228,10 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     sideEffect: true,
     dynamic: true,
     dynamicBarePromises: true,
+    constantDynamic: true,
     backtickDynamic: true,
     createRequire: true,
+    constantCreateRequire: true,
     namespaceCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
@@ -234,6 +252,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: importsDeferredExecution(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsDeferredExecution(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
+    unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -243,5 +262,6 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedConstantDynamic: false,
   });
 });
