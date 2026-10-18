@@ -1736,3 +1736,27 @@ reopened, no new finding, `status: clean`. Its checks exited 0 on Node v26.12.0 
 tests, 0 failures; header tracer `ACCESSORIES_HEADERS_OK files=6`); one read-only probe; no edit,
 no commit. Coordinator triage: opening 4, fixed 4, rejected 0, new 0, reopened 0, closing 0,
 `clean`. The batch closes at correction round 3.
+
+#### RECORDS closure and wave gate (task 05-05-03)
+
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch RECORDS`:
+  exit 0, `ACCESSORIES_HEADERS_OK files=9`.
+- `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --require-clean RECORDS`:
+  exit 0, `ACCESSORIES_LEDGER_TRACER_OK inventory=27 findings=138 open=0 rounds=26 clean=RECORDS`.
+- RECORDS closed at correction round 3 with 41 findings: 40 fixed and 1 rejected by the
+  maintainer's decision (032). Four genuine bugs were fixed through RED-to-GREEN evidence (001, 002,
+  038 in pumpRecords, and the consumer follow-up of 002 in the platform test). The S-05-07 branch
+  removed the unread `clock` option (D-06, adaptation row 27). Adaptation rows 25 and 26 cover the
+  persisted awaiting mark and its platform-test expectation.
+
+| Field | Value |
+| --- | --- |
+| Command | `npm run check` |
+| Raw exit | 0 |
+| HEAD | `c98babf44c810ceeea745a34021adf52260d5df9` (`git status --porcelain` empty before the run) |
+| Runtime | Node v26.12.0, npm 11.20.0 |
+| UTC start | 2026-10-18T03:30:27Z |
+| UTC end | 2026-10-18T03:31:29Z |
+| Static checks | passed typecheck (2.8 s); passed lint (10.1 s); passed lint:workflows (0.3 s); passed fallow (3.2 s); passed format:check (0.8 s); passed test:corresponding (0.6 s) |
+| Cucumber | 104 scenarios (104 passed); 1156 steps (1156 passed) |
+| Coverage | `Merged LCOV: coverage/direct.lcov (43 pairs)` |
