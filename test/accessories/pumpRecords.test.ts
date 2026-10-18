@@ -212,6 +212,41 @@ test('counts an activation across a snapshot whose running value did not decode'
   assert.strictEqual(records.primary.activationCount, 1);
 });
 
+// One row of the cases below: a pump, and the snapshots that report it stopped, running, and with a
+// running value that did not decode.
+interface UndecodedRunRow {
+  pump: 'primary' | 'backup';
+  stopped: Partial<PumpRecordsObservation>;
+  running: Partial<PumpRecordsObservation>;
+  undecoded: Partial<PumpRecordsObservation>;
+}
+
+// A running value that did not decode leaves the pump as it was, so a `true` on each side of it is
+// one run. Reading the gap as a stop would count a second activation for one physical run.
+for (const { pump, stopped, running, undecoded } of [
+  { pump: 'primary', stopped: { primaryRunning: false }, running: { primaryRunning: true }, undecoded: { primaryRunning: undefined } },
+  { pump: 'backup', stopped: { backupRunning: false }, running: { backupRunning: true }, undecoded: { backupRunning: undefined } },
+] satisfies readonly UndecodedRunRow[]) {
+  test(`counts one ${pump} activation for a run whose running state fails to decode for one snapshot`, () => {
+    // arrange
+    const { records } = pumpRecords();
+    records.observe(observation(stopped));
+    records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...running }));
+
+    // act
+    records.observe(observation({ receivedAt: OBSERVED_LAST_AT, ...undecoded }));
+    records.observe(observation({ receivedAt: OBSERVED_LAST_AT, ...running }));
+
+    // assert
+    assert.deepStrictEqual(records[pump], {
+      observationStartedAt: OBSERVED_AT,
+      activationCount: 1,
+      lastActivationAt: OBSERVED_NEXT_AT,
+      lastActivationWasTestActivity: undefined,
+    });
+  });
+}
+
 // The recovered timestamp also moves the stored watermark, and the observation asks for a write.
 // Without that write, a restart would recover the same run again.
 test('recovers one activation from a device timestamp and stores it in milliseconds', () => {
