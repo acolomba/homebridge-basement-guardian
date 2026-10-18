@@ -57,6 +57,7 @@ import {
   isStringLiteral,
   isVariableDeclaration,
   ScriptTarget,
+  SyntaxKind,
   type Node,
   type ObjectBindingPattern,
   type SourceFile,
@@ -233,16 +234,23 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
 
   function recordDestructuredAlias(binding: ObjectBindingPattern, initializer: Node): void {
     let capability: string | undefined;
+    let sourceProperty: string | undefined;
     if (isUuidApi(initializer)) {
       capability = 'generate';
+      sourceProperty = 'generate';
     } else if (isHapNamespace(initializer)) {
       capability = 'uuid';
+      sourceProperty = 'uuid';
+    } else if (isPropertyAccessExpression(initializer) && initializer.name.text === 'api' && initializer.expression.kind === SyntaxKind.ThisKeyword) {
+      capability = 'hapNamespace';
+      sourceProperty = 'hap';
     }
 
     for (const element of binding.elements) {
       const sourceName = element.propertyName ?? element.name;
-      if (capability && (isIdentifier(sourceName) || isStringLiteral(sourceName)) && sourceName.text === capability && isIdentifier(element.name)) {
-        scopes[scopes.length - 1]?.set(element.name.text, capability);
+      if (isIdentifier(element.name)) {
+        const matched = sourceProperty && (isIdentifier(sourceName) || isStringLiteral(sourceName)) && sourceName.text === sourceProperty;
+        scopes[scopes.length - 1]?.set(element.name.text, matched ? capability : undefined);
       }
     }
   }
@@ -742,6 +750,23 @@ test('counts UUID calls through aliases of the injected HAP namespace', () => {
 
   // assert
   assert.deepStrictEqual(uses, { namespaceAlias: true, forwardedAlias: true, destructuredAlias: true });
+});
+
+test('counts UUID calls through a renamed HAP namespace destructured from the injected API', () => {
+  // arrange
+  const injectedHap = sourceFileOf('const { hap: h } = this.api; h.uuid.generate(deviceId);');
+  const unrelatedHap = sourceFileOf('const { hap: h } = other; h.uuid.generate(deviceId);');
+  const shadowedHap = sourceFileOf('const { hap: h } = this.api; function run(h: API) { h.uuid.generate(deviceId); }');
+
+  // act
+  const uses = {
+    injectedHap: hapUses(injectedHap).memberCall,
+    unrelatedHap: hapUses(unrelatedHap).memberCall,
+    shadowedHap: hapUses(shadowedHap).memberCall,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { injectedHap: true, unrelatedHap: false, shadowedHap: false });
 });
 
 test('counts calls through HAP UUID generate function bindings', () => {
