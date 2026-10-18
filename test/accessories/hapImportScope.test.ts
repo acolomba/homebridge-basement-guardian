@@ -417,6 +417,17 @@ const { createRequire } = await import('node:module');
 const loadModule = createRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const DYNAMIC_NAMESPACE_CREATE_REQUIRE_IMPORT = `
+const module = await import('node:module');
+const loadModule = module.createRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
+const ALIASED_DYNAMIC_NAMESPACE_CREATE_REQUIRE_IMPORT = `
+const module = await import('node:module');
+const moduleAlias = module;
+const loadModule = moduleAlias.createRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
 const RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
 const { createRequire: makeRequire } = module;
@@ -491,6 +502,11 @@ const { createRequire } = await import('other-module');
 const loadModule = createRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const UNRELATED_DYNAMIC_NAMESPACE = `
+const module = await import('other-module');
+const loadModule = module.createRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
 const COMMENT_INTERLEAVED_IMPORT = `
 import { Characteristic } from /* a valid comment */ '${HAP_PACKAGE_SPECIFIER}';
 `;
@@ -550,6 +566,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     aliasedNamespaceCreateRequire: importsHapPackage(ALIASED_NAMESPACE_CREATE_REQUIRE_IMPORT),
     destructuredCreateRequire: importsHapPackage(DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     dynamicDestructuredCreateRequire: importsHapPackage(DYNAMIC_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
+    dynamicNamespaceCreateRequire: importsHapPackage(DYNAMIC_NAMESPACE_CREATE_REQUIRE_IMPORT),
+    aliasedDynamicNamespaceCreateRequire: importsHapPackage(ALIASED_DYNAMIC_NAMESPACE_CREATE_REQUIRE_IMPORT),
     renamedDestructuredCreateRequire: importsHapPackage(RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsHapPackage(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsHapPackage(DEFAULT_CREATE_REQUIRE_IMPORT),
@@ -583,6 +601,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     aliasedNamespaceCreateRequire: true,
     destructuredCreateRequire: true,
     dynamicDestructuredCreateRequire: true,
+    dynamicNamespaceCreateRequire: true,
+    aliasedDynamicNamespaceCreateRequire: true,
     renamedDestructuredCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
@@ -607,6 +627,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     unrelatedNamespaceAlias: importsHapPackage(UNRELATED_NAMESPACE_ALIAS),
     unrelatedDestructuredCreateRequire: importsHapPackage(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     unrelatedDynamicDestructure: importsHapPackage(UNRELATED_DYNAMIC_DESTRUCTURE),
+    unrelatedDynamicNamespace: importsHapPackage(UNRELATED_DYNAMIC_NAMESPACE),
     unrelatedConstantDynamic: importsHapPackage(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsHapPackage(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: importsHapPackage(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
@@ -623,6 +644,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     unrelatedNamespaceAlias: false,
     unrelatedDestructuredCreateRequire: false,
     unrelatedDynamicDestructure: false,
+    unrelatedDynamicNamespace: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,

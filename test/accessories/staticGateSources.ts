@@ -139,14 +139,17 @@ function addNamespaceAliases(file: SourceFile, checker: TypeChecker, namespaces:
       isVariableDeclaration(node) &&
       isIdentifier(node.name) &&
       node.initializer &&
-      isIdentifier(node.initializer) &&
       isVariableDeclarationList(node.parent) &&
       node.parent.flags & NodeFlags.Const
     ) {
-      const source = checker.getSymbolAtLocation(node.initializer);
       const alias = checker.getSymbolAtLocation(node.name);
-      if (source && alias) {
-        aliases.push({ source, alias });
+      if (alias && isDynamicModuleNamespace(node.initializer, checker)) {
+        namespaces.add(alias);
+      } else if (alias && isIdentifier(node.initializer)) {
+        const source = checker.getSymbolAtLocation(node.initializer);
+        if (source) {
+          aliases.push({ source, alias });
+        }
       }
     }
 

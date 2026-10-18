@@ -111,6 +111,7 @@ under D-03/D-18.
 
 | ID | Change | Evidence |
 | --- | --- | --- |
+| CR-05-GATES-056 | Record fixed dynamic `node:module` namespace bindings and follow aliases to `createRequire`; add direct, aliased, and unrelated-import controls to all three import gates. | Control: dropping dynamic namespace registration made all three planted-positive cases fail (raw exit 1); restored helper blob `ac8951117e4d77d569db3907593a8911e520c5de` with matching SHA-256. `build:test`, four compiled gates (86 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
 
 ---
 
