@@ -17,8 +17,14 @@ import {
   forEachChild,
   isCallExpression,
   isExportDeclaration,
+  isIdentifier,
   isImportDeclaration,
+  isMetaProperty,
+  isNamedImports,
+  isNoSubstitutionTemplateLiteral,
+  isPropertyAccessExpression,
   isStringLiteral,
+  isVariableDeclaration,
   ScriptTarget,
   SyntaxKind,
   type Node,
@@ -39,17 +45,65 @@ export function typeScriptFilesUnder(relativeDirectory: string): readonly string
   });
 }
 
-/** Lists literal module specifiers in static imports, re-exports and dynamic imports. */
+/** Lists fixed module specifiers loaded by imports and createRequire bindings. */
 export function importSpecifiers(source: string): readonly string[] {
   const specifiers: string[] = [];
   const file = createSourceFile('staticGate.ts', source, ScriptTarget.Latest, true);
+  const createRequireNames = new Set<string>();
+  const requireNames = new Set<string>();
+
+  for (const statement of file.statements) {
+    if (
+      isImportDeclaration(statement) &&
+      isStringLiteral(statement.moduleSpecifier) &&
+      ['node:module', 'module'].includes(statement.moduleSpecifier.text) &&
+      statement.importClause?.namedBindings &&
+      isNamedImports(statement.importClause.namedBindings)
+    ) {
+      for (const element of statement.importClause.namedBindings.elements) {
+        if ((element.propertyName?.text ?? element.name.text) === 'createRequire') {
+          createRequireNames.add(element.name.text);
+        }
+      }
+    }
+  }
+
+  function collectRequire(node: Node): void {
+    if (
+      isVariableDeclaration(node) &&
+      isIdentifier(node.name) &&
+      node.initializer &&
+      isCallExpression(node.initializer) &&
+      isIdentifier(node.initializer.expression) &&
+      createRequireNames.has(node.initializer.expression.text)
+    ) {
+      const argument = node.initializer.arguments[0];
+      if (
+        argument &&
+        isPropertyAccessExpression(argument) &&
+        argument.name.text === 'url' &&
+        isMetaProperty(argument.expression) &&
+        argument.expression.keywordToken === SyntaxKind.ImportKeyword &&
+        argument.expression.name.text === 'meta'
+      ) {
+        requireNames.add(node.name.text);
+      }
+    }
+
+    forEachChild(node, collectRequire);
+  }
+
+  collectRequire(file);
 
   function visit(node: Node): void {
     if ((isImportDeclaration(node) || isExportDeclaration(node)) && node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {
       specifiers.push(node.moduleSpecifier.text);
-    } else if (isCallExpression(node) && node.expression.kind === SyntaxKind.ImportKeyword) {
+    } else if (
+      isCallExpression(node) &&
+      (node.expression.kind === SyntaxKind.ImportKeyword || (isIdentifier(node.expression) && requireNames.has(node.expression.text)))
+    ) {
       const argument = node.arguments[0];
-      if (argument && isStringLiteral(argument)) {
+      if (argument && (isStringLiteral(argument) || isNoSubstitutionTemplateLiteral(argument))) {
         specifiers.push(argument.text);
       }
     }

@@ -79,6 +79,12 @@ import 'node:timers';
 const DYNAMIC_PROMISES_IMPORT = `
 const timers = await import('node:timers/promises');
 `;
+const BACKTICK_DYNAMIC_IMPORT = 'const timers = await import(`node:timers`);';
+const CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
+`;
 const COMMENT_INTERLEAVED_IMPORT = `
 import { setTimeout } from /* a valid comment */ 'node:timers/promises';
 `;
@@ -119,6 +125,8 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     doubleQuoted: importsDeferredExecution(DOUBLE_QUOTED_IMPORT),
     sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
     dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
+    backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
+    createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
     commentInterleaved: importsDeferredExecution(COMMENT_INTERLEAVED_IMPORT),
     reExported: importsDeferredExecution(RE_EXPORTED_IMPORT),
   };
@@ -130,6 +138,8 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     doubleQuoted: true,
     sideEffect: true,
     dynamic: true,
+    backtickDynamic: true,
+    createRequire: true,
     commentInterleaved: true,
     reExported: true,
   });

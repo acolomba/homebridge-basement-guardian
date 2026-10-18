@@ -148,6 +148,12 @@ import { createCloudApi } from /* a valid comment */ '${CLOUD_DIRECTORY_SPECIFIE
 const COMMENT_INTERLEAVED_RUNTIME_IMPORT = `
 import { createAccountRuntime } from /* a valid comment */ '${ACCOUNT_RUNTIME_SPECIFIER}';
 `;
+const BACKTICK_DYNAMIC_CLOUD_IMPORT = 'const cloud = await import(`' + CLOUD_DIRECTORY_SPECIFIER + 'api.js`);';
+const CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
 
 // One fixture per way the detector has to stay quiet: naming a forbidden spelling in prose is what
 // this file and `src/accessories/basementGuardian.ts` both do, and an unrelated import from a
@@ -212,10 +218,19 @@ test('reports a planted import of the cloud client and of the account runtime (D
     accountRuntime: reachesTheNetworkTier(ACCOUNT_RUNTIME_IMPORT),
     commentInterleavedCloud: reachesTheNetworkTier(COMMENT_INTERLEAVED_CLOUD_IMPORT),
     commentInterleavedRuntime: reachesTheNetworkTier(COMMENT_INTERLEAVED_RUNTIME_IMPORT),
+    backtickDynamicCloud: reachesTheNetworkTier(BACKTICK_DYNAMIC_CLOUD_IMPORT),
+    createRequireCloud: reachesTheNetworkTier(CREATE_REQUIRE_CLOUD_IMPORT),
   };
 
   // assert
-  assert.deepStrictEqual(imports, { cloudClient: true, accountRuntime: true, commentInterleavedCloud: true, commentInterleavedRuntime: true });
+  assert.deepStrictEqual(imports, {
+    cloudClient: true,
+    accountRuntime: true,
+    commentInterleavedCloud: true,
+    commentInterleavedRuntime: true,
+    backtickDynamicCloud: true,
+    createRequireCloud: true,
+  });
 });
 
 test('reports neither a comment naming the forbidden spellings nor an unrelated neighbouring import (D-09)', () => {

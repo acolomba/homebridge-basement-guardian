@@ -112,6 +112,12 @@ At the source revision above, Node `v26.12.0` with `/opt/homebrew/opt/node/bin` 
 
 The first unpaired run exited 1 only in `packedArtifact.test.js`: its child `npm pack --dry-run --json` could not write the default user npm cache (`EPERM`). Repeating with `/private/tmp/codex-gates-r2-npm-cache` exited 0. This is an environment failure, not a source finding. No full `npm run check` is claimed for this review. D-17 makes isolated pair coverage N/A for these unpaired gates.
 
+## Repair history
+
+| Cause | Verification | Repair |
+| --- | --- | --- |
+| CR-05-GATES-024 | Node v26.12.0: `fallow guard` 0; `npm run build:test` 0; four compiled GATES owners 0 (48 passed); `npm run test:unpaired` 0; `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9` 0, verdict pass. The temporary old detector built and made the named timer control fail on `backtickDynamic` and `createRequire`; restoring the helper's recorded blob `099c9d27c4d41bab442a83290f3dc4a71a8c432a` returned it to green. | The shared AST parser reads fixed backtick imports and literal calls through an imported `createRequire(import.meta.url)` binding. Each of the three gates plants both forms. The static, quoted, side-effect and re-export controls, HAP subpath check, and single permitted HAP importer remain in force. |
+
 ## Out-of-scope observations
 
 `test/platform.test.ts` is the RECORDS adaptation, so it is excluded from the YAML review list. Its bounded `readOf` and `trustReadsOf` declarations and all six changed call sites await the new read promise. The repair history records the platform owner passing; this round did not rerun it. The GATES adaptations and the platform consumer were inspected only at changed hunks and enclosing declarations.

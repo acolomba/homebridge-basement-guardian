@@ -190,6 +190,12 @@ const hap = await import('${HAP_PACKAGE_SPECIFIER}');
 const DOUBLE_QUOTED_DYNAMIC_IMPORT = `
 const hap = await import("${HAP_PACKAGE_SPECIFIER}");
 `;
+const BACKTICK_DYNAMIC_IMPORT = 'const hap = await import(`' + HAP_PACKAGE_SPECIFIER + '`);';
+const CREATE_REQUIRE_IMPORT = `
+import { createRequire as makeRequire } from 'node:module';
+const loadModule = makeRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
 const COMMENT_INTERLEAVED_IMPORT = `
 import { Characteristic } from /* a valid comment */ '${HAP_PACKAGE_SPECIFIER}';
 `;
@@ -236,6 +242,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: importsHapPackage(DOUBLE_QUOTED_SIDE_EFFECT_IMPORT),
     dynamic: importsHapPackage(DYNAMIC_IMPORT),
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
+    backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
+    createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
     commentInterleaved: importsHapPackage(COMMENT_INTERLEAVED_IMPORT),
     subpath: importsHapPackage(HAP_SUBPATH_IMPORT),
     reExported: importsHapPackage(RE_EXPORTED_IMPORT),
@@ -250,6 +258,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: true,
     dynamic: true,
     doubleQuotedDynamic: true,
+    backtickDynamic: true,
+    createRequire: true,
     commentInterleaved: true,
     subpath: true,
     reExported: true,
