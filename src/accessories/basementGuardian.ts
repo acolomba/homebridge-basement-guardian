@@ -79,7 +79,7 @@ import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
  * notification; it publishes everything a poll publishes and says nothing about
  * reachability, because it never observed a request succeed (RES-03, D-09).
  */
-export type SnapshotSource = 'poll' | 'live';
+type SnapshotSource = 'poll' | 'live';
 
 /** One physical system as HomeKit sees it. */
 export interface BasementGuardianAccessory {
@@ -105,7 +105,7 @@ export interface BasementGuardianAccessory {
    * synchronously: nothing is awaited and nothing is scheduled, so two updates
    * cannot interleave and a suppression cannot be observed half-applied.
    */
-  update(snapshot: DeviceSnapshot, source: SnapshotSource): void;
+  update(snapshot: DeviceSnapshot, source: 'poll' | 'live'): void;
   /**
    * Applies what the plugin can currently say about its own ability to observe
    * this account.
