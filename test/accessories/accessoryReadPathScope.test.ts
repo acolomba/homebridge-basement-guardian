@@ -367,6 +367,18 @@ import * as module from 'node:module';
 const loadModule = module.createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
+import * as module from 'node:module';
+const { createRequire } = module;
+const loadModule = createRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const RENAMED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
+import * as module from 'node:module';
+const { createRequire: makeRequire } = module;
+const loadModule = makeRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
 const COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT = `
 import * as module from 'node:module';
 const loadModule = module['createRequire'](import.meta.url);
@@ -413,6 +425,12 @@ const UNRELATED_LOADER_CALL = `
 function run(load: (name: string) => void) {
   load('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 }
+`;
+const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
+const other = { createRequire: () => (name: string) => name };
+const { createRequire: makeRequire } = other;
+const loadModule = makeRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
 
 // One fixture per way the detector has to stay quiet: naming a forbidden spelling in prose is what
@@ -548,6 +566,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
     constantCreateRequireCloud: reachesTheNetworkTier(CONSTANT_CREATE_REQUIRE_CLOUD_IMPORT),
     computedCreateRequireCloudSpecifier: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_SPECIFIER),
     namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
+    destructuredCreateRequireCloud: reachesTheNetworkTier(DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
+    renamedDestructuredCreateRequireCloud: reachesTheNetworkTier(RENAMED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
     computedCreateRequireCloud: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT),
     defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
     aliasedCreateRequireCloud: reachesTheNetworkTier(ALIASED_CREATE_REQUIRE_CLOUD_IMPORT),
@@ -575,6 +595,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
     constantCreateRequireCloud: true,
     computedCreateRequireCloudSpecifier: true,
     namespaceCreateRequireCloud: true,
+    destructuredCreateRequireCloud: true,
+    renamedDestructuredCreateRequireCloud: true,
     computedCreateRequireCloud: true,
     defaultCreateRequireCloud: true,
     aliasedCreateRequireCloud: true,
@@ -592,6 +614,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
     shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
     unrelatedLoaderCall: reachesTheNetworkTier(UNRELATED_LOADER_CALL),
+    unrelatedDestructuredCreateRequire: reachesTheNetworkTier(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
     unrelatedConstantDynamic: reachesTheNetworkTier(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: reachesTheNetworkTier(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: reachesTheNetworkTier(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
@@ -605,6 +628,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedDestructuredCreateRequire: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,

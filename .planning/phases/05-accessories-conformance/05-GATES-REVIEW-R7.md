@@ -133,6 +133,7 @@ cell before any round-7 repair begins.
 | ID | Change | Evidence |
 | --- | --- | --- |
 | CR-05-GATES-045 | Resolved fixed template spans and made unresolved dynamic imports and recognized `createRequire` loads throw. Added fixed forbidden templates, unresolved loads, and unrelated fixed templates to all three owning gates. | The three owners had nine intended RED failures (exit 1) before the helper change. After the change, `npm run build:test` exited 0, all four compiled gate owners passed 78/78, `npm run test:unpaired` exited 0, and `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9 --format json --quiet --explain` passed. Node `v26.12.0`. |
+| CR-05-GATES-046 | Tracked `createRequire` destructured from an imported `node:module` namespace, including a renamed binding. Each import gate now tests both forms and an unrelated-object destructure. | Before the helper change, all three owners had one intended RED failure (exit 1) on the planted imports. A temporary namespace-check mutation made the timer owner's planted case fail (exit 1); restoring the helper's recorded blob made it pass (exit 0). `npm run build:test` exited 0, all four compiled gate owners passed 78/78, `npm run test:unpaired` exited 0, and `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9 --format json --quiet --explain` passed. Node `v26.12.0`. |
 
 ---
 

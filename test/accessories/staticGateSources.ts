@@ -26,6 +26,7 @@ import {
   isNamedImports,
   isNamespaceImport,
   isNoSubstitutionTemplateLiteral,
+  isObjectBindingPattern,
   isParenthesizedExpression,
   isPropertyAccessExpression,
   isStringLiteral,
@@ -69,6 +70,36 @@ function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: 
   if (symbol) {
     named.add(symbol);
   }
+}
+
+function addDestructuredCreator(node: Node, checker: TypeChecker, named: Set<Symbol>, namespaces: ReadonlySet<Symbol>): void {
+  if (!isVariableDeclaration(node) || !isObjectBindingPattern(node.name) || !node.initializer || !isIdentifier(node.initializer)) {
+    return;
+  }
+
+  const source = checker.getSymbolAtLocation(node.initializer);
+  if (!source || !namespaces.has(source)) {
+    return;
+  }
+
+  for (const element of node.name.elements) {
+    const property = element.propertyName ?? element.name;
+    if ((isIdentifier(property) || isStringLiteral(property)) && property.text === 'createRequire' && isIdentifier(element.name)) {
+      const symbol = checker.getSymbolAtLocation(element.name);
+      if (symbol) {
+        named.add(symbol);
+      }
+    }
+  }
+}
+
+function addDestructuredCreators(file: SourceFile, checker: TypeChecker, named: Set<Symbol>, namespaces: ReadonlySet<Symbol>): void {
+  function visit(node: Node): void {
+    addDestructuredCreator(node, checker, named, namespaces);
+    forEachChild(node, visit);
+  }
+
+  visit(file);
 }
 
 function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Symbol>): void {
@@ -124,6 +155,7 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
     }
   }
 
+  addDestructuredCreators(file, checker, named, namespaces);
   addCreatorAliases(file, checker, named);
   return { named, namespaces };
 }

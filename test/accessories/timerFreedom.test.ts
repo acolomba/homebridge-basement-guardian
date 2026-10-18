@@ -146,6 +146,18 @@ import * as module from 'node:module';
 const loadModule = module.createRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
 `;
+const DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
+import * as module from 'node:module';
+const { createRequire } = module;
+const loadModule = createRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
+`;
+const RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
+import * as module from 'node:module';
+const { createRequire: makeRequire } = module;
+const loadModule = makeRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
+`;
 const COMPUTED_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
 const loadModule = module['createRequire'](import.meta.url);
@@ -198,6 +210,12 @@ const UNRELATED_LOADER_CALL = `
 function run(load: (name: string) => void) {
   load('node:timers/promises');
 }
+`;
+const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
+const other = { createRequire: () => (name: string) => name };
+const { createRequire: makeRequire } = other;
+const loadModule = makeRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
 `;
 const COMMENT_INTERLEAVED_IMPORT = `
 import { setTimeout } from /* a valid comment */ 'node:timers/promises';
@@ -285,6 +303,8 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     constantCreateRequire: importsDeferredExecution(CONSTANT_CREATE_REQUIRE_IMPORT),
     computedCreateRequireSpecifier: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_SPECIFIER),
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
+    destructuredCreateRequire: importsDeferredExecution(DESTRUCTURED_CREATE_REQUIRE_IMPORT),
+    renamedDestructuredCreateRequire: importsDeferredExecution(RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsDeferredExecution(DEFAULT_CREATE_REQUIRE_IMPORT),
     aliasedCreateRequire: importsDeferredExecution(ALIASED_CREATE_REQUIRE_IMPORT),
@@ -313,6 +333,8 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     constantCreateRequire: true,
     computedCreateRequireSpecifier: true,
     namespaceCreateRequire: true,
+    destructuredCreateRequire: true,
+    renamedDestructuredCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
     aliasedCreateRequire: true,
@@ -332,6 +354,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: importsDeferredExecution(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsDeferredExecution(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
+    unrelatedDestructuredCreateRequire: importsDeferredExecution(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsDeferredExecution(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: importsDeferredExecution(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
@@ -344,6 +367,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedDestructuredCreateRequire: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,
