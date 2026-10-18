@@ -1897,3 +1897,22 @@ RED `rg -n 'as unknown as' test/accessories/basementGuardian.test.ts` prints lin
 D-11 repair will move or retain the existing helper inside one commented widening block, add the
 other two helpers there and replace the seven inline casts. The target is four cast lines, all in
 that block, with the owner count still 160.
+
+All 22 findings assigned to 05-07 now have fix hashes; with the seven from 05-06, all 29
+ACCESSORY rows have at least one fix commit. They remain `open` until independent correction
+review. Test-side fixes removed helper-only and weaker source-text cases only after the report
+named their remaining protection. The 010 wrapper commit `34b3f3a44c078a75a23f77bffa8934b3c9101a42`
+was last: its whitespace-ignored diff has only the wrapper, orphan import and three approved
+formatter layouts, and the owner count stayed 153. The bounded amendments `dac8cb5`, `a7d2d9a`
+and `92947e2` preceded their dependent edits.
+
+Fresh pre-round checks on committed HEAD `a99b217390db112abb5d9c7e544de11681310039`, Node
+v26.12.0 (all raw exits 0):
+
+| Command | UTC start | UTC end | Printed result |
+| --- | --- | --- | --- |
+| `npm run build:test` | 2026-10-18T12:50:28.573732Z | 2026-10-18T12:50:32.007995Z | build passed |
+| `node --test dist-test/test/accessories/basementGuardian.test.js` | 2026-10-18T12:50:32.008394Z | 2026-10-18T12:50:32.409590Z | 153 tests, 153 passed, 0 failed |
+| `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | 2026-10-18T12:50:32.410095Z | 2026-10-18T12:50:36.914640Z | direct pair at 100% |
+
+The ledger tracer exits 0 before correction review, with the ACCESSORY counter still at round 0.
