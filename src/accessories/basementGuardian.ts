@@ -30,13 +30,13 @@
  * (D-014).
  *
  * Nothing here registers an `onGet` handler or a HAP `GET` event listener.
- * Every value reaches HomeKit by being pushed, so HAP serves the last pushed
+ * Reported values reach HomeKit by being pushed, so HAP serves the stored
  * value directly and a read never reaches the network (RES-04). Degradation is
  * reported only through `StatusActive` and the computed `untrusted` scopes; it
  * never throws `HapStatusError` and never pushes an `Error` through a
- * characteristic, either of which would produce Apple Home's sticky No Response
- * state and erase exactly the retained last-valid values the safety rule
- * requires the accessory to keep (D-014, DEV-08).
+ * characteristic. Either would leave a stored value unreadable in Apple Home's
+ * sticky No Response state, even though the last valid value remains stored
+ * (D-014, DEV-08).
  */
 
 import { createControlBinder } from './controls.js';
@@ -85,24 +85,23 @@ export type SnapshotSource = 'poll' | 'live';
 export interface BasementGuardianAccessory {
   /** The vendor identifier that seeds the accessory UUID. It never changes. */
   readonly deviceId: string;
-  /** Every service this accessory currently publishes, in the catalogue's declared order. */
+  /** Descriptors from the most recent catalogue publication, in its declared order. */
   readonly services: readonly ServiceDescriptor[];
   /**
    * The scopes this accessory currently cannot vouch for.
    *
-   * Empty while the family registry keeps resolving this accessory's
-   * snapshots to an implemented, fully validating family. One entry per scope
-   * that owns an invalid field, so a single bad value costs one scope rather
-   * than the whole device; every non-connectivity `TrustScope` the moment the
-   * registry stops resolving an implemented family at all, which is the one
-   * failure no adapter can narrow (D-014, DEV-08).
+   * Empty when neither the device nor the monitoring path withdraws a scope.
+   * One entry per scope that owns an invalid field, so a single bad value costs
+   * one scope rather than the whole device; every non-connectivity `TrustScope`
+   * when the registry stops resolving an implemented family at all, which is
+   * the one failure no adapter can narrow (D-014, DEV-08).
    */
   readonly untrusted: readonly UntrustedScope[];
   /**
    * Applies one canonical snapshot to the published characteristics.
    *
-   * This is the only way state reaches HomeKit, so a value the accessory does
-   * not receive here is a value HomeKit does not show. It runs to completion
+   * This path pushes decoded state to HomeKit. An accepted control write can
+   * also change the value HAP serves. The update runs to completion
    * synchronously: nothing is awaited and nothing is scheduled, so two updates
    * cannot interleave and a suppression cannot be observed half-applied.
    */
@@ -135,20 +134,19 @@ export interface BasementGuardianAccessoryOptions {
    * it recorded none across a whole transition, which is evidence about an
    * absence that watching behaviour alone cannot give (SAFE-07, D-18).
    *
-   * The write path is the one place a deferral exists, and it exists because
-   * HAP requires it: the push that makes a refused control readable again has
-   * to run after HAP's own catch has stored the refusal status. That is the
-   * next macrotask and no earlier, so the binder arms it here (D-04, D-10).
+   * The write path arms a pending confirmation window. Its deferred clearing
+   * push makes a refused control readable again after HAP has stored the
+   * refusal status. The binder schedules that push for the next macrotask
+   * (D-04, D-10, D-037).
    */
   timers: Timers;
   /**
    * The sink an accessory's own observation record reaches disk through.
    *
-   * Mutating an accessory's context changes an object in memory and nothing on
-   * disk: Homebridge writes the cache only when it is told the accessory
-   * changed. The record writes through this narrow port rather than the
-   * accessory reaching for a Homebridge API handle it deliberately does not
-   * have, so a test hands in a recorder and asserts a write was not asked for
+   * Mutating an accessory's context changes the object in memory but does not
+   * itself request persistence. The record writes through this narrow port.
+   * The accessory has no Homebridge API handle, so a test hands in a recorder
+   * and asserts a write was not asked for
    * (CTRL-01, D-008).
    */
   store: AccessoryStore;
@@ -271,7 +269,7 @@ function firmwareRevisionOf(metadata: Record<string, unknown>): string {
 }
 
 // A violation whose scope is `undefined` names a field no published service
-// reads, so it is diagnosable without deactivating anything (D-04).
+// reads, so this function withdraws no scope for it (D-04).
 function violatedScopesOf(validation: FamilyValidation): ReadonlySet<TrustScope> {
   const scopes = new Set<TrustScope>();
 
@@ -471,12 +469,11 @@ function populateAccessoryInformation(accessory: PlatformAccessory, hap: API['ha
  *
  * The factory reads no vendor payload itself: `update()` reaches the family
  * registry for validation and decoding, and every value it publishes traces
- * to a field the family adapter already confirmed. Building it touches nothing
- * outside itself: no service is added and no characteristic is pushed until the
- * first `update()` arrives, and a row still adds no service until it has a
- * value it can vouch for, so an accessory that has never heard from its device
- * -- or that has never heard a valid value for one scope -- shows no service
- * for that scope at all rather than a board of format defaults (D-014).
+ * to a field the family adapter already confirmed. Construction adds no
+ * service or characteristic value. `markMonitoring()` can update restored
+ * services before the first `update()`. On update, the two control Switches
+ * can publish while inactive; other rows wait for values they can publish,
+ * avoiding a board of format defaults (D-014).
  */
 export function createBasementGuardianAccessory(options: BasementGuardianAccessoryOptions): BasementGuardianAccessory {
   const { accessory, hap, registry, log } = options;
@@ -593,9 +590,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return offlineCount >= offlineThreshold;
   }
 
-  // Whether the runtime currently has a proven way to reach the vendor. Read
-  // from the same account-wide trust the rows publish from, so a row and a
-  // refused write cannot disagree about the same account (RES-04, D-07).
+  // Whether the runtime currently has a proven way to reach the vendor. The
+  // binder uses it to refuse a command even when a row still shows a value
+  // (RES-04, D-07).
   function commandTransportReady(): boolean {
     return monitoring.commandTransportReady;
   }
@@ -628,9 +625,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     return { ...input, primaryPumpRecord: recordProjectionOf(records.primary), backupPumpRecord: recordProjectionOf(records.backup) };
   }
 
-  // The one publish pass a service already on the accessory gets: everything its
-  // row can currently vouch for, then the `StatusActive` that reports whether it
-  // could vouch for every scope it reads.
+  // Republishes an existing service from its row, then sets `StatusActive`
+  // according to the trust of every scope that row reads.
   function publishRow(row: ServiceRow, service: Service, input: ProjectionInput): void {
     for (const value of row.project(input)) {
       publishValue(service, value.characteristic, value.value);
@@ -674,8 +670,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     // the single characteristic carrying the one presentation the owner has to act on, which
     // returns it to a readable, fully vouched-for state that nothing afterwards ever corrects.
     // Answering nothing here is what `bindRestoredControlRefusal` already does from the other side:
-    // it hands the binder a callback that republishes nothing, for the same reason, and it is the
-    // one refusal path that never erased the marking. The `On` push the binder makes after this
+    // it passes a callback that republishes nothing to `clearRefusal`, for the
+    // same reason, and it is the one refusal path that never erased the marking.
+    // The `On` push the binder makes after this
     // callback still runs and still should, because `On` carries no trust report: the press's own
     // refusal clears while the halt stands (D-10, D-13).
     //
@@ -697,9 +694,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   });
 
   // A control row's Switch is where a HomeKit press enters the plugin. The
-  // handler attaches to the service the row already published, so the catalogue
-  // stays projection-only and one service list keeps feeding every identity
-  // (D-01).
+  // handler attaches to the service `ensureService` returns, whether it was
+  // restored or just added. The catalogue stays projection-only and one service
+  // list keeps feeding every identity (D-01).
   function bindControlRow(row: ServiceRow, service: Service): void {
     const control = CONTROLS.get(row.kind);
 
@@ -711,9 +708,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   }
 
   // One pass over the catalogue in its declared order, so the published order
-  // never depends on which adapters an administrator suppressed. A row that
-  // cannot vouch for its scope receives its `StatusActive` push and nothing
-  // else, which leaves the last trustworthy value exactly where it was.
+  // never depends on which adapters an administrator suppressed. Each row
+  // publishes values allowed by its trust policy, then receives `StatusActive`
+  // for the scopes it reads. An unreachable row may still publish a value.
   //
   // `StatusActive` answers for every scope the row reads rather than for the
   // one it is filed under, so a service carrying a value from a second scope
@@ -889,8 +886,8 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     // `alwaysPublish`, neither is a removable notification kind, and both are
     // filed under a non-connectivity scope that tolerates nothing -- so any
     // accessory that reaches this line publishes at least those two and
-    // withdraws both. The one path that publishes nothing is the unresolved
-    // family above, which reports its own degradation and never calls this.
+    // withdraws both. The unresolved-family path below republishes trust and
+    // the offline verdict on services already present; it never calls this.
     log.warn(
       `Lost the pump controller link on ${deviceId}: the vendor cloud still answers, so the values on ` +
         `${WITHDRAWN_SERVICE_NAMES.format(withdrawnServiceNames())} are retained rather than refreshed until the link returns.`,
