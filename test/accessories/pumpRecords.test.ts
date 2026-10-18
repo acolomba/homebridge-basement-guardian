@@ -231,10 +231,10 @@ test('recovers one activation from a device timestamp and stores it in milliseco
   );
 });
 
-// The first timestamp a record ever sees establishes the baseline rather than recovering a run. The
-// device timed it from before the observation start that the same first observation seeded, so
-// counting it would report an activation from before the plugin was watching -- a number an owner
-// reads describing something nobody observed. Ruled 2026-09-01, reversing the plan as written.
+// The first timestamp a record ever sees is the baseline, and the record does not count it,
+// whichever observation brings it. The plugin cannot tell whether the device timed it before
+// observation began, and it never compares a device time with local time, so the count abstains.
+// Ruled 2026-09-01, reversing the plan as written.
 test('seeds the first device timestamp as a baseline and counts no activation for it', () => {
   // arrange
   const { records, context } = pumpRecords();
