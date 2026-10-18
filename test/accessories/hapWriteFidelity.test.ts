@@ -400,8 +400,11 @@ test('survives a push queued as a microtask inside the handler, on both implemen
 
   // assert
   assert.deepStrictEqual(real, fake);
-  assert.notStrictEqual(real.statusCode, 0);
-  assert.strictEqual(real.statusCode, HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
+  assert.deepStrictEqual(real, {
+    rejectedWith: undefined,
+    value: true,
+    statusCode: HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE,
+  });
 });
 
 // The push path that makes a characteristic unreadable, which is the one act the credential-rejection
