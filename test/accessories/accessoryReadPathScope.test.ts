@@ -121,6 +121,7 @@ function registersReadHandler(source: string): boolean {
   const file = createSourceFile('readHandler.ts', source, ScriptTarget.Latest, true);
   let registered = false;
   const scopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const methodScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
 
   function readAlias(name: string): boolean {
     for (let index = scopes.length - 1; index >= 0; index--) {
@@ -136,13 +137,24 @@ function registersReadHandler(source: string): boolean {
     return node && (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) ? node.text : undefined;
   }
 
+  function methodAlias(name: string): string | undefined {
+    for (let index = methodScopes.length - 1; index >= 0; index--) {
+      if (methodScopes[index]?.has(name)) {
+        return methodScopes[index]?.get(name);
+      }
+    }
+
+    return undefined;
+  }
+
   function staticMember(node: Node): { receiver: Node; name: string } | undefined {
     if (isPropertyAccessExpression(node)) {
       return { receiver: node.expression, name: node.name.text };
     }
 
     if (isElementAccessExpression(node)) {
-      const name = literalText(node.argumentExpression);
+      const argument = node.argumentExpression;
+      const name = literalText(argument) ?? (isIdentifier(argument) ? methodAlias(argument.text) : undefined);
       return name === undefined ? undefined : { receiver: node.expression, name };
     }
 
@@ -175,6 +187,16 @@ function registersReadHandler(source: string): boolean {
     if (isVariableDeclaration(node) && isIdentifier(node.name)) {
       const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
       scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
+      const initializer = node.initializer;
+      let method: string | undefined;
+      if (fixed) {
+        method = literalText(initializer);
+        if (method === undefined && initializer && isIdentifier(initializer)) {
+          method = methodAlias(initializer.text);
+        }
+      }
+
+      methodScopes[methodScopes.length - 1]?.set(node.name.text, method);
     }
   }
 
@@ -192,15 +214,18 @@ function registersReadHandler(source: string): boolean {
     const ownScope = isBlock(node) || isFunctionLike(node);
     if (ownScope) {
       const scope = new Map<string, boolean>();
+      const methodScope = new Map<string, string | undefined>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, false);
+            methodScope.set(parameter.name.text, undefined);
           }
         }
       }
 
       scopes.push(scope);
+      methodScopes.push(methodScope);
     }
 
     recordAlias(node);
@@ -208,6 +233,7 @@ function registersReadHandler(source: string): boolean {
     forEachChild(node, visit);
     if (ownScope) {
       scopes.pop();
+      methodScopes.pop();
     }
   }
 
@@ -269,6 +295,22 @@ characteristic['${READ_HANDLER_METHOD}'](() => false);
 `;
 const COMPUTED_EVENT_HANDLER = `
 characteristic['on']('${READ_HANDLER_EVENT}', (callback) => { callback(null, false); });
+`;
+const FIXED_METHOD_HANDLER = `
+const method = '${READ_HANDLER_METHOD}';
+characteristic[method](() => false);
+`;
+const FIXED_EVENT_METHOD_HANDLER = `
+const method = 'on';
+characteristic[method]('${READ_HANDLER_EVENT}', handler);
+`;
+const FIXED_ADD_LISTENER_METHOD_HANDLER = `
+const method = 'addListener';
+characteristic[method]('${READ_HANDLER_EVENT}', handler);
+`;
+const UNRELATED_FIXED_METHOD_HANDLER = `
+const method = 'emit';
+characteristic[method]('${READ_HANDLER_EVENT}', handler);
 `;
 const BACKTICK_EVENT_HANDLER = 'characteristic.on(`' + READ_HANDLER_EVENT + '`, (callback) => { callback(null, false); });';
 const BACKTICK_COMPUTED_METHOD_HANDLER = 'characteristic[`' + READ_HANDLER_METHOD + '`](() => false);';
@@ -492,6 +534,9 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     commentInterleavedEvent: registersReadHandler(COMMENT_INTERLEAVED_EVENT_HANDLER),
     computedMethod: registersReadHandler(COMPUTED_METHOD_HANDLER),
     computedEvent: registersReadHandler(COMPUTED_EVENT_HANDLER),
+    fixedMethod: registersReadHandler(FIXED_METHOD_HANDLER),
+    fixedEventMethod: registersReadHandler(FIXED_EVENT_METHOD_HANDLER),
+    fixedAddListenerMethod: registersReadHandler(FIXED_ADD_LISTENER_METHOD_HANDLER),
     backtickEvent: registersReadHandler(BACKTICK_EVENT_HANDLER),
     backtickComputedMethod: registersReadHandler(BACKTICK_COMPUTED_METHOD_HANDLER),
     backtickComputedEvent: registersReadHandler(BACKTICK_COMPUTED_EVENT_HANDLER),
@@ -516,6 +561,9 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     commentInterleavedEvent: true,
     computedMethod: true,
     computedEvent: true,
+    fixedMethod: true,
+    fixedEventMethod: true,
+    fixedAddListenerMethod: true,
     backtickEvent: true,
     backtickComputedMethod: true,
     backtickComputedEvent: true,
@@ -531,10 +579,11 @@ test('ignores other EventEmitter events in the read-handler gate', () => {
   const registrations = {
     direct: registersReadHandler(OTHER_EVENT_LISTENERS),
     fixed: registersReadHandler(OTHER_FIXED_EVENT_HANDLER),
+    unrelatedMethod: registersReadHandler(UNRELATED_FIXED_METHOD_HANDLER),
   };
 
   // assert
-  assert.deepStrictEqual(registrations, { direct: false, fixed: false });
+  assert.deepStrictEqual(registrations, { direct: false, fixed: false, unrelatedMethod: false });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {
