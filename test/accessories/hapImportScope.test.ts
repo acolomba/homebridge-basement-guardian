@@ -46,6 +46,7 @@ import {
   createSourceFile,
   forEachChild,
   isCallExpression,
+  isElementAccessExpression,
   isFunctionDeclaration,
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
@@ -120,27 +121,47 @@ function countIdentifiers(node: Node, name: string): number {
   return count;
 }
 
+function staticMemberName(node: Node): string | undefined {
+  if (isPropertyAccessExpression(node)) {
+    return node.name.text;
+  }
+
+  if (isElementAccessExpression(node) && (isStringLiteral(node.argumentExpression) || isNoSubstitutionTemplateLiteral(node.argumentExpression))) {
+    return node.argumentExpression.text;
+  }
+
+  return undefined;
+}
+
+function isSetEvent(node: Node): boolean {
+  if ((isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) && node.text === 'set') {
+    return true;
+  }
+
+  if (staticMemberName(node) !== 'SET' || (!isPropertyAccessExpression(node) && !isElementAccessExpression(node))) {
+    return false;
+  }
+
+  const owner = node.expression;
+  return (isIdentifier(owner) && owner.text === 'CharacteristicEventTypes') || staticMemberName(owner) === 'CharacteristicEventTypes';
+}
+
 function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberCall: boolean; destructuredCall: boolean } {
   const uses = { onSet: false, setEvent: false, memberCall: false, destructuredCall: false };
 
   function visit(node: Node): void {
-    if (isPropertyAccessExpression(node) && node.name.text === 'onSet') {
+    if (staticMemberName(node) === 'onSet') {
       uses.onSet = true;
     }
 
-    if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
+    if (isCallExpression(node) && (isPropertyAccessExpression(node.expression) || isElementAccessExpression(node.expression))) {
       const member = node.expression;
       const firstArgument = node.arguments[0];
-      if (
-        member.name.text === 'on' &&
-        firstArgument &&
-        (isStringLiteral(firstArgument) || isNoSubstitutionTemplateLiteral(firstArgument)) &&
-        firstArgument.text === 'set'
-      ) {
+      if (staticMemberName(member) === 'on' && firstArgument && isSetEvent(firstArgument)) {
         uses.setEvent = true;
       }
 
-      if (member.name.text === 'generate' && isPropertyAccessExpression(member.expression) && member.expression.name.text === 'uuid') {
+      if (staticMemberName(member) === 'generate' && staticMemberName(member.expression) === 'uuid') {
         uses.memberCall = true;
       }
     }
@@ -148,10 +169,12 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     if (
       isVariableDeclaration(node) &&
       isObjectBindingPattern(node.name) &&
-      node.name.elements.some((element) => isIdentifier(element.name) && element.name.text === 'generate') &&
+      node.name.elements.some((element) => {
+        const sourceName = element.propertyName ?? element.name;
+        return (isIdentifier(sourceName) || isStringLiteral(sourceName)) && sourceName.text === 'generate';
+      }) &&
       node.initializer &&
-      isPropertyAccessExpression(node.initializer) &&
-      node.initializer.name.text === 'uuid'
+      staticMemberName(node.initializer) === 'uuid'
     ) {
       uses.destructuredCall = true;
     }
@@ -342,6 +365,42 @@ const { generate } = hap.uuid;
 
   // assert
   assert.deepStrictEqual(uses, { erroredCharacteristic: 1, onSet: true, setEvent: true, memberCall: true, destructuredCall: true });
+});
+
+test('counts computed setters, enum set events and aliased UUID generation', () => {
+  // arrange
+  const computedOnSet = sourceFileOf('characteristic["onSet"](handler);');
+  const enumSetEvent = sourceFileOf('characteristic.on(CharacteristicEventTypes.SET, handler);');
+  const computedUuidCall = sourceFileOf('hap.uuid["generate"](deviceId);');
+  const aliasedUuidCall = sourceFileOf('const { generate: makeUuid } = hap.uuid; makeUuid(deviceId);');
+
+  // act
+  const uses = {
+    computedOnSet: hapUses(computedOnSet).onSet,
+    enumSetEvent: hapUses(enumSetEvent).setEvent,
+    computedUuidCall: hapUses(computedUuidCall).memberCall,
+    aliasedUuidCall: hapUses(aliasedUuidCall).destructuredCall,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { computedOnSet: true, enumSetEvent: true, computedUuidCall: true, aliasedUuidCall: true });
+});
+
+test('ignores other HAP methods and uncalled UUID members', () => {
+  // arrange
+  const source = `
+characteristic['onGet'](handler);
+characteristic.on(CharacteristicEventTypes.GET, handler);
+hap.uuid['generate'];
+const { generator: makeUuid } = hap.uuid;
+makeUuid(deviceId);
+`;
+
+  // act
+  const uses = hapUses(sourceFileOf(source));
+
+  // assert
+  assert.deepStrictEqual(uses, { onSet: false, setEvent: false, memberCall: false, destructuredCall: false });
 });
 
 for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
