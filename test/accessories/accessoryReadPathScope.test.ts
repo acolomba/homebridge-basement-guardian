@@ -178,6 +178,18 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT = `
+import * as module from 'node:module';
+const loadModule = module.createRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+function run(loadModule: (name: string) => void) {
+  loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+}
+`;
 
 // One fixture per way the detector has to stay quiet: naming a forbidden spelling in prose is what
 // this file and `src/accessories/basementGuardian.ts` both do, and an unrelated import from a
@@ -261,6 +273,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     commentInterleavedRuntime: reachesTheNetworkTier(COMMENT_INTERLEAVED_RUNTIME_IMPORT),
     backtickDynamicCloud: reachesTheNetworkTier(BACKTICK_DYNAMIC_CLOUD_IMPORT),
     createRequireCloud: reachesTheNetworkTier(CREATE_REQUIRE_CLOUD_IMPORT),
+    namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
   };
 
   // assert
@@ -271,6 +284,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     commentInterleavedRuntime: true,
     backtickDynamicCloud: true,
     createRequireCloud: true,
+    namespaceCreateRequireCloud: true,
   });
 });
 
@@ -279,8 +293,9 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
   const detections = {
     comment: registersReadHandler(COMMENT_NAMING_THE_SPELLINGS),
     unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
+    shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
   };
 
   // assert
-  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false });
+  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false, shadowedCreateRequire: false });
 });

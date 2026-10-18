@@ -13,6 +13,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  createCompilerHost,
+  createProgram,
   createSourceFile,
   forEachChild,
   isCallExpression,
@@ -21,13 +23,19 @@ import {
   isImportDeclaration,
   isMetaProperty,
   isNamedImports,
+  isNamespaceImport,
   isNoSubstitutionTemplateLiteral,
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
   ScriptTarget,
   SyntaxKind,
+  type CallExpression,
+  type ImportSpecifier,
   type Node,
+  type SourceFile,
+  type Symbol,
+  type TypeChecker,
 } from 'typescript';
 
 const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -45,49 +53,101 @@ export function typeScriptFilesUnder(relativeDirectory: string): readonly string
   });
 }
 
+function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: Set<Symbol>): void {
+  if ((element.propertyName?.text ?? element.name.text) !== 'createRequire') {
+    return;
+  }
+
+  const symbol = checker.getSymbolAtLocation(element.name);
+  if (symbol) {
+    named.add(symbol);
+  }
+}
+
+function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<Symbol>; namespaces: Set<Symbol> } {
+  const named = new Set<Symbol>();
+  const namespaces = new Set<Symbol>();
+  for (const statement of file.statements) {
+    if (!isImportDeclaration(statement) || !isStringLiteral(statement.moduleSpecifier) || !['node:module', 'module'].includes(statement.moduleSpecifier.text)) {
+      continue;
+    }
+
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && isNamespaceImport(bindings)) {
+      const symbol = checker.getSymbolAtLocation(bindings.name);
+      if (symbol) {
+        namespaces.add(symbol);
+      }
+
+      continue;
+    }
+
+    if (!bindings || !isNamedImports(bindings)) {
+      continue;
+    }
+
+    for (const element of bindings.elements) {
+      addNamedCreator(element, checker, named);
+    }
+  }
+
+  return { named, namespaces };
+}
+
+function importsMetaUrl(node: Node | undefined): boolean {
+  return (
+    node !== undefined &&
+    isPropertyAccessExpression(node) &&
+    node.name.text === 'url' &&
+    isMetaProperty(node.expression) &&
+    node.expression.keywordToken === SyntaxKind.ImportKeyword &&
+    node.expression.name.text === 'meta'
+  );
+}
+
+function callsImportedCreator(call: CallExpression, checker: TypeChecker, named: ReadonlySet<Symbol>, namespaces: ReadonlySet<Symbol>): boolean {
+  const callee = call.expression;
+  if (isIdentifier(callee)) {
+    const symbol = checker.getSymbolAtLocation(callee);
+    return symbol !== undefined && named.has(symbol);
+  }
+
+  if (isPropertyAccessExpression(callee) && callee.name.text === 'createRequire' && isIdentifier(callee.expression)) {
+    const symbol = checker.getSymbolAtLocation(callee.expression);
+    return symbol !== undefined && namespaces.has(symbol);
+  }
+
+  return false;
+}
+
+function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Symbol>, namespaces: ReadonlySet<Symbol>): Symbol | undefined {
+  if (!isVariableDeclaration(node) || !isIdentifier(node.name) || !node.initializer || !isCallExpression(node.initializer)) {
+    return undefined;
+  }
+
+  if (!callsImportedCreator(node.initializer, checker, named, namespaces) || !importsMetaUrl(node.initializer.arguments[0])) {
+    return undefined;
+  }
+
+  return checker.getSymbolAtLocation(node.name);
+}
+
 /** Lists fixed module specifiers loaded by imports and createRequire bindings. */
 export function importSpecifiers(source: string): readonly string[] {
   const specifiers: string[] = [];
   const file = createSourceFile('staticGate.ts', source, ScriptTarget.Latest, true);
-  const createRequireNames = new Set<string>();
-  const requireNames = new Set<string>();
-
-  for (const statement of file.statements) {
-    if (
-      isImportDeclaration(statement) &&
-      isStringLiteral(statement.moduleSpecifier) &&
-      ['node:module', 'module'].includes(statement.moduleSpecifier.text) &&
-      statement.importClause?.namedBindings &&
-      isNamedImports(statement.importClause.namedBindings)
-    ) {
-      for (const element of statement.importClause.namedBindings.elements) {
-        if ((element.propertyName?.text ?? element.name.text) === 'createRequire') {
-          createRequireNames.add(element.name.text);
-        }
-      }
-    }
-  }
+  // Local symbols distinguish a loader from a parameter with the same name.
+  const options = { noLib: true, noResolve: true };
+  const host = createCompilerHost(options);
+  host.getSourceFile = (fileName) => (fileName === file.fileName ? file : undefined);
+  const checker = createProgram([file.fileName], options, host).getTypeChecker();
+  const { named, namespaces } = importedCreators(file, checker);
+  const requireSymbols = new Set<Symbol>();
 
   function collectRequire(node: Node): void {
-    if (
-      isVariableDeclaration(node) &&
-      isIdentifier(node.name) &&
-      node.initializer &&
-      isCallExpression(node.initializer) &&
-      isIdentifier(node.initializer.expression) &&
-      createRequireNames.has(node.initializer.expression.text)
-    ) {
-      const argument = node.initializer.arguments[0];
-      if (
-        argument &&
-        isPropertyAccessExpression(argument) &&
-        argument.name.text === 'url' &&
-        isMetaProperty(argument.expression) &&
-        argument.expression.keywordToken === SyntaxKind.ImportKeyword &&
-        argument.expression.name.text === 'meta'
-      ) {
-        requireNames.add(node.name.text);
-      }
+    const symbol = requireBinding(node, checker, named, namespaces);
+    if (symbol) {
+      requireSymbols.add(symbol);
     }
 
     forEachChild(node, collectRequire);
@@ -98,12 +158,17 @@ export function importSpecifiers(source: string): readonly string[] {
   function visit(node: Node): void {
     if ((isImportDeclaration(node) || isExportDeclaration(node)) && node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {
       specifiers.push(node.moduleSpecifier.text);
-    } else if (
-      isCallExpression(node) &&
-      (node.expression.kind === SyntaxKind.ImportKeyword || (isIdentifier(node.expression) && requireNames.has(node.expression.text)))
-    ) {
+    }
+
+    if (isCallExpression(node)) {
+      const callee = node.expression;
+      const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
       const argument = node.arguments[0];
-      if (argument && (isStringLiteral(argument) || isNoSubstitutionTemplateLiteral(argument))) {
+      if (
+        (callee.kind === SyntaxKind.ImportKeyword || (symbol && requireSymbols.has(symbol))) &&
+        argument &&
+        (isStringLiteral(argument) || isNoSubstitutionTemplateLiteral(argument))
+      ) {
         specifiers.push(argument.text);
       }
     }

@@ -94,6 +94,12 @@ At source revision `03a3dc411303f1d1ce3aa595edccc0e871d7a4b7`, Node `v26.12.0`, 
 
 No full `npm run check` or Cucumber run is claimed for this correction review. The preceding repair history records the Cucumber result for 026. Isolated pair coverage does not apply to the four unpaired gates (D-17). Toolchain success does not cover the newly identified source forms.
 
+## Repair history
+
+| Cause | Verification | Repair |
+| --- | --- | --- |
+| CR-05-GATES-027 | Node v26.12.0: `fallow guard` 0. The planted namespace-load and shadowed-name controls compiled, then failed all six intended assertions before the helper changed (`node --test` on three gate owners exited 1). After the repair, `npm run test:unpaired` exited 0, including `build:test`; the four compiled GATES owners exited 0 with 49 passed; `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9` exited 0 with verdict pass. | The shared scanner resolves imported `createRequire` names, namespace members and loader calls through their local TypeScript symbols. Each import gate plants a forbidden namespace load and a harmless call through a shadowing parameter. Existing named and backtick controls and the single permitted HAP importer remain in force. |
+
 ## Out-of-scope observations
 
 `test/platform.test.ts` is a RECORDS inventory adaptation, excluded from this report's YAML file list. Its changed `readOf`/`trustReadsOf` declarations and their call sites await the read promise. No additional platform finding arose from the bounded hunk. The rest of that file and the rest of the feature adaptations remain with their owning phases.

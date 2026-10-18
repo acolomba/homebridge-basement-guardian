@@ -196,6 +196,18 @@ import { createRequire as makeRequire } from 'node:module';
 const loadModule = makeRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const NAMESPACE_CREATE_REQUIRE_IMPORT = `
+import * as module from 'node:module';
+const loadModule = module.createRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
+const SHADOWED_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+function run(loadModule: (name: string) => void) {
+  loadModule('${HAP_PACKAGE_SPECIFIER}');
+}
+`;
 const COMMENT_INTERLEAVED_IMPORT = `
 import { Characteristic } from /* a valid comment */ '${HAP_PACKAGE_SPECIFIER}';
 `;
@@ -244,6 +256,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
     backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
+    namespaceCreateRequire: importsHapPackage(NAMESPACE_CREATE_REQUIRE_IMPORT),
     commentInterleaved: importsHapPackage(COMMENT_INTERLEAVED_IMPORT),
     subpath: importsHapPackage(HAP_SUBPATH_IMPORT),
     reExported: importsHapPackage(RE_EXPORTED_IMPORT),
@@ -260,6 +273,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedDynamic: true,
     backtickDynamic: true,
     createRequire: true,
+    namespaceCreateRequire: true,
     commentInterleaved: true,
     subpath: true,
     reExported: true,
@@ -268,10 +282,14 @@ test('reports a planted HAP import in every spelling and quote style it is meant
 
 test('reports neither a comment naming the package nor an unrelated import (D-17)', () => {
   // act
-  const imports = { comment: importsHapPackage(COMMENT_NAMING_THE_PACKAGE), unrelatedImport: importsHapPackage(UNRELATED_IMPORT) };
+  const imports = {
+    comment: importsHapPackage(COMMENT_NAMING_THE_PACKAGE),
+    unrelatedImport: importsHapPackage(UNRELATED_IMPORT),
+    shadowedCreateRequire: importsHapPackage(SHADOWED_CREATE_REQUIRE_IMPORT),
+  };
 
   // assert
-  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false });
+  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false, shadowedCreateRequire: false });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
