@@ -170,6 +170,8 @@ const READ_OUTCOMES: Readonly<Record<ReadOutcome, string>> = {
   refused: 'refused a read',
   absent: 'carried no such characteristic',
 };
+const HAP_REFUSAL_STATUS_MIN = -70412;
+const HAP_REFUSAL_STATUS_MAX = -70401;
 
 // Which of the three a controller read of this characteristic meets. A characteristic made
 // unreadable rejects with the status the plugin stored on it ahead of the value, which is what Apple Home
@@ -187,8 +189,12 @@ async function readOutcome(service: FakeHapService | undefined, displayName: str
 
   try {
     await characteristic.handleGetRequest();
-  } catch {
-    return 'refused';
+  } catch (error: unknown) {
+    if (typeof error === 'number' && Number.isInteger(error) && error >= HAP_REFUSAL_STATUS_MIN && error <= HAP_REFUSAL_STATUS_MAX) {
+      return 'refused';
+    }
+
+    throw error;
   }
 
   return 'answered';
