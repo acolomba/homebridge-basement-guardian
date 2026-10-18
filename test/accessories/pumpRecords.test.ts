@@ -366,10 +366,30 @@ test('recovers nothing at all for the primary pump, which the device never times
 test('withholds the self-test label until both device timestamps have settled', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
-  const idle = { backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS };
-  const running = { backupRunning: true, testRunning: true, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS };
-  const stopped = { backupRunning: false, testRunning: true, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS };
-  const completed = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+  const idle = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: PRIOR_BACKUP_SECONDS,
+    testedAt: PRIOR_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  const running = {
+    backupRunning: true,
+    testRunning: true,
+    backupActivatedAt: PRIOR_BACKUP_SECONDS,
+    testedAt: PRIOR_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  const stopped = {
+    backupRunning: false,
+    testRunning: true,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: PRIOR_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  const completed = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
 
   // act
   const labels = [idle, running, stopped, completed, completed].map((phase) => {
@@ -388,7 +408,12 @@ test('withholds the self-test label until both device timestamps have settled', 
 test('labels the last activation as self-test activity when the self-test timestamp caught up exactly', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_BACKUP_SECONDS };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_BACKUP_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
 
   // act
   records.observe(observation(settled));
@@ -404,7 +429,12 @@ test('labels the last activation as self-test activity when the self-test timest
 test('labels the last activation as not self-test activity when the backup timestamp stays newer', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: PRIOR_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
 
   // act
   records.observe(observation(settled));
@@ -419,7 +449,12 @@ test('labels the last activation as not self-test activity when the backup times
 test('keeps the self-test label it already carries when the self-test timestamp did not decode', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
   records.observe(observation(settled));
   records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
   const beforeTheUndecodedSnapshot = records.backup.lastActivationWasTestActivity;
@@ -486,7 +521,12 @@ test('withholds the self-test label from a record that holds no activation even 
   // arrange
   const context = storedContext();
   const { records, persistCount } = pumpRecords(context);
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: PRIOR_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
 
   // act
   records.observe(observation(settled));
@@ -509,7 +549,12 @@ test('advances the self-test watermark when the label it computes is the one alr
     backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS, lastActivationWasTestActivity: true },
   };
   const { records, persistCount } = pumpRecords(context);
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
   records.observe(observation(settled));
   const beforeTheClassification = persistCount();
 
@@ -534,9 +579,14 @@ test('withholds the self-test label from a watched backup run whose device times
   // arrange
   const { records } = pumpRecords(storedContext());
   const laterBackupSeconds = 1_700_000_160;
-  const settled = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
-  const running = { ...settled, backupRunning: true };
-  const timestamped = { ...settled, backupActivatedAt: laterBackupSeconds };
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  const running = { ...settled, backupRunning: true } satisfies Partial<PumpRecordsObservation>;
+  const timestamped = { ...settled, backupActivatedAt: laterBackupSeconds } satisfies Partial<PumpRecordsObservation>;
   records.observe(observation(settled));
   records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
   const labels = [records.backup.lastActivationWasTestActivity];
