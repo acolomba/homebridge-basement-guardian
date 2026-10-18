@@ -295,6 +295,29 @@ test('absorbs the device timestamp that follows a watched backup activation', ()
   );
 });
 
+// A restart can land after a watched backup edge and before the device timestamp for that run. The
+// resumed record must still read that timestamp as the run it already counted. Otherwise one
+// physical run counts twice, and its last activation moves to the device clock.
+test('counts a watched backup run once across a restart before its device timestamp arrives', () => {
+  // arrange
+  const first = pumpRecords(storedContext());
+  first.records.observe(observation({ backupRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  first.records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupRunning: true, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+
+  // act
+  // Homebridge persists the context as JSON. `JSON.parse` answers `any`, and the text is the context
+  // the first instance wrote, so it has that shape.
+  const second = pumpRecords(JSON.parse(JSON.stringify(first.context)) as PumpRecordsContext);
+  second.records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: true, backupActivatedAt: PRIOR_BACKUP_SECONDS }));
+  second.records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS }));
+
+  // assert
+  assert.deepStrictEqual(
+    { activationCount: second.records.backup.activationCount, lastActivationAt: second.records.backup.lastActivationAt },
+    { activationCount: 1, lastActivationAt: OBSERVED_NEXT_AT },
+  );
+});
+
 // The device reports no primary timestamp at all, so the primary count holds watched edges and
 // nothing else. A backup timestamp reaching the primary record would be evidence out of thin air.
 test('recovers nothing at all for the primary pump, which the device never timestamps', () => {
@@ -542,6 +565,14 @@ const DAMAGED_RECORDS: readonly { readonly cause: string; readonly stored: Recor
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: 'lately' },
+    },
+  },
+  {
+    cause: 'a mark of a backup run awaiting its timestamp that is not a boolean',
+    stored: {
+      primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
+      backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
+      watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS, backupEdgeAwaitingTimestamp: 'yes' },
     },
   },
 ];

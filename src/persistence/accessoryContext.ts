@@ -76,15 +76,26 @@ export interface PumpObservation {
  * the same timestamp arrives again on every later payload. Keeping the
  * watermark per field is what stops one activation from being counted twice.
  *
- * Both members hold the device's own Unix seconds, exactly as the device sent
- * them and unconverted. A watermark is compared only against a later value
- * from the same device clock, and the two are compared only with each other --
- * never against local time, whose measured offset from the device is a few
- * seconds, and on which no exact-second logic may be built (D-11, D-13).
+ * Both timestamp members hold the device's own Unix seconds, exactly as the
+ * device sent them and unconverted. A watermark is compared only against a
+ * later value from the same device clock, and the two are compared only with
+ * each other -- never against local time, whose measured offset from the
+ * device is a few seconds, and on which no exact-second logic may be built
+ * (D-11, D-13).
  */
 export interface ActivationWatermarks {
   backupPumpTimestamp: number | undefined;
   testTimestamp: number | undefined;
+  /**
+   * Whether a watched backup run is counted and its device timestamp has not
+   * arrived yet.
+   *
+   * When `true`, the next backup timestamp past the watermark describes that
+   * same run, so it moves the watermark and counts nothing. It is stored
+   * because a restart can fall inside that window. Absent means no counted run
+   * waits for its timestamp (D-010).
+   */
+  backupEdgeAwaitingTimestamp?: boolean;
 }
 
 /** Everything Homebridge persists for one accessory. */

@@ -136,8 +136,11 @@ function isActivationWatermarks(value: unknown): value is ActivationWatermarks {
   }
 
   const candidate = value as Partial<ActivationWatermarks>;
+  const awaiting = candidate.backupEdgeAwaitingTimestamp;
 
-  return isNumberOrAbsent(candidate.backupPumpTimestamp) && isNumberOrAbsent(candidate.testTimestamp);
+  return (
+    isNumberOrAbsent(candidate.backupPumpTimestamp) && isNumberOrAbsent(candidate.testTimestamp) && (awaiting === undefined || typeof awaiting === 'boolean')
+  );
 }
 
 // An activation is a `false` this module saw become a `true`. A run already in progress at the
@@ -234,7 +237,6 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   let previousPrimaryRunning: boolean | undefined = undefined;
   let previousBackupRunning: boolean | undefined = undefined;
   let previousDeviceTimes: PreviousDeviceTimes = { backupActivatedAt: undefined, testedAt: undefined };
-  let backupEdgeAwaitingItsTimestamp = false;
 
   // The stored record is resumed whole or not at all. A context carrying two readable pumps beside
   // an unreadable watermark pair cannot be repaired into a coherent record, and a half-read count
@@ -279,7 +281,9 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   // advance following a watched backup edge describes the run that edge already counted. Absorbing
   // it -- moving the watermark without counting and without moving the last activation -- is what
   // keeps one physical run from being reported as two, and leaves that run's record written from
-  // one clock rather than two (D-010).
+  // one clock rather than two (D-010). The mark that an edge awaits its timestamp is stored with the
+  // watermarks, so a record resumed after a restart still absorbs the timestamp of the run it
+  // already counted.
   function reconcileBackupTimestamp(stored: StoredRecord, reportedAt: number | undefined): boolean {
     if (!evidencesAMissedActivation(stored.watermarks.backupPumpTimestamp, reportedAt)) {
       return false;
@@ -293,16 +297,17 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
     // activation. The device times it from before the observation start that the same first
     // observation seeded, so counting it would report a run from before the plugin was watching --
     // a number an owner reads describing something nobody observed. Any edge already awaiting its
-    // timestamp is accounted for by the same seed, so the flag clears here too rather than leaking
-    // into the next advance.
+    // timestamp is accounted for by the same seed, so the awaiting mark clears here too rather than
+    // leaking into the next advance. The mark is removed rather than set to `false`, because the
+    // stored shape declares it optional.
     if (seedingTheFirstWatermark) {
-      backupEdgeAwaitingItsTimestamp = false;
+      delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
       return true;
     }
 
-    if (backupEdgeAwaitingItsTimestamp) {
-      backupEdgeAwaitingItsTimestamp = false;
+    if (stored.watermarks.backupEdgeAwaitingTimestamp === true) {
+      delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
       return true;
     }
@@ -320,7 +325,7 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   // self-test values describe an earlier run or no run at all, so a label from them would be a
   // claim about the wrong activation.
   function reconcileClassification(stored: StoredRecord, observation: PumpRecordsObservation): boolean {
-    if (backupEdgeAwaitingItsTimestamp || stored.backupPump.lastActivationAt === undefined) {
+    if (stored.watermarks.backupEdgeAwaitingTimestamp === true || stored.backupPump.lastActivationAt === undefined) {
       return false;
     }
 
@@ -355,7 +360,7 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
       if (watchedAnActivation(previousBackupRunning, observation.backupRunning)) {
         countWatchedActivation(stored.backupPump, observation.receivedAt);
         dropTestActivityLabel(stored.backupPump);
-        backupEdgeAwaitingItsTimestamp = true;
+        stored.watermarks.backupEdgeAwaitingTimestamp = true;
         changed = true;
       }
 
