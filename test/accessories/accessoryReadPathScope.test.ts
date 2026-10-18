@@ -108,27 +108,38 @@ function registersReadHandler(source: string): boolean {
     return node && (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) ? node.text : undefined;
   }
 
+  function staticMember(node: Node): { receiver: Node; name: string } | undefined {
+    if (isPropertyAccessExpression(node)) {
+      return { receiver: node.expression, name: node.name.text };
+    }
+
+    if (isElementAccessExpression(node)) {
+      const name = literalText(node.argumentExpression);
+      return name === undefined ? undefined : { receiver: node.expression, name };
+    }
+
+    return undefined;
+  }
+
+  function isReadEvent(node: Node | undefined): boolean {
+    if (!node) {
+      return false;
+    }
+
+    const member = staticMember(node);
+    if (member?.name !== EVENT_TYPES_READ_MEMBER) {
+      return false;
+    }
+
+    const owner = member.receiver;
+    return (isIdentifier(owner) && owner.text === EVENT_TYPES_ENUM) || staticMember(owner)?.name === EVENT_TYPES_ENUM;
+  }
+
   function visit(node: Node): void {
     if (isCallExpression(node)) {
-      const callee = node.expression;
-      let method: string | undefined;
-      if (isPropertyAccessExpression(callee)) {
-        method = callee.name.text;
-      } else if (isElementAccessExpression(callee)) {
-        method = literalText(callee.argumentExpression);
-      }
-
+      const method = staticMember(node.expression)?.name;
       const event = node.arguments[0];
-      if (
-        method === READ_HANDLER_METHOD ||
-        (method === 'on' &&
-          event &&
-          (literalText(event) === READ_HANDLER_EVENT ||
-            (isPropertyAccessExpression(event) &&
-              isIdentifier(event.expression) &&
-              event.expression.text === EVENT_TYPES_ENUM &&
-              event.name.text === EVENT_TYPES_READ_MEMBER)))
-      ) {
+      if (method === READ_HANDLER_METHOD || (method === 'on' && event && (literalText(event) === READ_HANDLER_EVENT || isReadEvent(event)))) {
         registered = true;
       }
     }
@@ -162,6 +173,15 @@ characteristic.on("${READ_HANDLER_EVENT}", (callback) => { callback(null, false)
 const EVENT_TYPES_MEMBER_HANDLER = `
 characteristic.on(${EVENT_TYPES_READ_REFERENCE}, (callback) => { callback(null, false); });
 `;
+const QUALIFIED_EVENT_TYPES_MEMBER_HANDLER = `
+characteristic.on(hap.${EVENT_TYPES_READ_REFERENCE}, (callback) => { callback(null, false); });
+`;
+const COMPUTED_EVENT_TYPES_MEMBER_HANDLER = `
+characteristic.on(${EVENT_TYPES_ENUM}['${EVENT_TYPES_READ_MEMBER}'], (callback) => { callback(null, false); });
+`;
+const QUALIFIED_COMPUTED_EVENT_TYPES_MEMBER_HANDLER = `
+characteristic.on(hap['${EVENT_TYPES_ENUM}']['${EVENT_TYPES_READ_MEMBER}'], (callback) => { callback(null, false); });
+`;
 const COMMENT_INTERLEAVED_METHOD_HANDLER = `
 characteristic.${READ_HANDLER_METHOD} /* comment */ (() => false);
 `;
@@ -179,6 +199,7 @@ const BACKTICK_COMPUTED_METHOD_HANDLER = 'characteristic[`' + READ_HANDLER_METHO
 const BACKTICK_COMPUTED_EVENT_HANDLER = 'characteristic[`on`](`' + READ_HANDLER_EVENT + '`, (callback) => { callback(null, false); });';
 const DIAGNOSTIC_STRING = `
 const diagnostic = "characteristic.${READ_HANDLER_METHOD}(() => false)";
+const eventDiagnostic = "characteristic.on(hap.${EVENT_TYPES_READ_REFERENCE}, handler)";
 `;
 
 // The import an accessory module would reach the vendor through.
@@ -287,6 +308,9 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     singleQuotedEvent: registersReadHandler(SINGLE_QUOTED_EVENT_HANDLER),
     doubleQuotedEvent: registersReadHandler(DOUBLE_QUOTED_EVENT_HANDLER),
     eventTypesMember: registersReadHandler(EVENT_TYPES_MEMBER_HANDLER),
+    qualifiedEventTypesMember: registersReadHandler(QUALIFIED_EVENT_TYPES_MEMBER_HANDLER),
+    computedEventTypesMember: registersReadHandler(COMPUTED_EVENT_TYPES_MEMBER_HANDLER),
+    qualifiedComputedEventTypesMember: registersReadHandler(QUALIFIED_COMPUTED_EVENT_TYPES_MEMBER_HANDLER),
     commentInterleavedMethod: registersReadHandler(COMMENT_INTERLEAVED_METHOD_HANDLER),
     commentInterleavedEvent: registersReadHandler(COMMENT_INTERLEAVED_EVENT_HANDLER),
     computedMethod: registersReadHandler(COMPUTED_METHOD_HANDLER),
@@ -302,6 +326,9 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     singleQuotedEvent: true,
     doubleQuotedEvent: true,
     eventTypesMember: true,
+    qualifiedEventTypesMember: true,
+    computedEventTypesMember: true,
+    qualifiedComputedEventTypesMember: true,
     commentInterleavedMethod: true,
     commentInterleavedEvent: true,
     computedMethod: true,
