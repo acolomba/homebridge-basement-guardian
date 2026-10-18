@@ -5,13 +5,16 @@
  */
 
 /**
- * @fileoverview CTRL-01: what this plugin watched each pump do, and nothing the device reported.
+ * @fileoverview CTRL-01: each pump's activations as this plugin observed them,
+ * plus backup activations that the device's own timestamp shows the plugin missed.
  *
  * The cloud reports a pump's live running state and one timestamp for the
  * backup pump. It reports no activation count and no lifetime history, so the
- * only count that can exist is the one built here, out of what the plugin saw
- * while it was running. That is why every record carries the moment observation
- * began beside its count: the number means nothing without it (D-020).
+ * only count that can exist is the one built here: the activations the plugin
+ * watched while it was running, plus the backup activations whose device
+ * timestamp shows that the plugin missed them. That is why every record carries
+ * the moment observation began beside its count: the number means nothing
+ * without it (D-020).
  *
  * Three things can go quietly wrong in a record of this shape, and each has a
  * rule of its own below. A run already in progress at the first observation
@@ -22,8 +25,8 @@
  * would be counted twice, because the device publishes that timestamp only
  * after the pump stops (D-010).
  *
- * There is exactly one count per pump and every observed run is in it,
- * self-tests included. Whether the last activation was self-test activity is a
+ * There is exactly one count per pump, and a self-test run is counted in it
+ * like any other run. Whether the last activation was self-test activity is a
  * label on the record and nothing more: it never delays or suppresses a live
  * activation. It describes the last counted backup activation only, so each
  * newly counted backup activation removes it. It stays unwritten, rather than
