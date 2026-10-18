@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The static gate on the accessory read path: a HomeKit read is answered from
  * memory, and nothing in this plugin can turn one into vendor traffic.

@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The static half of the immediacy gate: no module in the
  * accessories tier can reach for deferred execution at all.

@@ -234,6 +234,10 @@ The initial combined owner invocation also exited 0 with 42/42 cases passed. An 
 
 Coordinator and fixers append cause-specific repair commits, checks, and correction-round results here after triage. No repair was performed in round 0.
 
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-GATES-001 | `test/accessories/timerFreedom.test.ts`, `test/accessories/hapImportScope.test.ts`, `test/accessories/accessoryReadPathScope.test.ts`, `test/accessories/hapWriteFidelity.test.ts`, `.planning/phases/05-accessories-conformance/05-GATES-REVIEW.md` | Node v26.12.0: `node_modules/.bin/fallow guard` on the five paths exit 0; `npm run build:test` exit 0; four owner tests exit 0 (3, 16, 5, and 18 passed); `npm run test:unpaired` exit 0; `node_modules/.bin/fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9 --format json --quiet --explain` exit 0, verdict pass; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch GATES` exit 0 (`ACCESSORIES_HEADERS_OK files=4`) | n/a (WARNING) | Added the approved SPDX line and separate copyright block above each unchanged overview. Verification ran in the main checkout. |
+
 ## Coordinator triage
 
 Accepted CR-05-GATES-001 through CR-05-GATES-017 as open. Each cites an applicable unit-test or TypeScript rule, the batch-base location, and a concrete repair. The four missing headers are one cause under 001. The three S-05-15 gaps are separately confirmed as 012, 013, and 014. S-05-22 is rejected under D-16 because the plugin does not rely on bare base-characteristic defaults. S-05-23 is split: asynchronous read refusal is confirmed as 017; absent-characteristic lookup is rejected under D-16 because the plugin guards or declares that lookup. All other GATES leads are confirmed by the IDs in the lead table. The 16 proposed rule-applicability rows are confirmed as N/A for the row-specific reasons above.
