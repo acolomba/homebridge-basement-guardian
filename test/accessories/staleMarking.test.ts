@@ -134,7 +134,16 @@ function warningLog(warnings: string[]): Logging {
 // Deferred execution that records nothing and runs nothing, for the cases that do not observe the
 // clearing push a refusal arms; there the port only has to be something the pass can hand on.
 function heldTimers(): Timers {
-  return { setTimeout: () => undefined, setInterval: () => undefined, clearTimeout: () => undefined, clearInterval: () => undefined };
+  return {
+    setTimeout: () => undefined,
+    setInterval: () => undefined,
+    clearTimeout: () => {
+      // nothing was armed, so there is nothing to cancel
+    },
+    clearInterval: () => {
+      // nothing was armed, so there is nothing to cancel
+    },
+  };
 }
 
 /** One deferral the pass asked the injected port for. */
@@ -544,7 +553,9 @@ describe('refuseRestoredControls', () => {
       offlineConfirmed: () => false,
       commandTransportReady: () => true,
       liveConfirmationObservable: () => true,
-      republish: () => undefined,
+      republish: () => {
+        // this case reads back what was sent, not the rows a republish re-asserts
+      },
     });
 
     // act
