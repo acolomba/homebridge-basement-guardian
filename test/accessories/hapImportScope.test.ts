@@ -63,10 +63,10 @@ const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..'
 /** Every directory holding TypeScript this repository authors. */
 const SOURCE_DIRECTORIES: readonly string[] = ['src', 'test', 'features'];
 
-// The three directories hold a hundred and four TypeScript files. A gate that enumerated
+// The three directories hold 133 TypeScript files. A gate that enumerated
 // fewer than this read the wrong tree, and the single-importer assertion built on that
 // read would pass without examining a single file.
-const SOURCE_FILE_FLOOR = 104;
+const SOURCE_FILE_FLOOR = 133;
 
 /** Accessory modules checked for direct HAP error, setter and UUID calls. */
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
