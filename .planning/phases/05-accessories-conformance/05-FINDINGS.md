@@ -34,6 +34,7 @@ The procedures that write and check this ledger live in `05-REVIEW-PROTOCOL.md`.
 | 24 | test/accessories/hapWriteFidelity.test.ts | core | GATES | 0 | 553 | overview-only |
 | 25 | src/persistence/accessoryContext.ts | adaptation | RECORDS | 1 | 112 | conforms |
 | 26 | test/platform.test.ts | adaptation | RECORDS | 1 | 3779 | conforms |
+| 27 | src/runtime/accountRuntime.ts | adaptation | RECORDS | 1 | 1346 | conforms |
 
 Kind `addition` is a new file under `src/accessories` or `test/accessories`. Its row is recorded in
 the commit right after the one that creates the file. Kind `adaptation` is any other path a batch
@@ -188,13 +189,13 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-RECORDS-011 | RECORDS | WARNING | D-01; .agents/skills/typescript-style/rules/modules-and-data.md Files and modules ("copyright JSDoc, @fileoverview JSDoc, imports ... each present section separated by exactly one blank line") | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:1-2; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:1` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:1-2; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:1` | gsd-code-reviewer round 0 | open |  | efdf57713b |  |
 | CR-05-RECORDS-012 | RECORDS | WARNING | D-01; .agents/skills/typescript-style/rules/modules-and-data.md Files and modules | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/staleMarking.ts:1-2; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/staleMarking.test.ts:1` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/staleMarking.ts:1-2; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/staleMarking.test.ts:1` | gsd-code-reviewer round 0 | open |  | f23ca8d645 |  |
 | CR-05-RECORDS-013 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe what the code does: the interface JSDoc says "Everything the reconciliation state machine needs"); .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Design production code for its tests (dependencies are explicit; an injected port the module does not use makes the test fabricate one) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:23, 50-54; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:17, 22, 42-46` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:23, 50-54; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:17, 22, 42-46` | gsd-code-reviewer round 0 | open | confirms lead S-05-07; D-06 bounded consumer edit at accountRuntime.ts:346 |  |  |
-| CR-05-RECORDS-014 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe what the code does) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:11-17` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:11-17` | gsd-code-reviewer round 0 | open |  |  |  |
+| CR-05-RECORDS-014 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe what the code does) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:11-17` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/reconciliation.ts:11-17` | gsd-code-reviewer round 0 | open |  | d16eaf50b8 |  |
 | CR-05-RECORDS-015 | RECORDS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (one describe() per entrypoint; do not group by anything else) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:211-224` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:211-224` | gsd-code-reviewer round 0 | open | D-10 cites CR-04-ACCOUNT-021 |  |  |
 | CR-05-RECORDS-016 | RECORDS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles state public behavior); .agents/skills/typescript-unit-tests/SKILL.md (a case costs maintenance and must add protection) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:103-114 (duplicate of 76-87)` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/reconciliation.test.ts:103-114 (duplicate of 76-87)` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-RECORDS-017 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe what the code does) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:35, 56, 158-159` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:35, 56, 158-159` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-RECORDS-018 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:3, 5-8` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:3, 5-8` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-RECORDS-019 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:209-216 (against :236, 244)` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:209-216 (against :236, 244)` | gsd-code-reviewer round 0 | open |  |  |  |
-| CR-05-RECORDS-020 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:278-283; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:206-208` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:278-283; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:206-208` | gsd-code-reviewer round 0 | open |  |  |  |
+| CR-05-RECORDS-017 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md (comments describe what the code does) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:35, 56, 158-159` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:35, 56, 158-159` | gsd-code-reviewer round 0 | open |  | 805088b084 |  |
+| CR-05-RECORDS-018 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:3, 5-8` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:3, 5-8` | gsd-code-reviewer round 0 | open |  | 514f78d657 |  |
+| CR-05-RECORDS-019 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:209-216 (against :236, 244)` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:209-216 (against :236, 244)` | gsd-code-reviewer round 0 | open |  | 039c51d606 |  |
+| CR-05-RECORDS-020 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:278-283; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:206-208` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:278-283; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:206-208` | gsd-code-reviewer round 0 | open |  | 3dda90283f |  |
 | CR-05-RECORDS-021 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:88-91` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:88-91` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-RECORDS-022 | RECORDS | WARNING | .agents/skills/typescript-style/rules/comments.md Forbidden in comments ("Any other phrasing whose only purpose is to record which planning artifact authored the line"; narration of a former shape) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:209; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/staleMarking.test.ts:17` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:209; 0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/staleMarking.test.ts:17` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-RECORDS-023 | RECORDS | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure ("Use // act & assert only when one assert.rejects() or assert.throws() expression performs both") and Assertions ("Assert errors by class and structured fields, not by message substring") | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:528-535` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:528-535` | gsd-code-reviewer round 0 | open |  |  |  |
@@ -1557,3 +1558,34 @@ owner keeps 70 tests with 0 failures, its pair, ESLint and typecheck exit 0, and
 passes (59 modules, 1631 tests, 0 failures). `fallow audit --base 0c0930e` reports verdict pass.
 From here on, every production fix in this phase also runs every unit module, not only the named
 consumers.
+
+Dispatch 9 (CR-05-RECORDS-017, 018, 019, 020, 014): role `gsd-code-fixer`, model omitted, effort
+`high`, foreground, owning `src/accessories/pumpRecords.ts`, `src/accessories/reconciliation.ts`
+and the report. Terminal result: five comment-only commits, one per cause:
+`805088b084882c496d01cbe527ec091ac4c8f241` (017, which stored times are milliseconds),
+`514f78d657e7088fa9ad0a1332e298766d342a63` (018, recovered runs in the overview, and the
+counted-run claim narrowed), `039c51d606debc570d799e08d6afa2ae0c4658ac` (019, the creation-time
+warning), `3dda90283f25c8e377eb00e587970cbee8997400` (020, the baseline rule, and the
+missed-activation claim narrowed) and `d16eaf50b8c0bc8cd918f0b444a4ac1b049cc151` (014, all three
+reconciliation inputs; "HTTP 200" restated as any 2xx). Owners 37 and 14 tests, pairs, ESLint and
+`fallow audit --base 0c0930e` (verdict pass) exited 0 after each on Node v26.12.0. The fixer
+reported two things. The test comment at `test/accessories/pumpRecords.test.ts:216-219` still
+gives 020's always-true reason; it goes to the pumpRecords test dispatch. And it noted a possible
+behavior issue: first-timestamp seeding removes a pending awaiting mark, so a first timestamp older
+than a watched edge would let that edge's own later timestamp count again. Correction round 1 will
+judge it. Coordinator check: owned paths only; the non-comment lines of both sources are unchanged;
+`git status --porcelain` is empty.
+
+CR-05-RECORDS-013 (lead S-05-07) consumer edit, declared before the edit (D-06):
+`fallow dead-code --type-aware --symbol-impact src/accessories/reconciliation.ts:ReconciliationOptions`
+exited 0 with `status: complete` and empty stderr. With `tsconfig.json` it names only
+`reconciliation.ts`; with `tsconfig.test.json` it also names `test/accessories/reconciliation.test.ts`.
+No production module names the type. Because `src/runtime/accountRuntime.ts` passes an object
+literal to `createReconciliation`, the coordinator also ran the same command on
+`src/accessories/reconciliation.ts:createReconciliation`. It exited 0 with `status: complete` and
+empty stderr. With `tsconfig.json` it names `reconciliation.ts` and `src/runtime/accountRuntime.ts`
+as the only production consumer; with `tsconfig.test.json` it adds
+`test/accessories/reconciliation.test.ts`. Inventory row 27 declares `src/runtime/accountRuntime.ts`
+as a RECORDS adaptation (First round 1). `test/runtime/accountRuntime.test.ts` does not call
+`createReconciliation` and stays unchanged. This edit does not reopen Phase 4's closed ACCOUNT
+counter (D-10).
