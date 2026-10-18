@@ -1957,3 +1957,13 @@ After the maintainer-authorized round-3 continuation, ID 034 has RED evidence co
 148 passed and 0 failed; `npm run test:coverage:direct -- src/accessories/basementGuardian.ts
 test/accessories/basementGuardian.test.ts` exited 0 with the direct pair at 100%. ID 034
 remains `open` pending independent round-4 review.
+
+Round 4 closed ACCESSORY with opening 1, fixed 1, new 0, reopened 0 and closing 0. On clean
+committed HEAD `448b0d42f58f35d509f1c5a987165f46caca56b7`, Node v26.12.0 and npm
+11.20.0, `05-ledger-tracer.mjs --require-clean ACCESSORY` exited 0 with `clean=ACCESSORY`,
+and `05-ledger-tracer.mjs --headers --batch ACCESSORY` exited 0 with `files=2`.
+`npm run check` with a writable temporary npm cache and host permission started at
+2026-10-18T13:48:07Z, ended at 2026-10-18T13:49:04Z and exited 0. Its printed result was
+104 scenarios passed, 1,156 steps passed, and `Merged LCOV: coverage/direct.lcov (43 pairs)`.
+The first sandboxed attempt could not bind Cucumber's local `127.0.0.1` fake-cloud listeners
+(`listen EPERM`); the host-permission run above is the passing full gate.
