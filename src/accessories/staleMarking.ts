@@ -140,12 +140,13 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * It reaches the trust report and nothing else. Every other characteristic on
  * a marked service still answers, and a service that carries no trust report is
  * not touched at all. The name says so, because "unreadable service" would
- * describe a pass that greys out the whole tile and this one does not.
+ * describe a pass that makes every characteristic of the service fail its read,
+ * and this one makes only the trust report fail.
  *
  * A refused credential is account-wide: one account, one authentication, one
- * poll loop. Marking a single service would imply the others are fine, so every
- * service that reports whether the plugin vouches for it is made unreadable
- * together (D-10).
+ * poll loop. Marking a single service would imply the others are fine, so the
+ * trust report of every service that carries one is made unreadable together
+ * (D-10).
  *
  * Like the restart passes, it walks the accessory's own services and constructs
  * no `BasementGuardianAccessory`: a run whose first grant the vendor refused
