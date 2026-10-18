@@ -57,8 +57,8 @@ const DEGRADED_SCOPES: readonly TrustScope[] = ['water', 'pump', 'power', 'batte
 
 // The published HAP service type of every row, written out here rather than read off the catalogue,
 // so a row that changed service type fails at the descriptor as well as behind it. The two backup
-// battery rows share a kind and a subtype and differ only here, which is what makes the descriptor
-// keyable.
+// battery rows share a kind and a subtype but have different service types and names, so their
+// descriptors remain distinct.
 const LEAK_SENSOR_UUID = '00000083-0000-1000-8000-0026BB765291';
 const CONTACT_SENSOR_UUID = '00000080-0000-1000-8000-0026BB765291';
 const BATTERY_UUID = '00000096-0000-1000-8000-0026BB765291';
@@ -167,8 +167,8 @@ const CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE =
 // it survived cannot be satisfied by a seed.
 const USER_RENAME = 'Fuse Box';
 
-// Every module under `src/accessories/`, read as source so a prohibited idiom fails here by name
-// rather than through some downstream symptom.
+// The four accessory modules checked for prohibited source idioms, named so a violation fails at
+// its source rather than through a downstream symptom.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
 
 // The construction that turns a characteristic unreadable, named once so the gate below and the one
@@ -286,9 +286,8 @@ const EVERY_TRANSPORT_LOST: MonitoringTrust = { restDegraded: true, shadowSilent
 // pair the republish comparison has to tell apart (WR-04).
 const COMMAND_TRANSPORT_UNREADY: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
 
-// What the runtime reports once the vendor has refused the account credentials. The command
-// transport is unready because the runtime has stopped for good, which is the shape `haltMonitoring`
-// answers and the only shape this member ever arrives in (D-10, D-13).
+// A credential refusal makes the command transport unready. This fixture fixes the other trust
+// members so the accessory tests isolate that refusal (D-10, D-13).
 const CREDENTIALS_REFUSED: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true };
 
 // The cause a refusal names when the runtime has no proven way to reach the vendor. Written out
@@ -307,8 +306,8 @@ const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin
 
 // The window a request waits in for the device's own confirming report, mirrored from the binder
 // because it does not export it. A case picks the deadline out of the deferrals by this delay rather
-// than running every deferral, which would also run a refusal's clearing push. A drift between the
-// two numbers leaves the deadline uncollected and fails the case on a count of zero (D-037).
+// than running every deferral, which would also run a refusal's clearing push. The expiry case
+// asserts the collected deadline count, so a changed delay fails there (D-037).
 const PENDING_WINDOW_MS = 30_000;
 
 // The four pump services a wrong-typed `test_timestamp` must leave alone. Filed under `pump` that
@@ -375,8 +374,8 @@ function recordingLog(): { log: Logging; warnings: string[] } {
   return { log, warnings };
 }
 
-// A `Timers` stand-in that records every call and schedules nothing. The accessory takes the port
-// and never reaches for it, so a case asserts this recorder stayed empty across a whole transition.
+// A `Timers` stand-in that records every call and schedules nothing. The accessory passes it to
+// the control binder, which arms timers when a controller presses a control.
 function recordingTimers(): { timers: Timers; calls: string[] } {
   const calls: string[] = [];
   const timers: Timers = {
@@ -433,9 +432,8 @@ function recordingStore(): { store: AccessoryStore; persisted: () => number } {
   };
 }
 
-// Every macrotask a case has collected, run in the order the plugin armed them. A handler whose
-// request was already resolved returns on its own, so the whole list is safe to run and a case
-// states "whatever the plugin deferred" rather than picking an index it worked out by hand.
+// Every macrotask a case has collected runs in the order the plugin armed it. Each caller selects
+// the callbacks it needs instead of relying on an index in the timer recorder.
 function runEvery(deferred: readonly (() => void)[]): void {
   for (const run of deferred) {
     run();
@@ -1843,7 +1841,7 @@ describe('createBasementGuardianAccessory', () => {
   });
 
   // The message is derived from the descriptors this accessory just published, so it names what an
-  // owner can actually open in Apple Home. This case is the one that pins the whole rendered line
+  // owner can actually open in Apple Home. This case pins the whole rendered line
   // against a fully published accessory: fifteen names in the catalogue's publication order.
   test('names every published service a lost controller link withdraws, in the catalogue publication order', () => {
     // arrange
@@ -1899,9 +1897,8 @@ describe('createBasementGuardianAccessory', () => {
   });
 
   // The two rows sharing the kind `backup-battery` carry different display names and different HAP
-  // service types, and both are withdrawn. This is the case that catches a join collapsing to the
-  // kind alone: with one key for two rows, one of these names goes missing or doubles. The needle for
-  // the second (facts) carries its trailing comma, because its name is a prefix of the first's (battery).
+  // service types, and both are withdrawn. This case checks that the warning includes both names.
+  // The needle for the second carries its trailing comma because its name prefixes the first.
   test('names both services sharing the backup-battery kind, neither merged nor dropped', () => {
     // arrange
     const { log, warnings } = recordingLog();
@@ -2619,13 +2616,10 @@ describe('createBasementGuardianAccessory', () => {
   });
 
   // A refused credential is the one failure this plugin presents as No Response, because it never
-  // clears itself and only the owner can act on it. Every way a control request can end arms a push
-  // that returns a refused characteristic to a normal read. These cases pin No Response on both
-  // controls after that push. The three cases below drive the three doors -- the press the plugin
-  // refuses by itself,
-  // the request that outlives its window, and the refusal the vendor answers -- because they reach
-  // the guard through different callers and a guard proved on one is not proved on the others. Each
-  // reads what a controller reads (CR-02, D-10).
+  // clears itself and only the owner can act on it. Refused writes arm clearing pushes; an expired
+  // request republishes its control. These cases pin No Response on both controls after the deferred
+  // work for a local refusal, an expired request, and a vendor refusal. Each reads what a controller
+  // reads (CR-02, D-10).
   const STILL_REFUSED = { selfTest: 'refused -70402', alarmMute: 'refused -70402', flood: 'refused -70402' };
 
   test('CR-02 leaves both controls refusing reads when the press it refused itself runs its clearing push', async () => {
