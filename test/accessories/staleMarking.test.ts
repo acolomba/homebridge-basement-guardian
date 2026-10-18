@@ -23,9 +23,10 @@ import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
-// The status a refused credential is presented under, written independently of the stand-in so a
-// drifted number fails here (D-10, 04-CONTEXT D-04).
-const COMMUNICATION_FAILURE = -70402;
+// The status the trust reports are marked under, written independently of the stand-in so a drifted
+// number fails here. It is not -70402, the status HAP and the stand-in give an error that names no
+// status, so a pass that ignored its status argument would read differently (D-10).
+const RESOURCE_BUSY = -70403;
 
 // The status the missing command transport already answers, and the one a restored control answers
 // for the same condition. Written out here for the same reason as the one above (D-08).
@@ -122,7 +123,7 @@ function markStale(accessory: HarnessPlatformAccessory): number {
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, COMMUNICATION_FAILURE);
+  return markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, RESOURCE_BUSY);
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
@@ -291,8 +292,8 @@ describe('markTrustReportsUnreadable', () => {
         battery: readOf(battery, HAP.Characteristic.StatusActive),
       },
       {
-        flood: { value: true, threw: COMMUNICATION_FAILURE },
-        battery: { value: true, threw: COMMUNICATION_FAILURE },
+        flood: { value: true, threw: RESOURCE_BUSY },
+        battery: { value: true, threw: RESOURCE_BUSY },
       },
     );
   });
