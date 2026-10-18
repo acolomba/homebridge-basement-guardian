@@ -29,12 +29,13 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { importSpecifiers } from './staticGateSources.js';
+import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * Every Node standard-library module that hands a caller deferred execution.
@@ -57,6 +58,19 @@ const ACCESSORIES_MODULE_FLOOR = 10;
 
 function importsDeferredExecution(source: string): boolean {
   return importSpecifiers(source).some((specifier) => DEFERRED_EXECUTION_MODULES.includes(specifier));
+}
+
+function deferredExecutionImportsIn(relativeDirectory: string): { modules: readonly string[]; importing: readonly string[] } {
+  const modules = typeScriptFilesUnder(relativeDirectory);
+  const importing = modules.filter((module) => importsDeferredExecution(readFileSync(join(REPOSITORY_ROOT, module), 'utf8')));
+  return { modules, importing };
+}
+
+function assertAccessoryModuleFloor(modules: readonly string[], directory: string): void {
+  assert.ok(
+    modules.length >= ACCESSORIES_MODULE_FLOOR,
+    `the gate enumerated ${String(modules.length)} modules under ${directory}, fewer than the ${String(ACCESSORIES_MODULE_FLOOR)} that tier holds`,
+  );
 }
 
 // One fixture per spelling the detector has to catch, written out rather than
@@ -180,18 +194,53 @@ import { readFileSync } from 'node:fs';
 `;
 
 test('no module in the accessories tier imports deferred execution from the node standard library (SAFE-07, D-18)', () => {
-  // arrange
-  const modules = readdirSync(ACCESSORIES_DIRECTORY).filter((entry) => entry.endsWith('.ts'));
-
   // act
-  const importing = modules.filter((module) => importsDeferredExecution(readFileSync(join(ACCESSORIES_DIRECTORY, module), 'utf8')));
+  const { modules, importing } = deferredExecutionImportsIn('src/accessories');
 
   // assert
-  assert.ok(
-    modules.length >= ACCESSORIES_MODULE_FLOOR,
-    `the gate enumerated ${String(modules.length)} modules under ${ACCESSORIES_DIRECTORY}, fewer than the ${String(ACCESSORIES_MODULE_FLOOR)} that tier holds`,
-  );
+  assertAccessoryModuleFloor(modules, ACCESSORIES_DIRECTORY);
   assert.deepStrictEqual(importing, []);
+});
+
+test('reads a nested accessory module that imports deferred execution (SAFE-07)', () => {
+  // arrange
+  const directory = mkdtempSync(join(tmpdir(), 'guardian-timer-gate-'));
+  const nestedDirectory = join(directory, 'nested');
+  const relativeDirectory = relative(REPOSITORY_ROOT, directory);
+  const nestedModule = `${relativeDirectory}/nested/monitor.ts`;
+
+  try {
+    mkdirSync(nestedDirectory);
+    writeFileSync(join(nestedDirectory, 'monitor.ts'), NAMED_PROMISES_IMPORT);
+
+    // act
+    const imports = deferredExecutionImportsIn(relativeDirectory);
+
+    // assert
+    assert.deepStrictEqual(imports, { modules: [nestedModule], importing: [nestedModule] });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('rejects a missing accessory tree and an enumeration below the module floor (SAFE-07)', () => {
+  // arrange
+  const directory = mkdtempSync(join(tmpdir(), 'guardian-timer-gate-'));
+  const relativeDirectory = relative(REPOSITORY_ROOT, directory);
+
+  try {
+    // act
+    const readMissingTree = () => deferredExecutionImportsIn(`${relativeDirectory}/missing`);
+    const checkEmptyTree = () => {
+      assertAccessoryModuleFloor([], directory);
+    };
+
+    // assert
+    assert.throws(readMissingTree, { code: 'ENOENT' });
+    assert.throws(checkEmptyTree, { message: `the gate enumerated 0 modules under ${directory}, fewer than the 10 that tier holds` });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('reports a planted deferred-execution import in every spelling it is meant to catch (SAFE-07)', () => {

@@ -128,6 +128,12 @@ D-03. The maintainer authorized continuation in this task after the stop was
 reported; the resolution is recorded in the ledger STOP cell before any round-6
 repair begins.
 
+## Repair history
+
+| Finding | Cause and control | Checks | Commit |
+| --- | --- | --- | --- |
+| CR-05-GATES-040 | The timer owner now uses the shared recursive enumerator. A temporary nested module with a deferred import failed the focused case against the one-level scan (RED exit 1; original test blob `4734d8869774484a758eacbd3f6e40f4e22a2ef2`). The same case passes after the repair. A missing directory throws, and an empty list fails the retained floor. | `npm run build:test` 0; four compiled gates 0 (60/60); `npm run test:unpaired` 0; Fallow audit pass; Node v26.12.0. | This report is in the cause commit. |
+
 ---
 
 _Reviewed: 2026-10-18T19:35:09Z_
