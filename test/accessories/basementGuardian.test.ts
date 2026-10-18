@@ -854,7 +854,19 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn(NO_DEVICE_CONTEXT);
 
     // act & assert
-    assert.throws(() => accessoryWith(accessory, {}), Error);
+    assert.throws(
+      () => accessoryWith(accessory, {}),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.strictEqual(error.constructor, Error);
+        assert.strictEqual(
+          error.message,
+          'the accessory context carries no device identity; the platform must set context.device before creating the accessory',
+        );
+
+        return true;
+      },
+    );
   });
 
   test('throws when the accessory context itself is not a record', () => {
@@ -862,7 +874,19 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = contextlessAccessory();
 
     // act & assert
-    assert.throws(() => createBasementGuardianAccessory({ ...buildOptions({ accessory: accessoryStandIn() }), accessory }), Error);
+    assert.throws(
+      () => createBasementGuardianAccessory({ ...buildOptions({ accessory: accessoryStandIn() }), accessory }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.strictEqual(error.constructor, Error);
+        assert.strictEqual(
+          error.message,
+          'the accessory context carries no device identity; the platform must set context.device before creating the accessory',
+        );
+
+        return true;
+      },
+    );
   });
 
   test('throws when the accessory context device carries a deviceId of the wrong type', () => {
@@ -1248,9 +1272,18 @@ describe('createBasementGuardianAccessory', () => {
     accessory.removeService(accessoryInformation ?? serviceOf(accessory, 'Sump Mains Power'));
 
     // act & assert
-    assert.throws(() => {
-      basementGuardianAccessory.update(buildSnapshot(), 'poll');
-    }, Error);
+    assert.throws(
+      () => {
+        basementGuardianAccessory.update(buildSnapshot(), 'poll');
+      },
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.strictEqual(error.constructor, Error);
+        assert.strictEqual(error.message, 'the accessory carries no AccessoryInformation service, which every constructed PlatformAccessory provides');
+
+        return true;
+      },
+    );
   });
 
   test('adds no service and changes nothing on a second update with the same snapshot', (t) => {
