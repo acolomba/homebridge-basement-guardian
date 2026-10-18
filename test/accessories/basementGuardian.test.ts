@@ -163,6 +163,11 @@ const CONTROLLER_LINK_WARNING_AFTER_A_HEALTHY_UPDATE =
   'Backup Pump Fault, Water Sensor Fault, System Self-Test, and Alarm Mute are retained rather than ' +
   'refreshed until the link returns.';
 
+// The full degradation line an owner reads when a profile or payload stops validating.
+const DEGRADATION_WARNING =
+  `Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
+  'The affected services keep their last valid values until a family-valid update recovers them.';
+
 // A name a user typed, deliberately unlike anything the catalogue publishes, so a case that asserts
 // it survived cannot be satisfied by a seed.
 const USER_RENAME = 'Fuse Box';
@@ -1014,7 +1019,7 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
-    assert.strictEqual(warnings.length, 1);
+    assert.deepStrictEqual(warnings, [DEGRADATION_WARNING]);
   });
 
   test('logs again after recovering and degrading a second time', () => {
@@ -1035,7 +1040,7 @@ describe('createBasementGuardianAccessory', () => {
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
-    assert.strictEqual(warnings.length, 2);
+    assert.deepStrictEqual(warnings, [DEGRADATION_WARNING, DEGRADATION_WARNING]);
   });
 
   test('reports degraded services without claiming refreshed metadata stayed unchanged', () => {
