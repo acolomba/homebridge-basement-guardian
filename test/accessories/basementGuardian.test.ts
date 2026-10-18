@@ -302,8 +302,7 @@ const NO_FRESH_STATE_CAUSE = 'the plugin has no fresh state for it';
 
 // The cause a refusal names when the route and the reported value are both there but the live path
 // has gone quiet, so no confirmation can come back inside the window. Written out for the same
-// reason as the two above, and this one especially: it is the cause the accessory named wrongly
-// until the rule behind it existed (D-07, D-08, WR-02).
+// reason as the two above: the refusal must name the quiet live path (D-07, D-08, WR-02).
 const QUIET_LIVE_CONNECTION_CAUSE = 'the live connection is quiet, so the plugin cannot see the device confirm the command';
 
 // The window a request waits in for the device's own confirming report, mirrored from the binder
@@ -2621,9 +2620,9 @@ describe('createBasementGuardianAccessory', () => {
 
   // A refused credential is the one failure this plugin presents as No Response, because it never
   // clears itself and only the owner can act on it. Every way a control request can end arms a push
-  // that returns a refused characteristic to a normal read, and one press therefore erased that
-  // message from both controls at once and left them claiming the plugin vouched for what they
-  // showed. The three cases below drive the three doors -- the press the plugin refuses by itself,
+  // that returns a refused characteristic to a normal read. These cases pin No Response on both
+  // controls after that push. The three cases below drive the three doors -- the press the plugin
+  // refuses by itself,
   // the request that outlives its window, and the refusal the vendor answers -- because they reach
   // the guard through different callers and a guard proved on one is not proved on the others. Each
   // reads what a controller reads (CR-02, D-10).
@@ -2856,8 +2855,8 @@ describe('createBasementGuardianAccessory', () => {
   // A press during shadow silence is refused, and the cause it names is the one that is true. The
   // poll is still delivering, so the plugin has the reported value and the tile is showing it; what
   // it has lost is the channel a confirmation comes back on, and the wait closes long before the
-  // next poll could carry one. Naming a missing state here -- which is what this case asserted
-  // before the cause existed -- sent an owner to inspect equipment that is fine (RES-04, D-07, WR-02).
+  // next poll could carry one. The refusal names that quiet live path rather than missing state
+  // (RES-04, D-07, WR-02).
   test('RES-04 names the quiet live connection for a press during shadow silence, and sends nothing', async () => {
     // arrange
     const accessory = accessoryStandIn();
@@ -2882,9 +2881,8 @@ describe('createBasementGuardianAccessory', () => {
 
   // The state rule is still reachable and still names its own cause. Both transports are working
   // here and the live path can carry an answer, so nothing above this rule fires; what is wrong is
-  // the capability's own reported field, which did not decode. Without this case the rule inserted
-  // above it could swallow every refusal in this module and the suite would not say so
-  // (RES-04, D-07, D-08).
+  // the capability's own reported field, which did not decode. This case pins that refusal cause
+  // when neither transport rule applies (RES-04, D-07, D-08).
   test('RES-04 names the missing state for a press whose reported field never decoded, and sends nothing', async () => {
     // arrange
     const accessory = accessoryStandIn();
@@ -2919,9 +2917,8 @@ describe('createBasementGuardianAccessory', () => {
   // answer becomes visible to a controller. It must be the device's reported `false`, which is what
   // the row publishes throughout the same withdrawal.
   //
-  // Before the two halves read one rule the write path sampled nothing at all here, and the push
-  // fell back to the value HomeKit's own request had left standing. The tile then showed a test
-  // running that no device had confirmed, which is requested state presented as reported state
+  // The clearing push uses the device's reported false instead of the requested true still held
+  // by HAP. The tile and write path therefore agree on the device's value
   // (RES-04, D-07, D-037, WR-02).
   test('WR-02 returns the Switch to the value the device reported when a press is refused during shadow silence', async () => {
     // arrange
@@ -3022,10 +3019,8 @@ describe('createBasementGuardianAccessory', () => {
 
   // A request the device confirmed on the very snapshot that withdrew the control's scope. The
   // report and the withdrawal arrive together -- the device says the test is running and the same
-  // payload says the pump controller link is gone -- and reconciliation used to read the value
-  // through the trust gate, so it saw nothing, never matched the request, and thirty seconds later
-  // warned that the device had never confirmed a test it had confirmed. That line names a device
-  // failure for a withdrawal the plugin made on its own side, and an owner acts on it.
+  // payload says the pump controller link is gone. Reconciliation reads the decoded value to
+  // resolve the confirmed request while publication withholds the untrusted `On` value.
   //
   // A confirmation is the device answering a request this plugin issued, so the question here is
   // what the device reported and not what the accessory can currently vouch for. The gate still
@@ -3063,11 +3058,9 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  // The same moment under the other withdrawal, which the shared publishing rule already closed: a
-  // scope withdrawn because the plugin is seeing less never hid the reported value from the write
-  // path once both halves read one rule. This is the shape `WR-06` was reported against, kept as its
-  // own case so an edit that gives either half its own copy of the rule fails here too and not only
-  // where the tile is read (CTRL-03, D-037, D-02, WR-06).
+  // The same moment under the other withdrawal: a quiet live path does not hide the reported value
+  // from reconciliation. This case pins that request outcome while the tile remains untrusted
+  // (CTRL-03, D-037, D-02, WR-06).
   test('WR-06 resolves a request the device confirmed on the snapshot that first went quiet', async () => {
     // arrange
     const accessory = accessoryStandIn();
@@ -3492,9 +3485,8 @@ describe('createBasementGuardianAccessory', () => {
   // The credential member of the republish comparison, reached as a change of its own. The runtime
   // flips the command transport at the same halt, so the two members move together and the pair
   // below is the one arrangement in which the credential member is the only difference: a poll that
-  // has already failed, and then the refusal. Replacing that member with a constant left the whole
-  // suite green before the withdrawal above existed, so what an owner is protected from here is a
-  // halt the accessory reads as nothing new and declines to report (WR-04, RES-04, D-10).
+  // has already failed, and then the refusal. This case pins the trust change caused by the
+  // credential member alone (WR-04, RES-04, D-10).
   test('WR-04 republishes for a trust push differing from the stored one only in the credential member', () => {
     // arrange
     const accessory = accessoryStandIn();
