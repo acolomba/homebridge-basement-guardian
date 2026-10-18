@@ -32,6 +32,7 @@ The procedures that write and check this ledger live in `05-REVIEW-PROTOCOL.md`.
 | 22 | test/accessories/hapImportScope.test.ts | core | GATES | 0 | 190 | overview-only |
 | 23 | test/accessories/accessoryReadPathScope.test.ts | core | GATES | 0 | 236 | overview-only |
 | 24 | test/accessories/hapWriteFidelity.test.ts | core | GATES | 0 | 553 | overview-only |
+| 25 | src/persistence/accessoryContext.ts | adaptation | RECORDS | 1 | 112 | conforms |
 
 Kind `addition` is a new file under `src/accessories` or `test/accessories`. Its row is recorded in
 the commit right after the one that creates the file. Kind `adaptation` is any other path a batch
@@ -173,7 +174,7 @@ correction rounds, and no batch records a round above 10 (D-18). The result voca
 | CR-05-CATALOGUE-022 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings; .agents/skills/typescript-unit-tests/rules/pairing-and-design.md Pairing and coverage | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | `309d0da49c4866bef00d793477e4603b5c6146e4:test/accessories/serviceCatalogue.test.ts:1183-1215, 1219-1267, 1342-1352` | gsd-code-reviewer round 3 | fixed |  | 252b50ab4b |  |
 | CR-05-CATALOGUE-023 | CATALOGUE | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (cases discriminate); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:626-648, 675-716, 900-1005` | gsd-code-reviewer round 4 | fixed |  | b87ee68ab4 |  |
 | CR-05-CATALOGUE-024 | CATALOGUE | WARNING | .agents/skills/typescript-unit-tests/rules/cases.md Case structure (titles) | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | `e790d20da2ce14d82304048c524159b23b7b9293:test/accessories/serviceCatalogue.test.ts:776-791` | gsd-code-reviewer round 4 | fixed |  | da8ff2c5dd, 46265a6a01 |  |
-| CR-05-RECORDS-001 | RECORDS | BLOCKER | .agents/skills/typescript-style/SKILL.md Classifying findings (incorrect behavior); D-05 (narrow trust, no guessed values); the module's own contract at src/accessories/pumpRecords.ts:20-24 and src/persistence/accessoryContext.ts:57-68 ("Whether the last observed activation was self-test activity") | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:175-187, 304-316, 333-337` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:175-187, 304-316, 333-337` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator; maintainer chose to fix): the self-test label describes an activation its timestamps do not yet describe |  |  |
+| CR-05-RECORDS-001 | RECORDS | BLOCKER | .agents/skills/typescript-style/SKILL.md Classifying findings (incorrect behavior); D-05 (narrow trust, no guessed values); the module's own contract at src/accessories/pumpRecords.ts:20-24 and src/persistence/accessoryContext.ts:57-68 ("Whether the last observed activation was self-test activity") | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:175-187, 304-316, 333-337` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:175-187, 304-316, 333-337` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator; maintainer chose to fix): the self-test label describes an activation its timestamps do not yet describe | 9701899ef2, e93758edc4 |  |
 | CR-05-RECORDS-002 | RECORDS | BLOCKER | .agents/skills/typescript-style/SKILL.md Classifying findings (incorrect behavior); the module's own D-009 and D-010 contract (src/accessories/pumpRecords.ts:11-18, 264-268) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:223, 244, 264-300` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:src/accessories/pumpRecords.ts:223, 244, 264-300` | gsd-code-reviewer round 0 | open | D-04 genuine bug (coordinator; maintainer chose to fix): a restart mid-run counts one run twice; fix persists one optional member |  |  |
 | CR-05-RECORDS-003 | RECORDS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md (every case discriminates the behavior in its title); .agents/skills/typescript-unit-tests/rules/review.md Classifying findings (a case a wrong implementation would pass) | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:192-204, 245-256, 269-286` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:192-204, 245-256, 269-286` | gsd-code-reviewer round 0 | open |  |  |  |
 | CR-05-RECORDS-004 | RECORDS | BLOCKER | .agents/skills/typescript-unit-tests/SKILL.md; .agents/skills/typescript-unit-tests/rules/review.md Classifying findings | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:301-375 (against src/accessories/pumpRecords.ts:175-187)` | `0c0930e890cb41e74d0d4e854ba45c41a31fea4a:test/accessories/pumpRecords.test.ts:301-375 (against src/accessories/pumpRecords.ts:175-187)` | gsd-code-reviewer round 0 | open |  |  |  |
@@ -268,6 +269,7 @@ The GATES plan confirms or changes each row.
 | CR-05-CONTROLS-008 | test/accessories/controls.test.ts `refuses a second on request while the first waits for the device, and sends one command` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 9b5cd20 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual) | 9b5cd207106e2f1370ab7d563986efccc6d8c9f0 | a2ae20acc02b310ad0c2037ce3489c0f7e338836 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays 7a9239714077956f50b9e5fa4eb0a971d03fd1d7 through the evidence commit, which changes only the evidence file |
 | CR-05-CONTROLS-009 | test/accessories/controls.test.ts `keeps the request pending when the vendor does not answer in time` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 1f85938 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual; `priorEvidence` holds the 008 record in full) | 1f8593865ec49ffeff13ebe33e75bbd1b2932c72 | 670ae8955b6b5cdd38e0a9d9ebeeac936481c972 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays e1fddbb00645b26d1e58a55ae2f91ba8869b8241 through the evidence commit, which changes only the evidence file |
 | CR-05-CONTROLS-033 | test/accessories/controls.test.ts `warns that a timed-out request may still have reached the device` | `05-CONTROLS-RED-EVIDENCE.json` as committed in 11c32d2 (exit 1, tests 1, suites 1, fail 1, ERR_ASSERTION at the target deepStrictEqual; `priorEvidence` holds the 009 record, which holds the 008 record) | 11c32d23dfbd2f2c06e660200678e6ef0b5b2a71 | 7790818ee032874025f4629998e40d59fb3260dd | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/controls.ts` stays 2b0a51f03e7ccbe913ec30306ed8ee558ea419c4 through the evidence commit, which changes only the evidence file |
+| CR-05-RECORDS-001 | test/accessories/pumpRecords.test.ts `withholds the self-test label from a watched backup run whose device timestamp has not arrived` | `05-PUMP-RECORDS-RED-EVIDENCE.json` as committed in 9701899 (exit 1, tests 1, fail 1, ERR_ASSERTION at the target deepStrictEqual) | 9701899ef2001050a8105698981e884d0d2d20a4 | e93758edc4e8d61cc24aea4f979d2540e50bb490 | `check tdd-red-evidence` RED_EVIDENCE_OK (target_test_failed) | the evidence commit is the parent of the fix commit; `src/accessories/pumpRecords.ts` stays 74771aee1e664afd2475d9870ced3d025f447294 through the evidence commit, which changes only the evidence file |
 
 ## Coordinator evidence
 
@@ -1450,3 +1452,41 @@ the header check (`ACCESSORIES_HEADERS_OK files=2`) and `fallow audit --base 0c0
 pass) exited 0 on Node v26.12.0. Coordinator check: three owned paths; no line deleted; the
 review commit `fd62233` precedes it; the GREEN header check exits 0; `git status --porcelain` is
 empty.
+
+Dispatch 3 (CR-05-RECORDS-001, RED): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning only `test/accessories/pumpRecords.test.ts`. It added 'withholds the self-test
+label from a watched backup run whose device timestamp has not arrived' at HEAD
+`ec5093bdcfe094e2330ab3dc20defdae4865d9aa`, built, and ran the target alone: raw exit 1, tests 1,
+fail 1, empty stderr, a `testCodeFailure` `ERR_ASSERTION` at its own `deepStrictEqual`, where the
+label stays `true` at all four run observations. It committed nothing; the production blob stayed
+`74771aee1e664afd2475d9870ced3d025f447294`. The coordinator wrote
+`05-PUMP-RECORDS-RED-EVIDENCE.json` (`priorEvidence` empty); `check tdd-red-evidence --raw`
+printed `RED_EVIDENCE_OK`; it was committed alone as `9701899ef2001050a8105698981e884d0d2d20a4`.
+
+Dispatch 4 (CR-05-RECORDS-001, GREEN): role `gsd-code-fixer`, model omitted, effort `high`,
+foreground, owning the pumpRecords pair and the report. Terminal result: commit
+`e93758edc4e8d61cc24aea4f979d2540e50bb490` (`fix(pumpRecords): withhold the self-test label from an
+unlabelled run`), three owned paths. A counted backup activation (a watched edge, or a recovered
+missed activation) removes the stored label. Classification is withheld while a counted run
+waits for its timestamp or while the record holds no activation. The persisted keys, seeding,
+absorption, the classification rule and every log line are unchanged. The test keeps the
+regression case byte for byte and adds the P4 case. Its control (no-activation withholding
+removed) failed only that case, restored to blob `fb9026b29d1c7fe5f341339734067da7531969fb`. One
+existing case that earned a label with no activation now earns it from a recovered activation,
+with the same title and assertions. Owner 35 tests, 0 failures; pair coverage, ESLint, typecheck,
+the `basementGuardian` (157) and `serviceCatalogue` (212) owners, the whole Cucumber suite (104
+scenarios, 1156 steps) and `fallow audit --base 0c0930e` (verdict pass) exited 0 on Node v26.12.0.
+The fixer noted that the `lastActivationWasTestActivity` JSDoc in
+`src/persistence/accessoryContext.ts` no longer covers the removal. Coordinator check: three
+owned paths; the RED block is present verbatim; the evidence commit is its parent;
+`grep -cE 'primaryPump\?:|backupPump\?:|watermarks\?:' src/accessories/pumpRecords.ts` prints 3;
+`git status --porcelain` is empty.
+
+CR-05-RECORDS-002 consumer edit, declared before the edit (D-06): both impact commands for
+`src/persistence/accessoryContext.ts:ActivationWatermarks` exited 0 with empty stderr and
+`status: complete`. With `tsconfig.json` they name `src/persistence/accessoryContext.ts` and
+`src/accessories/pumpRecords.ts`; with `tsconfig.test.json` they also name
+`test/persistence/accessoryContext.test.ts`, whose type-level checks an added optional member
+leaves valid. Inventory row 25 declares `src/persistence/accessoryContext.ts` as an `adaptation`
+of RECORDS with First round 1. The same file carries the label JSDoc that 001 changed the meaning
+of, so its follow-up comment edit is covered by the same row.
