@@ -566,10 +566,9 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // overwrite the last family-valid value with a bad one and acting on it would
   // operate a real pump on a guess.
   //
-  // That is the row's own distinction, read from the row's own rule rather than
-  // restated here. A second copy is how the two came to disagree: the row was
-  // widened and this was not, so a press was refused for a state the plugin had
-  // and the tile was showing (D-014, D-02, RES-04, D-07, WR-02).
+  // Reading the row's own rule keeps the write path and the tile from
+  // disagreeing about a value the plugin can still show
+  // (D-014, D-02, RES-04, D-07, WR-02).
   function reportedControlValue(row: ServiceRow, control: ControlDefinition): boolean | undefined {
     return isRowPublishable(row, untrusted) ? decodedControlValue(control) : undefined;
   }
@@ -669,12 +668,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
     // has no changed fact to re-assert -- and re-asserting one would push an ordinary value over
     // the single characteristic carrying the one presentation the owner has to act on, which
     // returns it to a readable, fully vouched-for state that nothing afterwards ever corrects.
-    // Answering nothing here is what `bindRestoredControlRefusal` already does from the other side:
-    // it passes a callback that republishes nothing to `clearRefusal`, for the
-    // same reason, and it is the one refusal path that never erased the marking.
-    // The `On` push the binder makes after this
-    // callback still runs and still should, because `On` carries no trust report: the press's own
-    // refusal clears while the halt stands (D-10, D-13).
+    // `bindRestoredControlRefusal` also passes a callback that republishes
+    // nothing to `clearRefusal`. Neither path overwrites the credential
+    // marking with an ordinary projection. The binder still pushes `On` after
+    // this callback to clear the press's refusal; `On` carries no trust report,
+    // so the halt stands (D-10, D-13).
     //
     // The guard belongs on this callback rather than inside the binder's clearing push, because a
     // request that outlives its window calls the callback directly and never reaches that push.
@@ -915,16 +913,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // needs no row. A confirmation is the device answering a request this plugin
   // itself issued, so the question is what the device reported, not what the
   // accessory can currently vouch for. The trust gate belongs on publishing and
-  // on the write, where a doubtful value would reach a tile or operate a pump;
-  // here it only decides whether the plugin is willing to hear an answer it
-  // already asked for. A request confirmed by a report the plugin then discarded
-  // stays pending and expires with a line saying the device never confirmed it --
-  // naming a device failure for a withdrawal made on this side.
-  //
-  // `update()`'s ordering is not the defect and is left exactly as it is.
-  // Recomputing the withdrawal before reconciling is right, because the rows
-  // published below it must reflect that withdrawal; what was wrong was
-  // reconciliation reading through the gate (CTRL-03, D-037, WR-06).
+  // on the write, where a doubtful value would reach a tile or operate a pump.
+  // Reconciliation reads the decoded answer so a confirmed request resolves
+  // even when that value is withheld from a tile. Recomputing withdrawal before
+  // reconciling lets the rows published below reflect current trust
+  // (CTRL-03, D-037, WR-06).
   function reconcileControls(): void {
     for (const control of CONTROLS.values()) {
       controls.reconcile(control.capability, decodedControlValue(control));
@@ -954,14 +947,11 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       // member, so a comparison without it would report "unchanged" for exactly
       // the transport failure a press must be refused on.
       //
-      // The credential member is proven by "republishes for a trust push
-      // differing from the stored one only in the credential member". It was not
-      // provable until that member began withdrawing scopes of its own:
-      // replacing it with a constant left the whole suite green, because the
-      // halt flips the command transport in the same act and the two moved
-      // together in every reachable path. A member added to the type and left
-      // out of this list still reaches the write path, which reads the stored
-      // value directly, so it is silent here rather than harmless
+      // The credential member withdraws scopes on its own. The case
+      // "republishes for a trust push differing from the stored one only in the
+      // credential member" pins this comparison. A member added to the type
+      // and left out of this list still reaches the write path, which reads the
+      // stored value directly, so it is silent here rather than harmless
       // (RES-04, D-07, D-10, WR-04).
       const unchanged =
         trust.restDegraded === monitoring.restDegraded &&
