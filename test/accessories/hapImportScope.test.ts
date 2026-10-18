@@ -312,9 +312,19 @@ const CONSTANT_DYNAMIC_IMPORT = `
 const target = '${HAP_PACKAGE_SPECIFIER}';
 const hap = await import(target);
 `;
+const COMPUTED_DYNAMIC_IMPORT = `
+const hap = await import('@homebridge/' + 'hap-nodejs');
+`;
+const COMPUTED_CONSTANT_DYNAMIC_IMPORT = `
+const target = '@homebridge/' + 'hap-nodejs';
+const hap = await import(target);
+`;
 const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
 const target = 'homebridge';
 const homebridge = await import(target);
+`;
+const UNRELATED_COMPUTED_DYNAMIC_IMPORT = `
+const homebridge = await import('home' + 'bridge');
 `;
 const DOUBLE_QUOTED_DYNAMIC_IMPORT = `
 const hap = await import("${HAP_PACKAGE_SPECIFIER}");
@@ -330,6 +340,11 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const target = '${HAP_PACKAGE_SPECIFIER}';
 const hap = loadModule(target);
+`;
+const COMPUTED_CREATE_REQUIRE_SPECIFIER = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const hap = loadModule('@homebridge/' + 'hap-nodejs');
 `;
 const NAMESPACE_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
@@ -429,10 +444,13 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: importsHapPackage(DOUBLE_QUOTED_SIDE_EFFECT_IMPORT),
     dynamic: importsHapPackage(DYNAMIC_IMPORT),
     constantDynamic: importsHapPackage(CONSTANT_DYNAMIC_IMPORT),
+    computedDynamic: importsHapPackage(COMPUTED_DYNAMIC_IMPORT),
+    computedConstantDynamic: importsHapPackage(COMPUTED_CONSTANT_DYNAMIC_IMPORT),
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
     backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
     constantCreateRequire: importsHapPackage(CONSTANT_CREATE_REQUIRE_IMPORT),
+    computedCreateRequireSpecifier: importsHapPackage(COMPUTED_CREATE_REQUIRE_SPECIFIER),
     namespaceCreateRequire: importsHapPackage(NAMESPACE_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsHapPackage(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsHapPackage(DEFAULT_CREATE_REQUIRE_IMPORT),
@@ -453,10 +471,13 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedSideEffect: true,
     dynamic: true,
     constantDynamic: true,
+    computedDynamic: true,
+    computedConstantDynamic: true,
     doubleQuotedDynamic: true,
     backtickDynamic: true,
     createRequire: true,
     constantCreateRequire: true,
+    computedCreateRequireSpecifier: true,
     namespaceCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
@@ -478,6 +499,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     shadowedCreatorAlias: importsHapPackage(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsHapPackage(UNRELATED_LOADER_CALL),
     unrelatedConstantDynamic: importsHapPackage(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
+    unrelatedComputedDynamic: importsHapPackage(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -488,6 +510,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
     unrelatedConstantDynamic: false,
+    unrelatedComputedDynamic: false,
   });
 });
 

@@ -102,9 +102,19 @@ const CONSTANT_DYNAMIC_IMPORT = `
 const target = 'node:timers/promises';
 const timers = await import(target);
 `;
+const COMPUTED_DYNAMIC_IMPORT = `
+const timers = await import('node:timers/' + 'promises');
+`;
+const COMPUTED_CONSTANT_DYNAMIC_IMPORT = `
+const target = 'node:timers/' + 'promises';
+const timers = await import(target);
+`;
 const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
 const target = 'node:fs';
 const files = await import(target);
+`;
+const UNRELATED_COMPUTED_DYNAMIC_IMPORT = `
+const files = await import('node:' + 'fs');
 `;
 const BACKTICK_DYNAMIC_IMPORT = 'const timers = await import(`node:timers`);';
 const CREATE_REQUIRE_IMPORT = `
@@ -117,6 +127,11 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const target = 'node:timers/promises';
 const timers = loadModule(target);
+`;
+const COMPUTED_CREATE_REQUIRE_SPECIFIER = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const timers = loadModule('node:timers/' + 'promises');
 `;
 const NAMESPACE_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
@@ -254,9 +269,12 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
     dynamicBarePromises: importsDeferredExecution(DYNAMIC_BARE_PROMISES_IMPORT),
     constantDynamic: importsDeferredExecution(CONSTANT_DYNAMIC_IMPORT),
+    computedDynamic: importsDeferredExecution(COMPUTED_DYNAMIC_IMPORT),
+    computedConstantDynamic: importsDeferredExecution(COMPUTED_CONSTANT_DYNAMIC_IMPORT),
     backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
     constantCreateRequire: importsDeferredExecution(CONSTANT_CREATE_REQUIRE_IMPORT),
+    computedCreateRequireSpecifier: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_SPECIFIER),
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsDeferredExecution(DEFAULT_CREATE_REQUIRE_IMPORT),
@@ -278,9 +296,12 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     dynamic: true,
     dynamicBarePromises: true,
     constantDynamic: true,
+    computedDynamic: true,
+    computedConstantDynamic: true,
     backtickDynamic: true,
     createRequire: true,
     constantCreateRequire: true,
+    computedCreateRequireSpecifier: true,
     namespaceCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
@@ -302,6 +323,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreatorAlias: importsDeferredExecution(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
     unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
+    unrelatedComputedDynamic: importsDeferredExecution(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -312,5 +334,6 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
     unrelatedConstantDynamic: false,
+    unrelatedComputedDynamic: false,
   });
 });

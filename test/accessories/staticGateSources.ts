@@ -17,6 +17,7 @@ import {
   createProgram,
   createSourceFile,
   forEachChild,
+  isBinaryExpression,
   isCallExpression,
   isElementAccessExpression,
   isExportDeclaration,
@@ -25,6 +26,7 @@ import {
   isNamedImports,
   isNamespaceImport,
   isNoSubstitutionTemplateLiteral,
+  isParenthesizedExpression,
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
@@ -160,6 +162,16 @@ function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Sym
 function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = new Set<Symbol>()): string | undefined {
   if (isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node)) {
     return node.text;
+  }
+
+  if (isParenthesizedExpression(node)) {
+    return fixedSpecifier(node.expression, checker, seen);
+  }
+
+  if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.PlusToken) {
+    const left = fixedSpecifier(node.left, checker, new Set(seen));
+    const right = fixedSpecifier(node.right, checker, new Set(seen));
+    return left !== undefined && right !== undefined ? left + right : undefined;
   }
 
   if (!isIdentifier(node)) {

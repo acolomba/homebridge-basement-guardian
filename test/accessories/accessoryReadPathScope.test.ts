@@ -264,9 +264,19 @@ const CONSTANT_DYNAMIC_CLOUD_IMPORT = `
 const target = '${CLOUD_DIRECTORY_SPECIFIER}api.js';
 const cloud = await import(target);
 `;
+const COMPUTED_DYNAMIC_CLOUD_IMPORT = `
+const cloud = await import('../cloud/' + 'api.js');
+`;
+const COMPUTED_CONSTANT_DYNAMIC_CLOUD_IMPORT = `
+const target = '../cloud/' + 'api.js';
+const cloud = await import(target);
+`;
 const UNRELATED_CONSTANT_DYNAMIC_IMPORT = `
 const target = '../runtime/timers.js';
 const timers = await import(target);
+`;
+const UNRELATED_COMPUTED_DYNAMIC_IMPORT = `
+const timers = await import('../runtime/' + 'timers.js');
 `;
 const CREATE_REQUIRE_CLOUD_IMPORT = `
 import { createRequire } from 'node:module';
@@ -278,6 +288,11 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const target = '${CLOUD_DIRECTORY_SPECIFIER}api.js';
 const cloud = loadModule(target);
+`;
+const COMPUTED_CREATE_REQUIRE_CLOUD_SPECIFIER = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const cloud = loadModule('../cloud/' + 'api.js');
 `;
 const NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT = `
 import * as module from 'node:module';
@@ -451,8 +466,11 @@ test('reports a planted import of the cloud client and of the account runtime (D
     commentInterleavedRuntime: reachesTheNetworkTier(COMMENT_INTERLEAVED_RUNTIME_IMPORT),
     backtickDynamicCloud: reachesTheNetworkTier(BACKTICK_DYNAMIC_CLOUD_IMPORT),
     constantDynamicCloud: reachesTheNetworkTier(CONSTANT_DYNAMIC_CLOUD_IMPORT),
+    computedDynamicCloud: reachesTheNetworkTier(COMPUTED_DYNAMIC_CLOUD_IMPORT),
+    computedConstantDynamicCloud: reachesTheNetworkTier(COMPUTED_CONSTANT_DYNAMIC_CLOUD_IMPORT),
     createRequireCloud: reachesTheNetworkTier(CREATE_REQUIRE_CLOUD_IMPORT),
     constantCreateRequireCloud: reachesTheNetworkTier(CONSTANT_CREATE_REQUIRE_CLOUD_IMPORT),
+    computedCreateRequireCloudSpecifier: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_SPECIFIER),
     namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
     computedCreateRequireCloud: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT),
     defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
@@ -474,8 +492,11 @@ test('reports a planted import of the cloud client and of the account runtime (D
     commentInterleavedRuntime: true,
     backtickDynamicCloud: true,
     constantDynamicCloud: true,
+    computedDynamicCloud: true,
+    computedConstantDynamicCloud: true,
     createRequireCloud: true,
     constantCreateRequireCloud: true,
+    computedCreateRequireCloudSpecifier: true,
     namespaceCreateRequireCloud: true,
     computedCreateRequireCloud: true,
     defaultCreateRequireCloud: true,
@@ -495,6 +516,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
     unrelatedLoaderCall: reachesTheNetworkTier(UNRELATED_LOADER_CALL),
     unrelatedConstantDynamic: reachesTheNetworkTier(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
+    unrelatedComputedDynamic: reachesTheNetworkTier(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
   };
 
   // assert
@@ -506,5 +528,6 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
     unrelatedConstantDynamic: false,
+    unrelatedComputedDynamic: false,
   });
 });
