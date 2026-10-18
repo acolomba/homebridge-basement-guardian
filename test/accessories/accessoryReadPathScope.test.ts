@@ -36,6 +36,17 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  createSourceFile,
+  forEachChild,
+  isCallExpression,
+  isIdentifier,
+  isPropertyAccessExpression,
+  isStringLiteral,
+  ScriptTarget,
+  type Node,
+} from 'typescript';
+
 import { importSpecifiers, typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
@@ -83,33 +94,37 @@ const SOURCE_DIRECTORY = 'src';
 const ACCESSORIES_MODULE_FLOOR = 10;
 const SOURCE_MODULE_FLOOR = 43;
 
-// A module specifier and a dotted enumeration member both carry `.`, which is the one
-// regular-expression metacharacter either of them holds, so it is escaped on the way into a
-// pattern. That keeps each spelling declared exactly once, above, rather than written a second
-// time inside a regular expression where it could drift from the constant the fixtures use.
-function asPattern(literal: string): string {
-  return literal.replaceAll('.', '\\.');
-}
-
 function reachesTheNetworkTier(source: string): boolean {
   return importSpecifiers(source).some((specifier) => specifier.startsWith(CLOUD_DIRECTORY_SPECIFIER) || specifier === ACCOUNT_RUNTIME_SPECIFIER);
 }
 
-// The four spellings that register a read handler: the fluent method, the event name in either
-// quote style, and the enumeration member naming the same event. Every one requires the call that
-// performs the registration, because this gate's own overview names all four in prose and a module
-// that documents having no read handler is not a module that registered one. The write handler in
-// `src/accessories/controls.ts` is deliberately not among them: `RES-04` governs reads, and the one
-// path from HomeKit to the vendor is a write.
-const READ_HANDLER_PATTERNS: readonly string[] = [
-  `\\.${READ_HANDLER_METHOD}\\s*\\(`,
-  `\\.on\\s*\\(\\s*'${READ_HANDLER_EVENT}'`,
-  `\\.on\\s*\\(\\s*"${READ_HANDLER_EVENT}"`,
-  `\\.on\\s*\\(\\s*${asPattern(EVENT_TYPES_READ_REFERENCE)}\\b`,
-];
-
 function registersReadHandler(source: string): boolean {
-  return READ_HANDLER_PATTERNS.some((pattern) => new RegExp(pattern, 'u').test(source));
+  const file = createSourceFile('readHandler.ts', source, ScriptTarget.Latest, true);
+  let registered = false;
+
+  function visit(node: Node): void {
+    if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
+      const method = node.expression.name.text;
+      const event = node.arguments[0];
+      if (
+        method === READ_HANDLER_METHOD ||
+        (method === 'on' &&
+          event &&
+          ((isStringLiteral(event) && event.text === READ_HANDLER_EVENT) ||
+            (isPropertyAccessExpression(event) &&
+              isIdentifier(event.expression) &&
+              event.expression.text === EVENT_TYPES_ENUM &&
+              event.name.text === EVENT_TYPES_READ_MEMBER)))
+      ) {
+        registered = true;
+      }
+    }
+
+    forEachChild(node, visit);
+  }
+
+  visit(file);
+  return registered;
 }
 
 function offendersUnder(relativeDirectory: string, offends: (source: string) => boolean): readonly string[] {
@@ -133,6 +148,15 @@ characteristic.on("${READ_HANDLER_EVENT}", (callback) => { callback(null, false)
 `;
 const EVENT_TYPES_MEMBER_HANDLER = `
 characteristic.on(${EVENT_TYPES_READ_REFERENCE}, (callback) => { callback(null, false); });
+`;
+const COMMENT_INTERLEAVED_METHOD_HANDLER = `
+characteristic.${READ_HANDLER_METHOD} /* comment */ (() => false);
+`;
+const COMMENT_INTERLEAVED_EVENT_HANDLER = `
+characteristic.on(/* comment */ '${READ_HANDLER_EVENT}', (callback) => { callback(null, false); });
+`;
+const DIAGNOSTIC_STRING = `
+const diagnostic = "characteristic.${READ_HANDLER_METHOD}(() => false)";
 `;
 
 // The import an accessory module would reach the vendor through.
@@ -205,10 +229,27 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     singleQuotedEvent: registersReadHandler(SINGLE_QUOTED_EVENT_HANDLER),
     doubleQuotedEvent: registersReadHandler(DOUBLE_QUOTED_EVENT_HANDLER),
     eventTypesMember: registersReadHandler(EVENT_TYPES_MEMBER_HANDLER),
+    commentInterleavedMethod: registersReadHandler(COMMENT_INTERLEAVED_METHOD_HANDLER),
+    commentInterleavedEvent: registersReadHandler(COMMENT_INTERLEAVED_EVENT_HANDLER),
   };
 
   // assert
-  assert.deepStrictEqual(registrations, { fluentMethod: true, singleQuotedEvent: true, doubleQuotedEvent: true, eventTypesMember: true });
+  assert.deepStrictEqual(registrations, {
+    fluentMethod: true,
+    singleQuotedEvent: true,
+    doubleQuotedEvent: true,
+    eventTypesMember: true,
+    commentInterleavedMethod: true,
+    commentInterleavedEvent: true,
+  });
+});
+
+test('ignores a read-handler spelling inside a diagnostic string', () => {
+  // act
+  const registration = registersReadHandler(DIAGNOSTIC_STRING);
+
+  // assert
+  assert.strictEqual(registration, false);
 });
 
 test('reports a planted import of the cloud client and of the account runtime (D-09)', () => {
