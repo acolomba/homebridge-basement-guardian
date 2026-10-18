@@ -179,8 +179,16 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     return undefined;
   }
 
+  function hasBinding(name: string): boolean {
+    return scopes.some((scope) => scope.has(name));
+  }
+
   function isHapNamespace(node: Node): boolean {
-    return (isIdentifier(node) && node.text === 'hap') || staticMemberName(node) === 'hap';
+    if (isIdentifier(node)) {
+      return aliasOf(node.text) === 'hapNamespace' || (node.text === 'hap' && !hasBinding(node.text));
+    }
+
+    return staticMemberName(node) === 'hap';
   }
 
   function isUuidApi(node: Node): boolean {
@@ -202,6 +210,10 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
 
     if (isUuidApi(node)) {
       return 'uuid';
+    }
+
+    if (isHapNamespace(node)) {
+      return 'hapNamespace';
     }
 
     if (isSetEvent(node, aliasOf)) {
@@ -664,6 +676,23 @@ test('counts local aliases of HAP UUID generation and set events', () => {
   assert.deepStrictEqual(uses, { uuidAlias: true, destructuredUuid: true, renamedUuid: true, setEventAlias: true });
 });
 
+test('counts UUID calls through aliases of the injected HAP namespace', () => {
+  // arrange
+  const namespaceAlias = sourceFileOf('const hapApi = this.api.hap; hapApi.uuid.generate(deviceId);');
+  const forwardedAlias = sourceFileOf('const hapApi = this.api.hap; const forwarded = hapApi; forwarded.uuid.generate(deviceId);');
+  const destructuredAlias = sourceFileOf('const hapApi = this.api.hap; const { uuid } = hapApi; uuid.generate(deviceId);');
+
+  // act
+  const uses = {
+    namespaceAlias: hapUses(namespaceAlias).memberCall,
+    forwardedAlias: hapUses(forwardedAlias).memberCall,
+    destructuredAlias: hapUses(destructuredAlias).memberCall,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { namespaceAlias: true, forwardedAlias: true, destructuredAlias: true });
+});
+
 test('counts calls through HAP UUID generate function bindings', () => {
   // arrange
   const memberBinding = sourceFileOf('const generate = hap.uuid.generate; generate(deviceId);');
@@ -685,6 +714,9 @@ test('ignores unused and unrelated UUID generate bindings', () => {
   const unrelated = sourceFileOf('const { generate } = other.uuid; generate(deviceId);');
   const unrelatedMember = sourceFileOf('other.uuid.generate(deviceId);');
   const unrelatedUuidObject = sourceFileOf('const { uuid } = other; uuid.generate(deviceId);');
+  const unrelatedNamespace = sourceFileOf('const hapApi = other; hapApi.uuid.generate(deviceId);');
+  const shadowedNamespace = sourceFileOf('const hapApi = this.api.hap; function run(hapApi: API) { hapApi.uuid.generate(deviceId); }');
+  const shadowedHap = sourceFileOf('const hap = other; hap.uuid.generate(deviceId);');
 
   // act
   const uses = {
@@ -692,10 +724,21 @@ test('ignores unused and unrelated UUID generate bindings', () => {
     unrelated: hapUses(unrelated).destructuredCall,
     unrelatedMember: hapUses(unrelatedMember).memberCall,
     unrelatedUuidObject: hapUses(unrelatedUuidObject).memberCall,
+    unrelatedNamespace: hapUses(unrelatedNamespace).memberCall,
+    shadowedNamespace: hapUses(shadowedNamespace).memberCall,
+    shadowedHap: hapUses(shadowedHap).memberCall,
   };
 
   // assert
-  assert.deepStrictEqual(uses, { unused: false, unrelated: false, unrelatedMember: false, unrelatedUuidObject: false });
+  assert.deepStrictEqual(uses, {
+    unused: false,
+    unrelated: false,
+    unrelatedMember: false,
+    unrelatedUuidObject: false,
+    unrelatedNamespace: false,
+    shadowedNamespace: false,
+    shadowedHap: false,
+  });
 });
 
 test('counts EventEmitter methods that register set listeners', () => {
