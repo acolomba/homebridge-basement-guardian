@@ -286,26 +286,37 @@ test('D-17 resolves the same HAP file the plugin host itself resolves', () => {
   assert.strictEqual(resolved.here, resolved.throughTheHost);
 });
 
-// Homebridge 1.x depends on the legacy unscoped `hap-nodejs` package (versions
-// 0.12.0/0.14.3, confirmed against the npm registry); only Homebridge 2.x
-// depends on the scoped `@homebridge/hap-nodejs` line this project pins and
-// this file tests against. The two lines share no version to compare, so this
-// case is registered only once the host has migrated to the scoped package --
-// a Homebridge 1.x run has nothing here to assert against.
-const hapVersionTheHostDeclares = manifestOwning(testRequire.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER).dependencies?.[HAP_SPECIFIER];
+// Homebridge 1.x declares the legacy unscoped package; Homebridge 2.x declares the scoped line
+// this file imports. The major versions have different package names and cannot share a version
+// assertion.
+test('D-17 checks the HAP package declared by the plugin host', () => {
+  // arrange
+  const host = manifestOwning(testRequire.resolve(HOMEBRIDGE_SPECIFIER), HOMEBRIDGE_SPECIFIER);
+  const scopedVersion = host.dependencies?.[HAP_SPECIFIER];
+  const legacyVersion = host.dependencies?.['hap-nodejs'];
 
-if (hapVersionTheHostDeclares !== undefined) {
-  test('D-17 runs against the HAP version the plugin host declares', () => {
-    // arrange
+  // act
+  const hostMajor = host.version.split('.')[0];
+
+  // assert
+  if (hostMajor === '1') {
+    assert.strictEqual(scopedVersion, undefined);
+    assert.match(legacyVersion ?? '', /^\S+$/);
+
+    return;
+  }
+
+  if (hostMajor === '2') {
     const installed = readManifest(testRequire.resolve(`${HAP_SPECIFIER}/package.json`));
+    assert.strictEqual(installed.name, HAP_SPECIFIER);
+    assert.strictEqual(scopedVersion, installed.version);
+    assert.strictEqual(legacyVersion, undefined);
 
-    // act
-    const installedVersion = installed.version;
+    return;
+  }
 
-    // assert
-    assert.strictEqual(installedVersion, hapVersionTheHostDeclares);
-  });
-}
+  assert.fail(`unsupported Homebridge version ${host.version}`);
+});
 
 test('stores the value and clears the status on an accepted write, on both implementations', async () => {
   // act
