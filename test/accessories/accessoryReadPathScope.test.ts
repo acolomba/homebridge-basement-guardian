@@ -31,10 +31,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+
+import { typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * The cloud tier, as a module in the accessories tier would reach it.
@@ -119,20 +121,6 @@ const READ_HANDLER_PATTERNS: readonly string[] = [
 
 function registersReadHandler(source: string): boolean {
   return READ_HANDLER_PATTERNS.some((pattern) => new RegExp(pattern, 'u').test(source));
-}
-
-// Repository-relative and POSIX-separated, because that path is what the failing assertion prints:
-// a gate that reports `true` names nothing an author can open.
-function typeScriptFilesUnder(relativeDirectory: string): readonly string[] {
-  return readdirSync(join(REPOSITORY_ROOT, relativeDirectory), { withFileTypes: true }).flatMap((entry) => {
-    const path = `${relativeDirectory}/${entry.name}`;
-
-    if (entry.isDirectory()) {
-      return typeScriptFilesUnder(path);
-    }
-
-    return entry.name.endsWith('.ts') ? [path] : [];
-  });
 }
 
 function offendersUnder(relativeDirectory: string, offends: (source: string) => boolean): readonly string[] {

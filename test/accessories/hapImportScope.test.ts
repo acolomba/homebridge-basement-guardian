@@ -36,12 +36,14 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { createPrinter, createSourceFile, ScriptTarget } from 'typescript';
+
+import { typeScriptFilesUnder } from './staticGateSources.js';
 
 /**
  * The package no module may reach except the one named below.
@@ -92,20 +94,6 @@ function importsModule(source: string, specifier: string): boolean {
 
 function importsHapPackage(source: string): boolean {
   return importsModule(source, HAP_PACKAGE_SPECIFIER);
-}
-
-// Repository-relative and POSIX-separated, because that path is what the failing
-// assertion prints: a gate that reports `true` names nothing an author can open.
-function typeScriptFilesUnder(relativeDirectory: string): readonly string[] {
-  return readdirSync(join(REPOSITORY_ROOT, relativeDirectory), { withFileTypes: true }).flatMap((entry) => {
-    const path = `${relativeDirectory}/${entry.name}`;
-
-    if (entry.isDirectory()) {
-      return typeScriptFilesUnder(path);
-    }
-
-    return entry.name.endsWith('.ts') ? [path] : [];
-  });
 }
 
 // Module overviews explain forbidden idioms, so the HAP source checks inspect code without comments.
