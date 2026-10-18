@@ -135,3 +135,9 @@ At HEAD `27a959e638209f6956e4715328ebcd89ee818aea`, `node --version` printed `v2
 ## Out-of-scope observations
 
 `src/accessories/controls.ts:534-541, 605-615` is the bounded CONTROLS edit that implements 001; it was read as context, not added to `files_reviewed_list`. `features/lib/hap.ts:316-347` remains a Phase 7 stand-in: its synchronous read differs from pinned HAP's async `handleGetRequest`, and this owner now awaits either implementation. The missing-device and missing-snapshot restored-refusal variants in `src/platform.ts` remain Phase 6 observations from round 0. No finding is assigned to those files here.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Note |
+| --- | --- | --- | --- |
+| CR-05-ACCESSORY-020 | `test/accessories/basementGuardian.test.ts`, `.planning/phases/05-accessories-conformance/05-ACCESSORY-REVIEW-R1.md` | Node v26.12.0: Fallow guard exit 0; `npm run build:test` exit 0; accessory owner exit 0 (153 tests, 153 pass; before 153); direct pair exit 0 (100%); Fallow audit against `9cb164b1299249c2d2083ea81677c83e28e66916` exit 0, verdict pass | Captured twelve write refusals during each case's single `// act` phase and asserted their exact HAP status in its final `// assert` phase. Moved one early command verification to the final assertion phase. The five standalone construction rejections retain `// act & assert`. Titles, command behavior and expected values remain unchanged. |

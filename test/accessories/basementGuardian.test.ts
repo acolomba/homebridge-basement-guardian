@@ -731,6 +731,16 @@ async function statusActiveReadOf(accessory: FakeAccessory, displayName: string)
   }
 }
 
+async function refusedWriteOf(write: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await write();
+
+    return undefined;
+  } catch (thrown: unknown) {
+    return thrown;
+  }
+}
+
 // The same read over both controls and one sensor beside them. A control write that reached past
 // the controls would show here, and a claim about "both controls" made from one of them would not
 // be a claim about the pair (CR-02).
@@ -1001,17 +1011,10 @@ test('names missing fresh state for a cached self-test when its family stops res
   // act
   restarted.markMonitoring(EVERY_TRANSPORT_WORKING);
   restarted.update(buildSnapshot({ data: GEMINI_TELEMETRY }), 'poll');
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(
     warnings.filter((warning) => warning.startsWith('Refused ')),
     [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
@@ -2587,20 +2590,13 @@ test('CTRL-03 refuses an off write, sends nothing, and makes the switch readable
   };
   geminiAccessory(accessory, { test_running: false }, { timers, commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(false),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
   // act
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(false));
   const beforeThePush = onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode;
   deferred[0]?.();
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual({ calls, beforeThePush }, { calls: ['setTimeout 0'], beforeThePush: NOT_ALLOWED_IN_CURRENT_STATE });
   assert.deepStrictEqual(
     {
@@ -2626,19 +2622,12 @@ test('leaves both controls refusing reads when the press it refused itself runs 
   const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
   refuseTheCredentials(accessory, basementGuardianAccessory);
 
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
   // act
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
   runEvery(deferred);
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(await trustReportReadsOf(accessory), STILL_REFUSED);
   verify(commands);
 });
@@ -2665,20 +2654,13 @@ test('leaves both controls refusing reads when the vendor refusal that answered 
   when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure: 'vendor-error' });
   const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
 
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, SERVICE_COMMUNICATION_FAILURE);
-
-      return true;
-    },
-  );
   // act
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
   refuseTheCredentials(accessory, basementGuardianAccessory);
   runEvery(deferred);
 
   // assert
+  assert.strictEqual(refusal, SERVICE_COMMUNICATION_FAILURE);
   assert.deepStrictEqual(await trustReportReadsOf(accessory), STILL_REFUSED);
   verify(commands);
 });
@@ -2727,17 +2709,11 @@ for (const { written, muted, status } of [
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
-    // act & assert
-    await assert.rejects(
-      () => onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(written),
-      (thrown: unknown) => {
-        assert.strictEqual(thrown, status);
-
-        return true;
-      },
-    );
+    // act
+    const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(written));
 
     // assert
+    assert.strictEqual(refusal, status);
     verify(commands);
   });
 }
@@ -2796,17 +2772,10 @@ test('CTRL-03 refuses a self-test on a confirmed-offline device and sends nothin
 
   // act
   basementGuardianAccessory.update(buildSnapshot({ connected: false, data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   verify(commands);
 });
 
@@ -2826,19 +2795,11 @@ test('RES-04 refuses the next press after a push differing from the stored trust
 
   // act
   await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
-  verify(commands);
   basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false });
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
   verify(commands);
 });
@@ -2857,17 +2818,10 @@ test('RES-04 names the quiet live connection for a press during shadow silence, 
 
   // act
   basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
   verify(commands);
 });
@@ -2885,19 +2839,12 @@ test('RES-04 names the missing state for a press whose reported field never deco
 
   // act
   basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // A payload carrying an out-of-domain field also degrades, and that line is not what
   // this case is about, so the refusal lines alone are compared.
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(
     warnings.filter((warning) => warning.startsWith('Refused ')),
     [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
@@ -2944,19 +2891,11 @@ test('returns the Switch to the value the device reported when a press is refuse
   await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
   const afterTheAcceptedPress = onCharacteristicOf(accessory, SELF_TEST_ROW).value;
   basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
-  // act
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
   runEvery(clearingPushes);
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(
     {
       clearingPushes: clearingPushes.length,
@@ -2989,19 +2928,12 @@ test('keeps a doubtful value absent from both the control row and the write path
 
   // act
   basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // A lost link is also reported once on its own line, and that line is not what this case
   // is about, so the refusal lines alone are compared.
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   assert.deepStrictEqual(
     {
       selfTestReason: basementGuardianAccessory.untrusted.find((scope) => scope.scope === 'self-test')?.reason,
@@ -3287,17 +3219,11 @@ test('RES-04 refuses a press before the runtime has pushed any monitoring trust,
   const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
   geminiAccessory(accessory, { test_running: false }, { commands });
 
-  // act & assert
-  await assert.rejects(
-    () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
-    (thrown: unknown) => {
-      assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
-
-      return true;
-    },
-  );
+  // act
+  const refusal = await refusedWriteOf(() => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true));
 
   // assert
+  assert.strictEqual(refusal, NOT_ALLOWED_IN_CURRENT_STATE);
   verify(commands);
 });
 
