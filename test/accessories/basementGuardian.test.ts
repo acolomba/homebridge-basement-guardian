@@ -1012,6 +1012,7 @@ describe('createBasementGuardianAccessory', () => {
     // act
     restarted.markMonitoring(EVERY_TRANSPORT_WORKING);
     restarted.update(buildSnapshot({ data: GEMINI_TELEMETRY }), 'poll');
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2582,7 +2583,7 @@ describe('createBasementGuardianAccessory', () => {
     };
     geminiAccessory(accessory, { test_running: false }, { timers: recording, commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
-    // act
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(false),
       (thrown: unknown) => {
@@ -2591,6 +2592,7 @@ describe('createBasementGuardianAccessory', () => {
         return true;
       },
     );
+    // act
     const beforeThePush = onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode;
     deferred[0]?.();
 
@@ -2619,7 +2621,7 @@ describe('createBasementGuardianAccessory', () => {
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
     refuseTheCredentials(accessory, basementGuardianAccessory);
 
-    // act
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2628,6 +2630,7 @@ describe('createBasementGuardianAccessory', () => {
         return true;
       },
     );
+    // act
     runEvery(deferred);
 
     // assert
@@ -2660,7 +2663,7 @@ describe('createBasementGuardianAccessory', () => {
     };
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
 
-    // act
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2669,6 +2672,7 @@ describe('createBasementGuardianAccessory', () => {
         return true;
       },
     );
+    // act
     refuseTheCredentials(accessory, basementGuardianAccessory);
     runEvery(deferred);
 
@@ -2720,7 +2724,7 @@ describe('createBasementGuardianAccessory', () => {
       const { commands, sends } = recordingCommands();
       geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
-      // act
+      // act & assert
       await assert.rejects(
         () => onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(written),
         (thrown: unknown) => {
@@ -2787,6 +2791,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.update(buildSnapshot({ connected: false, data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2817,6 +2822,7 @@ describe('createBasementGuardianAccessory', () => {
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
     const afterTheAcceptedPress = [...sends];
     basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false });
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2851,6 +2857,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2877,6 +2884,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2886,8 +2894,9 @@ describe('createBasementGuardianAccessory', () => {
       },
     );
 
-    // assert. A payload carrying an out-of-domain field also degrades, and that line is not what
+    // A payload carrying an out-of-domain field also degrades, and that line is not what
     // this case is about, so the refusal lines alone are compared.
+    // assert
     assert.deepStrictEqual(
       { sends, refusals: warnings.filter((warning) => warning.startsWith('Refused ')) },
       { sends: [], refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
@@ -2932,6 +2941,7 @@ describe('createBasementGuardianAccessory', () => {
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
     const afterTheAcceptedPress = onCharacteristicOf(accessory, SELF_TEST_ROW).value;
     basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2940,6 +2950,7 @@ describe('createBasementGuardianAccessory', () => {
         return true;
       },
     );
+    // act
     runEvery(clearingPushes);
 
     // assert
@@ -2975,6 +2986,7 @@ describe('createBasementGuardianAccessory', () => {
 
     // act
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
@@ -2984,8 +2996,9 @@ describe('createBasementGuardianAccessory', () => {
       },
     );
 
-    // assert. A lost link is also reported once on its own line, and that line is not what this case
+    // A lost link is also reported once on its own line, and that line is not what this case
     // is about, so the refusal lines alone are compared.
+    // assert
     assert.deepStrictEqual(
       {
         selfTestReason: basementGuardianAccessory.untrusted.find((scope) => scope.scope === 'self-test')?.reason,
@@ -3267,7 +3280,7 @@ describe('createBasementGuardianAccessory', () => {
     const { commands, sends } = recordingCommands();
     geminiAccessory(accessory, { test_running: false }, { commands });
 
-    // act
+    // act & assert
     await assert.rejects(
       () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
       (thrown: unknown) => {
