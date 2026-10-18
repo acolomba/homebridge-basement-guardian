@@ -53,6 +53,8 @@ import {
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
+  isObjectLiteralExpression,
+  isPropertyAssignment,
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
@@ -221,6 +223,23 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       return 'setEvent';
     }
 
+    if (isIdentifier(node) && aliasOf(node.text) === 'setEventObject') {
+      return 'setEventObject';
+    }
+
+    if (
+      isObjectLiteralExpression(node) &&
+      node.properties.some(
+        (property) =>
+          isPropertyAssignment(property) &&
+          (isIdentifier(property.name) || isStringLiteral(property.name)) &&
+          property.name.text === 'SET' &&
+          isSetEvent(property.initializer, aliasOf, isHapNamespace),
+      )
+    ) {
+      return 'setEventObject';
+    }
+
     if (isIdentifier(node) && aliasOf(node.text) === 'generate') {
       return 'generate';
     }
@@ -244,6 +263,9 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     } else if (isPropertyAccessExpression(initializer) && initializer.name.text === 'api' && initializer.expression.kind === SyntaxKind.ThisKeyword) {
       capability = 'hapNamespace';
       sourceProperty = 'hap';
+    } else if (capabilityOf(initializer) === 'setEventObject') {
+      capability = 'setEvent';
+      sourceProperty = 'SET';
     }
 
     for (const element of binding.elements) {
@@ -774,6 +796,33 @@ test('counts set-event registration through an injected HAP namespace alias', ()
 
   // assert
   assert.deepStrictEqual(uses, { injectedHap: true, unrelatedEnum: false, shadowedHap: false });
+});
+
+test('resolves fixed set events through object bindings without following unrelated or shadowed names', () => {
+  // arrange
+  const direct = sourceFileOf('const events = { SET: hap.CharacteristicEventTypes.SET }; const { SET } = events; characteristic.on(SET, handler);');
+  const renamed = sourceFileOf(
+    'const events = { SET: hap.CharacteristicEventTypes.SET }; const { SET: writeEvent } = events; characteristic.on(writeEvent, handler);',
+  );
+  const unrelated = sourceFileOf('const events = { SET: other.SET }; const { SET } = events; characteristic.on(SET, handler);');
+  const shadowedObject = sourceFileOf(
+    'const events = { SET: hap.CharacteristicEventTypes.SET }; function run(events: Events) { const { SET } = events; characteristic.on(SET, handler); }',
+  );
+  const shadowedEvent = sourceFileOf(
+    'const events = { SET: hap.CharacteristicEventTypes.SET }; const { SET } = events; function run(SET: string) { characteristic.on(SET, handler); }',
+  );
+
+  // act
+  const uses = {
+    direct: hapUses(direct).setEvent,
+    renamed: hapUses(renamed).setEvent,
+    unrelated: hapUses(unrelated).setEvent,
+    shadowedObject: hapUses(shadowedObject).setEvent,
+    shadowedEvent: hapUses(shadowedEvent).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { direct: true, renamed: true, unrelated: false, shadowedObject: false, shadowedEvent: false });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {

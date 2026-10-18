@@ -112,6 +112,7 @@ under D-03/D-18.
 | ID | Change | Evidence |
 | --- | --- | --- |
 | CR-05-GATES-056 | Record fixed dynamic `node:module` namespace bindings and follow aliases to `createRequire`; add direct, aliased, and unrelated-import controls to all three import gates. | Control: dropping dynamic namespace registration made all three planted-positive cases fail (raw exit 1); restored helper blob `ac8951117e4d77d569db3907593a8911e520c5de` with matching SHA-256. `build:test`, four compiled gates (86 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
+| CR-05-GATES-057 | Track fixed GET and SET object members through direct and renamed destructuring in the read and set gates; keep unrelated and shadowed bindings negative. | New cases failed on their direct and renamed assertions before the fix (raw exits 1). Control: mapping GET to SET and SET to GET made each case fail on those assertions (raw exits 1); source blobs restored exactly to `65d649c9156f8a7e2f336a03ecbd8837347b2c85` and `c1d0c0e4f6e62a2dd350a6307c36ef4d2ac0df98`. `build:test`, four compiled gates (88 pass), `test:unpaired`, and Fallow audit passed (raw exits 0, Node v26.12.0; main checkout). |
 
 ---
 

@@ -45,12 +45,16 @@ import {
   isFunctionLike,
   isIdentifier,
   isNoSubstitutionTemplateLiteral,
+  isObjectBindingPattern,
+  isObjectLiteralExpression,
+  isPropertyAssignment,
   isPropertyAccessExpression,
   isStringLiteral,
   isVariableDeclaration,
   NodeFlags,
   ScriptTarget,
   type Node,
+  type ObjectBindingPattern,
 } from 'typescript';
 
 import { moduleLoads, typeScriptFilesUnder } from './staticGateSources.js';
@@ -121,6 +125,7 @@ function registersReadHandler(source: string): boolean {
   const file = createSourceFile('readHandler.ts', source, ScriptTarget.Latest, true);
   let registered = false;
   const scopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const objectScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
   const methodScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
 
   function readAlias(name: string): boolean {
@@ -183,21 +188,67 @@ function registersReadHandler(source: string): boolean {
     return (isIdentifier(owner) && owner.text === EVENT_TYPES_ENUM) || staticMember(owner)?.name === EVENT_TYPES_ENUM;
   }
 
-  function recordAlias(node: Node): void {
-    if (isVariableDeclaration(node) && isIdentifier(node.name)) {
-      const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
-      scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
-      const initializer = node.initializer;
-      let method: string | undefined;
-      if (fixed) {
-        method = literalText(initializer);
-        if (method === undefined && initializer && isIdentifier(initializer)) {
-          method = methodAlias(initializer.text);
+  function isReadEventObject(node: Node | undefined): boolean {
+    if (node && isIdentifier(node)) {
+      for (let index = objectScopes.length - 1; index >= 0; index--) {
+        if (objectScopes[index]?.has(node.text)) {
+          return objectScopes[index]?.get(node.text) ?? false;
         }
       }
-
-      methodScopes[methodScopes.length - 1]?.set(node.name.text, method);
     }
+
+    return (
+      !!node &&
+      isObjectLiteralExpression(node) &&
+      node.properties.some(
+        (property) =>
+          isPropertyAssignment(property) &&
+          (isIdentifier(property.name) || isStringLiteral(property.name)) &&
+          property.name.text === EVENT_TYPES_READ_MEMBER &&
+          isReadEvent(property.initializer),
+      )
+    );
+  }
+
+  function recordObjectBinding(binding: ObjectBindingPattern, initializer: Node | undefined, fixed: boolean): void {
+    const readObject = fixed && isReadEventObject(initializer);
+    for (const element of binding.elements) {
+      const source = element.propertyName ?? element.name;
+      if (isIdentifier(element.name)) {
+        const readEvent = readObject && (isIdentifier(source) || isStringLiteral(source)) && source.text === EVENT_TYPES_READ_MEMBER;
+        scopes[scopes.length - 1]?.set(element.name.text, readEvent);
+        methodScopes[methodScopes.length - 1]?.set(element.name.text, undefined);
+      }
+    }
+  }
+
+  function recordAlias(node: Node): void {
+    if (!isVariableDeclaration(node)) {
+      return;
+    }
+
+    const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
+    if (isObjectBindingPattern(node.name)) {
+      recordObjectBinding(node.name, node.initializer, fixed);
+      return;
+    }
+
+    if (!isIdentifier(node.name)) {
+      return;
+    }
+
+    scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
+    objectScopes[objectScopes.length - 1]?.set(node.name.text, fixed && isReadEventObject(node.initializer));
+    const initializer = node.initializer;
+    let method: string | undefined;
+    if (fixed) {
+      method = literalText(initializer);
+      if (method === undefined && initializer && isIdentifier(initializer)) {
+        method = methodAlias(initializer.text);
+      }
+    }
+
+    methodScopes[methodScopes.length - 1]?.set(node.name.text, method);
   }
 
   function recordUse(node: Node): void {
@@ -214,17 +265,20 @@ function registersReadHandler(source: string): boolean {
     const ownScope = isBlock(node) || isFunctionLike(node);
     if (ownScope) {
       const scope = new Map<string, boolean>();
+      const objectScope = new Map<string, boolean>();
       const methodScope = new Map<string, string | undefined>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, false);
+            objectScope.set(parameter.name.text, false);
             methodScope.set(parameter.name.text, undefined);
           }
         }
       }
 
       scopes.push(scope);
+      objectScopes.push(objectScope);
       methodScopes.push(methodScope);
     }
 
@@ -233,6 +287,7 @@ function registersReadHandler(source: string): boolean {
     forEachChild(node, visit);
     if (ownScope) {
       scopes.pop();
+      objectScopes.pop();
       methodScopes.pop();
     }
   }
@@ -649,6 +704,34 @@ test('ignores other EventEmitter events in the read-handler gate', () => {
 
   // assert
   assert.deepStrictEqual(registrations, { direct: false, fixed: false, unrelatedMethod: false });
+});
+
+test('resolves fixed read events through object bindings without following unrelated or shadowed names', () => {
+  // arrange
+  const direct = `const events = { GET: hap.${EVENT_TYPES_READ_REFERENCE} }; const { GET } = events; characteristic.on(GET, handler);`;
+  const renamed = `const events = { GET: hap.${EVENT_TYPES_READ_REFERENCE} }; const { GET: readEvent } = events; characteristic.on(readEvent, handler);`;
+  const unrelated = 'const events = { GET: other.GET }; const { GET } = events; characteristic.on(GET, handler);';
+  const shadowedObject = `
+const events = { GET: hap.${EVENT_TYPES_READ_REFERENCE} };
+function run(events: Events) { const { GET } = events; characteristic.on(GET, handler); }
+`;
+  const shadowedEvent = `
+const events = { GET: hap.${EVENT_TYPES_READ_REFERENCE} };
+const { GET } = events;
+function run(GET: string) { characteristic.on(GET, handler); }
+`;
+
+  // act
+  const registrations = {
+    direct: registersReadHandler(direct),
+    renamed: registersReadHandler(renamed),
+    unrelated: registersReadHandler(unrelated),
+    shadowedObject: registersReadHandler(shadowedObject),
+    shadowedEvent: registersReadHandler(shadowedEvent),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { direct: true, renamed: true, unrelated: false, shadowedObject: false, shadowedEvent: false });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {
