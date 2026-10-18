@@ -173,6 +173,9 @@ const DEGRADATION_WARNING =
 // it survived cannot be satisfied by a seed.
 const USER_RENAME = 'Fuse Box';
 
+// A distinct read value left by the case so an unexpected StatusActive push is visible.
+const UNREPUBLISHED_STATUS = 'left by the case';
+
 // The four accessory modules checked for prohibited source idioms, named so a violation fails at
 // its source rather than through a downstream symptom.
 const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
@@ -2582,18 +2585,18 @@ describe('createBasementGuardianAccessory', () => {
   test('CTRL-03 refuses an off write, sends nothing, and makes the switch readable again on the deferral it recorded', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { timers, calls } = recordingTimers();
+    const { timers: recordedTimers, calls } = recordingTimers();
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const deferred: (() => void)[] = [];
-    const recording: Timers = {
-      ...timers,
+    const timers: Timers = {
+      ...recordedTimers,
       setTimeout: (handler, delayMs) => {
         deferred.push(handler);
 
-        return timers.setTimeout(handler, delayMs);
+        return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    geminiAccessory(accessory, { test_running: false }, { timers: recording, commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
+    geminiAccessory(accessory, { test_running: false }, { timers, commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act & assert
     await assert.rejects(
@@ -2927,7 +2930,7 @@ describe('createBasementGuardianAccessory', () => {
   test('returns the Switch to the value the device reported when a press is refused during shadow silence', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { timers } = recordingTimers();
+    const { timers: recordedTimers } = recordingTimers();
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     // The clearing push alone, told apart by the delay it was armed at. Running the request's own
@@ -2935,17 +2938,17 @@ describe('createBasementGuardianAccessory', () => {
     // `On` from its own projection -- which is the very value this case is checking the write path
     // arrived at independently. The case would pass whatever the write path answered.
     const clearingPushes: (() => void)[] = [];
-    const recording: Timers = {
-      ...timers,
+    const timers: Timers = {
+      ...recordedTimers,
       setTimeout: (handler, delayMs) => {
         if (delayMs === 0) {
           clearingPushes.push(handler);
         }
 
-        return timers.setTimeout(handler, delayMs);
+        return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands });
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers, commands });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
@@ -3037,22 +3040,22 @@ describe('createBasementGuardianAccessory', () => {
   test('resolves a request the device confirmed on the snapshot that withdrew the control scope', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { timers } = recordingTimers();
+    const { timers: recordedTimers } = recordingTimers();
     const { log, warnings } = recordingLog();
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
-    const recording: Timers = {
-      ...timers,
+    const timers: Timers = {
+      ...recordedTimers,
       setTimeout: (handler, delayMs) => {
         if (delayMs === PENDING_WINDOW_MS) {
           windowClosings.push(handler);
         }
 
-        return timers.setTimeout(handler, delayMs);
+        return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers, commands, log });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
@@ -3074,22 +3077,22 @@ describe('createBasementGuardianAccessory', () => {
   test('resolves a request the device confirmed on the snapshot that first went quiet', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { timers } = recordingTimers();
+    const { timers: recordedTimers } = recordingTimers();
     const { log, warnings } = recordingLog();
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
-    const recording: Timers = {
-      ...timers,
+    const timers: Timers = {
+      ...recordedTimers,
       setTimeout: (handler, delayMs) => {
         if (delayMs === PENDING_WINDOW_MS) {
           windowClosings.push(handler);
         }
 
-        return timers.setTimeout(handler, delayMs);
+        return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers, commands, log });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
@@ -3116,22 +3119,22 @@ describe('createBasementGuardianAccessory', () => {
   test('still warns when the window closes on a request no report ever confirmed', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { timers } = recordingTimers();
+    const { timers: recordedTimers } = recordingTimers();
     const { log, warnings } = recordingLog();
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
-    const recording: Timers = {
-      ...timers,
+    const timers: Timers = {
+      ...recordedTimers,
       setTimeout: (handler, delayMs) => {
         if (delayMs === PENDING_WINDOW_MS) {
           windowClosings.push(handler);
         }
 
-        return timers.setTimeout(handler, delayMs);
+        return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers: recording, commands, log });
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { timers, commands, log });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
@@ -3559,7 +3562,7 @@ describe('createBasementGuardianAccessory', () => {
     const basementGuardianAccessory = geminiAccessory(accessory, {});
     basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
     const service = serviceOf(accessory, 'Sump Pit Flood');
-    service.updateCharacteristic(HAP.Characteristic.StatusActive, USER_RENAME);
+    service.updateCharacteristic(HAP.Characteristic.StatusActive, UNREPUBLISHED_STATUS);
     const before = publishedValues(accessory);
 
     // act
