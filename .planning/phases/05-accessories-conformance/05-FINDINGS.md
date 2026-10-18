@@ -2076,3 +2076,11 @@ pre-round-5 checks by 2026-10-18T18:03:38Z on Node v26.12.0 and npm 11.20.0:
 `npm run test:unpaired:compiled` exited 0; and the ledger tracer exited 0
 (`inventory=31 findings=206 open=5 rounds=36`). These five IDs remain `open` until the
 independent round-5 review confirms their repairs.
+
+After the five round-5 findings received repair commits under the recorded maintainer
+resolution, clean HEAD `23e8eaa28313a60350097e45640ab2fdf8e97849` passed fresh
+pre-round-6 checks by 2026-10-18T19:31:50Z on Node v26.12.0 and npm 11.20.0:
+`npm run build:test` exited 0; the four compiled gate owners exited 0 with 58/58 tests;
+`npm run test:unpaired:compiled` exited 0; and the ledger tracer exited 0
+(`inventory=31 findings=211 open=5 rounds=37`). These five IDs remain `open` until the
+independent round-6 review confirms their repairs.
