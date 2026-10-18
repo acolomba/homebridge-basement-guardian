@@ -1967,3 +1967,16 @@ and `05-ledger-tracer.mjs --headers --batch ACCESSORY` exited 0 with `files=2`.
 104 scenarios passed, 1,156 steps passed, and `Merged LCOV: coverage/direct.lcov (43 pairs)`.
 The first sandboxed attempt could not bind Cucumber's local `127.0.0.1` fake-cloud listeners
 (`listen EPERM`); the host-permission run above is the passing full gate.
+
+### 05-08
+
+Resume check at clean HEAD `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` on
+2026-10-18T13:51:44Z: `git status --porcelain` was empty, Node was v26.12.0, and the ledger
+tracer exited 0 (`inventory=27 findings=172 open=0 rounds=31`). No committed `### 05-08`
+record or GATES counter row existed. This HEAD is the GATES batch base. The four compiled gate
+owners each exited 0: timerFreedom 3/3, hapImportScope 16/16, accessoryReadPathScope 5/5,
+and hapWriteFidelity 18/18. Using the gates' own recursive `.ts` enumeration rule, the tree
+has 43 files under `src`, 68 under `test`, 22 under `features`, and 10 under
+`src/accessories`; the HAP gate's three roots contain 133 files in total. The RED header
+tracer exited 1 and named each of the four gates at line 1 for its missing SPDX line.
+`fallow guard` on all four gates exited 0.
