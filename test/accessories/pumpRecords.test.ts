@@ -372,12 +372,11 @@ test('withholds the self-test label until both device timestamps have settled', 
   const completed = { backupRunning: false, testRunning: false, backupActivatedAt: NEW_BACKUP_SECONDS, testedAt: NEW_TEST_SECONDS };
 
   // act
-  const labels: (boolean | undefined)[] = [];
-
-  for (const phase of [idle, running, stopped, completed, completed]) {
+  const labels = [idle, running, stopped, completed, completed].map((phase) => {
     records.observe(observation({ receivedAt: OBSERVED_AT, ...phase }));
-    labels.push(records.backup.lastActivationWasTestActivity);
-  }
+
+    return records.backup.lastActivationWasTestActivity;
+  });
 
   // assert
   assert.deepStrictEqual(labels, [undefined, undefined, undefined, undefined, true]);
@@ -540,7 +539,7 @@ test('withholds the self-test label from a watched backup run whose device times
   const timestamped = { ...settled, backupActivatedAt: laterBackupSeconds };
   records.observe(observation(settled));
   records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled }));
-  const labels: (boolean | undefined)[] = [records.backup.lastActivationWasTestActivity];
+  const labels = [records.backup.lastActivationWasTestActivity];
 
   // act
   for (const phase of [running, running, settled, timestamped]) {
@@ -598,10 +597,16 @@ test('schedules nothing at all across one observation', (t) => {
 // The one line the module writes about an unreadable record.
 const UNREADABLE_RECORD_WARNING = 'The stored pump observation record could not be read, so observation starts again from now.';
 
+// One row of the cases below: what is wrong with the stored record, and the stored members.
+interface DamagedRecordRow {
+  readonly cause: string;
+  readonly stored: Record<string, unknown>;
+}
+
 // Every way a restored record can fail to be readable. A half-read record is repaired by nobody:
 // it is replaced by a fresh observation start, because a count assembled out of a broken record is
 // a number an owner would read as a fact about their basement.
-const DAMAGED_RECORDS: readonly { readonly cause: string; readonly stored: Record<string, unknown> }[] = [
+const DAMAGED_RECORDS: readonly DamagedRecordRow[] = [
   { cause: 'a pump record that is not an object at all', stored: { primaryPump: 'primary' } },
   { cause: 'a pump record that is null', stored: { primaryPump: null } },
   { cause: 'a pump record missing its observation start', stored: { primaryPump: { activationCount: 4 } } },
