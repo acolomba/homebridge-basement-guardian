@@ -311,6 +311,17 @@ const makeRequire = createRequire;
 const loadModule = makeRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const ALTERNATE_BASE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(new URL('./probe.js', import.meta.url));
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
+const LOADER_ALIAS_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const load = loadModule;
+const hap = load('${HAP_PACKAGE_SPECIFIER}');
+`;
 const SHADOWED_CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -324,6 +335,11 @@ const makeRequire = createRequire;
 function run(makeRequire: (url: string) => (name: string) => void) {
   const loadModule = makeRequire(import.meta.url);
   loadModule('${HAP_PACKAGE_SPECIFIER}');
+}
+`;
+const UNRELATED_LOADER_CALL = `
+function run(load: (name: string) => void) {
+  load('${HAP_PACKAGE_SPECIFIER}');
 }
 `;
 const COMMENT_INTERLEAVED_IMPORT = `
@@ -378,6 +394,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     computedCreateRequire: importsHapPackage(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsHapPackage(DEFAULT_CREATE_REQUIRE_IMPORT),
     aliasedCreateRequire: importsHapPackage(ALIASED_CREATE_REQUIRE_IMPORT),
+    alternateBaseCreateRequire: importsHapPackage(ALTERNATE_BASE_CREATE_REQUIRE_IMPORT),
+    loaderAlias: importsHapPackage(LOADER_ALIAS_IMPORT),
     commentInterleaved: importsHapPackage(COMMENT_INTERLEAVED_IMPORT),
     subpath: importsHapPackage(HAP_SUBPATH_IMPORT),
     reExported: importsHapPackage(RE_EXPORTED_IMPORT),
@@ -398,6 +416,8 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     computedCreateRequire: true,
     defaultCreateRequire: true,
     aliasedCreateRequire: true,
+    alternateBaseCreateRequire: true,
+    loaderAlias: true,
     commentInterleaved: true,
     subpath: true,
     reExported: true,
@@ -411,10 +431,17 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     unrelatedImport: importsHapPackage(UNRELATED_IMPORT),
     shadowedCreateRequire: importsHapPackage(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsHapPackage(SHADOWED_CREATOR_ALIAS_IMPORT),
+    unrelatedLoaderCall: importsHapPackage(UNRELATED_LOADER_CALL),
   };
 
   // assert
-  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false, shadowedCreateRequire: false, shadowedCreatorAlias: false });
+  assert.deepStrictEqual(imports, {
+    comment: false,
+    unrelatedImport: false,
+    shadowedCreateRequire: false,
+    shadowedCreatorAlias: false,
+    unrelatedLoaderCall: false,
+  });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {

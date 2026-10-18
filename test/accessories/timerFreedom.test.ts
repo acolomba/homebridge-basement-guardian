@@ -111,6 +111,23 @@ const makeRequire = createRequire;
 const loadModule = makeRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
 `;
+const ALTERNATE_BASE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(new URL('./probe.js', import.meta.url));
+const timers = loadModule('node:timers/promises');
+`;
+const PATH_BASE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+import { join } from 'node:path';
+const loadModule = createRequire(join(process.cwd(), 'probe.js'));
+const timers = loadModule('node:timers/promises');
+`;
+const LOADER_ALIAS_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const load = loadModule;
+const timers = load('node:timers/promises');
+`;
 const SHADOWED_CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -124,6 +141,11 @@ const makeRequire = createRequire;
 function run(makeRequire: (url: string) => (name: string) => void) {
   const loadModule = makeRequire(import.meta.url);
   loadModule('node:timers/promises');
+}
+`;
+const UNRELATED_LOADER_CALL = `
+function run(load: (name: string) => void) {
+  load('node:timers/promises');
 }
 `;
 const COMMENT_INTERLEAVED_IMPORT = `
@@ -174,6 +196,9 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     computedCreateRequire: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsDeferredExecution(DEFAULT_CREATE_REQUIRE_IMPORT),
     aliasedCreateRequire: importsDeferredExecution(ALIASED_CREATE_REQUIRE_IMPORT),
+    alternateBaseCreateRequire: importsDeferredExecution(ALTERNATE_BASE_CREATE_REQUIRE_IMPORT),
+    pathBaseCreateRequire: importsDeferredExecution(PATH_BASE_CREATE_REQUIRE_IMPORT),
+    loaderAlias: importsDeferredExecution(LOADER_ALIAS_IMPORT),
     commentInterleaved: importsDeferredExecution(COMMENT_INTERLEAVED_IMPORT),
     reExported: importsDeferredExecution(RE_EXPORTED_IMPORT),
   };
@@ -193,6 +218,9 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     computedCreateRequire: true,
     defaultCreateRequire: true,
     aliasedCreateRequire: true,
+    alternateBaseCreateRequire: true,
+    pathBaseCreateRequire: true,
+    loaderAlias: true,
     commentInterleaved: true,
     reExported: true,
   });
@@ -205,8 +233,15 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     unrelatedImport: importsDeferredExecution(UNRELATED_NODE_IMPORT),
     shadowedCreateRequire: importsDeferredExecution(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsDeferredExecution(SHADOWED_CREATOR_ALIAS_IMPORT),
+    unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
   };
 
   // assert
-  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false, shadowedCreateRequire: false, shadowedCreatorAlias: false });
+  assert.deepStrictEqual(imports, {
+    comment: false,
+    unrelatedImport: false,
+    shadowedCreateRequire: false,
+    shadowedCreatorAlias: false,
+    unrelatedLoaderCall: false,
+  });
 });

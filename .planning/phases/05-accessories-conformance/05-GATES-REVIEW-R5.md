@@ -116,6 +116,12 @@ No full `npm run check`, isolated pair coverage or Cucumber run is claimed for t
 
 No source or test file was edited. No mutation experiment or commit was performed.
 
+## Repair history
+
+| Cause | Verification | Repair |
+| --- | --- | --- |
+| CR-05-GATES-035 | Node v26.12.0: `fallow guard` exited 0. The three owners' planted load cases failed on the intended alternate-base and loader-alias assertions before the helper changed (`node --test` exit 1). After the repair, `npm run build:test`, the four compiled GATES owners (53/53), `npm run test:unpaired`, and `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9` exited 0; audit verdict pass. D-04 control: disabling loader-alias propagation made the timer case fail on `loaderAlias` (exit 1). Restoring source blob `af59b3fdccb4ed6858e34d333c169c9029febd10` made that case pass (exit 0). | The shared scanner recognizes imported `createRequire` calls with alternate URL or path bases and follows local aliases of their loaders by TypeScript symbol. Each import gate plants a forbidden alternate-base load and a loader-alias load, plus an unrelated function-call negative. The timer gate also covers a `join(process.cwd(), 'probe.js')` base. |
+
 
 ## Coordinator triage
 

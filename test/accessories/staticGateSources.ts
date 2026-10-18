@@ -22,7 +22,6 @@ import {
   isExportDeclaration,
   isIdentifier,
   isImportDeclaration,
-  isMetaProperty,
   isNamedImports,
   isNamespaceImport,
   isNoSubstitutionTemplateLiteral,
@@ -123,17 +122,6 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
   return { named, namespaces };
 }
 
-function importsMetaUrl(node: Node | undefined): boolean {
-  return (
-    node !== undefined &&
-    isPropertyAccessExpression(node) &&
-    node.name.text === 'url' &&
-    isMetaProperty(node.expression) &&
-    node.expression.keywordToken === SyntaxKind.ImportKeyword &&
-    node.expression.name.text === 'meta'
-  );
-}
-
 function callsImportedCreator(call: CallExpression, checker: TypeChecker, named: ReadonlySet<Symbol>, namespaces: ReadonlySet<Symbol>): boolean {
   const callee = call.expression;
   if (isIdentifier(callee)) {
@@ -160,7 +148,7 @@ function requireBinding(node: Node, checker: TypeChecker, named: ReadonlySet<Sym
     return undefined;
   }
 
-  if (!callsImportedCreator(node.initializer, checker, named, namespaces) || !importsMetaUrl(node.initializer.arguments[0])) {
+  if (!callsImportedCreator(node.initializer, checker, named, namespaces)) {
     return undefined;
   }
 
@@ -178,6 +166,7 @@ export function importSpecifiers(source: string): readonly string[] {
   const checker = createProgram([file.fileName], options, host).getTypeChecker();
   const { named, namespaces } = importedCreators(file, checker);
   const requireSymbols = new Set<Symbol>();
+  const requireAliases: { source: Symbol; alias: Symbol }[] = [];
 
   function collectRequire(node: Node): void {
     const symbol = requireBinding(node, checker, named, namespaces);
@@ -185,10 +174,28 @@ export function importSpecifiers(source: string): readonly string[] {
       requireSymbols.add(symbol);
     }
 
+    if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer && isIdentifier(node.initializer)) {
+      const source = checker.getSymbolAtLocation(node.initializer);
+      const alias = checker.getSymbolAtLocation(node.name);
+      if (source && alias) {
+        requireAliases.push({ source, alias });
+      }
+    }
+
     forEachChild(node, collectRequire);
   }
 
   collectRequire(file);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const { source, alias } of requireAliases) {
+      if (requireSymbols.has(source) && !requireSymbols.has(alias)) {
+        requireSymbols.add(alias);
+        added = true;
+      }
+    }
+  }
 
   function visit(node: Node): void {
     if ((isImportDeclaration(node) || isExportDeclaration(node)) && node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {

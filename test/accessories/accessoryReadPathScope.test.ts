@@ -262,6 +262,17 @@ const makeRequire = createRequire;
 const loadModule = makeRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const ALTERNATE_BASE_CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(new URL('./probe.js', import.meta.url));
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const LOADER_ALIAS_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const loadModule = createRequire(import.meta.url);
+const load = loadModule;
+const cloud = load('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
 const SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -275,6 +286,11 @@ const makeRequire = createRequire;
 function run(makeRequire: (url: string) => (name: string) => void) {
   const loadModule = makeRequire(import.meta.url);
   loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+}
+`;
+const UNRELATED_LOADER_CALL = `
+function run(load: (name: string) => void) {
+  load('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 }
 `;
 
@@ -383,6 +399,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
     computedCreateRequireCloud: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT),
     defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
     aliasedCreateRequireCloud: reachesTheNetworkTier(ALIASED_CREATE_REQUIRE_CLOUD_IMPORT),
+    alternateBaseCreateRequireCloud: reachesTheNetworkTier(ALTERNATE_BASE_CREATE_REQUIRE_CLOUD_IMPORT),
+    loaderAliasCloud: reachesTheNetworkTier(LOADER_ALIAS_CLOUD_IMPORT),
   };
 
   // assert
@@ -400,6 +418,8 @@ test('reports a planted import of the cloud client and of the account runtime (D
     computedCreateRequireCloud: true,
     defaultCreateRequireCloud: true,
     aliasedCreateRequireCloud: true,
+    alternateBaseCreateRequireCloud: true,
+    loaderAliasCloud: true,
   });
 });
 
@@ -410,8 +430,15 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
     shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
     shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
+    unrelatedLoaderCall: reachesTheNetworkTier(UNRELATED_LOADER_CALL),
   };
 
   // assert
-  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false, shadowedCreateRequire: false, shadowedCreatorAlias: false });
+  assert.deepStrictEqual(detections, {
+    comment: false,
+    unrelatedImport: false,
+    shadowedCreateRequire: false,
+    shadowedCreatorAlias: false,
+    unrelatedLoaderCall: false,
+  });
 });
