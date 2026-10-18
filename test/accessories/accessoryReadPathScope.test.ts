@@ -74,6 +74,7 @@ const READ_HANDLER_METHOD = 'onGet';
 
 /** The event name the same registration carries when it goes through the event emitter. */
 const READ_HANDLER_EVENT = 'get';
+const READ_EVENT_LISTENER_METHODS = new Set(['on', 'addListener', 'once', 'prependListener', 'prependOnceListener']);
 
 /** The enumeration naming that event, and the member of it that is the read. */
 const EVENT_TYPES_ENUM = 'CharacteristicEventTypes';
@@ -150,7 +151,10 @@ function registersReadHandler(source: string): boolean {
     if (isCallExpression(node)) {
       const method = staticMember(node.expression)?.name;
       const event = node.arguments[0];
-      if (method === READ_HANDLER_METHOD || (method === 'on' && event && (literalText(event) === READ_HANDLER_EVENT || isReadEvent(event)))) {
+      if (
+        method === READ_HANDLER_METHOD ||
+        (method && READ_EVENT_LISTENER_METHODS.has(method) && event && (literalText(event) === READ_HANDLER_EVENT || isReadEvent(event)))
+      ) {
         registered = true;
       }
     }
@@ -208,6 +212,16 @@ characteristic['on']('${READ_HANDLER_EVENT}', (callback) => { callback(null, fal
 const BACKTICK_EVENT_HANDLER = 'characteristic.on(`' + READ_HANDLER_EVENT + '`, (callback) => { callback(null, false); });';
 const BACKTICK_COMPUTED_METHOD_HANDLER = 'characteristic[`' + READ_HANDLER_METHOD + '`](() => false);';
 const BACKTICK_COMPUTED_EVENT_HANDLER = 'characteristic[`on`](`' + READ_HANDLER_EVENT + '`, (callback) => { callback(null, false); });';
+const ADD_LISTENER_READ_HANDLER = `characteristic.addListener('${READ_HANDLER_EVENT}', handler);`;
+const ONCE_READ_HANDLER = `characteristic.once('${READ_HANDLER_EVENT}', handler);`;
+const PREPEND_LISTENER_READ_HANDLER = `characteristic.prependListener('${READ_HANDLER_EVENT}', handler);`;
+const PREPEND_ONCE_LISTENER_READ_HANDLER = `characteristic.prependOnceListener('${READ_HANDLER_EVENT}', handler);`;
+const OTHER_EVENT_LISTENERS = `
+characteristic.addListener('change', handler);
+characteristic.once('change', handler);
+characteristic.prependListener('change', handler);
+characteristic.prependOnceListener('change', handler);
+`;
 const DIAGNOSTIC_STRING = `
 const diagnostic = "characteristic.${READ_HANDLER_METHOD}(() => false)";
 const eventDiagnostic = "characteristic.on(hap.${EVENT_TYPES_READ_REFERENCE}, handler)";
@@ -368,6 +382,10 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     backtickEvent: registersReadHandler(BACKTICK_EVENT_HANDLER),
     backtickComputedMethod: registersReadHandler(BACKTICK_COMPUTED_METHOD_HANDLER),
     backtickComputedEvent: registersReadHandler(BACKTICK_COMPUTED_EVENT_HANDLER),
+    addListener: registersReadHandler(ADD_LISTENER_READ_HANDLER),
+    once: registersReadHandler(ONCE_READ_HANDLER),
+    prependListener: registersReadHandler(PREPEND_LISTENER_READ_HANDLER),
+    prependOnceListener: registersReadHandler(PREPEND_ONCE_LISTENER_READ_HANDLER),
   };
 
   // assert
@@ -386,7 +404,19 @@ test('reports a planted read handler in every spelling it is meant to catch (D-0
     backtickEvent: true,
     backtickComputedMethod: true,
     backtickComputedEvent: true,
+    addListener: true,
+    once: true,
+    prependListener: true,
+    prependOnceListener: true,
   });
+});
+
+test('ignores other EventEmitter events in the read-handler gate', () => {
+  // act
+  const registration = registersReadHandler(OTHER_EVENT_LISTENERS);
+
+  // assert
+  assert.strictEqual(registration, false);
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {

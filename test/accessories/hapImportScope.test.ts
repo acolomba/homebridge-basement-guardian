@@ -97,6 +97,7 @@ const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customChar
 const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
 
 const ERRORED_CHARACTERISTIC = 'HapStatusError';
+const SET_EVENT_LISTENER_METHODS = new Set(['on', 'addListener', 'once', 'prependListener', 'prependOnceListener']);
 
 function importsHapPackage(source: string): boolean {
   return importSpecifiers(source).some((specifier) => specifier === HAP_PACKAGE_SPECIFIER || specifier.startsWith(`${HAP_PACKAGE_SPECIFIER}/`));
@@ -207,7 +208,8 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     if (isCallExpression(node) && (isPropertyAccessExpression(node.expression) || isElementAccessExpression(node.expression))) {
       const member = node.expression;
       const firstArgument = node.arguments[0];
-      if (staticMemberName(member) === 'on' && firstArgument && isSetEvent(firstArgument, aliasOf)) {
+      const method = staticMemberName(member);
+      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf)) {
         uses.setEvent = true;
       }
 
@@ -545,6 +547,43 @@ test('counts local aliases of HAP UUID generation and set events', () => {
 
   // assert
   assert.deepStrictEqual(uses, { uuidAlias: true, setEventAlias: true });
+});
+
+test('counts EventEmitter methods that register set listeners', () => {
+  // arrange
+  const registrations = {
+    addListener: sourceFileOf('characteristic.addListener("set", handler);'),
+    once: sourceFileOf('characteristic.once("set", handler);'),
+    prependListener: sourceFileOf('characteristic.prependListener("set", handler);'),
+    prependOnceListener: sourceFileOf('characteristic.prependOnceListener("set", handler);'),
+  };
+
+  // act
+  const uses = {
+    addListener: hapUses(registrations.addListener).setEvent,
+    once: hapUses(registrations.once).setEvent,
+    prependListener: hapUses(registrations.prependListener).setEvent,
+    prependOnceListener: hapUses(registrations.prependOnceListener).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { addListener: true, once: true, prependListener: true, prependOnceListener: true });
+});
+
+test('ignores other EventEmitter events in the direct-set gate', () => {
+  // arrange
+  const source = `
+characteristic.addListener('get', handler);
+characteristic.once('get', handler);
+characteristic.prependListener('get', handler);
+characteristic.prependOnceListener('get', handler);
+`;
+
+  // act
+  const uses = hapUses(sourceFileOf(source));
+
+  // assert
+  assert.strictEqual(uses.setEvent, false);
 });
 
 test('ignores aliases of unrelated UUID and event APIs', () => {
