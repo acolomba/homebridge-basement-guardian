@@ -447,3 +447,9 @@ Counts: opening 0, fixed 0, rejected 0, new 29, reopened 0, closing 29 (7 BLOCKE
   (closed CONTROLS batch). Because the tracer allows one inventory row per path, the ACCESSORY
   correction rounds read that hunk as a reference outside `files_reviewed_list`. It follows the D-04
   sequence with `05-BASEMENT-GUARDIAN-RED-EVIDENCE.json`.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-ACCESSORY-009 | `src/accessories/basementGuardian.ts`, `test/accessories/basementGuardian.test.ts`, `.planning/phases/05-accessories-conformance/05-ACCESSORY-REVIEW.md` | Node v26.12.0: `node_modules/.bin/fallow guard src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` exit 0; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --batch ACCESSORY` exit 0 (`ACCESSORIES_HEADERS_OK files=2`); `npm run build:test` exit 0; `node --test dist-test/test/accessories/basementGuardian.test.js` exit 0 (157 tests, 157 pass, 0 fail); `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` exit 0 (pair at 100%); `node_modules/.bin/fallow audit --base 9cb164b1299249c2d2083ea81677c83e28e66916 --format json --quiet --explain` exit 0, verdict pass; `SKIP=npm-check pre-commit run --files` on the three named paths exit 0 | n/a (WARNING) | Header-only: source overview and code unchanged; test gains an overview above unchanged imports. The first audit attempt exited 2 because the sandbox denied its temporary Git worktree; the permitted rerun exited 0. |
