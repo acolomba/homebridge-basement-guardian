@@ -115,8 +115,10 @@ function manifestOwning(entryPath: string, name: string): InstalledManifest {
       if (manifest.name === name) {
         return manifest;
       }
-    } catch {
-      // Not every directory on the way up carries a manifest; the walk continues.
+    } catch (error: unknown) {
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+        throw error;
+      }
     }
 
     directory = dirname(directory);
