@@ -8,13 +8,12 @@
  * @fileoverview DEV-05: the two-consecutive-trustworthy-absence removal
  * state machine.
  *
- * `observe` takes a caller-verified-trustworthy inventory response -- the
- * full deviceId set one poll reported, after the caller has already
- * confirmed the response was HTTP 200 and schema-valid (D-02: a valid
- * empty list is a trustworthy response too). This module makes no such
- * judgment itself: its sole input is a deviceId list, so a failed,
- * non-2xx, or schema-invalid response can never reach it and can never
- * advance or reset a count (D-029).
+ * Its inputs are deviceIds only. `observe` takes the full list one
+ * inventory response reported, after the caller has confirmed that the
+ * response was successful (2xx) and schema-valid (D-02: a valid empty list
+ * is a trustworthy response too). `present` and `forget` each take one
+ * deviceId, which the caller records as present or stops tracking. This
+ * module makes no trustworthiness judgment itself (D-029).
  *
  * Tracking is by `deviceId` alone (D-003), so this module composes with
  * any current or future device family without change.
