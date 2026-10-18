@@ -177,7 +177,7 @@ const ERRORED_CHARACTERISTIC = 'HapStatusError';
 
 // The modules that must never name it at all. `serviceCatalogue.ts` is deliberately absent:
 // `D-10` grants it exactly one, and the case below pins the count and where that one sits rather
-// than permitting the module wholesale (03-CONTEXT D-05).
+// than permitting the module wholesale.
 const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
 
 // The namespace holds no per-scenario state: a service and its characteristics live on the
