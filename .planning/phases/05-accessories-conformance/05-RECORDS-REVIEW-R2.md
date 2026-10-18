@@ -232,3 +232,9 @@ closing 4. The open count fell from 5 to 4 with no reopen in round 2, so the res
   `AccessoryContext` top-level identity members against the `device` object the platform stores,
   go to Phase 6 (the platform). They are recorded for the phase verifier.
 - **Repair order:** the D-04 bug (038); then 040 and 041 (comments); then 039 (test).
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-RECORDS-038 | `src/accessories/pumpRecords.ts`, `test/accessories/pumpRecords.test.ts` | Node v26.12.0: `fallow guard` 0; `npm run build:test` 0; `node --test dist-test/test/accessories/pumpRecords.test.js` 0 (tests 43, pass 43, fail 0); `npm run test:coverage:direct -- src/accessories/pumpRecords.ts test/accessories/pumpRecords.test.ts` 0; `eslint --max-warnings=0` 0; `npm run typecheck` 0; every unit module `node --test $(find dist-test/test -name '*.test.js' \| sort)` 0 (59 files, tests 1636, pass 1636, fail 0); `npx cucumber-js` 0 (104 scenarios, 1156 steps, all passed); `fallow audit --base 0c0930e` 0, verdict pass | RED evidence 5105051 (D-04) | `observe` reconciles the backup timestamp before it marks a watched backup edge, so an advance that arrives with the edge is read as an earlier run's timestamp (recovered on the device clock, absorbed for an earlier awaiting edge, or seeded as the baseline) and the edge's run then awaits its own timestamp. The active regression case `reads a timestamp advance that arrives with a backup edge as an earlier run` is committed byte for byte and passes. No existing case changed its expectation. Comments: the `reconcileBackupTimestamp` rule (`:291-299`) now says "the first advance in a later observation" and states the same-observation rule, and the call site carries the order reason. Kept: the persisted keys, the 032 first-timestamp trade-off, absorption of a later advance, the classification rule and every log line. |

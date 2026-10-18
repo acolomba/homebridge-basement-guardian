@@ -640,6 +640,35 @@ test('withholds the self-test label from a watched backup run whose device times
   );
 });
 
+// The device publishes a backup run's timestamp only after that run stops. A timestamp advance that
+// arrives with a backup edge therefore belongs to an earlier run, here a self-test that ended between
+// two observations. The record counts that earlier run on the device clock and the watched run at
+// its receipt time. The watched run still awaits its own timestamp, so the settled self-test values
+// of the earlier run do not label it while it runs.
+test('reads a timestamp advance that arrives with a backup edge as an earlier run', () => {
+  // arrange
+  const { records, context } = pumpRecords(storedContext());
+  const earlierSelfTest = {
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  records.observe(observation({ backupRunning: false, testRunning: false, backupActivatedAt: PRIOR_BACKUP_SECONDS, testedAt: PRIOR_TEST_SECONDS }));
+
+  // act
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupRunning: true, ...earlierSelfTest }));
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: true, ...earlierSelfTest }));
+
+  // assert
+  assert.deepStrictEqual(
+    { backup: records.backup, awaitingTimestamp: context.watermarks?.backupEdgeAwaitingTimestamp },
+    {
+      backup: { observationStartedAt: OBSERVED_AT, activationCount: 2, lastActivationAt: OBSERVED_NEXT_AT, lastActivationWasTestActivity: undefined },
+      awaitingTimestamp: true,
+    },
+  );
+});
+
 // A write per poll would be a write while the basement is dry. Change detection is what keeps it to
 // a few small writes per pump cycle.
 test('asks for one write for a counted activation and none for an unchanged snapshot', () => {

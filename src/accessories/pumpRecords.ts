@@ -289,12 +289,14 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   }
 
   // The device publishes a new backup-pump timestamp only after the pump stops, so the record takes
-  // the first advance following a watched backup edge as the run that edge already counted.
-  // Absorbing it -- moving the watermark without counting and without moving the last activation --
-  // is what keeps one physical run from being reported as two, and leaves that run's record written
-  // from one clock rather than two (D-010). The mark that an edge awaits its timestamp is stored
-  // with the watermarks, so a record resumed after a restart still counts nothing for the next new
-  // backup timestamp.
+  // the first advance in a later observation than a watched backup edge as the run that edge
+  // already counted. An advance in the observation of the edge itself belongs to an earlier run,
+  // which is why `observe` reconciles it before it marks the edge. Absorbing an advance -- moving
+  // the watermark without counting and without moving the last activation -- is what keeps one
+  // physical run from being reported as two, and leaves that run's record written from one clock
+  // rather than two (D-010). The mark that an edge awaits its timestamp is stored with the
+  // watermarks, so a record resumed after a restart still counts nothing for the next new backup
+  // timestamp.
   function reconcileBackupTimestamp(stored: StoredRecord, reportedAt: number | undefined): boolean {
     if (!evidencesAMissedActivation(stored.watermarks.backupPumpTimestamp, reportedAt)) {
       return false;
@@ -373,6 +375,11 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
         changed = true;
       }
 
+      // The backup timestamp is reconciled before the backup edge is marked, so an advance that
+      // arrives with the edge is read as an earlier run's and the run of this edge still awaits its
+      // own timestamp (D-010).
+      changed = reconcileBackupTimestamp(stored, observation.backupActivatedAt) || changed;
+
       if (watchedAnActivation(previousBackupRunning, observation.backupRunning)) {
         countWatchedActivation(stored.backupPump, observation.receivedAt);
         dropTestActivityLabel(stored.backupPump);
@@ -380,7 +387,6 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
         changed = true;
       }
 
-      changed = reconcileBackupTimestamp(stored, observation.backupActivatedAt) || changed;
       changed = reconcileClassification(stored, observation) || changed;
 
       previousPrimaryRunning = rememberedRunning(previousPrimaryRunning, observation.primaryRunning);
