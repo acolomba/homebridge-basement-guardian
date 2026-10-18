@@ -41,6 +41,8 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { createPrinter, createSourceFile, ScriptTarget } from 'typescript';
+
 /**
  * The package no module may reach except the one named below.
  *
@@ -108,7 +110,7 @@ function typeScriptFilesUnder(relativeDirectory: string): readonly string[] {
 
 // Module overviews explain forbidden idioms, so the HAP source checks inspect code without comments.
 function codeOf(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  return createPrinter({ removeComments: true }).printFile(createSourceFile('accessory.ts', source, ScriptTarget.Latest, true));
 }
 
 function accessoryCodeOf(module: string): string {
@@ -214,6 +216,17 @@ test('does not report the hand-built stand-in, whose own file overview names the
 
   // assert
   assert.deepStrictEqual(standInImport, { namesThePackage: true, importsThePackage: false });
+});
+
+test('ignores a trailing HAP status comment while preserving a string literal', () => {
+  // arrange
+  const source = 'const status = "HapStatusError"; // HapStatusError\n';
+
+  // act
+  const code = codeOf(source);
+
+  // assert
+  assert.strictEqual(code, 'const status = "HapStatusError";\n');
 });
 
 for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
