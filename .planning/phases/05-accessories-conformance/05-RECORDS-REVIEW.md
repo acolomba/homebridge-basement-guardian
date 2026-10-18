@@ -397,3 +397,9 @@ WARNING).
   does. S-05-07 is confirmed as 013.
 - **Repair order:** the pumpRecords header (011); then the D-04 bugs (001, then 002); then the
   remaining source causes and the test causes, file by file; any reindent goes last in its file.
+
+## Repair history
+
+| ID | Paths | Checks (raw exits, Node) | Control | Note |
+| --- | --- | --- | --- | --- |
+| CR-05-RECORDS-011 | `src/accessories/pumpRecords.ts`, `test/accessories/pumpRecords.test.ts` | Node v26.12.0: `node_modules/.bin/fallow guard src/accessories/pumpRecords.ts test/accessories/pumpRecords.test.ts` exit 0; `npm run build:test` exit 0; `node --test dist-test/test/accessories/pumpRecords.test.js` exit 0 (33 tests, 0 failures); `npm run test:coverage:direct -- src/accessories/pumpRecords.ts test/accessories/pumpRecords.test.ts` exit 0; `node_modules/.bin/eslint src/accessories/pumpRecords.ts test/accessories/pumpRecords.test.ts --max-warnings=0` exit 0; `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs --headers --paths src/accessories/pumpRecords.ts test/accessories/pumpRecords.test.ts` exit 0 (`ACCESSORIES_HEADERS_OK files=2`); `node_modules/.bin/fallow audit --base 0c0930e890cb41e74d0d4e854ba45c41a31fea4a --format json --quiet --explain` exit 0, verdict pass | n/a (WARNING) | header-only |
