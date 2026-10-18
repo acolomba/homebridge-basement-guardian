@@ -120,12 +120,27 @@ function addDestructuredCreators(file: SourceFile, checker: TypeChecker, named: 
   visit(file);
 }
 
-function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Symbol>): void {
+function isNamespaceCreatorMember(node: Expression, checker: TypeChecker, namespaces: ReadonlySet<Symbol>): boolean {
+  if (!isPropertyAccessExpression(node) && !isElementAccessExpression(node)) {
+    return false;
+  }
+
+  const member = isPropertyAccessExpression(node) ? node.name.text : fixedSpecifier(node.argumentExpression, checker);
+  if (member !== 'createRequire' || !isIdentifier(node.expression)) {
+    return false;
+  }
+
+  const namespace = checker.getSymbolAtLocation(node.expression);
+  return namespace !== undefined && namespaces.has(namespace);
+}
+
+function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Symbol>, namespaces: ReadonlySet<Symbol>): void {
   function visit(node: Node): void {
-    if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer && isIdentifier(node.initializer)) {
-      const source = checker.getSymbolAtLocation(node.initializer);
+    if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer) {
+      const initializer = node.initializer;
       const alias = checker.getSymbolAtLocation(node.name);
-      if (source && alias && named.has(source)) {
+      const source = isIdentifier(initializer) ? checker.getSymbolAtLocation(initializer) : undefined;
+      if (alias && ((source && named.has(source)) || isNamespaceCreatorMember(initializer, checker, namespaces))) {
         named.add(alias);
       }
     }
@@ -212,7 +227,7 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
 
   addNamespaceAliases(file, checker, namespaces);
   addDestructuredCreators(file, checker, named, namespaces);
-  addCreatorAliases(file, checker, named);
+  addCreatorAliases(file, checker, named, namespaces);
   return { named, namespaces };
 }
 

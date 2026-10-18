@@ -886,6 +886,46 @@ load('../cloud/api.js');
   assert.deepStrictEqual(detections, { module: true, unrelated: false });
 });
 
+test('detects copied createRequire members reaching the network from static and dynamic module namespaces', () => {
+  // act
+  const detections = {
+    staticMember: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const makeRequire = module.createRequire;
+const alias = makeRequire;
+const load = alias(import.meta.url);
+load('../cloud/api.js');
+`),
+    staticComputed: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const makeRequire = module['createRequire'];
+const load = makeRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+    dynamicMember: reachesTheNetworkTier(`
+const module = await import('node:module');
+const makeRequire = module.createRequire;
+const load = makeRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+    dynamicComputed: reachesTheNetworkTier(`
+const module = await import('node:module');
+const makeRequire = module['createRequire'];
+const load = makeRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+    unrelated: reachesTheNetworkTier(`
+const module = { createRequire: () => (name: string) => name };
+const makeRequire = module.createRequire;
+const load = makeRequire(import.meta.url);
+load('../cloud/api.js');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { staticMember: true, staticComputed: true, dynamicMember: true, dynamicComputed: true, unrelated: false });
+});
+
 test('rejects an accessory network loader call with an unresolved base', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve base in createRequire load' });
