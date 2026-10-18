@@ -393,6 +393,14 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const IMMEDIATE_CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const cloud = createRequire(import.meta.url)('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const cloud = createRequire(import.meta.url)(process.env.MODULE);
+`;
 const CONSTANT_CREATE_REQUIRE_CLOUD_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -467,6 +475,10 @@ const UNRELATED_LOADER_CALL = `
 function run(load: (name: string) => void) {
   load('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 }
+`;
+const UNRELATED_NESTED_CALL = `
+const other = () => (name: string) => name;
+const cloud = other()('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
 const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
 const other = { createRequire: () => (name: string) => name };
@@ -612,6 +624,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     computedConstantDynamicCloud: reachesTheNetworkTier(COMPUTED_CONSTANT_DYNAMIC_CLOUD_IMPORT),
     fixedTemplateDynamicCloud: reachesTheNetworkTier(FIXED_TEMPLATE_DYNAMIC_CLOUD_IMPORT),
     createRequireCloud: reachesTheNetworkTier(CREATE_REQUIRE_CLOUD_IMPORT),
+    immediateCreateRequireCloud: reachesTheNetworkTier(IMMEDIATE_CREATE_REQUIRE_CLOUD_IMPORT),
     constantCreateRequireCloud: reachesTheNetworkTier(CONSTANT_CREATE_REQUIRE_CLOUD_IMPORT),
     computedCreateRequireCloudSpecifier: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_SPECIFIER),
     namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
@@ -641,6 +654,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     computedConstantDynamicCloud: true,
     fixedTemplateDynamicCloud: true,
     createRequireCloud: true,
+    immediateCreateRequireCloud: true,
     constantCreateRequireCloud: true,
     computedCreateRequireCloudSpecifier: true,
     namespaceCreateRequireCloud: true,
@@ -663,6 +677,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
     shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
     unrelatedLoaderCall: reachesTheNetworkTier(UNRELATED_LOADER_CALL),
+    unrelatedNestedCall: reachesTheNetworkTier(UNRELATED_NESTED_CALL),
     unrelatedDestructuredCreateRequire: reachesTheNetworkTier(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
     unrelatedConstantDynamic: reachesTheNetworkTier(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: reachesTheNetworkTier(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
@@ -677,6 +692,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedNestedCall: false,
     unrelatedDestructuredCreateRequire: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
@@ -692,4 +708,9 @@ test('rejects an accessory network import with an unresolved target', () => {
 test('rejects an accessory network loader call with an unresolved target', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
+});
+
+test('rejects an immediate accessory network loader call with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => reachesTheNetworkTier(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });

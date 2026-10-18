@@ -290,7 +290,8 @@ export function importSpecifiers(source: string): readonly string[] {
     const callee = node.expression;
     const symbol = isIdentifier(callee) ? checker.getSymbolAtLocation(callee) : undefined;
     const dynamicImport = callee.kind === SyntaxKind.ImportKeyword;
-    if (!dynamicImport && !(symbol && requireSymbols.has(symbol))) {
+    const immediateRequire = isCallExpression(callee) && callsImportedCreator(callee, checker, named, namespaces);
+    if (!dynamicImport && !immediateRequire && !(symbol && requireSymbols.has(symbol))) {
       return;
     }
 

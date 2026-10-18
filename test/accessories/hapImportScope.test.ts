@@ -368,6 +368,14 @@ import { createRequire as makeRequire } from 'node:module';
 const loadModule = makeRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const IMMEDIATE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const hap = createRequire(import.meta.url)('${HAP_PACKAGE_SPECIFIER}');
+`;
+const UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const hap = createRequire(import.meta.url)(process.env.MODULE);
+`;
 const CONSTANT_CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -443,6 +451,10 @@ function run(load: (name: string) => void) {
   load('${HAP_PACKAGE_SPECIFIER}');
 }
 `;
+const UNRELATED_NESTED_CALL = `
+const other = () => (name: string) => name;
+const hap = other()('${HAP_PACKAGE_SPECIFIER}');
+`;
 const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
 const other = { createRequire: () => (name: string) => name };
 const { createRequire: makeRequire } = other;
@@ -501,6 +513,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedDynamic: importsHapPackage(DOUBLE_QUOTED_DYNAMIC_IMPORT),
     backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
+    immediateCreateRequire: importsHapPackage(IMMEDIATE_CREATE_REQUIRE_IMPORT),
     constantCreateRequire: importsHapPackage(CONSTANT_CREATE_REQUIRE_IMPORT),
     computedCreateRequireSpecifier: importsHapPackage(COMPUTED_CREATE_REQUIRE_SPECIFIER),
     namespaceCreateRequire: importsHapPackage(NAMESPACE_CREATE_REQUIRE_IMPORT),
@@ -531,6 +544,7 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     doubleQuotedDynamic: true,
     backtickDynamic: true,
     createRequire: true,
+    immediateCreateRequire: true,
     constantCreateRequire: true,
     computedCreateRequireSpecifier: true,
     namespaceCreateRequire: true,
@@ -555,6 +569,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     shadowedCreateRequire: importsHapPackage(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsHapPackage(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsHapPackage(UNRELATED_LOADER_CALL),
+    unrelatedNestedCall: importsHapPackage(UNRELATED_NESTED_CALL),
     unrelatedDestructuredCreateRequire: importsHapPackage(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     unrelatedConstantDynamic: importsHapPackage(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsHapPackage(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
@@ -568,6 +583,7 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedNestedCall: false,
     unrelatedDestructuredCreateRequire: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
@@ -583,6 +599,11 @@ test('rejects a HAP import with an unresolved target', () => {
 test('rejects a HAP loader call with an unresolved target', () => {
   // act & assert
   assert.throws(() => importsHapPackage(UNRESOLVED_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
+});
+
+test('rejects an immediate HAP loader call with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsHapPackage(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {

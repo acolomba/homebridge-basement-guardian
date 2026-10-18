@@ -130,6 +130,14 @@ import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
 `;
+const IMMEDIATE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const timers = createRequire(import.meta.url)('node:timers/promises');
+`;
+const UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const timers = createRequire(import.meta.url)(process.env.MODULE);
+`;
 const CONSTANT_CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
@@ -210,6 +218,10 @@ const UNRELATED_LOADER_CALL = `
 function run(load: (name: string) => void) {
   load('node:timers/promises');
 }
+`;
+const UNRELATED_NESTED_CALL = `
+const other = () => (name: string) => name;
+const timers = other()('node:timers/promises');
 `;
 const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
 const other = { createRequire: () => (name: string) => name };
@@ -300,6 +312,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     fixedTemplateDynamic: importsDeferredExecution(FIXED_TEMPLATE_DYNAMIC_IMPORT),
     backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
+    immediateCreateRequire: importsDeferredExecution(IMMEDIATE_CREATE_REQUIRE_IMPORT),
     constantCreateRequire: importsDeferredExecution(CONSTANT_CREATE_REQUIRE_IMPORT),
     computedCreateRequireSpecifier: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_SPECIFIER),
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
@@ -330,6 +343,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     fixedTemplateDynamic: true,
     backtickDynamic: true,
     createRequire: true,
+    immediateCreateRequire: true,
     constantCreateRequire: true,
     computedCreateRequireSpecifier: true,
     namespaceCreateRequire: true,
@@ -354,6 +368,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: importsDeferredExecution(SHADOWED_CREATE_REQUIRE_IMPORT),
     shadowedCreatorAlias: importsDeferredExecution(SHADOWED_CREATOR_ALIAS_IMPORT),
     unrelatedLoaderCall: importsDeferredExecution(UNRELATED_LOADER_CALL),
+    unrelatedNestedCall: importsDeferredExecution(UNRELATED_NESTED_CALL),
     unrelatedDestructuredCreateRequire: importsDeferredExecution(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsDeferredExecution(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
@@ -367,6 +382,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     shadowedCreateRequire: false,
     shadowedCreatorAlias: false,
     unrelatedLoaderCall: false,
+    unrelatedNestedCall: false,
     unrelatedDestructuredCreateRequire: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
@@ -382,4 +398,11 @@ test('rejects a deferred-execution import with an unresolved target', () => {
 test('rejects a deferred-execution loader call with an unresolved target', () => {
   // act & assert
   assert.throws(() => importsDeferredExecution(UNRESOLVED_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve module specifier in createRequire load' });
+});
+
+test('rejects an immediate deferred-execution loader call with an unresolved target', () => {
+  // act & assert
+  assert.throws(() => importsDeferredExecution(UNRESOLVED_IMMEDIATE_CREATE_REQUIRE_IMPORT), {
+    message: 'cannot resolve module specifier in createRequire load',
+  });
 });
