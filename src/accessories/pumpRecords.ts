@@ -317,7 +317,8 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
     // and an older settled self-test pair that arrives with it can label the run a self-test.
     // Keeping the mark instead would absorb the next advance when this timestamp is the run's own,
     // and a missed run would go uncounted. The mark is removed rather than set to `false`, because
-    // the stored shape declares it optional.
+    // the stored shape uses its absence to say that no run waits, so a record with no waiting run
+    // is stored like one that never had a mark.
     if (seedingTheFirstWatermark) {
       delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
