@@ -141,7 +141,7 @@ function staticMemberName(node: Node): string | undefined {
   return undefined;
 }
 
-function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined): boolean {
+function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined, isHapNamespace: (node: Node) => boolean): boolean {
   if (isIdentifier(node) && aliasOf(node.text) === 'setEvent') {
     return true;
   }
@@ -163,7 +163,7 @@ function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined): 
     return false;
   }
 
-  return (isIdentifier(owner.expression) && owner.expression.text === 'hap') || staticMemberName(owner.expression) === 'hap';
+  return isHapNamespace(owner.expression);
 }
 
 function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberCall: boolean; destructuredCall: boolean } {
@@ -217,7 +217,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       return 'hapNamespace';
     }
 
-    if (isSetEvent(node, aliasOf)) {
+    if (isSetEvent(node, aliasOf, isHapNamespace)) {
       return 'setEvent';
     }
 
@@ -280,7 +280,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       const member = node.expression;
       const firstArgument = node.arguments[0];
       const method = staticMemberName(member);
-      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf)) {
+      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf, isHapNamespace)) {
         uses.setEvent = true;
       }
 
@@ -733,6 +733,25 @@ test('counts local aliases of HAP UUID generation and set events', () => {
 
   // assert
   assert.deepStrictEqual(uses, { uuidAlias: true, destructuredUuid: true, renamedUuid: true, setEventAlias: true });
+});
+
+test('counts set-event registration through an injected HAP namespace alias', () => {
+  // arrange
+  const injectedHap = sourceFileOf('const hapApi = this.api.hap; characteristic.on(hapApi.CharacteristicEventTypes.SET, handler);');
+  const unrelatedEnum = sourceFileOf('const hapApi = other; characteristic.on(hapApi.CharacteristicEventTypes.SET, handler);');
+  const shadowedHap = sourceFileOf(
+    'const hapApi = this.api.hap; function run(hapApi: API) { characteristic.on(hapApi.CharacteristicEventTypes.SET, handler); }',
+  );
+
+  // act
+  const uses = {
+    injectedHap: hapUses(injectedHap).setEvent,
+    unrelatedEnum: hapUses(unrelatedEnum).setEvent,
+    shadowedHap: hapUses(shadowedHap).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { injectedHap: true, unrelatedEnum: false, shadowedHap: false });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {
