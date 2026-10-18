@@ -39,11 +39,10 @@ import { importSpecifiers } from './staticGateSources.js';
 /**
  * Every Node standard-library module that hands a caller deferred execution.
  *
- * Declared once and consumed by the real case and both negative controls, so the
- * two spellings cannot drift apart between what the gate forbids and what it was
- * shown to catch.
+ * Node accepts both `node:` and bare names. This list covers each name that
+ * gives accessory code a way to defer a safety publish.
  */
-const DEFERRED_EXECUTION_MODULES: readonly string[] = ['node:timers', 'node:timers/promises'];
+const DEFERRED_EXECUTION_MODULES: readonly string[] = ['node:timers', 'node:timers/promises', 'timers', 'timers/promises'];
 
 // The compiled case runs from `dist-test/test/accessories`, which puts the
 // repository root three levels up. The floor below is what turns a wrong count
@@ -70,6 +69,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 const NAMED_BARE_IMPORT = `
 import { setTimeout } from 'node:timers';
 `;
+const BARE_TIMERS_IMPORT = `
+import { setTimeout } from 'timers';
+`;
 const DOUBLE_QUOTED_IMPORT = `
 import { setTimeout } from "node:timers/promises";
 `;
@@ -78,6 +80,9 @@ import 'node:timers';
 `;
 const DYNAMIC_PROMISES_IMPORT = `
 const timers = await import('node:timers/promises');
+`;
+const DYNAMIC_BARE_PROMISES_IMPORT = `
+const timers = await import('timers/promises');
 `;
 const BACKTICK_DYNAMIC_IMPORT = 'const timers = await import(`node:timers`);';
 const CREATE_REQUIRE_IMPORT = `
@@ -158,9 +163,11 @@ test('reports a planted deferred-execution import in every spelling it is meant 
   const imports = {
     namedPromises: importsDeferredExecution(NAMED_PROMISES_IMPORT),
     namedBare: importsDeferredExecution(NAMED_BARE_IMPORT),
+    bareTimers: importsDeferredExecution(BARE_TIMERS_IMPORT),
     doubleQuoted: importsDeferredExecution(DOUBLE_QUOTED_IMPORT),
     sideEffect: importsDeferredExecution(SIDE_EFFECT_IMPORT),
     dynamic: importsDeferredExecution(DYNAMIC_PROMISES_IMPORT),
+    dynamicBarePromises: importsDeferredExecution(DYNAMIC_BARE_PROMISES_IMPORT),
     backtickDynamic: importsDeferredExecution(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsDeferredExecution(CREATE_REQUIRE_IMPORT),
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
@@ -175,9 +182,11 @@ test('reports a planted deferred-execution import in every spelling it is meant 
   assert.deepStrictEqual(imports, {
     namedPromises: true,
     namedBare: true,
+    bareTimers: true,
     doubleQuoted: true,
     sideEffect: true,
     dynamic: true,
+    dynamicBarePromises: true,
     backtickDynamic: true,
     createRequire: true,
     namespaceCreateRequire: true,
