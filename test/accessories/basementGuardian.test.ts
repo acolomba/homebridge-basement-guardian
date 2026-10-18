@@ -683,6 +683,22 @@ function valueOf(accessory: FakeAccessory, displayName: string, characteristic: 
   return serviceOf(accessory, displayName).characteristics.find((candidate) => candidate.UUID === characteristic.UUID)?.value;
 }
 
+function accessoryInformationOf(accessory: FakeAccessory): {
+  manufacturer: unknown;
+  model: unknown;
+  serialNumber: unknown;
+  firmwareRevision: unknown;
+} {
+  const service = accessory.getService(HAP.Service.AccessoryInformation);
+
+  return {
+    manufacturer: service?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value,
+    model: service?.getCharacteristic(HAP.Characteristic.Model)?.value,
+    serialNumber: service?.getCharacteristic(HAP.Characteristic.SerialNumber)?.value,
+    firmwareRevision: service?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value,
+  };
+}
+
 function statusActiveOf(accessory: FakeAccessory, displayName: string): unknown {
   return valueOf(accessory, displayName, HAP.Characteristic.StatusActive);
 }
@@ -872,8 +888,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }) });
-    const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
-    const beforeUpdate = accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value;
+    const beforeUpdate = accessoryInformationOf(accessory);
 
     // act
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
@@ -884,7 +899,7 @@ describe('createBasementGuardianAccessory', () => {
       DEGRADED_SCOPES.map((scope) => ({ scope, reason: 'invalid', lastTrustedAt: undefined })),
     );
     assert.deepStrictEqual(basementGuardianAccessory.services, []);
-    assert.strictEqual(accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value, beforeUpdate);
+    assert.deepStrictEqual(accessoryInformationOf(accessory), beforeUpdate);
   });
 
   test('deactivates every service derived from the profile and leaves the offline sensor active when the family stops resolving', () => {
@@ -1207,14 +1222,13 @@ describe('createBasementGuardianAccessory', () => {
       const accessory = accessoryStandIn();
       const family = fakeFamily({ decode: () => decoded });
       const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family }) });
-      const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
-      const beforeUpdate = accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value;
+      const beforeUpdate = accessoryInformationOf(accessory);
 
       // act
       basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
       // assert
-      assert.strictEqual(accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value, beforeUpdate);
+      assert.deepStrictEqual(accessoryInformationOf(accessory), beforeUpdate);
     });
   }
 
