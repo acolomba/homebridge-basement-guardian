@@ -32,6 +32,10 @@ const RESOURCE_BUSY = -70403;
 // for the same condition. Written out here for the same reason as the one above (D-08).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
 
+// The cause the missing command transport names, and the one a restored refusal names for the same
+// condition. Written out here so a refusal with a different wording fails here (D-08).
+const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor right now';
+
 const DEVICE_ID = 'account-1_serial-1';
 
 // The one hand-built stand-in of this boundary, widened where the pass takes
@@ -92,11 +96,54 @@ function silentLog(): Logging {
   return Object.assign(noop, { prefix: 'basement guardian', debug: noop, error: noop, info: noop, log: noop, success: noop, warn: noop });
 }
 
-// Deferred execution that records nothing and runs nothing. The clearing push a refusal arms is the
-// control module's behaviour and is driven in that module's own cases; here the port only has to be
-// something the pass can hand on.
+// A log stand-in that collects the warnings a case reads back and discards every other level.
+function warningLog(warnings: string[]): Logging {
+  function noop(): void {
+    // only the warning channel is read back
+  }
+
+  return Object.assign(noop, {
+    prefix: 'basement guardian',
+    debug: noop,
+    error: noop,
+    info: noop,
+    log: noop,
+    success: noop,
+    warn: (message: string) => {
+      warnings.push(message);
+    },
+  });
+}
+
+// Deferred execution that records nothing and runs nothing, for the cases that do not observe the
+// clearing push a refusal arms; there the port only has to be something the pass can hand on.
 function heldTimers(): Timers {
   return { setTimeout: () => undefined, setInterval: () => undefined, clearTimeout: () => undefined, clearInterval: () => undefined };
+}
+
+/** One deferral the pass asked the injected port for. */
+interface Deferral {
+  delayMs: number;
+  run: () => void;
+}
+
+// Deferred execution that records each deferral rather than arming one, so a case reads back the
+// delay asked for and runs the handler itself.
+function recordingTimers(deferrals: Deferral[]): Timers {
+  return {
+    setTimeout: (run: () => void, delayMs: number) => {
+      deferrals.push({ delayMs, run });
+
+      return deferrals.length;
+    },
+    setInterval: () => undefined,
+    clearTimeout: () => {
+      // the pass arms one deferral and cancels none
+    },
+    clearInterval: () => {
+      // the pass arms no interval, so there is nothing to cancel
+    },
+  };
 }
 
 // What a controller's press answered: the status a refusal threw, or `undefined` for a write HAP
@@ -127,7 +174,11 @@ function markUnreadable(accessory: HarnessPlatformAccessory): number {
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
-  return refuseRestoredControls(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, silentLog(), heldTimers());
+  return refuseControlsWith(accessory, silentLog(), heldTimers());
+}
+
+function refuseControlsWith(accessory: HarnessPlatformAccessory, log: Logging, timers: Timers): number {
+  return refuseRestoredControls(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, log, timers);
 }
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
@@ -366,6 +417,41 @@ describe('refuseRestoredControls', () => {
     assert.deepStrictEqual(
       { armed, alarmMute: await pressOutcomeOf(alarmMute), selfTest: await pressOutcomeOf(selfTest) },
       { armed: 2, alarmMute: NOT_ALLOWED_IN_CURRENT_STATE, selfTest: NOT_ALLOWED_IN_CURRENT_STATE },
+    );
+  });
+
+  // The refusal is the control module's own: the transport rule's status and cause, and a clearing
+  // push. Without the push the refused Switch answers its status to every later read, which Apple
+  // Home draws as "No Response", the presentation kept for a refused credential (D-07, D-08, D-10).
+  test('refuses a restored press with the transport status and cause, and clears the status once the push runs', async () => {
+    // arrange
+    const accessory = restoredAccessory();
+    const control = switchCarryingNoTrust(accessory);
+    const warnings: string[] = [];
+    const deferrals: Deferral[] = [];
+
+    // act
+    const armed = refuseControlsWith(accessory, warningLog(warnings), recordingTimers(deferrals));
+    const press = await pressOutcomeOf(control);
+    const readBeforePush = readOf(control, HAP.Characteristic.On);
+
+    for (const deferral of deferrals) {
+      deferral.run();
+    }
+
+    const readAfterPush = readOf(control, HAP.Characteristic.On);
+
+    // assert
+    assert.deepStrictEqual(
+      { armed, press, warnings, delays: deferrals.map((deferral) => deferral.delayMs), readBeforePush, readAfterPush },
+      {
+        armed: 1,
+        press: NOT_ALLOWED_IN_CURRENT_STATE,
+        warnings: [`Refused Alarm Mute on Sump Guardian: ${NO_COMMAND_TRANSPORT_CAUSE}.`],
+        delays: [0],
+        readBeforePush: { value: true, threw: NOT_ALLOWED_IN_CURRENT_STATE },
+        readAfterPush: { value: true, threw: undefined },
+      },
     );
   });
 
