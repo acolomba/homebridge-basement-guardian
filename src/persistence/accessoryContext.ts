@@ -63,8 +63,9 @@ export interface PumpObservation {
    * test, and asserting that from inputs which did not decode is a claim the
    * plugin cannot make. The label is computed only once the test is reported
    * finished and both device timestamps have been stable across two
-   * observations; anything else leaves the previous label where it was
-   * (D-13, D-014).
+   * observations. A newly counted backup activation removes the label. An
+   * observation that neither counts an activation nor computes a label leaves
+   * the previous label where it was (D-13, D-014).
    */
   lastActivationWasTestActivity?: boolean;
 }
