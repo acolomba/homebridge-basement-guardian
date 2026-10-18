@@ -427,9 +427,9 @@ function nothingToRepublish(): void {
 }
 
 /**
- * Refuses every press on one restored control until the accessory's publish
- * pass binds the control row, which happens only once the device's family
- * resolves.
+ * Refuses every press on one restored control until an accessory publication
+ * pass binds the control row. A monitoring trust change or an update for an
+ * unresolved family can bind an existing service.
  *
  * A restart the vendor cloud never answers is the window `RES-04` names, and it
  * is unbounded: no binder exists until the first REST inventory succeeds, and
@@ -442,9 +442,9 @@ function nothingToRepublish(): void {
  * The status and the cause are the transport rule's own, because the window
  * this refusal exists for is a restart the cloud has not answered, where the
  * plugin has no proven way to reach the vendor. Reusing both keeps one
- * condition answering one status with one wording (D-07, D-08). The refusal
- * also stays, with the same line, while a cached accessory's family does not
- * resolve, because only the publish pass of a resolved family binds the row.
+ * condition answering one status with one wording (D-07, D-08). When a cached
+ * accessory's family does not resolve, republishing an existing control row
+ * binds the live refusal, which names the cause that now applies.
  *
  * The clearing push is not optional. HAP stores a thrown status on the
  * characteristic and answers it to later reads, which Apple Home draws as

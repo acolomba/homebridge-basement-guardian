@@ -18,7 +18,7 @@ import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import { createCustomCharacteristics } from '../../src/accessories/customCharacteristics.js';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
-import { markTrustReportsUnreadable } from '../../src/accessories/staleMarking.js';
+import { markTrustReportsUnreadable, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
 import { geminiFamily } from '../../src/device/gemini.js';
 import { systemTimers } from '../../src/runtime/timers.js';
 
@@ -187,6 +187,12 @@ const HAP = createFakeHap();
 // The stand-in answers the members the plugin reads and nothing else, which no structural type can
 // express; the widening is what lets it stand where the plugin takes the real namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
+
+// The accessory stand-in implements the Homebridge members this test uses. This widening lets the
+// restored-control pass act on the same cached services as the accessory under test.
+function asPlatformAccessory(accessory: FakeAccessory): PlatformAccessory {
+  return accessory as unknown as PlatformAccessory;
+}
 
 const {
   ControllerDataLastTrustedAt,
@@ -949,6 +955,35 @@ describe('createBasementGuardianAccessory', () => {
         reported: valueOf(accessory, 'Sump Mains Power', MainsPowerPresent),
       },
       { flood: LEAK_DETECTED, floodActive: false, level: FLOODING_LEVEL_PERCENT, reported: true },
+    );
+  });
+
+  test('names missing fresh state for a cached self-test when its family stops resolving', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    geminiAccessory(accessory, { test_running: false });
+    const { log, warnings } = recordingLog();
+    const { timers } = recordingTimers();
+    refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers);
+    const { commands, sends } = recordingCommands();
+    const restarted = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }), commands, log, timers });
+
+    // act
+    restarted.markMonitoring(EVERY_TRANSPORT_WORKING);
+    restarted.update(buildSnapshot({ data: GEMINI_TELEMETRY }), 'poll');
+    await assert.rejects(
+      () => onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true),
+      (thrown: unknown) => {
+        assert.strictEqual(thrown, NOT_ALLOWED_IN_CURRENT_STATE);
+
+        return true;
+      },
+    );
+
+    // assert
+    assert.deepStrictEqual(
+      { sends, refusals: warnings.filter((warning) => warning.startsWith('Refused ')) },
+      { sends: [], refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
     );
   });
 

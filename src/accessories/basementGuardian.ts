@@ -788,6 +788,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       }
 
       seedConfiguredName(hap, service, row.displayName);
+      bindControlRow(row, service);
       publishRow(row, service, input);
     }
   }
