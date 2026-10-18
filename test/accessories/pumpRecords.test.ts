@@ -574,6 +574,36 @@ test('advances the self-test watermark when the label it computes is the one alr
   );
 });
 
+// A device timestamp past the watermark counts a backup run the record did not watch, and the
+// stored label describes the activation before it. Classification abstains on that observation,
+// because the backup timestamp moved, so only the removal keeps the earlier label off the new run.
+test('removes the stored self-test label when a device timestamp recovers a missed backup run', () => {
+  // arrange
+  const context: PumpRecordsContext = {
+    ...storedContextWithAnActivation(),
+    backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: NEW_BACKUP_MS, lastActivationWasTestActivity: true },
+  };
+  const { records } = pumpRecords(context);
+  const settled = {
+    backupRunning: false,
+    testRunning: false,
+    backupActivatedAt: NEW_BACKUP_SECONDS,
+    testedAt: NEW_TEST_SECONDS,
+  } satisfies Partial<PumpRecordsObservation>;
+  records.observe(observation(settled));
+
+  // act
+  records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, ...settled, backupActivatedAt: 1_700_000_160 }));
+
+  // assert
+  assert.deepStrictEqual(records.backup, {
+    observationStartedAt: OBSERVED_AT,
+    activationCount: 2,
+    lastActivationAt: 1_700_000_160_000,
+    lastActivationWasTestActivity: undefined,
+  });
+});
+
 // A real backup run after a self-test is a new activation, and the settled self-test timestamps do
 // not describe it. Until the device publishes the timestamp of that run, the record holds no label,
 // so HomeKit does not report a real basement run as a self-test.
