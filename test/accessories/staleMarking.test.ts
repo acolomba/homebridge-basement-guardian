@@ -38,10 +38,26 @@ const NO_COMMAND_TRANSPORT_CAUSE = 'the plugin has no way to reach the vendor ri
 
 const DEVICE_ID = 'account-1_serial-1';
 
-// The one hand-built stand-in of this boundary, widened where the pass takes
-// the namespace the plugin is injected with.
+// The one hand-built stand-in of this boundary. The namespace holds no per-case state: each case
+// builds its own accessory, and a characteristic lives on the service that carries it.
 const HAP = createFakeHap();
+
+// The widenings, kept in one place. Each stand-in carries only part of the real type, so no
+// structural type admits it; the widening is what lets it stand where the code under test takes the
+// real type.
+//
+// The stand-in namespace stands where the passes and the binder take the injected HAP namespace.
 const HAP_NAMESPACE = HAP as unknown as API['hap'];
+
+// The stand-in accessory stands where a pass takes a restored PlatformAccessory.
+function asPlatformAccessory(accessory: HarnessPlatformAccessory): PlatformAccessory {
+  return accessory as unknown as PlatformAccessory;
+}
+
+// The stand-in service stands where the binder takes a Service.
+function asService(service: FakeHapService): Service {
+  return service as unknown as Service;
+}
 
 // A restored accessory carries plain services holding the values the previous
 // run published, which is what `restoreCachedAccessories` rebuilds and what a
@@ -166,11 +182,11 @@ async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
 }
 
 function markStale(accessory: HarnessPlatformAccessory): number {
-  return markRestoredServicesStale(accessory as unknown as PlatformAccessory, HAP_NAMESPACE);
+  return markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markTrustReportsUnreadable(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, RESOURCE_BUSY);
+  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY);
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
@@ -178,7 +194,7 @@ function refuseControls(accessory: HarnessPlatformAccessory): number {
 }
 
 function refuseControlsWith(accessory: HarnessPlatformAccessory, log: Logging, timers: Timers): number {
-  return refuseRestoredControls(accessory as unknown as PlatformAccessory, HAP_NAMESPACE, log, timers);
+  return refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers);
 }
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
@@ -531,7 +547,7 @@ describe('refuseRestoredControls', () => {
     });
 
     // act
-    binder.bind(control as unknown as Service, 'self-test', () => false);
+    binder.bind(asService(control), 'self-test', () => false);
     const press = await pressOutcomeOf(control);
 
     // assert
