@@ -244,9 +244,10 @@ describe('forget', () => {
     tracker.observe([DEVICE_ID]);
 
     // act
-    const confirmedAbsent = tracker.observe([]);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
 
     // assert
-    assert.deepStrictEqual(confirmedAbsent, []);
+    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID] });
   });
 });
