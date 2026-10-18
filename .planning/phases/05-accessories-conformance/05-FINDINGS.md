@@ -1881,3 +1881,19 @@ open=29 rounds=27` (exit 0) and the header tracer printed `ACCESSORIES_HEADERS_O
 `open` until the 05-07 correction review. The 22 IDs handed to 05-07 are
 CR-05-ACCESSORY-004 through 008, 010, 013 through 027, and 029. The source-side IDs 001, 002,
 003, 009, 011, 012 and 028 have fix commits; 05-07 reviews those repairs and closes or reopens them.
+
+### 05-07
+
+Plan start at HEAD `65e0faf4b096cc18b5fb6e4774ad737443654c7f` on 2026-10-18,
+with an empty `git status --porcelain` and Node v26.12.0. The ACCESSORY counter still has only
+round 0, and CR-05-ACCESSORY-016 is `open`. Owner command
+`node --test dist-test/test/accessories/basementGuardian.test.js` exits 0: 160 tests, 160 passed,
+0 failed. `node_modules/.bin/fallow guard` on the source and test pair exits 0. The ledger tracer
+exits 0 (`ACCESSORIES_LEDGER_TRACER_OK inventory=27 findings=167 open=29 rounds=27`).
+
+RED `rg -n 'as unknown as' test/accessories/basementGuardian.test.ts` prints lines 189
+(`HAP_NAMESPACE`), 194 (an `asPlatformAccessory` helper already added with the 05-06 repair for
+002), and seven inline call-site casts at 497, 663, 693, 763, 830, 1350 and 1351. The 05-07
+D-11 repair will move or retain the existing helper inside one commented widening block, add the
+other two helpers there and replace the seven inline casts. The target is four cast lines, all in
+that block, with the owner count still 160.
