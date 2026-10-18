@@ -203,21 +203,6 @@ describe('present', () => {
     // assert
     assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID] });
   });
-
-  test('lets forget remove the eligibility of a device recorded present', () => {
-    // arrange
-    const tracker = reconciliation();
-    tracker.present(DEVICE_ID);
-    tracker.observe([]);
-
-    // act
-    tracker.forget(DEVICE_ID);
-    const afterFirstOmission = tracker.observe([]);
-    const afterSecondOmission = tracker.observe([]);
-
-    // assert
-    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [] });
-  });
 });
 
 describe('forget', () => {
@@ -249,5 +234,20 @@ describe('forget', () => {
 
     // assert
     assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [DEVICE_ID] });
+  });
+
+  test('lets forget remove the eligibility of a device recorded present', () => {
+    // arrange
+    const tracker = reconciliation();
+    tracker.present(DEVICE_ID);
+    tracker.observe([]);
+
+    // act
+    tracker.forget(DEVICE_ID);
+    const afterFirstOmission = tracker.observe([]);
+    const afterSecondOmission = tracker.observe([]);
+
+    // assert
+    assert.deepStrictEqual({ afterFirstOmission, afterSecondOmission }, { afterFirstOmission: [], afterSecondOmission: [] });
   });
 });
