@@ -2517,7 +2517,7 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  test('D-03 publishes the self-test switch on the first update even though test_running never decoded', () => {
+  test('publishes the self-test switch on the first update even though test_running never decoded', () => {
     // arrange
     const accessory = accessoryStandIn();
 
@@ -2535,7 +2535,7 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  test('D-02 deactivates the alarm mute scope alone for an out-of-domain alarm_audio_muted', () => {
+  test('deactivates the alarm mute scope alone for an out-of-domain alarm_audio_muted', () => {
     // arrange
     const accessory = accessoryStandIn();
 
@@ -2547,7 +2547,7 @@ describe('createBasementGuardianAccessory', () => {
     assert.strictEqual(statusActiveOf(accessory, SELF_TEST_ROW), true);
   });
 
-  test('D-02 deactivates the self-test scope alone for a wrong-typed test_timestamp, leaving every pump service active', () => {
+  test('deactivates the self-test scope alone for a wrong-typed test_timestamp, leaving every pump service active', () => {
     // arrange
     const accessory = accessoryStandIn();
 
@@ -2628,7 +2628,7 @@ describe('createBasementGuardianAccessory', () => {
   // reads (CR-02, D-10).
   const STILL_REFUSED = { selfTest: 'refused -70402', alarmMute: 'refused -70402', flood: 'refused -70402' };
 
-  test('CR-02 leaves both controls refusing reads when the press it refused itself runs its clearing push', async () => {
+  test('leaves both controls refusing reads when the press it refused itself runs its clearing push', async () => {
     // arrange
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
@@ -2651,7 +2651,7 @@ describe('createBasementGuardianAccessory', () => {
     verify(commands);
   });
 
-  test('CR-02 leaves both controls refusing reads when a request that outlived its window runs its clearing push', async () => {
+  test('leaves both controls refusing reads when a request that outlived its window runs its clearing push', async () => {
     // arrange
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
@@ -2667,7 +2667,7 @@ describe('createBasementGuardianAccessory', () => {
     verify(commands);
   });
 
-  test('CR-02 leaves both controls refusing reads when the vendor refusal that answered a press runs its clearing push', async () => {
+  test('leaves both controls refusing reads when the vendor refusal that answered a press runs its clearing push', async () => {
     // arrange
     const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure: 'vendor-error' });
@@ -2691,7 +2691,7 @@ describe('createBasementGuardianAccessory', () => {
     verify(commands);
   });
 
-  test('D-03 publishes the alarm mute switch on the first update even though alarm_audio_muted never decoded', () => {
+  test('publishes the alarm mute switch on the first update even though alarm_audio_muted never decoded', () => {
     // arrange
     const accessory = accessoryStandIn();
 
@@ -2924,7 +2924,7 @@ describe('createBasementGuardianAccessory', () => {
   // The clearing push uses the device's reported false instead of the requested true still held
   // by HAP. The tile and write path therefore agree on the device's value
   // (RES-04, D-07, D-037, WR-02).
-  test('WR-02 returns the Switch to the value the device reported when a press is refused during shadow silence', async () => {
+  test('returns the Switch to the value the device reported when a press is refused during shadow silence', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
@@ -2988,7 +2988,7 @@ describe('createBasementGuardianAccessory', () => {
   // invalid field would find the value absent whatever this rule answered, and would agree with a
   // rule that withheld nothing. The link fact is a valid boolean, so every group still decodes and
   // the rule is the only thing holding the value back (RES-04, D-02, D-07, D-11, D-014, WR-02).
-  test('WR-02 keeps a doubtful value absent from both the control row and the write path', async () => {
+  test('keeps a doubtful value absent from both the control row and the write path', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
@@ -3034,7 +3034,7 @@ describe('createBasementGuardianAccessory', () => {
   // what the device reported and not what the accessory can currently vouch for. The gate still
   // stands on publishing and on the write: the row publishes no `On` throughout, so resolving the
   // request shows nothing the plugin cannot vouch for (CTRL-03, D-037, D-11, WR-06).
-  test('WR-06 resolves a request the device confirmed on the snapshot that withdrew the control scope', async () => {
+  test('resolves a request the device confirmed on the snapshot that withdrew the control scope', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
@@ -3071,7 +3071,7 @@ describe('createBasementGuardianAccessory', () => {
   // The same moment under the other withdrawal: a quiet live path does not hide the reported value
   // from reconciliation. This case pins that request outcome while the tile remains untrusted
   // (CTRL-03, D-037, D-02, WR-06).
-  test('WR-06 resolves a request the device confirmed on the snapshot that first went quiet', async () => {
+  test('resolves a request the device confirmed on the snapshot that first went quiet', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
@@ -3113,7 +3113,7 @@ describe('createBasementGuardianAccessory', () => {
   // well. A device that genuinely never reports the test still leaves the request unresolved, the
   // window still closes on it, and the warning that names it still fires -- because nothing is
   // retried and an owner has to be told a command may have reached the pump anyway (D-038, D-06).
-  test('WR-06 still warns when the window closes on a request no report ever confirmed', async () => {
+  test('still warns when the window closes on a request no report ever confirmed', async () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
@@ -3474,7 +3474,7 @@ describe('createBasementGuardianAccessory', () => {
   // case is the assertion behind that sentence. The row is first pushed the opposite verdict, so a
   // withdrawal that withheld would leave the wrong reading standing and be caught here rather than
   // agreeing with the right one by accident (WR-03, D-02, D-014).
-  test('WR-03 keeps the offline adapter publishing its verdict under a refused credential and stops vouching for it', () => {
+  test('keeps the offline adapter publishing its verdict under a refused credential and stops vouching for it', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, {});
@@ -3496,7 +3496,7 @@ describe('createBasementGuardianAccessory', () => {
   // A refused credential ends every observation this runtime will ever make, so nothing it holds is
   // current whatever the two transports last reported. The reason is checked alongside the scopes,
   // because which reason fills them decides whether the withdrawal marks or empties (WR-03, D-10).
-  test('WR-03 withdraws every scope under a refused credential, saying the plugin is seeing less rather than that a value is wrong', () => {
+  test('withdraws every scope under a refused credential, saying the plugin is seeing less rather than that a value is wrong', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, {});
@@ -3515,7 +3515,7 @@ describe('createBasementGuardianAccessory', () => {
   // case protects is one an owner would act on, and the whole published surface is compared rather
   // than the one value chosen in advance, so a withdrawal that emptied any other tile fails here
   // too (WR-03, D-014).
-  test('WR-03 leaves every reading a row published where it was when the credential refusal lands', () => {
+  test('leaves every reading a row published where it was when the credential refusal lands', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, { water_level: FLOODING_LEVEL_CODE });
@@ -3536,7 +3536,7 @@ describe('createBasementGuardianAccessory', () => {
   // below is the one arrangement in which the credential member is the only difference: a poll that
   // has already failed, and then the refusal. This case pins the trust change caused by the
   // credential member alone (WR-04, RES-04, D-10).
-  test('WR-04 republishes for a trust push differing from the stored one only in the credential member', () => {
+  test('republishes for a trust push differing from the stored one only in the credential member', () => {
     // arrange
     const accessory = accessoryStandIn();
     const basementGuardianAccessory = geminiAccessory(accessory, {});

@@ -106,7 +106,7 @@ export interface ControlBinderOptions {
    * rule decides both.
    *
    * If they could disagree, a press would be refused for a missing state while
-   * the tile beside it showed that state. The case "WR-02 returns the Switch to
+   * the tile beside it showed that state. The case "returns the Switch to
    * the value the device reported when a press is refused during shadow
    * silence" reads the write path's own answer where a controller can see it
    * (RES-04, D-07, WR-02).
