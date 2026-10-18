@@ -3128,6 +3128,42 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
+  // A pending request keeps HAP's requested value visible while ordinary polls and trust pushes
+  // republish the control row. Only the expired request returns it to the reported value (D-037).
+  test('keeps a requested self-test value through poll and trust republish until its window expires', async () => {
+    // arrange
+    const accessory = accessoryStandIn();
+    const { timers: recordedTimers } = recordingTimers();
+    const windowClosings: (() => void)[] = [];
+    const timers: Timers = {
+      ...recordedTimers,
+      setTimeout: (handler, delayMs) => {
+        if (delayMs === PENDING_WINDOW_MS) {
+          windowClosings.push(handler);
+        }
+
+        return recordedTimers.setTimeout(handler, delayMs);
+      },
+    };
+    const { commands, sends } = recordingCommands();
+    const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, timers });
+    basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
+
+    // act
+    await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
+    basementGuardianAccessory.update(buildSnapshot({ data: { ...GEMINI_TELEMETRY, test_running: false } }), 'poll');
+    const duringPoll = valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On);
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+    const duringTrustChange = valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On);
+    runEvery(windowClosings);
+
+    // assert
+    assert.deepStrictEqual(
+      { sends, duringPoll, duringTrustChange, afterWindow: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On) },
+      { sends: [`${DEVICE_ID} self-test true`], duringPoll: true, duringTrustChange: true, afterWindow: false },
+    );
+  });
+
   // An accepted press leaves HAP serving the requested true until the device confirms it or the
   // window closes. Each withdrawal below prevents the control row from publishing On at expiry, so
   // the binder must restore the last reported false itself (D-037).
