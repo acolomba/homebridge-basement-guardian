@@ -1850,3 +1850,34 @@ Resumed 2026-10-18. The maintainer decided to fix CR-05-ACCESSORY-001 now: the b
 value HAP served before an accepted press, and expiry pushes `reported() ?? that value`. This is a
 bounded edit to `src/accessories/controls.ts`; the ACCESSORY correction rounds review that hunk as
 a reference. Next step: the pair-header fixer for CR-05-ACCESSORY-009.
+
+#### Source repairs and wave gate
+
+All seven 05-06 findings have repair commits in the findings table: 009 (pair headers), 011 and
+012 (source comments), 028 (local snapshot-source type), and the genuine bugs 002, 003 and 001.
+The RED evidence commits for 002, 003 and 001 are respectively `b025898`, `e8af5d2` and
+`41b2ba7`, preceding fixes `7bc27047c0dac3369b2e5ff76f025339c1297b63`,
+`667601c4ba3433061b13864b0801aa10a71efa76` and
+`a6cbebfacdf8bf0928b2ca7fe0f30cc5cd9811f4`. The evidence classifier returned
+`RED_EVIDENCE_OK` (exit 0). The 001 repair used the committed bounded controls amendments
+`6bc5ce7` and `fdea7de`; the 003 repair used the committed Cucumber consumer amendment
+`c3c0f28`. Each source repair passed its owner and direct pair checks, Fallow audit against the
+batch base, pre-commit, and the normal commit hook.
+
+Fresh committed-tree gate at HEAD `37259fc636a7c80cf4ff2557e68b750d7b72615d`, Node
+v26.12.0 and npm 11.20.0:
+
+| Command | UTC start | UTC end | Raw exit | Printed result |
+| --- | --- | --- | --- | --- |
+| `npm run build:test` | 2026-10-18T11:54:49.127374Z | 2026-10-18T11:54:52.387501Z | 0 | build succeeded |
+| `node --test dist-test/test/accessories/basementGuardian.test.js` | 2026-10-18T11:54:52.387706Z | 2026-10-18T11:54:52.841736Z | 0 | 160 tests, 160 passed, 0 failed |
+| `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | 2026-10-18T11:54:52.841893Z | 2026-10-18T11:54:56.877226Z | 0 | accessory pair at 100% direct coverage |
+| `npm run check` (sandbox) | 2026-10-18T11:55:04.423209Z | 2026-10-18T11:55:36.809403Z | 1 | package inspection's `npm pack --dry-run --json` received EPERM on the home npm cache |
+| `npm run check` (host-resource rerun) | 2026-10-18T11:55:47.326111Z | 2026-10-18T11:56:44.876680Z | 0 | typecheck, lint, workflow lint, Fallow, format and corresponding checks passed; 104 scenarios passed, 1156 steps passed; merged LCOV from 43 direct pairs |
+
+After the gate, the ledger tracer printed `ACCESSORIES_LEDGER_TRACER_OK inventory=27 findings=167
+open=29 rounds=27` (exit 0) and the header tracer printed `ACCESSORIES_HEADERS_OK files=2`
+(exit 0). ACCESSORY still has exactly one counter row, round 0. All 29 findings retain disposition
+`open` until the 05-07 correction review. The 22 IDs handed to 05-07 are
+CR-05-ACCESSORY-004 through 008, 010, 013 through 027, and 029. The source-side IDs 001, 002,
+003, 009, 011, 012 and 028 have fix commits; 05-07 reviews those repairs and closes or reopens them.
