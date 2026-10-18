@@ -597,78 +597,79 @@ test('schedules nothing at all across one observation', (t) => {
 // The one line the module writes about an unreadable record.
 const UNREADABLE_RECORD_WARNING = 'The stored pump observation record could not be read, so observation starts again from now.';
 
-// One row of the cases below: what is wrong with the stored record, and the stored members.
+// One row of the cases below: what is wrong with the stored record, and a function that builds the
+// stored members. The module writes into the context it is given, so each case builds its own.
 interface DamagedRecordRow {
   readonly cause: string;
-  readonly stored: Record<string, unknown>;
+  readonly stored: () => Record<string, unknown>;
 }
 
 // Every way a restored record can fail to be readable. A half-read record is repaired by nobody:
 // it is replaced by a fresh observation start, because a count assembled out of a broken record is
 // a number an owner would read as a fact about their basement.
 const DAMAGED_RECORDS: readonly DamagedRecordRow[] = [
-  { cause: 'a pump record that is not an object at all', stored: { primaryPump: 'primary' } },
-  { cause: 'a pump record that is null', stored: { primaryPump: null } },
-  { cause: 'a pump record missing its observation start', stored: { primaryPump: { activationCount: 4 } } },
-  { cause: 'a pump record missing its count', stored: { primaryPump: { observationStartedAt: OBSERVED_AT } } },
+  { cause: 'a pump record that is not an object at all', stored: () => ({ primaryPump: 'primary' }) },
+  { cause: 'a pump record that is null', stored: () => ({ primaryPump: null }) },
+  { cause: 'a pump record missing its observation start', stored: () => ({ primaryPump: { activationCount: 4 } }) },
+  { cause: 'a pump record missing its count', stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT } }) },
   {
     cause: 'a pump record whose last activation is not a time',
-    stored: { primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4, lastActivationAt: 'recently' } },
+    stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4, lastActivationAt: 'recently' } }),
   },
   {
     cause: 'a pump record whose self-test label is not a boolean',
-    stored: { primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4, lastActivationWasTestActivity: 'yes' } },
+    stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4, lastActivationWasTestActivity: 'yes' } }),
   },
   {
     cause: 'a second pump record that is unreadable while the first is fine',
-    stored: { primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 } },
+    stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 } }),
   },
   {
     cause: 'a watermark pair that is not an object at all',
-    stored: {
+    stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: 7,
-    },
+    }),
   },
   {
     cause: 'a watermark pair that is null',
-    stored: {
+    stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: null,
-    },
+    }),
   },
   {
     cause: 'a backup watermark that is not a device time',
-    stored: {
+    stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: { backupPumpTimestamp: 'lately', testTimestamp: undefined },
-    },
+    }),
   },
   {
     cause: 'a self-test watermark that is not a device time',
-    stored: {
+    stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: 'lately' },
-    },
+    }),
   },
   {
     cause: 'a mark of a backup run awaiting its timestamp that is not a boolean',
-    stored: {
+    stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS, backupEdgeAwaitingTimestamp: 'yes' },
-    },
+    }),
   },
 ];
 
 for (const { cause, stored } of DAMAGED_RECORDS) {
   test(`starts observation again and says so once for ${cause}`, () => {
     // arrange
-    const { records, persistCount, warnings } = pumpRecords(damagedContext(stored));
+    const { records, persistCount, warnings } = pumpRecords(damagedContext(stored()));
 
     // act
     records.observe(observation());
