@@ -166,6 +166,11 @@ const { createRequire } = module;
 const loadModule = createRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
 `;
+const DYNAMIC_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
+const { createRequire } = await import('node:module');
+const loadModule = createRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
+`;
 const RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
 import * as module from 'node:module';
 const { createRequire: makeRequire } = module;
@@ -239,6 +244,11 @@ const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT = `
 const other = { createRequire: () => (name: string) => name };
 const { createRequire: makeRequire } = other;
 const loadModule = makeRequire(import.meta.url);
+const timers = loadModule('node:timers/promises');
+`;
+const UNRELATED_DYNAMIC_DESTRUCTURE = `
+const { createRequire } = await import('other-module');
+const loadModule = createRequire(import.meta.url);
 const timers = loadModule('node:timers/promises');
 `;
 const COMMENT_INTERLEAVED_IMPORT = `
@@ -330,6 +340,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     namespaceCreateRequire: importsDeferredExecution(NAMESPACE_CREATE_REQUIRE_IMPORT),
     aliasedNamespaceCreateRequire: importsDeferredExecution(ALIASED_NAMESPACE_CREATE_REQUIRE_IMPORT),
     destructuredCreateRequire: importsDeferredExecution(DESTRUCTURED_CREATE_REQUIRE_IMPORT),
+    dynamicDestructuredCreateRequire: importsDeferredExecution(DYNAMIC_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     renamedDestructuredCreateRequire: importsDeferredExecution(RENAMED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
     computedCreateRequire: importsDeferredExecution(COMPUTED_CREATE_REQUIRE_IMPORT),
     defaultCreateRequire: importsDeferredExecution(DEFAULT_CREATE_REQUIRE_IMPORT),
@@ -362,6 +373,7 @@ test('reports a planted deferred-execution import in every spelling it is meant 
     namespaceCreateRequire: true,
     aliasedNamespaceCreateRequire: true,
     destructuredCreateRequire: true,
+    dynamicDestructuredCreateRequire: true,
     renamedDestructuredCreateRequire: true,
     computedCreateRequire: true,
     defaultCreateRequire: true,
@@ -385,6 +397,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     unrelatedNestedCall: importsDeferredExecution(UNRELATED_NESTED_CALL),
     unrelatedNamespaceAlias: importsDeferredExecution(UNRELATED_NAMESPACE_ALIAS),
     unrelatedDestructuredCreateRequire: importsDeferredExecution(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_IMPORT),
+    unrelatedDynamicDestructure: importsDeferredExecution(UNRELATED_DYNAMIC_DESTRUCTURE),
     unrelatedConstantDynamic: importsDeferredExecution(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: importsDeferredExecution(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: importsDeferredExecution(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
@@ -400,6 +413,7 @@ test('reports neither a comment naming the modules nor an unrelated node import 
     unrelatedNestedCall: false,
     unrelatedNamespaceAlias: false,
     unrelatedDestructuredCreateRequire: false,
+    unrelatedDynamicDestructure: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,

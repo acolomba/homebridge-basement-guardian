@@ -429,6 +429,11 @@ const { createRequire } = module;
 const loadModule = createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const DYNAMIC_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
+const { createRequire } = await import('node:module');
+const loadModule = createRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
 const RENAMED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
 import * as module from 'node:module';
 const { createRequire: makeRequire } = module;
@@ -496,6 +501,11 @@ const UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT = `
 const other = { createRequire: () => (name: string) => name };
 const { createRequire: makeRequire } = other;
 const loadModule = makeRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const UNRELATED_DYNAMIC_DESTRUCTURE = `
+const { createRequire } = await import('other-module');
+const loadModule = createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
 
@@ -642,6 +652,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
     aliasedNamespaceCreateRequireCloud: reachesTheNetworkTier(ALIASED_NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
     destructuredCreateRequireCloud: reachesTheNetworkTier(DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
+    dynamicDestructuredCreateRequireCloud: reachesTheNetworkTier(DYNAMIC_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
     renamedDestructuredCreateRequireCloud: reachesTheNetworkTier(RENAMED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
     computedCreateRequireCloud: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT),
     defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
@@ -673,6 +684,7 @@ test('reports a planted import of the cloud client and of the account runtime (D
     namespaceCreateRequireCloud: true,
     aliasedNamespaceCreateRequireCloud: true,
     destructuredCreateRequireCloud: true,
+    dynamicDestructuredCreateRequireCloud: true,
     renamedDestructuredCreateRequireCloud: true,
     computedCreateRequireCloud: true,
     defaultCreateRequireCloud: true,
@@ -694,6 +706,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     unrelatedNestedCall: reachesTheNetworkTier(UNRELATED_NESTED_CALL),
     unrelatedNamespaceAlias: reachesTheNetworkTier(UNRELATED_NAMESPACE_ALIAS),
     unrelatedDestructuredCreateRequire: reachesTheNetworkTier(UNRELATED_DESTRUCTURED_CREATE_REQUIRE_CLOUD_IMPORT),
+    unrelatedDynamicDestructure: reachesTheNetworkTier(UNRELATED_DYNAMIC_DESTRUCTURE),
     unrelatedConstantDynamic: reachesTheNetworkTier(UNRELATED_CONSTANT_DYNAMIC_IMPORT),
     unrelatedComputedDynamic: reachesTheNetworkTier(UNRELATED_COMPUTED_DYNAMIC_IMPORT),
     unrelatedFixedTemplateDynamic: reachesTheNetworkTier(UNRELATED_FIXED_TEMPLATE_DYNAMIC_IMPORT),
@@ -710,6 +723,7 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     unrelatedNestedCall: false,
     unrelatedNamespaceAlias: false,
     unrelatedDestructuredCreateRequire: false,
+    unrelatedDynamicDestructure: false,
     unrelatedConstantDynamic: false,
     unrelatedComputedDynamic: false,
     unrelatedFixedTemplateDynamic: false,

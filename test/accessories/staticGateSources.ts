@@ -17,6 +17,7 @@ import {
   createProgram,
   createSourceFile,
   forEachChild,
+  isAwaitExpression,
   isBinaryExpression,
   isCallExpression,
   isElementAccessExpression,
@@ -37,6 +38,7 @@ import {
   ScriptTarget,
   SyntaxKind,
   type CallExpression,
+  type Expression,
   type ImportDeclaration,
   type ImportSpecifier,
   type Node,
@@ -72,13 +74,23 @@ function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: 
   }
 }
 
+function isDynamicModuleNamespace(initializer: Expression, checker: TypeChecker): boolean {
+  if (!isAwaitExpression(initializer) || !isCallExpression(initializer.expression) || initializer.expression.expression.kind !== SyntaxKind.ImportKeyword) {
+    return false;
+  }
+
+  const specifier = initializer.expression.arguments[0];
+  return specifier !== undefined && ['node:module', 'module'].includes(fixedSpecifier(specifier, checker) ?? '');
+}
+
 function addDestructuredCreator(node: Node, checker: TypeChecker, named: Set<Symbol>, namespaces: ReadonlySet<Symbol>): void {
-  if (!isVariableDeclaration(node) || !isObjectBindingPattern(node.name) || !node.initializer || !isIdentifier(node.initializer)) {
+  if (!isVariableDeclaration(node) || !isObjectBindingPattern(node.name) || !node.initializer) {
     return;
   }
 
-  const source = checker.getSymbolAtLocation(node.initializer);
-  if (!source || !namespaces.has(source)) {
+  const initializer = node.initializer;
+  const source = isIdentifier(initializer) ? checker.getSymbolAtLocation(initializer) : undefined;
+  if (!(source && namespaces.has(source)) && !isDynamicModuleNamespace(initializer, checker)) {
     return;
   }
 
