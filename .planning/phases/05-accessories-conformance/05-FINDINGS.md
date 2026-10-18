@@ -1935,3 +1935,11 @@ completed by 2026-10-18T13:11:52Z with Node v26.12.0: `npm run build:test` exite
 144 passed and 0 failed; `npm run test:coverage:direct -- src/accessories/basementGuardian.ts
 test/accessories/basementGuardian.test.ts` exited 0 with the direct pair at 100%. All five
 round-1 open IDs have repair hashes and remain `open` until independent round-2 review.
+
+Round-2's sole open ID 033 has RED evidence commit `8fc2983` and repair commit `4f09add`,
+recorded through clean HEAD `0497cfbb06a081822cec68f8797d3ca48a6ba149`. Fresh
+pre-round-3 checks completed by 2026-10-18T13:23:41Z with Node v26.12.0: `npm run build:test`
+exited 0; `node --test dist-test/test/accessories/basementGuardian.test.js` exited 0 with
+145 tests, 145 passed and 0 failed; `npm run test:coverage:direct --
+src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` exited 0 with
+the direct pair at 100%. ID 033 remains `open` pending independent round-3 review.
