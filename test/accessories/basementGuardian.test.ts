@@ -875,9 +875,18 @@ test('throws when the accessory context device carries a deviceId of the wrong t
   const accessory = accessoryStandIn({ deviceId: 12345, deviceTypeId: DEVICE_TYPE_ID });
 
   // act & assert
-  assert.throws(() => {
-    accessoryWith(accessory, {});
-  }, Error);
+  assert.throws(
+    () => {
+      accessoryWith(accessory, {});
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.strictEqual(error.constructor, Error);
+      assert.strictEqual(error.message, 'the accessory context carries no device identity; the platform must set context.device before creating the accessory');
+
+      return true;
+    },
+  );
 });
 
 test('throws when the accessory context device carries a deviceTypeId of the wrong type', () => {
@@ -885,9 +894,18 @@ test('throws when the accessory context device carries a deviceTypeId of the wro
   const accessory = accessoryStandIn({ deviceId: DEVICE_ID, deviceTypeId: 12345 });
 
   // act & assert
-  assert.throws(() => {
-    accessoryWith(accessory, {});
-  }, Error);
+  assert.throws(
+    () => {
+      accessoryWith(accessory, {});
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.strictEqual(error.constructor, Error);
+      assert.strictEqual(error.message, 'the accessory context carries no device identity; the platform must set context.device before creating the accessory');
+
+      return true;
+    },
+  );
 });
 
 test('publishes no service and marks no scope untrusted before the first update', () => {
@@ -1507,15 +1525,29 @@ for (const threshold of [1, 2, 8]) {
   });
 }
 
-for (const offlineConfirmationPollCount of [0, -1, 1.5, Number.NaN]) {
+for (const { offlineConfirmationPollCount, message } of [
+  { offlineConfirmationPollCount: 0, message: 'offlineConfirmationPollCount must be a whole number of at least 1, not 0' },
+  { offlineConfirmationPollCount: -1, message: 'offlineConfirmationPollCount must be a whole number of at least 1, not -1' },
+  { offlineConfirmationPollCount: 1.5, message: 'offlineConfirmationPollCount must be a whole number of at least 1, not 1.5' },
+  { offlineConfirmationPollCount: Number.NaN, message: 'offlineConfirmationPollCount must be a whole number of at least 1, not NaN' },
+]) {
   test(`refuses an offline confirmation poll count of ${String(offlineConfirmationPollCount)} at construction`, () => {
     // arrange
     const accessory = accessoryStandIn();
 
     // act & assert
-    assert.throws(() => {
-      accessoryWith(accessory, { offlineConfirmationPollCount });
-    }, Error);
+    assert.throws(
+      () => {
+        accessoryWith(accessory, { offlineConfirmationPollCount });
+      },
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.strictEqual(error.constructor, Error);
+        assert.strictEqual(error.message, message);
+
+        return true;
+      },
+    );
   });
 }
 
