@@ -36,6 +36,7 @@ The procedures that write and check this ledger live in `05-REVIEW-PROTOCOL.md`.
 | 26 | test/platform.test.ts | adaptation | RECORDS | 1 | 3779 | conforms |
 | 27 | src/runtime/accountRuntime.ts | adaptation | RECORDS | 1 | 1346 | conforms |
 | 28 | test/accessories/staticGateSources.ts | addition | GATES | 1 | n/a | new |
+| 29 | features/lib/hap.ts | adaptation | GATES | 1 | 722 | overview-only |
 
 Kind `addition` is a new file under `src/accessories` or `test/accessories`. Its row is recorded in
 the commit right after the one that creates the file. Kind `adaptation` is any other path a batch
