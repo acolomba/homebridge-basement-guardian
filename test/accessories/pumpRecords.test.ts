@@ -596,6 +596,9 @@ test('schedules nothing at all across one observation', (t) => {
   assert.deepStrictEqual(scheduled, { setTimeout: 0, setInterval: 0, setImmediate: 0, queueMicrotask: 0 });
 });
 
+// The one line the module writes about an unreadable record.
+const UNREADABLE_RECORD_WARNING = 'The stored pump observation record could not be read, so observation starts again from now.';
+
 // Every way a restored record can fail to be readable. A half-read record is repaired by nobody:
 // it is replaced by a fresh observation start, because a count assembled out of a broken record is
 // a number an owner would read as a fact about their basement.
@@ -668,27 +671,25 @@ for (const { cause, stored } of DAMAGED_RECORDS) {
 
     // assert
     assert.deepStrictEqual(
-      { primary: records.primary, backup: records.backup, persisted: persistCount(), warnings: warnings.length },
-      { primary: freshRecord(), backup: freshRecord(), persisted: 1, warnings: 1 },
+      { primary: records.primary, backup: records.backup, persisted: persistCount(), warnings },
+      { primary: freshRecord(), backup: freshRecord(), persisted: 1, warnings: [UNREADABLE_RECORD_WARNING] },
     );
   });
 }
 
 // The warning names a capability and a cause. That is everything the reader needs, so the line
 // carries no identifier. The reason is what the sentence has to say, not sensitivity: a vendor
-// device identifier is admitted to runtime logs.
+// device identifier is admitted to runtime logs. The damaged context carries the identifiers that a
+// real accessory context carries, so a line that took them from the context would show them.
 test('names no device or account identifier in the line about an unreadable record', () => {
   // arrange
-  const { records, warnings } = pumpRecords(damagedContext({ primaryPump: 'primary' }));
+  const { records, warnings } = pumpRecords(damagedContext({ deviceId: 'account-1_serial-1', serialNumber: 'serial-1', primaryPump: 'primary' }));
 
   // act
   records.observe(observation());
 
   // assert
-  assert.deepStrictEqual(
-    warnings.filter((warning) => /account-|serial-|_/.test(warning)),
-    [],
-  );
+  assert.deepStrictEqual(warnings, [UNREADABLE_RECORD_WARNING]);
 });
 
 // The accessory observes a snapshot before it publishes one, so a read before the first observation
