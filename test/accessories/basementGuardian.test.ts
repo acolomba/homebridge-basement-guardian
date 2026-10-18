@@ -13,6 +13,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, test } from 'node:test';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createFakeHap } from '../../features/lib/hap.js';
 import { createFakeAccessory } from '../../features/lib/homebridgeApi.js';
 import { createBasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
@@ -26,7 +28,7 @@ import type { FakeAccessory } from '../../features/lib/homebridgeApi.js';
 import type { BasementGuardianAccessory, BasementGuardianAccessoryOptions } from '../../src/accessories/basementGuardian.js';
 import type { ServiceRow } from '../../src/accessories/serviceCatalogue.js';
 import type { NotificationServiceKind, ServiceDescriptor, ServiceKind } from '../../src/accessories/services.js';
-import type { DeviceCapability, DeviceFamily, FieldViolation } from '../../src/device/family.js';
+import type { DeviceFamily, FieldViolation } from '../../src/device/family.js';
 import type { TrustScope } from '../../src/device/health.js';
 import type { FamilyOutcome, FamilyRegistry } from '../../src/device/registry.js';
 import type { DeviceSnapshot } from '../../src/device/state.js';
@@ -424,38 +426,6 @@ function recordingTimers(): { timers: Timers; calls: string[] } {
   return { timers, calls };
 }
 
-// A `CommandPort` stand-in that records every send and accepts it. The accessory never sends on its
-// own, so a case asserts this recorder stayed empty across a whole update.
-function recordingCommands(): { commands: CommandPort; sends: string[] } {
-  const sends: string[] = [];
-  const commands: CommandPort = {
-    send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
-      sends.push(`${deviceId} ${capability} ${String(requested)}`);
-
-      return Promise.resolve({ accepted: true });
-    },
-  };
-
-  return { commands, sends };
-}
-
-// An `AccessoryStore` stand-in that counts every write request and performs none. The accessory
-// mutates its own context and asks Homebridge to store it, so a case counts the asks; a case that
-// asserts none were made is stating something about an absence, which watching behaviour alone
-// cannot give (D-008, D-010).
-function recordingStore(): { store: AccessoryStore; persisted: () => number } {
-  let persists = 0;
-
-  return {
-    store: {
-      persist: () => {
-        persists += 1;
-      },
-    },
-    persisted: () => persists,
-  };
-}
-
 // Every macrotask a case has collected runs in the order the plugin armed it. Each caller selects
 // the callbacks it needs instead of relying on an index in the timer recorder.
 function runEvery(deferred: readonly (() => void)[]): void {
@@ -515,8 +485,12 @@ function buildOptions(
     registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }),
     log: silentLog(),
     timers: recordingTimers().timers,
-    store: recordingStore().store,
-    commands: recordingCommands().commands,
+    store: {
+      persist: () => {
+        // Default options do not observe persistence.
+      },
+    },
+    commands: { send: () => Promise.resolve({ accepted: true }) },
     ...rest,
     accessory: asPlatformAccessory(accessory),
   };
@@ -1026,7 +1000,7 @@ describe('createBasementGuardianAccessory', () => {
     const { log, warnings } = recordingLog();
     const { timers } = recordingTimers();
     refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers);
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const restarted = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }), commands, log, timers });
 
     // act
@@ -1044,9 +1018,10 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { sends, refusals: warnings.filter((warning) => warning.startsWith('Refused ')) },
-      { sends: [], refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
+      warnings.filter((warning) => warning.startsWith('Refused ')),
+      [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
     );
+    verify(commands);
   });
 
   test('adds no service when the family stops resolving before it ever resolved', (t) => {
@@ -2364,7 +2339,7 @@ describe('createBasementGuardianAccessory', () => {
   test('drives no observation and asks for no write when the family has never resolved', () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { store, persisted } = recordingStore();
+    const store = mock<AccessoryStore>({ exactParams: true, name: 'store' });
     const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID }), store });
 
     // act
@@ -2372,9 +2347,10 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { persists: persisted(), pumpServices: basementGuardianAccessory.services.filter((service) => service.kind === 'primary-pump') },
-      { persists: 0, pumpServices: [] },
+      basementGuardianAccessory.services.filter((service) => service.kind === 'primary-pump'),
+      [],
     );
+    verify(store);
   });
 
   // A profile that stops resolving neither advances a count nor blanks a record: the record the
@@ -2382,26 +2358,31 @@ describe('createBasementGuardianAccessory', () => {
   test('leaves a published record where it is when the family stops resolving', () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { store, persisted } = recordingStore();
+    const store = mock<AccessoryStore>({ exactParams: true, name: 'store' });
+    when(() => {
+      store.persist();
+    }).thenReturn(undefined);
     const registry = registryOver([
       { kind: 'implemented', family: geminiFamily },
       { kind: 'unknown', deviceTypeId: DEVICE_TYPE_ID },
     ]);
     const basementGuardianAccessory = accessoryWith(accessory, { registry, store });
     basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT }), 'poll');
-    const afterTheResolvedUpdate = { record: pumpRecordOf(accessory, 'Backup Pump'), persists: persisted() };
+    const afterTheResolvedUpdate = pumpRecordOf(accessory, 'Backup Pump');
+    verify(store);
 
     // act
     basementGuardianAccessory.update(buildSnapshot({ data: GEMINI_TELEMETRY, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }), 'poll');
 
     // assert
     assert.deepStrictEqual(
-      { record: pumpRecordOf(accessory, 'Backup Pump'), furtherPersists: persisted() - afterTheResolvedUpdate.persists },
+      { record: pumpRecordOf(accessory, 'Backup Pump'), previous: afterTheResolvedUpdate },
       {
         record: { observationStartedAt: RECORD_RECEIVED_AT_ISO, activationCount: 0, lastActivationAt: '', lastActivationWasTestActivity: undefined },
-        furtherPersists: 0,
+        previous: { observationStartedAt: RECORD_RECEIVED_AT_ISO, activationCount: 0, lastActivationAt: '', lastActivationWasTestActivity: undefined },
       },
     );
+    verify(store);
   });
 
   // A record that counted an activation and never asked to be stored is lost on the next restart,
@@ -2409,26 +2390,29 @@ describe('createBasementGuardianAccessory', () => {
   test('asks for one write for the snapshot that counted an activation and none for an unchanged one', () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { store, persisted } = recordingStore();
+    const store = mock<AccessoryStore>({ exactParams: true, name: 'store' });
+    when(() => {
+      store.persist();
+    }).thenReturn(undefined);
     const basementGuardianAccessory = geminiUpdates(accessory, [{}], { store });
-    const afterTheSeed = persisted();
+    verify(store);
 
     // act
+    when(() => {
+      store.persist();
+    }).thenReturn(undefined);
     basementGuardianAccessory.update(
       buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + ONE_POLL_LATER_MS }),
       'poll',
     );
-    const afterTheActivation = persisted();
+    verify(store);
     basementGuardianAccessory.update(
       buildSnapshot({ data: { ...GEMINI_TELEMETRY, backup_pump_running: true }, receivedAt: RECORD_RECEIVED_AT + 2 * ONE_POLL_LATER_MS }),
       'poll',
     );
 
     // assert
-    assert.deepStrictEqual(
-      { afterTheSeed, afterTheActivation, afterAnUnchangedSnapshot: persisted() },
-      { afterTheSeed: 1, afterTheActivation: 2, afterAnUnchangedSnapshot: 2 },
-    );
+    verify(store);
   });
 
   test('declares no injected option typed API', async () => {
@@ -2599,7 +2583,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers, calls } = recordingTimers();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const deferred: (() => void)[] = [];
     const recording: Timers = {
       ...timers,
@@ -2625,7 +2609,7 @@ describe('createBasementGuardianAccessory', () => {
     deferred[0]?.();
 
     // assert
-    assert.deepStrictEqual({ sends, calls, beforeThePush }, { sends: [], calls: ['setTimeout 0'], beforeThePush: NOT_ALLOWED_IN_CURRENT_STATE });
+    assert.deepStrictEqual({ calls, beforeThePush }, { calls: ['setTimeout 0'], beforeThePush: NOT_ALLOWED_IN_CURRENT_STATE });
     assert.deepStrictEqual(
       {
         statusCode: onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode,
@@ -2634,6 +2618,7 @@ describe('createBasementGuardianAccessory', () => {
       },
       { statusCode: 0, on: false, statusActive: true },
     );
+    verify(commands);
   });
 
   // A refused credential is the one failure this plugin presents as No Response, because it never
@@ -2645,7 +2630,7 @@ describe('createBasementGuardianAccessory', () => {
 
   test('CR-02 leaves both controls refusing reads when the press it refused itself runs its clearing push', async () => {
     // arrange
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
     refuseTheCredentials(accessory, basementGuardianAccessory);
 
@@ -2662,12 +2647,14 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [] });
+    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    verify(commands);
   });
 
   test('CR-02 leaves both controls refusing reads when a request that outlived its window runs its clearing push', async () => {
     // arrange
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
 
     // act
@@ -2676,19 +2663,14 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [`${DEVICE_ID} self-test true`] });
+    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    verify(commands);
   });
 
   test('CR-02 leaves both controls refusing reads when the vendor refusal that answered a press runs its clearing push', async () => {
     // arrange
-    const sends: string[] = [];
-    const commands: CommandPort = {
-      send: (deviceId: string, capability: DeviceCapability, requested: boolean) => {
-        sends.push(`${deviceId} ${capability} ${String(requested)}`);
-
-        return Promise.resolve({ accepted: false, failure: 'vendor-error' });
-      },
-    };
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: false, failure: 'vendor-error' });
     const { accessory, basementGuardianAccessory, deferred } = haltableAccessory(commands);
 
     // act & assert
@@ -2705,7 +2687,8 @@ describe('createBasementGuardianAccessory', () => {
     runEvery(deferred);
 
     // assert
-    assert.deepStrictEqual({ reads: trustReportReadsOf(accessory), sends }, { reads: STILL_REFUSED, sends: [`${DEVICE_ID} self-test true`] });
+    assert.deepStrictEqual(trustReportReadsOf(accessory), STILL_REFUSED);
+    verify(commands);
   });
 
   test('D-03 publishes the alarm mute switch on the first update even though alarm_audio_muted never decoded', () => {
@@ -2749,7 +2732,7 @@ describe('createBasementGuardianAccessory', () => {
     test(`CTRL-04 answers ${String(status)} for a write of ${String(written)} while alarm_audio_muted reads ${String(muted)}, and sends nothing`, async () => {
       // arrange
       const accessory = accessoryStandIn();
-      const { commands, sends } = recordingCommands();
+      const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
       geminiAccessory(accessory, { alarm_audio_muted: muted }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
       // act & assert
@@ -2763,21 +2746,22 @@ describe('createBasementGuardianAccessory', () => {
       );
 
       // assert
-      assert.deepStrictEqual(sends, []);
+      verify(commands);
     });
   }
 
   test('CTRL-04 sends one mute request carrying the only value the plugin will ever ask for', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'alarm-mute', true)).thenResolve({ accepted: true });
     geminiAccessory(accessory, { alarm_audio_muted: false }, { commands }).markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     await onCharacteristicOf(accessory, ALARM_MUTE_ROW).handleSetRequest(true);
 
     // assert
-    assert.deepStrictEqual(sends, [`${DEVICE_ID} alarm-mute true`]);
+    verify(commands);
   });
 
   // Equipment faults are not eligibility. The official Gemini client permits a self-test while
@@ -2787,7 +2771,8 @@ describe('createBasementGuardianAccessory', () => {
   test('CTRL-03 sends a self-test while every reported equipment fault is active', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     geminiAccessory(
       accessory,
       {
@@ -2805,7 +2790,7 @@ describe('createBasementGuardianAccessory', () => {
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
 
     // assert
-    assert.deepStrictEqual(sends, [`${DEVICE_ID} self-test true`]);
+    verify(commands);
   });
 
   // The write path reads the same confirmation run the rows publish from, so a device HomeKit is
@@ -2813,7 +2798,7 @@ describe('createBasementGuardianAccessory', () => {
   test('CTRL-03 refuses a self-test on a confirmed-offline device and sends nothing', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, offlineConfirmationPollCount: 1 });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
@@ -2830,7 +2815,7 @@ describe('createBasementGuardianAccessory', () => {
     );
 
     // assert
-    assert.deepStrictEqual(sends, []);
+    verify(commands);
   });
 
   // The failing case a two-field comparison would swallow is the ordinary one, not an exotic
@@ -2842,13 +2827,14 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, log });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
     // act
     await onCharacteristicOf(accessory, SELF_TEST_ROW).handleSetRequest(true);
-    const afterTheAcceptedPress = [...sends];
+    verify(commands);
     basementGuardianAccessory.markMonitoring({ restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false });
     // act & assert
     await assert.rejects(
@@ -2861,14 +2847,8 @@ describe('createBasementGuardianAccessory', () => {
     );
 
     // assert
-    assert.deepStrictEqual(
-      { afterTheAcceptedPress, sends, warnings },
-      {
-        afterTheAcceptedPress: [`${DEVICE_ID} self-test true`],
-        sends: [`${DEVICE_ID} self-test true`],
-        warnings: [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`],
-      },
-    );
+    assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${NO_COMMAND_TRANSPORT_CAUSE}.`]);
+    verify(commands);
   });
 
   // A press during shadow silence is refused, and the cause it names is the one that is true. The
@@ -2880,7 +2860,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, log });
 
     // act
@@ -2896,7 +2876,8 @@ describe('createBasementGuardianAccessory', () => {
     );
 
     // assert
-    assert.deepStrictEqual({ sends, warnings }, { sends: [], warnings: [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`] });
+    assert.deepStrictEqual(warnings, [`Refused self-test on ${DEVICE_ID}: ${QUIET_LIVE_CONNECTION_CAUSE}.`]);
+    verify(commands);
   });
 
   // The state rule is still reachable and still names its own cause. Both transports are working
@@ -2907,7 +2888,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: 'not-a-boolean' }, { commands, log });
 
     // act
@@ -2926,9 +2907,10 @@ describe('createBasementGuardianAccessory', () => {
     // this case is about, so the refusal lines alone are compared.
     // assert
     assert.deepStrictEqual(
-      { sends, refusals: warnings.filter((warning) => warning.startsWith('Refused ')) },
-      { sends: [], refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`] },
+      warnings.filter((warning) => warning.startsWith('Refused ')),
+      [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
     );
+    verify(commands);
   });
 
   // The value the tile shows and the value the write path reads are one value, asserted where an
@@ -2946,7 +2928,8 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     // The clearing push alone, told apart by the delay it was armed at. Running the request's own
     // 30-second deadline as well would expire the request, and the row's republish would then set
     // `On` from its own projection -- which is the very value this case is checking the write path
@@ -2988,10 +2971,10 @@ describe('createBasementGuardianAccessory', () => {
         afterTheAcceptedPress,
         afterTheRefusedPress: onCharacteristicOf(accessory, SELF_TEST_ROW).value,
         statusCode: onCharacteristicOf(accessory, SELF_TEST_ROW).statusCode,
-        sends,
       },
-      { clearingPushes: 1, afterTheAcceptedPress: true, afterTheRefusedPress: false, statusCode: 0, sends: [`${DEVICE_ID} self-test true`] },
+      { clearingPushes: 1, afterTheAcceptedPress: true, afterTheRefusedPress: false, statusCode: 0 },
     );
+    verify(commands);
   });
 
   // The other direction of the same rule, and the one that keeps it narrow. A lost pump controller
@@ -3009,7 +2992,7 @@ describe('createBasementGuardianAccessory', () => {
     // arrange
     const accessory = accessoryStandIn();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     const basementGuardianAccessory = geminiAccessory(accessory, { serial_communications: false }, { commands, log });
 
     // act
@@ -3031,16 +3014,15 @@ describe('createBasementGuardianAccessory', () => {
       {
         selfTestReason: basementGuardianAccessory.untrusted.find((scope) => scope.scope === 'self-test')?.reason,
         publishedOn: serviceOf(accessory, SELF_TEST_ROW).characteristics.find((candidate) => candidate.UUID === HAP.Characteristic.On.UUID)?.pushed,
-        sends,
         refusals: warnings.filter((warning) => warning.startsWith('Refused ')),
       },
       {
         selfTestReason: 'controller-link-lost',
         publishedOn: false,
-        sends: [],
         refusals: [`Refused self-test on ${DEVICE_ID}: ${NO_FRESH_STATE_CAUSE}.`],
       },
     );
+    verify(commands);
   });
 
   // A request the device confirmed on the very snapshot that withdrew the control's scope. The
@@ -3057,7 +3039,8 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
     const recording: Timers = {
       ...timers,
@@ -3079,9 +3062,10 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { sends, windowClosings: windowClosings.length, unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')) },
-      { sends: [`${DEVICE_ID} self-test true`], windowClosings: 1, unconfirmed: [] },
+      { windowClosings: windowClosings.length, unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')) },
+      { windowClosings: 1, unconfirmed: [] },
     );
+    verify(commands);
   });
 
   // The same moment under the other withdrawal: a quiet live path does not hide the reported value
@@ -3092,7 +3076,8 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
     const recording: Timers = {
       ...timers,
@@ -3116,12 +3101,12 @@ describe('createBasementGuardianAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        sends,
         on: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On),
         unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')),
       },
-      { sends: [`${DEVICE_ID} self-test true`], on: true, unconfirmed: [] },
+      { on: true, unconfirmed: [] },
     );
+    verify(commands);
   });
 
   // The other half of the same reader, and what stops the gate being removed from the report as
@@ -3133,7 +3118,8 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn();
     const { timers } = recordingTimers();
     const { log, warnings } = recordingLog();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const windowClosings: (() => void)[] = [];
     const recording: Timers = {
       ...timers,
@@ -3155,9 +3141,10 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { sends, unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')) },
-      { sends: [`${DEVICE_ID} self-test true`], unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`] },
+      warnings.filter((warning) => warning.includes('never confirmed')),
+      [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
     );
+    verify(commands);
   });
 
   // A pending request keeps HAP's requested value visible while ordinary polls and trust pushes
@@ -3177,7 +3164,8 @@ describe('createBasementGuardianAccessory', () => {
         return recordedTimers.setTimeout(handler, delayMs);
       },
     };
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+    when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
     const basementGuardianAccessory = geminiAccessory(accessory, { test_running: false }, { commands, timers });
     basementGuardianAccessory.markMonitoring(EVERY_TRANSPORT_WORKING);
 
@@ -3191,9 +3179,10 @@ describe('createBasementGuardianAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { sends, duringPoll, duringTrustChange, afterWindow: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On) },
-      { sends: [`${DEVICE_ID} self-test true`], duringPoll: true, duringTrustChange: true, afterWindow: false },
+      { duringPoll, duringTrustChange, afterWindow: valueOf(accessory, SELF_TEST_ROW, HAP.Characteristic.On) },
+      { duringPoll: true, duringTrustChange: true, afterWindow: false },
     );
+    verify(commands);
   });
 
   // An accepted press leaves HAP serving the requested true until the device confirms it or the
@@ -3230,7 +3219,8 @@ describe('createBasementGuardianAccessory', () => {
       const accessory = accessoryStandIn();
       const { timers } = recordingTimers();
       const { log, warnings } = recordingLog();
-      const { commands, sends } = recordingCommands();
+      const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
+      when(() => commands.send(DEVICE_ID, 'self-test', true)).thenResolve({ accepted: true });
       const windowClosings: (() => void)[] = [];
       const controlTimers: Timers = {
         ...timers,
@@ -3259,9 +3249,9 @@ describe('createBasementGuardianAccessory', () => {
         windowClosings: windowClosings.length,
         afterExpiry: on.value,
         readAfterExpiry: await on.handleGetRequest(),
-        sends,
         unconfirmed: warnings.filter((warning) => warning.includes('never confirmed')),
       });
+      verify(commands);
     }
 
     // assert
@@ -3273,7 +3263,6 @@ describe('createBasementGuardianAccessory', () => {
         windowClosings: 1,
         afterExpiry: false,
         readAfterExpiry: false,
-        sends: [`${DEVICE_ID} self-test true`],
         unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
       },
       {
@@ -3283,7 +3272,6 @@ describe('createBasementGuardianAccessory', () => {
         windowClosings: 1,
         afterExpiry: false,
         readAfterExpiry: false,
-        sends: [`${DEVICE_ID} self-test true`],
         unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
       },
       {
@@ -3293,7 +3281,6 @@ describe('createBasementGuardianAccessory', () => {
         windowClosings: 1,
         afterExpiry: false,
         readAfterExpiry: false,
-        sends: [`${DEVICE_ID} self-test true`],
         unconfirmed: [`The self-test request on ${DEVICE_ID} was never confirmed by the device. It is not retried.`],
       },
     ]);
@@ -3305,7 +3292,7 @@ describe('createBasementGuardianAccessory', () => {
   test('RES-04 refuses a press before the runtime has pushed any monitoring trust, and sends nothing', async () => {
     // arrange
     const accessory = accessoryStandIn();
-    const { commands, sends } = recordingCommands();
+    const commands = mock<CommandPort>({ exactParams: true, name: 'commands' });
     geminiAccessory(accessory, { test_running: false }, { commands });
 
     // act & assert
@@ -3319,7 +3306,7 @@ describe('createBasementGuardianAccessory', () => {
     );
 
     // assert
-    assert.deepStrictEqual(sends, []);
+    verify(commands);
   });
 
   test('withdraws every scope but connectivity when only the shadow has gone quiet', () => {
