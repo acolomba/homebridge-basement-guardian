@@ -62,6 +62,14 @@ const SOURCE_DIRECTORIES: readonly string[] = ['src', 'test', 'features'];
 // read would pass without examining a single file.
 const SOURCE_FILE_FLOOR = 104;
 
+/** Accessory modules checked for direct HAP error, setter and UUID calls. */
+const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
+
+/** The three modules that must never construct an errored characteristic. */
+const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
+
+const ERRORED_CHARACTERISTIC = 'HapStatusError';
+
 // A comment naming a package is not an import of it, and this gate's own overview names
 // the package repeatedly, so the detector reads the three spellings that actually reach a
 // module -- `from '<specifier>'`, a side-effect `import '<specifier>'`, and a dynamic
@@ -90,6 +98,19 @@ function typeScriptFilesUnder(relativeDirectory: string): readonly string[] {
 
     return entry.name.endsWith('.ts') ? [path] : [];
   });
+}
+
+// Module overviews explain forbidden idioms, so the HAP source checks inspect code without comments.
+function codeOf(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+function accessoryCodeOf(module: string): string {
+  return codeOf(readFileSync(join(REPOSITORY_ROOT, 'src', 'accessories', module), 'utf8'));
+}
+
+function occurrences(code: string, needle: string): number {
+  return code.split(needle).length - 1;
 }
 
 // One fixture per spelling the detector has to catch, each written out rather than
@@ -188,3 +209,51 @@ test('does not report the hand-built stand-in, whose own file overview names the
     { namesThePackage: true, importsThePackage: false },
   );
 });
+
+for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
+  test(`${module} signals no untrusted scope through an errored characteristic`, () => {
+    // act
+    const code = accessoryCodeOf(module);
+
+    // assert
+    assert.strictEqual(occurrences(code, ERRORED_CHARACTERISTIC), 0);
+  });
+}
+
+// D-10 permits one persistent failure. Pin both the file count and the call's function location.
+test('serviceCatalogue.ts names an errored characteristic once, inside publishPersistentFailure', () => {
+  // act
+  const code = accessoryCodeOf('serviceCatalogue.ts');
+  const persistentFailure = /export function publishPersistentFailure\b[\s\S]*?\n\}/.exec(code)?.[0] ?? '';
+
+  // assert
+  assert.deepStrictEqual(
+    { file: occurrences(code, ERRORED_CHARACTERISTIC), insidePublishPersistentFailure: occurrences(persistentFailure, ERRORED_CHARACTERISTIC) },
+    { file: 1, insidePublishPersistentFailure: 1 },
+  );
+});
+
+for (const module of ACCESSORY_MODULES) {
+  // Switch `On` writes use the control binder. No accessory module registers a direct set handler.
+  test(`${module} has no direct onSet or set-event registration`, () => {
+    // act
+    const code = accessoryCodeOf(module);
+
+    // assert
+    assert.deepStrictEqual({ onSet: code.includes('onSet'), setEvent: /\.on\(\s*['"`]set/i.test(code) }, { onSet: false, setEvent: false });
+  });
+
+  test(`${module} contains no direct HAP UUID generation call`, () => {
+    // act
+    const code = accessoryCodeOf(module);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        memberCall: /\buuid\s*\.\s*generate\s*\(/u.test(code),
+        destructuredCall: /\{\s*generate\s*\}\s*=\s*[\w.]+\.uuid\b/u.test(code),
+      },
+      { memberCall: false, destructuredCall: false },
+    );
+  });
+}

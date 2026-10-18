@@ -176,18 +176,6 @@ const USER_RENAME = 'Fuse Box';
 // A distinct read value left by the case so an unexpected StatusActive push is visible.
 const UNREPUBLISHED_STATUS = 'left by the case';
 
-// The four accessory modules checked for direct setter and UUID generation spellings.
-const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
-
-// The construction that turns a characteristic unreadable, named once so the gate below and the one
-// exception to it cannot drift apart.
-const ERRORED_CHARACTERISTIC = 'HapStatusError';
-
-// The modules that must never name it at all. `serviceCatalogue.ts` is deliberately absent:
-// `D-10` grants it exactly one, and the case below pins the count and where that one sits rather
-// than permitting the module wholesale.
-const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
-
 // The namespace holds no per-scenario state: a service and its characteristics live on the
 // accessory that added them, so one stand-in serves every case.
 const HAP = createFakeHap();
@@ -799,10 +787,6 @@ function onCharacteristicOf(accessory: FakeAccessory, displayName: string): Fake
 
 async function sourceOf(module: string): Promise<string> {
   return readFile(new URL(`../../../src/accessories/${module}`, import.meta.url), 'utf8');
-}
-
-function occurrences(code: string, needle: string): number {
-  return code.split(needle).length - 1;
 }
 
 // Everything one pump service publishes about what the plugin observed it do, read back by the
@@ -3567,55 +3551,3 @@ test('keeps a lost monitoring path withdrawn across a poll that moves a value du
     { mains: CONTACT_NOT_DETECTED, mainsActive: false, distrust: DEGRADED_SCOPES.map((scope) => `${scope} unreachable`) },
   );
 });
-
-for (const module of MODULES_ERRORING_NO_CHARACTERISTIC) {
-  test(`${module} signals no untrusted scope through an errored characteristic`, async () => {
-    // act
-    const code = codeOf(await sourceOf(module));
-
-    // assert
-    assert.strictEqual(occurrences(code, ERRORED_CHARACTERISTIC), 0);
-  });
-}
-
-// The one exception `D-10` grants to the locked decision, pinned as a count and a location rather
-// than as a permission for the module. A second construction anywhere in the catalogue fails here,
-// which is what makes "a search for the forbidden act answers exactly one production call site" a
-// checked claim rather than a promise.
-test('serviceCatalogue.ts names an errored characteristic once, inside publishPersistentFailure', async () => {
-  // act
-  const code = codeOf(await sourceOf('serviceCatalogue.ts'));
-  const persistentFailure = /export function publishPersistentFailure\b[\s\S]*?\n\}/.exec(code)?.[0] ?? '';
-
-  // assert
-  assert.deepStrictEqual(
-    { file: occurrences(code, ERRORED_CHARACTERISTIC), insidePublishPersistentFailure: occurrences(persistentFailure, ERRORED_CHARACTERISTIC) },
-    { file: 1, insidePublishPersistentFailure: 1 },
-  );
-});
-
-for (const module of ACCESSORY_MODULES) {
-  // Switch `On` writes use the control binder. These modules register no direct set handler;
-  // in particular, a ConfiguredName write has no path to a device command (SAFE-08).
-  test(`${module} has no direct onSet or set-event registration`, async () => {
-    // act
-    const code = codeOf(await sourceOf(module));
-
-    // assert
-    assert.deepStrictEqual({ onSet: code.includes('onSet'), setEvent: /\.on\(\s*['"`]set/i.test(code) }, { onSet: false, setEvent: false });
-  });
-
-  test(`${module} contains no direct HAP UUID generation call`, async () => {
-    // act
-    const code = codeOf(await sourceOf(module));
-
-    // assert
-    assert.deepStrictEqual(
-      {
-        memberCall: /\buuid\s*\.\s*generate\s*\(/u.test(code),
-        destructuredCall: /\{\s*generate\s*\}\s*=\s*[\w.]+\.uuid\b/u.test(code),
-      },
-      { memberCall: false, destructuredCall: false },
-    );
-  });
-}
