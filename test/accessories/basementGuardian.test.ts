@@ -219,36 +219,40 @@ const {
 } = createCustomCharacteristics(HAP_NAMESPACE);
 const CATALOGUE = createServiceCatalogue(HAP_NAMESPACE);
 
+const noOperation = () => {
+  // These compile-only examples never invoke the accessory methods.
+};
+
 void ({
   deviceId: DEVICE_ID,
   services: [{ kind: 'sump-pit-flood', subtype: 'sump-pit-flood', serviceUuid: LEAK_SENSOR_UUID, name: 'Sump Pit Flood' }],
   untrusted: [],
-  update: () => undefined,
-  markMonitoring: () => undefined,
+  update: noOperation,
+  markMonitoring: noOperation,
 } satisfies BasementGuardianAccessory);
 
 // @ts-expect-error the accessory is seeded by the immutable vendor identifier
-void ({ services: [], untrusted: [], update: () => undefined, markMonitoring: () => undefined } satisfies BasementGuardianAccessory);
+void ({ services: [], untrusted: [], update: noOperation, markMonitoring: noOperation } satisfies BasementGuardianAccessory);
 // @ts-expect-error state reaches HomeKit through the update entry point alone
-void ({ deviceId: DEVICE_ID, services: [], untrusted: [], markMonitoring: () => undefined } satisfies BasementGuardianAccessory);
+void ({ deviceId: DEVICE_ID, services: [], untrusted: [], markMonitoring: noOperation } satisfies BasementGuardianAccessory);
 void ({
   deviceId: DEVICE_ID,
   // @ts-expect-error a published service is a keyed descriptor, not a bare name
   services: ['sump-pit-flood'],
   untrusted: [],
-  update: () => undefined,
-  markMonitoring: () => undefined,
+  update: noOperation,
+  markMonitoring: noOperation,
 } satisfies BasementGuardianAccessory);
 void ({
   deviceId: DEVICE_ID,
   services: [],
   // @ts-expect-error a degraded scope is a keyed descriptor, not a bare name
   untrusted: ['water'],
-  update: () => undefined,
-  markMonitoring: () => undefined,
+  update: noOperation,
+  markMonitoring: noOperation,
 } satisfies BasementGuardianAccessory);
 // @ts-expect-error the account-wide monitoring trust is how a lost path reaches the published rows
-void ({ deviceId: DEVICE_ID, services: [], untrusted: [], update: () => undefined } satisfies BasementGuardianAccessory);
+void ({ deviceId: DEVICE_ID, services: [], untrusted: [], update: noOperation } satisfies BasementGuardianAccessory);
 
 // A full, legal Gemini telemetry payload. The trust-scope cases below run the real adapter rather
 // than a stand-in, because the claim they check is about the whole chain -- a wire field, the scope
@@ -356,14 +360,18 @@ function codeOf(source: string): string {
 }
 
 function silentLog(): Logging {
-  return Object.assign(() => undefined, {
+  const ignoreLog = () => {
+    // The silent logger intentionally drops messages.
+  };
+
+  return Object.assign(ignoreLog, {
     prefix: 'basement guardian',
-    debug: () => undefined,
-    error: () => undefined,
-    info: () => undefined,
-    log: () => undefined,
-    success: () => undefined,
-    warn: () => undefined,
+    debug: ignoreLog,
+    error: ignoreLog,
+    info: ignoreLog,
+    log: ignoreLog,
+    success: ignoreLog,
+    warn: ignoreLog,
   });
 }
 
@@ -371,13 +379,17 @@ function silentLog(): Logging {
 // the degradation transition logs exactly once.
 function recordingLog(): { log: Logging; warnings: string[] } {
   const warnings: string[] = [];
-  const log = Object.assign(() => undefined, {
+  const ignoreLog = () => {
+    // This recorder keeps warning messages only.
+  };
+
+  const log = Object.assign(ignoreLog, {
     prefix: 'basement guardian',
-    debug: () => undefined,
-    error: () => undefined,
-    info: () => undefined,
-    log: () => undefined,
-    success: () => undefined,
+    debug: ignoreLog,
+    error: ignoreLog,
+    info: ignoreLog,
+    log: ignoreLog,
+    success: ignoreLog,
     warn: (message: string) => {
       warnings.push(message);
     },
@@ -841,7 +853,9 @@ describe('createBasementGuardianAccessory', () => {
 
     // act & assert
     assert.throws(
-      () => accessoryWith(accessory, {}),
+      () => {
+        accessoryWith(accessory, {});
+      },
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.strictEqual(error.constructor, Error);
@@ -861,7 +875,9 @@ describe('createBasementGuardianAccessory', () => {
 
     // act & assert
     assert.throws(
-      () => createBasementGuardianAccessory({ ...buildOptions({ accessory: accessoryStandIn() }), accessory }),
+      () => {
+        createBasementGuardianAccessory({ ...buildOptions({ accessory: accessoryStandIn() }), accessory });
+      },
       (error: unknown) => {
         assert.ok(error instanceof Error);
         assert.strictEqual(error.constructor, Error);
@@ -880,7 +896,9 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn({ deviceId: 12345, deviceTypeId: DEVICE_TYPE_ID });
 
     // act & assert
-    assert.throws(() => accessoryWith(accessory, {}), Error);
+    assert.throws(() => {
+      accessoryWith(accessory, {});
+    }, Error);
   });
 
   test('throws when the accessory context device carries a deviceTypeId of the wrong type', () => {
@@ -888,7 +906,9 @@ describe('createBasementGuardianAccessory', () => {
     const accessory = accessoryStandIn({ deviceId: DEVICE_ID, deviceTypeId: 12345 });
 
     // act & assert
-    assert.throws(() => accessoryWith(accessory, {}), Error);
+    assert.throws(() => {
+      accessoryWith(accessory, {});
+    }, Error);
   });
 
   test('publishes no service and marks no scope untrusted before the first update', () => {
@@ -1517,7 +1537,9 @@ describe('createBasementGuardianAccessory', () => {
       const accessory = accessoryStandIn();
 
       // act & assert
-      assert.throws(() => accessoryWith(accessory, { offlineConfirmationPollCount }), Error);
+      assert.throws(() => {
+        accessoryWith(accessory, { offlineConfirmationPollCount });
+      }, Error);
     });
   }
 
