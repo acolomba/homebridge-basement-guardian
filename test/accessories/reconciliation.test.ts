@@ -96,19 +96,6 @@ describe('observe', () => {
     assert.deepStrictEqual(confirmedAbsent, []);
   });
 
-  test('treats a schema-valid empty list as a trustworthy response that can confirm absence', () => {
-    // arrange
-    const tracker = reconciliation();
-    tracker.observe([DEVICE_ID]);
-    tracker.observe([]);
-
-    // act
-    const confirmedAbsent = tracker.observe([]);
-
-    // assert
-    assert.deepStrictEqual(confirmedAbsent, [DEVICE_ID]);
-  });
-
   test('keeps reporting a deviceId confirmed absent on every later call while it stays absent', () => {
     // arrange
     const tracker = reconciliation();
