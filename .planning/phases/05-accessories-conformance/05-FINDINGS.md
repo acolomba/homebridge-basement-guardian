@@ -1822,3 +1822,20 @@ were read-only runs of the compiled modules; no edit, no commit. Coordinator tri
 29 as `open`: 05-06 takes 001, 002, 003, 009, 011, 012 and 028, and 05-07 takes the rest. 002 and
 003 are classified as genuine bugs (D-04). 001 is a D-04 candidate whose fix edits the closed
 CONTROLS module. The maintainer paused the session before deciding it.
+
+#### Resume point
+
+Paused 2026-10-18 at the maintainer's request (`/gsd-pause`), at resume point (a).
+
+- Batch: ACCESSORY (plans 05-06 and 05-07; batch base `9cb164b1299249c2d2083ea81677c83e28e66916`).
+- Last committed round: round 0, `05-ACCESSORY-REVIEW.md`, result `initial`, committed in
+  `79108d4e83157e51b50973caf50c431d7d23d863`.
+- Open IDs: CR-05-ACCESSORY-001 to 029 (7 BLOCKER, 22 WARNING). Open IDs with fix commits: none.
+- Owning plan: 05-06 takes 001, 002, 003, 009, 011, 012 and 028; 05-07 takes the rest.
+- Waiting on the maintainer: whether CR-05-ACCESSORY-001 is fixed now or deferred. The fix edits
+  `src/accessories/controls.ts`, the closed CONTROLS batch. The binder would keep the pre-press
+  value, and expiry would push `reported() ?? that value`.
+- Next step on resume: ask that decision, then continue task 05-06-01 with the pair-header fixer for
+  009 (`style(basementGuardian): add the approved file headers`). Then task 05-06-02: the comment
+  and style causes 011, 012 and 028, the D-04 sequences for 002 and 003 with
+  `05-BASEMENT-GUARDIAN-RED-EVIDENCE.json`, and 001 as decided. Then the 05-06 gate.
