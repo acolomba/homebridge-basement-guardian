@@ -610,7 +610,7 @@ test('removes the stored self-test label when a device timestamp recovers a miss
 
 // A real backup run after a self-test is a new activation, and the settled self-test timestamps do
 // not describe it. Until the device publishes the timestamp of that run, the record holds no label,
-// so HomeKit does not report a real basement run as a self-test.
+// so it no longer says that the last activation was a self-test.
 test('withholds the self-test label from a watched backup run whose device timestamp has not arrived', () => {
   // arrange
   const { records } = pumpRecords(storedContext());
