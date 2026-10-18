@@ -375,12 +375,12 @@ function restoredAccessoryRepublishingItsRows(): RepublishingAccessory {
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
 // difference between unreadable and merely marked, so it is driven rather than inferred from the
 // stored status.
-function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): { value: unknown; threw: unknown } {
+async function readOf(service: FakeHapService, characteristicClass: FakeCharacteristicClass): Promise<{ value: unknown; threw: unknown }> {
   const held = service.getCharacteristic(characteristicClass);
   let threw: unknown = undefined;
 
   try {
-    held?.handleGetRequest();
+    await held?.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
@@ -390,13 +390,15 @@ function readOf(service: FakeHapService, characteristicClass: FakeCharacteristic
 
 // The trust row beside a reading the pass must not touch, so preserve-and-erase fails here as
 // plainly as an unmarked accessory does.
-function trustReadsOf(
+async function trustReadsOf(
   floods: readonly FakeHapService[],
-): readonly { statusActive: { value: unknown; threw: unknown }; leakDetected: { value: unknown; threw: unknown } }[] {
-  return floods.map((flood) => ({
-    statusActive: readOf(flood, HAP.Characteristic.StatusActive),
-    leakDetected: readOf(flood, HAP.Characteristic.LeakDetected),
-  }));
+): Promise<readonly { statusActive: { value: unknown; threw: unknown }; leakDetected: { value: unknown; threw: unknown } }[]> {
+  return Promise.all(
+    floods.map(async (flood) => ({
+      statusActive: await readOf(flood, HAP.Characteristic.StatusActive),
+      leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+    })),
+  );
 }
 
 function statusesOf(floods: readonly FakeHapService[]): readonly (number | undefined)[] {
@@ -1676,7 +1678,7 @@ describe('applyMonitoringHealth', () => {
   // none of the latter. These two accessories are exactly what a halted restart holds: restored,
   // carrying the values the previous run published, and belonging to no accessory instance at all
   // (RES-04, D-10).
-  test('makes every restored accessory unreadable when the vendor has refused the credentials', () => {
+  test('makes every restored accessory unreadable when the vendor has refused the credentials', async () => {
     // arrange
     const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessories();
@@ -1689,7 +1691,7 @@ describe('applyMonitoringHealth', () => {
     applyMonitoringHealth(context, { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
-    assert.deepStrictEqual(trustReadsOf(restored.floods), [
+    assert.deepStrictEqual(await trustReadsOf(restored.floods), [
       { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
       { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
     ]);
@@ -1700,7 +1702,7 @@ describe('applyMonitoringHealth', () => {
   // the ones a halted launch found in the cache. Both kinds are in the platform's own accessory map,
   // which is what the unreadable pass walks, and the built one is here as well -- so the pass that
   // reaches a restored accessory is proven to reach a discovered one in the same call (CR-03, D-10).
-  test('makes an accessory a successful inventory built unreadable in the same pass as a restored one', () => {
+  test('makes an accessory a successful inventory built unreadable in the same pass as a restored one', async () => {
     // arrange
     const marks: string[] = [];
     const restored = restoredAccessories();
@@ -1742,7 +1744,7 @@ describe('applyMonitoringHealth', () => {
 
     // assert
     assert.deepStrictEqual(
-      { marks, reads: trustReadsOf(restored.floods) },
+      { marks, reads: await trustReadsOf(restored.floods) },
       {
         marks: [`${DEVICE_ID} rest false shadow false`],
         reads: [
@@ -1810,7 +1812,7 @@ describe('applyMonitoringHealth', () => {
   // Credential refusal withdraws every trust scope, so this real accessory republishes its trust
   // report as `false` before the error lands. The recording-only fixture retains the `true` seeded
   // by `restoredAccessories`, because it has no instance publishing onto those services (D-10).
-  test('leaves the pushed status standing over an accessory that republishes its own rows', () => {
+  test('leaves the pushed status standing over an accessory that republishes its own rows', async () => {
     // arrange
     const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const live = restoredAccessoryRepublishingItsRows();
@@ -1826,7 +1828,7 @@ describe('applyMonitoringHealth', () => {
     applyMonitoringHealth(context, { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: true }, noDeviceAnswered);
 
     // assert
-    assert.deepStrictEqual(trustReadsOf(live.floods), [
+    assert.deepStrictEqual(await trustReadsOf(live.floods), [
       { statusActive: { value: false, threw: COMMUNICATION_FAILURE }, leakDetected: { value: 0, threw: undefined } },
     ]);
     verify(context.api);
@@ -1869,7 +1871,7 @@ describe('applyMonitoringHealth', () => {
     );
   });
 
-  test('retains a cached control without inventing a trust characteristic when credentials are refused', () => {
+  test('retains a cached control without inventing a trust characteristic when credentials are refused', async () => {
     // arrange
     const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessoryCarryingNoTrustReport();
@@ -1890,14 +1892,14 @@ describe('applyMonitoringHealth', () => {
         accessoryIds: [...context.accessories.keys()],
         instanceIds: [...context.basementGuardianAccessories.keys()],
         carriesTrust: restored.control.testCharacteristic(HAP.Characteristic.StatusActive),
-        on: readOf(restored.control, HAP.Characteristic.On),
+        on: await readOf(restored.control, HAP.Characteristic.On),
       },
       { accessoryIds: [ACCESSORY_UUID], instanceIds: [], carriesTrust: false, on: { value: true, threw: undefined } },
     );
     verify(context.api);
   });
 
-  test('retains both cached accessories and their readings while refused credentials make trust unreadable', () => {
+  test('retains both cached accessories and their readings while refused credentials make trust unreadable', async () => {
     // arrange
     const noDeviceAnswered = new Map<string, MonitoringTrust>();
     const restored = restoredAccessories();
@@ -1919,7 +1921,7 @@ describe('applyMonitoringHealth', () => {
       {
         accessoryIds: [...context.accessories.keys()],
         instanceIds: [...context.basementGuardianAccessories.keys()],
-        reads: trustReadsOf(restored.floods),
+        reads: await trustReadsOf(restored.floods),
       },
       {
         accessoryIds: [ACCESSORY_UUID, SECOND_ACCESSORY_UUID],
@@ -1964,7 +1966,7 @@ describe('applyMonitoringHealth', () => {
     { cause: 'an unready command transport', trust: { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false } },
     { cause: 'both transports lost', trust: { restDegraded: true, shadowSilent: true, commandTransportReady: false, credentialsRejected: false } },
   ] satisfies readonly { cause: string; trust: MonitoringTrust }[]) {
-    test(`leaves every restored accessory readable for ${cause}`, () => {
+    test(`leaves every restored accessory readable for ${cause}`, async () => {
       // arrange
       const noDeviceAnswered = new Map<string, MonitoringTrust>();
       const restored = restoredAccessories();
@@ -1974,7 +1976,7 @@ describe('applyMonitoringHealth', () => {
       applyMonitoringHealth(context, trust, noDeviceAnswered);
 
       // assert
-      assert.deepStrictEqual(trustReadsOf(restored.floods), [
+      assert.deepStrictEqual(await trustReadsOf(restored.floods), [
         { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
         { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
       ]);
