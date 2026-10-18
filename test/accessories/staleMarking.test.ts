@@ -348,18 +348,24 @@ describe('markTrustReportsUnreadable', () => {
 });
 
 describe('refuseRestoredControls', () => {
+  // A restored accessory carries both control Switches, so a pass that armed only the first Switch it
+  // found would leave the second one storing a press and reporting success.
   test('refuses a press on every restored control and counts the controls it armed', async () => {
     // arrange
     const accessory = restoredAccessory();
     floodSensorReporting(accessory, true);
     batteryReporting(accessory, true);
-    const control = switchCarryingNoTrust(accessory);
+    const alarmMute = switchCarryingNoTrust(accessory);
+    const selfTest = selfTestControl(accessory);
 
     // act
     const armed = refuseControls(accessory);
 
     // assert
-    assert.deepStrictEqual({ armed, press: await pressOutcomeOf(control) }, { armed: 1, press: NOT_ALLOWED_IN_CURRENT_STATE });
+    assert.deepStrictEqual(
+      { armed, alarmMute: await pressOutcomeOf(alarmMute), selfTest: await pressOutcomeOf(selfTest) },
+      { armed: 2, alarmMute: NOT_ALLOWED_IN_CURRENT_STATE, selfTest: NOT_ALLOWED_IN_CURRENT_STATE },
+    );
   });
 
   // The guard is the control write surface itself, so a sensor is walked and left exactly as the
