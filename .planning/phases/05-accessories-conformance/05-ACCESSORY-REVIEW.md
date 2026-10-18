@@ -441,3 +441,9 @@ Counts: opening 0, fixed 0, rejected 0, new 29, reopened 0, closing 29 (7 BLOCKE
   - S-05-24 is confirmed, part 1 inside 011 and part 2 as 001.
   - S-05-25 is confirmed as 002 for the unresolved family. The missing-device and no-snapshot
     variants live in `src/platform.ts` (Phase 6) and are recorded as out of scope.
+- **Maintainer decision (2026-10-18, on resume):** fix CR-05-ACCESSORY-001 now. The binder keeps the
+  value HAP served before an accepted press, and expiry pushes the reported value or, when none can
+  be vouched for, that pre-press value. This is a bounded edit to `src/accessories/controls.ts`
+  (closed CONTROLS batch). Because the tracer allows one inventory row per path, the ACCESSORY
+  correction rounds read that hunk as a reference outside `files_reviewed_list`. It follows the D-04
+  sequence with `05-BASEMENT-GUARDIAN-RED-EVIDENCE.json`.
