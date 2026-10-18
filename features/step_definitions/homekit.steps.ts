@@ -200,9 +200,8 @@ async function readOutcome(service: FakeHapService | undefined, displayName: str
   return 'answered';
 }
 
-// The wait's own message can only name the outcome the step wanted, because it is built before the
-// first read. The deadline failure is restated here with the outcome the last read met, and carries
-// the wait's error as its cause so nothing about the timing is lost.
+// A controller read repeats until it meets the expected outcome or the deadline passes.
+// If the deadline passes, the error names the last outcome and puts the time limit in its cause.
 async function untilReadOutcome(world: BasementGuardianWorld, serviceName: string, characteristicName: string, expected: ReadOutcome): Promise<void> {
   const homebridge = await world.homebridge();
   const read = (): Promise<ReadOutcome> => readOutcome(serviceOf(homebridge, serviceName), characteristicName);
