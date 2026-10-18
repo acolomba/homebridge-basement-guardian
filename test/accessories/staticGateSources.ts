@@ -18,6 +18,7 @@ import {
   createSourceFile,
   forEachChild,
   isCallExpression,
+  isElementAccessExpression,
   isExportDeclaration,
   isIdentifier,
   isImportDeclaration,
@@ -31,6 +32,7 @@ import {
   ScriptTarget,
   SyntaxKind,
   type CallExpression,
+  type ImportDeclaration,
   type ImportSpecifier,
   type Node,
   type SourceFile,
@@ -64,6 +66,30 @@ function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: 
   }
 }
 
+function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Symbol>): void {
+  function visit(node: Node): void {
+    if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer && isIdentifier(node.initializer)) {
+      const source = checker.getSymbolAtLocation(node.initializer);
+      const alias = checker.getSymbolAtLocation(node.name);
+      if (source && alias && named.has(source)) {
+        named.add(alias);
+      }
+    }
+
+    forEachChild(node, visit);
+  }
+
+  visit(file);
+}
+
+function addDefaultCreator(statement: ImportDeclaration, checker: TypeChecker, namespaces: Set<Symbol>): void {
+  const defaultName = statement.importClause?.name;
+  const symbol = defaultName ? checker.getSymbolAtLocation(defaultName) : undefined;
+  if (symbol) {
+    namespaces.add(symbol);
+  }
+}
+
 function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<Symbol>; namespaces: Set<Symbol> } {
   const named = new Set<Symbol>();
   const namespaces = new Set<Symbol>();
@@ -71,6 +97,8 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
     if (!isImportDeclaration(statement) || !isStringLiteral(statement.moduleSpecifier) || !['node:module', 'module'].includes(statement.moduleSpecifier.text)) {
       continue;
     }
+
+    addDefaultCreator(statement, checker, namespaces);
 
     const bindings = statement.importClause?.namedBindings;
     if (bindings && isNamespaceImport(bindings)) {
@@ -91,6 +119,7 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
     }
   }
 
+  addCreatorAliases(file, checker, named);
   return { named, namespaces };
 }
 
@@ -112,7 +141,13 @@ function callsImportedCreator(call: CallExpression, checker: TypeChecker, named:
     return symbol !== undefined && named.has(symbol);
   }
 
-  if (isPropertyAccessExpression(callee) && callee.name.text === 'createRequire' && isIdentifier(callee.expression)) {
+  if (
+    ((isPropertyAccessExpression(callee) && callee.name.text === 'createRequire') ||
+      (isElementAccessExpression(callee) &&
+        (isStringLiteral(callee.argumentExpression) || isNoSubstitutionTemplateLiteral(callee.argumentExpression)) &&
+        callee.argumentExpression.text === 'createRequire')) &&
+    isIdentifier(callee.expression)
+  ) {
     const symbol = checker.getSymbolAtLocation(callee.expression);
     return symbol !== undefined && namespaces.has(symbol);
   }

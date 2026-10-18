@@ -224,10 +224,34 @@ import * as module from 'node:module';
 const loadModule = module.createRequire(import.meta.url);
 const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
 `;
+const COMPUTED_CREATE_REQUIRE_IMPORT = `
+import * as module from 'node:module';
+const loadModule = module['createRequire'](import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
+const DEFAULT_CREATE_REQUIRE_IMPORT = `
+import module from 'node:module';
+const loadModule = module.createRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
+const ALIASED_CREATE_REQUIRE_IMPORT = `
+import { createRequire } from 'node:module';
+const makeRequire = createRequire;
+const loadModule = makeRequire(import.meta.url);
+const hap = loadModule('${HAP_PACKAGE_SPECIFIER}');
+`;
 const SHADOWED_CREATE_REQUIRE_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 function run(loadModule: (name: string) => void) {
+  loadModule('${HAP_PACKAGE_SPECIFIER}');
+}
+`;
+const SHADOWED_CREATOR_ALIAS_IMPORT = `
+import { createRequire } from 'node:module';
+const makeRequire = createRequire;
+function run(makeRequire: (url: string) => (name: string) => void) {
+  const loadModule = makeRequire(import.meta.url);
   loadModule('${HAP_PACKAGE_SPECIFIER}');
 }
 `;
@@ -280,6 +304,9 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     backtickDynamic: importsHapPackage(BACKTICK_DYNAMIC_IMPORT),
     createRequire: importsHapPackage(CREATE_REQUIRE_IMPORT),
     namespaceCreateRequire: importsHapPackage(NAMESPACE_CREATE_REQUIRE_IMPORT),
+    computedCreateRequire: importsHapPackage(COMPUTED_CREATE_REQUIRE_IMPORT),
+    defaultCreateRequire: importsHapPackage(DEFAULT_CREATE_REQUIRE_IMPORT),
+    aliasedCreateRequire: importsHapPackage(ALIASED_CREATE_REQUIRE_IMPORT),
     commentInterleaved: importsHapPackage(COMMENT_INTERLEAVED_IMPORT),
     subpath: importsHapPackage(HAP_SUBPATH_IMPORT),
     reExported: importsHapPackage(RE_EXPORTED_IMPORT),
@@ -297,6 +324,9 @@ test('reports a planted HAP import in every spelling and quote style it is meant
     backtickDynamic: true,
     createRequire: true,
     namespaceCreateRequire: true,
+    computedCreateRequire: true,
+    defaultCreateRequire: true,
+    aliasedCreateRequire: true,
     commentInterleaved: true,
     subpath: true,
     reExported: true,
@@ -309,10 +339,11 @@ test('reports neither a comment naming the package nor an unrelated import (D-17
     comment: importsHapPackage(COMMENT_NAMING_THE_PACKAGE),
     unrelatedImport: importsHapPackage(UNRELATED_IMPORT),
     shadowedCreateRequire: importsHapPackage(SHADOWED_CREATE_REQUIRE_IMPORT),
+    shadowedCreatorAlias: importsHapPackage(SHADOWED_CREATOR_ALIAS_IMPORT),
   };
 
   // assert
-  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false, shadowedCreateRequire: false });
+  assert.deepStrictEqual(imports, { comment: false, unrelatedImport: false, shadowedCreateRequire: false, shadowedCreatorAlias: false });
 });
 
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {

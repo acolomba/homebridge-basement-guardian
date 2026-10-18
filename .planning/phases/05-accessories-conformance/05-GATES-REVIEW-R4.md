@@ -128,6 +128,12 @@ Opening 3, fixed 3, rejected 0, new 5, reopened 0, closing 5:
 task after the stop was reported; the resolution is recorded in the ledger STOP
 cell before any round-4 repair begins.
 
+## Repair history
+
+| Cause | Verification | Repair |
+| --- | --- | --- |
+| CR-05-GATES-030 | Node v26.12.0: `fallow guard` exited 0. The three gate owners' planted-positive cases failed as intended before the helper changed (each `node --test` exit 1). After the repair, `npm run build:test`, four compiled GATES owners (51/51), `npm run test:unpaired`, and `fallow audit --base 379e86772fb2f353abbbe9c35dc3aa502bbb68f9` exited 0; audit verdict pass. D-04 control: changing alias registration from named to namespace made the timer owner fail on `aliasedCreateRequire` (exit 1); restoring the source blob `f93d1c07b1d2d1828da386a51411bc6191d79560` made it pass (exit 0). | The shared scanner resolves computed and default `node:module` creator access and local aliases using TypeScript symbols. All three import gates plant each forbidden load plus a harmless shadowed creator alias. |
+
 ---
 
 _Reviewed: 2026-10-18T17:05:57Z_

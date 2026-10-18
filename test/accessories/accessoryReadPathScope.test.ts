@@ -205,10 +205,34 @@ import * as module from 'node:module';
 const loadModule = module.createRequire(import.meta.url);
 const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 `;
+const COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT = `
+import * as module from 'node:module';
+const loadModule = module['createRequire'](import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT = `
+import module from 'node:module';
+const loadModule = module.createRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
+const ALIASED_CREATE_REQUIRE_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const makeRequire = createRequire;
+const loadModule = makeRequire(import.meta.url);
+const cloud = loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+`;
 const SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT = `
 import { createRequire } from 'node:module';
 const loadModule = createRequire(import.meta.url);
 function run(loadModule: (name: string) => void) {
+  loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
+}
+`;
+const SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT = `
+import { createRequire } from 'node:module';
+const makeRequire = createRequire;
+function run(makeRequire: (url: string) => (name: string) => void) {
+  const loadModule = makeRequire(import.meta.url);
   loadModule('${CLOUD_DIRECTORY_SPECIFIER}api.js');
 }
 `;
@@ -306,6 +330,9 @@ test('reports a planted import of the cloud client and of the account runtime (D
     backtickDynamicCloud: reachesTheNetworkTier(BACKTICK_DYNAMIC_CLOUD_IMPORT),
     createRequireCloud: reachesTheNetworkTier(CREATE_REQUIRE_CLOUD_IMPORT),
     namespaceCreateRequireCloud: reachesTheNetworkTier(NAMESPACE_CREATE_REQUIRE_CLOUD_IMPORT),
+    computedCreateRequireCloud: reachesTheNetworkTier(COMPUTED_CREATE_REQUIRE_CLOUD_IMPORT),
+    defaultCreateRequireCloud: reachesTheNetworkTier(DEFAULT_CREATE_REQUIRE_CLOUD_IMPORT),
+    aliasedCreateRequireCloud: reachesTheNetworkTier(ALIASED_CREATE_REQUIRE_CLOUD_IMPORT),
   };
 
   // assert
@@ -317,6 +344,9 @@ test('reports a planted import of the cloud client and of the account runtime (D
     backtickDynamicCloud: true,
     createRequireCloud: true,
     namespaceCreateRequireCloud: true,
+    computedCreateRequireCloud: true,
+    defaultCreateRequireCloud: true,
+    aliasedCreateRequireCloud: true,
   });
 });
 
@@ -326,8 +356,9 @@ test('reports neither a comment naming the forbidden spellings nor an unrelated 
     comment: registersReadHandler(COMMENT_NAMING_THE_SPELLINGS),
     unrelatedImport: reachesTheNetworkTier(UNRELATED_NEIGHBOURING_IMPORT),
     shadowedCreateRequire: reachesTheNetworkTier(SHADOWED_CREATE_REQUIRE_CLOUD_IMPORT),
+    shadowedCreatorAlias: reachesTheNetworkTier(SHADOWED_CREATOR_ALIAS_CLOUD_IMPORT),
   };
 
   // assert
-  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false, shadowedCreateRequire: false });
+  assert.deepStrictEqual(detections, { comment: false, unrelatedImport: false, shadowedCreateRequire: false, shadowedCreatorAlias: false });
 });
