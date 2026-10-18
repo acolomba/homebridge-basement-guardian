@@ -39,7 +39,7 @@ import type { ActivationWatermarks, PumpObservation } from '../persistence/acces
 import type { AccessoryStore } from '../runtime/accessoryStore.js';
 import type { Logging } from 'homebridge';
 
-/** What one second of a device timestamp is worth in the milliseconds every stored time is in. */
+/** What one second of a device timestamp is worth in milliseconds. */
 const MILLISECONDS_PER_SECOND = 1000;
 
 /** One decoded snapshot, in the only shape this module reads one. */
@@ -60,7 +60,11 @@ export interface PumpRecordValues {
   /** Milliseconds, local, at which observation of this pump began. */
   observationStartedAt: number;
   activationCount: number;
-  /** Milliseconds, local, of the last observed activation, or absent when none has been observed. */
+  /**
+   * Milliseconds of the last observed activation: the plugin's receipt time for
+   * a watched edge, or the device's converted timestamp for a recovered one;
+   * absent when none has been observed.
+   */
   lastActivationAt: number | undefined;
   /** Absent until the plugin has earned the label, which is a different thing from `false`. */
   lastActivationWasTestActivity: boolean | undefined;
@@ -165,11 +169,12 @@ function evidencesAMissedActivation(watermark: number | undefined, reportedAt: n
   return reportedAt !== undefined && (watermark === undefined || reportedAt > watermark);
 }
 
-// The device's timestamps are its own Unix seconds and every stored time is milliseconds, so the
-// one conversion happens here and nowhere else. The rule forbidding arithmetic on a device
-// timestamp is about comparing it against local time, whose measured offset from the device is a
-// few seconds; a unit conversion compares nothing. Left unconverted, the published characteristic
-// renders a date in 1970 (D-011).
+// The device's timestamps are its own Unix seconds and a stored activation time is milliseconds,
+// so a recovered activation's time is converted here and nowhere else in this module. The
+// watermarks stay in device seconds. The rule forbidding arithmetic on a device timestamp is about
+// comparing it against local time, whose measured offset from the device is a few seconds; a unit
+// conversion compares nothing. Left unconverted, the published characteristic renders a date in
+// 1970 (D-011).
 function millisecondsOf(deviceSeconds: number): number {
   return deviceSeconds * MILLISECONDS_PER_SECOND;
 }
