@@ -344,6 +344,21 @@ test('stores a write without a handler, on both implementations', async () => {
   assert.deepStrictEqual(real, { rejectedWith: undefined, value: false, statusCode: 0 });
 });
 
+test('uses the latest onSet handler for a write, on both implementations', async () => {
+  // act
+  const { real, fake } = await bothRecords(async (subject, refuse) => {
+    subject.pushOn(false);
+    subject.onSet(() => Promise.reject(refuse(HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE)));
+    subject.onSet(() => Promise.resolve());
+
+    return subject.set(true);
+  });
+
+  // assert
+  assert.deepStrictEqual(real, fake);
+  assert.deepStrictEqual(real, { rejectedWith: undefined, value: true, statusCode: 0 });
+});
+
 // The held value is pushed to `true` first, deliberately away from the `bool` format default. A
 // case that refused a write from the default could not tell an implementation that leaves the value
 // alone from one that resets it, and resetting it is exactly what a hand-built stand-in would do.
