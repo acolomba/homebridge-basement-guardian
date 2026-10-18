@@ -48,11 +48,13 @@ interface RecordedSubject {
 // function that carries them. Only `warn` is observed: it is the one level this module writes to.
 function recordingLog(): { log: Logging; warnings: string[] } {
   const warnings: string[] = [];
-  const discard = (): void => {
+  function discard(): void {
     // the other six levels are not part of any assertion here
-  };
+  }
 
-  const warn = (message: string): void => void warnings.push(message);
+  function warn(message: string): void {
+    warnings.push(message);
+  }
 
   return { warnings, log: Object.assign(discard, { prefix: 'guardian', debug: discard, error: discard, info: discard, log: discard, success: discard, warn }) };
 }
