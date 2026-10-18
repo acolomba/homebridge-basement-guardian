@@ -23,13 +23,14 @@ import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
-// The status the trust reports are marked under, written independently of the stand-in so a drifted
-// number fails here. It is not -70402, the status HAP and the stand-in give an error that names no
-// status, so a pass that ignored its status argument would read differently (D-10).
+// The status the trust reports are marked under. It is not -70402, the status HAP and the stand-in
+// give an error that names no status, so a pass that marked with such an error instead of its status
+// argument would read differently (D-10).
 const RESOURCE_BUSY = -70403;
 
 // The status the missing command transport already answers, and the one a restored control answers
-// for the same condition. Written out here for the same reason as the one above (D-08).
+// for the same condition. Written out rather than read from the stand-in, because the refusal reads
+// the status from the injected namespace, so a drifted number there fails here (D-08).
 const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
 
 // The cause the missing command transport names, and the one a restored refusal names for the same
