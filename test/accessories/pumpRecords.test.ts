@@ -250,10 +250,13 @@ test('seeds the first device timestamp as a baseline and counts no activation fo
   );
 });
 
-// The seed absorbs whatever the device was reporting, so an edge already awaiting its timestamp is
-// accounted for by that same seed and its flag must clear with it. Were the flag left set, the NEXT
-// advance would be absorbed too and a genuinely missed run would go uncounted -- so this case drives
-// a watched edge FIRST, which is the only way the flag is ever set when the seed arrives.
+// The record takes the first device timestamp it sees as the own timestamp of any watched run that
+// awaits one, so the seed clears the awaiting mark and a later advance counts. The record cannot
+// tell an older timestamp from the run's own without comparing device time with local time. If the
+// first timestamp is older, the run's own timestamp counts that run a second time. Keeping the mark
+// instead would absorb the next advance when the first timestamp is the run's own, and a missed run
+// would go uncounted. The case drives a watched edge before the first timestamp and pins the count
+// and the last activation that the rule gives.
 test('counts a later advance after a seed that also absorbed a watched edge', () => {
   // arrange
   const { records } = pumpRecords();
@@ -295,10 +298,11 @@ test('recovers exactly one activation from a device timestamp one second past th
   assert.strictEqual(records.backup.activationCount, 1);
 });
 
-// The device publishes a new backup-pump timestamp only after the pump stops, so the advance that
-// follows a watched edge describes the run that edge already counted. Counting both would report
-// one physical run as two, and taking the device time would write one run's record from two clocks.
-// The record starts with a stored watermark, so the advance is absorbed and is not the baseline.
+// The device publishes a new backup-pump timestamp only after the pump stops, so the record takes
+// the advance that follows a watched edge as the run that edge already counted. Counting both would
+// report one physical run as two, and taking the device time would write one run's record from two
+// clocks. The record starts with a stored watermark, so the advance is absorbed and is not the
+// baseline.
 // Absorbing moves the stored watermark and asks for a write, so the same timestamp on the next poll
 // counts nothing.
 test('absorbs the device timestamp that follows a watched backup activation', () => {
