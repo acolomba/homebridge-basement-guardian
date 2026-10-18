@@ -90,8 +90,11 @@ const SOURCE_DIRECTORIES: readonly string[] = ['src', 'test', 'features'];
 // read would pass without examining a single file.
 const SOURCE_FILE_FLOOR = 134;
 
-/** Accessory modules checked for direct HAP error, setter and UUID calls. */
-const ACCESSORY_MODULES: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts', 'serviceCatalogue.ts'];
+/** Accessory modules checked for direct HAP calls. */
+const ACCESSORY_MODULES = typeScriptFilesUnder('src/accessories').map((file) => file.slice('src/accessories/'.length));
+
+/** The control binder owns the approved setter registrations. */
+const SET_HANDLER_MODULES = ACCESSORY_MODULES.filter((module) => module !== 'controls.ts');
 
 /** The three modules that must never construct an errored characteristic. */
 const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian.ts', 'customCharacteristics.ts', 'customServices.ts'];
@@ -696,8 +699,33 @@ test('serviceCatalogue.ts names an errored characteristic once, inside publishPe
   );
 });
 
-for (const module of ACCESSORY_MODULES) {
-  // Switch `On` writes use the control binder. No accessory module registers a direct set handler.
+test('direct HAP-use cases include accessory modules outside the control binder', () => {
+  // act
+  const covered = {
+    alarmMute: SET_HANDLER_MODULES.includes('alarmMute.ts'),
+    pumpRecords: SET_HANDLER_MODULES.includes('pumpRecords.ts'),
+    reconciliation: SET_HANDLER_MODULES.includes('reconciliation.ts'),
+    services: SET_HANDLER_MODULES.includes('services.ts'),
+    staleMarking: SET_HANDLER_MODULES.includes('staleMarking.ts'),
+    controlBinderExcluded: !SET_HANDLER_MODULES.includes('controls.ts'),
+    controlBinderUuidChecked: ACCESSORY_MODULES.includes('controls.ts'),
+  };
+
+  // assert
+  assert.ok(ACCESSORY_MODULES.length >= 10);
+  assert.deepStrictEqual(covered, {
+    alarmMute: true,
+    pumpRecords: true,
+    reconciliation: true,
+    services: true,
+    staleMarking: true,
+    controlBinderExcluded: true,
+    controlBinderUuidChecked: true,
+  });
+});
+
+for (const module of SET_HANDLER_MODULES) {
+  // The control binder owns Switch `On` writes. Other modules register no direct set handler.
   test(`${module} has no direct onSet or set-event registration`, () => {
     // act
     const file = accessorySourceOf(module);
@@ -706,7 +734,9 @@ for (const module of ACCESSORY_MODULES) {
     // assert
     assert.deepStrictEqual({ onSet: uses.onSet, setEvent: uses.setEvent }, { onSet: false, setEvent: false });
   });
+}
 
+for (const module of ACCESSORY_MODULES) {
   test(`${module} contains no direct HAP UUID generation call`, () => {
     // act
     const file = accessorySourceOf(module);
