@@ -75,11 +75,11 @@ const REPOSITORY_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..'
 const ACCESSORIES_DIRECTORY = 'src/accessories';
 const SOURCE_DIRECTORY = 'src';
 
-// The accessories tier holds ten modules and the production tree forty. A gate that enumerated
+// The accessories tier holds ten modules and the production tree forty-three. A gate that enumerated
 // fewer than either read the wrong directory, and both assertions built on that read would pass
 // without examining a single module.
 const ACCESSORIES_MODULE_FLOOR = 10;
-const SOURCE_MODULE_FLOOR = 40;
+const SOURCE_MODULE_FLOOR = 43;
 
 // A module specifier and a dotted enumeration member both carry `.`, which is the one
 // regular-expression metacharacter either of them holds, so it is escaped on the way into a
