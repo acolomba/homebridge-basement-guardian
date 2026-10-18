@@ -1178,7 +1178,10 @@ describe('createBasementGuardianAccessory', () => {
     );
   });
 
-  for (const mainsPresent of [true, false]) {
+  for (const { mainsPresent, adapter } of [
+    { mainsPresent: true, adapter: CONTACT_DETECTED },
+    { mainsPresent: false, adapter: CONTACT_NOT_DETECTED },
+  ] satisfies readonly { mainsPresent: boolean; adapter: number }[]) {
     test(`publishes a reported ac_power of ${String(mainsPresent)} on both power services`, () => {
       // arrange
       const accessory = accessoryStandIn();
@@ -1194,7 +1197,7 @@ describe('createBasementGuardianAccessory', () => {
           adapter: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.ContactSensorState),
           fault: valueOf(accessory, 'Mains Power Lost', HAP.Characteristic.StatusFault),
         },
-        { reported: mainsPresent, adapter: mainsPresent ? CONTACT_DETECTED : CONTACT_NOT_DETECTED, fault: HAP.Characteristic.StatusFault.NO_FAULT },
+        { reported: mainsPresent, adapter, fault: HAP.Characteristic.StatusFault.NO_FAULT },
       );
     });
   }
