@@ -129,3 +129,7 @@ The reviewer accepted new WARNING CR-06-ENTRY-017 at `src/logging.ts@e5a29d4:32`
 Round 2 counts: opening 1, fixed 1, rejected 0, new 1, reopened 0, closing 1. `1 - 1 - 0 + 1 + 0 = 1`. Open ID: 017. Because an accepted finding remains and closing did not decrease, D-04 requires an immediate no-progress stop. No round 3 or further fix was started. The maintainer must resolve this stop before ENTRY or PLATFORM work continues.
 
 At the reviewed revision, all three ENTRY pairs met 100% isolated direct line, function, and branch coverage. A fresh `npm run check` also passed with 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated pairs. These checks do not override the independent finding or D-04 stop.
+
+## One-time maintainer authorization after round 2
+
+The maintainer answered the D-04 stop decision: **“Authorize one repair and re-review (Recommended).”** This permits one cause repair for CR-06-ENTRY-017 and one independent complete six-file correction review as round 3. It does not erase the round-2 no-progress stop or reset the ENTRY counter. If round 3 has any open finding, execution stops with the exact IDs. No further repair or round is authorized by this answer.
