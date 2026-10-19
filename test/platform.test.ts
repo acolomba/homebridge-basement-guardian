@@ -979,7 +979,7 @@ describe('BasementGuardianPlatform', () => {
     verify(api);
   });
 
-  test('AUTH-02 caches the granted token under the Homebridge storage directory', async (t) => {
+  test('AUTH-02 caches the granted token under the Homebridge storage directory', { timeout: 10_000 }, async (t) => {
     // arrange
     t.mock.method(systemClock, 'now', () => 1_800_000_000_000);
     const [requestAfterGrant, announceRequestAfterGrant] = completionSignal();
@@ -1005,16 +1005,16 @@ describe('BasementGuardianPlatform', () => {
     const { user, storagePath } = await expectStoragePath(t, api);
     // Atomic renames publish these final files only after their writes finish.
     const stored = [ARRIVAL_ANCHOR_FILENAME, '.basement-guardian-token.json'].sort();
-    const pendingFiles = new Set(stored);
-    const [filesWritten, announceFilesWritten] = completionSignal();
-    watcher = watch(storagePath, { persistent: false }, (event, filename) => {
-      if (event === 'rename' && filename !== null) {
-        pendingFiles.delete(filename);
-
-        if (pendingFiles.size === 0) {
-          announceFilesWritten();
-        }
-      }
+    const filesWritten = new Promise<void>((resolve, reject) => {
+      const fileWatcher = watch(storagePath, { persistent: false }, () => {
+        void readdir(storagePath).then((entries) => {
+          if (stored.every((filename) => entries.includes(filename))) {
+            resolve();
+          }
+        }, reject);
+      });
+      watcher = fileWatcher;
+      fileWatcher.on('error', reject);
     });
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
@@ -1026,7 +1026,7 @@ describe('BasementGuardianPlatform', () => {
     await filesWritten;
     await readFile(join(storagePath, ARRIVAL_ANCHOR_FILENAME));
     const tokenBytes = await readFile(join(storagePath, '.basement-guardian-token.json'));
-    watcher.close();
+    watcher?.close();
     await requestAfterGrant;
     await settle();
     shutdown?.();
