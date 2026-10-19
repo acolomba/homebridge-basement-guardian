@@ -414,16 +414,31 @@ test('AUTH-02 redacts a comma inside an unquoted password', () => {
   verify(delegate);
 });
 
-test('AUTH-02 preserves a following field after an unquoted password', () => {
+test('AUTH-02 redacts a possible following field after an unquoted password', () => {
   // arrange
   const delegate = createDelegate();
   when(() => {
-    delegate.debug(`posting password=${REDACTED}, status=ok`);
+    delegate.debug(`posting password=${REDACTED}`);
   }).thenReturn(undefined);
   const log = createRedactingLogger({ delegate, secrets: [] });
 
   // act
   log.debug('posting password=left,right, status=ok');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a field-shaped suffix inside an unquoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting password=${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting password=left,right=middle');
 
   // assert
   verify(delegate);

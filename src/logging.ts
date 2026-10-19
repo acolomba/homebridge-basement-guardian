@@ -17,8 +17,9 @@ const REDACTED = '[redacted]';
 const UNSERIALIZABLE = '[unserializable object]';
 
 // Credential material the plugin never holds as a registered string. Each
-// pattern keeps the naming part of its match, so the log still says which
-// credential was present, and replaces only the value that follows it.
+// pattern keeps the credential name. An unquoted authentication value has no
+// reliable comma boundary, so its pattern redacts the remaining unquoted text,
+// including possible later fields, to avoid exposing a password suffix.
 const AWS_SESSION_CREDENTIAL_FIELDS = 'AccessKeyId|SecretAccessKey|SessionToken';
 const PRESIGNED_URL_PARAMETERS = 'X-Amz-Credential|X-Amz-Security-Token|X-Amz-Signature';
 const AUTHENTICATION_BODY_FIELDS = 'password|username';
@@ -29,10 +30,7 @@ const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=~-](?:[\w.+/=~-]*[\w+/=~-])?/gi;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
 const AUTHENTICATION_QUOTED_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*")(?:\\.|[^"\\])+`, 'gi');
-const AUTHENTICATION_BODY_PATTERN = new RegExp(
-  String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)(?:[^",}]|,(?!\s*"?[A-Za-z][\w-]*"?\s*[:=]))+`,
-  'gi',
-);
+const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)[^"}]+`, 'gi');
 
 const CREDENTIAL_PATTERNS: readonly RegExp[] = [
   AUTHORIZATION_PATTERN,
