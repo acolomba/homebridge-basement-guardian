@@ -192,14 +192,18 @@ function registersReadHandler(source: string): boolean {
     return undefined;
   }
 
-  function staticMember(node: Node): { receiver: Node; name: string } | undefined {
+  function staticMember(node: Node, fixedKey = false): { receiver: Node; name: string } | undefined {
     if (isPropertyAccessExpression(node)) {
       return { receiver: node.expression, name: node.name.text };
     }
 
     if (isElementAccessExpression(node)) {
       const argument = node.argumentExpression;
-      const name = literalText(argument) ?? (isIdentifier(argument) ? methodAlias(argument.text) : undefined);
+      let name = fixedKey ? fixedEventText(argument) : literalText(argument);
+      if (!fixedKey && name === undefined && isIdentifier(argument)) {
+        name = methodAlias(argument.text);
+      }
+
       return name === undefined ? undefined : { receiver: node.expression, name };
     }
 
@@ -219,7 +223,7 @@ function registersReadHandler(source: string): boolean {
       return readAlias(node.text);
     }
 
-    const member = staticMember(node);
+    const member = staticMember(node, true);
     if (member?.name !== EVENT_TYPES_READ_MEMBER) {
       return false;
     }
@@ -873,6 +877,48 @@ const prefix = prefix + 'g'; characteristic.on(prefix + 'et', handler);
     shadowed: false,
     mutable: false,
     cyclic: false,
+  });
+});
+
+test('resolves computed HAP read event keys without following unrelated keys', () => {
+  // arrange
+  const expression = `
+characteristic.on(hap.CharacteristicEventTypes['G' + 'ET'], handler);
+`;
+  const alias = `
+const key = 'G' + 'ET'; characteristic.on(hap.CharacteristicEventTypes[key], handler);
+`;
+  const enumAlias = `
+const events = hap.CharacteristicEventTypes; const key = 'GET'; characteristic.on(events[key], handler);
+`;
+  const unrelatedKey = `
+characteristic.on(hap.CharacteristicEventTypes['S' + 'ET'], handler);
+`;
+  const unrelatedObject = `
+characteristic.on(other.CharacteristicEventTypes['G' + 'ET'], handler);
+`;
+  const shadowedKey = `
+const key = 'GET'; function run(key: string) { characteristic.on(hap.CharacteristicEventTypes[key], handler); }
+`;
+
+  // act
+  const registrations = {
+    expression: registersReadHandler(expression),
+    alias: registersReadHandler(alias),
+    enumAlias: registersReadHandler(enumAlias),
+    unrelatedKey: registersReadHandler(unrelatedKey),
+    unrelatedObject: registersReadHandler(unrelatedObject),
+    shadowedKey: registersReadHandler(shadowedKey),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, {
+    expression: true,
+    alias: true,
+    enumAlias: true,
+    unrelatedKey: false,
+    unrelatedObject: false,
+    shadowedKey: false,
   });
 });
 

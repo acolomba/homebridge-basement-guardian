@@ -193,7 +193,8 @@ function isSetEvent(
     return true;
   }
 
-  if (staticMemberName(node) !== 'SET' || (!isPropertyAccessExpression(node) && !isElementAccessExpression(node))) {
+  const eventMember = isElementAccessExpression(node) ? fixedEventText(node.argumentExpression, fixedAlias) : staticMemberName(node);
+  if (eventMember !== 'SET' || (!isPropertyAccessExpression(node) && !isElementAccessExpression(node))) {
     return false;
   }
 
@@ -1158,6 +1159,48 @@ const prefix = prefix + 's'; characteristic.on(prefix + 'et', handler);
     shadowed: false,
     mutable: false,
     cyclic: false,
+  });
+});
+
+test('resolves computed HAP set event keys without following unrelated keys', () => {
+  // arrange
+  const expression = sourceFileOf(`
+characteristic.on(hap.CharacteristicEventTypes['S' + 'ET'], handler);
+`);
+  const alias = sourceFileOf(`
+const key = 'S' + 'ET'; characteristic.on(hap.CharacteristicEventTypes[key], handler);
+`);
+  const enumAlias = sourceFileOf(`
+const events = hap.CharacteristicEventTypes; const key = 'SET'; characteristic.on(events[key], handler);
+`);
+  const unrelatedKey = sourceFileOf(`
+characteristic.on(hap.CharacteristicEventTypes['G' + 'ET'], handler);
+`);
+  const unrelatedObject = sourceFileOf(`
+characteristic.on(other.CharacteristicEventTypes['S' + 'ET'], handler);
+`);
+  const shadowedKey = sourceFileOf(`
+const key = 'SET'; function run(key: string) { characteristic.on(hap.CharacteristicEventTypes[key], handler); }
+`);
+
+  // act
+  const uses = {
+    expression: hapUses(expression).setEvent,
+    alias: hapUses(alias).setEvent,
+    enumAlias: hapUses(enumAlias).setEvent,
+    unrelatedKey: hapUses(unrelatedKey).setEvent,
+    unrelatedObject: hapUses(unrelatedObject).setEvent,
+    shadowedKey: hapUses(shadowedKey).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, {
+    expression: true,
+    alias: true,
+    enumAlias: true,
+    unrelatedKey: false,
+    unrelatedObject: false,
+    shadowedKey: false,
   });
 });
 
