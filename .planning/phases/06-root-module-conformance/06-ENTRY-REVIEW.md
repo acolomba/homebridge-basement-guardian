@@ -151,3 +151,7 @@ The reviewer accepted new BLOCKER CR-06-ENTRY-018 at `src/logging.ts@18f6324:32�
 Round 3 counts: opening 1, fixed 1, rejected 0, new 1, reopened 0, closing 1. `1 - 1 - 0 + 1 + 0 = 1`. Open ID: 018. The D-04 no-progress predicate holds, and the maintainer's one-time repair and re-review authorization is exhausted. No additional repair or round was started. PLATFORM dispatch remains blocked pending a new maintainer decision.
 
 At the reviewed revision, all three ENTRY pairs met 100% isolated direct line, function, and branch coverage. A fresh `npm run check` passed with 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated pairs. The passing checks do not override the reviewer finding or D-04 stop.
+
+## Second maintainer decision: privacy first
+
+The maintainer answered the round-3 stop decision: **“Yes, prioritize redaction (Recommended).”** This authorizes one bounded safety-first repair for CR-06-ENTRY-018 and one final independent complete six-file review as round 4. The unquoted password remainder must be redacted even if later log fields are lost. The previous ENTRY-017 field-preservation expectation becomes an accepted tradeoff under this explicit policy; it is not silently reopened. Both prior D-04 stop records and their counts remain in this report. If round 4 has any open finding, the four-round cap requires a stop with exact IDs and no more repair or review.
