@@ -69,10 +69,10 @@ status: complete
 
 The two behavior regressions from round 0 and the round 1 domain-label regression each failed at their named assertion against unchanged production. Each planning-only RED commit preceded its GREEN commit. The evidence JSON at HEAD holds ID 008; prior records remain in commits `500cbad` and `b7942c2`. The protocol test repair used a separate temporary negative control: changing `wss` to `ws` made its exact-value assertion fail. The JSON bytes were restored before GREEN and commit.
 
-## Verification
+## Gate evidence
 
 - `npm run --silent test:corresponding` passed at round 0 and during protocol repair.
-- At clean `437213ff60c0a7f91fc9c1203714852a95bac99b` on Node v26.12.0, `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/platform.ts` exited 0. Each pair met 100% direct line, function, and branch coverage.
+- At clean `437213ff60c0a7f91fc9c1203714852a95bac99b` on Node v26.12.0, npm run test:coverage:direct -- src/config.ts src/protocol.ts src/platform.ts exited 0. Each pair met 100% direct line, function, and branch coverage.
 - At the same executable-input revision, `npm run check` exited 0: six static gates, compiled unpaired tests, 104 of 104 Cucumber scenarios, 1156 of 1156 steps, and direct LCOV for 43 isolated pairs. Full output: `/private/tmp/guardian-06-02-full-final.log`.
 - The named bounded configuration scenario passed 1 of 1 scenario and 7 of 7 steps. The Cucumber dry-run usage check reported no unused step.
 
