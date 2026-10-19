@@ -35,3 +35,11 @@ The coordinator recorded every cause commit here before dispatching the next rev
 | 007 | `dd2e5b3` added the approved header to `test/protocol.test.ts` only. |
 
 Each header commit passed its owner coverage, Fallow checks, project pre-step, and normal commit hook. At code revision `dd2e5b3`, `npm run test:coverage:direct -- src/config.ts src/protocol.ts` exited 0 with 100% direct line, function, and branch coverage for both pairs. The bounded platform test change is a scope deviation for cause 001 and does not count as a complete platform review.
+
+## Correction round 1
+
+Independent reviewer `review_config_protocol` read all four current files at clean revision `2c5788f30d52997ab64363c2fff28431d3160761`: `src/config.ts` 1–209, `test/config.test.ts` 1–485, `src/protocol.ts` 1–45, and `test/protocol.test.ts` 1–42. The reviewer checked the bounded platform assertion and unchanged `src/protocol.json` as consumers. IDs 001–007 were confirmed fixed. No fixed ID reopened.
+
+New `CR-06-CONFIG_PROTOCOL-008` is a BLOCKER under `config.schema.json` email format and context D-06 at `src/config.ts@2c5788f:22`. The runtime regex accepts malformed domains including labels with leading or trailing hyphens and punctuation such as parentheses or a port suffix. This differs from 002's empty dot-atom parts. The cause remains open for a named active refusal regression and a minimum domain-label validation repair.
+
+Round 1 counts: opening 7, fixed 7 (001–007), rejected 0, new 1 (008), reopened 0, closing 1 (008). `7 - 7 - 0 + 1 + 0 = 1`. Closing is less than opening, so the no-progress stop does not fire. The counter is 1 of at most 4. This report and ledger are committed before the next repair.
