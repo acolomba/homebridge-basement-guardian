@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the bundled vendor protocol constants.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
