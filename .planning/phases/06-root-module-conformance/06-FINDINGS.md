@@ -65,14 +65,25 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 
 ## PLATFORM stable IDs
 
-No review has been dispatched. No findings have been accepted or rejected.
+The independent full-file round-0 review at `0696d99c54c932ad992a7b7d90677f11edd96359` read `src/platform.ts` 1–673 and `test/platform.test.ts` 1–3781. The matching report is `06-PLATFORM-REVIEW.md`. Its eleven candidates received eight accepted/open and three evidence-backed rejected dispositions before any platform source or test edit.
 
 | ID | Rule | Revision-qualified location | Severity | First round | Disposition and evidence | Source / RED / fix commits |
 | --- | --- | --- | --- | --- | --- | --- |
+| CR-06-PLATFORM-001 | `AGENTS.md` safety semantics; T-06-08 | `src/platform.ts@0696d99:412–429,450–454,640–642` | BLOCKER | 0 | Open: one throwing accessory aborts monitoring trust fan-out, cached unreadable marking, and potentially shutdown abort; active regression required | source `0696d99`; RED pending; fix pending |
+| CR-06-PLATFORM-002 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:977–1031` | BLOCKER | 0 | Open: token-cache owner reads but never asserts stored bytes, so wrong cache content passes | source `0696d99`; fix pending |
+| CR-06-PLATFORM-003 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:915–975,1374–1392` | BLOCKER | 0 | Open: shutdown owner cases do not observe later retry/poll work or await the asynchronous lifecycle boundary | source `0696d99`; fix pending |
+| CR-06-PLATFORM-004 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:1125–1235` | BLOCKER | 0 | Open: offline trust case sees one accessory only and omits state after the first failed poll | source `0696d99`; fix pending |
+| CR-06-PLATFORM-005 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:1448–1470` | BLOCKER | 0 | Open: one restored trust service cannot distinguish first-only marking | source `0696d99`; fix pending |
+| CR-06-PLATFORM-006 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:1475–1492` | BLOCKER | 0 | Open: one restored control cannot distinguish first-only refusal | source `0696d99`; fix pending |
+| CR-06-PLATFORM-007 | Unit-test `cases.md` Assertions; `review.md` BLOCKER | `test/platform.test.ts@0696d99:1237–1352` | BLOCKER | 0 | Open: confirmed-removal case does not await or assert its final inventory request | source `0696d99`; fix pending |
+| CR-06-PLATFORM-008 | TypeScript style `functions.md` Functions | `test/platform.test.ts@0696d99:2095,2276–2277,2303–2304` | WARNING | 0 | Open: named local `context` and `restoredContext` arrows lack an allowed reason | source `0696d99`; fix pending |
+| CR-06-PLATFORM-009 | `AGENTS.md` privacy candidate | `src/platform.ts@0696d99:112–120,334,390` | BLOCKER | 0 | Rejected: D-14/D-027 explicitly permit the vendor composite deviceId in local logs and accessory context; no unscoped leak shown | source `0696d99`; no fix |
+| CR-06-PLATFORM-010 | Device identity candidate | `src/platform.ts@0696d99:304–307,323–330` | BLOCKER | 0 | Rejected: existing accessory update performs fresh deviceTypeId adapter lookup and retains immutable deviceId UUID | source `0696d99`; no fix |
+| CR-06-PLATFORM-011 | Vendor rename candidate | `src/platform.ts@0696d99:127–133` | WARNING | 0 | Rejected: no stored vendor-name baseline means a rename cannot be distinguished from HomeKit customization under D-030 | source `0696d99`; no fix |
 
 ## Correction rounds
 
-No correction round has started. For each independent round, commit its report and this counter before repairs. Record repair commits here before the next round. Stop under the three predicates in `06-REVIEW-PROTOCOL.md`.
+PLATFORM round 0 is the initial review, not a correction round. For each independent correction round, commit its report and this counter before repairs. Record repair commits here before the next round. Stop under the three predicates in `06-REVIEW-PROTOCOL.md`.
 
 | Batch | Round | Reviewer and revision | Opening | Fixed | Rejected | New | Reopened | Closing | Open IDs | Report commit | Repair ledger commit |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
@@ -84,6 +95,7 @@ No correction round has started. For each independent round, commit its report a
 | ENTRY | 2 | `entry_round2_review` at `e5a29d4`, clean diff; logging 1–200, logging test 1–570, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 017 | `e018f94` | none; D-04 stop |
 | ENTRY | 3 | `entry_round3_review` at `18f6324`, clean diff; logging 1–203, logging test 1–585, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 018 | `b6964aa` | none; exception exhausted |
 | ENTRY | 4 | `entry_round4_review` at `add5a3a`, clean diff; logging 1–201, logging test 1–600, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 2 | 0 | 2 | 019, 020 | `c91b053` | none; D-04 cap stop |
+| PLATFORM | 0 | `platform_initial_review` at `0696d99`, clean executable inputs; platform 1–673, owner 1–3781 | 0 | 0 | 3 | 11 | 0 | 8 | 001–008 | pending report commit | none; no repair yet |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
