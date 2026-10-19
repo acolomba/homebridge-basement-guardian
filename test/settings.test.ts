@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests the plugin identity and outbound user agent.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
