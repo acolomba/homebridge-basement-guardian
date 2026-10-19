@@ -1,6 +1,6 @@
 ---
 phase: 05-accessories-conformance
-verified: "2026-10-19T08:50:00Z"
+verified: "2026-10-19T12:45:26Z"
 status: passed
 score: "12/12 checks verified; 4 by one bundled maintainer acceptance"
 covered_files:
@@ -22,6 +22,12 @@ covered_files:
   - .planning/phases/05-accessories-conformance/05-08-SUMMARY.md
   - .planning/phases/05-accessories-conformance/05-09-PLAN.md
   - .planning/phases/05-accessories-conformance/05-09-SUMMARY.md
+  - .planning/phases/05-accessories-conformance/05-FINDINGS.md
+  - .planning/phases/05-accessories-conformance/05-GATES-REVIEW-R15.md
+  - .planning/phases/05-accessories-conformance/05-REVIEW.md
+  - .planning/phases/05-accessories-conformance/05-SECURITY.md
+  - .planning/phases/05-accessories-conformance/05-UAT.md
+  - .planning/phases/05-accessories-conformance/05-VALIDATION.md
   - .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs
   - eslint.config.js
   - features/lib/hap.ts
@@ -48,7 +54,7 @@ covered_files:
   - test/accessories/serviceCatalogue.test.ts
   - test/accessories/services.test.ts
   - test/accessories/staleMarking.test.ts
-covered_digest: "v3:sha256:63172e1156fbf184366dc07c03df1613ef3da959b7b50f86c2b9a1937eb91e45"
+covered_digest: "v3:sha256:27cc9fb9ae82fa9d9b31eefd055c27456dcf1c5a1561f2860c7e1fde10b3e09a"
 behavior_unverified: 0
 overrides_applied: 0
 decision_coverage:
@@ -112,7 +118,8 @@ style, comment and unit-test rules; confirmed production bugs have RED
 regressions before fixes.
 
 **Status:** Passed after one bundled maintainer acceptance of the four
-closeout judgments. The automated checks below passed. The historical GATES
+closeout judgments. The automated checks below passed again after removal of
+two unrelated unpaired repository tests. The historical GATES
 review stopped at round 15 with two valid findings against retired scanner
 code. These remain open in the historical ledger; the old all-clean predicate
 still fails.
@@ -124,11 +131,11 @@ still fails.
 | 1 | Current accessory scope is inventoried and carries required headers | VERIFIED | Ten sources, ten paired tests and one HAP parity test; header tracer exit 0, files=21. The ledger retains the four retired historical paths. |
 | 2 | Findings and review outcomes remain auditable | VERIFIED with disclosed STOP | Ordinary ledger tracer exit 0, inventory=31, findings=247, open=2, rounds=47. Open IDs 074/075 are valid findings against retired scanners. |
 | 3 | Review convergence is reported honestly | VERIFIED | Five batch clean checks exit 0; GATES round 15 is STOP; all-clean exits 1 for GATES and its two open IDs. No round 16 exists. |
-| 4 | Current paired code retains isolated direct coverage | VERIFIED | Full `npm run check` exit 0; direct LCOV merged 43 pairs under the repository's 100% pair gate. |
+| 4 | Current paired code retains isolated direct coverage | VERIFIED | After removal of the two unpaired repository tests, full `npm run check` exited 0; direct LCOV still merged 43 pairs under the repository's 100% pair gate. |
 | 5 | Confirmed bug histories retain RED-before-GREEN evidence | VERIFIED | Four current RED evidence files each return RED_EVIDENCE_OK; the ledger names affected owners and fix commits. Scanner IDs 074/075 claim no production defect. |
 | 6 | Replacement lint boundaries are wired | VERIFIED within stated syntax scope | Eleven forbidden probes reported their configured ESLint rules; current controls and parity modules have no restricted-rule finding; full lint passed. Alias and computed-name forms are outside the claimed syntax scope. |
 | 7 | Real HAP checks the stand-in's write behavior | VERIFIED | Retained `hapWriteFidelity.test.ts` imports the installed HAP package and compares real and fake write records; compiled owner passed 22/22. |
-| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | On `a95b8700fb3a092c2224f448104c102acd15258f`, Node v26.12.0, full check exit 0: 104 Cucumber scenarios, 1,156 steps and 43 direct pairs. The same full check passed again on the final Phase 5 closeout tree after GSD updated `.planning/state.json`, with the same scenario, step and pair counts. |
+| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | After commit `9605a63` removed the two unpaired tests and their check-script entries, `npm run check` exited 0: 104 Cucumber scenarios, 1,156 steps and 43 direct pairs. Later commits before this refresh changed planning Markdown only. The earlier Phase 5 gates remain in `05-09-SUMMARY.md`. |
 | 9-12 | E-05-01 and P-05-01 through P-05-03 | VERIFIED by maintainer judgment | One bundled "Accept" response is recorded in `05-UAT.md`. The edge taxonomy and historical GATES STOP remain as qualified there. |
 
 ## Test quality and decision coverage
@@ -137,7 +144,13 @@ No disabled or todo test was found under `test/accessories` or `features`.
 The parity test invokes the installed real-HAP implementation as an
 independent comparison source. The context-decision check reports 18 of 18
 trackable decisions honored; it is advisory. No new production behavior was
-introduced by the closeout records.
+introduced by the test removal or closeout records. The incremental
+`05-REVIEW.md` found no new defect in the two roster-script edits and the
+comment-only `services.ts` change. `05-VALIDATION.md` records no new test
+gap in the accessory scope; `05-SECURITY.md` records the bounded ASVS level 1
+threat review. The execute:post TDD checkpoint reported no `type:tdd` plans
+and no blocking violation. The full `npm run check` also served as the
+prior-phase regression gate.
 
 ## Human verification resolution
 
@@ -152,3 +165,6 @@ GATES result is claimed.
 No current executable gate failed. The accepted boundary leaves the two
 historical scanner findings open against retired files and the GATES STOP
 unchanged. The old `--require-clean all` predicate remains false by design.
+Removing `test/configSchema.test.ts` and `test/packageManifest.test.ts`
+removed their schema and package assertions from the repository suite at the
+maintainer's request; the passing full gate does not replace those assertions.
