@@ -54,7 +54,7 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-010 | Same header rules | `test/settings.test.ts@eb893e3:1–3` | WARNING | 0 | Repair committed, pending independent round-1 review: approved test header added without changing assertions; 100% direct owner coverage | source `eb893e3`; fix `6d372fc` |
 | CR-06-ENTRY-011 | Same header rules | `src/index.ts@eb893e3:1–4` | WARNING | 0 | Open for 06-04: incomplete Apache header; retain attribution | source `eb893e3`; fix pending |
 | CR-06-ENTRY-012 | Same header rules | `test/index.test.ts@eb893e3:1–3` | WARNING | 0 | Open for 06-04: missing header | source `eb893e3`; fix pending |
-| CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Open: `act & assert` labels misstate constant checks | source `eb893e3`; fix pending |
+| CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Repair committed, pending independent round-1 review: separate arrange, act, and assert phases retain the literal, schema, package, and user-agent assertions; 100% direct owner coverage | source `eb893e3`; fix `6befd9c` |
 | CR-06-ENTRY-014 | Style `functions.md` Functions | `src/logging.ts@eb893e3:137,164` | WARNING | 0 | Open: const arrows for named local functions | source `eb893e3`; fix pending |
 | CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Open for 06-04: exported function JSDoc misnames it | source `eb893e3`; fix pending |
 
