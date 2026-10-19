@@ -38,10 +38,25 @@ The full-file independent review at `5ff22a40053e9635672aae7c399f8e6ac51f21c9` a
 
 ## ENTRY stable IDs
 
-No review has been dispatched. No findings have been accepted or rejected.
+The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3186b` accepted 15 causes. Its report is `06-ENTRY-REVIEW.md`. The five logging behavior outputs were independently reproduced with synthetic values through compiled unchanged source before any repair.
 
 | ID | Rule | Revision-qualified location | Severity | First round | Disposition and evidence | Source / RED / fix commits |
 | --- | --- | --- | --- | --- | --- | --- |
+| CR-06-ENTRY-001 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:58–60` | BLOCKER | 0 | Open: overlapping registered secrets expose a suffix | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-002 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:74–96` | BLOCKER | 0 | Open: JSON escaping hides a secret from exact substitution | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-003 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:19` | BLOCKER | 0 | Open: bearer case and `~` suffix evade full redaction | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-004 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:22` | BLOCKER | 0 | Open: comma in quoted password survives pattern | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-005 | `typescript-style/rules/functions.md` Errors; D-06 | `src/logging.ts@eb893e3:74–96` | BLOCKER | 0 | Open: undefined JSON serialization raises from logger | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-006 | `typescript-unit-tests/rules/cases.md` Assertions and `review.md` | `test/logging.test.ts@eb893e3:62–107,109–122` | BLOCKER | 0 | Open: callable and `.log` parameter routes lack discriminating assertions | source `eb893e3`; fix pending |
+| CR-06-ENTRY-007 | Approved header; style `modules-and-data.md` File order | `src/logging.ts@eb893e3:1–2` | WARNING | 0 | Open: incomplete header | source `eb893e3`; fix pending |
+| CR-06-ENTRY-008 | Same header rules | `test/logging.test.ts@eb893e3:1–3` | WARNING | 0 | Open: missing header | source `eb893e3`; fix pending |
+| CR-06-ENTRY-009 | Same header rules | `src/settings.ts@eb893e3:1–4` | WARNING | 0 | Open: incomplete Apache header; retain attribution | source `eb893e3`; fix pending |
+| CR-06-ENTRY-010 | Same header rules | `test/settings.test.ts@eb893e3:1–3` | WARNING | 0 | Open: missing header | source `eb893e3`; fix pending |
+| CR-06-ENTRY-011 | Same header rules | `src/index.ts@eb893e3:1–4` | WARNING | 0 | Open for 06-04: incomplete Apache header; retain attribution | source `eb893e3`; fix pending |
+| CR-06-ENTRY-012 | Same header rules | `test/index.test.ts@eb893e3:1–3` | WARNING | 0 | Open for 06-04: missing header | source `eb893e3`; fix pending |
+| CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Open: `act & assert` labels misstate constant checks | source `eb893e3`; fix pending |
+| CR-06-ENTRY-014 | Style `functions.md` Functions | `src/logging.ts@eb893e3:137,164` | WARNING | 0 | Open: const arrows for named local functions | source `eb893e3`; fix pending |
+| CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Open for 06-04: exported function JSDoc misnames it | source `eb893e3`; fix pending |
 
 ## PLATFORM stable IDs
 
@@ -59,6 +74,7 @@ No correction round has started. For each independent round, commit its report a
 | CONFIG_PROTOCOL | 0 | `review_config_protocol` at `5ff22a4`, clean diff; four complete files | 0 | 0 | 0 | 7 | 0 | 7 | 001–007 | `d2ab800` | `2c5788f` |
 | CONFIG_PROTOCOL | 1 | `review_config_protocol` at `2c5788f`, clean diff; config 1–209, config test 1–485, protocol 1–45, protocol test 1–42 | 7 | 7 | 0 | 1 | 0 | 1 | 008 | `e211078` | `2c5788f` |
 | CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | `8b3606a` | `41d1ee3` |
+| ENTRY | 0 | `entry_initial_review` at `eb893e3`, clean diff; logging 1–180, logging test 1–432, settings 1–26, settings test 1–26, index 1–13, index test 1–23 | 0 | 0 | 0 | 15 | 0 | 15 | 001–015 | pending | pending |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
