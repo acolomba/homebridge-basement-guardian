@@ -9,6 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { watch } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -29,6 +30,7 @@ import { createDeviceStateStore } from '../src/device/state.js';
 import { createRedactingLogger } from '../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
 import { ARRIVAL_ANCHOR_FILENAME } from '../src/runtime/arrivalAnchors.js';
+import { systemClock } from '../src/runtime/clock.js';
 import { systemTimers } from '../src/runtime/timers.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../src/settings.js';
 
@@ -976,6 +978,7 @@ describe('BasementGuardianPlatform', () => {
 
   test('AUTH-02 caches the granted token under the Homebridge storage directory', async (t) => {
     // arrange
+    t.mock.method(systemClock, 'now', () => 1_800_000_000_000);
     const [requestAfterGrant, announceRequestAfterGrant] = completionSignal();
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
       if (input.toString().endsWith('/oauth/token')) {
@@ -1018,7 +1021,8 @@ describe('BasementGuardianPlatform', () => {
     // act
     launch?.();
     await filesWritten;
-    await Promise.all(stored.map((filename) => readFile(join(storagePath, filename))));
+    await readFile(join(storagePath, ARRIVAL_ANCHOR_FILENAME));
+    const tokenBytes = await readFile(join(storagePath, '.basement-guardian-token.json'));
     watcher.close();
     await requestAfterGrant;
     await settle();
@@ -1027,6 +1031,17 @@ describe('BasementGuardianPlatform', () => {
 
     // assert
     assert.deepStrictEqual((await readdir(storagePath)).sort(), stored);
+    const cache: unknown = JSON.parse(tokenBytes.toString('utf8'));
+    assert.ok(isRecord(cache));
+    const salt = cache.salt;
+    assert.ok(typeof salt === 'string');
+    assert.match(salt, /^[0-9a-f]{32}$/);
+    assert.deepStrictEqual(cache, {
+      idToken: 'id-token-1',
+      expiresAt: 1_802_592_000_000,
+      emailFingerprint: createHash('sha256').update(`${salt}account@example.test`).digest('hex'),
+      salt,
+    });
     verify(user);
     verify(api);
   });
