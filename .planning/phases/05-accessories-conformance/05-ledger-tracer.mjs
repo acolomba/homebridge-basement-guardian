@@ -42,6 +42,17 @@ const CORE_PATHS = [
   'test/accessories/hapWriteFidelity.test.ts',
 ];
 
+// These GATES inputs were reviewed at round 15, then retired by the maintainer.
+// Keep their historical inventory rows without claiming they exist in the current tree.
+const RETIRED_PATHS = new Set([
+  'test/accessories/timerFreedom.test.ts',
+  'test/accessories/hapImportScope.test.ts',
+  'test/accessories/accessoryReadPathScope.test.ts',
+  'test/accessories/staticGateSources.ts',
+]);
+const RETIRED_BASE = '43c0e4a3a1b22aaba3c0e9aeece5b685412daff7';
+const RETIRE_COMMIT = '3299b7e0e2e5c4887907dc94cb88219af0b69b1d';
+
 const BATCHES = ['DECLARATIONS', 'CATALOGUE', 'CONTROLS', 'RECORDS', 'ACCESSORY', 'GATES'];
 
 // Only CONTROLS opens with findings: the seven Phase 1 seeds pre-allocated before its first round (D-09).
@@ -317,7 +328,11 @@ function checkInventory(inventory, violate) {
     } else if (row.Kind === 'core' && Number(row['First round']) !== 0) {
       violate('L2', `${rowPath}: a core row has First round 0, not ${row['First round']}`);
     }
-    if (!isTracked(rowPath)) {
+    if (RETIRED_PATHS.has(rowPath)) {
+      if (isTracked(rowPath) || git(['cat-file', '-e', `${RETIRED_BASE}:${rowPath}`]).status !== 0 || git(['cat-file', '-e', `${RETIRE_COMMIT}:${rowPath}`]).status === 0) {
+        violate('L2', `${rowPath} does not match the recorded retirement history`);
+      }
+    } else if (!isTracked(rowPath)) {
       violate('L2', `${rowPath} is not tracked by git`);
     }
   }
