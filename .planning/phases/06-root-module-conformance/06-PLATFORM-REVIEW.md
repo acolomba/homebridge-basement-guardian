@@ -170,6 +170,25 @@ Two temporary controls tested the assertions. First, removing `root.abort()` onl
 
 This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
 
+## CR-06-PLATFORM-004 repair after round 0
+
+Fix `b7e4670` gives the offline trust case two synthetic systems. It records each system's offline and flood `StatusActive` values and offline contact state before any failed poll, after one failed poll, and after two failed polls. Literal expectations require both offline trust flags to stay active through the first failure and become inactive together on the second. The case also checks that three inventories ran. The initial draft expected a different contact-state value before failure; the named test exposed that test expectation, which was corrected without a production edit.
+
+Two temporary controls verified the new assertions. Changing `REST_FAILURE_THRESHOLD` from 2 to 1 only in ignored `dist-test/src/runtime/monitoringHealth.js` made the named case exit 1: both offline `StatusActive` values were false after the first failed poll, where true was expected. Adding a `break` after the first accessory's trust publication only in ignored `dist-test/src/platform.js` made the same case exit 1: the second accessory still reported offline trust as true after the second failure, where false was expected. `npm run build:test` restored the compiled SHA-256 values `5b8ced1abcf89ffffae50b785a6e11d52c57cf50c3957c588049bac6a39a3dac` and `45d496adabb4ff78c9040207864b21fe8069556dc8169d040a2191f9844f58b1`. No temporary mutation was committed. The stronger case exposed no production bug.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | owner edit before `b7e4670`, main checkout, Node v26.12.0 | 0 | Compiled the owner and both temporary-control targets. |
+| Named early-withdrawal control | temporary compiled monitoring threshold, main checkout | 1 | First-poll trust assertion rejected premature withdrawal for both devices. |
+| Named first-only control | temporary compiled platform publication, main checkout | 1 | Second-device trust assertion rejected first-accessory-only withdrawal. |
+| Named GREEN owner case | restored compiled files, owner edit at `b7e4670`, main checkout | 0 | One named test passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | owner edit at `b7e4670`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `b7e4670`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed. |
+
+This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
