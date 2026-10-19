@@ -27,13 +27,13 @@ The full-file independent review at `5ff22a40053e9635672aae7c399f8e6ac51f21c9` a
 
 | ID | Rule | Revision-qualified location | Severity | First round | Disposition and evidence | Source / RED / fix commits |
 | --- | --- | --- | --- | --- | --- | --- |
-| CR-06-CONFIG_PROTOCOL-001 | `AGENTS.md` Privacy; D-06 | `src/config.ts@5ff22a4:80–85,99,124,131,135` | BLOCKER | 0 | Open: arbitrary refused values can enter platform logs; independent reviewer `review_config_protocol` | source `5ff22a4`; RED pending; fix pending |
-| CR-06-CONFIG_PROTOCOL-002 | `config.schema.json` email format; D-06 | `src/config.ts@5ff22a4:14,167–169`; `test/config.test.ts@5ff22a4:88–102` | BLOCKER | 0 | Open: malformed dot-atom email addresses are accepted; independent reviewer `review_config_protocol` | source `5ff22a4`; RED pending; fix pending |
-| CR-06-CONFIG_PROTOCOL-003 | Unit-test `cases.md` Assertions, `review.md` BLOCKER | `test/protocol.test.ts@5ff22a4:20–28` | BLOCKER | 0 | Open: nonempty checks miss wrong bundled values; independent reviewer `review_config_protocol` | source `5ff22a4`; negative control pending; fix pending |
-| CR-06-CONFIG_PROTOCOL-004 | Approved header; style `modules-and-data.md` File order | `src/config.ts@5ff22a4:1–2` | WARNING | 0 | Open: copyright and overview absent; independent reviewer `review_config_protocol` | source `5ff22a4`; fix pending |
-| CR-06-CONFIG_PROTOCOL-005 | Approved header; style `modules-and-data.md` File order | `test/config.test.ts@5ff22a4:1–4` | WARNING | 0 | Open: SPDX, copyright, and overview absent; independent reviewer `review_config_protocol` | source `5ff22a4`; fix pending |
-| CR-06-CONFIG_PROTOCOL-006 | Approved header; style `modules-and-data.md` File order | `src/protocol.ts@5ff22a4:1–5` | WARNING | 0 | Open: copyright and overview absent; independent reviewer `review_config_protocol` | source `5ff22a4`; fix pending |
-| CR-06-CONFIG_PROTOCOL-007 | Approved header; style `modules-and-data.md` File order | `test/protocol.test.ts@5ff22a4:1–4` | WARNING | 0 | Open: SPDX, copyright, and overview absent; independent reviewer `review_config_protocol` | source `5ff22a4`; fix pending |
+| CR-06-CONFIG_PROTOCOL-001 | `AGENTS.md` Privacy; D-06 | `src/config.ts@5ff22a4:80–85,99,124,131,135` | BLOCKER | 0 | Repaired, awaiting round 1: active `keeps a private value out of a poll interval refusal` failed before source fix; safe field-specific refusals and bounded platform assertion pass | source `d2ab800`; RED `500cbad`; fix `5d605c3`; consumer `5dd9bbc` |
+| CR-06-CONFIG_PROTOCOL-002 | `config.schema.json` email format; D-06 | `src/config.ts@5ff22a4:14,167–169`; `test/config.test.ts@5ff22a4:88–102` | BLOCKER | 0 | Repaired, awaiting round 1: active `refuses an account email with consecutive domain dots` failed before source fix; runtime now refuses empty dot-atom parts | source `5dd9bbc`; RED `b7942c2`; fix `ccee6ce` |
+| CR-06-CONFIG_PROTOCOL-003 | Unit-test `cases.md` Assertions, `review.md` BLOCKER | `test/protocol.test.ts@5ff22a4:20–28` | BLOCKER | 0 | Repaired, awaiting round 1: temporary `wss` to `ws` JSON mutation made exact-value assertion fail; source bytes were restored and GREEN passed | source `ccee6ce`; RED not applicable; fix `68c6dc1` |
+| CR-06-CONFIG_PROTOCOL-004 | Approved header; style `modules-and-data.md` File order | `src/config.ts@5ff22a4:1–2` | WARNING | 0 | Repaired, awaiting round 1: approved copyright and overview header | source `68c6dc1`; fix `7a4b1ca` |
+| CR-06-CONFIG_PROTOCOL-005 | Approved header; style `modules-and-data.md` File order | `test/config.test.ts@5ff22a4:1–4` | WARNING | 0 | Repaired, awaiting round 1: approved SPDX, copyright, and overview header | source `7a4b1ca`; fix `e393b43` |
+| CR-06-CONFIG_PROTOCOL-006 | Approved header; style `modules-and-data.md` File order | `src/protocol.ts@5ff22a4:1–5` | WARNING | 0 | Repaired, awaiting round 1: approved copyright and overview header | source `e393b43`; fix `c1766e5` |
+| CR-06-CONFIG_PROTOCOL-007 | Approved header; style `modules-and-data.md` File order | `test/protocol.test.ts@5ff22a4:1–4` | WARNING | 0 | Repaired, awaiting round 1: approved SPDX, copyright, and overview header | source `c1766e5`; fix `dd2e5b3` |
 
 ## ENTRY stable IDs
 
@@ -55,7 +55,7 @@ No correction round has started. For each independent round, commit its report a
 
 | Batch | Round | Reviewer and revision | Opening | Fixed | Rejected | New | Reopened | Closing | Open IDs | Report commit | Repair ledger commit |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
-| CONFIG_PROTOCOL | 0 | `review_config_protocol` at `5ff22a4`, clean diff; four complete files | 0 | 0 | 0 | 7 | 0 | 7 | 001–007 | pending | pending |
+| CONFIG_PROTOCOL | 0 | `review_config_protocol` at `5ff22a4`, clean diff; four complete files | 0 | 0 | 0 | 7 | 0 | 7 | 001–007 | `d2ab800` | this repair-ledger commit |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 

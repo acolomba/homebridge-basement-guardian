@@ -19,3 +19,19 @@ The independent review checked the project TypeScript style and unit-test rules,
 The reviewer rejected three candidates without assigning IDs because they were not filed as findings: `resolveIgnoredFaults()` only runs after invalid entries are refused; `String(email)` and `String(password)` follow successful text validation; and a circular object is outside the `config.json` input contract. The candidate email verdict was accepted as a finding because the runtime claims an email-address check and the form declares `format: email`.
 
 Round 0 counts: opening 0, fixed 0, rejected 0, new 7, reopened 0, closing 7. Open IDs: 001–007. This report and its matching ledger rows are committed before owner repairs.
+
+## Repairs queued for independent round 1
+
+The coordinator recorded every cause commit here before dispatching the next reviewer. All seven IDs remain open until independent round 1 confirms each repair.
+
+| ID | Repair and evidence |
+| --- | --- |
+| 001 | `500cbad` committed only the validated RED evidence JSON. Its active named config assertion failed against unchanged production (`RED_EVIDENCE_OK`). `5d605c3` removed arbitrary supplied values from integer and ignored-fault refusals; config direct coverage and normal hooks passed. The bounded platform consumer assertion changed in `5dd9bbc`; platform direct coverage passed under native watcher access. Two sandboxed attempts exited 1 with `EMFILE` in an unrelated watcher test. |
+| 002 | `b7942c2` committed only validated RED evidence (`RED_EVIDENCE_OK`) for consecutive dots in an account email. `ccee6ce` refuses empty dot-atom parts and updates owner expectations. Named TAP, config direct coverage, and normal hooks passed. |
+| 003 | `68c6dc1` asserts the six vendor values independently in the protocol owner test. A temporary `src/protocol.json` change from `wss` to `ws` made `bundles the exact public vendor protocol values` fail at `deepStrictEqual` (exit 1). The fixer restored the JSON byte for byte, confirmed blob `3088e6a36d1a99d0062b2dea927508f2163a61b9`, rebuilt, and observed named GREEN (exit 0). Protocol direct coverage and normal hooks passed. No production protocol field changed. |
+| 004 | `7a4b1ca` added the approved header to `src/config.ts` only. |
+| 005 | `e393b43` added the approved header to `test/config.test.ts` only. |
+| 006 | `c1766e5` added the approved header to `src/protocol.ts` only and preserved the import-attribute comment. |
+| 007 | `dd2e5b3` added the approved header to `test/protocol.test.ts` only. |
+
+Each header commit passed its owner coverage, Fallow checks, project pre-step, and normal commit hook. At code revision `dd2e5b3`, `npm run test:coverage:direct -- src/config.ts src/protocol.ts` exited 0 with 100% direct line, function, and branch coverage for both pairs. The bounded platform test change is a scope deviation for cause 001 and does not count as a complete platform review.
