@@ -5,11 +5,11 @@ milestone_name: Code Review Sweep
 current_phase: 05
 current_phase_name: Accessories Conformance
 status: executing
-stopped_at: Completed 05-07-PLAN.md
-last_updated: "2026-10-19T07:52:50.675Z"
+stopped_at: Phase 05 verification needs maintainer judgment
+last_updated: "2026-10-19T08:38:12Z"
 last_activity: 2026-10-19
-last_activity_desc: Completed quick task 261019-56i to replace accessory source scanners
-state_head: 3299b7e0e2e5c4887907dc94cb88219af0b69b1d
+last_activity_desc: Verified revised accessory closeout; four maintainer judgments pending
+state_head: a95b8700fb3a092c2224f448104c102acd15258f
 progress:
   total_phases: 8
   completed_phases: 4
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 05 (Accessories Conformance) — EXECUTING
-Plan: 8 of 9
-Status: Ready to execute
-Last activity: 2026-10-19 — Completed quick task 261019-56i to replace accessory source scanners
+Plan: 9 of 9
+Status: Human verification needed
+Last activity: 2026-10-19 — Revised accessory closeout passed automated checks; four judgments pending
 
 Progress: [█████░░░░░] 50%
 
@@ -637,6 +637,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 |---|-------------|------|--------|--------|-----------|
 | 261016-wbo | Update Phase 5 planning files to the new skill and step paths | 2026-10-17 | 2abef60 | — | [261016-wbo-update-phase-5-planning-files-to-the-new](./quick/261016-wbo-update-phase-5-planning-files-to-the-new/) |
 | 261019-56i | Replace custom accessory source scanners with ESLint boundary rules while retaining runtime and HAP parity tests | 2026-10-19 | 3299b7e | complete | [261019-56i-replace-custom-accessory-source-scanners](./quick/261019-56i-replace-custom-accessory-source-scanners/) |
+| 261019-68p | Reconcile accessory closeout after retiring source scanners | 2026-10-19 | a95b870 | complete | [261019-68p-reconcile-accessory-closeout-after-retir](./quick/261019-68p-reconcile-accessory-closeout-after-retir/) |
 
 ## Deferred Items
 

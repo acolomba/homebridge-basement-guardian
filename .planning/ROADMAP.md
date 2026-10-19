@@ -70,7 +70,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 **Requirements**: CLOUD-01
 **Success Criteria** (what must be TRUE):
   1. The ledger lists all eight `src/cloud/**` modules and all nine `test/cloud/**` files as reviewed, each carries the Phase 1 header form, and the spot-check WARNING lines for `auth.ts` and `auth.test.ts` each have an outcome: the `.length`-only and standalone negative `includes` assertions, the `T | undefined` fields, the global `fetch` default, and the test-only `TOKEN_CACHE_FILENAME` export.
-  2. The phase ledger records each finding's rule, location, severity, and outcome. It names the two historical open scanner findings, the STOP decision and why those files were retired, without claiming the findings were fixed or rejected (applies PROC-01).
+  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
   3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
@@ -216,12 +216,12 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 **Requirements**: ACC-01
 **Success Criteria** (what must be TRUE):
   1. The ledger preserves the review of all ten `src/accessories/**` modules and the fourteen test files in the Wave 0 inventory. The current tree has ten sources, ten paired tests and one real-HAP fidelity test; these 21 paths carry the Phase 1 header form. The three retired scanner tests remain historical review entries. The spot-check WARNING lines for `controls.ts` and `controls.test.ts` each have a recorded outcome.
-  2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
+  2. The phase ledger records each finding's rule, location, severity, and outcome. It names the two historical open scanner findings, the STOP decision and why those files were retired, without claiming the findings were fixed or rejected (applies PROC-01).
   3. Five batches close cleanly. GATES stops at its amended cap of fifteen rounds with two open findings in retired scanner code. The ledger preserves the STOP and the maintainer's replacement decision. Current lint boundaries, the retained HAP parity test and the full gate provide the replacement evidence; none is described as a clean GATES round (applies PROC-02).
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 7 completed, 1 stopped and superseded, 1 closeout pending in 9 serial waves
+**Plans**: 8 completed, 1 stopped and superseded in 9 serial waves; phase verification needs a maintainer judgment
 **Wave 1**
 - [x] 05-01-PLAN.md — Wave 0: findings ledger, ledger tracer, review protocol and fresh baseline gate
 
@@ -247,7 +247,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 05-08-PLAN.md — GATES: stopped at round 15; custom scanners retired by maintainer decision, with history in 05-08-SUMMARY.md
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 05-09-PLAN.md — Closeout: historical ledger, current lint and HAP parity checks, validation map and phase-end gate
+- [x] 05-09-PLAN.md — Closeout: historical ledger, current lint and HAP parity checks, validation map and phase-end gate
 
 **Cross-cutting constraints:**
 - The batch is resumable: each correction round's report and counter row are committed before that round's repairs start, and each dispatch's fix commits are recorded in a ledger commit before the next dispatch, so a paused session resumes from the ledger through the protocol's resume check without repeating a committed round.

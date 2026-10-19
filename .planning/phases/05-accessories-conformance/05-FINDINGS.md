@@ -2225,3 +2225,57 @@ exited 0 with 124/124 tests; `npm run test:unpaired:compiled` exited 0;
 and the ledger tracer exited 0 (`inventory=31 findings=245 open=2
 rounds=46`). IDs 072 and 073 remain `open` pending independent
 round-15 review.
+
+Round 15 confirmed 072 and 073 fixed and reported 074 and 075 in the custom
+source scanners. Opening 2 - fixed 2 + new 2 = closing 2. It reached the
+fifteen-round cap and stopped without a clean result. The maintainer retired
+the scanner approach in commit `3299b7e`, then recorded that resolution in
+the STOP cell. The two findings were valid in the reviewed files and remain
+open historical findings; their files no longer exist in the current tree.
+
+### 05-09
+
+The current tracked accessory scope is ten sources, ten paired tests and
+`test/accessories/hapWriteFidelity.test.ts` (21 paths). The other four
+historical GATES inventory paths were removed in `3299b7e`; their round-15
+review and STOP result remain in this ledger and its report. No GATES round 16
+ran. This closeout uses the maintainer's replacement criteria in
+`05-09-PLAN.md`, not a claim that the old GATES batch closed cleanly.
+
+| Check | Raw result | Evidence |
+| --- | --- | --- |
+| Ordinary ledger tracer | exit 0 | `inventory=31 findings=247 open=2 rounds=47` |
+| Five `--require-clean <batch>` runs | exit 0 each | DECLARATIONS, CATALOGUE, CONTROLS, RECORDS, ACCESSORY |
+| Old `--require-clean all` predicate | exit 1, expected | GATES round 15 is STOP; 074 and 075 remain open |
+| Current-path header tracer | exit 0 | `ACCESSORIES_HEADERS_OK files=21` |
+| ESLint restriction probes | exit 0 | 11 forbidden import/loader/handler forms reported by their configured rules; current `controls.ts` and HAP parity test have no restricted-rule finding |
+| Current unpaired tests | exit 0 | `npm run test:unpaired` |
+| Real-HAP write fidelity | exit 0 | compiled owner: 22 tests passed, 0 failed |
+| Four RED evidence files | exit 0 each | BASEMENT-GUARDIAN, CONTROLS, HAP-WRITE-FIDELITY and PUMP-RECORDS each returned `RED_EVIDENCE_OK` |
+| Full combined gate | exit 0 | `npm_config_cache=/private/tmp/basement-guardian-npm-cache npm run check` on `a95b8700fb3a092c2224f448104c102acd15258f`, Node v26.12.0, npm 11.20.0, 2026-10-19T08:34:32Z to 08:35:36Z; 104 Cucumber scenarios and 1,156 steps passed; direct coverage merged 43 pairs |
+
+The ESLint rules cover static imports and ordinary handler registration syntax.
+They do not track arbitrary aliases or computed event names. Current runtime
+and parity tests cover behavior; code review remains necessary for unusual
+syntax. Neither 074 nor 075 established a production defect. Confirmed
+production bug and HAP stand-in histories retain RED evidence and fix commits
+in `## Genuine bug histories`; the four current evidence files passed their
+record checks above.
+
+#### Open judgments for the maintainer
+
+- **P-05-01:** Current full tests and five clean source batches support the
+  safety behavior. The maintainer must judge the prohibition against guessed
+  normal values and changed refusal or identity semantics; no automatic
+  descriptor proves the negative for every path.
+- **P-05-02:** This ledger calls GATES STOP and the old all-clean predicate
+  fails. The maintainer must judge whether the revised scope and disclosure
+  accurately describe the completed work.
+- **P-05-03:** Historical reports map removed or moved cases to retained
+  protection; the scanner tests were retired by explicit decision. The
+  maintainer must judge whether the replacement checks are sufficient.
+- **E-05-01:** The ACC-01 edge category remains unclassified and unresolved.
+  The maintainer must judge whether the concrete current review and test
+  evidence is the accepted conformance boundary.
+
+All four judgments remain unresolved by this automated closeout.

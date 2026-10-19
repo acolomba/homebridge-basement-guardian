@@ -47,15 +47,15 @@ created: "2026-10-16"
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | W0 baseline | coordinator | 0 | ACC-01 | — | N/A | full | `npm run check` | ✅ | ✅ green (`05-FINDINGS.md` `### 05-01`) |
 | W0 ledger tracer | coordinator | 0 | ACC-01 (PROC-01/02 applied) | — | Ledger counts match reports and Git | ledger tracer | `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs` | ✅ | ✅ green (`05-FINDINGS.md` `### 05-01`) |
-| DECLARATIONS | batch | per plan | ACC-01 | per plan | N/A | unit + coverage | PAIR commands for alarmMute, services, customCharacteristics, customServices | ✅ | ⬜ pending |
-| CATALOGUE | batch | per plan | ACC-01 | per plan | Rows withhold doubtful values; no default projection | unit + coverage | `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` | ✅ | ⬜ pending |
-| CONTROLS | batch | per plan | ACC-01 | per plan | Refusal order and status unchanged; one attempt; no secrets in logs | unit + coverage | `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` | ✅ | ⬜ pending |
-| RECORDS | batch | per plan | ACC-01 | per plan | Context keys unchanged; one persist per change | unit + coverage | PAIR commands for pumpRecords, reconciliation, staleMarking | ✅ | ⬜ pending |
-| ACCESSORY | batch | per plan | ACC-01 | per plan | No false normal; StatusActive withdrawal kept | unit + coverage | `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | ✅ | ⬜ pending |
+| DECLARATIONS | 05-02 | 2 | ACC-01 | per plan | N/A | unit + coverage | PAIR commands for alarmMute, services, customCharacteristics, customServices | ✅ | ✅ green (clean ledger; current full gate) |
+| CATALOGUE | 05-03 | 3 | ACC-01 | per plan | Rows withhold doubtful values; no default projection | unit + coverage | `npm run test:coverage:direct -- src/accessories/serviceCatalogue.ts test/accessories/serviceCatalogue.test.ts` | ✅ | ✅ green (clean ledger; current full gate) |
+| CONTROLS | 05-04 | 4 | ACC-01 | per plan | Refusal order and status unchanged; one attempt; no secrets in logs | unit + coverage | `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` | ✅ | ✅ green (clean ledger; current full gate) |
+| RECORDS | 05-05 | 5 | ACC-01 | per plan | Context keys unchanged; one persist per change | unit + coverage | PAIR commands for pumpRecords, reconciliation, staleMarking | ✅ | ✅ green (clean ledger; current full gate) |
+| ACCESSORY | 05-06/07 | 6-7 | ACC-01 | per plan | No false normal; StatusActive withdrawal kept | unit + coverage | `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | ✅ | ✅ green (clean ledger; current full gate) |
 | GATES historical review | 05-08 | 8 | ACC-01 | per plan | Scanner review stopped at round 15 with two open findings | review ledger | `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs` | ✅ | ⚠️ stopped; the old all-clean predicate fails |
-| Current lint and HAP parity | 05-09 | 9 | ACC-01 | per plan | Static import and ordinary handler-registration boundaries; real-HAP write parity | lint + unpaired | `npm run lint && npm run test:unpaired` | ✅ | ⬜ pending |
-| Bug RED evidence | any batch | per plan | ACC-01 (BUG-01 applied) | — | RED observed before GREEN | evidence check | `node .claude/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/05-accessories-conformance/05-<PAIR>-RED-EVIDENCE.json --raw` | conditional | ⬜ pending |
-| Closeout | coordinator | last | ACC-01 | — | N/A | full | `npm run check` | ✅ | ⬜ pending |
+| Current lint and HAP parity | 05-09 | 9 | ACC-01 | per plan | Static import and ordinary handler-registration boundaries; real-HAP write parity | lint + unpaired | `npm run lint && npm run test:unpaired` | ✅ | ✅ green (11 forbidden probes, 2 allowed owners, parity 22/22, full gate) |
+| Bug RED evidence | any batch | per plan | ACC-01 (BUG-01 applied) | — | RED observed before GREEN | evidence check | `node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/05-accessories-conformance/05-<PAIR>-RED-EVIDENCE.json --raw` | ✅ | ✅ green (four evidence files exited 0) |
+| Closeout | 05-09 | 9 | ACC-01 | — | N/A | full | `npm run check` | ✅ | ✅ green (a95b870, 2026-10-19T08:34:32Z to 08:35:36Z) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
