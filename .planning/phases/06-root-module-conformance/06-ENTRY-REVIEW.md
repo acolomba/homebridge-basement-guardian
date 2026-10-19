@@ -64,6 +64,10 @@ At source revision `2bab93d`, two active owner cases checked registered-secret r
 
 After rebuilding the restored source, both named cases passed (1/1 each). Commit `bfd7262` adds only those assertions. `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. This test-assertion repair uses a temporary negative control rather than genuine-bug RED evidence. It awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
 
+## Repair after round 0: CR-06-ENTRY-009
+
+Commit `093cfdc` adds separate copyright and file overview JSDocs to `src/settings.ts`. It retains the Apache-2.0 SPDX line, Homebridge template attribution, and all three identity values. `npm run test:coverage:direct -- src/settings.ts` exited 0 at 100% direct line, function, and branch coverage. Fallow guard and audit, the pre-commit step, and normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
 ## Handoff to 06-04
 
 This plan owns accepted logging and settings causes 001–010, 013, and 014. Plan 06-04 owns index causes 011, 012, and 015 and the first independent correction round across all six complete files. Its opening count is the same 15 IDs; it must account for every repair and may not reset ENTRY's counter.
