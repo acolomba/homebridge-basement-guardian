@@ -916,6 +916,7 @@ describe('BasementGuardianPlatform', () => {
 
   test('starts the cloud work on the launch event and releases it on shutdown', async (t) => {
     // arrange
+    t.mock.timers.enable({ apis: ['setTimeout'] });
     const requests: string[] = [];
     const [launchRequestsCompleted, announceLaunchRequests] = completionSignal();
     const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
@@ -962,6 +963,8 @@ describe('BasementGuardianPlatform', () => {
     await settle();
     const requestsAfterLaunch = requests.length;
     shutdown?.();
+    await settle();
+    t.mock.timers.tick(300_000);
     await settle();
 
     // assert
@@ -1388,20 +1391,54 @@ describe('BasementGuardianPlatform', () => {
 
   test('registers and removes no accessory across the whole lifecycle', async (t) => {
     // arrange
-    t.mock.method(globalThis, 'fetch', () => Promise.reject(new Error('no request expected')));
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const requests: string[] = [];
+    const [launchRequestsCompleted, announceLaunchRequests] = completionSignal();
+    const httpFetch: HttpFetch = (input) => {
+      requests.push(String(input));
+      if (requests.length === 2) {
+        announceLaunchRequests();
+      }
+
+      return Promise.reject(new Error('the vendor is unreachable'));
+    };
+
     const listeners: (() => void)[] = [];
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    new BasementGuardianPlatform(createSilentLog(), accountConfig(), api);
+    const accessoryChanges: string[] = [];
+    when(() => api.registerPlatformAccessories)
+      .thenReturn(() => {
+        accessoryChanges.push('registered');
+      })
+      .atMost(1);
+    when(() => api.unregisterPlatformAccessories)
+      .thenReturn(() => {
+        accessoryChanges.push('removed');
+      })
+      .atMost(1);
+    const platform = new BasementGuardianPlatform(createSilentLog(), accountConfig(), api, { httpFetch });
+    const [launch, shutdown] = listeners;
 
     // act
-    for (const listener of listeners) {
-      listener();
-    }
+    launch?.();
+    await launchRequestsCompleted;
+    await settle();
+    const requestsAfterLaunch = requests.length;
+    shutdown?.();
+    await settle();
+    t.mock.timers.tick(300_000);
+    await settle();
 
     // assert
+    assert.deepStrictEqual(platform.accessories, new Map());
+    assert.deepStrictEqual(accessoryChanges, []);
+    assert.deepStrictEqual(
+      { requestsAfterLaunch, requestsAfterShutdown: requests.length - requestsAfterLaunch },
+      { requestsAfterLaunch: 2, requestsAfterShutdown: 0 },
+    );
     verify(user);
     verify(api);
   });
