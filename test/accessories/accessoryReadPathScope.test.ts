@@ -155,6 +155,10 @@ function registersReadHandler(source: string): boolean {
       return fixedEventText(node.expression);
     }
 
+    if (isIdentifier(node)) {
+      return methodAlias(node.text);
+    }
+
     if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.PlusToken) {
       const left = fixedEventText(node.left);
       const right = fixedEventText(node.right);
@@ -278,18 +282,10 @@ function registersReadHandler(source: string): boolean {
       return;
     }
 
+    methodScopes[methodScopes.length - 1]?.set(node.name.text, undefined);
     scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
     objectScopes[objectScopes.length - 1]?.set(node.name.text, fixed && isReadEventObject(node.initializer));
-    const initializer = node.initializer;
-    let method: string | undefined;
-    if (fixed) {
-      method = literalText(initializer);
-      if (method === undefined && initializer && isIdentifier(initializer)) {
-        method = methodAlias(initializer.text);
-      }
-    }
-
-    methodScopes[methodScopes.length - 1]?.set(node.name.text, method);
+    methodScopes[methodScopes.length - 1]?.set(node.name.text, fixed ? fixedEventText(node.initializer) : undefined);
   }
 
   function recordUse(node: Node): void {
@@ -833,6 +829,51 @@ const event = 'ch' + 'ange'; characteristic.on(event, handler);
 
   // assert
   assert.deepStrictEqual(registrations, { concatenated: true, direct: true, template: true, unrelated: false, unresolved: false });
+});
+
+test('resolves constant operands in read event names without following shadowed names', () => {
+  // arrange
+  const concatenated = `
+const prefix = 'g'; const event = prefix + 'et'; characteristic.on(event, handler);
+`;
+  const forwarded = `
+const prefix = 'g'; const next = prefix; characteristic.on(next + 'et', handler);
+`;
+  const template = 'const prefix = "g"; characteristic.on(`${prefix}et`, handler);';
+  const unrelated = `
+const prefix = 's'; characteristic.on(prefix + 'et', handler);
+`;
+  const shadowed = `
+const prefix = 'g'; function run(prefix: string) { characteristic.on(prefix + 'et', handler); }
+`;
+  const mutable = `
+let prefix = 'g'; characteristic.on(prefix + 'et', handler);
+`;
+  const cyclic = `
+const prefix = prefix + 'g'; characteristic.on(prefix + 'et', handler);
+`;
+
+  // act
+  const registrations = {
+    concatenated: registersReadHandler(concatenated),
+    forwarded: registersReadHandler(forwarded),
+    template: registersReadHandler(template),
+    unrelated: registersReadHandler(unrelated),
+    shadowed: registersReadHandler(shadowed),
+    mutable: registersReadHandler(mutable),
+    cyclic: registersReadHandler(cyclic),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, {
+    concatenated: true,
+    forwarded: true,
+    template: true,
+    unrelated: false,
+    shadowed: false,
+    mutable: false,
+    cyclic: false,
+  });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {

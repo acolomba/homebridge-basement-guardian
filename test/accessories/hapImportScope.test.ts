@@ -61,6 +61,7 @@ import {
   isStringLiteral,
   isTemplateExpression,
   isVariableDeclaration,
+  NodeFlags,
   ScriptTarget,
   SyntaxKind,
   type Node,
@@ -146,21 +147,25 @@ function staticMemberName(node: Node): string | undefined {
   return undefined;
 }
 
-function fixedEventText(node: Node): string | undefined {
+function fixedEventText(node: Node, fixedAlias: (name: string) => string | undefined): string | undefined {
   if (isParenthesizedExpression(node)) {
-    return fixedEventText(node.expression);
+    return fixedEventText(node.expression, fixedAlias);
+  }
+
+  if (isIdentifier(node)) {
+    return fixedAlias(node.text);
   }
 
   if (isBinaryExpression(node) && node.operatorToken.kind === SyntaxKind.PlusToken) {
-    const left = fixedEventText(node.left);
-    const right = fixedEventText(node.right);
+    const left = fixedEventText(node.left, fixedAlias);
+    const right = fixedEventText(node.right, fixedAlias);
     return left === undefined || right === undefined ? undefined : left + right;
   }
 
   if (isTemplateExpression(node)) {
     let text = node.head.text;
     for (const span of node.templateSpans) {
-      const part = fixedEventText(span.expression);
+      const part = fixedEventText(span.expression, fixedAlias);
       if (part === undefined) {
         return undefined;
       }
@@ -174,12 +179,17 @@ function fixedEventText(node: Node): string | undefined {
   return isStringLiteral(node) || isNoSubstitutionTemplateLiteral(node) ? node.text : undefined;
 }
 
-function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined, isHapNamespace: (node: Node) => boolean): boolean {
+function isSetEvent(
+  node: Node,
+  aliasOf: (name: string) => string | undefined,
+  fixedAlias: (name: string) => string | undefined,
+  isHapNamespace: (node: Node) => boolean,
+): boolean {
   if (isIdentifier(node) && aliasOf(node.text) === 'setEvent') {
     return true;
   }
 
-  if (fixedEventText(node) === 'set') {
+  if (fixedEventText(node, fixedAlias) === 'set') {
     return true;
   }
 
@@ -202,11 +212,22 @@ function isSetEvent(node: Node, aliasOf: (name: string) => string | undefined, i
 function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberCall: boolean; destructuredCall: boolean } {
   const uses = { onSet: false, setEvent: false, memberCall: false, destructuredCall: false };
   const scopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
+  const fixedScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
 
   function aliasOf(name: string): string | undefined {
     for (let index = scopes.length - 1; index >= 0; index--) {
       if (scopes[index]?.has(name)) {
         return scopes[index]?.get(name);
+      }
+    }
+
+    return undefined;
+  }
+
+  function fixedAlias(name: string): string | undefined {
+    for (let index = fixedScopes.length - 1; index >= 0; index--) {
+      if (fixedScopes[index]?.has(name)) {
+        return fixedScopes[index]?.get(name);
       }
     }
 
@@ -257,7 +278,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
           isPropertyAssignment(property) &&
           (isIdentifier(property.name) || isStringLiteral(property.name)) &&
           property.name.text === 'SET' &&
-          isSetEvent(property.initializer, aliasOf, isHapNamespace),
+          isSetEvent(property.initializer, aliasOf, fixedAlias, isHapNamespace),
       )
     );
   }
@@ -275,7 +296,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       return 'hapNamespace';
     }
 
-    if (isSetEvent(node, aliasOf, isHapNamespace)) {
+    if (isSetEvent(node, aliasOf, fixedAlias, isHapNamespace)) {
       return 'setEvent';
     }
 
@@ -326,6 +347,9 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     }
 
     if (isIdentifier(node.name)) {
+      const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
+      fixedScopes[fixedScopes.length - 1]?.set(node.name.text, undefined);
+      fixedScopes[fixedScopes.length - 1]?.set(node.name.text, fixed && node.initializer ? fixedEventText(node.initializer, fixedAlias) : undefined);
       scopes[scopes.length - 1]?.set(node.name.text, capabilityOf(node.initializer));
     } else if (isObjectBindingPattern(node.name) && node.initializer) {
       recordDestructuredAlias(node.name, node.initializer);
@@ -345,7 +369,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       const member = node.expression;
       const firstArgument = node.arguments[0];
       const method = staticMemberName(member);
-      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf, isHapNamespace)) {
+      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf, fixedAlias, isHapNamespace)) {
         uses.setEvent = true;
       }
 
@@ -359,15 +383,18 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     const ownScope = isBlock(node) || isFunctionLike(node);
     if (ownScope) {
       const scope = new Map<string, string | undefined>();
+      const fixedScope = new Map<string, string | undefined>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, undefined);
+            fixedScope.set(parameter.name.text, undefined);
           }
         }
       }
 
       scopes.push(scope);
+      fixedScopes.push(fixedScope);
     }
 
     recordAlias(node);
@@ -375,6 +402,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     forEachChild(node, visit);
     if (ownScope) {
       scopes.pop();
+      fixedScopes.pop();
     }
   }
 
@@ -1086,6 +1114,51 @@ const event = 'ch' + 'ange'; characteristic.on(event, handler);
 
   // assert
   assert.deepStrictEqual(uses, { concatenated: true, direct: true, template: true, unrelated: false, unresolved: false });
+});
+
+test('resolves constant operands in set event names without following shadowed names', () => {
+  // arrange
+  const concatenated = sourceFileOf(`
+const prefix = 's'; const event = prefix + 'et'; characteristic.on(event, handler);
+`);
+  const forwarded = sourceFileOf(`
+const prefix = 's'; const next = prefix; characteristic.on(next + 'et', handler);
+`);
+  const template = sourceFileOf('const prefix = "s"; characteristic.on(`${prefix}et`, handler);');
+  const unrelated = sourceFileOf(`
+const prefix = 'g'; characteristic.on(prefix + 'et', handler);
+`);
+  const shadowed = sourceFileOf(`
+const prefix = 's'; function run(prefix: string) { characteristic.on(prefix + 'et', handler); }
+`);
+  const mutable = sourceFileOf(`
+let prefix = 's'; characteristic.on(prefix + 'et', handler);
+`);
+  const cyclic = sourceFileOf(`
+const prefix = prefix + 's'; characteristic.on(prefix + 'et', handler);
+`);
+
+  // act
+  const uses = {
+    concatenated: hapUses(concatenated).setEvent,
+    forwarded: hapUses(forwarded).setEvent,
+    template: hapUses(template).setEvent,
+    unrelated: hapUses(unrelated).setEvent,
+    shadowed: hapUses(shadowed).setEvent,
+    mutable: hapUses(mutable).setEvent,
+    cyclic: hapUses(cyclic).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, {
+    concatenated: true,
+    forwarded: true,
+    template: true,
+    unrelated: false,
+    shadowed: false,
+    mutable: false,
+    cyclic: false,
+  });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {
