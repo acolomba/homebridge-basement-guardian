@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Validates account settings and resolves platform defaults.
+ */
+
 import { isNotificationServiceKind, NOTIFICATION_SERVICE_KINDS } from './accessories/services.js';
 import { PROTOCOL } from './protocol.js';
 
