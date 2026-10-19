@@ -81,9 +81,9 @@ These are **candidates for coordinator triage**, with proposed stable IDs. A pas
 
 **Rule and location:** `typescript-unit-tests/rules/cases.md` Assertions and `typescript-unit-tests/rules/review.md` BLOCKER; `test/platform.test.ts@0696d99:1237–1352`, especially 1250–1264 and 1333–1350. **Severity: BLOCKER.**
 
-**Cause and evidence:** The case titled `unregisters a confirmed-absent accessory once two trustworthy polls and a final check agree it is gone` increments `deviceListCalls` but never asserts its value or waits for the third request. A wrong runtime that removes after the two ordinary inventories without making the out-of-band final request can still meet `{ unregisteredCount: 1, accessoryCount: 0 }`. The separate restored-device case at 667–818 does observe its final request; that does not make this named case discriminate its own contract.
+**Cause and evidence:** The case titled `unregisters a confirmed-absent accessory once two trustworthy polls and a final check agree it is gone` increments `deviceListCalls` but never asserts its value or waits for the fourth request. Registration first fetches the present device; the two ordinary absent polls are requests two and three, and the out-of-band final check is request four. A wrong runtime that removes after the two ordinary absent polls without making the final request can still meet `{ unregisteredCount: 1, accessoryCount: 0 }`. The separate restored-device case at 667–818 starts with a cached accessory and has three total requests; it does not make this named case discriminate its own contract.
 
-**Fix:** Capture the request for the final inventory, assert no unregister before its response, answer it with an empty inventory, then assert the exact three request count and one unregister.
+**Fix:** Capture the request for the final inventory, assert no unregister before its response, answer it with an empty inventory, then assert four total requests (three after registration) and one unregister.
 
 ## Warnings
 
@@ -222,6 +222,24 @@ A temporary control added `break` after the first action in ignored `dist-test/s
 | `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
 | Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
 | Project pre-step and commit hook | fix `59ff8f0`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed. |
+
+This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
+## CR-06-PLATFORM-007 repair after round 0
+
+Fix `38c8a77` makes the confirmed-removal case hold its out-of-band final inventory response. It observes four inventory requests in total: the initial present-device registration, two ordinary absent polls, and the final confirmation request. Before that response, the case requires the final `/devices` request to exist, the accessory to remain registered, and zero unregister calls. After an empty final response, it requires exactly one unregister and an empty accessory map. The separate cached-restoration case begins with an absent inventory and therefore has three total requests; its count does not apply to this case.
+
+A temporary control in ignored `dist-test/src/runtime/accountRuntime.js` bypassed `options.api.devices(root.signal)` for the final check. The named test exited 1: it saw only three total requests (two after registration), no final request, and an early unregister. `npm run build:test` restored the compiled runtime to SHA-256 `cc19b08ac2c861c537297e437be73e5f0dbff55715a6e54e29ec208681a7e1e4`. No control mutation was committed, and the stronger case exposed no production bug.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | owner edit before `38c8a77`, main checkout, Node v26.12.0 | 0 | Compiled the owner and runtime. |
+| Named skipped-final-check control | temporary compiled runtime, main checkout | 1 | Exact before-response assertion rejected early unregister and the missing fourth request. |
+| Named GREEN owner case | restored compiled runtime, owner edit at `38c8a77`, main checkout | 0 | One named test passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | owner edit at `38c8a77`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `38c8a77`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed. |
 
 This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
 
