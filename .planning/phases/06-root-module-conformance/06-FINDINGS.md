@@ -51,7 +51,7 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-007 | Approved header; style `modules-and-data.md` File order | `src/logging.ts@eb893e3:1–2` | WARNING | 0 | Open: incomplete header | source `eb893e3`; fix pending |
 | CR-06-ENTRY-008 | Same header rules | `test/logging.test.ts@eb893e3:1–3` | WARNING | 0 | Open: missing header | source `eb893e3`; fix pending |
 | CR-06-ENTRY-009 | Same header rules | `src/settings.ts@eb893e3:1–4` | WARNING | 0 | Repair committed, pending independent round-1 review: separate copyright and overview JSDocs retain Apache SPDX, template attribution, and identity values; 100% direct owner coverage | source `eb893e3`; fix `093cfdc` |
-| CR-06-ENTRY-010 | Same header rules | `test/settings.test.ts@eb893e3:1–3` | WARNING | 0 | Open: missing header | source `eb893e3`; fix pending |
+| CR-06-ENTRY-010 | Same header rules | `test/settings.test.ts@eb893e3:1–3` | WARNING | 0 | Repair committed, pending independent round-1 review: approved test header added without changing assertions; 100% direct owner coverage | source `eb893e3`; fix `6d372fc` |
 | CR-06-ENTRY-011 | Same header rules | `src/index.ts@eb893e3:1–4` | WARNING | 0 | Open for 06-04: incomplete Apache header; retain attribution | source `eb893e3`; fix pending |
 | CR-06-ENTRY-012 | Same header rules | `test/index.test.ts@eb893e3:1–3` | WARNING | 0 | Open for 06-04: missing header | source `eb893e3`; fix pending |
 | CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Open: `act & assert` labels misstate constant checks | source `eb893e3`; fix pending |
