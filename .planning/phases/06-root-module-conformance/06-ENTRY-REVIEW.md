@@ -46,6 +46,12 @@ At source revision `040a298`, the active owner case `AUTH-02 redacts a lowercase
 
 Commit `2113b89` makes the authorization pattern case-insensitive and includes `~` in token matches while keeping the final sentence period outside the match. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
 
+## Repair after round 0: CR-06-ENTRY-004
+
+At source revision `c8a97ba`, the active owner case `AUTH-02 redacts a comma inside a quoted password` compiled with `npm run build:test` (exit 0). Its named TAP run exited 1 on the intended delegate assertion: expected `{"password":"[redacted]"}`, received `{"password":"[redacted],right"}`. `06-ENTRY-RED-EVIDENCE.json` holds the complete TAP, active patch, source blob, semantic assessment, and unchanged evidence for findings 001–003. The validator returned `RED_EVIDENCE_OK`; the evidence-only commit is `5e30e07`.
+
+Commit `a51f5e6` matches an entire quoted authentication value, including commas, before the existing unquoted-value pattern. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. The pre-commit formatter changed the source layout; its second run passed before the commit. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
 ## Handoff to 06-04
 
 This plan owns accepted logging and settings causes 001–010, 013, and 014. Plan 06-04 owns index causes 011, 012, and 015 and the first independent correction round across all six complete files. Its opening count is the same 15 IDs; it must account for every repair and may not reset ENTRY's counter.
