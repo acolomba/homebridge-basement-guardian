@@ -35,6 +35,8 @@ const NEW_TEST_SECONDS = 1_700_000_105;
 // What a backup-pump timestamp is worth once it reaches a stored time, which is the one piece of
 // arithmetic this module does on a device value.
 const NEW_BACKUP_MS = 1_700_000_100_000;
+const LAST_VALID_MILLISECOND = 8_640_000_000_000_000;
+const LAST_VALID_DEVICE_SECOND = 8_640_000_000_000;
 
 /** The recorder a case reads the module's whole outward behaviour off. */
 interface RecordedSubject {
@@ -154,6 +156,31 @@ test('resumes a stored record and asks for no write of its own', () => {
 
   // assert
   assert.deepStrictEqual({ ...resumed, persisted: second.persistCount() }, { primary: first.records.primary, backup: first.records.backup, persisted: 0 });
+});
+
+test('resumes stored timestamps at the last ISO-formattable millisecond', () => {
+  // arrange
+  const context: PumpRecordsContext = {
+    primaryPump: { observationStartedAt: LAST_VALID_MILLISECOND, activationCount: 0, lastActivationAt: undefined },
+    backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: LAST_VALID_MILLISECOND },
+    watermarks: { backupPumpTimestamp: LAST_VALID_DEVICE_SECOND, testTimestamp: LAST_VALID_DEVICE_SECOND },
+  };
+
+  // act
+  const { records, warnings, persistCount } = pumpRecords(context);
+  records.observe(observation());
+
+  // assert
+  assert.deepStrictEqual(
+    { primary: records.primary, backup: records.backup, watermarks: context.watermarks, warnings, persisted: persistCount() },
+    {
+      primary: { observationStartedAt: LAST_VALID_MILLISECOND, activationCount: 0, lastActivationAt: undefined, lastActivationWasTestActivity: undefined },
+      backup: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: LAST_VALID_MILLISECOND, lastActivationWasTestActivity: undefined },
+      watermarks: { backupPumpTimestamp: LAST_VALID_DEVICE_SECOND, testTimestamp: LAST_VALID_DEVICE_SECOND },
+      warnings: [],
+      persisted: 0,
+    },
+  );
 });
 
 test('counts a watched backup activation once and times it by the plugin own receipt', () => {
@@ -813,6 +840,30 @@ const DAMAGED_RECORDS: readonly DamagedRecordRow[] = [
   { cause: 'a pump record missing its observation start', stored: () => ({ primaryPump: { activationCount: 4 } }) },
   { cause: 'a pump record missing its count', stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT } }) },
   {
+    cause: 'a pump record with a negative count',
+    stored: () => ({ ...storedContext(), primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: -2 } }),
+  },
+  {
+    cause: 'a pump record with a fractional count',
+    stored: () => ({ ...storedContext(), backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1.5 } }),
+  },
+  {
+    cause: 'a pump record with a count beyond safe integer precision',
+    stored: () => ({ ...storedContext(), primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: Number.MAX_SAFE_INTEGER + 1 } }),
+  },
+  {
+    cause: 'a pump record with an out-of-range observation start',
+    stored: () => ({ ...storedContext(), primaryPump: { observationStartedAt: 1e308, activationCount: 0 } }),
+  },
+  {
+    cause: 'a pump record with an observation start one millisecond beyond the date range',
+    stored: () => ({ ...storedContext(), primaryPump: { observationStartedAt: LAST_VALID_MILLISECOND + 1, activationCount: 0 } }),
+  },
+  {
+    cause: 'a pump record with an out-of-range last activation',
+    stored: () => ({ ...storedContext(), backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: 1e308 } }),
+  },
+  {
     cause: 'a pump record whose last activation is not a time',
     stored: () => ({ primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4, lastActivationAt: 'recently' } }),
   },
@@ -839,6 +890,18 @@ const DAMAGED_RECORDS: readonly DamagedRecordRow[] = [
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: null,
     }),
+  },
+  {
+    cause: 'an out-of-range backup watermark',
+    stored: () => ({ ...storedContext(), watermarks: { backupPumpTimestamp: 1e308, testTimestamp: PRIOR_TEST_SECONDS } }),
+  },
+  {
+    cause: 'a backup watermark one second beyond the date range',
+    stored: () => ({ ...storedContext(), watermarks: { backupPumpTimestamp: LAST_VALID_DEVICE_SECOND + 1, testTimestamp: PRIOR_TEST_SECONDS } }),
+  },
+  {
+    cause: 'an out-of-range self-test watermark',
+    stored: () => ({ ...storedContext(), watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: 1e308 } }),
   },
   {
     cause: 'a backup watermark that is not a device time',

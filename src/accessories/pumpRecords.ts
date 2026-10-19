@@ -46,6 +46,7 @@ import type { Logging } from 'homebridge';
 
 /** What one second of a device timestamp is worth in milliseconds. */
 const MILLISECONDS_PER_SECOND = 1000;
+const MAX_DATE_MILLISECONDS = 8_640_000_000_000_000;
 
 /** One decoded snapshot, in the only shape this module reads one. */
 export interface PumpRecordsObservation {
@@ -116,8 +117,16 @@ interface PreviousDeviceTimes {
   testedAt: number | undefined;
 }
 
-function isNumberOrAbsent(value: unknown): boolean {
-  return value === undefined || typeof value === 'number';
+function isDateMilliseconds(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_DATE_MILLISECONDS;
+}
+
+function isDateMillisecondsOrAbsent(value: unknown): boolean {
+  return value === undefined || isDateMilliseconds(value);
+}
+
+function isDeviceSecondsOrAbsent(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && isDateMilliseconds(value * MILLISECONDS_PER_SECOND));
 }
 
 // A record restored from the Homebridge cache is whatever JSON was on disk, whatever its declared
@@ -132,9 +141,11 @@ function isPumpObservation(value: unknown): value is PumpObservation {
   const label = candidate.lastActivationWasTestActivity;
 
   return (
-    typeof candidate.observationStartedAt === 'number' &&
+    isDateMilliseconds(candidate.observationStartedAt) &&
     typeof candidate.activationCount === 'number' &&
-    isNumberOrAbsent(candidate.lastActivationAt) &&
+    Number.isSafeInteger(candidate.activationCount) &&
+    candidate.activationCount >= 0 &&
+    isDateMillisecondsOrAbsent(candidate.lastActivationAt) &&
     (label === undefined || typeof label === 'boolean')
   );
 }
@@ -148,7 +159,9 @@ function isActivationWatermarks(value: unknown): value is ActivationWatermarks {
   const awaiting = candidate.backupEdgeAwaitingTimestamp;
 
   return (
-    isNumberOrAbsent(candidate.backupPumpTimestamp) && isNumberOrAbsent(candidate.testTimestamp) && (awaiting === undefined || typeof awaiting === 'boolean')
+    isDeviceSecondsOrAbsent(candidate.backupPumpTimestamp) &&
+    isDeviceSecondsOrAbsent(candidate.testTimestamp) &&
+    (awaiting === undefined || typeof awaiting === 'boolean')
   );
 }
 
