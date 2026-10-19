@@ -28,6 +28,12 @@ The coordinator compiled unchanged source with `npm run build:test` (exit 0) and
 
 Round 0 counts: opening 0, fixed 0, rejected 0, new 15, reopened 0, closing 15. Open IDs: 001–015. `0 - 0 - 0 + 15 + 0 = 15`. The correction-round counter remains 0 until the complete logging, settings, and index repair wave receives an independent review in 06-04. No D-04 stop applies to the initial triage. The report and matching central ledger are committed before source or test edits.
 
+## Repair after round 0: CR-06-ENTRY-001
+
+At source revision `eac3368`, the active owner case `redacts the longest registered secret when secrets overlap` compiled with `npm run build:test` (exit 0). Its named TAP run exited 1 on the intended delegate assertion: expected `token [redacted]`, received `token [redacted]def`. The complete TAP, active test patch, source blob, and semantic assessment are in `06-ENTRY-RED-EVIDENCE.json`. The validator returned `RED_EVIDENCE_OK`; the evidence-only commit is `0340e45`.
+
+Commit `c6987fd` processes registered secrets from longest to shortest without changing role rotation or delegate routes. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
 ## Handoff to 06-04
 
 This plan owns accepted logging and settings causes 001–010, 013, and 014. Plan 06-04 owns index causes 011, 012, and 015 and the first independent correction round across all six complete files. Its opening count is the same 15 IDs; it must account for every repair and may not reset ENTRY's counter.

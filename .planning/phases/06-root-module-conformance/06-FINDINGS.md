@@ -42,7 +42,7 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 
 | ID | Rule | Revision-qualified location | Severity | First round | Disposition and evidence | Source / RED / fix commits |
 | --- | --- | --- | --- | --- | --- | --- |
-| CR-06-ENTRY-001 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:58–60` | BLOCKER | 0 | Open: overlapping registered secrets expose a suffix | source `eb893e3`; RED pending; fix pending |
+| CR-06-ENTRY-001 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:58–60` | BLOCKER | 0 | Repair committed, pending independent round-1 review: active `redacts the longest registered secret when secrets overlap` failed on `[redacted]def` against unchanged source; longest-first substitution passes with 100% direct owner coverage | source `eb893e3`; RED `0340e45`; fix `c6987fd` |
 | CR-06-ENTRY-002 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:74–96` | BLOCKER | 0 | Open: JSON escaping hides a secret from exact substitution | source `eb893e3`; RED pending; fix pending |
 | CR-06-ENTRY-003 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:19` | BLOCKER | 0 | Open: bearer case and `~` suffix evade full redaction | source `eb893e3`; RED pending; fix pending |
 | CR-06-ENTRY-004 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@eb893e3:22` | BLOCKER | 0 | Open: comma in quoted password survives pattern | source `eb893e3`; RED pending; fix pending |
