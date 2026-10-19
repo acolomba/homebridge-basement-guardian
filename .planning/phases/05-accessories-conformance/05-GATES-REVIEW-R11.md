@@ -126,6 +126,7 @@ that resolution is recorded in the ledger STOP cell before repairs begin.
 | ID | Change | Evidence |
 | --- | --- | --- |
 | CR-05-GATES-062 | Unwrap parenthesized creator members, calls and loader initializers in the shared module-load scanner; add positive and unrelated-source controls in all three import owners. | Three new cases failed on unchanged helper (raw exit 1), then passed after the fix (raw exit 0). A planted no-unwrap source caused the same three intended assertion failures (raw exit 1); the source SHA-256 returned to `71006347daedba4003da8806007834303cbede876cf77087e25476a0206fd440` before GREEN. |
+| CR-05-GATES-064 | Resolve direct computed `createRequire` member keys through the fixed-specifier resolver; add static and dynamic namespace positives and unrelated-key controls in all three import owners. | Three new cases failed on unchanged helper (raw exit 1), then passed after the fix (raw exit 0). A planted wrong-key source caused all three intended assertion failures (raw exit 1); the source SHA-256 returned to `f173091e32671e68fd6d951357138df4fe7d3dde6d16d6d58b721bb5c4d8275d` before GREEN. |
 
 ---
 

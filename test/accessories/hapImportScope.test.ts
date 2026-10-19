@@ -842,6 +842,55 @@ const createRequire = () => (name: string) => name;
   });
 });
 
+test('detects direct createRequire calls with fixed computed keys loading HAP', () => {
+  // act
+  const detections = {
+    staticExpression: importsHapPackage(`
+import * as module from 'node:module';
+const load = module['create' + 'Require'](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    staticAlias: importsHapPackage(`
+import * as module from 'node:module';
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    dynamicExpression: importsHapPackage(`
+const module = await import('node:module');
+const load = module['create' + 'Require'](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    dynamicAlias: importsHapPackage(`
+const module = await import('node:module');
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelatedKey: importsHapPackage(`
+import * as module from 'node:module';
+const load = module['other' + 'Require'](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelatedObject: importsHapPackage(`
+const module = { createRequire: () => (name: string) => name };
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, {
+    staticExpression: true,
+    staticAlias: true,
+    dynamicExpression: true,
+    dynamicAlias: true,
+    unrelatedKey: false,
+    unrelatedObject: false,
+  });
+});
+
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
   // arrange
   const standIn = readFileSync(join(REPOSITORY_ROOT, PROSE_MENTION_WITHOUT_IMPORT), 'utf8');

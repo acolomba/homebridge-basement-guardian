@@ -569,3 +569,52 @@ const createRequire = () => (name: string) => name;
     unrelatedCall: false,
   });
 });
+
+test('detects direct createRequire calls with fixed computed keys', () => {
+  // act
+  const detections = {
+    staticExpression: importsDeferredExecution(`
+import * as module from 'node:module';
+const load = module['create' + 'Require'](import.meta.url);
+load('node:timers/promises');
+`),
+    staticAlias: importsDeferredExecution(`
+import * as module from 'node:module';
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('node:timers/promises');
+`),
+    dynamicExpression: importsDeferredExecution(`
+const module = await import('node:module');
+const load = module['create' + 'Require'](import.meta.url);
+load('node:timers/promises');
+`),
+    dynamicAlias: importsDeferredExecution(`
+const module = await import('node:module');
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('node:timers/promises');
+`),
+    unrelatedKey: importsDeferredExecution(`
+import * as module from 'node:module';
+const load = module['other' + 'Require'](import.meta.url);
+load('node:timers/promises');
+`),
+    unrelatedObject: importsDeferredExecution(`
+const module = { createRequire: () => (name: string) => name };
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('node:timers/promises');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, {
+    staticExpression: true,
+    staticAlias: true,
+    dynamicExpression: true,
+    dynamicAlias: true,
+    unrelatedKey: false,
+    unrelatedObject: false,
+  });
+});

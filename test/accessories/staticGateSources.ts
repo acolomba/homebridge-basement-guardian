@@ -249,9 +249,7 @@ function callsImportedCreator(call: CallExpression, checker: TypeChecker, named:
 
   if (
     ((isPropertyAccessExpression(callee) && callee.name.text === 'createRequire') ||
-      (isElementAccessExpression(callee) &&
-        (isStringLiteral(callee.argumentExpression) || isNoSubstitutionTemplateLiteral(callee.argumentExpression)) &&
-        callee.argumentExpression.text === 'createRequire')) &&
+      (isElementAccessExpression(callee) && fixedSpecifier(callee.argumentExpression, checker) === 'createRequire')) &&
     (isIdentifier(callee.expression) || isDynamicModuleNamespace(callee.expression, checker))
   ) {
     if (isDynamicModuleNamespace(callee.expression, checker)) {

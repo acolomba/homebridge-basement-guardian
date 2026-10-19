@@ -1079,6 +1079,55 @@ const createRequire = () => (name: string) => name;
   });
 });
 
+test('detects direct createRequire calls with fixed computed keys reaching the network', () => {
+  // act
+  const detections = {
+    staticExpression: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const load = module['create' + 'Require'](import.meta.url);
+load('../cloud/api.js');
+`),
+    staticAlias: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('../cloud/api.js');
+`),
+    dynamicExpression: reachesTheNetworkTier(`
+const module = await import('node:module');
+const load = module['create' + 'Require'](import.meta.url);
+load('../cloud/api.js');
+`),
+    dynamicAlias: reachesTheNetworkTier(`
+const module = await import('node:module');
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('../cloud/api.js');
+`),
+    unrelatedKey: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const load = module['other' + 'Require'](import.meta.url);
+load('../cloud/api.js');
+`),
+    unrelatedObject: reachesTheNetworkTier(`
+const module = { createRequire: () => (name: string) => name };
+const member = 'createRequire';
+const load = module[member](import.meta.url);
+load('../cloud/api.js');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, {
+    staticExpression: true,
+    staticAlias: true,
+    dynamicExpression: true,
+    dynamicAlias: true,
+    unrelatedKey: false,
+    unrelatedObject: false,
+  });
+});
+
 test('rejects an accessory network loader call with an unresolved base', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve base in createRequire load' });
