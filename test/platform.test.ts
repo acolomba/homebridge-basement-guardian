@@ -964,7 +964,7 @@ describe('BasementGuardianPlatform', () => {
     const requestsAfterLaunch = requests.length;
     shutdown?.();
     await settle();
-    t.mock.timers.tick(300_000);
+    t.mock.timers.tick(900_001);
     await settle();
 
     // assert
@@ -1513,7 +1513,7 @@ describe('BasementGuardianPlatform', () => {
     const requestsAfterLaunch = requests.length;
     shutdown?.();
     await settle();
-    t.mock.timers.tick(300_000);
+    t.mock.timers.tick(900_001);
     await settle();
 
     // assert
