@@ -64,6 +64,14 @@ At source revision `2bab93d`, two active owner cases checked registered-secret r
 
 After rebuilding the restored source, both named cases passed (1/1 each). Commit `bfd7262` adds only those assertions. `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. This test-assertion repair uses a temporary negative control rather than genuine-bug RED evidence. It awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
 
+## Repair after round 0: CR-06-ENTRY-007
+
+Commit `06515ae` adds separate copyright and file overview JSDocs after the MIT SPDX line in `src/logging.ts`. The implementation is unchanged. Both named callable and `.log` trailing-parameter tests passed. Direct logging coverage remained 100% for lines, functions, and branches. The corresponding-test gate, Fallow guard and audit, pre-commit step, and normal commit hooks passed.
+
+## Repair after round 0: CR-06-ENTRY-008
+
+Commit `6ba2a16` adds the approved SPDX, copyright, and file overview header to `test/logging.test.ts`. Assertions are unchanged. Both named trailing-parameter tests passed. Direct logging coverage remained 100% for lines, functions, and branches. The corresponding-test gate, Fallow guard and audit, pre-commit step, and normal commit hooks passed.
+
 ## Repair after round 0: CR-06-ENTRY-009
 
 Commit `093cfdc` adds separate copyright and file overview JSDocs to `src/settings.ts`. It retains the Apache-2.0 SPDX line, Homebridge template attribution, and all three identity values. `npm run test:coverage:direct -- src/settings.ts` exited 0 at 100% direct line, function, and branch coverage. Fallow guard and audit, the pre-commit step, and normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
@@ -75,6 +83,10 @@ Commit `6d372fc` adds the approved SPDX, copyright, and file overview header to 
 ## Repair after round 0: CR-06-ENTRY-013
 
 Commit `6befd9c` gives each settings constant case separate arrange, act, and assert phases. The assertions still check the same literal names, schema and package values, and user-agent shape. `npm run test:coverage:direct -- src/settings.ts` exited 0 at 100% direct line, function, and branch coverage. Fallow guard and audit, the pre-commit step, and normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
+## Repair after round 0: CR-06-ENTRY-014
+
+Commit `0937041` changes the named local `registerSecret` and `write` arrows to function declarations in `src/logging.ts`. Their bodies and call paths are unchanged. Both named trailing-parameter tests passed. Direct logging coverage remained 100% for lines, functions, and branches. The corresponding-test gate, Fallow guard and audit, pre-commit step, and normal commit hooks passed. All three logging style repairs ran in the shared main checkout on Node v26.12.0. They await the first independent ENTRY correction round; the round-0 count remains unchanged.
 
 ## Handoff to 06-04
 
