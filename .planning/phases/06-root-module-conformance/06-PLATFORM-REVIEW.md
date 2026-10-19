@@ -189,6 +189,24 @@ Two temporary controls verified the new assertions. Changing `REST_FAILURE_THRES
 
 This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
 
+## CR-06-PLATFORM-005 repair after round 0
+
+Fix `7389501` adds a ContactSensor to the same restored accessory as the existing LeakSensor. Both start with `StatusActive: true`; each also carries a distinct measurement. The owner case requires both trust flags to become false after `configureAccessory`, while `LeakDetected` and `ContactSensorState` keep their seeded values. It still confirms that the platform records the restored accessory.
+
+A temporary first-service-only control added `break` after the first action in ignored `dist-test/src/accessories/staleMarking.js`. The named test exited 1 at its complete-object assertion: the first service's trust was false, but the second stayed true instead of false; both measurements and accessory ownership matched expectations. `npm run build:test` restored the compiled file to SHA-256 `04897d6c0287d87d90f8f1bbd549d533918fd58c908fbddc673115f428d0efc8`. No control mutation was committed, and the stronger case exposed no production bug.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | owner edit before `7389501`, main checkout, Node v26.12.0 | 0 | Compiled the owner and marking helper. |
+| Named first-only control | temporary compiled marking helper, main checkout | 1 | Second service's `StatusActive` remained true, where false was expected. |
+| Named GREEN owner case | restored compiled helper, owner edit at `7389501`, main checkout | 0 | One named test passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | owner edit at `7389501`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `7389501`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed. |
+
+This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
