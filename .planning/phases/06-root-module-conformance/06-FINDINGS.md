@@ -95,7 +95,7 @@ PLATFORM round 0 is the initial review, not a correction round. For each indepen
 | ENTRY | 2 | `entry_round2_review` at `e5a29d4`, clean diff; logging 1–200, logging test 1–570, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 017 | `e018f94` | none; D-04 stop |
 | ENTRY | 3 | `entry_round3_review` at `18f6324`, clean diff; logging 1–203, logging test 1–585, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 018 | `b6964aa` | none; exception exhausted |
 | ENTRY | 4 | `entry_round4_review` at `add5a3a`, clean diff; logging 1–201, logging test 1–600, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 2 | 0 | 2 | 019, 020 | `c91b053` | none; D-04 cap stop |
-| PLATFORM | 0 | `platform_initial_review` at `0696d99`, clean executable inputs; platform 1–673, owner 1–3781 | 0 | 0 | 3 | 11 | 0 | 8 | 001–008 | pending report commit | none; no repair yet |
+| PLATFORM | 0 | `platform_initial_review` at `0696d99`, clean executable inputs; platform 1–673, owner 1–3781 | 0 | 0 | 3 | 11 | 0 | 8 | 001–008 | `2daea7b` | none; no repair yet |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
