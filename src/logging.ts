@@ -30,7 +30,7 @@ const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=~-](?:[\w.+/=~-]*[\w+/=~-])?/gi;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
 const AUTHENTICATION_QUOTED_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*")(?:\\.|[^"\\])+`, 'gi');
-const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)[^"}]+`, 'gi');
+const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*)([^"\s][^\r\n]*)`, 'gi');
 
 const CREDENTIAL_PATTERNS: readonly RegExp[] = [
   AUTHORIZATION_PATTERN,
@@ -70,17 +70,43 @@ export interface RedactingLogger extends Logging {
 type LevelledMember = 'debug' | 'error' | 'info' | 'success' | 'warn';
 
 function redactText(text: string, secrets: readonly string[]): string {
-  let redacted = text;
-
-  for (const secret of [...secrets].sort((left, right) => right.length - left.length)) {
-    redacted = redacted.split(secret).join(REDACTED);
-  }
+  const spans: { start: number; end: number }[] = [];
 
   for (const pattern of CREDENTIAL_PATTERNS) {
-    redacted = redacted.replace(pattern, `$1${REDACTED}`);
+    for (const match of text.matchAll(pattern)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Every credential pattern captures group 1.
+      const prefix = match[1]!;
+      spans.push({ start: match.index + prefix.length, end: match.index + match[0].length });
+    }
   }
 
-  return redacted;
+  for (const secret of secrets) {
+    let start = text.indexOf(secret);
+
+    while (start !== -1) {
+      spans.push({ start, end: start + secret.length });
+      start = text.indexOf(secret, start + 1);
+    }
+  }
+
+  spans.sort((left, right) => left.start - right.start || right.end - left.end);
+
+  let redacted = '';
+  let end = 0;
+
+  for (const span of spans) {
+    if (span.end <= end) {
+      continue;
+    }
+
+    if (span.start >= end) {
+      redacted += text.slice(end, span.start) + REDACTED;
+    }
+
+    end = span.end;
+  }
+
+  return redacted + text.slice(end);
 }
 
 // An object can carry a secret in any field and its graph can be circular, so

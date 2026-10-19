@@ -444,6 +444,57 @@ test('AUTH-02 redacts a field-shaped suffix inside an unquoted password', () => 
   verify(delegate);
 });
 
+for (const { character, password } of [
+  { character: 'brace', password: 'left}right' },
+  { character: 'quote', password: 'left"right' },
+]) {
+  test(`AUTH-02 redacts a ${character} inside an unquoted password`, () => {
+    // arrange
+    const delegate = createDelegate();
+    when(() => {
+      delegate.debug(`posting password=${REDACTED}`);
+    }).thenReturn(undefined);
+    const log = createRedactingLogger({ delegate, secrets: [] });
+
+    // act
+    log.debug(`posting password=${password}`);
+
+    // assert
+    verify(delegate);
+  });
+}
+
+test('AUTH-02 redacts a new password when its field name is a registered secret', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting {"${REDACTED}":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['password'] });
+
+  // act
+  log.debug('posting {"password":"next-secret"}');
+
+  // assert
+  verify(delegate);
+});
+
+test('AUTH-02 redacts a registered secret containing a password field', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`token ${REDACTED}`);
+  }).thenReturn(undefined);
+  const secret = 'prefix password=inner-secret';
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.info(`token ${secret}`);
+
+  // assert
+  verify(delegate);
+});
+
 // The same body written with spaces around its separators, which is what the
 // separator groups exist for: without them the pattern never reaches the value
 // and the whole body goes to the log unredacted.
