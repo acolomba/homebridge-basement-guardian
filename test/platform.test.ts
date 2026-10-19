@@ -2303,7 +2303,10 @@ describe('registerDiscoveredDevices', () => {
       when(() => api.unregisterPlatformAccessories)
         .thenReturn(removal)
         .atMost(1);
-      const context = (): DiscoveryContext => discoveryContext({ api, accessories, basementGuardianAccessories, registry: powerRegistry(), log });
+      function context(): DiscoveryContext {
+        return discoveryContext({ api, accessories, basementGuardianAccessories, registry: powerRegistry(), log });
+      }
+
       store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
       store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, name: 'Second System', serialNumber: 'serial-2', data: { ac_power: false } });
 
@@ -2484,8 +2487,10 @@ describe('registerDiscoveredDevices', () => {
     const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const subscribeSpy = t.mock.method(store, 'subscribe');
     store.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
-    const context = (): DiscoveryContext =>
-      discoveryContext({ api, accessories: platform.accessories, basementGuardianAccessories, registry: powerRegistry() });
+    function context(): DiscoveryContext {
+      return discoveryContext({ api, accessories: platform.accessories, basementGuardianAccessories, registry: powerRegistry() });
+    }
+
     const priorPlatform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), api);
     const priorStore = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
     const priorInstances = new Map<string, BasementGuardianAccessory>();
@@ -2511,8 +2516,10 @@ describe('registerDiscoveredDevices', () => {
     const restoredSubscribeSpy = t.mock.method(restoredStore, 'subscribe');
     restartedPlatform.configureAccessory(registered);
     restoredStore.applyDiscovery({ ...geminiDevice(), data: { ac_power: false } });
-    const restoredContext = (): DiscoveryContext =>
-      discoveryContext({ api, accessories: restartedPlatform.accessories, basementGuardianAccessories: restoredInstances, registry: powerRegistry() });
+    function restoredContext(): DiscoveryContext {
+      return discoveryContext({ api, accessories: restartedPlatform.accessories, basementGuardianAccessories: restoredInstances, registry: powerRegistry() });
+    }
+
     registerDiscoveredDevices(restoredContext(), [DEVICE_ID], restoredStore);
     registerDiscoveredDevices(restoredContext(), [DEVICE_ID], restoredStore);
     restoredStore.applyReportedPatch(DEVICE_ID, reportedPatch({ ac_power: true }));
