@@ -133,6 +133,24 @@ Fix `37e2fb7` catches failures per live accessory and per cached accessory, logs
 
 This is a repair record for one accepted cause. The round-0 review and its count remain historical; the next independent correction round has not run here.
 
+## CR-06-PLATFORM-002 repair after round 0
+
+Fix `647ff47` keeps the AUTH-02 storage path and filename assertions and compares the complete parsed token cache record. The test fixes the platform clock at `1_800_000_000_000` ms, expects expiry `1_802_592_000_000` ms and token `id-token-1`, and computes the expected SHA-256 account fingerprint from the stored 32-character hex salt and the synthetic `account@example.test` address. The expected record is stated in the test, not obtained from the cache writer.
+
+For a temporary negative control, only the ignored compiled cache writer at `dist-test/src/cloud/auth.js` stored `wrong-token` instead of the granted token. The named AUTH-02 test exited 1 at the complete-object assertion, showing `wrong-token` against `id-token-1`. `npm run build:test` restored the compiled writer to its original SHA-256 `f752c30c9f3317ba610b6af2c9dfcbf391fa2823f4aa10e6fdc4cecd819c0117`; tracked `src/cloud/auth.ts` remained at blob `45316e0`. No negative-control mutation was committed.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | test edit before `647ff47`, main checkout, Node v26.12.0 | 0 | Compiled the owner and cache writer. |
+| Named AUTH-02 negative control | temporary compiled writer, main checkout with native file-watcher access | 1 | Complete cache-record assertion rejected the wrong token bytes. |
+| Named AUTH-02 GREEN | restored compiled writer and test at `647ff47`, same checkout | 0 | One named test passed after byte-for-byte restoration. |
+| `npm run test:coverage:direct -- src/platform.ts` | test at `647ff47`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Commit hook `npm run check:commit` | fix `647ff47`, main checkout | 0 | Normal foreground commit hooks passed. |
+
+This repair changes only the owner test. The round-0 count remains historical, and no independent correction round ran here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
