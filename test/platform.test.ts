@@ -1310,6 +1310,11 @@ describe('BasementGuardianPlatform', () => {
     // arrange
     const [registered, announceRegistration] = completionSignal();
     const [removed, announceRemoval] = completionSignal();
+    let completeFinalCheck!: (response: Response) => void;
+    const finalCheck = new Promise<Response>((resolve) => {
+      completeFinalCheck = resolve;
+    });
+    const finalCheckRequests: string[] = [];
     t.mock.timers.enable({ apis: ['setTimeout'] });
     let deviceListCalls = 0;
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
@@ -1321,6 +1326,12 @@ describe('BasementGuardianPlatform', () => {
 
       if (url.endsWith('/devices')) {
         deviceListCalls += 1;
+
+        if (deviceListCalls === 4) {
+          finalCheckRequests.push(url);
+
+          return finalCheck;
+        }
 
         const wireDevice = {
           accountId: 'account-1',
@@ -1410,15 +1421,34 @@ describe('BasementGuardianPlatform', () => {
     await settle();
     t.mock.timers.tick(300_000);
     await settle();
+    const beforeFinalAnswer = {
+      deviceListCalls,
+      postRegistrationInventoryCalls: deviceListCalls - 1,
+      finalCheckRequests: [...finalCheckRequests],
+      unregisteredCount: unregisteredAccessories.length,
+      accessoryIds: [...platform.accessories.keys()],
+    };
+    completeFinalCheck(new Response(JSON.stringify({ devices: [] }), { status: 200 }));
     await removed;
+    await settle();
+    const afterFinalAnswer = {
+      deviceListCalls,
+      postRegistrationInventoryCalls: deviceListCalls - 1,
+      unregisteredCount: unregisteredAccessories.length,
+      accessoryIds: [...platform.accessories.keys()],
+    };
     shutdown?.();
     await settle();
 
     // assert
-    assert.deepStrictEqual(
-      { unregisteredCount: unregisteredAccessories.length, accessoryCount: platform.accessories.size },
-      { unregisteredCount: 1, accessoryCount: 0 },
-    );
+    assert.deepStrictEqual(beforeFinalAnswer, {
+      deviceListCalls: 4,
+      postRegistrationInventoryCalls: 3,
+      finalCheckRequests: ['https://api.iot8020.com/devices'],
+      unregisteredCount: 0,
+      accessoryIds: [ACCESSORY_UUID],
+    });
+    assert.deepStrictEqual(afterFinalAnswer, { deviceListCalls: 4, postRegistrationInventoryCalls: 3, unregisteredCount: 1, accessoryIds: [] });
     verify(user);
     verify(api);
   });
