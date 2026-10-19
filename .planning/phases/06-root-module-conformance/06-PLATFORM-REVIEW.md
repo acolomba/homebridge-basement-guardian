@@ -151,6 +151,25 @@ For a temporary negative control, only the ignored compiled cache writer at `dis
 
 This repair changes only the owner test. The round-0 count remains historical, and no independent correction round ran here.
 
+## CR-06-PLATFORM-003 repair after round 0
+
+Fix `2e60f69` gives both shutdown cases their own fake timer. Each waits for two launch requests before shutdown, advances 300,000 ms, and checks for later work. The lifecycle case records registration and removal calls as well as requests and accessory state. Its vendor transport is injected through `httpFetch`, the port the platform actually uses. No production defect appeared with these stronger assertions.
+
+Two temporary controls tested the assertions. First, removing `root.abort()` only from ignored `dist-test/src/runtime/accountRuntime.js` left a scheduled wait active. The first named case exited 1 because `verify(httpFetch)` saw an unexpected third Auth0 request after the clock advanced. Second, ignored `dist-test/src/platform.js` scheduled one registration and one removal after shutdown. The second named case exited 1 at its `accessoryChanges` assertion: actual `['registered 1', 'removed 1']` versus expected `[]`. `npm run build:test` restored the compiled runtime and platform to SHA-256 `cc19b08ac2c861c537297e437be73e5f0dbff55715a6e54e29ec208681a7e1e4` and `45d496adabb4ff78c9040207864b21fe8069556dc8169d040a2191f9844f58b1`, respectively. Neither control changed tracked source or entered a commit.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | owner edit before `2e60f69`, main checkout, Node v26.12.0 | 0 | Compiled the owner and runtime. |
+| Named abort negative control | temporary compiled runtime, main checkout | 1 | Unexpected third vendor request after fake time advanced. |
+| Named accessory negative control | temporary compiled platform, main checkout | 1 | Delayed registration and removal failed the empty call-log assertion. |
+| Both named GREEN cases | restored compiled files, owner edit at `2e60f69`, main checkout | 0 each | One test passed in each run. |
+| `npm run test:coverage:direct -- src/platform.ts` | owner edit at `2e60f69`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `2e60f69`, main checkout | 0 | Pre-commit fixers and the final normal `npm run check:commit` passed. An earlier hook attempt found four lint errors; they were corrected before this commit. |
+
+This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
