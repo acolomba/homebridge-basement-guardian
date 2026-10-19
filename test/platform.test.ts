@@ -1672,6 +1672,91 @@ describe('configureAccessory', () => {
 });
 
 describe('applyMonitoringHealth', () => {
+  test('marks later cached trust on the same accessory when an earlier service fails', async (t: TestContext) => {
+    // arrange
+    const accessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+    const flood = accessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
+    flood.updateCharacteristic(HAP.Characteristic.LeakDetected, LEAK_DETECTED);
+    flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    const offline = accessory.addService(HAP.Service.ContactSensor, 'Basement Guardian Offline', 'basement-guardian-offline');
+    offline.updateCharacteristic(HAP.Characteristic.ContactSensorState, CONTACT_NOT_DETECTED);
+    offline.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic cached marking failure');
+    });
+    const messages: string[] = [];
+    const api = fakeDiscoveryApi([]);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(1);
+    const context = discoveryContext({
+      api,
+      accessories: new Map<string, BasementGuardianPlatformAccessory>([[ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory]]),
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+    });
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
+
+    // act
+    applyMonitoringHealth(context, account, new Map());
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        flood: {
+          statusActive: await readOf(flood, HAP.Characteristic.StatusActive),
+          leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+        },
+        offline: {
+          statusActive: await readOf(offline, HAP.Characteristic.StatusActive),
+          contactState: await readOf(offline, HAP.Characteristic.ContactSensorState),
+        },
+        messages,
+      },
+      {
+        flood: { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        offline: { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, contactState: { value: CONTACT_NOT_DETECTED, threw: undefined } },
+        messages: ['Unable to mark cached monitoring trust unreadable.'],
+      },
+    );
+    verify(api);
+  });
+
+  test('continues cached marking when one accessory cannot list its services', async () => {
+    // arrange
+    const restored = restoredAccessories();
+    const firstAccessory = restored.accessories.get(ACCESSORY_UUID);
+    assert.ok(firstAccessory);
+    Object.defineProperty(firstAccessory, 'services', {
+      get: () => {
+        throw new Error('synthetic service-list failure');
+      },
+    });
+    const messages: string[] = [];
+    const api = fakeDiscoveryApi([]);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    const context = discoveryContext({ api, accessories: restored.accessories, registry: unknownRegistry(), log: createRecordingLog(messages) });
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
+
+    // act
+    applyMonitoringHealth(context, account, new Map());
+
+    // assert
+    assert.deepStrictEqual(
+      { reads: await trustReadsOf(restored.floods), messages },
+      {
+        reads: [
+          { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        ],
+        messages: ['Unable to mark cached monitoring trust unreadable.'],
+      },
+    );
+    verify(api);
+  });
+
   test('continues trust updates and cached marking when one accessory fails', async (t: TestContext) => {
     // arrange
     const heard = new Map<string, MonitoringTrust>();

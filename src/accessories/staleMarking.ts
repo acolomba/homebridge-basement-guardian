@@ -135,7 +135,7 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
 
 /**
  * Makes the trust report on every service that carries one unreadable under a
- * named status, and answers how many it marked.
+ * named status, and answers how many it marked or could not mark.
  *
  * It reaches the trust report and nothing else. Every other characteristic on
  * a marked service still answers, and a service that carries no trust report is
@@ -165,8 +165,22 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * keeps answering, and the caller is the only place the silence can be named
  * (WR-08).
  */
-export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
-  return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
-    publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
-  });
+export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): { marked: number; failed: number } {
+  let marked = 0;
+  let failed = 0;
+
+  for (const service of accessory.services) {
+    try {
+      if (!service.testCharacteristic(hap.Characteristic.StatusActive)) {
+        continue;
+      }
+
+      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
+      marked += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  return { marked, failed };
 }

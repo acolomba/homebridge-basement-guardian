@@ -196,7 +196,7 @@ function markStale(accessory: HarnessPlatformAccessory): number {
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY);
+  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY).marked;
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
@@ -334,6 +334,37 @@ describe('markRestoredServicesStale', () => {
 });
 
 describe('markTrustReportsUnreadable', () => {
+  test('counts a later successful mark after the first service fails on the same accessory', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const battery = batteryReporting(accessory, true);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic trust marking failure');
+    });
+
+    // act
+    const marks = markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        marks,
+        flood: await readOf(flood, HAP.Characteristic.StatusActive),
+        battery: await readOf(battery, HAP.Characteristic.StatusActive),
+        leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected),
+        batteryLevel: await readOf(battery, HAP.Characteristic.BatteryLevel),
+      },
+      {
+        marks: { marked: 1, failed: 1 },
+        flood: { value: true, threw: undefined },
+        battery: { value: true, threw: RESOURCE_BUSY },
+        leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
+        batteryLevel: { value: 80, threw: undefined },
+      },
+    );
+  });
+
   test('counts every service that reports whether the plugin vouches for it, and leaves one that never did alone', async () => {
     // arrange
     const accessory = restoredAccessory();
