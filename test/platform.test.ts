@@ -1557,6 +1557,9 @@ describe('configureAccessory', () => {
     const flood = restoredAccessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
     flood.updateCharacteristic(HAP.Characteristic.LeakDetected, HAP.Characteristic.LeakDetected.LEAK_DETECTED);
     flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    const offline = restoredAccessory.addService(HAP.Service.ContactSensor, 'Basement Guardian Offline', 'basement-guardian-offline');
+    offline.updateCharacteristic(HAP.Characteristic.ContactSensorState, CONTACT_NOT_DETECTED);
+    offline.updateCharacteristic(HAP.Characteristic.StatusActive, true);
     const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), fakeDiscoveryApi([]));
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
@@ -1566,11 +1569,21 @@ describe('configureAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+        flood: {
+          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+        },
+        offline: {
+          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+        },
         recorded: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
       },
-      { statusActive: false, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED, recorded: true },
+      {
+        flood: { statusActive: false, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED },
+        offline: { statusActive: false, contactState: CONTACT_NOT_DETECTED },
+        recorded: true,
+      },
     );
     verify(platform.api);
   });
