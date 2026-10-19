@@ -58,6 +58,12 @@ At source revision `ed39af9`, the active owner case `describes an object whose t
 
 Commit `099618c` sends a non-string serialization result through the existing fallback. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
 
+## Repair after round 0: CR-06-ENTRY-006
+
+At source revision `2bab93d`, two active owner cases checked registered-secret redaction in trailing parameters through the callable logger and `.log(level, ...)`. A temporary mutation forwarded raw parameters on those two routes. After `npm run build:test` passed, each named TAP run exited 1 on the intended exact delegate assertion: it received `attempt with account-password` instead of `attempt with [redacted]`. The mutation was not committed. Restoring `src/logging.ts` returned it to its original Git blob `42c5d322c94c4b9547017029e0a087cfd8699cf7`, with no source diff.
+
+After rebuilding the restored source, both named cases passed (1/1 each). Commit `bfd7262` adds only those assertions. `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. This test-assertion repair uses a temporary negative control rather than genuine-bug RED evidence. It awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
 ## Handoff to 06-04
 
 This plan owns accepted logging and settings causes 001–010, 013, and 014. Plan 06-04 owns index causes 011, 012, and 015 and the first independent correction round across all six complete files. Its opening count is the same 15 IDs; it must account for every repair and may not reset ENTRY's counter.
