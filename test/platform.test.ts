@@ -1513,6 +1513,58 @@ describe('configureAccessory', () => {
 });
 
 describe('applyMonitoringHealth', () => {
+  test('continues trust updates and cached marking when one accessory fails', async (t: TestContext) => {
+    // arrange
+    const heard = new Map<string, MonitoringTrust>();
+    const messages: string[] = [];
+    const restored = restoredAccessories();
+    const firstFlood = restored.floods.at(0);
+    assert.ok(firstFlood);
+    t.mock.method(firstFlood, 'updateCharacteristic', () => {
+      throw new Error('synthetic cached marking failure');
+    });
+    const account = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: true } satisfies MonitoringTrust;
+    const api = fakeDiscoveryApi([]);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    const context = discoveryContext({
+      api,
+      accessories: restored.accessories,
+      registry: unknownRegistry(),
+      log: createRecordingLog(messages),
+      basementGuardianAccessories: new Map<string, BasementGuardianAccessory>([
+        [
+          ACCESSORY_UUID,
+          {
+            ...recordingBasementGuardianAccessory(DEVICE_ID, []),
+            markMonitoring: () => {
+              throw new Error('synthetic trust publication failure');
+            },
+          },
+        ],
+        [SECOND_ACCESSORY_UUID, trustRecordingBasementGuardianAccessory(SECOND_DEVICE_ID, heard)],
+      ]),
+    });
+
+    // act
+    applyMonitoringHealth(context, account, new Map<string, MonitoringTrust>([[SECOND_DEVICE_ID, account]]));
+
+    // assert
+    assert.deepStrictEqual(
+      { heard, reads: await trustReadsOf(restored.floods), messages },
+      {
+        heard: new Map<string, MonitoringTrust>([[SECOND_DEVICE_ID, account]]),
+        reads: [
+          { statusActive: { value: true, threw: undefined }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+          { statusActive: { value: true, threw: COMMUNICATION_FAILURE }, leakDetected: { value: LEAK_DETECTED, threw: undefined } },
+        ],
+        messages: ['Unable to publish monitoring trust for an accessory.', 'Unable to mark cached monitoring trust unreadable.'],
+      },
+    );
+    verify(api);
+  });
+
   // Two systems, one account, and each accessory hears the answer for its own controller. The map is
   // keyed by deviceId while the accessory map is keyed by the UUID that deviceId seeds, so this also
   // holds the join: keying the pushed map by the generated UUID makes both accessories miss, both

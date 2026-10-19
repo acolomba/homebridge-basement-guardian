@@ -425,7 +425,11 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
     // supplied and `markMonitoring` compares all four (D-02).
     const trust = byDevice.get(basementGuardianAccessory.deviceId) ?? { ...account, shadowSilent: true };
 
-    basementGuardianAccessory.markMonitoring(trust);
+    try {
+      basementGuardianAccessory.markMonitoring(trust);
+    } catch {
+      context.log.error('Unable to publish monitoring trust for an accessory.');
+    }
   }
 
   if (!account.credentialsRejected) {
@@ -450,7 +454,11 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
   let marked = 0;
 
   for (const accessory of context.accessories.values()) {
-    marked += markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    try {
+      marked += markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    } catch {
+      context.log.error('Unable to mark cached monitoring trust unreadable.');
+    }
   }
 
   // Zero is worth a line and a non-zero total is not. A pass that marked
