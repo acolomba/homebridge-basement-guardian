@@ -232,6 +232,21 @@ test('AUTH-02 leaves the sentence full stop after an authorization token it subs
   verify(delegate);
 });
 
+test('AUTH-02 redacts a lowercase bearer token with a tilde', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`sending authorization: bearer ${REDACTED}.`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('sending authorization: bearer header~payload.signature.');
+
+  // assert
+  verify(delegate);
+});
+
 // The credential value opens with an `s` and a second field follows it, so the
 // whole value class is load-bearing here. A class that excluded the letter `s`
 // instead of whitespace -- one dropped `String.raw` away -- cannot match this
