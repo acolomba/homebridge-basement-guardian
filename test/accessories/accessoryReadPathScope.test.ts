@@ -46,6 +46,9 @@ import {
   isElementAccessExpression,
   isFunctionLike,
   isIdentifier,
+  isImportDeclaration,
+  isNamedImports,
+  isNewExpression,
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
   isObjectLiteralExpression,
@@ -54,6 +57,7 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
   isTemplateExpression,
+  isTypeReferenceNode,
   isVariableDeclaration,
   NodeFlags,
   ScriptTarget,
@@ -88,6 +92,7 @@ const READ_HANDLER_METHOD = 'onGet';
 /** The event name the same registration carries when it goes through the event emitter. */
 const READ_HANDLER_EVENT = 'get';
 const READ_EVENT_LISTENER_METHODS = new Set(['on', 'addListener', 'once', 'prependListener', 'prependOnceListener']);
+const HOMEBRIDGE_SERVICE_IMPORT = 'import type { Service } from "homebridge";';
 
 /** The enumeration naming that event, and the member of it that is the read. */
 const EVENT_TYPES_ENUM = 'CharacteristicEventTypes';
@@ -133,6 +138,27 @@ function registersReadHandler(source: string): boolean {
   const objectScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
   const methodScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
   const characteristicScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const serviceScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const serviceTypes = new Set<string>();
+  for (const statement of file.statements) {
+    if (
+      isImportDeclaration(statement) &&
+      isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === 'homebridge' &&
+      statement.importClause?.namedBindings &&
+      isNamedImports(statement.importClause.namedBindings)
+    ) {
+      for (const element of statement.importClause.namedBindings.elements) {
+        if ((element.propertyName ?? element.name).text === 'Service') {
+          serviceTypes.add(element.name.text);
+        }
+      }
+    }
+  }
+
+  function isServiceType(node: Node | undefined): boolean {
+    return !!node && isTypeReferenceNode(node) && isIdentifier(node.typeName) && serviceTypes.has(node.typeName.text);
+  }
 
   function readAlias(name: string): boolean {
     for (let index = scopes.length - 1; index >= 0; index--) {
@@ -212,6 +238,31 @@ function registersReadHandler(source: string): boolean {
     return undefined;
   }
 
+  function isServiceReceiver(node: Node): boolean {
+    if (isParenthesizedExpression(node)) {
+      return isServiceReceiver(node.expression);
+    }
+
+    if (isIdentifier(node)) {
+      for (let index = serviceScopes.length - 1; index >= 0; index--) {
+        if (serviceScopes[index]?.has(node.text)) {
+          return serviceScopes[index]?.get(node.text) ?? false;
+        }
+      }
+
+      return false;
+    }
+
+    return (
+      isNewExpression(node) &&
+      isPropertyAccessExpression(node.expression) &&
+      isPropertyAccessExpression(node.expression.expression) &&
+      node.expression.expression.name.text === 'Service' &&
+      isIdentifier(node.expression.expression.expression) &&
+      node.expression.expression.expression.text === 'hap'
+    );
+  }
+
   function isCharacteristicReceiver(node: Node): boolean {
     if (isParenthesizedExpression(node)) {
       return isCharacteristicReceiver(node.expression);
@@ -231,7 +282,8 @@ function registersReadHandler(source: string): boolean {
       return node.text === 'characteristic';
     }
 
-    return isCallExpression(node) && staticMember(node.expression)?.name === 'getCharacteristic';
+    const member = isCallExpression(node) && staticMember(node.expression);
+    return !!member && member.name === 'getCharacteristic' && isServiceReceiver(member.receiver);
   }
 
   function isReadEvent(node: Node | undefined): boolean {
@@ -320,6 +372,10 @@ function registersReadHandler(source: string): boolean {
     }
 
     methodScopes[methodScopes.length - 1]?.set(node.name.text, undefined);
+    serviceScopes[serviceScopes.length - 1]?.set(
+      node.name.text,
+      isServiceType(node.type) || (fixed && !!node.initializer && isServiceReceiver(node.initializer)),
+    );
     characteristicScopes[characteristicScopes.length - 1]?.set(node.name.text, fixed && !!node.initializer && isCharacteristicReceiver(node.initializer));
     scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
     objectScopes[objectScopes.length - 1]?.set(node.name.text, fixed && isReadEventObject(node.initializer));
@@ -348,6 +404,7 @@ function registersReadHandler(source: string): boolean {
       const objectScope = new Map<string, boolean>();
       const methodScope = new Map<string, string | undefined>();
       const characteristicScope = new Map<string, boolean>();
+      const serviceScope = new Map<string, boolean>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
@@ -355,6 +412,7 @@ function registersReadHandler(source: string): boolean {
             objectScope.set(parameter.name.text, false);
             methodScope.set(parameter.name.text, undefined);
             characteristicScope.set(parameter.name.text, parameter.name.text === 'characteristic');
+            serviceScope.set(parameter.name.text, isServiceType(parameter.type));
           }
         }
       }
@@ -363,6 +421,7 @@ function registersReadHandler(source: string): boolean {
       objectScopes.push(objectScope);
       methodScopes.push(methodScope);
       characteristicScopes.push(characteristicScope);
+      serviceScopes.push(serviceScope);
     }
 
     recordAlias(node);
@@ -373,6 +432,7 @@ function registersReadHandler(source: string): boolean {
       objectScopes.pop();
       methodScopes.pop();
       characteristicScopes.pop();
+      serviceScopes.pop();
     }
   }
 
@@ -391,6 +451,7 @@ function offendersUnder(relativeDirectory: string, offends: (source: string, sou
 // declared constants are interpolated, and they have to be: a fixture holding a spelling literally
 // would make this gate report itself, and the real cases below could never assert an empty list.
 const FLUENT_METHOD_HANDLER = `
+const service = new hap.Service.Switch('Switch');
 service.getCharacteristic(hap.Characteristic.On).${READ_HANDLER_METHOD}(() => false);
 `;
 const SINGLE_QUOTED_EVENT_HANDLER = `
@@ -792,8 +853,14 @@ test('ignores other EventEmitter events in the read-handler gate', () => {
 
 test('counts read handlers on characteristic aliases without counting unrelated emitters', () => {
   // arrange
-  const aliasedMethod = 'const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.onGet(handler);';
-  const aliasedEvent = 'const control = service.getCharacteristic(hap.Characteristic.On); control.on("get", handler);';
+  const aliasedMethod = `${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service) {
+    const control = service.getCharacteristic(hap.Characteristic.On);
+    const alias = control;
+    alias.onGet(handler);
+  }`;
+  const aliasedEvent = `${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service) { const control = service.getCharacteristic(hap.Characteristic.On); control.on("get", handler); }`;
   const unrelatedMethod = 'other.onGet(handler);';
   const unrelatedEvent = 'emitter.on("get", handler);';
   const unrelatedAlias = 'const control = emitter; control.on("get", handler);';
@@ -813,17 +880,53 @@ test('counts read handlers on characteristic aliases without counting unrelated 
 
 test('counts read handlers on either selected HAP characteristic', () => {
   // arrange
-  const selected = `const control = useBackup
+  const selected = `${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service, backupService: Service) { const control = useBackup
     ? backupService.getCharacteristic(hap.Characteristic.On)
     : service.getCharacteristic(hap.Characteristic.On);
-  control.onGet(handler);`;
-  const mixed = 'const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.onGet(handler);';
+  control.onGet(handler); }`;
+  const mixed = `${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service) {
+    const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter;
+    control.onGet(handler);
+  }`;
 
   // act
   const registrations = { selected: registersReadHandler(selected), mixed: registersReadHandler(mixed) };
 
   // assert
   assert.deepStrictEqual(registrations, { selected: true, mixed: false });
+});
+
+test('ignores read handlers returned by unrelated getCharacteristic methods', () => {
+  // arrange
+  const typedService = `${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service) { service.getCharacteristic(hap.Characteristic.On).onGet(handler); }`;
+  const constructedService = 'const service = new hap.Service.Switch("Switch"); service.getCharacteristic(hap.Characteristic.On).on("get", handler);';
+  const unrelatedSource = 'const source = { getCharacteristic: () => new EventEmitter() }; source.getCharacteristic().on("get", handler);';
+  const unrelatedService = 'const service = { getCharacteristic: () => ({ onGet() {} }) }; service.getCharacteristic().onGet(handler);';
+  const unrelatedServiceType = `class Service {
+    getCharacteristic() { return new EventEmitter(); }
+  }
+  function bind(service: Service) { service.getCharacteristic().on("get", handler); }`;
+
+  // act
+  const registrations = {
+    typedService: registersReadHandler(typedService),
+    constructedService: registersReadHandler(constructedService),
+    unrelatedSource: registersReadHandler(unrelatedSource),
+    unrelatedService: registersReadHandler(unrelatedService),
+    unrelatedServiceType: registersReadHandler(unrelatedServiceType),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, {
+    typedService: true,
+    constructedService: true,
+    unrelatedSource: false,
+    unrelatedService: false,
+    unrelatedServiceType: false,
+  });
 });
 
 test('resolves fixed read events through object bindings without following unrelated or shadowed names', () => {

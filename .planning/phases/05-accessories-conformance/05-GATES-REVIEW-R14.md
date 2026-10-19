@@ -108,6 +108,7 @@ Neither finding establishes a plugin runtime bug. Round 15 is the GATES cap.
 | Cause | Repair | Verification | Commit |
 | --- | --- | --- | --- |
 | CR-05-GATES-072 | Resolve a conditional characteristic selection only when both arms are characteristic receivers. Separate controls cover `onSet`, set events, and `onGet`; each rejects a mixed HAP/emitter selection. | In the main checkout on Node v26.12.0, Fallow guard, `npm run build:test`, both owner tests (86 passed), `npm run test:unpaired`, and Fallow audit against `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` passed (raw exits 0). | Committed with this report row. |
+| CR-05-GATES-073 | Track HAP service receivers before accepting `getCharacteristic()` as a producer. Controls preserve services typed by a Homebridge import or built by HAP, and reject unrelated objects and a local class named `Service`. | In the main checkout on Node v26.12.0, Fallow guard, `npm run build:test`, both owner tests (88 passed), `npm run test:unpaired`, and Fallow audit against `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` passed (raw exits 0). | Committed with this report row. |
 
 ---
 

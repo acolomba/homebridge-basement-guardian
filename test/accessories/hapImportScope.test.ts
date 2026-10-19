@@ -53,6 +53,9 @@ import {
   isFunctionDeclaration,
   isFunctionLike,
   isIdentifier,
+  isImportDeclaration,
+  isNamedImports,
+  isNewExpression,
   isNoSubstitutionTemplateLiteral,
   isObjectBindingPattern,
   isObjectLiteralExpression,
@@ -61,6 +64,7 @@ import {
   isPropertyAccessExpression,
   isStringLiteral,
   isTemplateExpression,
+  isTypeReferenceNode,
   isVariableDeclaration,
   NodeFlags,
   ScriptTarget,
@@ -110,6 +114,7 @@ const MODULES_ERRORING_NO_CHARACTERISTIC: readonly string[] = ['basementGuardian
 
 const ERRORED_CHARACTERISTIC = 'HapStatusError';
 const SET_EVENT_LISTENER_METHODS = new Set(['on', 'addListener', 'once', 'prependListener', 'prependOnceListener']);
+const HOMEBRIDGE_SERVICE_IMPORT = 'import type { Service } from "homebridge";';
 
 function importsHapPackage(source: string): boolean {
   return importSpecifiers(source).some((specifier) => specifier === HAP_PACKAGE_SPECIFIER || specifier.startsWith(`${HAP_PACKAGE_SPECIFIER}/`));
@@ -224,6 +229,27 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
   const scopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
   const fixedScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
   const characteristicScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const serviceScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
+  const serviceTypes = new Set<string>();
+  for (const statement of file.statements) {
+    if (
+      isImportDeclaration(statement) &&
+      isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === 'homebridge' &&
+      statement.importClause?.namedBindings &&
+      isNamedImports(statement.importClause.namedBindings)
+    ) {
+      for (const element of statement.importClause.namedBindings.elements) {
+        if ((element.propertyName ?? element.name).text === 'Service') {
+          serviceTypes.add(element.name.text);
+        }
+      }
+    }
+  }
+
+  function isServiceType(node: Node | undefined): boolean {
+    return !!node && isTypeReferenceNode(node) && isIdentifier(node.typeName) && serviceTypes.has(node.typeName.text);
+  }
 
   function aliasOf(name: string): string | undefined {
     for (let index = scopes.length - 1; index >= 0; index--) {
@@ -359,6 +385,10 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
 
     if (isIdentifier(node.name)) {
       const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
+      serviceScopes[serviceScopes.length - 1]?.set(
+        node.name.text,
+        isServiceType(node.type) || (fixed && !!node.initializer && isServiceReceiver(node.initializer)),
+      );
       fixedScopes[fixedScopes.length - 1]?.set(node.name.text, undefined);
       fixedScopes[fixedScopes.length - 1]?.set(node.name.text, fixed && node.initializer ? fixedEventText(node.initializer, fixedAlias) : undefined);
       characteristicScopes[characteristicScopes.length - 1]?.set(node.name.text, fixed && !!node.initializer && isCharacteristicReceiver(node.initializer));
@@ -366,6 +396,30 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     } else if (isObjectBindingPattern(node.name) && node.initializer) {
       recordDestructuredAlias(node.name, node.initializer);
     }
+  }
+
+  function isServiceReceiver(node: Node): boolean {
+    if (isParenthesizedExpression(node)) {
+      return isServiceReceiver(node.expression);
+    }
+
+    if (isIdentifier(node)) {
+      for (let index = serviceScopes.length - 1; index >= 0; index--) {
+        if (serviceScopes[index]?.has(node.text)) {
+          return serviceScopes[index]?.get(node.text) ?? false;
+        }
+      }
+
+      return false;
+    }
+
+    return (
+      isNewExpression(node) &&
+      isPropertyAccessExpression(node.expression) &&
+      isPropertyAccessExpression(node.expression.expression) &&
+      node.expression.expression.name.text === 'Service' &&
+      isHapNamespace(node.expression.expression.expression)
+    );
   }
 
   function isCharacteristicReceiver(node: Node): boolean {
@@ -387,7 +441,12 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       return node.text === 'characteristic';
     }
 
-    return isCallExpression(node) && staticMemberName(node.expression) === 'getCharacteristic';
+    return (
+      isCallExpression(node) &&
+      (isPropertyAccessExpression(node.expression) || isElementAccessExpression(node.expression)) &&
+      staticMemberName(node.expression) === 'getCharacteristic' &&
+      isServiceReceiver(node.expression.expression)
+    );
   }
 
   function recordUse(node: Node): void {
@@ -425,12 +484,14 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       const scope = new Map<string, string | undefined>();
       const fixedScope = new Map<string, string | undefined>();
       const characteristicScope = new Map<string, boolean>();
+      const serviceScope = new Map<string, boolean>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, undefined);
             fixedScope.set(parameter.name.text, undefined);
             characteristicScope.set(parameter.name.text, parameter.name.text === 'characteristic');
+            serviceScope.set(parameter.name.text, isServiceType(parameter.type));
           }
         }
       }
@@ -438,6 +499,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       scopes.push(scope);
       fixedScopes.push(fixedScope);
       characteristicScopes.push(characteristicScope);
+      serviceScopes.push(serviceScope);
     }
 
     recordAlias(node);
@@ -447,6 +509,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       scopes.pop();
       fixedScopes.pop();
       characteristicScopes.pop();
+      serviceScopes.pop();
     }
   }
 
@@ -1100,8 +1163,14 @@ test('counts computed setters, enum set events and aliased UUID generation', () 
 
 test('counts setter calls on characteristics but ignores property reads and unrelated calls', () => {
   // arrange
-  const characteristicCall = sourceFileOf('service.getCharacteristic(hap.Characteristic.On).onSet(handler);');
-  const aliasedCall = sourceFileOf('const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.onSet(handler);');
+  const characteristicCall = sourceFileOf(`${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service) { service.getCharacteristic(hap.Characteristic.On).onSet(handler); }`);
+  const aliasedCall = sourceFileOf(`${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service) {
+    const control = service.getCharacteristic(hap.Characteristic.On);
+    const alias = control;
+    alias.onSet(handler);
+  }`);
   const propertyRead = sourceFileOf('const setter = characteristic.onSet; characteristic.onSet; characteristic["onSet"];');
   const unrelatedCall = sourceFileOf('other.onSet(handler);');
   const unrelatedAlias = sourceFileOf('const control = other; control.onSet(handler);');
@@ -1451,7 +1520,8 @@ test('counts EventEmitter methods that register set listeners', () => {
 test('counts set listeners on characteristic aliases without counting unrelated emitters', () => {
   // arrange
   const aliasedCharacteristic = sourceFileOf(
-    'const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.on("set", handler);',
+    `${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service) { const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.on("set", handler); }`,
   );
   const unrelatedEmitter = sourceFileOf('emitter.on("set", handler);');
   const unrelatedAlias = sourceFileOf('const control = emitter; control.on("set", handler);');
@@ -1470,12 +1540,17 @@ test('counts set listeners on characteristic aliases without counting unrelated 
 test('counts set handlers on either selected HAP characteristic', () => {
   // arrange
   const selected = sourceFileOf(
-    `const control = useBackup
+    `${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service, backupService: Service) { const control = useBackup
       ? backupService.getCharacteristic(hap.Characteristic.On)
       : service.getCharacteristic(hap.Characteristic.On);
-    control.onSet(handler);`,
+    control.onSet(handler); }`,
   );
-  const mixed = sourceFileOf('const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.onSet(handler);');
+  const mixed = sourceFileOf(`${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service) {
+    const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter;
+    control.onSet(handler);
+  }`);
 
   // act
   const uses = { selected: hapUses(selected).onSet, mixed: hapUses(mixed).onSet };
@@ -1487,18 +1562,50 @@ test('counts set handlers on either selected HAP characteristic', () => {
 test('counts set events on either selected HAP characteristic', () => {
   // arrange
   const selected = sourceFileOf(
-    `const control = useBackup
+    `${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service, backupService: Service) { const control = useBackup
       ? backupService.getCharacteristic(hap.Characteristic.On)
       : service.getCharacteristic(hap.Characteristic.On);
-    control.on("set", handler);`,
+    control.on("set", handler); }`,
   );
-  const mixed = sourceFileOf('const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.on("set", handler);');
+  const mixed = sourceFileOf(`${HOMEBRIDGE_SERVICE_IMPORT}
+  function bind(service: Service) {
+    const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter;
+    control.on("set", handler);
+  }`);
 
   // act
   const uses = { selected: hapUses(selected).setEvent, mixed: hapUses(mixed).setEvent };
 
   // assert
   assert.deepStrictEqual(uses, { selected: true, mixed: false });
+});
+
+test('ignores set listeners returned by unrelated getCharacteristic methods', () => {
+  // arrange
+  const typedService = sourceFileOf(`${HOMEBRIDGE_SERVICE_IMPORT}
+    function bind(service: Service) { service.getCharacteristic(hap.Characteristic.On).on("set", handler); }`);
+  const constructedService = sourceFileOf(
+    'const service = new hap.Service.Switch("Switch"); service.getCharacteristic(hap.Characteristic.On).on("set", handler);',
+  );
+  const unrelatedSource = sourceFileOf('const source = { getCharacteristic: () => new EventEmitter() }; source.getCharacteristic().on("set", handler);');
+  const unrelatedService = sourceFileOf('const service = { getCharacteristic: () => new EventEmitter() }; service.getCharacteristic().on("set", handler);');
+  const unrelatedServiceType = sourceFileOf(`class Service {
+    getCharacteristic() { return new EventEmitter(); }
+  }
+  function bind(service: Service) { service.getCharacteristic().on("set", handler); }`);
+
+  // act
+  const uses = {
+    typedService: hapUses(typedService).setEvent,
+    constructedService: hapUses(constructedService).setEvent,
+    unrelatedSource: hapUses(unrelatedSource).setEvent,
+    unrelatedService: hapUses(unrelatedService).setEvent,
+    unrelatedServiceType: hapUses(unrelatedServiceType).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { typedService: true, constructedService: true, unrelatedSource: false, unrelatedService: false, unrelatedServiceType: false });
 });
 
 test('ignores other EventEmitter events in the direct-set gate', () => {
