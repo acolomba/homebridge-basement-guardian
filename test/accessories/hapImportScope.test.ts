@@ -185,6 +185,10 @@ function isSetEvent(
   fixedAlias: (name: string) => string | undefined,
   isHapNamespace: (node: Node) => boolean,
 ): boolean {
+  if (isParenthesizedExpression(node)) {
+    return isSetEvent(node.expression, aliasOf, fixedAlias, isHapNamespace);
+  }
+
   if (isIdentifier(node) && aliasOf(node.text) === 'setEvent') {
     return true;
   }
@@ -198,7 +202,11 @@ function isSetEvent(
     return false;
   }
 
-  const owner = node.expression;
+  let owner: Node = node.expression;
+  while (isParenthesizedExpression(owner)) {
+    owner = owner.expression;
+  }
+
   if (isIdentifier(owner)) {
     return owner.text === 'CharacteristicEventTypes' || aliasOf(owner.text) === 'setEventObject';
   }
@@ -1286,6 +1294,20 @@ const key = 'SET'; function run(key: string) { characteristic.on(hap.Characteris
     unrelatedObject: false,
     shadowedKey: false,
   });
+});
+
+test('detects parenthesized HAP set events without following other events', () => {
+  // act
+  const registrations = {
+    member: hapUses(sourceFileOf('characteristic.on((hap.CharacteristicEventTypes.SET), handler);')).setEvent,
+    enumOwner: hapUses(sourceFileOf('characteristic.on((hap.CharacteristicEventTypes)["SET"], handler);')).setEvent,
+    computedMember: hapUses(sourceFileOf('characteristic.on((hap.CharacteristicEventTypes["SET"]), handler);')).setEvent,
+    unrelatedEvent: hapUses(sourceFileOf('characteristic.on((hap.CharacteristicEventTypes.GET), handler);')).setEvent,
+    unrelatedObject: hapUses(sourceFileOf('characteristic.on((other.CharacteristicEventTypes)["SET"], handler);')).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { member: true, enumOwner: true, computedMember: true, unrelatedEvent: false, unrelatedObject: false });
 });
 
 test('counts UUID calls through aliases of the injected HAP namespace', () => {

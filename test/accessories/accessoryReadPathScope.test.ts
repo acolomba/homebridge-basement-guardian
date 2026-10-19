@@ -215,6 +215,10 @@ function registersReadHandler(source: string): boolean {
       return false;
     }
 
+    if (isParenthesizedExpression(node)) {
+      return isReadEvent(node.expression);
+    }
+
     if (fixedEventText(node) === READ_HANDLER_EVENT) {
       return true;
     }
@@ -233,6 +237,10 @@ function registersReadHandler(source: string): boolean {
   }
 
   function isReadEventObject(node: Node | undefined): boolean {
+    if (node && isParenthesizedExpression(node)) {
+      return isReadEventObject(node.expression);
+    }
+
     if (node && isIdentifier(node)) {
       for (let index = objectScopes.length - 1; index >= 0; index--) {
         if (objectScopes[index]?.has(node.text)) {
@@ -920,6 +928,20 @@ const key = 'GET'; function run(key: string) { characteristic.on(hap.Characteris
     unrelatedObject: false,
     shadowedKey: false,
   });
+});
+
+test('detects parenthesized HAP get events without following other events', () => {
+  // act
+  const registrations = {
+    member: registersReadHandler('characteristic.on((hap.CharacteristicEventTypes.GET), handler);'),
+    enumOwner: registersReadHandler('characteristic.on((hap.CharacteristicEventTypes)["GET"], handler);'),
+    computedMember: registersReadHandler('characteristic.on((hap.CharacteristicEventTypes["GET"]), handler);'),
+    unrelatedEvent: registersReadHandler('characteristic.on((hap.CharacteristicEventTypes.SET), handler);'),
+    unrelatedObject: registersReadHandler('characteristic.on((other.CharacteristicEventTypes)["GET"], handler);'),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { member: true, enumOwner: true, computedMember: true, unrelatedEvent: false, unrelatedObject: false });
 });
 
 test('ignores a read-handler spelling inside a diagnostic string', () => {
