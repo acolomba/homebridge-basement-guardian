@@ -357,11 +357,11 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     }
   }
 
-  function recordUse(node: Node): void {
-    if (staticMemberName(node) === 'onSet') {
-      uses.onSet = true;
-    }
+  function isCharacteristicReceiver(node: Node): boolean {
+    return (isIdentifier(node) && node.text === 'characteristic') || (isCallExpression(node) && staticMemberName(node.expression) === 'getCharacteristic');
+  }
 
+  function recordUse(node: Node): void {
     if (isCallExpression(node) && isIdentifier(node.expression) && aliasOf(node.expression.text) === 'generate') {
       uses.destructuredCall = true;
     }
@@ -370,6 +370,10 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       const member = node.expression;
       const firstArgument = node.arguments[0];
       const method = staticMemberName(member);
+      if (method === 'onSet' && isCharacteristicReceiver(member.expression)) {
+        uses.onSet = true;
+      }
+
       if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf, fixedAlias, isHapNamespace)) {
         uses.setEvent = true;
       }
@@ -1011,6 +1015,23 @@ test('counts computed setters, enum set events and aliased UUID generation', () 
 
   // assert
   assert.deepStrictEqual(uses, { computedOnSet: true, enumSetEvent: true, computedUuidCall: true, aliasedUuidCall: true });
+});
+
+test('counts setter calls on characteristics but ignores property reads and unrelated calls', () => {
+  // arrange
+  const characteristicCall = sourceFileOf('service.getCharacteristic(hap.Characteristic.On).onSet(handler);');
+  const propertyRead = sourceFileOf('const setter = characteristic.onSet; characteristic.onSet; characteristic["onSet"];');
+  const unrelatedCall = sourceFileOf('other.onSet(handler);');
+
+  // act
+  const uses = {
+    characteristicCall: hapUses(characteristicCall).onSet,
+    propertyRead: hapUses(propertyRead).onSet,
+    unrelatedCall: hapUses(unrelatedCall).onSet,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { characteristicCall: true, propertyRead: false, unrelatedCall: false });
 });
 
 test('counts local aliases of HAP UUID generation and set events', () => {
