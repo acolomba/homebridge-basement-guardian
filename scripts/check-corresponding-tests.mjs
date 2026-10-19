@@ -20,10 +20,7 @@ const productionRoot = 'src';
 const testRoot = 'test';
 // Repository-wide contracts do not belong to a single production module.
 const repositoryTests = new Set([
-  'test/accessories/accessoryReadPathScope.test.ts',
-  'test/accessories/hapImportScope.test.ts',
   'test/accessories/hapWriteFidelity.test.ts',
-  'test/accessories/timerFreedom.test.ts',
   'test/configSchema.test.ts',
   'test/documentation.test.ts',
   'test/packageManifest.test.ts',

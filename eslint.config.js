@@ -181,6 +181,39 @@ const platformWiring = {
   },
 };
 
+const forbiddenModules = [
+  { name: '@homebridge/hap-nodejs', message: 'Use the HAP instance supplied by Homebridge; only the parity test imports this package.' },
+  { name: 'hap-nodejs', message: 'Use the HAP instance supplied by Homebridge; only the parity test imports this package.' },
+  { name: 'node:module', message: 'Do not load modules outside static imports.' },
+  { name: 'module', message: 'Do not load modules outside static imports.' },
+];
+const forbiddenHapSubpaths = [{ group: ['@homebridge/hap-nodejs/*', 'hap-nodejs/*'], message: 'Use the HAP instance supplied by Homebridge.' }];
+const forbiddenLoaders = [
+  { selector: 'ImportExpression', message: 'Use a static import so module boundaries can be checked.' },
+  { selector: 'CallExpression[callee.name="require"]', message: 'Use a static import so module boundaries can be checked.' },
+];
+const listenerMethods = 'on|addListener|once|prependListener|prependOnceListener';
+const readListeners = [
+  {
+    selector: `CallExpression[callee.property.name=/^(${listenerMethods})$/][arguments.0.value='get']`,
+    message: 'HomeKit reads must use the last published characteristic value.',
+  },
+  {
+    selector: `CallExpression[callee.property.name=/^(${listenerMethods})$/][arguments.0.property.name='GET']`,
+    message: 'HomeKit reads must use the last published characteristic value.',
+  },
+];
+const setListeners = [
+  {
+    selector: `CallExpression[callee.property.name=/^(${listenerMethods})$/][arguments.0.value='set']`,
+    message: 'Register HomeKit writes only in src/accessories/controls.ts.',
+  },
+  {
+    selector: `CallExpression[callee.property.name=/^(${listenerMethods})$/][arguments.0.property.name='SET']`,
+    message: 'Register HomeKit writes only in src/accessories/controls.ts.',
+  },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -261,6 +294,58 @@ export default tseslint.config(
         project: ['./tsconfig.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'test/**/*.ts', 'features/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: forbiddenModules, patterns: forbiddenHapSubpaths }],
+      'no-restricted-syntax': ['error', ...forbiddenLoaders],
+    },
+  },
+  {
+    files: ['test/accessories/hapWriteFidelity.test.ts'],
+    rules: { 'no-restricted-imports': 'off' },
+  },
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      'no-restricted-properties': ['error', { property: 'onGet', message: 'HomeKit reads must use the last published characteristic value.' }],
+      'no-restricted-syntax': ['error', ...forbiddenLoaders, ...readListeners],
+    },
+  },
+  {
+    files: ['src/accessories/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            ...forbiddenModules,
+            ...['node:timers', 'node:timers/promises', 'timers', 'timers/promises'].map((name) => ({
+              name,
+              message: 'Accessory publication must not depend on Node timers.',
+            })),
+          ],
+          patterns: [
+            ...forbiddenHapSubpaths,
+            { regex: '(^|/)cloud/', message: 'Accessory code must not import the vendor client.' },
+            { regex: '(^|/)runtime/accountRuntime\\.js$', message: 'Accessory code must not import the account runtime.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/accessories/**/*.ts'],
+    ignores: ['src/accessories/controls.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        { property: 'onGet', message: 'HomeKit reads must use the last published characteristic value.' },
+        { property: 'onSet', message: 'Register HomeKit writes only in src/accessories/controls.ts.' },
+      ],
+      'no-restricted-syntax': ['error', ...forbiddenLoaders, ...readListeners, ...setListeners],
     },
   },
   {
