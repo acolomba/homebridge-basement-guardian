@@ -53,7 +53,10 @@ The required equation is `closing = opening - fixed - rejected + new + reopened`
 
 ## Evidence
 
+Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a8d686db9735d454ee004851`. The check ran at `9528f28d31ebe0ffc562fb09f22acdc143a0c942`, whose committed change contains only this ledger and `06-REVIEW-PROTOCOL.md`. `git diff --stat 4bb84f631ac806f0a8d686db9735d454ee004851 -- src test features scripts package.json package-lock.json config.schema.json tsconfig.json tsconfig.build.json tsconfig.test.json eslint.config.js .fallowrc.json .pre-commit-config.yaml .github/workflows` returned no changes before or after the checks. `git ls-files --others --exclude-standard` returned no untracked inputs. The only dirty paths were `.planning/STATE.md` and `.planning/state.json`, changed by `state.begin-phase`; neither is an executable check input. Pairing and full-check evidence below covers this exact tree. Any source, test, support, dependency, or tool input change requires a fresh check.
+
 | Gate | Source revision and input scope | Node | Command | Exit | Duration | Result |
 | --- | --- | --- | --- | ---: | --- | --- |
-| Baseline pairing | Pending fresh run | Pending | `npm run --silent test:corresponding` | Pending | Pending | Pending |
-| Baseline full check | Pending fresh run | Pending | `npm run check` | Pending | Pending | Pending |
+| Baseline pairing | `4bb84f631ac806f0a8d686db9735d454ee004851`, checked at `9528f28d31ebe0ffc562fb09f22acdc143a0c942` | v26.12.0 | `npm run --silent test:corresponding` | 0 | 0.5 s | `Corresponding-tests gate passed.` |
+| First full-check attempt | Same inputs; restricted sandbox | v26.12.0 | `npm run check` | 1 | 34 s | Static checks passed; compiled unpaired suite had 51/53 pass. Both `packedArtifact` tests failed because child `npm pack --dry-run --json` received npm-cache `EPERM`. Cucumber and direct coverage did not run. Full output: `/private/tmp/guardian-06-01-baseline.log`. |
+| Baseline full check | Same inputs; local npm-cache and socket access | v26.12.0 | `npm run check` | 0 | 61 s | Six static checks passed; compiled unpaired tests passed; 104/104 Cucumber scenarios and 1156/1156 steps passed; direct LCOV merged 43 isolated pairs. Full output: `/private/tmp/guardian-06-01-baseline-native.log`. No install or source change occurred between attempts. |
