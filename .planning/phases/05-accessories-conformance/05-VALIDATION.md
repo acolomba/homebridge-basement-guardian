@@ -25,7 +25,7 @@ created: "2026-10-16"
 | **Config file** | `tsconfig.test.json`; `scripts/test-coverage-direct.mjs`; `scripts/check-corresponding-tests.mjs` |
 | **Quick run command** | `npm run build:test && node --test dist-test/test/accessories/<name>.test.js` |
 | **Pair coverage command** | `npm run test:coverage:direct -- src/accessories/<name>.ts test/accessories/<name>.test.ts` (silent on success; record the raw exit) |
-| **Gate command** | `npm run test:unpaired` (the four gates are unpaired by design: `scripts/test-coverage-direct.mjs:17-21`) |
+| **Gate command** | `npm run lint` and `npm run test:unpaired` (the retained HAP parity test is unpaired) |
 | **Full suite command** | `npm run check` |
 | **Runtime** | Node v26.12.0 and npm 11.20.0 at `/opt/homebrew/opt/node/bin`; prefix `PATH` and record `node --version` with every result |
 | **Estimated runtime** | Owner run seconds; pair coverage under a minute; full gate ~56–68 seconds (Phase 4 evidence) |
@@ -52,7 +52,8 @@ created: "2026-10-16"
 | CONTROLS | batch | per plan | ACC-01 | per plan | Refusal order and status unchanged; one attempt; no secrets in logs | unit + coverage | `npm run test:coverage:direct -- src/accessories/controls.ts test/accessories/controls.test.ts` | ✅ | ⬜ pending |
 | RECORDS | batch | per plan | ACC-01 | per plan | Context keys unchanged; one persist per change | unit + coverage | PAIR commands for pumpRecords, reconciliation, staleMarking | ✅ | ⬜ pending |
 | ACCESSORY | batch | per plan | ACC-01 | per plan | No false normal; StatusActive withdrawal kept | unit + coverage | `npm run test:coverage:direct -- src/accessories/basementGuardian.ts test/accessories/basementGuardian.test.ts` | ✅ | ⬜ pending |
-| GATES | batch | per plan | ACC-01 | per plan | Exactly one HAP importer; no read handler reaches the network | static gate | `npm run test:unpaired` | ✅ | ⬜ pending |
+| GATES historical review | 05-08 | 8 | ACC-01 | per plan | Scanner review stopped at round 15 with two open findings | review ledger | `node .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs` | ✅ | ⚠️ stopped; the old all-clean predicate fails |
+| Current lint and HAP parity | 05-09 | 9 | ACC-01 | per plan | Static import and ordinary handler-registration boundaries; real-HAP write parity | lint + unpaired | `npm run lint && npm run test:unpaired` | ✅ | ⬜ pending |
 | Bug RED evidence | any batch | per plan | ACC-01 (BUG-01 applied) | — | RED observed before GREEN | evidence check | `node .claude/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence .planning/phases/05-accessories-conformance/05-<PAIR>-RED-EVIDENCE.json --raw` | conditional | ⬜ pending |
 | Closeout | coordinator | last | ACC-01 | — | N/A | full | `npm run check` | ✅ | ⬜ pending |
 
@@ -75,7 +76,7 @@ created: "2026-10-16"
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Full D-01 header form (SPDX, blank, copyright JSDoc, blank, overview JSDoc) | ACC-01 | `test/packaging/licenseHeaders.test.ts` checks only the SPDX MIT token | Inspect the first lines of all 24 files against `src/runtime/clock.ts:1-9` in the closeout header audit |
+| Full D-01 header form (SPDX, blank, copyright JSDoc, blank, overview JSDoc) | ACC-01 | `test/packaging/licenseHeaders.test.ts` checks only the SPDX MIT token | Run the ledger header tracer on the 21 current accessory source and test paths; the four retired paths remain historical inventory only |
 | Rule judgments on review findings | ACC-01 (PROC-01 applied) | Rulebook conformance is a reviewer judgment | Independent full-file reviews per batch; ledger records rule, location, severity, disposition |
 
 ---
