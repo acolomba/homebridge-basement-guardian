@@ -58,7 +58,7 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-014 | Style `functions.md` Functions | `src/logging.ts@eb893e3:137,164` | WARNING | 0 | Fixed in round 1: `registerSecret` and `write` are named function declarations with unchanged bodies; 100% direct owner coverage | source `6ba2a16`; fix `0937041` |
 | CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Fixed in round 1: exported function JSDoc begins with a third-person verb and calls it a function by implication; 100% direct owner coverage | source `eb893e3`; fix `f2e0373` |
 | CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Fixed in round 2: active unquoted-comma regression failed on the exposed `,right` suffix; the matcher now consumes unquoted commas; 100% direct logging coverage | source `401704f`; RED `f7d5a4c`; fix `f6c6317` |
-| CR-06-ENTRY-017 | `src/logging.ts:19–21` value-only pattern contract; `typescript-unit-tests/rules/cases.md` Assertions | `src/logging.ts@e5a29d4:32`; `test/logging.test.ts@e5a29d4:402–415` | WARNING | 2 | Open at D-04 no-progress stop: `password=left,right, status=ok` becomes `password=[redacted]`, consuming the later field; requires maintainer decision before another repair | source `e5a29d4`; RED pending; fix pending |
+| CR-06-ENTRY-017 | `src/logging.ts:19–21` value-only pattern contract; `typescript-unit-tests/rules/cases.md` Assertions | `src/logging.ts@e5a29d4:32`; `test/logging.test.ts@e5a29d4:402–415` | WARNING | 2 | Repair committed under the one-time maintainer exception, pending independent round-3 review: active following-field regression failed on omitted `status=ok`; the matcher now stops before a comma introducing a field assignment; 100% direct logging coverage | source `07d039c`; RED `001800e`; fix `cad5804` |
 
 ## PLATFORM stable IDs
 
@@ -86,7 +86,7 @@ The required equation is `closing = opening - fixed - rejected + new + reopened`
 
 The independent round-2 review closed ENTRY-016 and accepted new ENTRY-017. Its one open finding did not decrease the opening count: `1 - 1 - 0 + 1 + 0 = 1`. This meets the no-progress stop predicate (`closing >= opening`). The only open ENTRY ID is CR-06-ENTRY-017. Repairs attempted before this stop: index header and JSDoc causes 011, 012, and 015; unquoted-password privacy cause 016. The ledger prohibits another ENTRY repair or PLATFORM dispatch until a maintainer resolves the stop. Round 3 and round 4 were not run.
 
-The maintainer then answered the stop decision: **“Authorize one repair and re-review (Recommended).”** This is a one-time D-04 exception for CR-06-ENTRY-017 only. The round-2 stop and counts remain recorded. One repair and one independent complete-file round 3 are authorized. If round 3 has any open finding, stop again with its IDs; no further repair or round is authorized.
+The maintainer then answered the stop decision: **“Authorize one repair and re-review (Recommended).”** This is a one-time D-04 exception for CR-06-ENTRY-017 only. The round-2 stop and counts remain recorded. Evidence commit `001800e` and repair commit `cad5804` used the exception. One independent complete-file round 3 remains authorized. If round 3 has any open finding, stop again with its IDs; no further repair or round is authorized.
 
 ## Evidence
 

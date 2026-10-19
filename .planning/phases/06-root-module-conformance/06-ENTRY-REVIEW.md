@@ -133,3 +133,9 @@ At the reviewed revision, all three ENTRY pairs met 100% isolated direct line, f
 ## One-time maintainer authorization after round 2
 
 The maintainer answered the D-04 stop decision: **“Authorize one repair and re-review (Recommended).”** This permits one cause repair for CR-06-ENTRY-017 and one independent complete six-file correction review as round 3. It does not erase the round-2 no-progress stop or reset the ENTRY counter. If round 3 has any open finding, execution stops with the exact IDs. No further repair or round is authorized by this answer.
+
+## One-time repair of CR-06-ENTRY-017
+
+At unchanged logging source commit `07d039c`, the active owner case `AUTH-02 preserves a following field after an unquoted password` compiled with `npm run build:test` (exit 0). Its named TAP run exited 1 on the exact delegate assertion: expected `posting password=[redacted], status=ok`, received `posting password=[redacted]`. The complete TAP, active test patch, source blob, and semantic assessment are in `06-ENTRY-RED-EVIDENCE.json`. The validator returned `RED_EVIDENCE_OK`; evidence-only commit `001800e` contains no source or test change.
+
+Commit `cad5804` changes the unquoted matcher to stop before a comma followed by a field assignment, while retaining commas inside the password. Both named unquoted-password cases passed (2/2), `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage, and `npm run --silent test:corresponding` passed. Fallow guard and audit, the pre-commit step, and normal commit hooks passed. The formatter changed layout only and its second run passed before the commit. The fix awaits the single authorized independent round 3.
