@@ -42,6 +42,7 @@ import {
   isBinaryExpression,
   isBlock,
   isCallExpression,
+  isConditionalExpression,
   isElementAccessExpression,
   isFunctionLike,
   isIdentifier,
@@ -214,6 +215,10 @@ function registersReadHandler(source: string): boolean {
   function isCharacteristicReceiver(node: Node): boolean {
     if (isParenthesizedExpression(node)) {
       return isCharacteristicReceiver(node.expression);
+    }
+
+    if (isConditionalExpression(node)) {
+      return isCharacteristicReceiver(node.whenTrue) && isCharacteristicReceiver(node.whenFalse);
     }
 
     if (isIdentifier(node)) {
@@ -804,6 +809,21 @@ test('counts read handlers on characteristic aliases without counting unrelated 
 
   // assert
   assert.deepStrictEqual(registrations, { aliasedMethod: true, aliasedEvent: true, unrelatedMethod: false, unrelatedEvent: false, unrelatedAlias: false });
+});
+
+test('counts read handlers on either selected HAP characteristic', () => {
+  // arrange
+  const selected = `const control = useBackup
+    ? backupService.getCharacteristic(hap.Characteristic.On)
+    : service.getCharacteristic(hap.Characteristic.On);
+  control.onGet(handler);`;
+  const mixed = 'const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.onGet(handler);';
+
+  // act
+  const registrations = { selected: registersReadHandler(selected), mixed: registersReadHandler(mixed) };
+
+  // assert
+  assert.deepStrictEqual(registrations, { selected: true, mixed: false });
 });
 
 test('resolves fixed read events through object bindings without following unrelated or shadowed names', () => {

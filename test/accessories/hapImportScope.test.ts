@@ -48,6 +48,7 @@ import {
   isBinaryExpression,
   isBlock,
   isCallExpression,
+  isConditionalExpression,
   isElementAccessExpression,
   isFunctionDeclaration,
   isFunctionLike,
@@ -370,6 +371,10 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
   function isCharacteristicReceiver(node: Node): boolean {
     if (isParenthesizedExpression(node)) {
       return isCharacteristicReceiver(node.expression);
+    }
+
+    if (isConditionalExpression(node)) {
+      return isCharacteristicReceiver(node.whenTrue) && isCharacteristicReceiver(node.whenFalse);
     }
 
     if (isIdentifier(node)) {
@@ -1460,6 +1465,40 @@ test('counts set listeners on characteristic aliases without counting unrelated 
 
   // assert
   assert.deepStrictEqual(uses, { aliasedCharacteristic: true, unrelatedEmitter: false, unrelatedAlias: false });
+});
+
+test('counts set handlers on either selected HAP characteristic', () => {
+  // arrange
+  const selected = sourceFileOf(
+    `const control = useBackup
+      ? backupService.getCharacteristic(hap.Characteristic.On)
+      : service.getCharacteristic(hap.Characteristic.On);
+    control.onSet(handler);`,
+  );
+  const mixed = sourceFileOf('const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.onSet(handler);');
+
+  // act
+  const uses = { selected: hapUses(selected).onSet, mixed: hapUses(mixed).onSet };
+
+  // assert
+  assert.deepStrictEqual(uses, { selected: true, mixed: false });
+});
+
+test('counts set events on either selected HAP characteristic', () => {
+  // arrange
+  const selected = sourceFileOf(
+    `const control = useBackup
+      ? backupService.getCharacteristic(hap.Characteristic.On)
+      : service.getCharacteristic(hap.Characteristic.On);
+    control.on("set", handler);`,
+  );
+  const mixed = sourceFileOf('const control = useBackup ? service.getCharacteristic(hap.Characteristic.On) : emitter; control.on("set", handler);');
+
+  // act
+  const uses = { selected: hapUses(selected).setEvent, mixed: hapUses(mixed).setEvent };
+
+  // assert
+  assert.deepStrictEqual(uses, { selected: true, mixed: false });
 });
 
 test('ignores other EventEmitter events in the direct-set gate', () => {
