@@ -399,6 +399,21 @@ test('AUTH-02 redacts a comma inside a quoted password', () => {
   verify(delegate);
 });
 
+test('AUTH-02 redacts a comma inside an unquoted password', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.debug(`posting password=${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+
+  // act
+  log.debug('posting password=left,right');
+
+  // assert
+  verify(delegate);
+});
+
 // The same body written with spaces around its separators, which is what the
 // separator groups exist for: without them the pattern never reaches the value
 // and the whole body goes to the log unredacted.
