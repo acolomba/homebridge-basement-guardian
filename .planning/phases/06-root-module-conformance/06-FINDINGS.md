@@ -57,7 +57,8 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Fixed in round 1: separate arrange, act, and assert phases retain the literal, schema, package, and user-agent assertions; 100% direct owner coverage | source `eb893e3`; fix `6befd9c` |
 | CR-06-ENTRY-014 | Style `functions.md` Functions | `src/logging.ts@eb893e3:137,164` | WARNING | 0 | Fixed in round 1: `registerSecret` and `write` are named function declarations with unchanged bodies; 100% direct owner coverage | source `6ba2a16`; fix `0937041` |
 | CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Fixed in round 1: exported function JSDoc begins with a third-person verb and calls it a function by implication; 100% direct owner coverage | source `eb893e3`; fix `f2e0373` |
-| CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Repair committed, pending independent round-2 review: active unquoted-comma regression failed on the exposed `,right` suffix; the matcher now consumes unquoted commas; 100% direct logging coverage | source `401704f`; RED `f7d5a4c`; fix `f6c6317` |
+| CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Fixed in round 2: active unquoted-comma regression failed on the exposed `,right` suffix; the matcher now consumes unquoted commas; 100% direct logging coverage | source `401704f`; RED `f7d5a4c`; fix `f6c6317` |
+| CR-06-ENTRY-017 | `src/logging.ts:19–21` value-only pattern contract; `typescript-unit-tests/rules/cases.md` Assertions | `src/logging.ts@e5a29d4:32`; `test/logging.test.ts@e5a29d4:402–415` | WARNING | 2 | Open at D-04 no-progress stop: `password=left,right, status=ok` becomes `password=[redacted]`, consuming the later field; requires maintainer decision before another repair | source `e5a29d4`; RED pending; fix pending |
 
 ## PLATFORM stable IDs
 
@@ -77,8 +78,13 @@ No correction round has started. For each independent round, commit its report a
 | CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | `8b3606a` | `41d1ee3` |
 | ENTRY | 0 | `entry_initial_review` at `eb893e3`, clean diff; logging 1–180, logging test 1–432, settings 1–26, settings test 1–26, index 1–13, index test 1–23 | 0 | 0 | 0 | 15 | 0 | 15 | 001–015 | `eac3368` | `637ca38` |
 | ENTRY | 1 | `entry_round1_review` at `591c5a6`, clean diff; logging 1–200, logging test 1–555, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 15 | 15 | 0 | 1 | 0 | 1 | 016 | `401704f` | `f6c6317` |
+| ENTRY | 2 | `entry_round2_review` at `e5a29d4`, clean diff; logging 1–200, logging test 1–570, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 017 | this report commit | none; D-04 stop |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
+
+## ENTRY D-04 stop
+
+The independent round-2 review closed ENTRY-016 and accepted new ENTRY-017. Its one open finding did not decrease the opening count: `1 - 1 - 0 + 1 + 0 = 1`. This meets the no-progress stop predicate (`closing >= opening`). The only open ENTRY ID is CR-06-ENTRY-017. Repairs attempted before this stop: index header and JSDoc causes 011, 012, and 015; unquoted-password privacy cause 016. The ledger prohibits another ENTRY repair or PLATFORM dispatch until a maintainer resolves the stop. Round 3 and round 4 were not run.
 
 ## Evidence
 
@@ -99,3 +105,5 @@ Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a
 | ENTRY final combined check | Same clean `637ca38e76723f629ab070cab1a3e9b7e230ee86` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-03-npm-cache npm run check` | 0 | about 61 s | Six static checks and compiled unpaired tests passed; 104/104 Cucumber scenarios and 1156/1156 steps passed; direct LCOV merged 43 isolated pairs. Output: `/private/tmp/guardian-06-03-full-final.log`. |
 | ENTRY round-1 pre-repair owner coverage | Clean `591c5a6d030c3c658d098b597f439915ed06ea39`; no untracked inputs | v26.12.0 | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts` | 0 | about 4 s | All three pairs met 100% direct line, function, and branch coverage. |
 | ENTRY round-1 pre-repair combined check | Same clean `591c5a6` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 59 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The independent review still found ENTRY-016; this check does not close it. |
+| ENTRY round-2 owner coverage | Clean `e5a29d4896dfb1c1856c28f4deb37e0819907c9d`, no untracked inputs; executable-input diff from this revision empty | v26.12.0 | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts` | 0 | about 4 s | All three pairs met 100% direct line, function, and branch coverage. The reviewer still found ENTRY-017. |
+| ENTRY round-2 combined check | Same clean `e5a29d4` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 56 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The review's D-04 stop remains active. |
