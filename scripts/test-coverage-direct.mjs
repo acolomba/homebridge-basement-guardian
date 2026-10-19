@@ -16,9 +16,7 @@ const reporterPath = fileURLToPath(new URL('./test-reporter.mjs', import.meta.ur
 // Repository-wide contracts do not belong to a single production module.
 const repositoryTests = new Set([
   'test/accessories/hapWriteFidelity.test.ts',
-  'test/configSchema.test.ts',
   'test/documentation.test.ts',
-  'test/packageManifest.test.ts',
   'test/packaging/dependencyAllowlist.test.ts',
   'test/packaging/dependencyLicenses.test.ts',
   'test/packaging/dependencyTelemetry.test.ts',

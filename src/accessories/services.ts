@@ -21,7 +21,7 @@
  * runtime list, because an administrator supplies them as text. The
  * configuration check reads the runtime list. The settings form reads its own
  * enum in `config.schema.json`, a separate alphabetical list of the same seven
- * names that `test/configSchema.test.ts` pins.
+ * names.
  */
 
 /**
@@ -63,8 +63,7 @@ export type NotificationServiceKind =
  * Its element type makes every entry a name the type declares. The
  * configuration check refuses any supplied name that is not in this list. The
  * settings form does not read it: `config.schema.json` holds its own
- * alphabetical enum of the same seven names, and `test/configSchema.test.ts`
- * pins that enum.
+ * alphabetical enum of the same seven names.
  */
 export const NOTIFICATION_SERVICE_KINDS: readonly NotificationServiceKind[] = [
   'backup-pump-running',
