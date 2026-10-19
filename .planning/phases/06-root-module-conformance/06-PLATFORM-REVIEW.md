@@ -243,6 +243,23 @@ A temporary control in ignored `dist-test/src/runtime/accountRuntime.js` bypasse
 
 This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
 
+## CR-06-PLATFORM-008 repair after round 0
+
+Fix `47bf976` replaces three named local arrows with `function context(): DiscoveryContext` and `function restoredContext(): DiscoveryContext` declarations in the two registration owner cases. Their bodies, captured values, and call sites are unchanged. The two parameterized uncertain-registration cases and the fresh-run/restored-accessory case passed. This is a style repair; no production source or behavior changed.
+
+The first normal commit hook found three missing blank lines after the new declarations. Adding those lines made `npm run --silent check:static` and the normal commit hook pass. No other function was changed.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | final owner edit at `47bf976`, main checkout, Node v26.12.0 | 0 | TypeScript test build passed. |
+| Named registration owner cases | same test input, main checkout | 0 | Three cases passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | final owner edit at `47bf976`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `47bf976`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed after the blank-line correction. |
+
+The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
