@@ -59,7 +59,9 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Fixed in round 1: exported function JSDoc begins with a third-person verb and calls it a function by implication; 100% direct owner coverage | source `eb893e3`; fix `f2e0373` |
 | CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Fixed in round 2: active unquoted-comma regression failed on the exposed `,right` suffix; the matcher now consumes unquoted commas; 100% direct logging coverage | source `401704f`; RED `f7d5a4c`; fix `f6c6317` |
 | CR-06-ENTRY-017 | `src/logging.ts:19–21` value-only pattern contract; `typescript-unit-tests/rules/cases.md` Assertions | `src/logging.ts@e5a29d4:32`; `test/logging.test.ts@e5a29d4:402–415` | WARNING | 2 | Fixed in round 3; accepted privacy-first tradeoff after the maintainer decision: later fields may be omitted. The owner test now asserts complete redaction of the ambiguous remainder. This ID is closed by explicit policy, not silently reopened. | source `07d039c`; RED `001800e`; fix `cad5804`; policy fix `6955514` |
-| CR-06-ENTRY-018 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@18f6324:32–35`; `test/logging.test.ts@18f6324:417–430` | BLOCKER | 3 | Repair committed under second one-time exception, pending independent round-4 review: active field-shaped suffix regression failed on leaked `right=middle`; broad redaction now hides ambiguous remainder; 100% direct logging coverage | source `7cd6c77`; RED `3599f67`; fix `6955514` |
+| CR-06-ENTRY-018 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@18f6324:32–35`; `test/logging.test.ts@18f6324:417–430` | BLOCKER | 3 | Fixed in round 4: active field-shaped suffix regression failed on leaked `right=middle`; broad redaction hides that ambiguous remainder; 100% direct logging coverage | source `7cd6c77`; RED `3599f67`; fix `6955514` |
+| CR-06-ENTRY-019 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@add5a3a:33` | BLOCKER | 4 | Open at four-round cap: `password=left}right` becomes `password=[redacted]}right`; an unquoted password suffix also leaks after `"` | source `add5a3a`; RED pending; fix pending |
+| CR-06-ENTRY-020 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@add5a3a:75–80`; bounded caller `src/platform.ts:572` | BLOCKER | 4 | Open at four-round cap: with registered secret `password`, `{"password":"next-secret"}` becomes `{"[redacted]":"next-secret"}`; exact substitution erases the field name before credential matching | source `add5a3a`; RED pending; fix pending |
 
 ## PLATFORM stable IDs
 
@@ -81,6 +83,7 @@ No correction round has started. For each independent round, commit its report a
 | ENTRY | 1 | `entry_round1_review` at `591c5a6`, clean diff; logging 1–200, logging test 1–555, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 15 | 15 | 0 | 1 | 0 | 1 | 016 | `401704f` | `f6c6317` |
 | ENTRY | 2 | `entry_round2_review` at `e5a29d4`, clean diff; logging 1–200, logging test 1–570, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 017 | `e018f94` | none; D-04 stop |
 | ENTRY | 3 | `entry_round3_review` at `18f6324`, clean diff; logging 1–203, logging test 1–585, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 018 | `b6964aa` | none; exception exhausted |
+| ENTRY | 4 | `entry_round4_review` at `add5a3a`, clean diff; logging 1–201, logging test 1–600, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 2 | 0 | 2 | 019, 020 | pending commit | none; D-04 cap stop |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
@@ -94,7 +97,11 @@ Round 3 closed ENTRY-017 but found new BLOCKER CR-06-ENTRY-018. The count again 
 
 The maintainer answered the next stop decision: **“Yes, prioritize redaction (Recommended).”** This authorizes one bounded safety-first repair for CR-06-ENTRY-018 and one final complete-file review as round 4. The unquoted password remainder must be redacted, even when later log fields are lost. ENTRY-017's field-preservation expectation is an accepted tradeoff under this explicit policy, not a reopened finding. The round-2 and round-3 stop records remain intact. If round 4 has any open finding, stop at the cap with exact IDs.
 
-Evidence commit `3599f67` and source/test commit `6955514` used this second exception. The accepted ENTRY-017 tradeoff is expressed in the revised owner test and source comment. Exactly one independent complete-file round 4 remains; its result determines clean closure or the cap stop.
+Evidence commit `3599f67` and source/test commit `6955514` used this second exception. The accepted ENTRY-017 tradeoff is expressed in the revised owner test and source comment. Exactly one independent complete-file round 4 was authorized; its result appears below.
+
+## ENTRY round-four cap stop
+
+The final independent round closed ENTRY-018 and accepted new privacy BLOCKERs ENTRY-019 and ENTRY-020. `1 - 1 - 0 + 2 + 0 = 2`. Open IDs: CR-06-ENTRY-019 and CR-06-ENTRY-020. The four-round cap applies even if a later repair could close these causes. Both one-time maintainer exceptions have been used. No further ENTRY repair or review is authorized, and PLATFORM dispatch remains blocked pending a new maintainer decision.
 
 ## Evidence
 
@@ -119,3 +126,5 @@ Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a
 | ENTRY round-2 combined check | Same clean `e5a29d4` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 56 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The review's D-04 stop remains active. |
 | ENTRY round-3 owner coverage | Clean `18f63241644aa5a0827bed5e2d9a49ed996bb5ec`, no untracked inputs; executable-input diff from this revision empty | v26.12.0 | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts` | 0 | about 4 s | All three pairs met 100% direct line, function, and branch coverage. The reviewer still found ENTRY-018. |
 | ENTRY round-3 combined check | Same clean `18f6324` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 55 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The one-time exception is exhausted and ENTRY-018 remains open. |
+| ENTRY round-4 owner coverage | Clean `add5a3a84654a51cefd13c75af92e2d93c08b686`, no untracked inputs; executable-input diff from this revision empty | v26.12.0 | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts` | 0 | about 4 s | All three pairs met 100% direct line, function, and branch coverage. The reviewer still found ENTRY-019 and ENTRY-020. |
+| ENTRY round-4 combined check | Same clean `add5a3a` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 55 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The D-04 cap stop remains active. |
