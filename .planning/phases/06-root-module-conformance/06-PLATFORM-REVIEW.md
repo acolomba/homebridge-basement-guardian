@@ -115,6 +115,24 @@ Round 0 has opening 0, fixed 0, rejected 3, new candidates 11, reopened 0, and c
 
 On Node v26.12.0, the corresponding-test gate passed. The first two restricted `npm run test:coverage:direct -- src/platform.ts` attempts failed with `EMFILE` when the token-cache case opened `fs.watch`; both were unchanged-input environment failures. The same direct owner command then exited 0 with filesystem-watcher access and met 100% line, function, and branch coverage. It is the round-0 owner baseline, not evidence that the eight accepted causes are fixed.
 
+## CR-06-PLATFORM-001 repair after round 0
+
+The active two-accessory regression `continues trust updates and cached marking when one accessory fails` failed against unchanged `src/platform.ts` blob `8f48e05` at source commit `658b1f0`. Its first publisher threw a synthetic error before the second accessory or cached trust reports were reached. `06-PLATFORM-RED-EVIDENCE.json` contains the complete TAP, command, timestamps, source and test blobs, and the exact active test patch. The validator returned `RED_EVIDENCE_OK`. The final evidence-only commit is `08b97e9`; `e426052`, `fc78103`, and `658b1f0` are earlier evidence-only corrections to the same record before the source fix.
+
+Fix `37e2fb7` catches failures per live accessory and per cached accessory, logs fixed messages without device IDs or error bodies, and continues each walk. The active case confirms that the healthy neighbor receives its exact trust and that its cached `StatusActive` becomes unreadable while a failing cached service does not stop the pass. These caught presentation failures now let the existing `runtime.stop()` path reach `root.abort()`. The shutdown path was traced in `src/runtime/accountRuntime.ts:1212–1238`; this dispatch did not change that module. This logic repair remains subject to the independent correction review and human verification.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| RED owner test | unchanged source at `658b1f0`, main checkout, Node v26.12.0 | 1 | Named TAP failed on the intended synthetic publisher throw. |
+| RED validator | evidence at `08b97e9`, main checkout | 0 | `RED_EVIDENCE_OK`; one target test failed, no report errors. |
+| GREEN named owner test | source/test at `37e2fb7`, main checkout, Node v26.12.0 | 0 | One named test passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | source/test at `37e2fb7`, main checkout with native file-watcher access | 0 | Platform owner passed 100% direct line, function, and branch coverage. Two restricted attempts hit unrelated `FSWatcher` `EMFILE`. |
+| `npm run --silent test:corresponding` | same source/test, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `src/platform.ts`, `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Commit hook `npm run check:commit` | fix `37e2fb7`, main checkout | 0 | Normal foreground commit hooks passed. |
+
+This is a repair record for one accepted cause. The round-0 review and its count remain historical; the next independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
