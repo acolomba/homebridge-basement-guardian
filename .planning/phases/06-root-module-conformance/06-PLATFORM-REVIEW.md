@@ -334,3 +334,11 @@ A temporary control changed only ignored `dist-test/src/runtime/accountRuntime.j
 | Project pre-step and normal commit hook | fix `965c300`, main checkout | 0 | Pre-commit fixers and `npm run check:commit` passed. |
 
 This record repairs one round-1 open cause. The round-1 counter remains historical; an independent correction review has not yet accepted the repair.
+
+## CR-06-PLATFORM-012 repair after round 1
+
+The active `marks later cached trust on the same accessory when an earlier service fails` regression uses two trust-bearing services on one restored accessory. Against unchanged `src/platform.ts` blob `07b3a747` and `src/accessories/staleMarking.ts` blob `f12a6dc5`, the first service's synthetic `updateCharacteristic` throw stopped the helper. The second service remained readable and the platform logged the false zero-mark diagnostic. The complete TAP and active patch are in the evidence-only commit `5a55c3b`; the validator returned `RED_EVIDENCE_OK` before any source edit.
+
+Fix `f22d73f` isolates failures per cached service. `markTrustReportsUnreadable` returns separate successful and failed counts so `applyMonitoringHealth` can retain successful marks and emit its existing fixed, device-free error line for a failure. The owner test checks that the second service becomes unreadable and that the false zero-mark line is absent. A focused helper case checks `{ marked: 1, failed: 1 }`; the earlier PLATFORM-001 diagnostic case also passes. A service-list failure still uses the outer per-accessory catch and allows the next accessory to be marked. This repair does not change restored-accessory ownership, which remains CR-06-PLATFORM-013.
+
+On Node v26.12.0, the named RED exited 1 on its intended assertion; the validated evidence-only commit changed only `06-PLATFORM-RED-EVIDENCE.json`. After GREEN, `npm run build:test`, four focused cases, pairing, Fallow symbol impact/guard/audit, the project pre-step, and normal hooks exited 0. `npm run test:coverage:direct -- src/platform.ts src/accessories/staleMarking.ts` exited 0 with each owner at 100% line, function, and branch coverage. The tree was clean at `f22d73f`. This cause remains pending the next independent complete-file correction review; round one is unchanged.
