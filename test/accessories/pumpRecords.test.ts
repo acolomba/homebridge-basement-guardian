@@ -721,6 +721,56 @@ test('asks for one write for a counted activation and none for an unchanged snap
   assert.deepStrictEqual({ forTheEdge: afterTheEdge - beforeTheEdge, forTheUnchanged: persistCount() - afterTheEdge }, { forTheEdge: 1, forTheUnchanged: 0 });
 });
 
+test('retries a failed activation write without counting the unchanged run again', () => {
+  // arrange
+  const context = storedContext();
+  const persistedContexts: PumpRecordsContext[] = [];
+  let writes = 0;
+  const store: AccessoryStore = {
+    persist: () => {
+      writes += 1;
+
+      if (writes === 1) {
+        throw new Error('synthetic record write failure');
+      }
+
+      persistedContexts.push(structuredClone(context));
+    },
+  };
+  const { log } = recordingLog();
+  const records = createPumpRecords({ context, store, log });
+  records.observe(observation({ backupRunning: false }));
+  let failure: unknown = undefined;
+
+  // act
+  try {
+    records.observe(observation({ receivedAt: OBSERVED_NEXT_AT, backupRunning: true }));
+  } catch (error: unknown) {
+    failure = error;
+  }
+
+  const countAfterFailure = records.backup.activationCount;
+  records.observe(observation({ receivedAt: OBSERVED_LAST_AT, backupRunning: true }));
+
+  // assert
+  assert.deepStrictEqual(
+    { failure, countAfterFailure, backup: records.backup, writes, persistedContexts },
+    {
+      failure: new Error('synthetic record write failure'),
+      countAfterFailure: 1,
+      backup: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: OBSERVED_NEXT_AT, lastActivationWasTestActivity: undefined },
+      writes: 2,
+      persistedContexts: [
+        {
+          primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 0, lastActivationAt: undefined },
+          backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 1, lastActivationAt: OBSERVED_NEXT_AT },
+          watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS, backupEdgeAwaitingTimestamp: true },
+        },
+      ],
+    },
+  );
+});
+
 // Nothing here defers. A delay shorter than whatever a harness advances would survive a purely
 // behavioural test, so the recorders are what make the absence provable.
 test('schedules nothing at all across one observation', (t) => {

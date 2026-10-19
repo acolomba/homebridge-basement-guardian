@@ -3711,6 +3711,70 @@ describe('registerDiscoveredDevices', () => {
     verify(context.api);
   });
 
+  test('retries a failed activation cache write on the next unchanged observation', () => {
+    // arrange
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const persistedContexts: unknown[] = [];
+    let receivedAt = 1000;
+    let writes = 0;
+    const store = createDeviceStateStore({ clock: { now: () => receivedAt }, log: createSilentLog() });
+    const api = fakeDiscoveryApi([]);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(3);
+    when(() => api.updatePlatformAccessories)
+      .thenReturn((candidates) => {
+        writes += 1;
+
+        if (writes === 3) {
+          throw new Error('synthetic cache write failure');
+        }
+
+        persistedContexts.push(structuredClone(candidates[0]?.context));
+      })
+      .times(4);
+    const context = discoveryContext({ api, accessories, registry: powerRegistry() });
+    registeredDevice(context, accessories, store);
+    const writesAfterSeed = writes;
+    persistedContexts.length = 0;
+
+    // act
+    receivedAt = 2000;
+    store.applyDiscovery({ ...geminiDevice(), data: { backup_pump_running: true } });
+    const writesAfterFailure = writes;
+    const cachedAfterFailure = [...persistedContexts];
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        writesAfterSeed,
+        writesAfterFailure,
+        writesAfterRetry: writes,
+        cachedAfterFailure,
+        persistedContexts,
+        currentCount: accessories.get(ACCESSORY_UUID)?.context.backupPump?.activationCount,
+      },
+      {
+        writesAfterSeed: 2,
+        writesAfterFailure: 3,
+        writesAfterRetry: 4,
+        cachedAfterFailure: [],
+        persistedContexts: [
+          {
+            device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID },
+            lastVendorName: 'Sump System',
+            primaryPump: { observationStartedAt: 1000, activationCount: 0, lastActivationAt: undefined },
+            backupPump: { observationStartedAt: 1000, activationCount: 1, lastActivationAt: 2000 },
+            watermarks: { backupPumpTimestamp: undefined, testTimestamp: undefined, backupEdgeAwaitingTimestamp: true },
+          },
+        ],
+        currentCount: 1,
+      },
+    );
+    verify(api);
+  });
+
   test('publishes every adapter but the one an administrator ignored', () => {
     // arrange
     const accessories = new Map<string, BasementGuardianPlatformAccessory>();

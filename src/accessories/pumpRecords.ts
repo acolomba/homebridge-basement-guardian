@@ -36,8 +36,8 @@
  * timestamp rule below states when and why.
  *
  * Nothing here defers and nothing here reads a clock. Every time it uses
- * arrives on the observation, and the only write to disk is one `persist()` per
- * observation that actually changed something.
+ * arrives on the observation. A failed write stays pending for the next
+ * observation, even when that observation changes no record value.
  */
 
 import type { ActivationWatermarks, PumpObservation } from '../persistence/accessoryContext.js';
@@ -95,7 +95,7 @@ export interface PumpRecords {
    * Records one decoded snapshot.
    *
    * It schedules nothing, awaits nothing, and reads no clock, and it asks for
-   * one write to disk when a stored value actually changed and none otherwise.
+   * one write when a stored value changed or an earlier write failed.
    */
   observe(observation: PumpRecordsObservation): void;
   readonly primary: PumpRecordValues;
@@ -269,6 +269,7 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   }
 
   let record = resumedRecord();
+  let pendingPersist = false;
 
   // Observation began at the first snapshot, so the epoch is that snapshot's own receipt time
   // rather than a clock reading. Taking it from the observation introduces no second time source
@@ -394,10 +395,13 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
       previousBackupRunning = rememberedRunning(previousBackupRunning, observation.backupRunning);
       previousDeviceTimes = { backupActivatedAt: observation.backupActivatedAt, testedAt: observation.testedAt };
 
-      // A context mutation Homebridge does not know about is invisible on disk, so only a real
-      // change earns the call rather than persisting an identical record on every poll (D-010).
-      if (changed) {
+      // A failed write still owes Homebridge the already-mutated context. Retry it on the next
+      // observation, even when no new activation is counted; clear the debt only after success.
+      pendingPersist = pendingPersist || changed;
+
+      if (pendingPersist) {
         store.persist();
+        pendingPersist = false;
       }
     },
 
