@@ -207,6 +207,24 @@ A temporary first-service-only control added `break` after the first action in i
 
 This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
 
+## CR-06-PLATFORM-006 repair after round 0
+
+Fix `59ff8f0` restores two Switches on one accessory: System Self-Test and Alarm Mute have distinct subtypes and start with `On: false`. The named owner case presses each and requires refusal status `-70412` and unchanged `On: false` for both. A strict vendor HTTP mock verifies no transport request. The platform uses empty configuration here, so this case establishes the local refusal behavior before discovery or a vendor command port exists.
+
+A temporary control added `break` after the first action in ignored `dist-test/src/accessories/staleMarking.js`, leaving only the first control bound. The named test exited 1 at its complete-object assertion: Self-Test refused the press, while Alarm Mute returned `undefined` and changed `On` to true instead of refusing and staying false. `npm run build:test` restored the compiled helper to SHA-256 `04897d6c0287d87d90f8f1bbd549d533918fd58c908fbddc673115f428d0efc8`. No control mutation was committed, and the stronger case exposed no production bug.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | owner edit before `59ff8f0`, main checkout, Node v26.12.0 | 0 | Compiled the owner and binding helper. |
+| Named first-only control | temporary compiled binding helper, main checkout | 1 | Second press succeeded and flipped `On`, where refusal and unchanged `On` were expected. |
+| Named GREEN owner case | restored compiled helper, owner edit at `59ff8f0`, main checkout | 0 | One named test passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | owner edit at `59ff8f0`, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before the fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and commit hook | fix `59ff8f0`, main checkout | 0 | Pre-commit fixers and normal `npm run check:commit` passed. |
+
+This is one owner-test cause repair. The historical round-0 count is unchanged, and the first independent correction round has not run here.
+
 ---
 
 _Reviewed: 2026-10-19T17:00:41Z_
