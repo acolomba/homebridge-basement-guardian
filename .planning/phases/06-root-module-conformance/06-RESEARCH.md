@@ -245,10 +245,10 @@ This conformance phase plans no state rename or migration. A later confirmed fix
 | A1 | No production state migration will be needed because no rename is planned. [ASSUMED] | Runtime State Inventory | A genuine fix might alter persisted context or registration identity; reopen inventory before that edit. |
 | A2 | A/B may proceed as separate review batches without cross-batch consumer edits. [ASSUMED] | Architecture Patterns | A confirmed shared cause could require wave serialization and revised ownership. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Will full-file review find a behavior bug or shared-contract repair?** The scope and process are fixed; the actual defects cannot be known until review. Plan a conditional RED evidence path and bounded consumer ownership. [VERIFIED: .planning/phases/06-root-module-conformance/06-CONTEXT.md:31-53]
-2. **Will later root changes preserve the post-deletion full gate?** The baseline passed after commit `9605a63`; rerun the full gate whenever combined source or test inputs change. [VERIFIED: .planning/phases/05-accessories-conformance/05-VERIFICATION.md; .agents/skills/local-verification/rules/gates.md]
+1. **RESOLVED — behavior bugs or shared-contract repairs:** The review outcome is unknowable before execution. Each plan uses the conditional RED evidence path and bounded consumer ownership if it finds a confirmed cause. [VERIFIED: .planning/phases/06-root-module-conformance/06-CONTEXT.md:31-53]
+2. **RESOLVED — post-change combined gate:** The baseline passed after commit `9605a63`. Each plan reruns the full gate after combined source or test inputs change; a later failing gate stops the phase. [VERIFIED: .planning/phases/05-accessories-conformance/05-VERIFICATION.md; .agents/skills/local-verification/rules/gates.md]
 
 ## Sources
 
