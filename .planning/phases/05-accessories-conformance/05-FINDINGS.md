@@ -2180,6 +2180,14 @@ the ledger tracer exited 0 (`inventory=31 findings=237 open=4 rounds=43`).
 These four IDs remain `open` until the independent round-12 review confirms
 their repairs.
 
+After the four round-12 findings received repair commits under the recorded
+maintainer resolution, clean HEAD `5fdc93ab1cc980d5f03fc509cb86d9a53f05100a`
+passed fresh pre-round-13 checks by 2026-10-19T01:42:38Z on Node v26.12.0
+and npm 11.20.0: `npm run build:test` exited 0; the four compiled gate owners
+exited 0 with 117/117 tests; `npm run test:unpaired:compiled` exited 0; and
+the ledger tracer exited 0 (`inventory=31 findings=241 open=4 rounds=44`).
+The four IDs remain `open` pending independent round-13 review.
+
 Round 12 confirmed 062-065 fixed and found 066-069, leaving four open findings.
 The maintainer authorized continuing after the no-progress stop. Prettier 3.9.6
 removes the parenthesized forms in 066 and 067 and `format:check` runs in the
