@@ -19,9 +19,16 @@ const AUTHENTICATION_BODY_FIELDS = 'password|username';
 const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=~-](?:[\w.+/=~-]*[\w+/=~-])?/gi;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
+const AUTHENTICATION_QUOTED_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*")(?:\\.|[^"\\])+`, 'gi');
 const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)[^",}]+`, 'gi');
 
-const CREDENTIAL_PATTERNS: readonly RegExp[] = [AUTHORIZATION_PATTERN, AWS_SESSION_CREDENTIAL_PATTERN, PRESIGNED_URL_PATTERN, AUTHENTICATION_BODY_PATTERN];
+const CREDENTIAL_PATTERNS: readonly RegExp[] = [
+  AUTHORIZATION_PATTERN,
+  AWS_SESSION_CREDENTIAL_PATTERN,
+  PRESIGNED_URL_PATTERN,
+  AUTHENTICATION_QUOTED_BODY_PATTERN,
+  AUTHENTICATION_BODY_PATTERN,
+];
 
 /** The delegate to write through, and the secret values known at build time. */
 export interface RedactingLoggerOptions {
