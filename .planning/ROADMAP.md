@@ -261,13 +261,37 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 **Depends on**: Phase 1, Phase 5
 **Requirements**: ROOT-01
 **Success Criteria** (what must be TRUE):
-  1. The ledger lists the six root modules and their paired tests as reviewed, including the full 2,375-line `test/platform.test.ts`, and each file carries the Phase 1 header form. The repo-level gate tests stay unchanged unless a fix needs them, and the ledger says why for each one touched.
+  1. The ledger lists the six root modules and their paired tests as reviewed, including the full `test/platform.test.ts` at its current revision, and each file carries the Phase 1 header form. The two retired repository tests stay out of scope.
   2. The phase ledger records each finding's rule, location, severity, and outcome, fixed or rejected with a stated reason (applies PROC-01).
   3. The last re-review round reports no open finding, or the phase stopped at about four rounds or on a no-progress round with a report of what stays open and why (applies PROC-02).
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: TBD
+**Plans**: 8
+**Wave 1**
+- [ ] 06-01-PLAN.md
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 06-02-PLAN.md
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 06-03-PLAN.md
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 06-04-PLAN.md
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 06-05-PLAN.md
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 06-06-PLAN.md
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 06-07-PLAN.md
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 06-08-PLAN.md
+
 **Batching**: Six pairs. `platform.ts` (673 lines; test 3,781 lines at Phase 6 research) is a batch of its own; the other five fit in one or two batches. This phase runs after Phase 5 because `platform.ts` wires the accessories tier, so the two phases must not edit that wiring at the same time. The maintainer removed `test/configSchema.test.ts` and `test/packageManifest.test.ts` before this phase; neither is in scope. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
 
 ### Phase 7: Cucumber Feature Conformance
@@ -310,6 +334,6 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
 | 4. Runtime Conformance | code-review-sweep | 19/19 | Complete    | 2026-10-16 |
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
-| 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
+| 6. Root Module Conformance | code-review-sweep | 0/8 | Planned     | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |

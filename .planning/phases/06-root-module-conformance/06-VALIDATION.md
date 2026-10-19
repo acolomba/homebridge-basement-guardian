@@ -9,8 +9,8 @@ created: "2026-10-19"
 
 # Phase 6 — Validation Strategy
 
-> Per-phase feedback contract. The plan tasks and their threat references are
-> filled in after planning.
+> Per-phase feedback contract. Plan tasks and threat references below are
+> planned checks; execution status remains pending until evidence exists.
 
 ## Test Infrastructure
 
@@ -36,12 +36,25 @@ created: "2026-10-19"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Wave 0 baseline | Coordinator | 0 | ROOT-01 | — | No deleted test is restored | pairing + full | `npm run check` | ✅ | ✅ green on the post-deletion `9605a63` code tree |
-| A: config/protocol | TBD | TBD | ROOT-01 | Per plan | Invalid config stays refused; protocol meaning is unchanged | owner + direct coverage | `npm run test:coverage:direct -- src/config.ts src/protocol.ts` | ✅ | ⬜ pending |
-| B: logging/settings/index | TBD | TBD | ROOT-01 | Per plan | Secrets stay redacted; registration identity stays stable | owner + direct coverage | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts` | ✅ | ⬜ pending |
-| C: platform | TBD | TBD | ROOT-01 | Per plan | Trust, identity, lifecycle, and persistence remain correct | owner + direct coverage | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
-| Confirmed behavior bug | Per cause | Per plan | ROOT-01 (BUG-01 applied) | Per plan | Active named regression fails before fix | RED evidence + owner | `node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence <evidence-file> --raw` | Conditional | ⬜ pending |
-| Phase closeout | Final plan | Final wave | ROOT-01 | — | No current regression | full | `npm run check` | ✅ | ⬜ pending |
+| 06-01-01 | 06-01 | 1 | ROOT-01 (PROC-01/02 applied) | T-06-01/T-06-SC | Twelve-file ledger and four-round protocol; no package install | document check | `rg -q '^## Scope and authority$' .planning/phases/06-root-module-conformance/06-REVIEW-PROTOCOL.md && rg -q '^## Finding ledger$' .planning/phases/06-root-module-conformance/06-FINDINGS.md` | ⬜ planned | ⬜ pending |
+| 06-01-02 | 06-01 | 1 | ROOT-01 | T-06-01 | Current baseline and pairing | pairing + full | `npm run --silent test:corresponding`; `npm run check` | ✅ | ⬜ pending; prior post-deletion pass is historical only |
+| 06-02-01 | 06-02 | 2 | ROOT-01 (PROC-01 applied) | T-06-02/03 | Four complete files reviewed | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
+| 06-02-02 | 06-02 | 2 | ROOT-01 (BUG-01 applied) | T-06-02 | Config refusal and secret privacy | direct coverage | `npm run test:coverage:direct -- src/config.ts` | ✅ | ⬜ pending |
+| 06-02-03 | 06-02 | 2 | ROOT-01 (PROC-02 applied) | T-06-02/03 | Protocol contract and clean batch | direct coverage + full | `npm run test:coverage:direct -- src/config.ts src/protocol.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-03-01 | 06-03 | 3 | ROOT-01 (PROC-01 applied) | T-06-04/05 | Six complete ENTRY files reviewed | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
+| 06-03-02 | 06-03 | 3 | ROOT-01 (BUG-01 applied) | T-06-04 | Logger redacts all routed secrets | direct coverage | `npm run test:coverage:direct -- src/logging.ts` | ✅ | ⬜ pending |
+| 06-03-03 | 06-03 | 3 | ROOT-01 | T-06-05 | Settings identity remains stable | direct coverage + full | `npm run test:coverage:direct -- src/logging.ts src/settings.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-04-01 | 06-04 | 4 | ROOT-01 (BUG-01 applied) | T-06-06 | One existing Homebridge registration | direct coverage | `npm run test:coverage:direct -- src/index.ts` | ✅ | ⬜ pending |
+| 06-04-02 | 06-04 | 4 | ROOT-01 (PROC-02 applied) | T-06-04/06/07 | ENTRY converges or reports stop | direct coverage + full | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-05-01 | 06-05 | 5 | ROOT-01 (PROC-01 applied) | T-06-08/09/10 | One reviewer covers full 673/3781 platform pair at current spans | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
+| 06-05-02 | 06-05 | 5 | ROOT-01 (PROC-01/02 applied) | T-06-08/09/10/11 | PLATFORM round 0 has stable IDs and no source edits | direct coverage + ledger | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
+| 06-06-01 | 06-06 | 6 | ROOT-01 (BUG-01 applied) | T-06-12/13 | Accepted initial behavior causes have RED-before-GREEN evidence | direct coverage | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
+| 06-06-02 | 06-06 | 6 | ROOT-01 (PROC-02 applied) | T-06-12/13 | First independent full-file correction round retains PLATFORM IDs | direct coverage + full | `npm run test:coverage:direct -- src/platform.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-07-01 | 06-07 | 7 | ROOT-01 (PROC-02, BUG-01 applied) | T-06-14/15 | Remaining independent full-file rounds close or stop under one counter | direct coverage + manual review | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
+| 06-07-02 | 06-07 | 7 | ROOT-01 | T-06-14/15 | Terminal PLATFORM owner coverage and combined gate are current | direct coverage + full | `npm run test:coverage:direct -- src/platform.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-08-01 | 06-08 | 8 | ROOT-01 (PROC-01/02, BUG-01 applied) | T-06-16 | Twelve-owner ledger and bug ancestry reconcile | pairing + ledger audit | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
+| 06-08-02 | 06-08 | 8 | ROOT-01 | T-06-16 | Final combined tree and coverage pass | full | `npm run check` | ✅ | ⬜ pending |
+| Confirmed behavior bug | owning cause | owner wave | ROOT-01 (BUG-01 applied) | owning threat | Active named regression fails before fix | RED evidence + owner | `node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence <evidence-file> --raw` | conditional | ⬜ pending if found |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
