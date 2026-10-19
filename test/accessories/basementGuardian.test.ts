@@ -3573,6 +3573,39 @@ test('republishes nothing when the monitoring trust it is handed is the one it a
   assert.deepStrictEqual(movedSince(before, accessory), []);
 });
 
+test('marks later services inactive after one trust write fails and retries the failed service on the same report', (t) => {
+  // arrange
+  const accessory = accessoryStandIn();
+  const basementGuardianAccessory = geminiAccessory(accessory, {});
+  const flood = serviceOf(accessory, 'Sump Pit Flood');
+  t.mock.method(
+    flood,
+    'updateCharacteristic',
+    () => {
+      throw new Error('failed publication');
+    },
+    { times: 1 },
+  );
+
+  // act
+  assert.throws(() => {
+    basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+  }, Error);
+  const afterFailure = PUBLISHED_SERVICES.map(({ name }) => statusActiveOf(accessory, name));
+  basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
+  const afterRetry = PUBLISHED_SERVICES.map(({ name }) => statusActiveOf(accessory, name));
+
+  // assert
+  assert.deepStrictEqual(
+    afterFailure,
+    PUBLISHED_SCOPES.map((scope, index) => index === 0 || scope === 'connectivity'),
+  );
+  assert.deepStrictEqual(
+    afterRetry,
+    PUBLISHED_SCOPES.map((scope) => scope === 'connectivity'),
+  );
+});
+
 test('explains no degradation when the payload never stopped validating', () => {
   // arrange
   const accessory = accessoryStandIn();

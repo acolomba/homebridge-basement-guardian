@@ -514,6 +514,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // yet, so a press in that window is refused locally rather than sent into a
   // route that has never answered (RES-04, D-07).
   let monitoring: MonitoringTrust = { restDegraded: false, shadowSilent: false, commandTransportReady: false, credentialsRejected: false };
+  let publishedRowsPending = false;
   // What the last update's own payload said about trust. It is held because an
   // account-wide monitoring change recomputes the whole reason map without a
   // fresh snapshot, and the two device-level causes must keep their precedence
@@ -774,23 +775,36 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
   // a live verdict every poll, which is the sensor and the automations attached
   // to it coming back on their own (CONF-06, D-017).
   function republishPublishedRows(input: ProjectionInput): void {
+    publishedRowsPending = true;
+    const failures: unknown[] = [];
+
     for (const row of catalogue) {
-      if (isSuppressed(row.kind)) {
-        removeServiceIfPresent(accessory, row);
+      try {
+        if (isSuppressed(row.kind)) {
+          removeServiceIfPresent(accessory, row);
 
-        continue;
+          continue;
+        }
+
+        const service = publishedService(accessory, row);
+
+        if (service === undefined) {
+          continue;
+        }
+
+        seedConfiguredName(hap, service, row.displayName);
+        bindControlRow(row, service);
+        publishRow(row, service, input);
+      } catch (error: unknown) {
+        failures.push(error);
       }
-
-      const service = publishedService(accessory, row);
-
-      if (service === undefined) {
-        continue;
-      }
-
-      seedConfiguredName(hap, service, row.displayName);
-      bindControlRow(row, service);
-      publishRow(row, service, input);
     }
+
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'Unable to republish every service.');
+    }
+
+    publishedRowsPending = false;
   }
 
   // The transition into a degraded state logs once; recovery clears the flag,
@@ -972,7 +986,7 @@ export function createBasementGuardianAccessory(options: BasementGuardianAccesso
       // directly rather than through the row projection (IN-02, RES-04, D-07).
       monitoring = trust;
 
-      if (unchanged) {
+      if (unchanged && !publishedRowsPending) {
         return;
       }
 
