@@ -57,7 +57,7 @@ The complete independent round-0 review at `eb893e3bee2554365fb4d52bd7e681a546e3
 | CR-06-ENTRY-013 | Unit-test `cases.md` Case structure | `test/settings.test.ts@eb893e3:8–26` | WARNING | 0 | Fixed in round 1: separate arrange, act, and assert phases retain the literal, schema, package, and user-agent assertions; 100% direct owner coverage | source `eb893e3`; fix `6befd9c` |
 | CR-06-ENTRY-014 | Style `functions.md` Functions | `src/logging.ts@eb893e3:137,164` | WARNING | 0 | Fixed in round 1: `registerSecret` and `write` are named function declarations with unchanged bodies; 100% direct owner coverage | source `6ba2a16`; fix `0937041` |
 | CR-06-ENTRY-015 | Style `naming-and-docs.md` Comments | `src/index.ts@eb893e3:8–11` | WARNING | 0 | Fixed in round 1: exported function JSDoc begins with a third-person verb and calls it a function by implication; 100% direct owner coverage | source `eb893e3`; fix `f2e0373` |
-| CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Open: unquoted `password=left,right` becomes `password=[redacted],right`; the quoted-comma regression does not cover this branch | source `591c5a6`; RED pending; fix pending |
+| CR-06-ENTRY-016 | `AGENTS.md` Privacy; D-06 | `src/logging.ts@591c5a6:32`; `test/logging.test.ts@591c5a6:387–400` | BLOCKER | 1 | Repair committed, pending independent round-2 review: active unquoted-comma regression failed on the exposed `,right` suffix; the matcher now consumes unquoted commas; 100% direct logging coverage | source `401704f`; RED `f7d5a4c`; fix `f6c6317` |
 
 ## PLATFORM stable IDs
 
@@ -76,7 +76,7 @@ No correction round has started. For each independent round, commit its report a
 | CONFIG_PROTOCOL | 1 | `review_config_protocol` at `2c5788f`, clean diff; config 1–209, config test 1–485, protocol 1–45, protocol test 1–42 | 7 | 7 | 0 | 1 | 0 | 1 | 008 | `e211078` | `2c5788f` |
 | CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | `8b3606a` | `41d1ee3` |
 | ENTRY | 0 | `entry_initial_review` at `eb893e3`, clean diff; logging 1–180, logging test 1–432, settings 1–26, settings test 1–26, index 1–13, index test 1–23 | 0 | 0 | 0 | 15 | 0 | 15 | 001–015 | `eac3368` | `637ca38` |
-| ENTRY | 1 | `entry_round1_review` at `591c5a6`, clean diff; logging 1–200, logging test 1–555, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 15 | 15 | 0 | 1 | 0 | 1 | 016 | pending commit | `591c5a6` |
+| ENTRY | 1 | `entry_round1_review` at `591c5a6`, clean diff; logging 1–200, logging test 1–555, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 15 | 15 | 0 | 1 | 0 | 1 | 016 | `401704f` | `f6c6317` |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
