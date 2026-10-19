@@ -80,7 +80,7 @@ No correction round has started. For each independent round, commit its report a
 | ENTRY | 0 | `entry_initial_review` at `eb893e3`, clean diff; logging 1–180, logging test 1–432, settings 1–26, settings test 1–26, index 1–13, index test 1–23 | 0 | 0 | 0 | 15 | 0 | 15 | 001–015 | `eac3368` | `637ca38` |
 | ENTRY | 1 | `entry_round1_review` at `591c5a6`, clean diff; logging 1–200, logging test 1–555, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 15 | 15 | 0 | 1 | 0 | 1 | 016 | `401704f` | `f6c6317` |
 | ENTRY | 2 | `entry_round2_review` at `e5a29d4`, clean diff; logging 1–200, logging test 1–570, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 017 | `e018f94` | none; D-04 stop |
-| ENTRY | 3 | `entry_round3_review` at `18f6324`, clean diff; logging 1–203, logging test 1–585, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 018 | pending commit | none; exception exhausted |
+| ENTRY | 3 | `entry_round3_review` at `18f6324`, clean diff; logging 1–203, logging test 1–585, settings 1–36, settings test 1–54, index 1–23, index test 1–33 | 1 | 1 | 0 | 1 | 0 | 1 | 018 | `b6964aa` | none; exception exhausted |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
