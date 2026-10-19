@@ -74,6 +74,21 @@ test('D-18 substitutes a registered secret through the bare callable form', () =
   verify(delegate);
 });
 
+test('D-18 redacts a registered secret in a callable trailing parameter', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate('the grant was rejected', `attempt with ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [ACCOUNT_PASSWORD] });
+
+  // act
+  log('the grant was rejected', `attempt with ${ACCOUNT_PASSWORD}`);
+
+  // assert
+  verify(delegate);
+});
+
 for (const member of LEVELLED_MEMBERS) {
   test(`D-18 substitutes a registered secret through ${member}`, () => {
     // arrange
@@ -101,6 +116,21 @@ test('D-18 substitutes a registered secret through the levelled log member', () 
 
   // act
   log.log(LogLevel.WARN, `signing in with ${ACCOUNT_PASSWORD}`);
+
+  // assert
+  verify(delegate);
+});
+
+test('D-18 redacts a registered secret in a levelled log trailing parameter', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.log(LogLevel.WARN, 'the grant was rejected', `attempt with ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [ACCOUNT_PASSWORD] });
+
+  // act
+  log.log(LogLevel.WARN, 'the grant was rejected', `attempt with ${ACCOUNT_PASSWORD}`);
 
   // assert
   verify(delegate);
