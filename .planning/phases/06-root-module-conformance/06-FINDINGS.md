@@ -58,7 +58,7 @@ No correction round has started. For each independent round, commit its report a
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
 | CONFIG_PROTOCOL | 0 | `review_config_protocol` at `5ff22a4`, clean diff; four complete files | 0 | 0 | 0 | 7 | 0 | 7 | 001–007 | `d2ab800` | `2c5788f` |
 | CONFIG_PROTOCOL | 1 | `review_config_protocol` at `2c5788f`, clean diff; config 1–209, config test 1–485, protocol 1–45, protocol test 1–42 | 7 | 7 | 0 | 1 | 0 | 1 | 008 | `e211078` | `2c5788f` |
-| CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | this round-report commit | `41d1ee3` |
+| CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | `8b3606a` | `41d1ee3` |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
@@ -71,3 +71,7 @@ Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a
 | Baseline pairing | `4bb84f631ac806f0a8d686db9735d454ee004851`, checked at `9528f28d31ebe0ffc562fb09f22acdc143a0c942` | v26.12.0 | `npm run --silent test:corresponding` | 0 | 0.5 s | `Corresponding-tests gate passed.` |
 | First full-check attempt | Same inputs; restricted sandbox | v26.12.0 | `npm run check` | 1 | 34 s | Static checks passed; compiled unpaired suite had 51/53 pass. Both `packedArtifact` tests failed because child `npm pack --dry-run --json` received npm-cache `EPERM`. Cucumber and direct coverage did not run. Full output: `/private/tmp/guardian-06-01-baseline.log`. |
 | Baseline full check | Same inputs; local npm-cache and socket access | v26.12.0 | `npm run check` | 0 | 61 s | Six static checks passed; compiled unpaired tests passed; 104/104 Cucumber scenarios and 1156/1156 steps passed; direct LCOV merged 43 isolated pairs. Full output: `/private/tmp/guardian-06-01-baseline-native.log`. No install or source change occurred between attempts. |
+| CONFIG_PROTOCOL owner and bounded consumer coverage | `437213ff60c0a7f91fc9c1203714852a95bac99b`, clean tree, no untracked inputs | v26.12.0 | `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/platform.ts` | 0 | 4.4 s | Each of the three owner pairs met 100% direct line, function, and branch coverage. |
+| Combined check before bounded scenario correction | `8b3606a`, clean tree | v26.12.0 | `npm run check` | 1 | about 60 s | Static and unpaired gates passed; 103/104 Cucumber scenarios passed. The configuration scenario still expected the old value-quoting refusal. Full output: `/private/tmp/guardian-06-02-full.log`. |
+| Bounded configuration scenario | `437213f`, clean tree | v26.12.0 | `npx cucumber-js --name 'The plugin starts nothing on an out-of-range poll interval'` | 0 | 0.2 s | 1/1 scenario and 7/7 steps passed after exact refusal expectation update. |
+| Final combined check | `437213ff60c0a7f91fc9c1203714852a95bac99b`, clean tree, no untracked inputs | v26.12.0 | `npm run check` | 0 | about 61 s | Six static checks, compiled unpaired suite, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. Full output: `/private/tmp/guardian-06-02-full-final.log`. |
