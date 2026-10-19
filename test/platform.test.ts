@@ -1594,9 +1594,12 @@ describe('configureAccessory', () => {
   test('refuses a press on every restored control, so a press before the first poll is not silently accepted (RES-04, D-07)', async () => {
     // arrange
     const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
-    const control = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
-    control.updateCharacteristic(HAP.Characteristic.On, false);
-    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), fakeDiscoveryApi([]));
+    const selfTest = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
+    selfTest.updateCharacteristic(HAP.Characteristic.On, false);
+    const alarmMute = restoredAccessory.addService(HAP.Service.Switch, 'Alarm Mute', 'alarm-mute');
+    alarmMute.updateCharacteristic(HAP.Characteristic.On, false);
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+    const platform = new BasementGuardianPlatform(createSilentLog(), emptyConfig(), fakeDiscoveryApi([]), { httpFetch });
     when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
 
     // act
@@ -1604,9 +1607,16 @@ describe('configureAccessory', () => {
 
     // assert
     assert.deepStrictEqual(
-      { press: await pressOutcomeOf(control), on: control.getCharacteristic(HAP.Characteristic.On)?.value },
-      { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+      {
+        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On)?.value },
+        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On)?.value },
+      },
+      {
+        selfTest: { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+        alarmMute: { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+      },
     );
+    verify(httpFetch);
     verify(platform.api);
   });
 
