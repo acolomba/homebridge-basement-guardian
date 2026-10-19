@@ -34,6 +34,12 @@ At source revision `eac3368`, the active owner case `redacts the longest registe
 
 Commit `c6987fd` processes registered secrets from longest to shortest without changing role rotation or delegate routes. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
 
+## Repair after round 0: CR-06-ENTRY-002
+
+At source revision `d189ec7`, the active owner case `redacts a registered secret escaped by object serialization` compiled with `npm run build:test` (exit 0). Its named TAP run exited 1 on the intended delegate assertion: the expected object text had `[redacted]`, but the actual text retained the synthetic secret with its quote escaped. `06-ENTRY-RED-EVIDENCE.json` holds the complete TAP, active patch, source blob, semantic assessment, and unchanged evidence for finding 001. The validator returned `RED_EVIDENCE_OK`; the evidence-only commit is `bd5ce3a`.
+
+Commit `c0b4656` matches both raw registered secrets and their JSON escaped forms in serialized object parameters. The named owner case passed (1/1); `npm run test:coverage:direct -- src/logging.ts` exited 0 at 100% direct line, function, and branch coverage. `npm run --silent test:corresponding`, Fallow guard, Fallow audit, the pre-commit step, and the normal commit hooks passed. Checks ran in the shared main checkout on Node v26.12.0. The repair awaits the first independent ENTRY correction round; the round-0 count remains unchanged.
+
 ## Handoff to 06-04
 
 This plan owns accepted logging and settings causes 001–010, 013, and 014. Plan 06-04 owns index causes 011, 012, and 015 and the first independent correction round across all six complete files. Its opening count is the same 15 IDs; it must account for every repair and may not reset ENTRY's counter.
