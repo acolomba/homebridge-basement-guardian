@@ -389,3 +389,11 @@ Previously fixed **001, 002, 004–008** remain fixed on the complete current ow
 ### Round-2 counter and decision
 
 Opening **4** (003, 012–014), fixed **4** (003, 012–014), rejected **0**, new **1** (015), reopened **0**, closing **1** (015): `4 - 4 - 0 + 1 + 0 = 1`. The new cause is outside the pump-record retry path, so it receives ID 015 rather than reusing 014. Round two makes progress (`1 < 4`), no fixed finding reopened, and the four-round cap has not been reached. **D-04 decision: CONTINUE** with CR-06-PLATFORM-015 open after the coordinator commits this report and ledger row. This reviewer dispatches no fix or check that mutates compiled output.
+
+## CR-06-PLATFORM-015 repair after round 2
+
+The active `retries a failed vendor rename cache write on the next unchanged inventory` case makes the first `api.updatePlatformAccessories` call throw after an accessory's name and context have changed in memory. Against unchanged `src/platform.ts` at `383c991`, the next identical inventory did not write those changes. Evidence-only commit `e818104` records the complete named TAP, active patch, expected and actual values, source blob, Node version, and timestamps; the validator returned `RED_EVIDENCE_OK` before GREEN.
+
+Fix `35e2631` keeps an accessory-scoped pending metadata/service write after a failed cache call and clears it only after success. An identical later inventory retries; a third identical inventory does not write again. The existing pump-record persist port also clears this obligation if its successful cache write saves the same accessory first. The owner case checks the failed first write, successful second write containing the renamed display name and context, and absence of a third write.
+
+On Node v26.12.0, the named RED exited 1 on its intended assertion. After GREEN, `npm run build:test`, the named owner, pairing, Fallow guard/audit, the project pre-step, and normal hooks exited 0. The direct platform owner reached 100% line, function, and branch coverage. The tree was clean at `35e2631`. This cause awaits the next independent complete-file correction review; round two is unchanged.
