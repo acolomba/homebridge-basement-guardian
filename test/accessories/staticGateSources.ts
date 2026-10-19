@@ -90,11 +90,16 @@ function isDynamicModuleNamespace(initializer: Expression, checker: TypeChecker)
     return isDynamicModuleNamespace(initializer.expression, checker);
   }
 
-  if (!isAwaitExpression(initializer) || !isCallExpression(initializer.expression) || initializer.expression.expression.kind !== SyntaxKind.ImportKeyword) {
+  if (!isAwaitExpression(initializer)) {
     return false;
   }
 
-  const specifier = initializer.expression.arguments[0];
+  const call = unparenthesized(initializer.expression);
+  if (!isCallExpression(call) || call.expression.kind !== SyntaxKind.ImportKeyword) {
+    return false;
+  }
+
+  const specifier = call.arguments[0];
   return specifier !== undefined && ['node:module', 'module'].includes(fixedSpecifier(specifier, checker) ?? '');
 }
 
@@ -103,7 +108,7 @@ function addDestructuredCreator(node: Node, checker: TypeChecker, named: Set<Sym
     return;
   }
 
-  const initializer = node.initializer;
+  const initializer = unparenthesized(node.initializer);
   const source = isIdentifier(initializer) ? checker.getSymbolAtLocation(initializer) : undefined;
   if (!(source && namespaces.has(source)) && !isDynamicModuleNamespace(initializer, checker)) {
     return;
@@ -145,11 +150,12 @@ function isNamespaceCreatorMember(node: Expression, checker: TypeChecker, namesp
   }
 
   const member = isPropertyAccessExpression(node) ? node.name.text : fixedSpecifier(node.argumentExpression, checker);
-  if (member !== 'createRequire' || !isIdentifier(node.expression)) {
+  const receiver = unparenthesized(node.expression);
+  if (member !== 'createRequire' || !isIdentifier(receiver)) {
     return false;
   }
 
-  const namespace = checker.getSymbolAtLocation(node.expression);
+  const namespace = checker.getSymbolAtLocation(receiver);
   return namespace !== undefined && namespaces.has(namespace);
 }
 
@@ -181,10 +187,11 @@ function addNamespaceAliases(file: SourceFile, checker: TypeChecker, namespaces:
       node.parent.flags & NodeFlags.Const
     ) {
       const alias = checker.getSymbolAtLocation(node.name);
-      if (alias && isDynamicModuleNamespace(node.initializer, checker)) {
+      const initializer = unparenthesized(node.initializer);
+      if (alias && isDynamicModuleNamespace(initializer, checker)) {
         namespaces.add(alias);
-      } else if (alias && isIdentifier(node.initializer)) {
-        const source = checker.getSymbolAtLocation(node.initializer);
+      } else if (alias && isIdentifier(initializer)) {
+        const source = checker.getSymbolAtLocation(initializer);
         if (source) {
           aliases.push({ source, alias });
         }
@@ -260,13 +267,13 @@ function callsImportedCreator(call: CallExpression, checker: TypeChecker, named:
   if (
     ((isPropertyAccessExpression(callee) && callee.name.text === 'createRequire') ||
       (isElementAccessExpression(callee) && fixedSpecifier(callee.argumentExpression, checker) === 'createRequire')) &&
-    (isIdentifier(callee.expression) || isDynamicModuleNamespace(callee.expression, checker))
+    (isIdentifier(unparenthesized(callee.expression)) || isDynamicModuleNamespace(callee.expression, checker))
   ) {
     if (isDynamicModuleNamespace(callee.expression, checker)) {
       return true;
     }
 
-    const symbol = checker.getSymbolAtLocation(callee.expression);
+    const symbol = checker.getSymbolAtLocation(unparenthesized(callee.expression));
     return symbol !== undefined && namespaces.has(symbol);
   }
 

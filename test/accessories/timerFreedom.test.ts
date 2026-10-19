@@ -570,6 +570,48 @@ const createRequire = () => (name: string) => name;
   });
 });
 
+test('detects parenthesized module namespaces without following unrelated objects', () => {
+  // act
+  const detections = {
+    alias: importsDeferredExecution(`
+import * as module from 'node:module';
+const alias = (module);
+const load = alias.createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    member: importsDeferredExecution(`
+import * as module from 'node:module';
+const load = (module).createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    destructured: importsDeferredExecution(`
+import * as module from 'node:module';
+const { createRequire } = (module);
+const load = createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    awaited: importsDeferredExecution(`
+const module = await (import('node:module'));
+const load = module.createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    unrelatedObject: importsDeferredExecution(`
+const module = { createRequire: () => (name: string) => name };
+const alias = (module);
+const load = alias.createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+    unrelatedAwaited: importsDeferredExecution(`
+const module = await (import('node:fs'));
+const load = module.createRequire(import.meta.url);
+load('node:timers/promises');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { alias: true, member: true, destructured: true, awaited: true, unrelatedObject: false, unrelatedAwaited: false });
+});
+
 test('detects direct createRequire calls with fixed computed keys', () => {
   // act
   const detections = {

@@ -875,6 +875,48 @@ const createRequire = () => (name: string) => name;
   });
 });
 
+test('detects parenthesized module namespaces without following unrelated objects', () => {
+  // act
+  const detections = {
+    alias: importsHapPackage(`
+import * as module from 'node:module';
+const alias = (module);
+const load = alias.createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    member: importsHapPackage(`
+import * as module from 'node:module';
+const load = (module).createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    destructured: importsHapPackage(`
+import * as module from 'node:module';
+const { createRequire } = (module);
+const load = createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    awaited: importsHapPackage(`
+const module = await (import('node:module'));
+const load = module.createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelatedObject: importsHapPackage(`
+const module = { createRequire: () => (name: string) => name };
+const alias = (module);
+const load = alias.createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelatedAwaited: importsHapPackage(`
+const module = await (import('node:fs'));
+const load = module.createRequire(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { alias: true, member: true, destructured: true, awaited: true, unrelatedObject: false, unrelatedAwaited: false });
+});
+
 test('detects direct createRequire calls with fixed computed keys loading HAP', () => {
   // act
   const detections = {

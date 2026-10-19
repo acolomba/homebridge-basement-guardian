@@ -127,6 +127,7 @@ positive on valid source. No production bug is claimed.
 | --- | --- | --- |
 | CR-05-GATES-068 | Resolve fixed computed destructuring keys for `createRequire` through the existing specifier resolver. All three import owners check a working loader and an unrelated key. | The three new cases failed against the unchanged scanner (raw exit 1) and passed after the fix. In the main checkout on Node v26.12.0, Fallow guard, `build:test`, all three owner modules (89 passed), `test:unpaired`, and Fallow audit passed (raw exits 0). |
 | CR-05-GATES-069 | Count `onSet` only when called on a characteristic receiver. A new case covers a direct characteristic call, property reads, and an unrelated call; the existing cases cover named and computed setter calls. | The new case failed against the unchanged detector (raw exit 1). In the main checkout on Node v26.12.0, Fallow guard, `build:test`, the owner module (56 passed), `test:unpaired`, and Fallow audit passed (raw exits 0). An intermediate Fallow audit found complexity (raw exit 1); extracting the receiver check cleared it. |
+| CR-05-GATES-066 | Unwrap module namespace receivers, aliases, destructuring sources, and awaited import calls before checking `createRequire` provenance. All three import owners cover these forms and unrelated objects. | In the main checkout on Node v26.12.0, Fallow guard, `build:test`, all three owner modules (93 passed), `test:unpaired`, and Fallow audit passed (raw exits 0). The standalone scanner now detects the parenthesized loads. |
 
 ---
 
