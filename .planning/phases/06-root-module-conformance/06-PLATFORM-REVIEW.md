@@ -316,3 +316,21 @@ The round-0 rejected candidates **009–011 remain rejected** for their recorded
 ### Round-1 counter and decision
 
 Opening **8** (001–008), fixed **7** (001, 002, 004–008), rejected **0**, new **3** (012–014), reopened **0**, closing **4** (003, 012–014): `8 - 7 - 0 + 3 + 0 = 4`. CR-06-PLATFORM-003 was never accepted as fixed by an independent round, so its incomplete attempted repair is **open**, not a reopened fixed finding. All four closing IDs are BLOCKER. Round one makes progress (`4 < 8`), no fixed ID reopened, and the four-round cap has not been reached. **D-04 decision: CONTINUE** with these exact open IDs in plan 06-07 after the coordinator commits the report and ledger; this reviewer dispatches no fixes. If a later round fails to reduce its opening count, reopens a fixed ID, or reaches round four, stop under D-04.
+
+## CR-06-PLATFORM-003 repair after round 1
+
+Fix `965c300` advances each shutdown case's own fake clock by 900,001 ms after shutdown. Both cases use `accountConfig()` without an interval override, so `src/config.ts` resolves a 900-second poll interval and `runPolls` waits 900,000 ms. This advance crosses the next poll deadline while retaining the existing exact request and accessory-call assertions. The earlier `2e60f69` repair advanced only 300,000 ms and remains recorded as an incomplete attempt. No production source was changed.
+
+A temporary control changed only ignored `dist-test/src/runtime/accountRuntime.js`: its poll wait ignored abort, and its poll used a fresh signal after waking. `root.abort()` and the credential rotation wait were unchanged, so credential retry still canceled. Both named shutdown cases exited 1 after the poll deadline. The first strict vendor HTTP mock rejected an unexpected third Auth0 call. The second case's exact request assertion saw one post-shutdown request instead of zero. `npm run build:test` restored the compiled runtime byte for byte to SHA-256 `cc19b08ac2c861c537297e437be73e5f0dbff55715a6e54e29ec208681a7e1e4`; both named cases then passed. The control was not committed. The stronger tests exposed no production defect.
+
+| Gate | Revision and location | Exit | Result |
+| --- | --- | ---: | --- |
+| `npm run build:test` | test edit at `965c300`, main checkout, Node v26.12.0 | 0 | Compiled the owner and runtime. |
+| Named selective poll-leak control | temporary compiled runtime, main checkout | 1 | Both shutdown owners failed on an unexpected post-shutdown request. |
+| Named GREEN shutdown owners | restored compiled runtime, test edit at `965c300`, main checkout | 0 | Two named cases passed. |
+| `npm run test:coverage:direct -- src/platform.ts` | same executable inputs, main checkout with native file-watcher access | 0 | Platform owner met 100% direct line, function, and branch coverage. |
+| `npm run --silent test:corresponding` | same source/test inputs, main checkout | 0 | Source/test pairing passed. |
+| Fallow guard and audit | `test/platform.test.ts`; audit before fix commit | 0 | No configured boundary zones; audit verdict `pass`. |
+| Project pre-step and normal commit hook | fix `965c300`, main checkout | 0 | Pre-commit fixers and `npm run check:commit` passed. |
+
+This record repairs one round-1 open cause. The round-1 counter remains historical; an independent correction review has not yet accepted the repair.
