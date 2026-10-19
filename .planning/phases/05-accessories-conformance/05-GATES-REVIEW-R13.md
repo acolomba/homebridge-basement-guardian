@@ -103,7 +103,9 @@ Neither finding identifies a production runtime bug.
 
 ## Repair history
 
-Pending.
+| Cause | Repair | Verification | Commit |
+| --- | --- | --- | --- |
+| CR-05-GATES-070 | Track scoped, constant characteristic aliases for `onSet` calls. The control counts an alias chain and rejects unrelated receivers and property reads. | Node v26.12.0; Fallow guard, `npm run build:test`, the `hapImportScope` owner test, `npm run test:unpaired`, and Fallow audit against `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` each exited 0. | Committed with this report row. |
 
 ---
 

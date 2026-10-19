@@ -222,6 +222,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
   const uses = { onSet: false, setEvent: false, memberCall: false, destructuredCall: false };
   const scopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
   const fixedScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
+  const characteristicScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
 
   function aliasOf(name: string): string | undefined {
     for (let index = scopes.length - 1; index >= 0; index--) {
@@ -359,6 +360,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
       const fixed = (node.parent.flags & NodeFlags.Const) !== 0;
       fixedScopes[fixedScopes.length - 1]?.set(node.name.text, undefined);
       fixedScopes[fixedScopes.length - 1]?.set(node.name.text, fixed && node.initializer ? fixedEventText(node.initializer, fixedAlias) : undefined);
+      characteristicScopes[characteristicScopes.length - 1]?.set(node.name.text, fixed && !!node.initializer && isCharacteristicReceiver(node.initializer));
       scopes[scopes.length - 1]?.set(node.name.text, capabilityOf(node.initializer));
     } else if (isObjectBindingPattern(node.name) && node.initializer) {
       recordDestructuredAlias(node.name, node.initializer);
@@ -366,7 +368,21 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
   }
 
   function isCharacteristicReceiver(node: Node): boolean {
-    return (isIdentifier(node) && node.text === 'characteristic') || (isCallExpression(node) && staticMemberName(node.expression) === 'getCharacteristic');
+    if (isParenthesizedExpression(node)) {
+      return isCharacteristicReceiver(node.expression);
+    }
+
+    if (isIdentifier(node)) {
+      for (let index = characteristicScopes.length - 1; index >= 0; index--) {
+        if (characteristicScopes[index]?.has(node.text)) {
+          return characteristicScopes[index]?.get(node.text) ?? false;
+        }
+      }
+
+      return node.text === 'characteristic';
+    }
+
+    return isCallExpression(node) && staticMemberName(node.expression) === 'getCharacteristic';
   }
 
   function recordUse(node: Node): void {
@@ -397,17 +413,20 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     if (ownScope) {
       const scope = new Map<string, string | undefined>();
       const fixedScope = new Map<string, string | undefined>();
+      const characteristicScope = new Map<string, boolean>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, undefined);
             fixedScope.set(parameter.name.text, undefined);
+            characteristicScope.set(parameter.name.text, parameter.name.text === 'characteristic');
           }
         }
       }
 
       scopes.push(scope);
       fixedScopes.push(fixedScope);
+      characteristicScopes.push(characteristicScope);
     }
 
     recordAlias(node);
@@ -416,6 +435,7 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
     if (ownScope) {
       scopes.pop();
       fixedScopes.pop();
+      characteristicScopes.pop();
     }
   }
 
@@ -1070,18 +1090,22 @@ test('counts computed setters, enum set events and aliased UUID generation', () 
 test('counts setter calls on characteristics but ignores property reads and unrelated calls', () => {
   // arrange
   const characteristicCall = sourceFileOf('service.getCharacteristic(hap.Characteristic.On).onSet(handler);');
+  const aliasedCall = sourceFileOf('const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.onSet(handler);');
   const propertyRead = sourceFileOf('const setter = characteristic.onSet; characteristic.onSet; characteristic["onSet"];');
   const unrelatedCall = sourceFileOf('other.onSet(handler);');
+  const unrelatedAlias = sourceFileOf('const control = other; control.onSet(handler);');
 
   // act
   const uses = {
     characteristicCall: hapUses(characteristicCall).onSet,
+    aliasedCall: hapUses(aliasedCall).onSet,
     propertyRead: hapUses(propertyRead).onSet,
     unrelatedCall: hapUses(unrelatedCall).onSet,
+    unrelatedAlias: hapUses(unrelatedAlias).onSet,
   };
 
   // assert
-  assert.deepStrictEqual(uses, { characteristicCall: true, propertyRead: false, unrelatedCall: false });
+  assert.deepStrictEqual(uses, { characteristicCall: true, aliasedCall: true, propertyRead: false, unrelatedCall: false, unrelatedAlias: false });
 });
 
 test('counts local aliases of HAP UUID generation and set events', () => {
