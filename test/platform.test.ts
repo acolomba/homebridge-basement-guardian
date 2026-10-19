@@ -1529,6 +1529,69 @@ describe('BasementGuardianPlatform', () => {
 });
 
 describe('configureAccessory', () => {
+  test('keeps ownership and prepares later restored services when an early service throws', async (t: TestContext) => {
+    // arrange
+    const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
+    const flood = restoredAccessory.addService(HAP.Service.LeakSensor, 'Sump Pit Flood', 'sump-pit-flood');
+    flood.updateCharacteristic(HAP.Characteristic.LeakDetected, HAP.Characteristic.LeakDetected.LEAK_DETECTED);
+    flood.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    const offline = restoredAccessory.addService(HAP.Service.ContactSensor, 'Basement Guardian Offline', 'basement-guardian-offline');
+    offline.updateCharacteristic(HAP.Characteristic.ContactSensorState, CONTACT_NOT_DETECTED);
+    offline.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+    const selfTest = restoredAccessory.addService(HAP.Service.Switch, 'System Self-Test', 'system-self-test');
+    selfTest.updateCharacteristic(HAP.Characteristic.On, false);
+    const alarmMute = restoredAccessory.addService(HAP.Service.Switch, 'Alarm Mute', 'alarm-mute');
+    alarmMute.updateCharacteristic(HAP.Characteristic.On, false);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic restored marking failure');
+    });
+    const messages: string[] = [];
+    const httpFetch = mock<HttpFetch>({ exactParams: true, name: 'vendor HTTP' });
+    const platform = new BasementGuardianPlatform(createRecordingLog(messages), emptyConfig(), fakeDiscoveryApi([]), { httpFetch });
+    when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
+    messages.length = 0;
+    let thrown: unknown = undefined;
+
+    // act
+    try {
+      platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+    } catch (error: unknown) {
+      thrown = error;
+    }
+
+    const configureMessages = [...messages];
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        threw: thrown === undefined ? undefined : 'restored service failure escaped',
+        owned: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
+        flood: {
+          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+        },
+        offline: {
+          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+        },
+        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On)?.value },
+        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On)?.value },
+        messages: configureMessages,
+      },
+      {
+        threw: undefined,
+        owned: true,
+        flood: { statusActive: true, leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED },
+        offline: { statusActive: false, contactState: CONTACT_NOT_DETECTED },
+        selfTest: { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+        alarmMute: { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
+        messages: ['Unable to prepare every restored accessory service.', 'Loading accessory from cache:'],
+      },
+    );
+    verify(httpFetch);
+    verify(platform.api);
+  });
+
   test('records a restored accessory under its UUID', () => {
     // arrange
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });

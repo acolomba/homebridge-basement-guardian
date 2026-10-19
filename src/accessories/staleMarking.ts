@@ -57,36 +57,40 @@ import type { CharacteristicClass } from './customCharacteristics.js';
 import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
-// The one walk all three passes make: every restored service carrying the
+// The one walk both restart passes make: every restored service carrying the
 // characteristic that decides the pass applies to it, acted on and counted.
 //
-// It is extracted rather than written out three times because the three differ
+// It is extracted rather than written out twice because the passes differ
 // only in that guard and that act, and a guard tightened in one copy and not
-// the others would silently change which services a pass reaches. The health
-// gate fails a build on a third near-identical block as well, so keeping the
-// copies was not an option either.
+// the other would silently change which services a pass reaches. A failed
+// service is counted and does not prevent a later one from being prepared.
 //
 // The guard stays `testCharacteristic` for every pass. A service that never
 // carried the characteristic does not gain one, because adding a characteristic
 // on upgrade changes a published identity a user's automations may already
 // attach to, and a cache an older release wrote is exactly the input these
 // passes exist to handle.
-function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): number {
+function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): { reached: number; failed: number } {
   let reached = 0;
+  let failed = 0;
 
   for (const service of accessory.services) {
-    if (service.testCharacteristic(guard)) {
-      act(service);
-      reached += 1;
+    try {
+      if (service.testCharacteristic(guard)) {
+        act(service);
+        reached += 1;
+      }
+    } catch {
+      failed += 1;
     }
   }
 
-  return reached;
+  return { reached, failed };
 }
 
 /**
  * Withdraws trust from every restored service that already reports it, and
- * answers how many it withdrew.
+ * answers how many it withdrew or could not mark.
  *
  * The count is the assertable evidence that the pass did work. A pass that
  * walked an empty service list and a pass that marked every service report the
@@ -104,7 +108,7 @@ function overServicesCarrying(accessory: PlatformAccessory, guard: Characteristi
  * this plugin issued to the device, and the accessories tier carries one write
  * verb precisely so that cannot happen by accident.
  */
-export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): number {
+export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): { reached: number; failed: number } {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
     publishValue(service, hap.Characteristic.StatusActive, false);
   });
@@ -112,7 +116,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
 
 /**
  * Refuses a press on every restored control, and answers how many controls it
- * armed.
+ * armed or could not arm.
  *
  * The guard is the control write surface itself, so the pass reaches exactly
  * the services a controller can act on and leaves every sensor alone. A sensor
@@ -127,7 +131,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
  * refusal, its status table and its clearing push, so a restored control and a
  * live one cannot answer one condition two ways (D-07, D-08).
  */
-export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): number {
+export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): { reached: number; failed: number } {
   return overServicesCarrying(accessory, hap.Characteristic.On, (service) => {
     bindRestoredControlRefusal({ hap, log, timers, service, accessoryName: accessory.displayName });
   });

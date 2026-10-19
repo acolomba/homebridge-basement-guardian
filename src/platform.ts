@@ -656,9 +656,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * Records an accessory that Homebridge restored from its cache, after
-   * withdrawing trust from every service that already reports it and refusing
-   * a press on every control it carries.
+   * Records an accessory that Homebridge restored from its cache, then
+   * withdraws trust from every service that already reports it and refuses a
+   * press on every control it carries.
    *
    * This is the only code that runs while a restored accessory exists and no
    * fresh data does. HAP serves the cached values from the moment the bridge
@@ -668,19 +668,23 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
    * without the marking a tile reads as vouched for, and without the refusal a
    * press reports success for a command that never left (RES-04, D-06, D-07).
    *
-   * One log line covers both passes. They report on the same accessory at the
-   * same moment, and a second line would read as a second event.
+   * One summary line covers both passes. A failed service also produces one
+   * fixed diagnostic with no cached accessory or device details.
    */
   configureAccessory(accessory: PlatformAccessory): void {
+    this.accessories.set(accessory.UUID, accessory);
     const { hap } = this.api;
     const marked = markRestoredServicesStale(accessory, hap);
     const refusing = refuseRestoredControls(accessory, hap, this.log, systemTimers);
 
+    if (marked.failed + refusing.failed > 0) {
+      this.log.error('Unable to prepare every restored accessory service.');
+    }
+
     this.log.info(
       'Loading accessory from cache:',
       accessory.displayName,
-      `(${String(marked)} services no longer vouched for, ${String(refusing)} controls refusing presses)`,
+      `(${String(marked.reached)} services no longer vouched for, ${String(refusing.reached)} controls refusing presses)`,
     );
-    this.accessories.set(accessory.UUID, accessory);
   }
 }

@@ -192,7 +192,7 @@ async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
 }
 
 function markStale(accessory: HarnessPlatformAccessory): number {
-  return markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+  return markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE).reached;
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
@@ -204,7 +204,7 @@ function refuseControls(accessory: HarnessPlatformAccessory): number {
 }
 
 function refuseControlsWith(accessory: HarnessPlatformAccessory, log: Logging, timers: Timers): number {
-  return refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers);
+  return refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, log, timers).reached;
 }
 
 // What a characteristic holds, and what a controller read of it answers. The read is the whole
@@ -225,6 +225,31 @@ async function readOf(service: FakeHapService, characteristicClass: FakeCharacte
 }
 
 describe('markRestoredServicesStale', () => {
+  test('counts a later stale mark after the first restored service rejects its update', (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const battery = batteryReporting(accessory, true);
+    t.mock.method(flood, 'updateCharacteristic', () => {
+      throw new Error('synthetic restored marking failure');
+    });
+
+    // act
+    const result = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        result,
+        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel)?.value,
+      },
+      { result: { reached: 1, failed: 1 }, flood: true, battery: false, leakDetected: 1, batteryLevel: 80 },
+    );
+  });
+
   test('counts every restored service that already reports whether the plugin vouches for it', () => {
     // arrange
     const accessory = restoredAccessory();
@@ -458,6 +483,31 @@ describe('markTrustReportsUnreadable', () => {
 });
 
 describe('refuseRestoredControls', () => {
+  test('arms a later restored control when the first rejects its refusal handler', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const first = switchCarryingNoTrust(accessory);
+    const later = selfTestControl(accessory);
+    const firstOn = first.getCharacteristic(HAP.Characteristic.On);
+    assert.ok(firstOn);
+    t.mock.method(firstOn, 'onSet', () => {
+      throw new Error('synthetic restored binding failure');
+    });
+
+    // act
+    const result = refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, silentLog(), heldTimers());
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        result,
+        laterPress: await pressOutcomeOf(later),
+        laterOn: later.getCharacteristic(HAP.Characteristic.On)?.value,
+      },
+      { result: { reached: 1, failed: 1 }, laterPress: NOT_ALLOWED_IN_CURRENT_STATE, laterOn: false },
+    );
+  });
+
   // A restored accessory carries both control Switches, so a pass that armed only the first Switch it
   // found would leave the second one storing a press and reporting success.
   test('refuses a press on every restored control and counts the controls it armed', async () => {
