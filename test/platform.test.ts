@@ -1145,6 +1145,18 @@ describe('BasementGuardianPlatform', () => {
     const [registered, announceRegistration] = completionSignal();
     const [offlineWithdrawn, announceOfflineWithdrawal] = completionSignal();
     t.mock.timers.enable({ apis: ['setTimeout'] });
+    const firstDevice = geminiWireDeviceList().devices[0];
+
+    if (firstDevice === undefined) {
+      throw new Error('the synthetic inventory carries no device');
+    }
+
+    const inventory = {
+      devices: [
+        firstDevice,
+        { ...firstDevice, deviceId: SECOND_DEVICE_ID, name: 'Second System', attributes: { productLine: 'wayneWater', serialNumber: 'serial-2' } },
+      ],
+    };
     let deviceListCalls = 0;
     t.mock.method(globalThis, 'fetch', (input: string | URL) => {
       const url = input.toString();
@@ -1157,7 +1169,7 @@ describe('BasementGuardianPlatform', () => {
         deviceListCalls += 1;
 
         return deviceListCalls === 1
-          ? Promise.resolve(new Response(JSON.stringify(geminiWireDeviceList()), { status: 200 }))
+          ? Promise.resolve(new Response(JSON.stringify(inventory), { status: 200 }))
           : Promise.resolve(new Response('{}', { status: 503 }));
       }
 
@@ -1169,12 +1181,13 @@ describe('BasementGuardianPlatform', () => {
     const { user } = await expectStoragePath(t, api);
     when(() => api.on('didFinishLaunching', captureListener(listeners))).thenReturn(api);
     when(() => api.on('shutdown', captureListener(listeners))).thenReturn(api);
-    // Twice while registering the accessory: the UUID derivation, then the
-    // accessory factory declaring this plugin's own HomeKit types.
+    // Each accessory reads HAP for its UUID and for the plugin's HomeKit types.
     when(() => api.hap)
       .thenReturn(HAP_NAMESPACE)
+      .times(4);
+    when(() => api.platformAccessory)
+      .thenReturn(PLATFORM_ACCESSORY)
       .times(2);
-    when(() => api.platformAccessory).thenReturn(PLATFORM_ACCESSORY);
     when(() => {
       api.registerPlatformAccessories(
         PLUGIN_NAME,
@@ -1192,6 +1205,27 @@ describe('BasementGuardianPlatform', () => {
           }
 
           registeredAccessories.push(accessory);
+          return true;
+        }),
+      );
+    }).thenReturn(undefined);
+    when(() => {
+      api.registerPlatformAccessories(
+        PLUGIN_NAME,
+        PLATFORM_NAME,
+        It.matches((accessories: PlatformAccessory[]) => {
+          const accessory = accessories[0];
+          if (
+            accessories.length !== 1 ||
+            !(accessory instanceof HarnessPlatformAccessory) ||
+            accessory.UUID !== SECOND_ACCESSORY_UUID ||
+            accessory.displayName !== 'Second System' ||
+            !isDeepStrictEqual(accessory.context.device, { deviceId: SECOND_DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID })
+          ) {
+            return false;
+          }
+
+          registeredAccessories.push(accessory);
           announceRegistration();
           return true;
         }),
@@ -1204,14 +1238,23 @@ describe('BasementGuardianPlatform', () => {
     launch?.();
     await registered;
     await settle();
-    const accessory = registeredAccessories[0];
+    const firstAccessory = registeredAccessories[0];
+    const secondAccessory = registeredAccessories[1];
 
-    if (accessory === undefined) {
-      throw new Error('the platform registered no accessory');
+    if (firstAccessory === undefined || secondAccessory === undefined) {
+      throw new Error('the platform did not register both accessories');
     }
 
-    const beforeAnyFailure = statusActiveOf(accessory, 'Basement Guardian Offline');
-    const offlineService = accessory.getServiceById(HAP.Service.ContactSensor, 'basement-guardian-offline');
+    function trustRowsOf(accessory: FakeAccessory): { offline: unknown; flood: unknown; offlineState: unknown } {
+      return {
+        offline: statusActiveOf(accessory, 'Basement Guardian Offline'),
+        flood: statusActiveOf(accessory, 'Sump Pit Flood'),
+        offlineState: contactStateOf(accessory, 'basement-guardian-offline'),
+      };
+    }
+
+    const beforeAnyFailure = { first: trustRowsOf(firstAccessory), second: trustRowsOf(secondAccessory) };
+    const offlineService = firstAccessory.getServiceById(HAP.Service.ContactSensor, 'basement-guardian-offline');
 
     if (offlineService === undefined) {
       throw new Error('the platform published no offline service');
@@ -1232,21 +1275,32 @@ describe('BasementGuardianPlatform', () => {
     // act
     t.mock.timers.tick(300_000);
     await settle();
+    const afterFirstFailure = { first: trustRowsOf(firstAccessory), second: trustRowsOf(secondAccessory) };
     t.mock.timers.tick(300_000);
     await settle();
     await offlineWithdrawn;
+    const afterSecondFailure = { first: trustRowsOf(firstAccessory), second: trustRowsOf(secondAccessory) };
     shutdown?.();
     await settle();
 
     // assert
     assert.deepStrictEqual(
+      { beforeAnyFailure, afterFirstFailure, afterSecondFailure, deviceListCalls },
       {
-        beforeAnyFailure,
-        offline: statusActiveOf(accessory, 'Basement Guardian Offline'),
-        flood: statusActiveOf(accessory, 'Sump Pit Flood'),
-        offlineState: contactStateOf(accessory, 'basement-guardian-offline'),
+        beforeAnyFailure: {
+          first: { offline: true, flood: true, offlineState: CONTACT_DETECTED },
+          second: { offline: true, flood: true, offlineState: CONTACT_DETECTED },
+        },
+        afterFirstFailure: {
+          first: { offline: true, flood: true, offlineState: CONTACT_DETECTED },
+          second: { offline: true, flood: true, offlineState: CONTACT_DETECTED },
+        },
+        afterSecondFailure: {
+          first: { offline: false, flood: true, offlineState: CONTACT_DETECTED },
+          second: { offline: false, flood: true, offlineState: CONTACT_DETECTED },
+        },
+        deviceListCalls: 3,
       },
-      { beforeAnyFailure: true, offline: false, flood: true, offlineState: CONTACT_DETECTED },
     );
     verify(user);
     verify(api);
