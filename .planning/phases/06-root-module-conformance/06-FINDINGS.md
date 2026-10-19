@@ -111,10 +111,14 @@ Independent `entry_post_debug_review` read all six complete ENTRY files at `b24c
 
 | ID | Current-code review result | Evidence | Closure status |
 | --- | --- | --- | --- |
-| CR-06-ENTRY-019 | Provisionally fixed | `src/logging.ts@b24cd83:33` masks the remainder, including braces, quotes, and newlines; exact delegate assertions at `test/logging.test.ts:447–466` pass | Pending fresh gates and explicit Homebridge result |
-| CR-06-ENTRY-020 | Provisionally fixed | Original-text span union at `src/logging.ts@b24cd83:72–109` retains field recognition; exact delegate assertion at `test/logging.test.ts:468–481` passes | Pending fresh gates and explicit Homebridge result |
+| CR-06-ENTRY-019 | Fixed in current code | `src/logging.ts@b24cd83:33` masks the remainder, including braces, quotes, and newlines; exact delegate assertions at `test/logging.test.ts:447–466` pass | Closed after fresh gates and explicit Homebridge result |
+| CR-06-ENTRY-020 | Fixed in current code | Original-text span union at `src/logging.ts@b24cd83:72–109` retains field recognition; exact delegate assertion at `test/logging.test.ts:468–481` passes | Closed after fresh gates and explicit Homebridge result |
 
-The independent review accepted no new ENTRY cause and assigned no ENTRY-021. Adjacent newline, registered-secret overlap, all logger routes, settings identity, index registration, and six headers had concrete passing source/test evidence in `06-ENTRY-REVIEW.md`. At the reviewed executable inputs on Node v26.12.0, the three compiled ENTRY owners passed 52/52 tests, pairing passed, fresh isolated direct coverage passed all three 100% thresholds, and fresh `npm run check` passed static, unpaired, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated direct pairs. The executable-input diff from `b24cd83` was empty; the only untracked path was the non-executable debug session. The reviewed code has zero accepted open findings, but ENTRY is **not closed**: the original real Homebridge logging workflow result is still required. PLATFORM dispatch remains blocked.
+The independent review accepted no new ENTRY cause and assigned no ENTRY-021. Adjacent newline, registered-secret overlap, all logger routes, settings identity, index registration, and six headers had concrete passing source/test evidence in `06-ENTRY-REVIEW.md`. At the reviewed executable inputs on Node v26.12.0, the three compiled ENTRY owners passed 52/52 tests, pairing passed, fresh isolated direct coverage passed all three 100% thresholds, and fresh `npm run check` passed static, unpaired, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated direct pairs. The executable-input diff from `b24cd83` was empty; the only untracked path was the non-executable debug session.
+
+### Post-debug closure
+
+The maintainer reported **“Confirmed fixed”** for the original Homebridge logging workflow. Commit `5e4c9d4` archived the resolved debug record. The accepted ENTRY-019 and ENTRY-020 causes are **fixed in the separate post-debug closure**, with code commits `24f3620` and `2d291cc`; their historical round-four rows and STOP above remain unchanged. The independent current-code review found zero accepted open IDs, and the direct, full, and human gates passed on unchanged executable inputs. ENTRY is closed without treating this validation as correction round five. PLATFORM dispatch is released.
 
 ## Evidence
 

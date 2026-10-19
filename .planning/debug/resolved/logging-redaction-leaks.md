@@ -122,7 +122,7 @@ started: These cases were found in Phase 6 ENTRY correction round 4 at source re
   implication: Automated repair is complete at `2d291cc`. Human real-workflow confirmation is required before resolving or archiving the session; the Phase 6 round-four STOP remains in effect.
 - timestamp: 2026-10-19T16:55:12.000Z
   checked: Maintainer response to the human-verify checkpoint for the original Homebridge logging workflow.
-  found: 'Confirmed fixed.'
+  found: 'Confirmed fixed'
   implication: Human verification is complete. The debug session can be resolved and archived without changing the Phase 6 review or findings ledgers.
 - timestamp: 2026-10-19T16:55:46.000Z
   checked: Archived record, document-only pre-commit pass, and Fallow audit against `HEAD` (`c46a2d9`).
@@ -142,7 +142,7 @@ verification:
   guardrail_verdict: accepted
   full_check: { result: pass, command: "npm_config_cache=/private/tmp/guardian-npm-cache-20261019 npm run check", node: "v26.12.0", scope: "static, unpaired, 104 Cucumber scenarios, 1156 steps, 43 direct pairs" }
   commit_hooks: { result: pass, commits: ["24f3620", "2d291cc"] }
-  human_verify: { result: pass, response: 'Confirmed fixed.' }
+  human_verify: { result: pass, response: 'Confirmed fixed' }
 oracle_type: specified
 files_changed: [src/logging.ts, test/logging.test.ts]
 commits: [24f3620, 2d291cc]

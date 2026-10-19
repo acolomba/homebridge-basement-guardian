@@ -32,13 +32,12 @@ created: "2026-10-19"
 - Reuse passing evidence only for identical inputs under
   `.agents/skills/local-verification/rules/gates.md`.
 
-ENTRY's correction round four remains a cap STOP with CR-06-ENTRY-019/020
-open in the historical ledger. Debug commits `24f3620` and `2d291cc`
-passed their automated checks, but the debug session awaits the maintainer's
-real Homebridge workflow result. Plan 06-04 now requires one separate
-post-debug complete-file review and explicit human confirmation before clean
-closure. Its new validation does not increment the correction-round counter.
-Plans 06-05 through 06-08 remain blocked until that closure is recorded.
+ENTRY's correction round four remains a historical cap STOP with
+CR-06-ENTRY-019/020 open at that revision. The separate post-debug review
+found both fixed in the current code. Debug commits `24f3620` and `2d291cc`,
+fresh automated gates, and the maintainer's “Confirmed fixed” Homebridge
+workflow result close ENTRY without incrementing the correction-round counter.
+Plans 06-05 through 06-08 may proceed in dependency order.
 
 ## Per-Task Verification Map
 
@@ -53,7 +52,7 @@ Plans 06-05 through 06-08 remain blocked until that closure is recorded.
 | 06-03-02 | 06-03 | 3 | ROOT-01 (BUG-01 applied) | T-06-04 | Logger redacts all routed secrets | direct coverage | `npm run test:coverage:direct -- src/logging.ts` | ✅ | ⬜ pending |
 | 06-03-03 | 06-03 | 3 | ROOT-01 | T-06-05 | Settings identity remains stable | direct coverage + full | `npm run test:coverage:direct -- src/logging.ts src/settings.ts`; `npm run check` | ✅ | ⬜ pending |
 | 06-04-01 | 06-04 | 4 | ROOT-01 (PROC-01/02 applied) | T-06-06/07/17 | One independent post-debug review covers all six ENTRY files and 019/020 plus adjacent cases | owner unit + pairing + manual review | `npm run build:test && node --test dist-test/test/logging.test.js dist-test/test/settings.test.js dist-test/test/index.test.js`; `npm run --silent test:corresponding` | ✅ | ✅ review clean at `b24cd83`; 52/52 owner tests and pairing pass |
-| 06-04-02 | 06-04 | 4 | ROOT-01 (BUG-01 applied) | T-06-07/17 | True debug ancestry, explicit real Homebridge result, and current clean gates close ENTRY separately from round four | direct coverage + full + human result | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts`; `npm run check` | ✅ | ⬜ automated gates pass on reviewed inputs; human workflow result required |
+| 06-04-02 | 06-04 | 4 | ROOT-01 (BUG-01 applied) | T-06-07/17 | True debug ancestry, explicit real Homebridge result, and current clean gates close ENTRY separately from round four | direct coverage + full + human result | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts`; `npm run check` | ✅ | ✅ all automated gates pass; maintainer confirmed the Homebridge workflow |
 | 06-05-01 | 06-05 | 5 | ROOT-01 (PROC-01 applied) | T-06-08/09/10 | One reviewer covers full 673/3781 platform pair at current spans | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
 | 06-05-02 | 06-05 | 5 | ROOT-01 (PROC-01/02 applied) | T-06-08/09/10/11 | PLATFORM round 0 has stable IDs and no source edits | direct coverage + ledger | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
 | 06-06-01 | 06-06 | 6 | ROOT-01 (BUG-01 applied) | T-06-12/13 | Accepted initial behavior causes have RED-before-GREEN evidence | direct coverage | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |

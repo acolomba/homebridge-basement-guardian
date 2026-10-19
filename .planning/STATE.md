@@ -5,16 +5,16 @@ milestone_name: Code Review Sweep
 current_phase: 6
 current_phase_name: Root Module Conformance
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-10-19T15:22:24.010Z"
+stopped_at: Completed 06-04-PLAN.md; 06-05 ready
+last_updated: "2026-10-19T16:57:34.362Z"
 last_activity: 2026-10-19
 last_activity_desc: Phase 6 execution started
-state_head: add5a3a84654a51cefd13c75af92e2d93c08b686
+state_head: 5e4c9d4c26c7a806436dcfb7c2630ef20ddaa61b
 progress:
   total_phases: 8
   completed_phases: 5
   total_plans: 53
-  completed_plans: 48
+  completed_plans: 49
   percent: 63
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-19)
 ## Current Position
 
 Phase: 6 (Root Module Conformance) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-10-19 — Phase 6 execution started
 
@@ -557,7 +557,6 @@ Opened by the Phase 3 discussion, resolved by Phase 3 research:
 - Phase 3: test/accessories/basementGuardian.test.ts still carries a second hand-built HAP stand-in. Migrating it now would weaken one assertion from undefined to the empty string and drop a branch the pair 100% coverage needs. Migrate when 03-04 or 03-06 reworks its AccessoryInformation assertions; new accessories unit tests must import features/support/fakeHap.ts rather than grow their own.
 - ~~A shadow that goes silent never releases the telemetry watermark~~ — **RESOLVED 2026-09-02, corrected here 2026-09-03.** Plan 05-11 released the watermark on two missed heartbeats, plan 05-14 made the release per device, and `05-CONTEXT.md` D-13 ratifies it as a narrow amendment to D-15 and SYNC-03. Ledger entry 5 reads `fixed`. This line asked for a decision that had already been made, shipped and requirement-amended; it stood for a day because nothing owned it
 - V11 is a null result: no shipped scenario reconnects and then publishes a heartbeat, so neither the cumulative-wait mutation nor the per-connection-reset mutation fails anything. The per-connection wait is pinned only by a state assertion. 05.1-04's reconnecting scenario did not close this — `05.1-07-SUMMARY.md` carries V11 forward as still unpinned, alongside V9's literal wording, in the phase's final validation record.
-- Phase 6 ENTRY D-04 round-four cap: CR-06-ENTRY-019 and CR-06-ENTRY-020 remain open privacy blockers in src/logging.ts; no further correction round is authorized, and PLATFORM dispatch is blocked pending maintainer decision.
 
 ## Deferred Verification
 
@@ -669,8 +668,8 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 ## Session Continuity
 
-Last session: 2026-10-19T14:27:14.818Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-10-19T16:57:33.797Z
+Stopped at: Completed 06-04-PLAN.md; 06-05 ready
 Resume file: None
 
 The notes below describe the v1.0 milestone, which shipped on 2026-10-13. They stay
