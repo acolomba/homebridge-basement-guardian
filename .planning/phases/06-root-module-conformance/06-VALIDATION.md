@@ -32,6 +32,14 @@ created: "2026-10-19"
 - Reuse passing evidence only for identical inputs under
   `.agents/skills/local-verification/rules/gates.md`.
 
+ENTRY's correction round four remains a cap STOP with CR-06-ENTRY-019/020
+open in the historical ledger. Debug commits `24f3620` and `2d291cc`
+passed their automated checks, but the debug session awaits the maintainer's
+real Homebridge workflow result. Plan 06-04 now requires one separate
+post-debug complete-file review and explicit human confirmation before clean
+closure. Its new validation does not increment the correction-round counter.
+Plans 06-05 through 06-08 remain blocked until that closure is recorded.
+
 ## Per-Task Verification Map
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
@@ -44,8 +52,8 @@ created: "2026-10-19"
 | 06-03-01 | 06-03 | 3 | ROOT-01 (PROC-01 applied) | T-06-04/05 | Six complete ENTRY files reviewed | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
 | 06-03-02 | 06-03 | 3 | ROOT-01 (BUG-01 applied) | T-06-04 | Logger redacts all routed secrets | direct coverage | `npm run test:coverage:direct -- src/logging.ts` | ✅ | ⬜ pending |
 | 06-03-03 | 06-03 | 3 | ROOT-01 | T-06-05 | Settings identity remains stable | direct coverage + full | `npm run test:coverage:direct -- src/logging.ts src/settings.ts`; `npm run check` | ✅ | ⬜ pending |
-| 06-04-01 | 06-04 | 4 | ROOT-01 (BUG-01 applied) | T-06-06 | One existing Homebridge registration | direct coverage | `npm run test:coverage:direct -- src/index.ts` | ✅ | ⬜ pending |
-| 06-04-02 | 06-04 | 4 | ROOT-01 (PROC-02 applied) | T-06-04/06/07 | ENTRY converges or reports stop | direct coverage + full | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts`; `npm run check` | ✅ | ⬜ pending |
+| 06-04-01 | 06-04 | 4 | ROOT-01 (PROC-01/02 applied) | T-06-06/07/17 | One independent post-debug review covers all six ENTRY files and 019/020 plus adjacent cases | owner unit + pairing + manual review | `npm run build:test && node --test dist-test/test/logging.test.js dist-test/test/settings.test.js dist-test/test/index.test.js`; `npm run --silent test:corresponding` | ✅ | ⬜ pending; one review only |
+| 06-04-02 | 06-04 | 4 | ROOT-01 (BUG-01 applied) | T-06-07/17 | True debug ancestry, explicit real Homebridge result, and current clean gates close ENTRY separately from round four | direct coverage + full + human result | `npm run test:coverage:direct -- src/logging.ts src/settings.ts src/index.ts`; `npm run check` | ✅ | ⬜ pending; human workflow result required |
 | 06-05-01 | 06-05 | 5 | ROOT-01 (PROC-01 applied) | T-06-08/09/10 | One reviewer covers full 673/3781 platform pair at current spans | pairing + manual review | `npm run --silent test:corresponding` | ✅ | ⬜ pending |
 | 06-05-02 | 06-05 | 5 | ROOT-01 (PROC-01/02 applied) | T-06-08/09/10/11 | PLATFORM round 0 has stable IDs and no source edits | direct coverage + ledger | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
 | 06-06-01 | 06-06 | 6 | ROOT-01 (BUG-01 applied) | T-06-12/13 | Accepted initial behavior causes have RED-before-GREEN evidence | direct coverage | `npm run test:coverage:direct -- src/platform.ts` | ✅ | ⬜ pending |
@@ -68,7 +76,8 @@ Phase 6 ledger and review protocol before the first independent review.
 | Behavior | Requirement | Why Manual | Test Instructions |
 | --- | --- | --- | --- |
 | Complete-file style, comment, and test-rule review | ROOT-01 | Reviewer judgment is not a runtime property | Read all twelve current files under the project rulebooks; log rule, location, severity, and disposition for each finding. |
-| Review convergence | ROOT-01 (PROC-02 applied) | Independent correction rounds require judgment | Reconcile opening, fixed, new, reopened, and closing IDs; apply the four-round and no-progress stop rules. |
+| Review convergence | ROOT-01 (PROC-02 applied) | Independent correction rounds require judgment | Preserve the round-four STOP and its exact IDs; conduct one separate post-debug full-file review, then halt on any accepted open finding. |
+| Original Homebridge logging workflow | ROOT-01 (BUG-01 applied) | The agent has no access to the maintainer's original real Homebridge workflow | The maintainer repeats that workflow and explicitly reports whether any unredacted credential suffix or unregistered password value reaches Homebridge logs, without sharing actual credential bytes. No response leaves 06-04 and PLATFORM blocked. |
 
 ## Validation Sign-Off
 

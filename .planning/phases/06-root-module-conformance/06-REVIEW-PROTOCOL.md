@@ -18,6 +18,44 @@ First triage the complete files and commit the batch report and ledger. Fix acce
 
 Stop all batch dispatches immediately if a round has open findings and makes no progress (`closing >= opening`), any fixed finding reopens, or correction round four is reached, even when round four closes cleanly. Record the actual counts, open IDs, attempted repairs, and stop reason. Do not silently reset the counter or convert a pause into a fix. A maintainer decision is required before work continues past a stop. Phase 5's `GATES` cap exception does not apply to Phase 6.
 
+## Post-debug ENTRY validation after the round-four STOP
+
+D-07 records the maintainer's separate “Yes, debug and replan
+(Recommended)” decision. Preserve the historical ENTRY round-four row:
+opening 1, fixed 1, rejected 0, new 2, reopened 0, closing 2, open IDs
+CR-06-ENTRY-019 and CR-06-ENTRY-020. Focused GSD debug subsequently
+recorded active RED and revert/reconfirm runs and committed `24f3620` and
+`2d291cc`. Its record is not a Phase 6 planning-only RED evidence commit;
+record the actual cross-workflow sequence without inventing one.
+
+Run exactly one independent post-debug validation review at a recorded current
+revision. The reviewer reads all six complete ENTRY source/test files, checks
+the exact ENTRY-019 and ENTRY-020 delegate outputs, and probes adjacent
+redaction routes, newlines, registered-secret overlap, headers, settings,
+and registration. Record complete spans, rule-qualified locations, stable
+IDs, and actual executable-input diff in `06-ENTRY-REVIEW.md` and
+`06-FINDINGS.md`. Append a separately named post-debug validation result;
+do not increment or rewrite the four-round correction counter. Use a new
+stable ENTRY ID for a genuinely new cause and retain an existing ID for the
+same cause. If any accepted finding remains or appears, stop with exact open
+IDs and require a new maintainer decision. Do not fix and re-review
+automatically.
+
+Clean ENTRY closure requires that one review to find zero accepted open
+findings, 100% isolated direct coverage for logging, settings, and index,
+a fresh passing `npm run check` on the reviewed executable inputs, and an
+explicit maintainer result from the original Homebridge logging workflow
+confirming no unredacted suffix or unregistered password value in its logs.
+An unanswered human check is pending, not a pass. Record only the result,
+not actual credential bytes. Compare the debug's pre-fix source, active RED
+assertions, and timestamps with its GREEN commits to assess the BUG-01
+behavior objective; if that proof is ambiguous, stop for a new decision.
+Record debug evidence and commit ancestry truthfully, then append closure
+without changing the historical round-four STOP row. Plans 06-05 through
+06-08 may dispatch only
+after 06-04 records this clean closure and completes; an open finding,
+failed gate, or pending human result keeps PLATFORM blocked.
+
 ## Genuine bugs and assertion controls
 
 For a genuine behavior bug, keep production unchanged, add an active regression to the owning test, compile, and run the named test. RED must execute and fail on the intended assertion. A setup failure, no tests, a skipped test, or an environmental error is not RED. Save complete native TAP output, command, exit, target, expected and actual behavior, unchanged source commit, full regression patch, semantic assessment, Node version, and timestamps. Validate the record with `node .codex/gsd-core/bin/gsd-tools.cjs check tdd-red-evidence <record.json> --raw` and require `RED_EVIDENCE_OK` and semantic review. Commit **only** the planning RED evidence before the minimum GREEN production/test change; leave the active regression in the working tree. Verify the evidence commit's paths, then run GREEN and direct coverage. Never bypass normal hooks or rewrite history.

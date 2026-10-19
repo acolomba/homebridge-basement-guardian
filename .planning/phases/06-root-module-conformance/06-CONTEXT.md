@@ -1,8 +1,8 @@
 # Phase 6: Root Module Conformance - Context
 
 **Gathered:** 2026-10-19
-**Status:** Ready for planning
-**Mode:** Interactive carry-forward. The maintainer resolved the only open scope decision; earlier phase policy answers the remaining implementation choices.
+**Status:** Replanned; ENTRY closure pending human workflow verification
+**Mode:** Interactive carry-forward with explicit test-inventory and ENTRY stop-recovery decisions.
 
 <domain>
 ## Phase Boundary
@@ -50,6 +50,19 @@ repository-level tests or the accessory, runtime, device, or Cucumber trees.
   modified pair keeps 100% direct line, function, and branch coverage when
   run alone. Run the full repository check at phase gates; use offline local
   stand-ins for external systems.
+- **D-07:** After the round-four STOP with CR-06-ENTRY-019 and
+  CR-06-ENTRY-020 open, the maintainer chose “Yes, debug and replan
+  (Recommended).” The focused GSD debug recorded active RED and
+  revert/reconfirm evidence, then committed logger repairs `24f3620` and
+  `2d291cc`. This authorizes one bounded post-debug ENTRY validation and
+  closure review of all six files, separate from the capped correction-round
+  counter. Preserve round four, its counts, IDs, and STOP. Do not create a
+  fifth correction round or an automatic repair/re-review loop. Any remaining
+  or new accepted finding stops with exact IDs and needs a new decision.
+  Clean closure also requires explicit maintainer confirmation that the
+  original Homebridge logging workflow exposes no credential content; silence
+  is not confirmation. The debug workflow's RED record is distinct from a
+  Phase 6 planning-only RED evidence commit and must be described accurately.
 
 ### The agent's Discretion
 
@@ -73,6 +86,8 @@ repository-level tests or the accessory, runtime, device, or Cucumber trees.
 - `.agents/skills/typescript-style/SKILL.md` and `.agents/skills/typescript-unit-tests/SKILL.md` — authoritative style and test rules.
 - `.agents/skills/local-verification/SKILL.md` and `.agents/skills/committing/SKILL.md` — check and commit gates.
 - `.agents/skills/cucumber/SKILL.md` — applies if a bounded change touches `features/**`.
+- `.planning/debug/logging-redaction-leaks.md` — focused debug record and
+  pending real Homebridge verification for ENTRY-019/020.
 
 </canonical_refs>
 
