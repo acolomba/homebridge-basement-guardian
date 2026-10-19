@@ -2279,3 +2279,11 @@ record checks above.
   evidence is the accepted conformance boundary.
 
 All four judgments remain unresolved by this automated closeout.
+
+#### Subsequent maintainer acceptance
+
+On 2026-10-19 the maintainer answered "Accept" to the bundled question about
+the revised Phase 5 evidence for ACC-01, with the round-15 STOP and two scanner
+findings retained. `05-UAT.md` records the single response against E-05-01 and
+P-05-01 through P-05-03. This acceptance does not change the GATES result,
+close findings 074/075, or make `--require-clean all` pass.

@@ -26,7 +26,7 @@
     {
       "number": "5",
       "name": "Accessories Conformance",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "6",
@@ -46,8 +46,8 @@
   ],
   "next": {
     "command": "/gsd-progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 5 of 8 · 50% · executing"
+    "label": "Advance to the next step (plan phase 6)",
+    "reason": "Phase 6 of 8 — needs a plan"
   },
-  "updated_at": "2026-10-18T13:50:09.357Z"
+  "updated_at": "2026-10-19T08:47:07.941Z"
 }

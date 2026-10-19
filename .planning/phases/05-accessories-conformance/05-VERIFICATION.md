@@ -1,8 +1,8 @@
 ---
 phase: 05-accessories-conformance
-verified: "2026-10-19T08:35:36Z"
-status: human_needed
-score: "8/12 checks verified; 4 maintainer judgments pending"
+verified: "2026-10-19T08:50:00Z"
+status: passed
+score: "12/12 checks verified; 4 by one bundled maintainer acceptance"
 covered_files:
   - .planning/phases/05-accessories-conformance/05-01-PLAN.md
   - .planning/phases/05-accessories-conformance/05-01-SUMMARY.md
@@ -61,29 +61,48 @@ flagged_assumptions:
     status: unresolved
     category: unclassified
     flagged: true
-    reason: "A maintainer must accept the concrete current-scope evidence as the ACC-01 boundary."
+    human_boundary_decision: pass
+    source: ".planning/phases/05-accessories-conformance/05-UAT.md#1-e-05-01-concrete-acc-01-boundary"
+    reason: "The maintainer accepted the concrete current-scope evidence as the ACC-01 boundary; the edge taxonomy remains unclassified and unresolved."
 prohibitions:
   - id: P-05-01
-    status: unverified
+    status: verified
     verification: judgment
-    flagged: true
+    flagged: false
+    automated_status: unverified
+    source: ".planning/phases/05-accessories-conformance/05-UAT.md#2-p-05-01-safety-preservation"
   - id: P-05-02
-    status: unverified
+    status: verified
     verification: judgment
-    flagged: true
+    flagged: false
+    automated_status: unverified
+    source: ".planning/phases/05-accessories-conformance/05-UAT.md#3-p-05-02-truthful-review-outcome"
   - id: P-05-03
-    status: unverified
+    status: verified
     verification: judgment
-    flagged: true
-human_verification:
+    flagged: false
+    automated_status: unverified
+    source: ".planning/phases/05-accessories-conformance/05-UAT.md#4-p-05-03-replacement-checks"
+judgment_resolutions:
   - id: E-05-01
-    test: "Accept or reject the revised concrete conformance boundary while the edge category remains unclassified."
+    reported: pass
+    decision: "Accept the revised concrete conformance boundary; leave edge taxonomy unresolved."
   - id: P-05-01
-    test: "Judge preservation of safety semantics, refusal behavior and stable identity."
+    reported: pass
+    decision: "Accept the bounded safety, refusal and identity evidence."
   - id: P-05-02
-    test: "Judge the truthful STOP disclosure and revised scope."
+    reported: pass
+    decision: "Accept the truthful STOP disclosure and revised scope."
   - id: P-05-03
-    test: "Judge whether lint and runtime evidence adequately replace the retired scanner cases."
+    reported: pass
+    decision: "Accept lint and runtime evidence as sufficient for the current scope."
+human_resolution:
+  accepted_by: maintainer
+  recorded_uat_updated: "2026-10-19T08:46:31Z"
+  user_response_timestamps: null
+  accepted_items: [E-05-01, P-05-01, P-05-02, P-05-03]
+  scope: "One bundled response, Accept, to the revised Phase 5 evidence question; UAT updated is the file-record timestamp, not the response time."
+human_verification: []
 ---
 
 # Phase 5 accessory conformance verification
@@ -92,10 +111,11 @@ human_verification:
 style, comment and unit-test rules; confirmed production bugs have RED
 regressions before fixes.
 
-**Status:** Human decision needed. The automated checks below passed. The
-historical GATES review stopped at round 15 with two valid findings against
-deleted scanner code. The maintainer authorized that retirement, but has not
-yet answered the four closeout judgments. ACC-01 stays Pending.
+**Status:** Passed after one bundled maintainer acceptance of the four
+closeout judgments. The automated checks below passed. The historical GATES
+review stopped at round 15 with two valid findings against retired scanner
+code. These remain open in the historical ledger; the old all-clean predicate
+still fails.
 
 ## Goal achievement
 
@@ -108,8 +128,8 @@ yet answered the four closeout judgments. ACC-01 stays Pending.
 | 5 | Confirmed bug histories retain RED-before-GREEN evidence | VERIFIED | Four current RED evidence files each return RED_EVIDENCE_OK; the ledger names affected owners and fix commits. Scanner IDs 074/075 claim no production defect. |
 | 6 | Replacement lint boundaries are wired | VERIFIED within stated syntax scope | Eleven forbidden probes reported their configured ESLint rules; current controls and parity modules have no restricted-rule finding; full lint passed. Alias and computed-name forms are outside the claimed syntax scope. |
 | 7 | Real HAP checks the stand-in's write behavior | VERIFIED | Retained `hapWriteFidelity.test.ts` imports the installed HAP package and compares real and fake write records; compiled owner passed 22/22. |
-| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | On `a95b8700fb3a092c2224f448104c102acd15258f`, Node v26.12.0, full check exit 0: 104 Cucumber scenarios, 1,156 steps and 43 direct pairs. Later edits are planning Markdown only. |
-| 9-12 | E-05-01 and P-05-01 through P-05-03 | HUMAN NEEDED | Exact questions and supporting evidence are in `05-FINDINGS.md` under `### 05-09`. |
+| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | On `a95b8700fb3a092c2224f448104c102acd15258f`, Node v26.12.0, full check exit 0: 104 Cucumber scenarios, 1,156 steps and 43 direct pairs. The same full check passed again on the final Phase 5 closeout tree after GSD updated `.planning/state.json`, with the same scenario, step and pair counts. |
+| 9-12 | E-05-01 and P-05-01 through P-05-03 | VERIFIED by maintainer judgment | One bundled "Accept" response is recorded in `05-UAT.md`. The edge taxonomy and historical GATES STOP remain as qualified there. |
 
 ## Test quality and decision coverage
 
@@ -119,18 +139,16 @@ independent comparison source. The context-decision check reports 18 of 18
 trackable decisions honored; it is advisory. No new production behavior was
 introduced by the closeout records.
 
-## Human verification required
+## Human verification resolution
 
-1. **E-05-01:** Accept the concrete review, lint, parity and full-test boundary
-   for ACC-01 while the edge category remains unclassified.
-2. **P-05-01:** Confirm safety semantics, refusal behavior and stable identity
-   were preserved within the bounded review and test evidence.
-3. **P-05-02:** Confirm the STOP and retired-scanner disclosure accurately
-   describes the completed work.
-4. **P-05-03:** Confirm the replacement lint and runtime tests provide adequate
-   protection for the current tree despite retiring the custom scanner cases.
+The maintainer answered "Accept" once to the bundled Phase 5 question. The
+four judgments in `05-UAT.md` passed on that response. It accepts the concrete
+ACC-01 boundary and bounded safety, disclosure and replacement evidence.
+The edge taxonomy remains unclassified; no exhaustive safety proof or clean
+GATES result is claimed.
 
 ## Gaps summary
 
-No current executable gate failed. The four judgments above are unresolved;
-this report does not mark the phase passed or ACC-01 complete.
+No current executable gate failed. The accepted boundary leaves the two
+historical scanner findings open against retired files and the GATES STOP
+unchanged. The old `--require-clean all` predicate remains false by design.

@@ -36,7 +36,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] **Phase 2: Cloud Conformance** - `src/cloud/**` and `test/cloud/**` conform to the rules. (completed 2026-10-14)
 - [x] **Phase 3: Device and Persistence Conformance** - `src/device/**`, `src/persistence/**`, and their tests conform to the rules. (completed 2026-10-14)
 - [x] **Phase 4: Runtime Conformance** - `src/runtime/**` and `test/runtime/**` conform to the rules. (completed 2026-10-16)
-- [ ] **Phase 5: Accessories Conformance** - `src/accessories/**` and `test/accessories/**` conform to the rules.
+- [x] **Phase 5: Accessories Conformance** - `src/accessories/**` and `test/accessories/**` conform to the rules. (completed 2026-10-19)
 - [ ] **Phase 6: Root Module Conformance** - The root modules `src/*.ts` and their tests conform to the rules.
 - [ ] **Phase 7: Cucumber Feature Conformance** - Gherkin, step definitions, and support code under `features/**` conform to the rules.
 - [ ] **Phase 8: Final Sweep and Gate** - A full-repo re-review finds nothing open, the bug ledger is complete, and the full `npm run check` passes.
@@ -221,7 +221,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   4. Every source/test pair the phase touched still reaches 100% direct line, function, and branch coverage when it runs alone.
   5. Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit (applies BUG-01).
 
-**Plans**: 8 completed, 1 stopped and superseded in 9 serial waves; phase verification needs a maintainer judgment
+**Plans**: 8 completed, 1 stopped and superseded in 9 serial waves; phase verification passed after maintainer acceptance
 **Wave 1**
 - [x] 05-01-PLAN.md — Wave 0: findings ledger, ledger tracer, review protocol and fresh baseline gate
 
@@ -309,7 +309,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 2. Cloud Conformance | code-review-sweep | 5/5 | Complete    | 2026-10-14 |
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
 | 4. Runtime Conformance | code-review-sweep | 19/19 | Complete    | 2026-10-16 |
-| 5. Accessories Conformance | code-review-sweep | 7/9 | In Progress | - |
+| 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 6. Root Module Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |
