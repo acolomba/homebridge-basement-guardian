@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests account configuration validation and resolved defaults.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
