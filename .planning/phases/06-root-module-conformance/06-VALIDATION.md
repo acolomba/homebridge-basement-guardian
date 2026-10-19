@@ -87,7 +87,7 @@ Phase 6 ledger and review protocol before the first independent review.
 - [x] No watch-mode flags appear in test commands.
 - [x] `nyquist_compliant: true` is set only after execution evidence exists.
 
-**Approval:** complete. The maintainer confirmed the original Homebridge logging workflow; the remaining review and gate evidence is recorded below.
+**Approval:** automated phase checks complete. The maintainer confirmed the original Homebridge logging workflow. The CR-02 debug session awaits a separate real Homebridge trust-publication confirmation.
 
 ## Execution Evidence
 
@@ -95,7 +95,9 @@ The twelve-file inventory and final current-code finding outcomes are reconciled
 
 The sixteen Phase 6 planning RED evidence commits were checked for evidence-only paths and ancestry before their GREEN fixes. Each affected owner passed after its fix. The separate logging debug record preserves its actual active RED and revert/reconfirm sequence for the two post-cap causes. All 43 stable finding IDs in the three batch reports match the ledger (CONFIG_PROTOCOL 8, ENTRY 20, PLATFORM 15), and all twelve review-counter equations reconcile.
 
-At final check revision `9861492` on Node v26.12.0, the executable-input diff from the clean reviewed PLATFORM revision `6c0e8bd` was empty across source, tests, support, package, schema, build/lint/coverage configuration, and workflows; there were no untracked executable inputs. Pairing exited 0. The six current root pairs passed `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/logging.ts src/settings.ts src/index.ts src/platform.ts` at 100% isolated line, function, and branch coverage. With `NPM_CONFIG_CACHE=/private/tmp/guardian-06-final-npm-cache` and local socket access, the final `npm run check` exited 0 in about 56 seconds: static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated coverage pairs passed. Planning-only edits after that check do not change its executable inputs.
+At plan 06-08 check revision `9861492` on Node v26.12.0, the executable-input diff from the clean reviewed PLATFORM revision `6c0e8bd` was empty across source, tests, support, package, schema, build/lint/coverage configuration, and workflows; there were no untracked executable inputs. Pairing exited 0. The six root pairs passed `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/logging.ts src/settings.ts src/index.ts src/platform.ts` at 100% isolated line, function, and branch coverage. With `NPM_CONFIG_CACHE=/private/tmp/guardian-06-final-npm-cache` and local socket access, that combined `npm run check` exited 0 in about 56 seconds: static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated coverage pairs passed. Later advisory repairs changed executable inputs, so that plan check is historical.
+
+The execute:post advisory review found two behavior defects and one test wait defect in the 17-file changed-code scope. CR-01 and CR-02 have committed active RED evidence before their GREEN repairs; WR-01 has a focused named test and isolated platform coverage. At current executable revision `258ffb9`, after all three repairs and with no untracked executable inputs, `NPM_CONFIG_CACHE=/private/tmp/guardian-06-advisory-final-npm-cache npm run check` exited 0 in about 55 seconds with the same static, unpaired, 104/104 Cucumber, 1156/1156 step, and 43 isolated direct-pair results. The owner checks for both behavior fixes and the watcher test also passed. The advisory review and its current dispositions are kept outside the historical three batch counters.
 
 Threat references T-06-01 through T-06-17 were checked against the task map, three batch reports, RED/GREEN histories, and current gates. T-06-SC had no package install in this phase. The remaining milestone GATE-01, GATE-02, and hardware checks belong to later phases.
 

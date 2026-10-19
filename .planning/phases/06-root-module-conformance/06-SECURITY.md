@@ -48,6 +48,7 @@ No accepted risks.
 | Audit Date | Threats Total | Closed | Open | Run By |
 | --- | ---: | ---: | ---: | --- |
 | 2026-10-19 | 18 | 18 | 0 | Phase 6 Level 1 evidence audit |
+| 2026-10-19 | 18 | 18 | 0 | Post-advisory check at `258ffb9` |
 
 ## Sign-Off
 
@@ -57,6 +58,8 @@ No accepted risks.
 - [x] `status: verified` set in frontmatter.
 
 **Approval:** verified 2026-10-19.
+
+The later execute:post advisory review found invalid restored pump numbers (CR-01) and an incomplete monitoring-trust publication (CR-02). They were fixed at `68114f4` and `646b327`, respectively, behind active RED evidence and owner regressions. The combined full gate at `258ffb9` passed. Their separate code-review dispositions are in `06-REVIEW-DISPOSITION.md`; no batch correction counter was extended.
 
 ## Security Audit 2026-10-19
 
