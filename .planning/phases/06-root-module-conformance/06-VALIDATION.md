@@ -1,7 +1,7 @@
 ---
 phase: "06"
 slug: "root-module-conformance"
-status: complete
+status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-19"
@@ -98,3 +98,11 @@ The sixteen Phase 6 planning RED evidence commits were checked for evidence-only
 At final check revision `9861492` on Node v26.12.0, the executable-input diff from the clean reviewed PLATFORM revision `6c0e8bd` was empty across source, tests, support, package, schema, build/lint/coverage configuration, and workflows; there were no untracked executable inputs. Pairing exited 0. The six current root pairs passed `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/logging.ts src/settings.ts src/index.ts src/platform.ts` at 100% isolated line, function, and branch coverage. With `NPM_CONFIG_CACHE=/private/tmp/guardian-06-final-npm-cache` and local socket access, the final `npm run check` exited 0 in about 56 seconds: static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated coverage pairs passed. Planning-only edits after that check do not change its executable inputs.
 
 Threat references T-06-01 through T-06-17 were checked against the task map, three batch reports, RED/GREEN histories, and current gates. T-06-SC had no package install in this phase. The remaining milestone GATE-01, GATE-02, and hardware checks belong to later phases.
+
+## Validation Audit 2026-10-19
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
