@@ -85,11 +85,9 @@ for (const email of ['not-an-email', 'jane.doe@company', 'jane doe@example.test'
   });
 }
 
-// The accept and reject verdicts the email shape produces, written out so a rewrite of the pattern
-// that changed one would fail here instead of passing quietly. The consecutive-dot and trailing-dot
-// domains are accepted today and are recorded to hold that verdict still; they are not an
-// endorsement of those addresses.
-for (const email of ['a@b.c', 'user+tag@example.test', 'user@sub.domain.example', 'user@example..test', 'user@example.test.']) {
+// The accept and reject verdicts are written out so a pattern change cannot
+// alter them without failing a case.
+for (const email of ['a@b.c', 'user+tag@example.test', 'user@sub.domain.example']) {
   test(`accepts an account email of ${JSON.stringify(email)}`, () => {
     // arrange
     const expectedAcceptance = acceptedConfig({ email });
@@ -102,7 +100,17 @@ for (const email of ['a@b.c', 'user+tag@example.test', 'user@sub.domain.example'
   });
 }
 
-for (const email of ['user@example', 'user@.test', 'user@example.', '@example.test', 'user@@example.test']) {
+for (const email of [
+  'user@example',
+  'user@.test',
+  'user@example.',
+  'user@example.test.',
+  '@example.test',
+  'user@@example.test',
+  '.user@example.test',
+  'user.@example.test',
+  'user..name@example.test',
+]) {
   test(`refuses an account email of ${JSON.stringify(email)}`, () => {
     // arrange
     const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };
@@ -114,6 +122,17 @@ for (const email of ['user@example', 'user@.test', 'user@example.', '@example.te
     assert.deepStrictEqual(configResult, expectedRefusal);
   });
 }
+
+test('refuses an account email with consecutive domain dots', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };
+
+  // act
+  const configResult = validateConfig(accountConfig({ email: 'user@example..test' }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
 
 test('CONF-05 reports the first failing field in a fixed order when several fields are wrong', () => {
   // arrange
