@@ -325,6 +325,21 @@ test('substitutes a secret registered after the wrapper was built', () => {
   verify(delegate);
 });
 
+test('redacts the longest registered secret when secrets overlap', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info(`token ${REDACTED}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['abc', 'abcdef'] });
+
+  // act
+  log.info('token abcdef');
+
+  // assert
+  verify(delegate);
+});
+
 test('registers nothing for an empty or whitespace-only secret', () => {
   // arrange
   const delegate = createDelegate();

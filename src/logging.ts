@@ -55,7 +55,7 @@ type LevelledMember = 'debug' | 'error' | 'info' | 'success' | 'warn';
 function redactText(text: string, secrets: readonly string[]): string {
   let redacted = text;
 
-  for (const secret of secrets) {
+  for (const secret of [...secrets].sort((left, right) => right.length - left.length)) {
     redacted = redacted.split(secret).join(REDACTED);
   }
 
