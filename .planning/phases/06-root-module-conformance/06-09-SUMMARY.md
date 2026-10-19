@@ -39,10 +39,10 @@ coverage:
     requirement: ROOT-01
     verification:
       - kind: other
-        ref: "npm run test:coverage:direct -- src/platform.ts"
+        ref: "test/platform.test.ts#isolated direct coverage"
         status: pass
       - kind: integration
-        ref: "NPM_CONFIG_CACHE=/private/tmp/guardian-06-gap-closure-npm-cache npm run check"
+        ref: "06-VALIDATION.md#Execution Evidence"
         status: pass
     human_judgment: false
 completed: 2026-10-19

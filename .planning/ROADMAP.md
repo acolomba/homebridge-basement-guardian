@@ -37,7 +37,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] **Phase 3: Device and Persistence Conformance** - `src/device/**`, `src/persistence/**`, and their tests conform to the rules. (completed 2026-10-14)
 - [x] **Phase 4: Runtime Conformance** - `src/runtime/**` and `test/runtime/**` conform to the rules. (completed 2026-10-16)
 - [x] **Phase 5: Accessories Conformance** - `src/accessories/**` and `test/accessories/**` conform to the rules. (completed 2026-10-19)
-- [ ] **Phase 6: Root Module Conformance** - The root modules `src/*.ts` and their tests conform to the rules.
+- [x] **Phase 6: Root Module Conformance** - The root modules `src/*.ts` and their tests conform to the rules. (completed 2026-10-19)
 - [ ] **Phase 7: Cucumber Feature Conformance** - Gherkin, step definitions, and support code under `features/**` conform to the rules.
 - [ ] **Phase 8: Final Sweep and Gate** - A full-repo re-review finds nothing open, the bug ledger is complete, and the full `npm run check` passes.
 
@@ -293,7 +293,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 06-08-PLAN.md
 
 **Wave 9** *(blocked on Wave 8 completion)*
-- [ ] 06-09-PLAN.md
+- [x] 06-09-PLAN.md
 
 **Batching**: Six pairs. `platform.ts` (673 lines; test 3,781 lines at Phase 6 research) is a batch of its own; the other five fit in one or two batches. This phase runs after Phase 5 because `platform.ts` wires the accessories tier, so the two phases must not edit that wiring at the same time. The maintainer removed `test/configSchema.test.ts` and `test/packageManifest.test.ts` before this phase; neither is in scope. Plans are batches of source/test pairs, grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
 
@@ -337,6 +337,6 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 3. Device and Persistence Conformance | code-review-sweep | 8/8 | Complete    | 2026-10-14 |
 | 4. Runtime Conformance | code-review-sweep | 19/19 | Complete    | 2026-10-16 |
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
-| 6. Root Module Conformance | code-review-sweep | 8/8 | In Progress | - |
+| 6. Root Module Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 7. Cucumber Feature Conformance | code-review-sweep | 0/TBD | Not started | - |
 | 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |
