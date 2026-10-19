@@ -91,7 +91,9 @@ function redactParameter(parameter: unknown, secrets: readonly string[]): unknow
   }
 
   if (typeof parameter === 'object' && parameter !== null) {
-    return redactText(describeObject(parameter), secrets);
+    const escapedSecrets = secrets.map((secret) => JSON.stringify(secret).slice(1, -1));
+
+    return redactText(describeObject(parameter), [...secrets, ...escapedSecrets]);
   }
 
   return parameter;

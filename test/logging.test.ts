@@ -136,6 +136,22 @@ test('substitutes a registered secret inside a plain object parameter', () => {
   verify(delegate);
 });
 
+test('redacts a registered secret escaped by object serialization', () => {
+  // arrange
+  const secret = 'my"pass';
+  const delegate = createDelegate();
+  when(() => {
+    delegate.info('the grant was rejected', `{"credential":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.info('the grant was rejected', { credential: secret });
+
+  // assert
+  verify(delegate);
+});
+
 test('substitutes a registered secret inside an Error parameter and keeps its class name', () => {
   // arrange
   const delegate = createDelegate();
