@@ -104,6 +104,10 @@ export interface DiscoveryContext {
 // run. Disappearance cannot make an uncertain registration safe to repeat.
 const uncertainRegistrations = new WeakMap<DiscoveryContext['accessories'], Set<string>>();
 
+// A failed cache write leaves the already-mutated accessory awaiting a later
+// inventory, even when that inventory reports the same metadata and services.
+const pendingAccessoryPersistence = new WeakSet<BasementGuardianPlatformAccessory>();
+
 // A HALO or unknown outcome never becomes an accessory (DEV-01), so the
 // explanation is the only trace it leaves. Distinct wording for each kind is
 // what lets a reader tell "recognized but unsupported" apart from "never
@@ -166,6 +170,7 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
         }
 
         context.api.updatePlatformAccessories([accessory]);
+        pendingAccessoryPersistence.delete(accessory);
       },
     },
     commands: context.commands,
@@ -281,11 +286,16 @@ function updateDiscoveredDevice(
       services: basementGuardianAccessory.services,
     };
 
-    // A context mutation Homebridge does not know about is invisible on disk
-    // until the next full register/unregister cycle, so only a real change
-    // earns the call rather than persisting an identical value on every poll.
+    // A failed write still owes Homebridge the already-mutated metadata or
+    // service set. Keep that obligation until this or another cache write
+    // succeeds, even when the next inventory is unchanged.
     if (!isDeepStrictEqual(previousState, nextState)) {
+      pendingAccessoryPersistence.add(accessory);
+    }
+
+    if (pendingAccessoryPersistence.has(accessory)) {
       context.api.updatePlatformAccessories([accessory]);
+      pendingAccessoryPersistence.delete(accessory);
     }
   }
 }

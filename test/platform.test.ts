@@ -2863,6 +2863,71 @@ describe('registerDiscoveredDevices', () => {
     verify(api);
   });
 
+  test('retries a failed vendor rename cache write on the next unchanged inventory', () => {
+    // arrange
+    const api = fakeDiscoveryApi([]);
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const existing = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
+    existing.context.lastVendorName = 'Sump System';
+    existing.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(ACCESSORY_UUID, existing as unknown as BasementGuardianPlatformAccessory);
+    const store = createDeviceStateStore({ clock: { now: () => 0 }, log: createSilentLog() });
+    store.applyDiscovery({ ...geminiDevice(), name: 'Sump Sentry' });
+    const persisted: { displayName: string; context: unknown }[] = [];
+    let writes = 0;
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(4);
+    when(() => api.updatePlatformAccessories)
+      .thenReturn((candidates) => {
+        writes += 1;
+
+        if (writes === 1) {
+          throw new Error('synthetic rename cache write failure');
+        }
+
+        const accessory = candidates[0];
+
+        if (accessory !== undefined) {
+          persisted.push({ displayName: accessory.displayName, context: structuredClone(accessory.context) });
+        }
+      })
+      .times(2);
+    function context(): DiscoveryContext {
+      return discoveryContext({ api, accessories, basementGuardianAccessories, registry: unknownRegistry(), log: createSilentLog() });
+    }
+
+    // act
+    registerDiscoveredDevices(context(), [DEVICE_ID], store);
+    const afterFailure = { writes, persisted: [...persisted], displayName: existing.displayName, context: structuredClone(existing.context) };
+    registerDiscoveredDevices(context(), [DEVICE_ID], store);
+    const afterRetry = { writes, persisted: [...persisted] };
+    registerDiscoveredDevices(context(), [DEVICE_ID], store);
+
+    // assert
+    assert.deepStrictEqual(
+      { afterFailure, afterRetry, writesAfterSuccess: writes, persisted },
+      {
+        afterFailure: {
+          writes: 1,
+          persisted: [],
+          displayName: 'Sump Sentry',
+          context: { lastVendorName: 'Sump Sentry', device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } },
+        },
+        afterRetry: {
+          writes: 2,
+          persisted: [
+            { displayName: 'Sump Sentry', context: { lastVendorName: 'Sump Sentry', device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } } },
+          ],
+        },
+        writesAfterSuccess: 2,
+        persisted: [{ displayName: 'Sump Sentry', context: { lastVendorName: 'Sump Sentry', device: { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID } } }],
+      },
+    );
+    verify(api);
+  });
+
   test('keeps a customized display name but still advances the stored vendor name', () => {
     // arrange
     const registerCalls: FakeApiCall[] = [];
