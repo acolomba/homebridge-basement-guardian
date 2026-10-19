@@ -2,14 +2,14 @@
 status: awaiting_human_verify
 trigger: "Phase 6 advisory CR-02: failed HomeKit trust publication is never retried with unchanged monitoring health"
 created: 2026-10-19T00:00:00Z
-updated: 2026-10-19T18:30:05Z
+updated: 2026-10-19T18:31:40Z
 ---
 
 ## Current Focus
 
 bug_class: bohrbug — a one-shot characteristic failure gives a deterministic partial publication.
 hypothesis: An exception from one service aborts republishPublishedRows, while markMonitoring has already stored the new trust; the unchanged check then skips an identical retry.
-test: The GREEN source-and-test commit passed normal hooks, including check:commit and staged direct coverage.
+test: The owner test now injects the one-shot failure at StatusActive; source reversal made it RED again, and restoration made it GREEN.
 expecting: A real Homebridge run shows degraded trust to the owner and recovers the failed row after a later identical health report.
 next_action: Ask the owner to confirm the monitoring trust display in a real Homebridge environment; archive only after that confirmation.
 reasoning_checkpoint:
@@ -76,6 +76,10 @@ timeline: Found in the Phase 6 final advisory review on 2026-10-19.
   checked: Repository commit gate and Fallow audit.
   found: `node_modules/.bin/fallow audit --base HEAD` passed. Commit 646b327 passed the normal pre-commit and commit-message hooks, including `npm run check:commit` and staged direct coverage, on Node v26.12.0.
   implication: The code and owner test are committed; only real Homebridge confirmation remains before archiving this debug session.
+- timestamp: 2026-10-19T18:31:40Z
+  checked: Exact failed characteristic in the regression test.
+  found: The one-shot failure now targets the flood service's second write; the test confirms this call is StatusActive. Reversing committed source 646b327 made all 17 trust rows stay active and the test RED. Restoring it made the test GREEN, and direct accessory coverage passed.
+  implication: The owner test matches the reported StatusActive failure and still discriminates the source fix.
 
 ## Eliminated
 

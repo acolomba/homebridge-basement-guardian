@@ -3578,14 +3578,10 @@ test('marks later services inactive after one trust write fails and retries the 
   const accessory = accessoryStandIn();
   const basementGuardianAccessory = geminiAccessory(accessory, {});
   const flood = serviceOf(accessory, 'Sump Pit Flood');
-  t.mock.method(
-    flood,
-    'updateCharacteristic',
-    () => {
-      throw new Error('failed publication');
-    },
-    { times: 1 },
-  );
+  const updateCharacteristicSpy = t.mock.method(flood, 'updateCharacteristic');
+  updateCharacteristicSpy.mock.mockImplementationOnce(() => {
+    throw new Error('failed publication');
+  }, 1);
 
   // act
   assert.throws(() => {
@@ -3604,6 +3600,7 @@ test('marks later services inactive after one trust write fails and retries the 
     afterRetry,
     PUBLISHED_SCOPES.map((scope) => scope === 'connectivity'),
   );
+  assert.strictEqual(updateCharacteristicSpy.mock.calls[1]?.arguments[0].UUID, HAP.Characteristic.StatusActive.UUID);
 });
 
 test('explains no degradation when the payload never stopped validating', () => {
