@@ -29,7 +29,7 @@ Feature: Account configuration
       | password     | placeholder-password |
       | pollInterval | 60                   |
     When the plugin loads
-    Then the plugin refuses to start because "pollInterval must be a whole number of seconds from 300 to 3600, but it is 60."
+    Then the plugin refuses to start because "pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid."
     Then the plugin registers no lifecycle listener
     Then no request reaches the fake cloud
 
