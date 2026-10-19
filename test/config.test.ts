@@ -13,8 +13,8 @@ import type { PlatformConfig } from 'homebridge';
 // account identifier and the refusal is logged before anything is registered as a secret.
 const MALFORMED_EMAIL_REFUSAL = 'the account email must be an email address.';
 
-const POLL_INTERVAL_REFUSAL = 'pollInterval must be a whole number of seconds from 300 to 3600, but it is';
-const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number of polls from 1 to 8, but it is';
+const POLL_INTERVAL_REFUSAL = 'pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid.';
+const POLL_COUNT_REFUSAL = 'offlineConfirmationPollCount must be a whole number of polls from 1 to 8, but the supplied value is invalid.';
 
 // The removable sensor names are written out here rather than read from the production list, so a
 // case fails when the refusal stops enumerating one of them instead of agreeing with it (D-17).
@@ -28,8 +28,8 @@ const REMOVABLE_SENSOR_NAMES: readonly NotificationServiceKind[] = [
   'basement-guardian-offline',
 ];
 
-const UNKNOWN_SENSOR_REFUSAL = `ignoredFaults must name only ${REMOVABLE_SENSOR_NAMES.join(', ')}, but it names`;
-const NOT_A_LIST_REFUSAL = 'ignoredFaults must be a list of notification sensor names, but it is';
+const UNKNOWN_SENSOR_REFUSAL = `ignoredFaults must name only ${REMOVABLE_SENSOR_NAMES.join(', ')}, but it contains an invalid entry.`;
+const NOT_A_LIST_REFUSAL = 'ignoredFaults must be a list of notification sensor names, but the supplied value is invalid.';
 
 function accountConfig(overrides: Record<string, unknown> = {}): PlatformConfig {
   return { platform: PLATFORM_NAME, email: 'account@example.test', password: 'account-password', ...overrides };
@@ -218,8 +218,8 @@ for (const pollInterval of [300, 900, 3600]) {
   });
 }
 
-// The described form is written out per row rather than derived, because text is delimited and
-// every other format is not: `NaN` reports itself and a number reports its digits.
+// Each case keeps the supplied value in its title. Refusals identify the field
+// and rule without putting that value in the Homebridge log.
 for (const { pollInterval, describedValue } of [
   { pollInterval: 299, describedValue: '299' },
   { pollInterval: 3601, describedValue: '3601' },
@@ -230,7 +230,7 @@ for (const { pollInterval, describedValue } of [
 ]) {
   test(`CONF-05 refuses a poll interval of ${describedValue}`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} ${describedValue}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: POLL_INTERVAL_REFUSAL };
 
     // act
     const configResult = validateConfig(accountConfig({ pollInterval }));
@@ -240,9 +240,9 @@ for (const { pollInterval, describedValue } of [
   });
 }
 
-test('CONF-05 describes a structured poll interval rather than reporting it as an object', () => {
+test('CONF-05 refuses a structured poll interval without quoting its contents', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} {"seconds":900}.` };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: POLL_INTERVAL_REFUSAL };
 
   // act
   const configResult = validateConfig(accountConfig({ pollInterval: { seconds: 900 } }));
@@ -270,7 +270,7 @@ for (const { offlineConfirmationPollCount, describedValue } of [
 ]) {
   test(`CONF-05 refuses an offline confirmation poll count of ${describedValue}`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_COUNT_REFUSAL} ${describedValue}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: POLL_COUNT_REFUSAL };
 
     // act
     const configResult = validateConfig(accountConfig({ offlineConfirmationPollCount }));
@@ -311,18 +311,16 @@ test('CONF-06 publishes every adapter when the configuration omits the removable
   assert.deepStrictEqual(configResult, acceptedConfig({ ignoredFaults: [] }));
 });
 
-// The last two rows are the typo classes the delimiters exist for: a stray space renders as a
-// double space nobody sees, and a pasted trailing newline disappears entirely (D-17).
-for (const { described, entry, describedValue } of [
-  { described: 'a misspelled sensor name', entry: 'mains-power-lst', describedValue: '"mains-power-lst"' },
-  { described: 'a truthful service that cannot be removed', entry: 'sump-pit-flood', describedValue: '"sump-pit-flood"' },
-  { described: 'an entry that is not text', entry: 1, describedValue: '1' },
-  { described: 'a sensor name carrying a leading space', entry: ' mains-power-lost', describedValue: '" mains-power-lost"' },
-  { described: 'a sensor name carrying a trailing newline', entry: 'mains-power-lost\n', describedValue: '"mains-power-lost\\n"' },
+for (const { described, entry } of [
+  { described: 'a misspelled sensor name', entry: 'mains-power-lst' },
+  { described: 'a truthful service that cannot be removed', entry: 'sump-pit-flood' },
+  { described: 'an entry that is not text', entry: 1 },
+  { described: 'a sensor name carrying a leading space', entry: ' mains-power-lost' },
+  { described: 'a sensor name carrying a trailing newline', entry: 'mains-power-lost\n' },
 ]) {
   test(`CONF-06 refuses ${described} and enumerates every removable sensor`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} ${describedValue}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: UNKNOWN_SENSOR_REFUSAL };
 
     // act
     const configResult = validateConfig(accountConfig({ ignoredFaults: [entry] }));
@@ -345,18 +343,17 @@ for (const sensorName of REMOVABLE_SENSOR_NAMES) {
   });
 }
 
-test('CONF-06 names the unrecognised entry in the refusal', () => {
+test('CONF-06 omits an unrecognised entry from the refusal', () => {
   // act
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
 
   // assert
-  assert.ok(!configResult.ok);
-  assert.ok(configResult.reason.includes('mains-power-lst'));
+  assert.deepStrictEqual(configResult, { ok: false, reason: UNKNOWN_SENSOR_REFUSAL });
 });
 
-test('CONF-06 names the same unrecognised entry wherever it sits in the list', () => {
+test('CONF-06 gives the same refusal wherever an unrecognised entry sits in the list', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: `${UNKNOWN_SENSOR_REFUSAL} "mains-power-lst".` };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: UNKNOWN_SENSOR_REFUSAL };
 
   // act
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['backup-pump-fault', 'mains-power-lst', 'water-sensor-fault'] }));
@@ -367,7 +364,7 @@ test('CONF-06 names the same unrecognised entry wherever it sits in the list', (
 
 test('CONF-06 refuses a repeated removable sensor and says the list must be unique', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: 'ignoredFaults must be a unique list, but it names "mains-power-lost" more than once.' };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: 'ignoredFaults must be a unique list, but it names one sensor more than once.' };
 
   // act
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lost', 'primary-pump-fault', 'mains-power-lost'] }));
@@ -384,7 +381,7 @@ for (const { supplied, describedValue } of [
 ]) {
   test(`CONF-06 refuses a removable sensor list of ${describedValue} that is not a list`, () => {
     // arrange
-    const expectedRefusal: ConfigRefused = { ok: false, reason: `${NOT_A_LIST_REFUSAL} ${describedValue}.` };
+    const expectedRefusal: ConfigRefused = { ok: false, reason: NOT_A_LIST_REFUSAL };
 
     // act
     const configResult = validateConfig(accountConfig({ ignoredFaults: supplied }));
@@ -396,7 +393,7 @@ for (const { supplied, describedValue } of [
 
 test('CONF-06 reports the poll interval before the removable sensor list when both are wrong', () => {
   // arrange
-  const expectedRefusal: ConfigRefused = { ok: false, reason: `${POLL_INTERVAL_REFUSAL} 1.` };
+  const expectedRefusal: ConfigRefused = { ok: false, reason: POLL_INTERVAL_REFUSAL };
 
   // act
   const configResult = validateConfig(accountConfig({ pollInterval: 1, ignoredFaults: ['mains-power-lst'] }));
@@ -412,6 +409,20 @@ test('CONF-06 refuses an unrecognised removable sensor without quoting the accou
   // assert
   assert.ok(!configResult.ok);
   assert.strictEqual(configResult.reason.includes('@'), false);
+});
+
+test('keeps a private value out of a poll interval refusal', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = {
+    ok: false,
+    reason: POLL_INTERVAL_REFUSAL,
+  };
+
+  // act
+  const configResult = validateConfig(accountConfig({ pollInterval: 'private-password' }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
 });
 
 // The three degradation thresholds live in `src/runtime/monitoringHealth.ts` as constants, and this
