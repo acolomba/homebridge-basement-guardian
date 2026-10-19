@@ -618,3 +618,24 @@ load('node:timers/promises');
     unrelatedObject: false,
   });
 });
+
+test('detects fixed computed createRequire destructuring without following unrelated keys', () => {
+  // act
+  const detections = {
+    computed: importsDeferredExecution(`
+import * as module from 'node:module';
+const { ['create' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('node:timers/promises');
+`),
+    unrelatedKey: importsDeferredExecution(`
+import * as module from 'node:module';
+const { ['other' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('node:timers/promises');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { computed: true, unrelatedKey: false });
+});

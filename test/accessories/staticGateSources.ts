@@ -20,6 +20,7 @@ import {
   isAwaitExpression,
   isBinaryExpression,
   isCallExpression,
+  isComputedPropertyName,
   isElementAccessExpression,
   isExportDeclaration,
   isIdentifier,
@@ -76,6 +77,14 @@ function addNamedCreator(element: ImportSpecifier, checker: TypeChecker, named: 
   }
 }
 
+function fixedBindingPropertyName(property: Node, checker: TypeChecker): string | undefined {
+  if (isComputedPropertyName(property)) {
+    return fixedSpecifier(property.expression, checker);
+  }
+
+  return isIdentifier(property) || isStringLiteral(property) ? property.text : undefined;
+}
+
 function isDynamicModuleNamespace(initializer: Expression, checker: TypeChecker): boolean {
   if (isParenthesizedExpression(initializer)) {
     return isDynamicModuleNamespace(initializer.expression, checker);
@@ -102,7 +111,8 @@ function addDestructuredCreator(node: Node, checker: TypeChecker, named: Set<Sym
 
   for (const element of node.name.elements) {
     const property = element.propertyName ?? element.name;
-    if ((isIdentifier(property) || isStringLiteral(property)) && property.text === 'createRequire' && isIdentifier(element.name)) {
+    const name = fixedBindingPropertyName(property, checker);
+    if (name === 'createRequire' && isIdentifier(element.name)) {
       const symbol = checker.getSymbolAtLocation(element.name);
       if (symbol) {
         named.add(symbol);

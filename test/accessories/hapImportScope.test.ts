@@ -920,6 +920,27 @@ load('@homebridge/hap-nodejs');
   });
 });
 
+test('detects fixed computed createRequire destructuring loading HAP without following unrelated keys', () => {
+  // act
+  const detections = {
+    computed: importsHapPackage(`
+import * as module from 'node:module';
+const { ['create' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+    unrelatedKey: importsHapPackage(`
+import * as module from 'node:module';
+const { ['other' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('@homebridge/hap-nodejs');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { computed: true, unrelatedKey: false });
+});
+
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
   // arrange
   const standIn = readFileSync(join(REPOSITORY_ROOT, PROSE_MENTION_WITHOUT_IMPORT), 'utf8');

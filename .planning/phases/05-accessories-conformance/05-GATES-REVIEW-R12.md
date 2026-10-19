@@ -123,7 +123,9 @@ positive on valid source. No production bug is claimed.
 
 ## Repair history
 
-Pending.
+| ID | Change | Evidence |
+| --- | --- | --- |
+| CR-05-GATES-068 | Resolve fixed computed destructuring keys for `createRequire` through the existing specifier resolver. All three import owners check a working loader and an unrelated key. | The three new cases failed against the unchanged scanner (raw exit 1) and passed after the fix. In the main checkout on Node v26.12.0, Fallow guard, `build:test`, all three owner modules (89 passed), `test:unpaired`, and Fallow audit passed (raw exits 0). |
 
 ---
 

@@ -1215,6 +1215,27 @@ load('../cloud/api.js');
   });
 });
 
+test('detects fixed computed createRequire destructuring reaching the network without following unrelated keys', () => {
+  // act
+  const detections = {
+    computed: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const { ['create' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('../cloud/api.js');
+`),
+    unrelatedKey: reachesTheNetworkTier(`
+import * as module from 'node:module';
+const { ['other' + 'Require']: make } = module;
+const load = make(import.meta.url);
+load('../cloud/api.js');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, { computed: true, unrelatedKey: false });
+});
+
 test('rejects an accessory network loader call with an unresolved base', () => {
   // act & assert
   assert.throws(() => reachesTheNetworkTier(UNRESOLVED_BASE_CREATE_REQUIRE_IMPORT), { message: 'cannot resolve base in createRequire load' });
