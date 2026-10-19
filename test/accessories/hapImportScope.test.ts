@@ -788,6 +788,60 @@ load('@homebridge/hap-nodejs');
   assert.deepStrictEqual(detections, { staticMember: true, staticComputed: true, dynamicMember: true, dynamicComputed: true, unrelated: false });
 });
 
+test('detects parenthesized creator members, calls and loader initializers loading HAP', () => {
+  // act
+  const detections = {
+    member: importsHapPackage(
+      `
+import * as module from 'node:module';
+const make = (module.createRequire);
+const load = make(import.meta.url);
+load('@homebridge/hap-nodejs');
+`,
+    ),
+    initializer: importsHapPackage(
+      `
+import { createRequire } from 'node:module';
+const load = (createRequire(import.meta.url));
+load('@homebridge/hap-nodejs');
+`,
+    ),
+    call: importsHapPackage(`
+import { createRequire } from 'node:module';
+(createRequire)(import.meta.url)('@homebridge/hap-nodejs');
+`),
+    unrelatedMember: importsHapPackage(
+      `
+const other = { createRequire: () => (name: string) => name };
+const make = (other.createRequire);
+const load = make(import.meta.url);
+load('@homebridge/hap-nodejs');
+`,
+    ),
+    unrelatedInitializer: importsHapPackage(
+      `
+const createRequire = () => (name: string) => name;
+const load = (createRequire(import.meta.url));
+load('@homebridge/hap-nodejs');
+`,
+    ),
+    unrelatedCall: importsHapPackage(`
+const createRequire = () => (name: string) => name;
+(createRequire)(import.meta.url)('@homebridge/hap-nodejs');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, {
+    member: true,
+    initializer: true,
+    call: true,
+    unrelatedMember: false,
+    unrelatedInitializer: false,
+    unrelatedCall: false,
+  });
+});
+
 test('does not report the hand-built stand-in, whose own file overview names the package (D-17)', () => {
   // arrange
   const standIn = readFileSync(join(REPOSITORY_ROOT, PROSE_MENTION_WITHOUT_IMPORT), 'utf8');

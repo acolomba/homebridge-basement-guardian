@@ -515,3 +515,57 @@ load('node:timers/promises');
   // assert
   assert.deepStrictEqual(detections, { staticMember: true, staticComputed: true, dynamicMember: true, dynamicComputed: true, unrelated: false });
 });
+
+test('detects parenthesized creator members, calls and loader initializers', () => {
+  // act
+  const detections = {
+    member: importsDeferredExecution(
+      `
+import * as module from 'node:module';
+const make = (module.createRequire);
+const load = make(import.meta.url);
+load('node:timers/promises');
+`,
+    ),
+    initializer: importsDeferredExecution(
+      `
+import { createRequire } from 'node:module';
+const load = (createRequire(import.meta.url));
+load('node:timers/promises');
+`,
+    ),
+    call: importsDeferredExecution(`
+import { createRequire } from 'node:module';
+(createRequire)(import.meta.url)('node:timers/promises');
+`),
+    unrelatedMember: importsDeferredExecution(
+      `
+const other = { createRequire: () => (name: string) => name };
+const make = (other.createRequire);
+const load = make(import.meta.url);
+load('node:timers/promises');
+`,
+    ),
+    unrelatedInitializer: importsDeferredExecution(
+      `
+const createRequire = () => (name: string) => name;
+const load = (createRequire(import.meta.url));
+load('node:timers/promises');
+`,
+    ),
+    unrelatedCall: importsDeferredExecution(`
+const createRequire = () => (name: string) => name;
+(createRequire)(import.meta.url)('node:timers/promises');
+`),
+  };
+
+  // assert
+  assert.deepStrictEqual(detections, {
+    member: true,
+    initializer: true,
+    call: true,
+    unrelatedMember: false,
+    unrelatedInitializer: false,
+    unrelatedCall: false,
+  });
+});

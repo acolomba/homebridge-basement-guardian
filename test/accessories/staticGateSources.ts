@@ -120,7 +120,16 @@ function addDestructuredCreators(file: SourceFile, checker: TypeChecker, named: 
   visit(file);
 }
 
+function unparenthesized(node: Expression): Expression {
+  while (isParenthesizedExpression(node)) {
+    node = node.expression;
+  }
+
+  return node;
+}
+
 function isNamespaceCreatorMember(node: Expression, checker: TypeChecker, namespaces: ReadonlySet<Symbol>): boolean {
+  node = unparenthesized(node);
   if (!isPropertyAccessExpression(node) && !isElementAccessExpression(node)) {
     return false;
   }
@@ -137,7 +146,7 @@ function isNamespaceCreatorMember(node: Expression, checker: TypeChecker, namesp
 function addCreatorAliases(file: SourceFile, checker: TypeChecker, named: Set<Symbol>, namespaces: ReadonlySet<Symbol>): void {
   function visit(node: Node): void {
     if (isVariableDeclaration(node) && isIdentifier(node.name) && node.initializer) {
-      const initializer = node.initializer;
+      const initializer = unparenthesized(node.initializer);
       const alias = checker.getSymbolAtLocation(node.name);
       const source = isIdentifier(initializer) ? checker.getSymbolAtLocation(initializer) : undefined;
       if (alias && ((source && named.has(source)) || isNamespaceCreatorMember(initializer, checker, namespaces))) {
@@ -232,7 +241,7 @@ function importedCreators(file: SourceFile, checker: TypeChecker): { named: Set<
 }
 
 function callsImportedCreator(call: CallExpression, checker: TypeChecker, named: ReadonlySet<Symbol>, namespaces: ReadonlySet<Symbol>): boolean {
-  const callee = call.expression;
+  const callee = unparenthesized(call.expression);
   if (isIdentifier(callee)) {
     const symbol = checker.getSymbolAtLocation(callee);
     return symbol !== undefined && named.has(symbol);
@@ -289,16 +298,17 @@ function requireBinding(
   named: ReadonlySet<Symbol>,
   namespaces: ReadonlySet<Symbol>,
 ): { symbol: Symbol; base: string | undefined } | undefined {
-  if (!isVariableDeclaration(node) || !isIdentifier(node.name) || !node.initializer || !isCallExpression(node.initializer)) {
+  if (!isVariableDeclaration(node) || !isIdentifier(node.name) || !node.initializer) {
     return undefined;
   }
 
-  if (!callsImportedCreator(node.initializer, checker, named, namespaces)) {
+  const initializer = unparenthesized(node.initializer);
+  if (!isCallExpression(initializer) || !callsImportedCreator(initializer, checker, named, namespaces)) {
     return undefined;
   }
 
   const symbol = checker.getSymbolAtLocation(node.name);
-  return symbol ? { symbol, base: requireBase(node.initializer, checker) } : undefined;
+  return symbol ? { symbol, base: requireBase(initializer, checker) } : undefined;
 }
 
 function fixedSpecifier(node: Node, checker: TypeChecker, seen: Set<Symbol> = new Set<Symbol>()): string | undefined {
@@ -359,7 +369,7 @@ function loadBase(
   namespaces: ReadonlySet<Symbol>,
   requireBases: ReadonlyMap<Symbol, string | undefined>,
 ): { base: string | undefined } | undefined {
-  const callee = call.expression;
+  const callee = unparenthesized(call.expression);
   if (callee.kind === SyntaxKind.ImportKeyword) {
     return { base: '' };
   }
