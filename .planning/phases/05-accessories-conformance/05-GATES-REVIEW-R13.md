@@ -106,6 +106,7 @@ Neither finding identifies a production runtime bug.
 | Cause | Repair | Verification | Commit |
 | --- | --- | --- | --- |
 | CR-05-GATES-070 | Track scoped, constant characteristic aliases for `onSet` calls. The control counts an alias chain and rejects unrelated receivers and property reads. | Node v26.12.0; Fallow guard, `npm run build:test`, the `hapImportScope` owner test, `npm run test:unpaired`, and Fallow audit against `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` each exited 0. | Committed with this report row. |
+| CR-05-GATES-071 | Require a characteristic receiver for read and set listener calls. The controls count aliases of `getCharacteristic()` results and reject unrelated `onGet` calls and emitter events. | Node v26.12.0; Fallow guard, `npm run build:test`, both gate owner tests, `npm run test:unpaired`, and Fallow audit against `379e86772fb2f353abbbe9c35dc3aa502bbb68f9` each exited 0. | Committed with this report row. |
 
 ---
 

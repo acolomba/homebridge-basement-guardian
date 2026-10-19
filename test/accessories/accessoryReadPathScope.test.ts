@@ -131,6 +131,7 @@ function registersReadHandler(source: string): boolean {
   const scopes: Map<string, boolean>[] = [new Map<string, boolean>()];
   const objectScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
   const methodScopes: Map<string, string | undefined>[] = [new Map<string, string | undefined>()];
+  const characteristicScopes: Map<string, boolean>[] = [new Map<string, boolean>()];
 
   function readAlias(name: string): boolean {
     for (let index = scopes.length - 1; index >= 0; index--) {
@@ -210,6 +211,24 @@ function registersReadHandler(source: string): boolean {
     return undefined;
   }
 
+  function isCharacteristicReceiver(node: Node): boolean {
+    if (isParenthesizedExpression(node)) {
+      return isCharacteristicReceiver(node.expression);
+    }
+
+    if (isIdentifier(node)) {
+      for (let index = characteristicScopes.length - 1; index >= 0; index--) {
+        if (characteristicScopes[index]?.has(node.text)) {
+          return characteristicScopes[index]?.get(node.text) ?? false;
+        }
+      }
+
+      return node.text === 'characteristic';
+    }
+
+    return isCallExpression(node) && staticMember(node.expression)?.name === 'getCharacteristic';
+  }
+
   function isReadEvent(node: Node | undefined): boolean {
     if (!node) {
       return false;
@@ -275,6 +294,7 @@ function registersReadHandler(source: string): boolean {
         const readEvent = readObject && (isIdentifier(source) || isStringLiteral(source)) && source.text === EVENT_TYPES_READ_MEMBER;
         scopes[scopes.length - 1]?.set(element.name.text, readEvent);
         methodScopes[methodScopes.length - 1]?.set(element.name.text, undefined);
+        characteristicScopes[characteristicScopes.length - 1]?.set(element.name.text, false);
       }
     }
   }
@@ -295,6 +315,7 @@ function registersReadHandler(source: string): boolean {
     }
 
     methodScopes[methodScopes.length - 1]?.set(node.name.text, undefined);
+    characteristicScopes[characteristicScopes.length - 1]?.set(node.name.text, fixed && !!node.initializer && isCharacteristicReceiver(node.initializer));
     scopes[scopes.length - 1]?.set(node.name.text, fixed && isReadEvent(node.initializer));
     objectScopes[objectScopes.length - 1]?.set(node.name.text, fixed && isReadEventObject(node.initializer));
     methodScopes[methodScopes.length - 1]?.set(node.name.text, fixed ? fixedEventText(node.initializer) : undefined);
@@ -302,9 +323,14 @@ function registersReadHandler(source: string): boolean {
 
   function recordUse(node: Node): void {
     if (isCallExpression(node)) {
-      const method = staticMember(node.expression)?.name;
+      const member = staticMember(node.expression);
+      const method = member?.name;
       const event = node.arguments[0];
-      if (method === READ_HANDLER_METHOD || (method && READ_EVENT_LISTENER_METHODS.has(method) && isReadEvent(event))) {
+      if (
+        member &&
+        isCharacteristicReceiver(member.receiver) &&
+        (method === READ_HANDLER_METHOD || (method && READ_EVENT_LISTENER_METHODS.has(method) && isReadEvent(event)))
+      ) {
         registered = true;
       }
     }
@@ -316,12 +342,14 @@ function registersReadHandler(source: string): boolean {
       const scope = new Map<string, boolean>();
       const objectScope = new Map<string, boolean>();
       const methodScope = new Map<string, string | undefined>();
+      const characteristicScope = new Map<string, boolean>();
       if (isFunctionLike(node)) {
         for (const parameter of node.parameters) {
           if (isIdentifier(parameter.name)) {
             scope.set(parameter.name.text, false);
             objectScope.set(parameter.name.text, false);
             methodScope.set(parameter.name.text, undefined);
+            characteristicScope.set(parameter.name.text, parameter.name.text === 'characteristic');
           }
         }
       }
@@ -329,6 +357,7 @@ function registersReadHandler(source: string): boolean {
       scopes.push(scope);
       objectScopes.push(objectScope);
       methodScopes.push(methodScope);
+      characteristicScopes.push(characteristicScope);
     }
 
     recordAlias(node);
@@ -338,6 +367,7 @@ function registersReadHandler(source: string): boolean {
       scopes.pop();
       objectScopes.pop();
       methodScopes.pop();
+      characteristicScopes.pop();
     }
   }
 
@@ -753,6 +783,27 @@ test('ignores other EventEmitter events in the read-handler gate', () => {
 
   // assert
   assert.deepStrictEqual(registrations, { direct: false, fixed: false, unrelatedMethod: false });
+});
+
+test('counts read handlers on characteristic aliases without counting unrelated emitters', () => {
+  // arrange
+  const aliasedMethod = 'const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.onGet(handler);';
+  const aliasedEvent = 'const control = service.getCharacteristic(hap.Characteristic.On); control.on("get", handler);';
+  const unrelatedMethod = 'other.onGet(handler);';
+  const unrelatedEvent = 'emitter.on("get", handler);';
+  const unrelatedAlias = 'const control = emitter; control.on("get", handler);';
+
+  // act
+  const registrations = {
+    aliasedMethod: registersReadHandler(aliasedMethod),
+    aliasedEvent: registersReadHandler(aliasedEvent),
+    unrelatedMethod: registersReadHandler(unrelatedMethod),
+    unrelatedEvent: registersReadHandler(unrelatedEvent),
+    unrelatedAlias: registersReadHandler(unrelatedAlias),
+  };
+
+  // assert
+  assert.deepStrictEqual(registrations, { aliasedMethod: true, aliasedEvent: true, unrelatedMethod: false, unrelatedEvent: false, unrelatedAlias: false });
 });
 
 test('resolves fixed read events through object bindings without following unrelated or shadowed names', () => {

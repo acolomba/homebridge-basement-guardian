@@ -398,7 +398,13 @@ function hapUses(file: SourceFile): { onSet: boolean; setEvent: boolean; memberC
         uses.onSet = true;
       }
 
-      if (method && SET_EVENT_LISTENER_METHODS.has(method) && firstArgument && isSetEvent(firstArgument, aliasOf, fixedAlias, isHapNamespace)) {
+      if (
+        method &&
+        SET_EVENT_LISTENER_METHODS.has(method) &&
+        isCharacteristicReceiver(member.expression) &&
+        firstArgument &&
+        isSetEvent(firstArgument, aliasOf, fixedAlias, isHapNamespace)
+      ) {
         uses.setEvent = true;
       }
 
@@ -1435,6 +1441,25 @@ test('counts EventEmitter methods that register set listeners', () => {
 
   // assert
   assert.deepStrictEqual(uses, { addListener: true, once: true, prependListener: true, prependOnceListener: true });
+});
+
+test('counts set listeners on characteristic aliases without counting unrelated emitters', () => {
+  // arrange
+  const aliasedCharacteristic = sourceFileOf(
+    'const control = service.getCharacteristic(hap.Characteristic.On); const alias = control; alias.on("set", handler);',
+  );
+  const unrelatedEmitter = sourceFileOf('emitter.on("set", handler);');
+  const unrelatedAlias = sourceFileOf('const control = emitter; control.on("set", handler);');
+
+  // act
+  const uses = {
+    aliasedCharacteristic: hapUses(aliasedCharacteristic).setEvent,
+    unrelatedEmitter: hapUses(unrelatedEmitter).setEvent,
+    unrelatedAlias: hapUses(unrelatedAlias).setEvent,
+  };
+
+  // assert
+  assert.deepStrictEqual(uses, { aliasedCharacteristic: true, unrelatedEmitter: false, unrelatedAlias: false });
 });
 
 test('ignores other EventEmitter events in the direct-set gate', () => {
