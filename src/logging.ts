@@ -154,7 +154,7 @@ export function createRedactingLogger(options: RedactingLoggerOptions): Redactin
   // predecessor rather than joining it. Nothing is evicted by age or by count:
   // guessing which held value has expired is how a password stops being
   // redacted.
-  const registerSecret = (secret: string, role?: SecretRole): void => {
+  function registerSecret(secret: string, role?: SecretRole): void {
     // An empty or whitespace-only value would match everywhere, so it is not a
     // secret this wrapper can act on.
     if (secret.trim().length === 0) {
@@ -175,15 +175,15 @@ export function createRedactingLogger(options: RedactingLoggerOptions): Redactin
     } else {
       secrets[held] = secret;
     }
-  };
+  }
 
   for (const secret of options.secrets) {
     registerSecret(secret);
   }
 
-  const write = (message: string, ...parameters: unknown[]): void => {
+  function write(message: string, ...parameters: unknown[]): void {
     options.delegate(redactText(message, secrets), ...redactParameters(parameters, secrets));
-  };
+  }
 
   return Object.assign(write, {
     prefix: options.delegate.prefix,
