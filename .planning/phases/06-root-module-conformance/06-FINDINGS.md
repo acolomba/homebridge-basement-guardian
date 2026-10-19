@@ -34,7 +34,7 @@ The full-file independent review at `5ff22a40053e9635672aae7c399f8e6ac51f21c9` a
 | CR-06-CONFIG_PROTOCOL-005 | Approved header; style `modules-and-data.md` File order | `test/config.test.ts@5ff22a4:1–4` | WARNING | 0 | Fixed in round 1: approved SPDX, copyright, and overview header | source `7a4b1ca`; fix `e393b43` |
 | CR-06-CONFIG_PROTOCOL-006 | Approved header; style `modules-and-data.md` File order | `src/protocol.ts@5ff22a4:1–5` | WARNING | 0 | Fixed in round 1: approved copyright and overview header | source `e393b43`; fix `c1766e5` |
 | CR-06-CONFIG_PROTOCOL-007 | Approved header; style `modules-and-data.md` File order | `test/protocol.test.ts@5ff22a4:1–4` | WARNING | 0 | Fixed in round 1: approved SPDX, copyright, and overview header | source `c1766e5`; fix `dd2e5b3` |
-| CR-06-CONFIG_PROTOCOL-008 | `config.schema.json` email format; D-06 | `src/config.ts@2c5788f:22` | BLOCKER | 1 | Repaired, awaiting round 2: active edge-hyphen refusal failed before source fix; practical dot-atom local text and DNS label checks reject malformed parts | source `e211078`; RED `837f061`; fix `037dfe9` |
+| CR-06-CONFIG_PROTOCOL-008 | `config.schema.json` email format; D-06 | `src/config.ts@2c5788f:22` | BLOCKER | 1 | Fixed in round 2: active edge-hyphen refusal failed before source fix; practical dot-atom local text and DNS label checks reject malformed parts | source `e211078`; RED `837f061`; fix `037dfe9` |
 
 ## ENTRY stable IDs
 
@@ -58,6 +58,7 @@ No correction round has started. For each independent round, commit its report a
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
 | CONFIG_PROTOCOL | 0 | `review_config_protocol` at `5ff22a4`, clean diff; four complete files | 0 | 0 | 0 | 7 | 0 | 7 | 001–007 | `d2ab800` | `2c5788f` |
 | CONFIG_PROTOCOL | 1 | `review_config_protocol` at `2c5788f`, clean diff; config 1–209, config test 1–485, protocol 1–45, protocol test 1–42 | 7 | 7 | 0 | 1 | 0 | 1 | 008 | `e211078` | `2c5788f` |
+| CONFIG_PROTOCOL | 2 | `review_config_protocol` at `41d1ee3`, clean diff; config 1–216, config test 1–503, protocol 1–45, protocol test 1–42 | 1 | 1 | 0 | 0 | 0 | 0 | none | this round-report commit | `41d1ee3` |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 

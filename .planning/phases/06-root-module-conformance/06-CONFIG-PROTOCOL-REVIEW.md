@@ -47,3 +47,9 @@ Round 1 counts: opening 7, fixed 7 (001–007), rejected 0, new 1 (008), reopene
 ## Repair queued for independent round 2
 
 For 008, `837f061` committed only RED evidence JSON. The active `refuses an account email with an edge hyphen in its domain` assertion failed at the intended `deepStrictEqual` against unchanged source at `e211078`; `check tdd-red-evidence` returned `RED_EVIDENCE_OK`. Commit `037dfe9` checks the practical ASCII dot-atom local part and DNS labels with alphanumeric edges. It adds independent accepted and refused email cases and keeps the privacy-safe refusal text. Named GREEN TAP, config direct 100% coverage, Fallow guard and audit, and the normal commit hook passed. The first commit attempt failed only on regex complexity and lint style; the fixer corrected those issues before the successful normal commit. No production protocol value changed.
+
+## Correction round 2
+
+Independent reviewer `review_config_protocol` read all four complete files at clean revision `41d1ee3b2e2c6f1332f3ea171f0d22d296e629d1`: `src/config.ts` 1–216, `test/config.test.ts` 1–503, `src/protocol.ts` 1–45, and `test/protocol.test.ts` 1–42. The reviewer also checked the bounded platform assertion and unchanged `src/protocol.json`. ID 008 was confirmed fixed. IDs 001–007 stayed fixed; no finding reopened and no new finding survived triage.
+
+Round 2 counts: opening 1 (008), fixed 1 (008), rejected 0, new 0, reopened 0, closing 0. `1 - 1 - 0 + 0 + 0 = 0`. The batch closed before the four-round cap. No D-04 stop predicate fired.
