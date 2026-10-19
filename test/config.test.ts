@@ -97,7 +97,7 @@ for (const email of ['not-an-email', 'jane.doe@company', 'jane doe@example.test'
 
 // The accept and reject verdicts are written out so a pattern change cannot
 // alter them without failing a case.
-for (const email of ['a@b.c', 'user+tag@example.test', 'user@sub.domain.example']) {
+for (const email of ['a@b.c', 'user+tag@example.test', 'user@sub.domain.example', 'user@exam-ple.test']) {
   test(`accepts an account email of ${JSON.stringify(email)}`, () => {
     // arrange
     const expectedAcceptance = acceptedConfig({ email });
@@ -120,6 +120,13 @@ for (const email of [
   '.user@example.test',
   'user.@example.test',
   'user..name@example.test',
+  'user(name)@example.test',
+  'user@example-.test',
+  'user@example.-test',
+  'user@example.test-',
+  'user@exam(ple).test',
+  'user@example_test.com',
+  'user@example.test:443',
 ]) {
   test(`refuses an account email of ${JSON.stringify(email)}`, () => {
     // arrange
@@ -139,6 +146,17 @@ test('refuses an account email with consecutive domain dots', () => {
 
   // act
   const configResult = validateConfig(accountConfig({ email: 'user@example..test' }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
+
+test('refuses an account email with an edge hyphen in its domain', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = { ok: false, reason: MALFORMED_EMAIL_REFUSAL };
+
+  // act
+  const configResult = validateConfig(accountConfig({ email: 'user@-example.test' }));
 
   // assert
   assert.deepStrictEqual(configResult, expectedRefusal);

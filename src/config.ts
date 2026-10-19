@@ -18,8 +18,15 @@ import type { PlatformConfig } from 'homebridge';
 const DEFAULT_NAME = 'Basement Guardian';
 
 // The settings form uses `format: "email"`. A hand-edited config.json bypasses
-// the form, so the runtime also rejects empty dot-atom parts.
-const EMAIL_PATTERN = /^[^\s@.]+(?:\.[^\s@.]+)*@[^\s@.]+(?:\.[^\s@.]+)+$/;
+// the form, so the runtime checks dot-atom text and DNS labels with alphanumeric edges.
+const EMAIL_LOCAL_PART_PATTERN = /^[a-z\d!#$%&'*+/?=^_`{|}~-]+(?:\.[a-z\d!#$%&'*+/?=^_`{|}~-]+)*$/i;
+const EMAIL_DOMAIN_PATTERN = /^[a-z\d](?:[a-z\d-]*[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)+$/i;
+
+function isEmailAddress(email: string): boolean {
+  const at = email.indexOf('@');
+
+  return at > 0 && EMAIL_LOCAL_PART_PATTERN.test(email.slice(0, at)) && EMAIL_DOMAIN_PATTERN.test(email.slice(at + 1));
+}
 
 /** An integer field, its inclusive bounds, and the value an absent field takes. */
 interface IntegerBounds {
@@ -154,7 +161,7 @@ function firstRefusal(fields: Record<string, unknown>): string | undefined {
   // Alone among these refusals this one names the field and the rule and
   // quotes nothing: an account email is an account identifier, and the Privacy
   // constraint keeps identifiers out of the log (WR-01, AUTH-02).
-  if (!EMAIL_PATTERN.test(email)) {
+  if (!isEmailAddress(email)) {
     return 'the account email must be an email address.';
   }
 
