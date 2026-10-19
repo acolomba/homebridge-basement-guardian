@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Redacts secrets from Homebridge log messages and parameters.
+ */
+
 import type { LogLevel, Logging } from 'homebridge';
 
 /** Stands in for every value the wrapper substitutes. */
