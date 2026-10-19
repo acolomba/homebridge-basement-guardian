@@ -30,7 +30,7 @@ const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=~-](?:[\w.+/=~-]*[\w+/=~-])?/gi;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
 const AUTHENTICATION_QUOTED_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*")(?:\\.|[^"\\])+`, 'gi');
-const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*)([^"\s][^\r\n]*)`, 'gi');
+const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*)([^"\s][\s\S]*)`, 'gi');
 
 const CREDENTIAL_PATTERNS: readonly RegExp[] = [
   AUTHORIZATION_PATTERN,

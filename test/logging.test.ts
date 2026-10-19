@@ -447,6 +447,7 @@ test('AUTH-02 redacts a field-shaped suffix inside an unquoted password', () => 
 for (const { character, password } of [
   { character: 'brace', password: 'left}right' },
   { character: 'quote', password: 'left"right' },
+  { character: 'newline', password: 'left\nright' },
 ]) {
   test(`AUTH-02 redacts a ${character} inside an unquoted password`, () => {
     // arrange
