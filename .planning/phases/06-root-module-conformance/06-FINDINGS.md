@@ -103,6 +103,19 @@ Evidence commit `3599f67` and source/test commit `6955514` used this second exce
 
 The final independent round closed ENTRY-018 and accepted new privacy BLOCKERs ENTRY-019 and ENTRY-020. `1 - 1 - 0 + 2 + 0 = 2`. Open IDs: CR-06-ENTRY-019 and CR-06-ENTRY-020. The four-round cap applies even if a later repair could close these causes. Both one-time maintainer exceptions have been used. No further ENTRY repair or review is authorized, and PLATFORM dispatch remains blocked pending a new maintainer decision.
 
+## Separate post-debug ENTRY validation (not correction round five)
+
+The maintainer authorized a focused GSD debug task and replan after the round-four cap. Debug commits `24f3620` and `2d291cc` changed the logger and its owner tests. `.planning/debug/logging-redaction-leaks.md` records active RED assertions and revert/reconfirm evidence before and after the repair; there is no Phase 6 planning-only RED evidence commit for these debug fixes. Do not infer one from the commit history.
+
+Independent `entry_post_debug_review` read all six complete ENTRY files at `b24cd835d310beacc37beca99e527db125ab032b`: logging 1–227 and owner 1–652, settings 1–36 and owner 1–54, index 1–23 and owner 1–33. All six executable inputs matched HEAD and `2d291cc`; only the non-executable debug session was untracked. The historical ENTRY round-four table and STOP above are unchanged.
+
+| ID | Current-code review result | Evidence | Closure status |
+| --- | --- | --- | --- |
+| CR-06-ENTRY-019 | Provisionally fixed | `src/logging.ts@b24cd83:33` masks the remainder, including braces, quotes, and newlines; exact delegate assertions at `test/logging.test.ts:447–466` pass | Pending fresh gates and explicit Homebridge result |
+| CR-06-ENTRY-020 | Provisionally fixed | Original-text span union at `src/logging.ts@b24cd83:72–109` retains field recognition; exact delegate assertion at `test/logging.test.ts:468–481` passes | Pending fresh gates and explicit Homebridge result |
+
+The independent review accepted no new ENTRY cause and assigned no ENTRY-021. Adjacent newline, registered-secret overlap, all logger routes, settings identity, index registration, and six headers had concrete passing source/test evidence in `06-ENTRY-REVIEW.md`. At the reviewed executable inputs on Node v26.12.0, the three compiled ENTRY owners passed 52/52 tests, pairing passed, fresh isolated direct coverage passed all three 100% thresholds, and fresh `npm run check` passed static, unpaired, 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated direct pairs. The executable-input diff from `b24cd83` was empty; the only untracked path was the non-executable debug session. The reviewed code has zero accepted open findings, but ENTRY is **not closed**: the original real Homebridge logging workflow result is still required. PLATFORM dispatch remains blocked.
+
 ## Evidence
 
 Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a8d686db9735d454ee004851`. The check ran at `9528f28d31ebe0ffc562fb09f22acdc143a0c942`, whose committed change contains only this ledger and `06-REVIEW-PROTOCOL.md`. `git diff --stat 4bb84f631ac806f0a8d686db9735d454ee004851 -- src test features scripts package.json package-lock.json config.schema.json tsconfig.json tsconfig.build.json tsconfig.test.json eslint.config.js .fallowrc.json .pre-commit-config.yaml .github/workflows` returned no changes before or after the checks. `git ls-files --others --exclude-standard` returned no untracked inputs. The only dirty paths were `.planning/STATE.md` and `.planning/state.json`, changed by `state.begin-phase`; neither is an executable check input. Pairing and full-check evidence below covers this exact tree. Any source, test, support, dependency, or tool input change requires a fresh check.
