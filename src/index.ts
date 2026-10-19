@@ -16,7 +16,7 @@ import { PLATFORM_NAME } from './settings.js';
 import type { API } from 'homebridge';
 
 /**
- * This method registers the platform with Homebridge
+ * Registers the platform with Homebridge.
  */
 export default function registerPlatform(api: API): void {
   api.registerPlatform(PLATFORM_NAME, BasementGuardianPlatform);
