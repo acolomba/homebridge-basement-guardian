@@ -102,7 +102,7 @@ PLATFORM round 0 is the initial review, not a correction round. For each indepen
 | PLATFORM | 0 | `platform_initial_review` at `0696d99`, clean executable inputs; platform 1–673, owner 1–3781 | 0 | 0 | 3 | 11 | 0 | 8 | 001–008 | `2daea7b` | none; no repair yet |
 | PLATFORM | 1 | `platform_round1_review` at `7558443`, clean executable inputs; platform 1–681, owner 1–3999 | 8 | 7 | 0 | 3 | 0 | 4 | 003, 012–014 | `19255e5` | `7558443` |
 | PLATFORM | 2 | `platform_round2_review` at `f3e3088`, clean executable inputs; platform 1–690, owner 1–4211 | 4 | 4 | 0 | 1 | 0 | 1 | 015 | `383c991` | `f3e3088` |
-| PLATFORM | 3 | `platform_round3_review` at `6c0e8bd`, clean executable inputs; platform 1–700, owner 1–4276 | 1 | 1 | 0 | 0 | 0 | 0 | none | this commit | `6c0e8bd` |
+| PLATFORM | 3 | `platform_round3_review` at `6c0e8bd`, clean executable inputs; platform 1–700, owner 1–4276 | 1 | 1 | 0 | 0 | 0 | 0 | none | `a043e6d` | `6c0e8bd` |
 
 The required equation is `closing = opening - fixed - rejected + new + reopened`.
 
@@ -166,3 +166,15 @@ Baseline fingerprint: the executable-input source revision is `4bb84f631ac806f0a
 | ENTRY round-4 combined check | Same clean `add5a3a` inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-04-npm-cache npm run check` | 0 | about 55 s | Six static checks, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, and merged direct LCOV for 43 isolated pairs passed. The D-04 cap stop remains active. |
 | PLATFORM terminal owner coverage | Clean executable inputs at `6c0e8bd`, checked at `a043e6d`; no untracked inputs | v26.12.0 | `npm run test:coverage:direct -- src/platform.ts` | 0 | about 4 s | Isolated platform owner met 100% line, function, and branch coverage. |
 | PLATFORM terminal combined check | Same inputs, writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-platform-npm-cache npm run check` | 0 | about 56 s | Static and compiled unpaired checks passed; 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated direct pairs passed. |
+| Phase 6 final six-root direct coverage | Executable inputs at `6c0e8bd`, checked after planning-only commits at `9861492`; no untracked executable inputs | v26.12.0 | `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/logging.ts src/settings.ts src/index.ts src/platform.ts` | 0 | about 4 s | Each of the six source/test pairs independently met 100% line, function, and branch coverage. |
+| Phase 6 final combined check | Same executable inputs; writable npm cache and local socket access | v26.12.0 | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-final-npm-cache npm run check` | 0 | about 56 s | Static and compiled unpaired checks passed; 104/104 Cucumber scenarios, 1156/1156 steps, and 43 isolated direct pairs passed. |
+
+## Final Phase 6 reconciliation
+
+The current inventory is exactly six root source modules and their six mirrored tests: config, protocol, logging, settings, index, and platform. All twelve carry the approved SPDX, copyright, and file overview header. The maintainer-retired `test/configSchema.test.ts` and `test/packageManifest.test.ts` remain absent. Bounded accessory and Cucumber consumers are recorded only where a root repair required them; they are not counted as root files reviewed.
+
+CONFIG_PROTOCOL closed at correction round two with zero open IDs. ENTRY's historical correction round four stopped with 019 and 020 open; its separately authorized post-debug complete-file validation closed both current-code causes after the maintainer's “Confirmed fixed” Homebridge result. That validation is not called round five. PLATFORM closed at correction round three with zero open IDs. All round equations above reconcile and no PLATFORM fixed ID reopened.
+
+Git ancestry audit found sixteen Phase 6 planning RED evidence commits, each containing only a `.planning/` evidence path and preceding its GREEN fix commit. Their named failing assertions and `RED_EVIDENCE_OK` validator results are in the batch repair records. The separate logging debug commits `24f3620` and `2d291cc` retain their actual RED/revert/reconfirm history in the resolved debug record; they are not misrepresented as planning-only evidence commits. No accepted finding remains open in current code.
+
+At final reconciliation on Node v26.12.0, `npm run --silent test:corresponding` exited 0. `npm run test:coverage:direct -- src/config.ts src/protocol.ts src/logging.ts src/settings.ts src/index.ts src/platform.ts` exited 0, enforcing 100% direct line, function, and branch coverage for each root pair alone. The final combined full gate and its executable-input fingerprint are recorded in `06-VALIDATION.md`.

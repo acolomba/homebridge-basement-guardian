@@ -31,7 +31,7 @@ Each covers the source modules and their paired tests against the style, comment
 - [x] **DEV-01**: `src/device/**`, `src/persistence/**`, and their tests conform.
 - [x] **RUN-01**: `src/runtime/**` and `test/runtime/**` conform.
 - [x] **ACC-01**: `src/accessories/**` and `test/accessories/**` conform.
-- [ ] **ROOT-01**: The root modules `src/*.ts` and their tests conform.
+- [x] **ROOT-01**: The root modules `src/*.ts` and their tests conform.
 - [ ] **FEAT-01**: `features/**/*.feature` follow the Gherkin rules in `features/CLAUDE.md` and `skills/cucumber-behavioral-testing`.
 - [ ] **FEAT-02**: `features/**` step definitions and support code follow `skills/cucumber-behavioral-testing`, `features/CLAUDE.md`, and the TypeScript rules.
 
@@ -69,7 +69,7 @@ Each covers the source modules and their paired tests against the style, comment
 | DEV-01 | Phase 3 | Complete |
 | RUN-01 | Phase 4 | Complete |
 | ACC-01 | Phase 5 | Complete |
-| ROOT-01 | Phase 6 | Pending |
+| ROOT-01 | Phase 6 | Complete |
 | FEAT-01 | Phase 7 | Pending |
 | FEAT-02 | Phase 7 | Pending |
 | BUG-01 | Phase 8 | Pending |
