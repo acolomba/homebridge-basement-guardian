@@ -80,7 +80,9 @@ function redactText(text: string, secrets: readonly string[]): string {
 // inside catch blocks and message handlers (WR-10).
 function describeObject(value: object): string {
   try {
-    return JSON.stringify(value);
+    const description: unknown = JSON.stringify(value);
+
+    return typeof description === 'string' ? description : UNSERIALIZABLE;
   } catch {
     return UNSERIALIZABLE;
   }

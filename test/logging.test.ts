@@ -184,6 +184,28 @@ test('describes a parameter that cannot be serialized', () => {
   verify(delegate);
 });
 
+test('describes an object whose toJSON returns undefined without throwing', () => {
+  // arrange
+  const delegate = createDelegate();
+  when(() => {
+    delegate.warn('the snapshot was refused', '[unserializable object]');
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [] });
+  const snapshot = { toJSON: () => undefined };
+
+  // act
+  let loggingError: string | undefined;
+  try {
+    log.warn('the snapshot was refused', snapshot);
+  } catch (error: unknown) {
+    loggingError = error instanceof Error ? error.message : 'non-Error throw';
+  }
+
+  // assert
+  assert.strictEqual(loggingError, undefined);
+  verify(delegate);
+});
+
 test('WR-10 describes an unserializable parameter that has no prototype rather than raising', () => {
   // arrange
   const delegate = createDelegate();
