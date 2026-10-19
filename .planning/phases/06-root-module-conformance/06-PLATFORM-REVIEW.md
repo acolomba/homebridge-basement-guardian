@@ -265,3 +265,54 @@ The historical round-0 count is unchanged, and the first independent correction 
 _Reviewed: 2026-10-19T17:00:41Z_
 _Reviewer: gsd-code-reviewer_
 _Depth: deep; round 0 candidates only_
+
+## Independent correction round 1 — 2026-10-19T17:39:44Z
+
+**Reviewer:** `gsd-code-reviewer` (`platform_round1_review`). **Reviewed revision:** `7558443628973b82f04e9b43ce989989a1d82f93` on Node v26.12.0. I read the complete `src/platform.ts@7558443` lines **1–681** and `test/platform.test.ts@7558443` lines **1–3999** in contiguous spans: source 1–240, 241–480, 481–681; test 1–250, 251–500, 501–750, 751–1000, 1001–1350, 1351–1650, 1651–2000, 2001–2300, 2301–2600, 2601–2900, 2901–3200, 3201–3500, 3501–3800, 3801–3999. I reread overlapping boundaries and exact finding lines. The review covered the entire current owner pair, not only the repair diff. The tracked tree and untracked-input list were clean before this report edit; `git diff 7558443 -- src/platform.ts test/platform.test.ts` and the executable-input diff were empty. `npm run --silent test:corresponding` exited 0. Previous fix commits provide direct-coverage and hook evidence; this read-only reviewer did not rebuild or mutate `dist-test` while the checkout was shared.
+
+The review applied `AGENTS.md` safety, privacy, and persistence constraints; `06-CONTEXT.md` D-03–D-06; `06-REVIEW-PROTOCOL.md`; TypeScript style and unit-test rules, especially `cases.md` assertions and `review.md` classification. Bounded call-chain reads were `src/config.ts`, `src/runtime/accountRuntime.ts`, `src/accessories/basementGuardian.ts`, `src/accessories/staleMarking.ts`, `src/accessories/pumpRecords.ts`, and `src/accessories/serviceCatalogue.ts`. No finding depends on a new Homebridge API interpretation.
+
+### Opening IDs and repair dispositions
+
+| Opening ID | Round-1 result at `7558443` | Evidence |
+| --- | --- | --- |
+| CR-06-PLATFORM-001 | **Fixed** in code; human workflow verification remains a separate gate | `src/platform.ts:428–432,456–461` isolates live and cached accessory failures. `test/platform.test.ts:1675–1725` makes the first live publisher and first cached service throw, then checks the healthy neighbor and cached marking. The runtime stop path can reach `root.abort()` at `src/runtime/accountRuntime.ts:1212–1238` after these presentation failures. |
+| CR-06-PLATFORM-002 | **Fixed** | `test/platform.test.ts:982–1050` now checks the complete parsed token cache record, including token, expiry, salt shape, and independently computed synthetic account fingerprint. The recorded temporary wrong-token control failed. |
+| CR-06-PLATFORM-003 | **Open**; the attempted assertion repair does not cover the next poll | `test/platform.test.ts:919,965–968,1478,1514–1517` advances only 300,000 ms. Both cases call `accountConfig()` without `pollInterval`; `src/config.ts:40,211` supplies 900 seconds and `src/runtime/accountRuntime.ts:1052–1054,1333` waits 900,000 ms before a poll. A runtime that cancels credential refresh but leaves the poll timer active passes both cases. The recorded removal-of-`root.abort()` control exercised the 30-second credential retry (`src/runtime/accountRuntime.ts:58,966–1007`), not that selective poll leak. **Rule:** `typescript-unit-tests/rules/cases.md` Assertions and `rules/review.md` BLOCKER. **Fix:** Set `pollInterval: 300` in both case configurations or advance past 900,000 ms; keep the exact post-shutdown request and accessory-call assertions and prove a selective leaked-poll control fails. |
+| CR-06-PLATFORM-004 | **Fixed** | `test/platform.test.ts:1145–1305` observes two accessories before failure, after one failure, and after two, with literal trust and contact expectations. The threshold-one and first-accessory-only controls failed. |
+| CR-06-PLATFORM-005 | **Fixed** | `test/platform.test.ts:1584–1617` checks two distinct restored services, each trust flag and preserved measurement; the first-service-only control failed. |
+| CR-06-PLATFORM-006 | **Fixed** | `test/platform.test.ts:1624–1650` presses both restored Switches, checks refusal and unchanged `On`, and forbids vendor requests; the first-control-only control failed. |
+| CR-06-PLATFORM-007 | **Fixed** | `test/platform.test.ts:1310–1453` holds the fourth inventory response, checks no unregister before that answer, and checks exactly one after; the skipped-final-check control failed. |
+| CR-06-PLATFORM-008 | **Fixed** | The three cited named context builders are declarations at `test/platform.test.ts:2306,2490,2519`; bodies and call sites retain their prior behavior and affected owner cases passed. |
+
+The round-0 rejected candidates **009–011 remain rejected** for their recorded project-decision and source reasons. Their cited behavior has not changed; no duplicate ID is assigned.
+
+### New BLOCKER findings
+
+#### CR-06-PLATFORM-012: A failed cached service leaves later trust reports readable
+
+**Rule and location:** `AGENTS.md` safety semantics; D-06 and D-10 account-wide credential refusal; `src/platform.ts@7558443:454–461,481–485`; bounded `src/accessories/staleMarking.ts@7558443:74–85,168–172`; `test/platform.test.ts@7558443:1675–1725`. **Severity: BLOCKER.**
+
+**Issue:** The new catch isolates accessories, but `markTrustReportsUnreadable` walks all services inside one call. If an early service's `updateCharacteristic` throws, the helper exits and later services on that *same* accessory are never visited. Those later `StatusActive` reports remain readable even though credentials were rejected. The existing regression uses one trust service per accessory, so it proves cross-accessory continuation only. A two-service cached accessory with the first service throwing and the second initially readable exposes the failure. The compound `marked += helper()` also loses any count of services marked before a later throw, so the zero-count diagnostic can falsely say that no accessory shows the refusal.
+
+**Fix:** Isolate each service's unreadable marking within the service walk, retain a count of successful marks, and continue to sibling services. Add an owner case with two trust-bearing services on one cached accessory, one synthetic failure, and an exact read/status assertion for the healthy sibling.
+
+#### CR-06-PLATFORM-013: A restored-service failure prevents the accessory from being owned
+
+**Rule and location:** `AGENTS.md` safety, identity, and persistence constraints; D-06 and RES-04; `src/platform.ts@7558443:669–679`; bounded `src/accessories/staleMarking.ts@7558443:74–85,108–111,130–134`; `test/platform.test.ts@7558443:1584–1619`. **Severity: BLOCKER.**
+
+**Issue:** `configureAccessory` records the restored accessory only after both service passes and logging. If a cached service throws during stale marking or control binding, the method exits before `this.accessories.set`. Other services remain trusted or controls stay writable; the launch path at `src/platform.ts:637–645` then cannot include this cached accessory's identity, and later credential-failure marking also cannot reach it. The owner case exercises only successful services. This is distinct from 012: this path can lose ownership of the whole restored accessory before cloud work starts.
+
+**Fix:** Record the restored accessory before fallible presentation work, isolate service failures so remaining trust reports and controls are handled, and log a fixed redacted failure. Add an owner case with an early synthetic service failure that checks map ownership, a later service's stale trust, and control refusal.
+
+#### CR-06-PLATFORM-014: A failed cache write permanently loses a counted pump observation
+
+**Rule and location:** `AGENTS.md` persistence and safety semantics; D-06 and CTRL-01; `src/platform.ts@7558443:163–169,240–290`; bounded `src/accessories/pumpRecords.ts@7558443:365–401` and `src/accessories/basementGuardian.ts@7558443:1054`. **Severity: BLOCKER.**
+
+**Issue:** After a pump activation, `pumpRecords.observe` mutates the in-memory context and its previous-running state before `store.persist()` calls `api.updatePlatformAccessories`. If that cache write throws, the outer dispatch logs and continues. An identical next poll sees no new activation, so `changed` is false and `persist()` is never retried. `updateDiscoveredDevice`'s `finally` comparison excludes observation records; absent a simultaneous rename or service change, it also makes no persistence call. A restart then reloads the old count and loses a real observed activation. The existing test at `test/platform.test.ts:3429–3550` proves successful writes to the correct accessory but does not make the first cache write fail.
+
+**Fix:** Keep a pending-persist flag until `updatePlatformAccessories` succeeds and retry it on a later observation, including an unchanged one. Add an active regression with a first synthetic cache-write failure, a repeated identical poll, and a successful second write that carries the counted record.
+
+### Round-1 counter and decision
+
+Opening **8** (001–008), fixed **7** (001, 002, 004–008), rejected **0**, new **3** (012–014), reopened **0**, closing **4** (003, 012–014): `8 - 7 - 0 + 3 + 0 = 4`. CR-06-PLATFORM-003 was never accepted as fixed by an independent round, so its incomplete attempted repair is **open**, not a reopened fixed finding. All four closing IDs are BLOCKER. Round one makes progress (`4 < 8`), no fixed ID reopened, and the four-round cap has not been reached. **D-04 decision: CONTINUE** with these exact open IDs in plan 06-07 after the coordinator commits the report and ledger; this reviewer dispatches no fixes. If a later round fails to reduce its opening count, reopens a fixed ID, or reaches round four, stop under D-04.
