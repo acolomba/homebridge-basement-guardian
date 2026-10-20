@@ -111,12 +111,8 @@ export interface FakeHomebridgeApi {
    * that: each restored accessory carries the same identity, the context as it survives a round
    * trip through JSON, and the published service surface with every characteristic's last value.
    *
-   * The service surface used to be left out on purpose, arguing that an assertion after a restart
-   * should read only what this run published -- "a stricter question than a real restart asks and
-   * never a laxer one". That holds for one question, did the plugin republish, and fails for
-   * another, does a stale value read as trustworthy before anything republished it. With no
-   * restored services there is nothing stale to read, so an assertion about the second question
-   * passes whether or not the plugin marks anything (RES-04, D-12).
+   * Restored values let a scenario check whether the plugin marks stale readings before a fresh
+   * update (RES-04, D-12).
    *
    * The restore follows the real one. Homebridge rebuilds through `PlatformAccessory.deserialize`,
    * which replaces the constructed accessory's services with the ones the cache held, and HAP's
