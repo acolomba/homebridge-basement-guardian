@@ -331,6 +331,13 @@ function assertSnapshotFields(this: BasementGuardianWorld, table: DataTable): Pr
 
 Then('the canonical snapshot carries these fields:', { timeout: STEP_TIMEOUT_MS }, assertSnapshotFields);
 
+async function assertExactSnapshotFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  await assertSnapshotRecord(this, 'data', 'fields', table);
+  assert.deepStrictEqual(this.snapshot(theDeviceId(this)).data, fieldsOf(table));
+}
+
+Then('the canonical snapshot has exactly these fields:', { timeout: STEP_TIMEOUT_MS }, assertExactSnapshotFields);
+
 // The metadata twin of the assertion above. Nothing in the suite could read `snapshot.metadata`
 // before this step, so a scenario publishing a document whose only readable section is device
 // metadata had no way to say the document arrived, and would have read the same green against a

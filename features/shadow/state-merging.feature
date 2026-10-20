@@ -28,7 +28,7 @@ Feature: Shadow state merging
       | offline               | false |
       | mcu_target_version    | 4     |
       | wifi_signal_dbm       | -55   |
-    Then the canonical snapshot carries these fields:
+    Then the canonical snapshot has exactly these fields:
       | water_level          | 2     |
       | primary_pump_running | true  |
       | ac_power             | true  |
