@@ -1,8 +1,8 @@
 Feature: Monitoring degradation
 
-  A shadow connection the plugin cannot open costs latency, not correctness: the poll is already the
-  reconciliation backstop. The plugin stays up, says once that it is seeing less, and says once more
-  when the connection returns.
+  A shadow connection the plugin cannot open costs latency, not correctness: polling remains the
+  reconciliation backstop. The plugin stays up, warns once, and announces recovery once.
+  The scenarios use a local fake cloud in place of the vendor services.
 
   Background:
     Given the fake cloud
