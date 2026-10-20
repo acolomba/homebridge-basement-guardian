@@ -80,6 +80,32 @@ stable `CR-07-BATCH-NNN` ID. Consolidate only from the disjoint batch reports.
 
 ## Offline baseline
 
-Plan 07-01 task 02 will append the executed commands, status-checked output,
-exit codes, input state, timing, and direct-coverage result here. A prior
-research observation is not accepted as this plan's execution evidence.
+All successful commands below used source revision
+`cadc07b16db06949d0594a870781af5cc8268d0a` and Node `v26.12.0`.
+Before the commands, `git status --porcelain=v1 --untracked-files=all` was
+empty. Immediately after the checks, before this ledger edit, it was also
+empty. The executable-input diff from that
+revision was empty (`git diff --exit-code cadc07b -- .
+':(exclude,glob).planning/**/*.md'`, exit 0). Generated build and coverage
+output is ignored. No new untracked executable input was present.
+
+| Order | Exact command | Exit | Observed result |
+| --- | --- | ---: | --- |
+| 1 | `npm run build:test` | 0 | TypeScript test build completed before Cucumber. |
+| 2 | `./node_modules/.bin/cucumber-js` | 130 after interruption | Sandbox blocked local fake listeners with `listen EPERM: operation not permitted 127.0.0.1`. It reported 104 scenarios: six passed, 98 failed from the same socket denial. This is environmental, not product RED evidence. |
+| 3 | `./node_modules/.bin/cucumber-js` with permitted loopback access | 0 | 104 scenarios passed; 1,156 steps passed; Cucumber reported 24.180 seconds. |
+| 4 | `./node_modules/.bin/cucumber-js --dry-run --format usage > /tmp/phase07-usage.txt 2>&1` | 0 | Zero `UNUSED` definitions, checked across the complete usage output. |
+| 5 | `./node_modules/.bin/cucumber-js --profile real --dry-run --format summary > /tmp/phase07-real.txt 2>&1` | 0 | Seven scenarios skipped; 41 steps skipped. The full summary had no `UNDEFINED` or `AMBIGUOUS` status. No real step ran. |
+| 6 | `npm run check` with permitted loopback access | 0 | Static checks, test build, unpaired tests, 104 passing default scenarios, 1,156 passing steps, and direct coverage completed. It merged `coverage/direct.lcov` from 43 isolated source/test pairs. Wall time was about 60 seconds. |
+
+The built-in usage dry run emitted a `MaxListenersExceededWarning` for 11
+`process.unhandledRejection` listeners. It remains a review candidate for
+07-10 HARNESS and `features/support/world.ts`. No finding or repair is
+preaccepted from the warning alone.
+
+The successful default execution and full gate used only local stand-ins.
+The real profile ran with `--dry-run` and selected `@real and @read-only`.
+The [Cucumber.js 13.2.1 dry-run documentation](https://github.com/cucumber/cucumber-js/blob/v13.2.1/docs/dry_run.md)
+states that hooks and step bodies do not run. It also states that undefined
+and ambiguous steps do not force a failing process status. This ledger
+therefore checks the real summary text as well as exit 0.
