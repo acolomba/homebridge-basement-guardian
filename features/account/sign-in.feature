@@ -22,6 +22,7 @@ Feature: Account sign-in
     Then the tenant holds 1 token request
     When the plugin restarts
     Then the tenant holds 1 token request
+    Then the vendor receives a second device list request with the cached token
 
   Scenario: A refused credential stops authentication and clears the cache
     Given the storage holds a token for another account

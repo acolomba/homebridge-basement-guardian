@@ -132,6 +132,18 @@ async function assertTokenRequestCount(this: BasementGuardianWorld, count: numbe
 
 Then('the tenant holds {int} token request(s)', assertTokenRequestCount);
 
+async function assertSecondDeviceListUsesCachedToken(this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+  const deviceRequests = service.requests
+    .filter((request) => request.path === '/devices')
+    .map(({ method, path, authorization, body }) => ({ method, path, authorization, body }));
+  const expected = { method: 'GET', path: '/devices', authorization: `Bearer ${DEFAULT_ID_TOKEN}`, body: '' };
+
+  assert.deepEqual(deviceRequests, [expected, expected]);
+}
+
+Then('the vendor receives a second device list request with the cached token', assertSecondDeviceListUsesCachedToken);
+
 async function assertGrantCarriesTheAccount(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
