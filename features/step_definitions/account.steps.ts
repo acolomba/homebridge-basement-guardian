@@ -172,7 +172,9 @@ function assertThrottleReported(this: BasementGuardianWorld): void {
 Then('the log names the throttling and how to stop the plugin', assertThrottleReported);
 
 function assertNoCredentialInTheLog(this: BasementGuardianWorld): void {
-  const leaked = [DEFAULT_ID_TOKEN, ACCOUNT_PASSWORD, ...EVERY_ISSUED_CREDENTIAL].filter((credential) => this.logged.some((line) => line.includes(credential)));
+  const leaked = [DEFAULT_ID_TOKEN, ACCOUNT_EMAIL, ACCOUNT_PASSWORD, ...EVERY_ISSUED_CREDENTIAL].filter((credential) =>
+    this.logged.some((line) => line.includes(credential)),
+  );
 
   assert.deepEqual(leaked, []);
 }
