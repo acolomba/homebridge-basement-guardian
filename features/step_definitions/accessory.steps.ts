@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
 import { currentAccessory } from '../lib/publishedServices.js';
@@ -21,6 +22,7 @@ import type { FakeAccessory } from '../lib/homebridgeApi.js';
 import type { ApiDevice } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
+import type { API } from 'homebridge';
 
 const DEVICE_ID = 'placeholder-gemini';
 
@@ -156,6 +158,25 @@ const EXPECTED_MANUFACTURER = 'Wayne';
 const EXPECTED_MODEL = 'Gemini';
 const EXPECTED_SERIAL_NUMBER = 'placeholder-serial-number';
 const EXPECTED_FIRMWARE_REVISION = 'unknown';
+const EXPECTED_GEMINI_SERVICE_KINDS: readonly string[] = [
+  'sump-pit-flood',
+  'sump-pit-level',
+  'primary-pump',
+  'primary-pump-running',
+  'backup-pump',
+  'backup-pump-running',
+  'sump-mains-power',
+  'mains-power-lost',
+  'backup-battery',
+  'backup-battery',
+  'primary-pump-fault',
+  'backup-pump-fault',
+  'water-sensor-fault',
+  'pump-controller-link-lost',
+  'system-self-test',
+  'alarm-mute',
+  'basement-guardian-offline',
+];
 
 async function assertOneAccessoryWithTruthfulAccessoryInformation(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
@@ -175,6 +196,15 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
   });
 
   const accessoryInformation = accessories[0].getService(homebridge.hap.Service.AccessoryInformation);
+  const catalogue = createServiceCatalogue(homebridge.hap as unknown as API['hap']);
+  assert.deepEqual(
+    catalogue.map((row) => row.kind),
+    EXPECTED_GEMINI_SERVICE_KINDS,
+  );
+  assert.deepEqual(
+    accessories[0].services.map((service) => [service.displayName, service.UUID, service.subtype]),
+    [['', homebridge.hap.Service.AccessoryInformation.UUID, undefined], ...catalogue.map((row) => [row.displayName, row.serviceClass.UUID, row.subtype])],
+  );
 
   assert.deepEqual(
     {
