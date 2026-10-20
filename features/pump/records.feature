@@ -64,6 +64,6 @@ Feature: Pump records
     When the vendor changes these device fields:
       | backup_pump_timestamp | 1700003600 |
     Then the "Backup Pump" service reports "Activations Observed Since Observation Start" as "1"
-    Then the plugin polls the vendor at least 8 times
+    When the plugin completes another vendor poll
     Then the "Backup Pump" service reports "Activations Observed Since Observation Start" as "1"
     Then the "Backup Pump" service reports "Last Observed Activation At" as "2023-11-14T23:13:20.000Z"

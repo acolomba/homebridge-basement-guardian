@@ -144,6 +144,14 @@ When('homebridge shuts down', async function (this: BasementGuardianWorld): Prom
   await delay(SETTLE_MS);
 });
 
+// Polls run in sequence. A second new request proves the first post-observation poll completed.
+When('the plugin completes another vendor poll', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+  const before = deviceRequestCount(service);
+
+  await this.untilTrue(() => deviceRequestCount(service) >= before + 2, DEADLINE_MS, 'the plugin completed no later vendor poll');
+});
+
 Then('the monitoring path is {string}', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, path: string): Promise<void> {
   return this.untilTrue(() => this.runtime().monitoringPath === path, DEADLINE_MS, `the monitoring path never reached ${path}`);
 });
