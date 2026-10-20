@@ -6,11 +6,11 @@ Feature: Accessory discovery
 
   Background:
     Given the fake cloud
+
+  Scenario: A valid Gemini becomes one registered accessory with a populated AccessoryInformation service
     Given these devices:
       | deviceId           | name          |
       | placeholder-gemini | Sump Guardian |
-
-  Scenario: A valid Gemini becomes one registered accessory with a populated AccessoryInformation service
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
 
@@ -28,6 +28,9 @@ Feature: Accessory discovery
     Then the plugin explains the halo and the unknown device once each
 
   Scenario: An already-cached device is updated on a second poll
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -35,6 +38,9 @@ Feature: Accessory discovery
     Then the plugin registers one accessory with a truthful accessory information service
 
   Scenario: A deviceTypeId change keeps the same accessory
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -47,6 +53,9 @@ Feature: Accessory discovery
     Then the plugin registers one accessory with a truthful accessory information service
 
   Scenario: A vendor rename is adopted when there is no prior customization
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -57,6 +66,9 @@ Feature: Accessory discovery
     Then the accessory is named "Sump Sentry"
 
   Scenario: A vendor rename is not adopted after a user customization
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -68,6 +80,9 @@ Feature: Accessory discovery
     Then the accessory is named "Basement Pump"
 
   Scenario: A device omitted from two trustworthy polls and a final check is removed
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -75,6 +90,9 @@ Feature: Accessory discovery
     Then the plugin unregisters the accessory
 
   Scenario: A device that reappears before the final check is not removed
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -84,6 +102,9 @@ Feature: Accessory discovery
     Then the plugin never unregisters the accessory
 
   Scenario: A device removed and then rediscovered is watched again
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
@@ -98,6 +119,9 @@ Feature: Accessory discovery
     Then the plugin reports 1 canonical change
 
   Scenario: A payload that stops validating degrades the accessory in place
+    Given these devices:
+      | deviceId           | name          |
+      | placeholder-gemini | Sump Guardian |
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
