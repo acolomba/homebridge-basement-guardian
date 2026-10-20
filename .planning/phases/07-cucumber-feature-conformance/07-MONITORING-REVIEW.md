@@ -1,6 +1,6 @@
 # MONITORING complete-file review
 
-This is the Round 0 candidate record for the `code-review-sweep` monitoring batch. No candidate below is yet a confirmed production bug. The maintainer accepted candidates 001 through 005, 007, and 008. Commits `aa7b4b7`, `092f060`, `91342fc`, `061ba7f`, `dc2c6f0`, `68adedc`, and `d03a9ea` implement them. The remaining candidates await one-at-a-time rulings.
+This is the Round 0 candidate record for the `code-review-sweep` monitoring batch. No candidate below is yet a confirmed production bug. The maintainer accepted candidates 001 through 005 and 007 through 009. Commits `aa7b4b7`, `092f060`, `91342fc`, `061ba7f`, `dc2c6f0`, `68adedc`, `d03a9ea`, and `ed3c0c6` implement them. The remaining candidates await one-at-a-time rulings.
 
 ## Round 0 complete-file review
 
@@ -13,7 +13,7 @@ Reviewer `/root/phase7_monitoring_round0` read both owned files completely at `d
 
 ## Candidates awaiting triage
 
-`B` and `W` are the reviewer's proposed severity. Candidates 001 through 005, 007, and 008 are **fixed**, 006 is **rejected by maintainer ruling**, and the others are **pending**. The protocol's opening accepted count is not yet set. Locations refer to the observed revision, not the moving current line.
+`B` and `W` are the reviewer's proposed severity. Candidates 001 through 005 and 007 through 009 are **fixed**, 006 is **rejected by maintainer ruling**, and the others are **pending**. The protocol's opening accepted count is not yet set. Locations refer to the observed revision, not the moving current line.
 
 | ID | Requirement | Rule path and section | Observed location | Proposed severity | Candidate and plausible wrong result |
 | --- | --- | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ Reviewer `/root/phase7_monitoring_round0` read both owned files completely at `d
 | CR-07-MONITORING-006 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps | `db38aa5:features/monitoring/degradation.feature:328,343,366,450,469,484,502,528-529,553,588,639` | W | Multiple Given steps occur after a When. Rejected by the maintainer's explicit ruling to keep the current wording and scenario order; changing the Gherkin keywords for this style rule is outside the accepted repair set. |
 | CR-07-MONITORING-007 | FEAT-02 | `.agents/skills/cucumber/rules/steps.md` §Steps | `db38aa5:features/step_definitions/runtime.steps.ts:203-243` | W | A Then stores an inventory count through `remember()` for a later Then; the rule says a Then has no side effects. Fixed in `68adedc`: the vendor-hold Given records the first post-hold inventory request count and checks setup succeeded; both Then steps read that count and check it stays unchanged. The two focused heartbeat scenarios passed 2/2, 32/32 steps, with no scenario or step-count change. Normal commit hooks passed. |
 | CR-07-MONITORING-008 | FEAT-02 | `07-REVIEW-PROTOCOL.md` §Rules and acceptance source; `.agents/skills/typescript-style/rules/modules-and-data.md` §Files and modules | `db38aa5:features/step_definitions/runtime.steps.ts:1-8` | W | The approved SPDX and separate copyright JSDoc header are absent. Fixed in `d03a9ea` with the SPDX line and separate copyright block above the existing overview, matching the approved format. Pre-commit and Fallow audit passed. The first normal commit hook aborted during direct coverage (exit 134); a retry on the unchanged staged diff passed all normal hooks and created the commit. No scenario or step-count change. |
-| CR-07-MONITORING-009 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | `db38aa5:features/monitoring/degradation.feature:1-5` | W | The description omits the local fake cloud standing in for the vendor service. |
+| CR-07-MONITORING-009 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | `db38aa5:features/monitoring/degradation.feature:1-5` | W | The description omits the local fake cloud standing in for the vendor service. Fixed in `ed3c0c6`: the three-line description names the local fake cloud in place of the vendor services while preserving the behavior it explains. Pre-commit, Fallow audit, and normal commit hooks passed. No scenario or step-count change. |
 | CR-07-MONITORING-010 | FEAT-02 | `.agents/skills/cucumber/rules/steps.md` §Steps | `db38aa5:features/step_definitions/runtime.steps.ts:56-256` | W candidate | Registrations use named function declarations rather than the prescribed anonymous world-bound expressions. |
 | CR-07-MONITORING-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | `db38aa5:features/monitoring/degradation.feature:458-472` | W candidate | The title says “before any poll,” but the restart step awaits runtime startup before the assertion; it may mean before any *successful* poll. |
 
