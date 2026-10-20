@@ -105,9 +105,14 @@ Feature: Accessory discovery
       | deviceId           | name          | waterLevel |
       | placeholder-gemini | Sump Guardian | 99         |
     Then the plugin explains the degradation once
+    Then the "Sump Pit Level" service reports "Raw Water Level Code" as "1"
+    Then the "Sump Pit Level" service reports "Status Active" as "false"
+    Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the plugin never unregisters the accessory
     When the vendor reports these devices:
       | deviceId           | name          |
       | placeholder-gemini | Sump Guardian |
     Then the plugin registers one accessory with a truthful accessory information service
+    Then the "Sump Pit Level" service reports "Status Active" as "true"
+    Then the "Sump Pit Flood" service reports "Status Active" as "true"
     Then the plugin never unregisters the accessory
