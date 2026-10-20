@@ -2,7 +2,7 @@ Feature: Shadow credential rotation
 
   The temporary shadow credentials last about an hour. An established connection is not re-signed.
   The plugin refreshes the cache for the next handshake and leaves the live connection alone.
-  The following handshake uses the material and client identifier the vendor issued last.
+  The following handshake carries the new key, token, and client identifier.
 
   Background:
     Given the fake cloud
@@ -24,5 +24,5 @@ Feature: Shadow credential rotation
       | water_level | 2 |
     When the broker closes every connection
     Then the broker holds 2 handshakes
-    Then the newest handshake carries the rotated credentials
+    Then the newest handshake carries the rotated key and token
     Then the broker holds the first and the rotated client identifier

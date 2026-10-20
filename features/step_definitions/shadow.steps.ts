@@ -446,7 +446,7 @@ async function assertLiveSubscriptions(this: BasementGuardianWorld): Promise<voi
 
 Then('the live connection is subscribed to every seeded device', { timeout: STEP_TIMEOUT_MS }, assertLiveSubscriptions);
 
-async function assertHandshakeCarriesTheRotatedCredentials(this: BasementGuardianWorld): Promise<void> {
+async function assertHandshakeCarriesRotatedKeyAndToken(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
   const handshake = broker.handshakes.at(-1) ?? '';
 
@@ -460,7 +460,7 @@ async function assertHandshakeCarriesTheRotatedCredentials(this: BasementGuardia
   );
 }
 
-Then('the newest handshake carries the rotated credentials', assertHandshakeCarriesTheRotatedCredentials);
+Then('the newest handshake carries the rotated key and token', assertHandshakeCarriesRotatedKeyAndToken);
 
 async function assertClientIdentifiers(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
