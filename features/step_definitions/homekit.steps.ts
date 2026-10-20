@@ -25,7 +25,7 @@ import { Then } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { currentAccessory, pushedValue, serviceOf, serviceOnNamed } from '../lib/publishedServices.js';
 
-import type { FakeHapService, FakeServiceClass } from '../lib/hap.js';
+import type { FakeHapCharacteristic, FakeHapService, FakeServiceClass } from '../lib/hap.js';
 import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { API } from 'homebridge';
@@ -50,6 +50,16 @@ const ALARM_QUIET = 0;
 
 function characteristicValue(service: FakeHapService | undefined, displayName: string): unknown {
   return pushedValue(service?.characteristics.find((candidate) => candidate.displayName === displayName));
+}
+
+async function assertPushedRead(characteristic: FakeHapCharacteristic | undefined, expected: unknown): Promise<void> {
+  assert.deepStrictEqual(pushedValue(characteristic), expected);
+
+  if (characteristic === undefined) {
+    throw new Error('the service carried no characteristic for the controller to read');
+  }
+
+  assert.deepStrictEqual(await characteristic.handleGetRequest(), expected);
 }
 
 // A published time is an ISO-8601 instant, and a record that has observed nothing publishes the
@@ -87,6 +97,10 @@ async function untilAlarmState(world: BasementGuardianWorld, displayName: string
   const homebridge = await world.homebridge();
 
   await untilPublished(world, () => alarmValue(serviceOf(homebridge, displayName)), state, failure);
+  await assertPushedRead(
+    serviceOf(homebridge, displayName)?.characteristics.find((candidate) => ALARM_CHARACTERISTICS.includes(candidate.displayName)),
+    state,
+  );
 }
 
 async function assertServicePublished(this: BasementGuardianWorld, displayName: string): Promise<void> {
@@ -127,8 +141,13 @@ Then('the plugin publishes no {string} service', { timeout: STEP_TIMEOUT_MS }, a
 async function assertCharacteristicValue(this: BasementGuardianWorld, serviceName: string, characteristicName: string, text: string): Promise<void> {
   const homebridge = await this.homebridge();
   const failure = `the ${serviceName} service never reported ${characteristicName} as ${text}`;
+  const expected = publishedValue(text);
 
-  await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), publishedValue(text), failure);
+  await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), expected, failure);
+  await assertPushedRead(
+    serviceOf(homebridge, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
+    expected,
+  );
 }
 
 Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
@@ -148,12 +167,12 @@ async function assertCharacteristicValueOn(
 ): Promise<void> {
   const homebridge = await this.homebridge();
   const failure = `the ${serviceName} service on ${accessoryName} never reported ${characteristicName} as ${text}`;
+  const expected = publishedValue(text);
 
-  await untilPublished(
-    this,
-    () => characteristicValue(serviceOnNamed(homebridge, accessoryName, serviceName), characteristicName),
-    publishedValue(text),
-    failure,
+  await untilPublished(this, () => characteristicValue(serviceOnNamed(homebridge, accessoryName, serviceName), characteristicName), expected, failure);
+  await assertPushedRead(
+    serviceOnNamed(homebridge, accessoryName, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
+    expected,
   );
 }
 

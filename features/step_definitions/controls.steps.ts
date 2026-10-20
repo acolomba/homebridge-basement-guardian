@@ -222,8 +222,10 @@ When('the vendor starts failing every request with status {int}', startFailingVe
 
 async function assertSwitchReadsOn(this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
+  const characteristic = onCharacteristicOf(homebridge, displayName);
 
-  assert.strictEqual(pushedValue(onCharacteristicOf(homebridge, displayName)), true);
+  assert.strictEqual(pushedValue(characteristic), true);
+  assert.strictEqual(await characteristic?.handleGetRequest(), true);
 }
 
 Then('the {string} switch reads on', assertSwitchReadsOn);
@@ -287,6 +289,7 @@ async function assertPublishedValueCameBack(this: BasementGuardianWorld, service
   const failure = `the ${serviceName} service never published ${characteristicName} again`;
 
   await this.untilTrue(() => pushedValue(characteristicOf(homebridge, serviceName, characteristicName)) === expected, PUBLISH_DEADLINE_MS, failure);
+  assert.deepStrictEqual(await characteristicOf(homebridge, serviceName, characteristicName)?.handleGetRequest(), expected);
 }
 
 Then('the {string} service reports {string} as the value the scenario read', { timeout: STEP_TIMEOUT_MS }, assertPublishedValueCameBack);
