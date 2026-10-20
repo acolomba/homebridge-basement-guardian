@@ -1,6 +1,6 @@
 # MONITORING complete-file review
 
-This is the Round 0 candidate record for the `code-review-sweep` monitoring batch. No candidate below is a confirmed production bug. The maintainer accepted candidates 001 through 005 and 007 through 011, and rejected 006. Each accepted cause has a separate fix commit. The opening accepted set for correction Round 1 is 001, 002, 003, 004, 005, 007, 008, 009, 010, and 011 (10 IDs).
+This is the `code-review-sweep` monitoring batch record. No candidate below is a confirmed production bug. The maintainer accepted candidates 001 through 005 and 007 through 011, and rejected 006. Each accepted cause has a separate fix commit. Correction Round 1 reopened 004, so the batch stopped with that ID open.
 
 ## Round 0 complete-file review
 
@@ -13,7 +13,7 @@ Reviewer `/root/phase7_monitoring_round0` read both owned files completely at `d
 
 ## Round 0 triage and repairs
 
-`B` and `W` are the reviewer's proposed BLOCKER and WARNING severity. Candidates 001 through 005 and 007 through 011 are **fixed**; 006 is **rejected by maintainer ruling**. All first appeared in Round 0. Locations refer to the observed revision, not the moving current line. The baseline 104 scenarios and 1174 steps are now 104 scenarios and 1192 steps: 001 added one step, 002 six, 003 one, 004 five, and 005 five. The other repairs changed no step count.
+`B` and `W` are the reviewer's proposed BLOCKER and WARNING severity. Candidates 001 through 005 and 007 through 011 received fix commits; 004 **reopened in Round 1** and is now **open**. Candidate 006 is **rejected by maintainer ruling**. All first appeared in Round 0. Locations refer to the observed revision, not the moving current line. The baseline 104 scenarios and 1174 steps are now 104 scenarios and 1192 steps: 001 added one step, 002 six, 003 one, 004 five, and 005 five. The other repairs changed no step count.
 
 | ID | Requirement | Rule path and section | Observed location | Proposed severity | Candidate and plausible wrong result |
 | --- | --- | --- | --- | --- | --- |
@@ -31,4 +31,12 @@ Reviewer `/root/phase7_monitoring_round0` read both owned files completely at `d
 
 ## Correction rounds
 
-Round 1 awaits an independent complete-file rereview at the repaired revision. Opening accepted IDs: 001, 002, 003, 004, 005, 007, 008, 009, 010, 011 (10). All 10 have fix commits. Candidate 006 was rejected during Round 0 triage and is not in the accepted opening set. The protocol applies `closing = opening - fixed - rejected + new + reopened` to every later independent correction round.
+Round 1 reviewer `/root/phase7_monitoring_round1` read both complete files at `a700f108ff2340c884532cc4d69d344584539858`. The feature blob was `d0eb23a687a96b532e75809da2663bfee80f0a55`, read in contiguous spans 1-180, 181-360, 361-540, 541-731. The runtime step blob was `eb01b394b2af278bb80ab8f352ee54ff9c1872fb`, read in spans 1-160 and 161-302. The reviewer confirmed the intended repairs for 001-005 and 007-011 are present, but **reopened 004** at `a700f108:features/monitoring/degradation.feature:91-111`: “Shadow silence withdraws trust while polling continues” checks trust and sensor state after silence without requiring a later poll. A polling loop that stops at silence could pass. This is the same later-poll proof gap and is BLOCKER under `.agents/skills/cucumber/SKILL.md` §Review. No distinct new ID was confirmed. Candidate 006 remains rejected by the maintainer.
+
+| Round | Opening IDs | Fixed IDs | Rejected IDs | New IDs | Reopened IDs | Closing IDs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 001, 002, 003, 004, 005, 007, 008, 009, 010, 011 (10) | 001, 002, 003, 004, 005, 007, 008, 009, 010, 011 (10) | None (0) | None (0) | 004 (1) | 004 (1) |
+
+The equation is `10 - 10 - 0 + 0 + 1 = 1`. **STOP:** A previously fixed ID reopened, so this batch cannot run another correction round under `07-REVIEW-PROTOCOL.md`. The only open ID is CR-07-MONITORING-004. A separate decision and plan revision are required before any further repair.
+
+The combined-tree `npm run check` passed at `a700f108` on Node `v26.12.0`: 104/104 default scenarios, 1192/1192 steps, and direct coverage for 43 pairs. The worktree had no tracked diff or untracked files before that check. This passing gate does not resolve the reopened review finding.
