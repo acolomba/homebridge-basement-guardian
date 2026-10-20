@@ -1,17 +1,8 @@
 Feature: HomeKit official controls
 
-  A controller can press System Self-Test, and the press reaches the vendor exactly once. The
-  device's own report is what leaves the switch on: the plugin publishes what the system says it is
-  doing, never what somebody asked it to do (CTRL-03, CTRL-05, D-037).
-
-  Every way a command can end is here. A refused one and a resolved one carrying an unsuccessful
-  body both return the switch to what the device reports and leave it readable (D-04). A command the
-  vendor never answers reaches the device once and is never retried, because a command that outlived
-  its deadline may already have operated a real pump (D-038). A report that arrives after the window
-  closed is followed on its own merits (D-06).
-
-  Alarm Mute sends only the measured body and nothing else. Nobody has watched a real system
-  acknowledge a mute, so no scenario here states what the device does after one (CTRL-04, D-019).
+  A controller's self-test and alarm mute presses reach the vendor once with the measured commands.
+  The switches follow device reports through acceptance, refusal, and timeout.
+  The scenarios use a fake vendor and do not assume a real device confirms alarm mute.
 
   Background:
     Given the fake cloud
