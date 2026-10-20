@@ -28,12 +28,7 @@ import { pushedValue, serviceOf } from '../lib/publishedServices.js';
 
 import type { FakeHapCharacteristic } from '../lib/hap.js';
 import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
-import type { FakeRestRequest } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
-
-// The command route's own suffix, so a step names what the vendor receives rather than a path this
-// module rebuilt.
-const COMMAND_SUFFIX = '/data';
 
 // A published value appears only once a poll has applied what a step just set, so every read that
 // waits carries a deadline that turns a poll which never ran into a named failure.
@@ -86,20 +81,6 @@ function publishedSwitch(homebridge: FakeHomebridgeApi, displayName: string): Fa
   return characteristic;
 }
 
-function commandsIn(requests: readonly FakeRestRequest[]): readonly FakeRestRequest[] {
-  return requests.filter((request) => request.method === 'PUT' && new URL(request.path, 'http://vendor.test').pathname.endsWith(COMMAND_SUFFIX));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function desiredDataOf(request: FakeRestRequest): unknown {
-  const body: unknown = JSON.parse(request.body);
-
-  return isRecord(body) ? body.desiredData : undefined;
-}
-
 // A controller write, with its outcome recorded rather than raised. The real HAP rejects a refused
 // write with a bare status number and the stand-in reproduces that, so anything else thrown is a
 // defect and travels on rather than being read as a refusal.
@@ -122,11 +103,22 @@ async function writeToSwitch(world: BasementGuardianWorld, displayName: string, 
 
 async function assertCommandBodies(world: BasementGuardianWorld, count: number, desiredData: Record<string, unknown>): Promise<void> {
   const service = await world.restApi();
-  const commands = commandsIn(service.requests);
+  const deviceId = world.devices.at(0)?.deviceId;
+
+  if (deviceId === undefined) {
+    throw new Error('the scenario has no device for a command');
+  }
+
+  const requests = service.requests.filter((request) => request.method !== 'GET');
+  const expected = { method: 'PUT', path: `/devices/${encodeURIComponent(deviceId)}/data`, body: { desiredData } };
 
   assert.deepStrictEqual(
-    commands.map((request) => desiredDataOf(request)),
-    Array.from({ length: count }, () => desiredData),
+    requests.map((request) => ({
+      method: request.method,
+      path: new URL(request.path, 'http://vendor.test').pathname,
+      body: JSON.parse(request.body) as unknown,
+    })),
+    Array.from({ length: count }, () => expected),
   );
 }
 
