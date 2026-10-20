@@ -165,14 +165,18 @@ function refuseDuplicateService(services: readonly FakeHapService[], uuid: strin
  * needs the constructor itself.
  */
 export class HarnessPlatformAccessory implements FakeAccessory {
+  displayName: string;
+
+  readonly UUID: string;
+
   readonly context: Record<string, unknown> = {};
 
   readonly services: FakeHapService[] = [];
 
-  constructor(
-    public displayName: string,
-    readonly UUID: string,
-  ) {
+  constructor(displayName: string, UUID: string) {
+    this.displayName = displayName;
+    this.UUID = UUID;
+
     // Mirrors the real `Accessory` constructor, which always adds one
     // `AccessoryInformation` service before any accessory adapter runs.
     this.addService(hap.Service.AccessoryInformation);
