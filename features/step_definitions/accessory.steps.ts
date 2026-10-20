@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
+import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
 import { currentAccessory } from '../lib/publishedServices.js';
 
 import type { FakeAccessory } from '../lib/homebridgeApi.js';
@@ -164,9 +165,16 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
   const call = homebridge.registerPlatformAccessoryCalls[0];
   const accessories = call?.accessories ?? [];
 
+  assert.equal(call?.pluginIdentifier, PLUGIN_NAME);
+  assert.equal(call.platformName, PLATFORM_NAME);
   assert.equal(accessories.length, 1);
+  assert.equal(accessories[0]?.UUID, homebridge.hap.uuid.generate(DEVICE_ID));
+  assert.deepEqual(accessories[0].context.device, {
+    deviceId: DEVICE_ID,
+    deviceTypeId: this.devices.find((device) => device.deviceId === DEVICE_ID)?.deviceTypeId,
+  });
 
-  const accessoryInformation = accessories[0]?.getService(homebridge.hap.Service.AccessoryInformation);
+  const accessoryInformation = accessories[0].getService(homebridge.hap.Service.AccessoryInformation);
 
   assert.deepEqual(
     {
