@@ -20,6 +20,7 @@ Feature: Account configuration
     When the plugin loads
     Then the plugin refuses to start because "the account password is missing."
     Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
     Then no request reaches the fake cloud
 
   Scenario: The plugin starts nothing on an out-of-range poll interval
@@ -31,6 +32,7 @@ Feature: Account configuration
     When the plugin loads
     Then the plugin refuses to start because "pollInterval must be a whole number of seconds from 300 to 3600, but the supplied value is invalid."
     Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
     Then no request reaches the fake cloud
 
   Scenario: The plugin starts nothing when the account email is not an email address
@@ -41,5 +43,6 @@ Feature: Account configuration
     When the plugin loads
     Then the plugin refuses to start because "the account email must be an email address."
     Then the plugin registers no lifecycle listener
+    Then the plugin holds no accessory
     Then no logged line contains the configured account email
     Then no request reaches the fake cloud
