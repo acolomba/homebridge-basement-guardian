@@ -1,8 +1,8 @@
 Feature: Plugin lifecycle
 
-  Homebridge starts and stops the plugin on its own schedule, so a shutdown can land on a pending
-  retry, a request already in flight, or an open connection. Each one releases what it holds and
-  raises nothing, and a stopped plugin stays stopped.
+  Homebridge can stop the plugin during a retry, an active request, or an open connection.
+  Shutdown releases each, raises no error, and leaves the plugin stopped.
+  The scenarios use a local fake cloud in place of the vendor services.
 
   Background:
     Given the fake cloud
