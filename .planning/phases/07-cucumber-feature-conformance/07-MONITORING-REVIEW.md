@@ -1,6 +1,6 @@
 # MONITORING complete-file review
 
-This is the Round 0 candidate record for the `code-review-sweep` monitoring batch. No candidate below is yet a confirmed production bug. The maintainer is ruling on candidate 001 before the opening accepted set is fixed. No source repair has begun.
+This is the Round 0 candidate record for the `code-review-sweep` monitoring batch. No candidate below is yet a confirmed production bug. The maintainer accepted candidate 001 for a full published-service trust assertion. Commit `aa7b4b7` implements it. The remaining candidates await one-at-a-time rulings.
 
 ## Round 0 complete-file review
 
@@ -13,11 +13,11 @@ Reviewer `/root/phase7_monitoring_round0` read both owned files completely at `d
 
 ## Candidates awaiting triage
 
-`B` and `W` are the reviewer's proposed severity. The disposition for each row is **pending**; the protocol's opening accepted count is not yet set. Locations refer to the observed revision, not the moving current line.
+`B` and `W` are the reviewer's proposed severity. Candidate 001 is **fixed**; the other dispositions are **pending**. The protocol's opening accepted count is not yet set. Locations refer to the observed revision, not the moving current line.
 
 | ID | Requirement | Rule path and section | Observed location | Proposed severity | Candidate and plausible wrong result |
 | --- | --- | --- | --- | --- | --- |
-| CR-07-MONITORING-001 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios and §Data tables | `db38aa5:features/monitoring/degradation.feature:333-348` | B | “Every scope” checks only Flood and Offline. Mains Power could remain marked current and pass. Maintainer decision requested: expand full published-service trust assertion or narrow the claim. |
+| CR-07-MONITORING-001 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios and §Data tables | `db38aa5:features/monitoring/degradation.feature:333-348` | B | “Every scope” checks only Flood and Offline. Mains Power could remain marked current and pass. Fixed in `aa7b4b7`: the scenario checks the pushed `Status Active` value on every published catalogue service. The focused scenario passed 1/1; a temporary false-active Mains Power projection failed at the new Then (exit 1), and the control was removed. Normal commit hooks passed. |
 | CR-07-MONITORING-002 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | `db38aa5:features/monitoring/degradation.feature:513-533,559-604,606-657` | B | “Every service unreadable” samples one or three services. Primary Pump could answer a read after credential refusal and pass. |
 | CR-07-MONITORING-003 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | `db38aa5:features/monitoring/degradation.feature:659-674` | B | “Every service readable” checks two Flood characteristics. Primary Pump could answer No Response during a recoverable outage and pass. |
 | CR-07-MONITORING-004 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review | `db38aa5:features/monitoring/degradation.feature:14-23,371-387`; `db38aa5:features/step_definitions/runtime.steps.ts:188-196` | B candidate | “Keeps polling” may prove only one fallback update; the eight-poll floor may be met before silence. A loop that stops at the wrong time could pass. |
