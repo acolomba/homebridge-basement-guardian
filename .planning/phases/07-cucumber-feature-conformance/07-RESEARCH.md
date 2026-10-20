@@ -236,9 +236,9 @@ The phase's security-relevant boundary is test isolation and privacy: default sc
 
 ## Open Questions
 
-1. **Does the dry-run listener warning warrant a fix?** The warning is reproducible, and the constructor/`After` path explains why review is needed; independent full-file review should decide disposition before code changes. [VERIFIED: local usage output; `features/support/world.ts:228-235,781-785`]
-2. **Which real support layout repair is smallest?** Three current modules register steps under `real-pump/support/`; the layout rule requires `.steps.ts` under `step_definitions/`. A bounded owner should choose a move that preserves the real profile import and dry-run count. [VERIFIED: `features/real-pump/support/heartbeatSteps.ts:20-36`; `features/real-pump/support/lifecycleSteps.ts:16-36`; `features/real-pump/support/steps.ts:44-63`; `.agents/skills/cucumber/rules/layout.md:45-49`; `cucumber.json:9-13`]
-3. **Which supported Node version supplies the compatibility gate?** The host has Node 26, which the manifest permits, while the embedded project constraint names only Node 22/24. The planner should use an available Node 22/24 environment if compatibility evidence for those versions is required; do not infer it from this Node 26 baseline. [VERIFIED: `AGENTS.md:63-66`; `package.json:29-31`; local `node --version` output]
+1. **RESOLVED for planning — dry-run listener warning:** Plan 07-10 owns the full-file review of `world.ts` and must decide the warning's disposition from that review before any source change. The warning remains a candidate, not a preaccepted finding. [VERIFIED: `.planning/phases/07-cucumber-feature-conformance/07-10-PLAN.md:1-75`; local usage output; `features/support/world.ts:228-235,781-785`]
+2. **RESOLVED for planning — real support layout and helper boundary:** Plan 07-13 owns the three real step-module moves and polling-helper extraction. It must preserve the real profile's seven scenarios and 41 skipped steps, with no undefined or ambiguous steps and no live execution. [VERIFIED: `.planning/phases/07-cucumber-feature-conformance/07-13-PLAN.md`; `cucumber.json:9-13`]
+3. **RESOLVED for planning — Node baseline:** Accept the passing Node 26 baseline for this Phase 7 conformance review because `package.json` permits Node 26. Node 22/24 compatibility evidence remains a later release or Phase 8 concern; Phase 7 does not claim that evidence. [VERIFIED: `package.json:29-31`; `AGENTS.md:63-66`; local `node --version` output]
 
 ## Sources
 
