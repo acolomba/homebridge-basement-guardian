@@ -338,10 +338,8 @@ async function assertExactSnapshotFields(this: BasementGuardianWorld, table: Dat
 
 Then('the canonical snapshot has exactly these fields:', { timeout: STEP_TIMEOUT_MS }, assertExactSnapshotFields);
 
-// The metadata twin of the assertion above. Nothing in the suite could read `snapshot.metadata`
-// before this step, so a scenario publishing a document whose only readable section is device
-// metadata had no way to say the document arrived, and would have read the same green against a
-// harness that published nothing at all.
+// A metadata-only shadow document has no data fields to assert. This step checks its metadata in
+// the canonical snapshot.
 function assertSnapshotMetadataFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   return assertSnapshotRecord(this, 'metadata', 'device metadata fields', table);
 }
