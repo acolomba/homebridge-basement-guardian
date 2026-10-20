@@ -308,6 +308,15 @@ async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld):
     DISCOVERY_CHANGE_DEADLINE_MS,
     'the plugin never unregistered the accessory',
   );
+
+  assert.deepEqual(
+    homebridge.unregisterPlatformAccessoryCalls.map((call) => ({
+      pluginIdentifier: call.pluginIdentifier,
+      platformName: call.platformName,
+      uuids: call.accessories.map((accessory) => accessory.UUID),
+    })),
+    [{ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, uuids: [homebridge.hap.uuid.generate(DEVICE_ID)] }],
+  );
 }
 
 Then('the plugin unregisters the accessory', assertPluginUnregistersTheAccessory);
