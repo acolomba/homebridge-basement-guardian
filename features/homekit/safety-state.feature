@@ -8,7 +8,7 @@ Feature: HomeKit safety state
     Given the fake cloud
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
 
   Scenario: A reported mains power fact reaches both power services
@@ -39,7 +39,7 @@ Feature: HomeKit safety state
     those read as an empty pit that reports no leak.
 
     Given these devices:
-      | deviceId           | name          | water level |
+      | device id          | name          | water level |
       | placeholder-gemini | Sump Guardian | 12          |
     When the plugin starts
     Then the plugin publishes no "Sump Pit Flood" service

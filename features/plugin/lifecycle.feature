@@ -7,7 +7,7 @@ Feature: Plugin lifecycle
   Background:
     Given the fake cloud
     Given these gemini devices:
-      | deviceId                             | name        |
+      | device id                            | name        |
       | placeholder-account_placeholder-pump | Sump System |
 
   Scenario: Shutdown during a pending retry raises nothing

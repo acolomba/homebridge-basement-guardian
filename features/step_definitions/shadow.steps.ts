@@ -65,6 +65,10 @@ function fieldsOf(table: DataTable): Record<string, unknown> {
 }
 
 function toDevice(row: DeviceRow): ApiDevice {
+  if (row.deviceTypeId !== undefined || row.waterLevel !== undefined) {
+    throw new Error('a Gemini device table accepts only device id and name');
+  }
+
   return {
     deviceId: row.deviceId,
     deviceTypeId: DEVICE_TYPE_ID,

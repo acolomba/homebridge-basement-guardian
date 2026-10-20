@@ -13,7 +13,7 @@ Feature: Pump records
     Given the fake cloud
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
 
   Scenario: The observation record comes back after a restart with its count and its start

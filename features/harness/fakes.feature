@@ -18,7 +18,7 @@ Feature: Harness fakes
   Scenario: The fake service answers the device list
     Given the fake rest service
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the harness requests the device list
     Then the response carries status 200

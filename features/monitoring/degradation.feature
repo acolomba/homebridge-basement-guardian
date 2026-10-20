@@ -7,7 +7,7 @@ Feature: Monitoring degradation
   Background:
     Given the fake cloud
     Given these gemini devices:
-      | deviceId                             | name        |
+      | device id                            | name        |
       | placeholder-account_placeholder-pump | Sump System |
     Given the shadow credentials
 
@@ -29,9 +29,9 @@ Feature: Monitoring degradation
     carries its own water level, and every assertion names the pump it is about.
 
     Given these devices:
-      | deviceId                 | name            | waterLevel |
-      | placeholder-front-gemini | Front Sump Pump | 1          |
-      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+      | device id                | name            | water level |
+      | placeholder-front-gemini | Front Sump Pump | 1           |
+      | placeholder-back-gemini  | Back Sump Pump  | 7           |
     When the plugin starts
     Then the "Sump Pit Flood" service on "Front Sump Pump" reports "Status Active" as "true"
     Then the "Sump Pit Flood" service on "Back Sump Pump" reports "Status Active" as "true"
@@ -50,9 +50,9 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId                 | name            | waterLevel |
-      | placeholder-front-gemini | Front Sump Pump | 1          |
-      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+      | device id                | name            | water level |
+      | placeholder-front-gemini | Front Sump Pump | 1           |
+      | placeholder-back-gemini  | Back Sump Pump  | 7           |
     When the plugin starts
     Then the "Sump Pit Level" service on "Front Sump Pump" reports "Water Level" as "20"
     Then the "Sump Pit Level" service on "Back Sump Pump" reports "Water Level" as "60"
@@ -87,7 +87,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -112,7 +112,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -138,8 +138,8 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          | waterLevel |
-      | placeholder-gemini | Sump Guardian | 3          |
+      | device id          | name          | water level |
+      | placeholder-gemini | Sump Guardian | 3           |
     When the plugin starts
     When the device publishes these heartbeat fields:
       | water_level | 7 |
@@ -181,8 +181,8 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          | waterLevel |
-      | placeholder-gemini | Sump Guardian | 3          |
+      | device id          | name          | water level |
+      | placeholder-gemini | Sump Guardian | 3           |
     When the plugin starts
     When the device publishes these heartbeat fields:
       | water_level | 7 |
@@ -237,9 +237,9 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId                 | name            | waterLevel |
-      | placeholder-front-gemini | Front Sump Pump | 1          |
-      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+      | device id                | name            | water level |
+      | placeholder-front-gemini | Front Sump Pump | 1           |
+      | placeholder-back-gemini  | Back Sump Pump  | 7           |
     When the plugin starts
     When the "Front Sump Pump" device publishes these heartbeat fields:
       | water_level | 3 |
@@ -289,9 +289,9 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId                 | name            | waterLevel |
-      | placeholder-front-gemini | Front Sump Pump | 1          |
-      | placeholder-back-gemini  | Back Sump Pump  | 7          |
+      | device id                | name            | water level |
+      | placeholder-front-gemini | Front Sump Pump | 1           |
+      | placeholder-back-gemini  | Back Sump Pump  | 7           |
     When the plugin starts
     When the "Front Sump Pump" device publishes these heartbeat fields:
       | water_level | 3 |
@@ -317,7 +317,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Basement Guardian Offline" service reports "Status Active" as "true"
@@ -336,7 +336,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -356,7 +356,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the vendor changes these device fields:
@@ -374,7 +374,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the device publishes these heartbeat fields:
@@ -400,7 +400,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the device publishes these heartbeat fields:
@@ -436,7 +436,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the device publishes these heartbeat fields:
@@ -462,7 +462,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -477,7 +477,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Level" service reports "Water Level" as "20"
@@ -495,7 +495,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the plugin publishes the "System Self-Test" service
@@ -521,7 +521,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -546,7 +546,7 @@ Feature: Monitoring degradation
     Given a short poll interval
     Given the tenant issues tokens that expire in 3660 seconds
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -578,7 +578,7 @@ Feature: Monitoring degradation
     Given a short poll interval
     Given the tenant issues tokens that expire in 3660 seconds
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the device publishes these heartbeat fields:
@@ -629,7 +629,7 @@ Feature: Monitoring degradation
     Given a short poll interval
     Given the tenant issues tokens that expire in 3660 seconds
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     When the device publishes these heartbeat fields:
@@ -664,7 +664,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
@@ -689,7 +689,7 @@ Feature: Monitoring degradation
 
     Given a short poll interval
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
     When the plugin starts
     Then the "Sump Pit Flood" service reports "Status Active" as "true"
