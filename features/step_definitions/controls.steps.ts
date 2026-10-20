@@ -220,6 +220,14 @@ function movePastThePendingWindow(this: BasementGuardianWorld): void {
 
 When('the scenario clock moves past the control pending window', movePastThePendingWindow);
 
+async function startFailingVendorRequests(this: BasementGuardianWorld, status: number): Promise<void> {
+  const service = await this.restApi();
+
+  service.failEveryRequestWith(status);
+}
+
+When('the vendor starts failing every request with status {int}', startFailingVendorRequests);
+
 async function assertSwitchReadsOn(this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
 

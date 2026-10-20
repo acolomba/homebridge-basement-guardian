@@ -203,7 +203,7 @@ Feature: HomeKit official controls
     Given a short poll interval
     When the plugin starts
     Then the plugin publishes the "System Self-Test" service
-    Given the service fails every request with status 503
+    When the vendor starts failing every request with status 503
     Then the monitoring path is "unavailable"
     When a controller presses the "System Self-Test" switch
     Then the write reports that the control is not allowed now
