@@ -57,22 +57,103 @@ const VALID_GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
   offline: false,
 };
 
-// `waterLevel` is an optional column, following the same model `deviceTypeId`
-// established: a scenario naming it overrides the one otherwise-valid
-// telemetry field, which is what lets a scenario seed an out-of-domain
-// `water_level` (DEV-08) without restating the other 15 required fields.
-function withWaterLevelOverride(telemetry: Readonly<Record<string, unknown>>, row: Record<string, string>): Readonly<Record<string, unknown>> {
-  return row.waterLevel === undefined ? telemetry : { ...telemetry, water_level: Number(row.waterLevel) };
+interface DeviceRow {
+  deviceId: string;
+  name: string;
+  deviceTypeId?: string;
+  waterLevel?: string;
 }
 
-function toDevice(row: Record<string, string>): ApiDevice {
+const DEVICE_COLUMNS: ReadonlyMap<string, keyof DeviceRow> = new Map([
+  ['deviceId', 'deviceId'],
+  ['device id', 'deviceId'],
+  ['name', 'name'],
+  ['deviceTypeId', 'deviceTypeId'],
+  ['device type id', 'deviceTypeId'],
+  ['waterLevel', 'waterLevel'],
+  ['water level', 'waterLevel'],
+]);
+
+function parseDevices(table: DataTable): readonly ApiDevice[] {
+  const [headers, ...rows] = table.raw();
+
+  if (headers === undefined) {
+    throw new Error('a device table needs a header');
+  }
+
+  const fields = headers.map((header) => {
+    const field = DEVICE_COLUMNS.get(header);
+
+    if (field === undefined) {
+      throw new Error(`unknown device column: ${header}`);
+    }
+
+    return field;
+  });
+
+  if (new Set(fields).size !== fields.length || !fields.includes('deviceId') || !fields.includes('name')) {
+    throw new Error('a device table needs one device id and one name column, with no repeated field');
+  }
+
+  return rows.map((cells, index) => {
+    if (cells.length !== fields.length) {
+      throw new Error(`device row ${String(index + 1)} has ${String(cells.length)} cells; expected ${String(fields.length)}`);
+    }
+
+    const values: Partial<Record<keyof DeviceRow, string>> = {};
+
+    for (const [column, field] of fields.entries()) {
+      const value = cells[column];
+
+      if (value === undefined || value.trim() === '') {
+        throw new Error(`device row ${String(index + 1)} needs a value for ${field}`);
+      }
+
+      values[field] = value;
+    }
+
+    if (values.deviceId === undefined || values.name === undefined) {
+      throw new Error(`device row ${String(index + 1)} needs a device id and a name`);
+    }
+
+    const row: DeviceRow = { deviceId: values.deviceId, name: values.name };
+
+    if (values.deviceTypeId !== undefined) {
+      row.deviceTypeId = values.deviceTypeId;
+    }
+
+    if (values.waterLevel !== undefined) {
+      row.waterLevel = values.waterLevel;
+    }
+
+    return toDevice(row);
+  });
+}
+
+// An optional water level overrides one otherwise valid field, so a scenario can supply an
+// out-of-domain value without repeating every required telemetry field.
+function withWaterLevelOverride(telemetry: Readonly<Record<string, unknown>>, row: DeviceRow): Readonly<Record<string, unknown>> {
+  if (row.waterLevel === undefined) {
+    return telemetry;
+  }
+
+  const level = Number(row.waterLevel);
+
+  if (!Number.isFinite(level)) {
+    throw new Error(`water level must be numeric: ${row.waterLevel}`);
+  }
+
+  return { ...telemetry, water_level: level };
+}
+
+function toDevice(row: DeviceRow): ApiDevice {
   const deviceTypeId = row.deviceTypeId ?? DEFAULT_DEVICE_TYPE_ID;
   const telemetry = deviceTypeId === DEFAULT_DEVICE_TYPE_ID ? VALID_GEMINI_TELEMETRY : {};
 
   return {
-    deviceId: row.deviceId ?? '',
+    deviceId: row.deviceId,
     deviceTypeId,
-    name: row.name ?? '',
+    name: row.name,
     serialNumber: 'placeholder-serial-number',
     connectivity: { connected: true, timestamp: 0 },
     data: withWaterLevelOverride(telemetry, row),
@@ -90,7 +171,7 @@ function rememberedDeviceTypeId(accessory: FakeAccessory | undefined): unknown {
 async function applyDevicesFromTable(world: BasementGuardianWorld, table: DataTable): Promise<void> {
   const service = await world.restApi();
 
-  world.devices = table.hashes().map((row) => toDevice(row));
+  world.devices = parseDevices(table);
   service.setDevices(world.devices);
 }
 
@@ -137,7 +218,7 @@ When('the vendor omits the device from the next {int} inventory checks', deviceO
 async function devicesReportedForNextCheck(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const service = await this.restApi();
 
-  service.armDevicesAnswer(table.hashes().map((row) => toDevice(row)));
+  service.armDevicesAnswer(parseDevices(table));
 }
 
 When('the vendor reports these devices for the next inventory check:', devicesReportedForNextCheck);
