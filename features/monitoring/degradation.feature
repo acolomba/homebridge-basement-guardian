@@ -679,6 +679,7 @@ Feature: Monitoring degradation
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Sump Pit Flood" service answers a read for "Status Active"
     Then the "Sump Pit Flood" service answers a read for "Leak Detected"
+    Then every published service answers its trust read
 
   Scenario: A backwards system clock does not restore trust in a pump that stopped speaking
     A system clock moves backwards for ordinary reasons: an operator corrects it, NTP steps it after

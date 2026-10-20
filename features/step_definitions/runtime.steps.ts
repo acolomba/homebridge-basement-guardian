@@ -146,7 +146,7 @@ function assertMonitoringPath(this: BasementGuardianWorld, path: string): Promis
 
 Then('the monitoring path is {string}', { timeout: STEP_TIMEOUT_MS }, assertMonitoringPath);
 
-function publishedTrustReports(homebridge: FakeHomebridgeApi): readonly { service: string; characteristic: FakeHapCharacteristic | undefined }[] {
+function publishedTrustReports(homebridge: FakeHomebridgeApi): readonly { service: string; characteristic: FakeHapCharacteristic }[] {
   const accessory = currentAccessory(homebridge);
 
   if (accessory === undefined) {
@@ -162,6 +162,10 @@ function publishedTrustReports(homebridge: FakeHomebridgeApi): readonly { servic
     }
 
     const characteristic = service.characteristics.find((candidate) => candidate.UUID === statusActiveUuid);
+
+    if (characteristic === undefined) {
+      throw new Error(`the ${row.displayName} service carries no trust report`);
+    }
 
     return [{ service: row.displayName, characteristic }];
   });
@@ -186,10 +190,6 @@ Then('every published service reports "Status Active" as "false"', assertEveryPu
 async function assertEveryPublishedServiceTrustReadRefused(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
   for (const { service, characteristic } of publishedTrustReports(homebridge)) {
-    if (characteristic === undefined) {
-      throw new Error(`the ${service} service carries no trust report`);
-    }
-
     await assert.rejects(
       async () => {
         await characteristic.handleGetRequest();
@@ -201,6 +201,17 @@ async function assertEveryPublishedServiceTrustReadRefused(this: BasementGuardia
 }
 
 Then('every published service refuses its trust read', assertEveryPublishedServiceTrustReadRefused);
+
+async function assertEveryPublishedServiceTrustReadAnswered(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  for (const { service, characteristic } of publishedTrustReports(homebridge)) {
+    await assert.doesNotReject(async () => {
+      await characteristic.handleGetRequest();
+    }, `the ${service} service refused its trust read`);
+  }
+}
+
+Then('every published service answers its trust read', assertEveryPublishedServiceTrustReadAnswered);
 
 function assertNoUnhandledRejection(this: BasementGuardianWorld): void {
   assert.deepEqual(this.rejections, []);
