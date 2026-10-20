@@ -309,7 +309,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   4. The phase ledger records each finding's rule, location, severity, and outcome, and the last re-review round reports no open finding, or the phase stopped at the round cap with a report (applies PROC-01 and PROC-02).
   5. Every bug found has a regression test that was committed and seen failing before its fix, and every source/test pair a fix touched still reaches 100% direct coverage (applies BUG-01).
 
-**Plans**: 8/17 plans executed
+**Plans**: 9/17 plans executed
 - [x] 07-01-PLAN.md
 - [x] 07-02-PLAN.md
 - [x] 07-03-PLAN.md
@@ -326,7 +326,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [ ] 07-14-PLAN.md
 - [x] 07-15-PLAN.md
 - [x] 07-16-PLAN.md
-- [ ] 07-17-PLAN.md — bounded monitoring wording repair after Round 1 STOP
+- [x] 07-17-PLAN.md — bounded monitoring wording repair after Round 1 STOP
 
 **Batching**: Batches split the `.feature` files (Gherkin rules) from the TypeScript step and support code. `features/support/world.ts` and `features/support/steps/harness.ts` serve every scenario, so a batch that edits them runs in a wave of its own. The real-pump files get static review and a dry run only, never a live run. Plans are batches grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
 
