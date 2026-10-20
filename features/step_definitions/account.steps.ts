@@ -9,8 +9,10 @@
  */
 
 import assert from 'node:assert/strict';
-import { access, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { access, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
@@ -31,6 +33,7 @@ const REDACTED = '[redacted]';
 const REFUSED_STATUS = 403;
 const THROTTLED_STATUS = 429;
 const TOKEN_LIFETIME_MS = 2_592_000_000;
+const CACHE_SALT = 'placeholder-salt';
 
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
@@ -159,11 +162,27 @@ async function assertGrantCarriesTheAccount(this: BasementGuardianWorld): Promis
 
 Then('the grant carries the configured account', assertGrantCarriesTheAccount);
 
-async function assertTokenCachePresent(this: BasementGuardianWorld): Promise<void> {
-  assert.equal(await isPresent(await tokenCachePath(this)), true);
+async function assertGrantedTokenCached(this: BasementGuardianWorld): Promise<void> {
+  const contents = await readFile(await tokenCachePath(this), 'utf8');
+  let cache: unknown;
+
+  try {
+    cache = JSON.parse(contents);
+  } catch {
+    throw new Error('the token cache is not valid JSON');
+  }
+
+  const expected = {
+    idToken: DEFAULT_ID_TOKEN,
+    expiresAt: SCENARIO_START_TIME + TOKEN_LIFETIME_MS,
+    emailFingerprint: createHash('sha256').update(`${CACHE_SALT}${ACCOUNT_EMAIL}`).digest('hex'),
+    salt: CACHE_SALT,
+  };
+
+  assert.equal(isDeepStrictEqual(cache, expected), true, 'the token cache does not match the granted account token');
 }
 
-Then('the token cache is present', assertTokenCachePresent);
+Then('the token cache holds the granted token for the configured account', assertGrantedTokenCached);
 
 async function assertTokenCacheAbsent(this: BasementGuardianWorld): Promise<void> {
   assert.equal(await isPresent(await tokenCachePath(this)), false);

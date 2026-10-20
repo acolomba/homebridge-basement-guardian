@@ -14,7 +14,7 @@ Feature: Account sign-in
     When the plugin starts
     Then the tenant holds 1 token request
     Then the grant carries the configured account
-    Then the token cache is present
+    Then the token cache holds the granted token for the configured account
 
   Scenario: A restart reuses the cached token
     Given the shadow credentials
