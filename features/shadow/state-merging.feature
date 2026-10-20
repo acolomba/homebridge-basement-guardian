@@ -45,7 +45,7 @@ Feature: Shadow state merging
   Scenario: A requested value becomes neither device state nor a fresh receipt time
     When the plugin starts
     When the scenario clock moves forward
-    When the device publishes a requested value
+    When the shadow service returns a requested value
     Then the canonical snapshot carries no shadow version
     Then the canonical snapshot carries the receipt time the scenario started at
     Then the canonical snapshot carries no "alarm_muted" field
@@ -54,8 +54,8 @@ Feature: Shadow state merging
       | primary_pump_running | true |
     Then the plugin reports 0 canonical changes
 
-  # The other half of the same rule. A requested value the device sends is rejected above, and a
-  # value this plugin itself requested never reaches device state either: reported state stays
+  # The other half of the same rule. A requested value the shadow service returns is rejected above,
+  # and a value this plugin itself requested never reaches device state either: reported state stays
   # authoritative between an accepted command and the device's own report (CTRL-05, D-037).
   Scenario: A requested self-test never becomes device state
     Given the vendor accepts the next command with no device report

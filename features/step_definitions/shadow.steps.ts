@@ -252,7 +252,7 @@ async function publishRequestedState(this: BasementGuardianWorld): Promise<void>
   broker.publishGetAccepted(deviceId, REQUESTED_STATE, this.nextShadowVersion());
 }
 
-When('the device publishes a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);
+When('the shadow service returns a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);
 
 function advanceTheScenarioClock(this: BasementGuardianWorld): void {
   this.advanceClock(CLOCK_STEP_MS);
