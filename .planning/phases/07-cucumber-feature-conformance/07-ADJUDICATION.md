@@ -4,9 +4,9 @@
 Round 2, and HOMEKIT Round 3 STOP reports. **Scope:** The six findings below.
 This record does not change the observed findings, round equations, or STOP
 outcomes in `07-ACCOUNT-REVIEW.md`, `07-ACCESSORY-REVIEW.md`, or
-`07-HOMEKIT-REVIEW.md`. Plan `07-15` implements the four FIX/MOVE/ENFORCE
-rulings. Plan `07-14` reconciles its summary and this record with the original
-reports at the phase gate.
+`07-HOMEKIT-REVIEW.md`. Plans `07-15` and `07-16` implement the four
+FIX/MOVE/ENFORCE rulings. Plan `07-14` reconciles their summaries and this
+record with the original reports at the phase gate.
 
 | Finding | User ruling | Forward disposition and evidence required |
 | --- | --- | --- |
@@ -21,8 +21,8 @@ reports at the phase gate.
 
 These rulings authorize a bounded remediation addendum after the historical
 STOPs; they do not reopen correction rounds or authorize an unbounded review
-loop. No production behavior bug has been established, so Plan `07-15` touches
-only `features/**` test material. The two tests deleted by the maintainer in
+loop. No production behavior bug has been established, so Plans `07-15` and
+`07-16` touch only `features/**` test material. The two tests deleted by the maintainer in
 Phase 6 remain absent. The default profile uses offline stand-ins. The real
 profile runs only with `--dry-run`.
 
@@ -32,6 +32,6 @@ The three original reports retain their exact end-of-run open sets: ACCOUNT
 `015, 016`; ACCESSORY `007, 009, 019`; HOMEKIT `014`. The forward record has
 two adjudicated closures (`ACCESSORY-009`, `ACCESSORY-019`) and four items
 requiring verified implementation (`ACCOUNT-015`, `ACCOUNT-016`,
-`ACCESSORY-007`, `HOMEKIT-014`). Plan `07-15` records those four results in its
-summary. Plan `07-14` must report the historical STOP states and the later
+`ACCESSORY-007`, `HOMEKIT-014`). Plans `07-15` and `07-16` record those four
+results in their summaries. Plan `07-14` must report the historical STOP states and the later
 adjudicated outcomes separately, with current command and revision evidence.
