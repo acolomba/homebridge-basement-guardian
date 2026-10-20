@@ -7,7 +7,7 @@ Feature: Shadow state merging
   Background:
     Given the fake cloud
     Given these gemini devices:
-      | deviceId                             | name        |
+      | device id                            | name        |
       | placeholder-account_placeholder-pump | Sump System |
     Given these reported device fields:
       | water_level          | 1     |

@@ -115,7 +115,7 @@ async function assertCommandBodies(world: BasementGuardianWorld, count: number, 
   assert.deepStrictEqual(
     requests.map((request) => ({
       method: request.method,
-      path: new URL(request.path, 'http://vendor.test').pathname,
+      path: request.path,
       body: JSON.parse(request.body) as unknown,
     })),
     Array.from({ length: count }, () => expected),

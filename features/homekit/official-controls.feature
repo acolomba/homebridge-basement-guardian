@@ -7,7 +7,7 @@ Feature: HomeKit official controls
   Background:
     Given the fake cloud
     Given these devices:
-      | deviceId           | name          |
+      | device id          | name          |
       | placeholder-gemini | Sump Guardian |
 
   Scenario: A press of the self-test switch reaches the vendor and the device's report leaves it on

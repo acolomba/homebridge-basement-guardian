@@ -9,7 +9,7 @@ Feature: Shadow credential rotation
     Given the fake cloud
     Given a short rotation interval
     Given these gemini devices:
-      | deviceId                             | name        |
+      | device id                            | name        |
       | placeholder-account_placeholder-pump | Sump System |
     Given the shadow credentials
 
