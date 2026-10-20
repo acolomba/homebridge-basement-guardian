@@ -35,7 +35,7 @@ predates the ACCOUNT batch.
 | CR-07-ACCESSORY-006 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `17d79f3:features/accessory/discovery.feature:98-111` | B | fixed in Round 1: independent full-file review accepted the repair. | `a7216c8`: invalid-telemetry scenario passed; false-trust negative control failed at the intended Then. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-007 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, typed Given parser | 0 | `17d79f3:features/step_definitions/accessory.steps.ts:64-90` | W | open: strict cells and headers are repaired; the parser-location rule still requires an owned `features/lib/` path. Round 1 corrected severity from BLOCKER to WARNING because only the structural location remains. | `76d84c8`: unknown-header and blank-required-cell controls failed in Given; parser remains in the step module. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-008 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps; `AGENTS.md` §Identity | 0 | `17d79f3:features/step_definitions/accessory.steps.ts:159-185` | B | fixed in Round 1: independent full-file review accepted the repair. | `410e16c`: Gemini registration scenario passed; wrong-plugin negative control failed at the intended Then. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
-| CR-07-ACCESSORY-009 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `17d79f3:features/step_definitions/accessory.steps.ts:169-184` | B | fixed in Round 1: independent full-file review accepted the repair. | `cc2e011`: Gemini registration scenario passed; omitted-service negative control failed at the intended Then. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
+| CR-07-ACCESSORY-009 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `17d79f3:features/step_definitions/accessory.steps.ts:169-184`; reopened at `8c24e10:features/step_definitions/accessory.steps.ts:268-276` | B | **open at Round 2 STOP**: expected service triples come from production `createServiceCatalogue`, which also drives publication. Changing a row's subtype or display name moves both sides together and passes despite wrong HomeKit identity. | `cc2e011` caught an omitted service, but did not establish an independent oracle for service identities. Requires independently declared expected display-name, UUID, and subtype triples. |
 | CR-07-ACCESSORY-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `17d79f3:features/step_definitions/accessory.steps.ts:247-257` | B | fixed in Round 1: independent full-file review accepted the repair. | `cc5791a`: removal scenario passed; empty-removal negative control failed at the intended Then. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-011 | FEAT-01 | `.agents/skills/cucumber/rules/world-and-stand-ins.md` §Fakes and drivers; `.agents/skills/cucumber/SKILL.md` §Review | 0 | `17d79f3:features/lib/publishedServices.ts:30-31`; `17d79f3:features/lib/homebridgeApi.ts:272-277` | B | fixed in Round 1: independent full-file review accepted the repair. | `11b5e5f`: removal and rediscovery scenarios passed; historical-accessory control failed at the intended Then. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-012 | FEAT-01 | `07-REVIEW-PROTOCOL.md` §Rules and acceptance source | 0 | `17d79f3:features/lib/homebridgeApi.ts:1` | W | fixed in Round 1: independent full-file review accepted the repair. | `ee8fe1e`: header-only change passed normal commit hooks. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
@@ -43,8 +43,9 @@ predates the ACCOUNT batch.
 | CR-07-ACCESSORY-014 | FEAT-01 | `.agents/skills/typescript-style/rules/comments.md` §Forbidden in comments and test titles | 0 | `17d79f3:features/lib/homebridgeApi.ts:107-112` | W | fixed in Round 1: independent full-file review accepted the repair. | `b57f1d0`: present-tense cache comment passed normal commit hooks. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-015 | FEAT-01 | `.agents/skills/typescript-style/rules/classes.md` §Classes | 0 | `17d79f3:features/lib/homebridgeApi.ts:169-172` | W | fixed in Round 1: independent full-file review accepted the repair. | `46c6adb`: constructor smoke check and normal commit hooks passed. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-016 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `AGENTS.md` §Identity | 0 | `17d79f3:features/lib/publishedServices.ts:46-55,83-84` | B | fixed in Round 1: independent full-file review accepted the repair. | `62881fb`: direct two-same-name stand-in check throws on ambiguity; normal commit hooks passed. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
-| CR-07-ACCESSORY-017 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, registration callbacks | 1 | `787406b:features/step_definitions/accessory.steps.ts:178-182,307-434` | W | repair committed; awaiting independent Round 2 review. | `2e46aca`: all 15 world-using registrations now pass anonymous typed `function` expressions. Four focused scenarios and 41 steps passed; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps at `a39a4e6` on Node v26.12.0. |
-| CR-07-ACCESSORY-018 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, user-visible things | 1 | `787406b:features/accessory/discovery.feature:7-8` | W | repair committed; awaiting independent Round 2 review. | `a39a4e6`: removed the redundant fake-cloud Background; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps on Node v26.12.0. |
+| CR-07-ACCESSORY-017 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, registration callbacks | 1 | `787406b:features/step_definitions/accessory.steps.ts:178-182,307-434` | W | fixed in Round 2: independent full-file review found all 15 world-using registrations anonymous and typed. | `2e46aca`: four focused scenarios and 41 steps passed; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps at `a39a4e6` on Node v26.12.0. |
+| CR-07-ACCESSORY-018 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, user-visible things | 1 | `787406b:features/accessory/discovery.feature:7-8` | W | fixed in Round 2: independent full-file review found no fake-cloud Background. | `a39a4e6`: removed redundant setup; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps on Node v26.12.0. |
+| CR-07-ACCESSORY-019 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, user-visible things | 2 | `8c24e10:features/accessory/discovery.feature:51,66,80`; `8c24e10:features/step_definitions/accessory.steps.ts:323-328,351-356` | W | **open at Round 2 STOP**: “accessory remembers” asserts private context fields instead of a user-visible result; context can change while publication fails. | Requires observable name, identity, or service outcome in scenario wording and assertion. No repair attempted after STOP. |
 
 Rejected candidates: `homebridgeApi.ts:132` holds a shared HAP namespace with no
 per-scenario mutable state; `hap.ts:720-729` supports that reading. Multiple
@@ -86,12 +87,32 @@ revision. The independent reviewer must assess every current file before a
 closing count is recorded. Each round uses
 `closing = opening - fixed - rejected + new + reopened`.
 
-### Round 2 repair set, pending independent review
+### Round 2 repair set
 
 ID 017 has repair commit `2e46aca`; ID 018 has repair commit `a39a4e6`.
 ID 007 remains open because the exact parser location requires a plan revision
 that names an owned `features/lib/` path. No Round 2 closing count is claimed
 before an independent full-file review.
+
+### Round 2 — STOP
+
+Independent reviewer `/root/phase7_plan03/accessory_round2_review` read every
+line at `8c24e10f71f7c7b67bcd9fd0dc0143f72c5fd642`, after the two
+separate Round 2 repair commits.
+
+| Owned path | Reviewed blob | Contiguous lines |
+| --- | --- | ---: |
+| `features/accessory/discovery.feature` | `f72433dcaf59ad6a9b1f86c06487ff277f63a779` | 1-143 |
+| `features/step_definitions/accessory.steps.ts` | `f9d389ac654b78f65bc50fe61a1deb9d4087b8ca` | 1-440 |
+| `features/lib/homebridgeApi.ts` | `176b7760378726e484c6a262137832b46e8af2ca` | 1-352 |
+| `features/lib/publishedServices.ts` | `cc21c01f69ee558078fb0fd24d3a27e6e3b8eb57` | 1-105 |
+
+Opening **3** (007, 017, 018); fixed **2** (017, 018); rejected **0**;
+new **1** (019); reopened **1** (009); closing **3** (007, 009, 019).
+Equation: `3 - 2 - 0 + 1 + 1 = 3`. The positive open count did not fall,
+and a previously fixed ID reopened. Either condition requires **STOP now**.
+No Round 3 correction is permitted under this run. The source remains at the
+reviewed revision. The Round 2 reviewer found no further accepted cause.
 
 ## Repair and verification ledger
 
