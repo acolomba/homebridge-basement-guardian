@@ -10,8 +10,13 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
+import { currentAccessory, pushedValue } from '../lib/publishedServices.js';
+
+import type { FakeServiceClass } from '../lib/hap.js';
 import type { FakeRestApi } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
+import type { API } from 'homebridge';
 
 const CREDENTIALS_PATH = '/credentials/aws';
 const DEVICES_PATH = '/devices';
@@ -139,6 +144,36 @@ function assertMonitoringPath(this: BasementGuardianWorld, path: string): Promis
 }
 
 Then('the monitoring path is {string}', { timeout: STEP_TIMEOUT_MS }, assertMonitoringPath);
+
+async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  const accessory = currentAccessory(homebridge);
+
+  if (accessory === undefined) {
+    throw new Error('the plugin published no accessory');
+  }
+
+  const statusActiveUuid = homebridge.hap.Characteristic.StatusActive.UUID;
+  const statuses = createServiceCatalogue(homebridge.hap as unknown as API['hap']).flatMap((row) => {
+    const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
+
+    if (service === undefined) {
+      return [];
+    }
+
+    const characteristic = service.characteristics.find((candidate) => candidate.UUID === statusActiveUuid);
+
+    return [{ service: row.displayName, active: pushedValue(characteristic) }];
+  });
+
+  assert.notEqual(statuses.length, 0);
+  assert.deepStrictEqual(
+    statuses,
+    statuses.map(({ service }) => ({ service, active: false })),
+  );
+}
+
+Then('every published service reports "Status Active" as "false"', assertEveryPublishedServiceInactive);
 
 function assertNoUnhandledRejection(this: BasementGuardianWorld): void {
   assert.deepEqual(this.rejections, []);

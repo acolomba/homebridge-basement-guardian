@@ -344,6 +344,7 @@ Feature: Monitoring degradation
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
     Then the "Basement Guardian Offline" service reports "Status Active" as "false"
+    Then every published service reports "Status Active" as "false"
     Then the "Sump Pit Flood" sensor is not activated
     Then the "Basement Guardian Offline" sensor is not activated
 
