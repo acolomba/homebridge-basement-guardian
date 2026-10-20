@@ -421,6 +421,15 @@ async function assertHandshakeCount(this: BasementGuardianWorld, count: number):
 
 Then('the broker holds {int} handshake(s)', { timeout: STEP_TIMEOUT_MS }, assertHandshakeCount);
 
+async function assertOneLiveConnection(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  await this.untilTrue(() => broker.liveConnectionCount() >= 1, DEADLINE_MS, 'the broker held no live connection');
+  assert.equal(broker.liveConnectionCount(), 1);
+}
+
+Then('the broker holds one live connection', { timeout: STEP_TIMEOUT_MS }, assertOneLiveConnection);
+
 async function assertNoLiveConnection(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 

@@ -31,6 +31,7 @@ Feature: Plugin lifecycle
     Given the shadow credentials
     When the plugin starts
     Then the broker holds 1 handshake
+    Then the broker holds one live connection
     When homebridge shuts down
     Then the broker holds no live connection
     Then the plugin records no unhandled rejection
