@@ -163,24 +163,21 @@ Feature: HomeKit official controls
     Then the "Alarm Mute" switch answers a read
     Then the "Alarm Mute" service reports "On" as "true"
 
-  # A press refused after the live path goes quiet, asserted at the status. This comment used to say
-  # the row withholds the reported value once the control's own scope is untrusted, and that the
-  # no-fresh-state rule then refuses the press. Neither half was true of the code: the row goes on
-  # publishing what the working poll delivered, and the rule that refuses this press names the quiet
-  # live connection. The scenario stayed green through all of it because it asserts the status and
-  # never the cause, and one status answers every local refusal -- which is exactly how a premise can
-  # be wrong for a whole phase without a test saying so. The scenario below asserts the cause; this
-  # one is kept for the status, and the two together are what tell a reworded rule from a reordered
-  # table (D-07, D-08, WR-02).
+  # The live connection stays available, but the self-test field no longer validates. The plugin
+  # cannot use the previous value to decide whether another test is safe to start.
   Scenario: A press with no valid state is refused locally
     Given a short poll interval
+    Given the shadow credentials
     When the plugin starts
     Then the plugin publishes the "System Self-Test" service
-    When the scenario clock moves forward by 1796 seconds
+    Then the plugin publishes 1 complete shadow request
+    When the vendor changes these device fields:
+      | test_running | 12 |
     Then the "System Self-Test" service reports "Status Active" as "false"
     When a controller presses the "System Self-Test" switch
     Then the write reports that the control is not allowed now
     Then the vendor receives no command
+    Then the log warns once that the "self-test" press was refused because "the plugin has no fresh state for it"
 
   # The live-confirmation half, and the one an owner is most likely to meet. Polling is healthy here,
   # so the pit reading on the tile is real and arrived seconds ago; what the plugin lost is the fast
