@@ -37,15 +37,21 @@ export function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory |
  * none throws rather than answering another accessory: a fallback would let every assertion in a
  * multi-device scenario read one system twice and pass whether or not the other was ever published.
  *
- * The last active match is the current object after a restore.
+ * Two live systems can share a vendor name. In that case the name cannot select one physical
+ * system, so the lookup fails instead of reading either one's state.
  */
 function accessoryNamed(homebridge: FakeHomebridgeApi, accessoryName: string): FakeAccessory {
-  const accessory = homebridge.activeAccessories.filter((candidate) => candidate.displayName === accessoryName).at(-1);
+  const matches = homebridge.activeAccessories.filter((candidate) => candidate.displayName === accessoryName);
+  const accessory = matches[0];
 
   if (accessory === undefined) {
     const published = homebridge.activeAccessories.map((candidate) => candidate.displayName).join(', ');
 
     throw new Error(`the plugin published no ${accessoryName} accessory; it published: ${published}`);
+  }
+
+  if (matches.length !== 1) {
+    throw new Error(`more than one published accessory is named ${accessoryName}; select a device by its immutable id`);
   }
 
   return accessory;
