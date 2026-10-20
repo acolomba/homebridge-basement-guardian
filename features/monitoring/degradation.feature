@@ -17,6 +17,8 @@ Feature: Monitoring degradation
     When the plugin starts
     Then the monitoring path is "poll-only"
     Then the log warns once about the degraded path
+    Then the log records at least 4 refused shadow connections
+    Then the log warns once about the degraded path
     When the vendor changes these device fields:
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
@@ -77,11 +79,14 @@ Feature: Monitoring degradation
     Given the broker refuses connections
     When the plugin starts
     Then the log warns once about the degraded path
+    Then the log records at least 4 refused shadow connections
+    Then the log warns once about the degraded path
     Then the monitoring path is "poll-only"
     When the broker accepts connections
     Then the monitoring path is "shadow-and-poll"
     Then the live connection is subscribed to every seeded device
     Then the log announces the recovery once
+    Then the log warns once about the degraded path
 
   Scenario: Shadow silence withdraws trust while polling continues
     A shadow that stops speaking costs more than a shadow that never opened. Polls keep arriving, so

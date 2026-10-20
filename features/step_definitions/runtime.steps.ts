@@ -231,6 +231,16 @@ async function assertDegradedPathWarnedOnce(this: BasementGuardianWorld): Promis
 
 Then('the log warns once about the degraded path', { timeout: STEP_TIMEOUT_MS }, assertDegradedPathWarnedOnce);
 
+async function assertRefusedShadowConnectionCount(this: BasementGuardianWorld, count: number): Promise<void> {
+  await this.untilTrue(
+    () => countOf(this.logged, ATTEMPT_REFUSED_LINE) >= count,
+    DEADLINE_MS,
+    `the log recorded fewer than ${String(count)} refused shadow connections`,
+  );
+}
+
+Then('the log records at least {int} refused shadow connections', { timeout: STEP_TIMEOUT_MS }, assertRefusedShadowConnectionCount);
+
 // The runtime moves the monitoring path before it reports the recovery, so a step that waited on
 // the path alone can read the log between the two.
 async function assertRecoveryAnnouncedOnce(this: BasementGuardianWorld): Promise<void> {
