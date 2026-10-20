@@ -29,13 +29,13 @@ Feature: Shadow state merging
       | mcu_target_version    | 4     |
       | wifi_signal_dbm       | -55   |
     Then the canonical snapshot has exactly these fields:
-      | water_level          | 2     |
-      | primary_pump_running | true  |
-      | ac_power             | true  |
-      | battery_charging     | true  |
-      | test_running         | false |
-      | fault_code           | 0     |
-      | battery_health       | 96    |
+      | water_level           | 2     |
+      | primary_pump_running  | true  |
+      | ac_power              | true  |
+      | battery_charging      | true  |
+      | test_running          | false |
+      | fault_code            | 0     |
+      | battery_health        | 96    |
       | hours_of_protection   | 12    |
       | serial_communications | true  |
       | offline               | false |
