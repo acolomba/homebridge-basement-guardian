@@ -36,6 +36,11 @@ Feature: Shadow state merging
       | test_running         | false |
       | fault_code           | 0     |
       | battery_health       | 96    |
+      | hours_of_protection   | 12    |
+      | serial_communications | true  |
+      | offline               | false |
+      | mcu_target_version    | 4     |
+      | wifi_signal_dbm       | -55   |
 
   Scenario: A requested value becomes neither device state nor a fresh receipt time
     When the plugin starts
