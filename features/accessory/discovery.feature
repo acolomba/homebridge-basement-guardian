@@ -2,7 +2,7 @@ Feature: Accessory discovery
 
   A valid Gemini on the account becomes one HomeKit accessory, with a truthful AccessoryInformation
   service populated from validated vendor fields. A HALO or unrecognized device is explained and
-  skipped, and never blocks a valid Gemini in the same inventory.
+  skipped, and never blocks a valid Gemini in the same inventory. The scenarios use a local fake cloud.
 
   Background:
     Given the fake cloud
