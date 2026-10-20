@@ -1,7 +1,7 @@
 Feature: Account sign-in
 
-  The plugin signs in once, reuses the cached token across a restart, and answers each way the
-  vendor can refuse with the one response that is safe for it. No credential reaches the log.
+  The plugin signs in once, reuses its cached token after a restart, and handles vendor refusals
+  safely without leaking credentials to the log. A local fake cloud replaces the vendor services.
 
   Background:
     Given the fake cloud
