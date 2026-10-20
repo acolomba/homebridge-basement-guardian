@@ -40,9 +40,8 @@ const FOREIGN_ACCOUNT_EMAIL = 'foreign@example.test';
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
 
-// What one start registers with the redacting logger: the granted token and the three values of the
-// credential set the vendor issued for the shadow connection.
-const REGISTERED_CREDENTIALS: readonly string[] = [
+// The granted token and three AWS credential values this scenario writes through the plugin logger.
+const WRITTEN_CREDENTIALS: readonly string[] = [
   DEFAULT_ID_TOKEN,
   SHADOW_CREDENTIALS.accessKeyId,
   SHADOW_CREDENTIALS.secretAccessKey,
@@ -121,13 +120,13 @@ async function restartPlugin(this: BasementGuardianWorld): Promise<void> {
 
 When('the plugin restarts', restartPlugin);
 
-function logEveryRegisteredCredential(this: BasementGuardianWorld): void {
-  for (const credential of REGISTERED_CREDENTIALS) {
+function logGrantedTokenAndIssuedCredentials(this: BasementGuardianWorld): void {
+  for (const credential of WRITTEN_CREDENTIALS) {
     this.logger().info(credential);
   }
 }
 
-When('the plugin writes every credential it registered to the log', logEveryRegisteredCredential);
+When('the plugin writes the granted token and issued AWS credentials to the log', logGrantedTokenAndIssuedCredentials);
 
 async function assertTokenRequestCount(this: BasementGuardianWorld, count: number): Promise<void> {
   const tenant = await this.auth0();
@@ -215,7 +214,7 @@ function assertNoCredentialInTheLog(this: BasementGuardianWorld): void {
 Then('the log carries no credential', assertNoCredentialInTheLog);
 
 function assertEveryWrittenCredentialIsRedacted(this: BasementGuardianWorld): void {
-  const expected = REGISTERED_CREDENTIALS.map(() => `info ${REDACTED}`);
+  const expected = WRITTEN_CREDENTIALS.map(() => `info ${REDACTED}`);
 
   assert.deepEqual(this.logged.slice(-expected.length), expected);
 }

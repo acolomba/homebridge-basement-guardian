@@ -42,10 +42,10 @@ Feature: Account sign-in
     Then the log carries no error
     Then the log carries no credential
 
-  Scenario: No credential reaches the log
+  Scenario: The log redacts the granted token and issued AWS credentials
     Given the shadow credentials
     When the plugin starts
     Then the broker holds 1 handshake
     Then the log carries no credential
-    When the plugin writes every credential it registered to the log
+    When the plugin writes the granted token and issued AWS credentials to the log
     Then the log carries a redaction in place of each one
