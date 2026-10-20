@@ -95,6 +95,8 @@ Feature: HomeKit safety state
     Then the "Sump Mains Power" service reports "Mains Power Present" as "true"
     Then the "Primary Pump" service reports "Pump Running" as "false"
     Then the "Backup Pump" service reports "Pump Running" as "false"
+    Then the "System Self-Test" service reports "On" as "false"
+    Then the "Alarm Mute" service reports "On" as "false"
     When the device publishes these heartbeat fields:
       | battery_health        | 16    |
       | hours_of_protection   | 4     |
@@ -110,6 +112,10 @@ Feature: HomeKit safety state
     Then the "Primary Pump" service reports "Pump Running" as "false"
     Then the "Backup Pump" service reports "Status Active" as "true"
     Then the "Backup Pump" service reports "Pump Running" as "false"
+    Then the "System Self-Test" service reports "Status Active" as "true"
+    Then the "System Self-Test" service reports "On" as "false"
+    Then the "Alarm Mute" service reports "Status Active" as "true"
+    Then the "Alarm Mute" service reports "On" as "false"
 
   Scenario: A lost pump controller link deactivates the services derived from it
     When the plugin starts
