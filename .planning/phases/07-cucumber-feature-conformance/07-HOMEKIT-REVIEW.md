@@ -26,15 +26,18 @@ WARNING. Locations below are qualified by the reviewed commit above.
 
 | ID | Requirement | Exact rule and section | First round | Observed location | Severity | Disposition and reason | Regression, fix, verification |
 | --- | --- | --- | ---: | --- | --- | --- | --- |
-| CR-07-HOMEKIT-001 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, whole-value assertions; `.agents/skills/cucumber/SKILL.md` §Review | 0 | `71be722:features/step_definitions/controls.steps.ts:123-130` | B | repaired, pending independent review: a PUT to the wrong device and extra body fields could pass the command assertion. | `822081b`: compares every non-GET request's method, device route, and whole JSON body; wrong-body and wrong-device controls failed the exact assertion. |
-| CR-07-HOMEKIT-002 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `71be722:features/homekit/official-controls.feature:76-100` | B | repaired, pending independent review: both refused-command scenarios could pass if a local failure prevented the armed command reaching the vendor. | `8fb436b`: both scenarios assert one exact self-test command; a temporary local refusal with no vendor request failed at that assertion. |
-| CR-07-HOMEKIT-003 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 0 | `71be722:features/step_definitions/homekit.steps.ts:51-53,78-83,127-134`; `71be722:features/step_definitions/controls.steps.ts:223-229` | B | repaired, pending independent review: a pushed value could remain correct while HAP refused the controller read. | `139eea2`: checks the pushed gate and exact `handleGetRequest()` result for named values, alarms, and control switches; refused-read controls failed in both step modules. |
-| CR-07-HOMEKIT-004 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 0 | `71be722:features/homekit/official-controls.feature:173-190` | B | repaired, pending independent review: the “no valid state” title was not proved by the prior quiet-live setup. | `3f29c5f`: invalid `test_running` arrives while the live path is available; the scenario asserts the exact no-fresh-state cause. A substituted quiet-live warning failed that assertion. |
-| CR-07-HOMEKIT-005 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, order | 0 | `71be722:features/homekit/official-controls.feature:215` | W | repaired, pending independent review: a `Given` followed `When the plugin starts`. | `bf4a88d`: a registered `When` makes the vendor start failing after plugin startup; focused scenario passed. |
+| CR-07-HOMEKIT-001 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, whole-value assertions; `.agents/skills/cucumber/SKILL.md` §Review | 0 | `71be722:features/step_definitions/controls.steps.ts:123-130` | B | fixed in Round 1: a PUT to the wrong device and extra body fields could pass the command assertion. | `822081b`: compares every non-GET request's method, device route, and whole JSON body; wrong-body and wrong-device controls failed the exact assertion. |
+| CR-07-HOMEKIT-002 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps | 0 | `71be722:features/homekit/official-controls.feature:76-100` | B | fixed in Round 1: both refused-command scenarios could pass if a local failure prevented the armed command reaching the vendor. | `8fb436b`: both scenarios assert one exact self-test command; a temporary local refusal with no vendor request failed at that assertion. |
+| CR-07-HOMEKIT-003 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 0 | `71be722:features/step_definitions/homekit.steps.ts:51-53,78-83,127-134`; `71be722:features/step_definitions/controls.steps.ts:223-229` | B | fixed in Round 1: a pushed value could remain correct while HAP refused the controller read. | `139eea2`: checks the pushed gate and exact `handleGetRequest()` result for named values, alarms, and control switches; refused-read controls failed in both step modules. |
+| CR-07-HOMEKIT-004 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 0 | `71be722:features/homekit/official-controls.feature:173-190` | B | fixed in Round 1: the “no valid state” title was not proved by the prior quiet-live setup. | `3f29c5f`: invalid `test_running` arrives while the live path is available; the scenario asserts the exact no-fresh-state cause. A substituted quiet-live warning failed that assertion. |
+| CR-07-HOMEKIT-005 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, order | 0 | `71be722:features/homekit/official-controls.feature:215` | W | fixed in Round 1: a `Given` followed `When the plugin starts`. | `bf4a88d`: a registered `When` makes the vendor start failing after plugin startup; focused scenario passed. |
 | CR-07-HOMEKIT-006 | FEAT-01 | `.agents/skills/typescript-style/rules/comments.md` §Forbidden in comments and test titles | 0 | `71be722:features/homekit/official-controls.feature:173-181` | W | **rejected**: this rule governs TypeScript comments and test titles, not Gherkin comments; the cited process-history ban cannot be extended to `.feature` by implication. | No repair under this rule. The scenario's unproved claim is tracked separately as 004. |
-| CR-07-HOMEKIT-007 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios and §Steps | 0 | `71be722:features/homekit/official-controls.feature:162-164`; `71be722:features/homekit/safety-state.feature:42-44` | W | repaired, pending independent review: a pre-start vendor state was expressed as a first `When`. | `588e350`: registered `Given` steps seed both pre-start states; two focused scenarios passed. |
-| CR-07-HOMEKIT-008 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/official-controls.feature:3-14` | W | repaired, pending independent review: the description exceeded three lines and obscured the stand-in boundary. | `704a402`: three-line behavior and fake-vendor description; focused alarm-mute scenario passed. |
-| CR-07-HOMEKIT-009 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/safety-state.feature:3-6` | W | repaired, pending independent review: the description occupied four lines and did not name the local stand-in. | `2df7337`: three-line safety-state and fake-vendor description; focused mains-power scenario passed. |
+| CR-07-HOMEKIT-007 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios and §Steps | 0 | `71be722:features/homekit/official-controls.feature:162-164`; `71be722:features/homekit/safety-state.feature:42-44` | W | fixed in Round 1: a pre-start vendor state was expressed as a first `When`. | `588e350`: registered `Given` steps seed both pre-start states; two focused scenarios passed. |
+| CR-07-HOMEKIT-008 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/official-controls.feature:3-14` | W | fixed in Round 1: the description exceeded three lines and obscured the stand-in boundary. | `704a402`: three-line behavior and fake-vendor description; focused alarm-mute scenario passed. |
+| CR-07-HOMEKIT-009 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/safety-state.feature:3-6` | W | fixed in Round 1: the description has three lines and names the fake vendor. | `2df7337`: focused mains-power scenario passed. |
+| CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | open: “the vendor receives no command” ignores POST and PATCH requests. | Pending complete non-GET request assertion and wrong-result control. |
+| CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | open: the timeout scenario checks command count before the pending window ends, so a late retry can pass. | Pending clock advance and post-window command count and switch read result. |
+| CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | open: the title says no service is published, but the scenario requires Sump Mains Power. | Pending title naming only the absent pit services. |
 
 No source repair preceded this triage. The default profile's phase-start count
 was 104 scenarios and 1,156 steps. Earlier ACCOUNT and ACCESSORY batches have
@@ -68,5 +71,25 @@ The command exited 0 on Node `v26.12.0` on 2026-10-20. Its input was a clean
 Git tree with no untracked files. Every individual commit passed the normal
 commit hook, and each source change passed `fallow audit --base HEAD` before
 its commit. The Cucumber run happened in the main shared checkout.
-Independent complete-file re-review is pending; this repair record does not
-claim a closing finding count.
+## Correction rounds
+
+### Round 1
+
+Independent reviewer `/root/phase7_plan04/homekit_round1_reviewer` read every
+line at commit `f74b3d48048664d0d7506eb72a3eab0a3709b014`, after all
+eight separate correction commits. This was a complete-file review, not a
+diff-only inspection.
+
+| Owned path | Reviewed blob | Contiguous lines |
+| --- | --- | ---: |
+| `features/homekit/official-controls.feature` | `8901e53c0832de68949b025adabc3b5c80bade4e` | 1-209 |
+| `features/homekit/safety-state.feature` | `b67640b30d943271f8cbb2223ea83b819d0413cd` | 1-153 |
+| `features/step_definitions/controls.steps.ts` | `61d6c8d6dd75d9b9de2291ddc2fee27f8141c116` | 1-319 |
+| `features/step_definitions/homekit.steps.ts` | `958b06c58b03d5d21f575b20f0e8b61067cbbd79` | 1-275 |
+
+Opening **8** (001-005, 007-009); fixed **8** (001-005, 007-009);
+rejected **0**; new **3** (010-012); reopened **0**; closing **3**
+(010-012). Equation: `8 - 8 - 0 + 3 + 0 = 3`. The count fell and no fixed
+ID reopened, so correction round 2 is permitted. ID 006 was rejected in
+Round 0 and is not part of this opening set. The default usage dry run at
+`f74b3d4` exited 0 with no `UNUSED`, undefined, or ambiguous definition.
