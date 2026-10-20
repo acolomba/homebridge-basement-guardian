@@ -34,7 +34,7 @@ Feature: Account sign-in
     Then the log carries no credential
     Then the fake service holds 0 vendor requests
 
-  Scenario: A throttled account waits instead of stopping
+  Scenario: A 429 response prompts a throttling warning and stop advice
     Given the tenant throttles the account
     When the plugin starts
     Then the tenant holds 1 token request
