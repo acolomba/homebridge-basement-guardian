@@ -16,8 +16,9 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
-import { currentAccessory } from '../lib/publishedServices.js';
+import { currentAccessory, pushedValue } from '../lib/publishedServices.js';
 
+import type { FakeServiceClass } from '../lib/hap.js';
 import type { FakeAccessory } from '../lib/homebridgeApi.js';
 import type { ApiDevice } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
@@ -281,6 +282,23 @@ async function assertAccessoryRemembersDeviceType(this: BasementGuardianWorld, d
 }
 
 Then('the accessory remembers the device type {string}', assertAccessoryRemembersDeviceType);
+
+async function assertCachedGeminiServicesInactive(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  const accessory = currentAccessory(homebridge);
+  const rows = createServiceCatalogue(homebridge.hap as unknown as API['hap']).filter((row) => row.kind !== 'basement-guardian-offline');
+
+  assert.deepEqual(
+    rows.map((row) =>
+      pushedValue(
+        accessory?.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype)?.getCharacteristic(homebridge.hap.Characteristic.StatusActive),
+      ),
+    ),
+    rows.map(() => false),
+  );
+}
+
+Then('the cached Gemini services are inactive', assertCachedGeminiServicesInactive);
 
 async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();

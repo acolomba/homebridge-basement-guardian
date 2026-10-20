@@ -42,6 +42,8 @@ Feature: Accessory discovery
       | deviceId           | name          | deviceTypeId   |
       | placeholder-gemini | Sump Guardian | wayneWaterHalo |
     Then the accessory remembers the device type "wayneWaterHalo"
+    Then the cached Gemini services are inactive
+    Then the "Sump Pit Level" service reports "Raw Water Level Code" as "1"
     Then the plugin registers one accessory with a truthful accessory information service
 
   Scenario: A vendor rename is adopted when there is no prior customization
