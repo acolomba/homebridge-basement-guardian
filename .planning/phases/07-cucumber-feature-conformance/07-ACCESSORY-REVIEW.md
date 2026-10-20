@@ -43,8 +43,8 @@ predates the ACCOUNT batch.
 | CR-07-ACCESSORY-014 | FEAT-01 | `.agents/skills/typescript-style/rules/comments.md` §Forbidden in comments and test titles | 0 | `17d79f3:features/lib/homebridgeApi.ts:107-112` | W | fixed in Round 1: independent full-file review accepted the repair. | `b57f1d0`: present-tense cache comment passed normal commit hooks. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-015 | FEAT-01 | `.agents/skills/typescript-style/rules/classes.md` §Classes | 0 | `17d79f3:features/lib/homebridgeApi.ts:169-172` | W | fixed in Round 1: independent full-file review accepted the repair. | `46c6adb`: constructor smoke check and normal commit hooks passed. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
 | CR-07-ACCESSORY-016 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `AGENTS.md` §Identity | 0 | `17d79f3:features/lib/publishedServices.ts:46-55,83-84` | B | fixed in Round 1: independent full-file review accepted the repair. | `62881fb`: direct two-same-name stand-in check throws on ambiguity; normal commit hooks passed. Default offline Cucumber 104/104 scenarios, 1,170/1,170 steps at `1317634` on Node v26.12.0. |
-| CR-07-ACCESSORY-017 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, registration callbacks | 1 | `787406b:features/step_definitions/accessory.steps.ts:178-182,307-434` | W | open: world-using registrations pass named function declarations rather than anonymous typed `function` expressions. | Pending registration-form repair and focused Cucumber check. |
-| CR-07-ACCESSORY-018 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, user-visible things | 1 | `787406b:features/accessory/discovery.feature:7-8` | W | open: `Given the fake cloud` names the test mechanism instead of a user-visible precondition. | Pending removal of redundant fixture setup or user-visible wording. |
+| CR-07-ACCESSORY-017 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, registration callbacks | 1 | `787406b:features/step_definitions/accessory.steps.ts:178-182,307-434` | W | repair committed; awaiting independent Round 2 review. | `2e46aca`: all 15 world-using registrations now pass anonymous typed `function` expressions. Four focused scenarios and 41 steps passed; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps at `a39a4e6` on Node v26.12.0. |
+| CR-07-ACCESSORY-018 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Steps, user-visible things | 1 | `787406b:features/accessory/discovery.feature:7-8` | W | repair committed; awaiting independent Round 2 review. | `a39a4e6`: removed the redundant fake-cloud Background; normal hooks passed. Default offline Cucumber 104/104 scenarios, 1,160/1,160 steps on Node v26.12.0. |
 
 Rejected candidates: `homebridgeApi.ts:132` holds a shared HAP namespace with no
 per-scenario mutable state; `hap.ts:720-729` supports that reading. Multiple
@@ -76,7 +76,7 @@ ID reopened, so correction round 2 is permitted. The reviewer found no
 further rule-backed cause in the current owned files. ID 007's residual
 parser-location issue is WARNING, not the initial BLOCKER.
 
-Fifteen IDs have repair commits. ID 007 remains open:
+Seventeen IDs have repair commits. ID 007 remains open:
 the owned step module now rejects unknown headers, repeated fields, short
 rows, blank required cells, and nonnumeric water levels, but
 `.agents/skills/cucumber/rules/steps.md` places typed Given parsers in
@@ -85,6 +85,13 @@ coordinator prohibited adding an unlisted path without an exact-path plan
 revision. The independent reviewer must assess every current file before a
 closing count is recorded. Each round uses
 `closing = opening - fixed - rejected + new + reopened`.
+
+### Round 2 repair set, pending independent review
+
+ID 017 has repair commit `2e46aca`; ID 018 has repair commit `a39a4e6`.
+ID 007 remains open because the exact parser location requires a plan revision
+that names an owned `features/lib/` path. No Round 2 closing count is claimed
+before an independent full-file review.
 
 ## Repair and verification ledger
 
@@ -109,3 +116,11 @@ definitions. The default profile used local loopback stand-ins. The real
 profile was not run. The first sandboxed loopback attempt failed with `EPERM`;
 the authorized local loopback checks passed. The coordinator owns the combined
 wave `npm run check` gate.
+
+After the Round 2 repair set, the main checkout at `a39a4e6` on Node
+v26.12.0 passed `npm run test:cucumber`: **104/104 scenarios and 1,160/1,160
+steps**. Removing the Background step reduced the prior 1,170-step count by
+ten, one for each discovery scenario. The Cucumber usage command exited 0,
+with no `UNUSED`, undefined, or ambiguous definitions. These checks used the
+offline default profile and authorized local loopback stand-ins. The real
+profile was not run. The coordinator owns the combined `npm run check` gate.
