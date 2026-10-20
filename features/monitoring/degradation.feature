@@ -21,6 +21,10 @@ Feature: Monitoring degradation
       | water_level | 3 |
     Then the canonical snapshot carries these fields:
       | water_level | 3 |
+    When the vendor changes these device fields:
+      | water_level | 7 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 7 |
 
   Scenario: Two pumps on one account publish two accessories that read apart
     An owner with a Basement Guardian in each basement gets a tile for each one, and each tile is
@@ -384,7 +388,14 @@ Feature: Monitoring degradation
       | water_level | 3 |
     When the scenario clock moves forward by 1796 seconds
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
-    Then the plugin polls the vendor at least 8 times
+    When the vendor changes these device fields:
+      | water_level | 7 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 7 |
+    When the vendor changes these device fields:
+      | water_level | 10 |
+    Then the canonical snapshot carries these fields:
+      | water_level | 10 |
     Then the "Sump Pit Flood" service reports "Status Active" as "false"
 
   Scenario: An identical heartbeat clears the shadow silence
