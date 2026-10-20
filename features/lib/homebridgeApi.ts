@@ -89,12 +89,13 @@ export interface FakeHomebridgeApi {
   /**
    * Every accessory the plugin has been handed, in the order it received them.
    *
-   * A registration hands one over, and so does a restore from the cache after a restart. A step
-   * reading published state reads the newest, because that is the one the plugin is publishing onto
-   * now: after a restart the accessory registered before it is a detached object holding whatever
-   * the previous run left on it.
+   * A registration hands one over, and so does a restore from the cache after a restart.
+   * Earlier objects remain here as history even after Homebridge removes or restores them.
    */
   readonly handedAccessories: readonly FakeAccessory[];
+
+  /** Accessories currently published to HomeKit, using the latest restored object for each UUID. */
+  readonly activeAccessories: readonly FakeAccessory[];
 
   /**
    * Rebuilds the accessories a restarted Homebridge would restore from its cache.
@@ -231,6 +232,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
   const updatePlatformAccessoryCalls: UpdatePlatformAccessoriesCall[] = [];
   const unregisterPlatformAccessoryCalls: UnregisterPlatformAccessoriesCall[] = [];
   const handedAccessories: FakeAccessory[] = [];
+  const activeAccessories: FakeAccessory[] = [];
   // What the cache on disk would hold, keyed the way Homebridge keys it. Both the context and the
   // service surface are stored as the text a cache file carries rather than as the live objects, so
   // a later mutation the plugin never persisted cannot reach a restored accessory through a shared
@@ -245,6 +247,16 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
         services: JSON.stringify(accessory.services.map(serializeService)),
       });
     }
+  }
+
+  function activate(accessory: FakeAccessory): void {
+    const previous = activeAccessories.findIndex((candidate) => candidate.UUID === accessory.UUID);
+
+    if (previous >= 0) {
+      activeAccessories.splice(previous, 1);
+    }
+
+    activeAccessories.push(accessory);
   }
 
   const standIn = {
@@ -263,6 +275,10 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     registerPlatformAccessories(pluginIdentifier: string, platformName: string, accessories: FakeAccessory[]) {
       registerPlatformAccessoryCalls.push({ pluginIdentifier, platformName, accessories: [...accessories] });
       handedAccessories.push(...accessories);
+      for (const accessory of accessories) {
+        activate(accessory);
+      }
+
       writeToCache(accessories);
     },
     updatePlatformAccessories(accessories: FakeAccessory[]) {
@@ -274,6 +290,11 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
 
       for (const accessory of accessories) {
         cached.delete(accessory.UUID);
+        const index = activeAccessories.findIndex((candidate) => candidate.UUID === accessory.UUID);
+
+        if (index >= 0) {
+          activeAccessories.splice(index, 1);
+        }
       }
     },
   };
@@ -290,6 +311,7 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
     updatePlatformAccessoryCalls,
     unregisterPlatformAccessoryCalls,
     handedAccessories,
+    activeAccessories,
     restoreCachedAccessories(): readonly FakeAccessory[] {
       const restored = [...cached.entries()].map(([uuid, entry]) => {
         const accessory = new HarnessPlatformAccessory(entry.displayName, uuid);
@@ -300,6 +322,9 @@ export async function createFakeHomebridgeApi(): Promise<FakeHomebridgeApi> {
       });
 
       handedAccessories.push(...restored);
+      for (const accessory of restored) {
+        activate(accessory);
+      }
 
       return restored;
     },

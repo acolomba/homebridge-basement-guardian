@@ -16,7 +16,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
-import { currentAccessory, pushedValue } from '../lib/publishedServices.js';
+import { currentAccessory, pushedValue, serviceOf } from '../lib/publishedServices.js';
 
 import type { FakeServiceClass } from '../lib/hap.js';
 import type { FakeAccessory } from '../lib/homebridgeApi.js';
@@ -317,6 +317,8 @@ async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld):
     })),
     [{ pluginIdentifier: PLUGIN_NAME, platformName: PLATFORM_NAME, uuids: [homebridge.hap.uuid.generate(DEVICE_ID)] }],
   );
+  assert.equal(currentAccessory(homebridge), undefined);
+  assert.equal(serviceOf(homebridge, 'Sump Pit Flood'), undefined);
 }
 
 Then('the plugin unregisters the accessory', assertPluginUnregistersTheAccessory);

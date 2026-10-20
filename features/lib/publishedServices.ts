@@ -18,17 +18,15 @@ import type { API } from 'homebridge';
 /**
  * The accessory a scenario's plugin is publishing onto now.
  *
- * Every scenario seeds exactly one physical device, so a step reads state back through the newest
- * accessory the plugin was handed. It is the registered one until a restart, and the one restored
- * from the cache afterwards: reading the registered one after a restart would read a detached
- * object still holding whatever the previous run published to it, which passes an assertion about
- * a value that came back without anything having brought it back.
+ * Every scenario that uses this helper seeds one physical device. A step reads the newest active
+ * accessory. A removed accessory is absent, and a restored accessory replaces the detached object
+ * from the previous run.
  *
  * One device is the default shape, not the only one: an account carrying several systems hands over
  * one accessory per system, and a step meaning a particular one reaches for `accessoryNamed`.
  */
 export function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory | undefined {
-  return homebridge.handedAccessories.at(-1);
+  return homebridge.activeAccessories.at(-1);
 }
 
 /**
@@ -39,15 +37,13 @@ export function currentAccessory(homebridge: FakeHomebridgeApi): FakeAccessory |
  * none throws rather than answering another accessory: a fallback would let every assertion in a
  * multi-device scenario read one system twice and pass whether or not the other was ever published.
  *
- * The last match is the answer for the reason `currentAccessory` gives -- a restart hands the same
- * name back a second time, and the earlier object is detached and still holding what the previous run
- * left on it.
+ * The last active match is the current object after a restore.
  */
 function accessoryNamed(homebridge: FakeHomebridgeApi, accessoryName: string): FakeAccessory {
-  const accessory = homebridge.handedAccessories.filter((candidate) => candidate.displayName === accessoryName).at(-1);
+  const accessory = homebridge.activeAccessories.filter((candidate) => candidate.displayName === accessoryName).at(-1);
 
   if (accessory === undefined) {
-    const published = homebridge.handedAccessories.map((candidate) => candidate.displayName).join(', ');
+    const published = homebridge.activeAccessories.map((candidate) => candidate.displayName).join(', ');
 
     throw new Error(`the plugin published no ${accessoryName} accessory; it published: ${published}`);
   }
