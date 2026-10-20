@@ -58,3 +58,26 @@ The reviewer also read `features/support/world.ts`, this report, the review prot
 Opening IDs: 001-009 (9). Fixed: 001-009 (9). Rejected: none (0). New: 010-011 (2, including the coordinator supplement). Reopened: none (0). Closing: `9 - 9 - 0 + 2 + 0 = 2`, open IDs 010 and 011. The count fell, so the STOP rule did not trigger. Do not begin Round 2 until both candidate rulings and any accepted repairs are recorded.
 
 After Round 1, 010 is fixed in `9c54473` and 011 is fixed in `bfe9173`. The Round 1 closing count above records the state at the review, not these later repairs. Both accepted repairs are ready for Round 2 correction review.
+
+### Round 2 at `0028abf8719e8754529df40fc528e9f197adbf22`
+
+A new, read-only Claude Sonnet 5.5 reviewer read the seven current files in full. It reported no reopened IDs and two new comment-style candidates, 012 and 013. It did not author repairs, run commands, or verify blobs. The coordinator matched the committed blobs below to the reviewed HEAD.
+
+| Current path | Blob at review | Contiguous lines read |
+| --- | --- | ---: |
+| `features/plugin/lifecycle.feature` | `0f924798ba246f15ff0347251af56c20979c3070` | 1-71 |
+| `features/pump/records.feature` | `a1eb4f9e2576cbfefb4862319fa21ea10d76d4f0` | 1-64 |
+| `features/lib/vendorRestApi.ts` | `827f4b6b518f240feaaa7edbd50c755e7bd8b946` | 1-422 |
+| `features/step_definitions/runtime.steps.ts` | `3f0b668624a4a32bd52fdd795bd3fe4d6bb25f56` | 1-345 |
+| `features/step_definitions/shadow.steps.ts` | `d891a8f9047f779803a9fc06101530224223be13` | 1-491 |
+| `features/harness/fakes.feature` | `8950308989c7e782a6997f8c83b06290b214e884` | 1-116 |
+| `features/step_definitions/harness.steps.ts` | `c6b1e6aebd2f896b8fd2539b559b810db28760d0` | 1-438 |
+
+The reviewer also read `features/support/world.ts` (1-785), this report, the review protocol, the Cucumber skill and four applicable rules, and the TypeScript style skill and applicable rules. It found all previous IDs 001-011 still fixed. Neither new candidate is a confirmed behavior bug.
+
+| ID | Requirement | Rule path and heading | First observed location | Severity | Disposition and candidate result |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-RECORDS-012 | FEAT-02 | `.agents/skills/typescript-style/rules/comments.md` §Forbidden in comments and test titles | `0028abf:features/step_definitions/shadow.steps.ts:341-344` | WARNING | **Fixed in `83cd332` by maintainer ruling.** The comment now explains in present tense that a metadata-only shadow document has no data fields to assert and that this step checks metadata in the canonical snapshot. No executable code changed. Pre-commit, Fallow audit, and normal commit hooks passed; scenario and step counts did not change. |
+| CR-07-RECORDS-013 | FEAT-02 | `.agents/skills/typescript-style/rules/comments.md` §Forbidden in comments and test titles | `0028abf:features/lib/vendorRestApi.ts:162-165` | WARNING | Pending maintainer ruling. The phrase “It is the body this service has always answered” describes historical continuity rather than a current constraint. No behavior defect is alleged. |
+
+Opening IDs: 010-011 (2). Fixed opening IDs: 010-011 (2). Rejected: none so far. New candidates: 012-013 (2); 012 is accepted and fixed, while 013 awaits its ruling. Reopened: none. The accepted closing count is 1 if 013 is rejected and 2 if it is accepted. An accepted 013 would trigger the no-progress STOP for this round. Do not start Round 3 until the ruling is recorded.
