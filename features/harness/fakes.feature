@@ -40,6 +40,14 @@ Feature: Harness fakes
     When the harness requests the device list
     Then the response carries status 200
 
+  Scenario: The fake service refuses malformed command JSON
+    Given the fake rest service
+    Given the fake service records accepted commands
+    When the harness sends malformed command JSON
+    Then the response carries status 400
+    Then the fake service records no accepted command
+    Then the fake service raises no unhandled rejection
+
   Scenario: The fake broker delivers a reported patch
     Given the fake shadow broker
     Given a subscriber on the update-accepted topic

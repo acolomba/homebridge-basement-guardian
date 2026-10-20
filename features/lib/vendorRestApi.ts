@@ -216,9 +216,8 @@ function answerDevice(state: ServiceState, deviceId: string, response: ServerRes
   respondJson(response, 200, { device: wireDevice(device) });
 }
 
-// The command body the plugin sent, as the vendor would read it. Anything the plugin could not have
-// sent answers an empty object rather than throwing, so a malformed body fails on the assertion a
-// scenario makes about it rather than inside the service.
+// The command body the plugin sent, as the vendor would read it. A valid body without a desiredData
+// record answers an empty object; invalid JSON is refused before the command receives an answer.
 function desiredDataIn(body: string): Record<string, unknown> {
   const parsed: unknown = body === '' ? undefined : JSON.parse(body);
 
@@ -238,6 +237,16 @@ function desiredDataIn(body: string): Record<string, unknown> {
 // The reaction runs only for that standing answer. A held, refused, or scenario-authored answer is
 // not a command the device accepted, so the pump has nothing to react to.
 function answerCommand(state: ServiceState, deviceId: string, body: string, response: ServerResponse): void {
+  let desiredData: Record<string, unknown>;
+
+  try {
+    desiredData = desiredDataIn(body);
+  } catch {
+    respondJson(response, 400, { error: 'invalid_json' });
+
+    return;
+  }
+
   if (state.heldCommand) {
     state.heldCommand = false;
 
@@ -263,7 +272,7 @@ function answerCommand(state: ServiceState, deviceId: string, body: string, resp
   }
 
   respondJson(response, 200, ACCEPTED_COMMAND_BODY);
-  state.commandAccepted?.(deviceId, desiredDataIn(body));
+  state.commandAccepted?.(deviceId, desiredData);
 }
 
 function answer(state: ServiceState, method: string, pathname: string, body: string, response: ServerResponse): void {

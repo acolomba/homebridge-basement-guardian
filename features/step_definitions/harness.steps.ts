@@ -8,6 +8,7 @@
 
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
@@ -154,6 +155,16 @@ async function armedRequestFailure(this: BasementGuardianWorld, status: number):
 
 Given('the service fails the next request with status {int}', armedRequestFailure);
 
+async function recordAcceptedCommands(this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+
+  service.onCommandAccepted(() => {
+    this.observations.push('accepted command');
+  });
+}
+
+Given('the fake service records accepted commands', recordAcceptedCommands);
+
 async function fakeShadowBroker(this: BasementGuardianWorld): Promise<void> {
   await this.broker();
 }
@@ -214,6 +225,18 @@ async function requestTemporaryCredentials(this: BasementGuardianWorld): Promise
 
 When('the harness requests the temporary credentials', requestTemporaryCredentials);
 
+async function sendMalformedCommand(this: BasementGuardianWorld): Promise<void> {
+  const service = await this.restApi();
+
+  await record(this, `${service.baseUrl}/devices/${DEVICE_ID}/data`, {
+    method: 'PUT',
+    headers: { authorization: AUTHORIZATION_HEADER, 'content-type': 'application/json' },
+    body: '{',
+  });
+}
+
+When('the harness sends malformed command JSON', sendMalformedCommand);
+
 async function publishTheReportedPatch(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
@@ -267,6 +290,19 @@ function assertResponseStatus(this: BasementGuardianWorld, status: number): void
 }
 
 Then('the response carries status {int}', assertResponseStatus);
+
+function assertNoAcceptedCommand(this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, []);
+}
+
+Then('the fake service records no accepted command', assertNoAcceptedCommand);
+
+async function assertNoUnhandledRejection(this: BasementGuardianWorld): Promise<void> {
+  await nextTurn();
+  assert.deepStrictEqual(this.rejections, []);
+}
+
+Then('the fake service raises no unhandled rejection', assertNoUnhandledRejection);
 
 function assertResponseError(this: BasementGuardianWorld, error: string): void {
   assert.equal(field(this.response().body, 'error'), error);
