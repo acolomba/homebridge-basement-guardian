@@ -38,8 +38,9 @@ Feature: HomeKit safety state
     A service added before its row has a value to vouch for sits at the hap format defaults, and
     those read as an empty pit that reports no leak.
 
-    When the vendor changes these device fields:
-      | water_level | 12 |
+    Given these devices:
+      | deviceId           | name          | water level |
+      | placeholder-gemini | Sump Guardian | 12          |
     When the plugin starts
     Then the plugin publishes no "Sump Pit Flood" service
     Then the plugin publishes no "Sump Pit Level" service

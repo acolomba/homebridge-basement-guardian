@@ -150,7 +150,7 @@ Feature: HomeKit official controls
     Then the vendor receives 1 alarm mute command
 
   Scenario: An off write while mute is active reaches no vendor command
-    When the vendor changes these device fields:
+    Given these reported device fields:
       | alarm_audio_muted | true |
     When the plugin starts
     Then the "Alarm Mute" service reports "On" as "true"
