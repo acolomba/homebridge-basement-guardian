@@ -52,7 +52,7 @@ Feature: Harness fakes
   Scenario: The fake service refuses malformed command JSON
     Given the fake rest service
     Given the fake service records accepted commands
-    When the harness sends malformed command JSON
+    When the harness sends malformed command json
     Then the response carries status 400
     Then the fake service records no accepted command
     Then the fake service raises no unhandled rejection

@@ -245,7 +245,7 @@ async function sendMalformedCommand(this: BasementGuardianWorld): Promise<void> 
   });
 }
 
-When('the harness sends malformed command JSON', sendMalformedCommand);
+When('the harness sends malformed command json', sendMalformedCommand);
 
 async function publishTheReportedPatch(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
