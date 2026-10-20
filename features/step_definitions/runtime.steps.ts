@@ -90,11 +90,18 @@ Given('the service holds the next request', heldRequest);
 
 async function heldDeviceRequests(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
+  const atArming = deviceRequestCount(service);
 
   service.holdEveryDeviceRequest();
+  await this.untilTrue(
+    () => deviceRequestCount(service) > atArming,
+    DEADLINE_MS,
+    `the plugin asked for the device list no further time after the hold was armed; it had asked ${String(atArming)} times`,
+  );
+  this.remember(PARKED_DEVICE_REQUESTS, deviceRequestCount(service));
 }
 
-Given('the vendor never answers the device list', heldDeviceRequests);
+Given('the vendor never answers the device list', { timeout: STEP_TIMEOUT_MS }, heldDeviceRequests);
 
 async function everyRequestFailing(this: BasementGuardianWorld, status: number): Promise<void> {
   const service = await this.restApi();
@@ -278,27 +285,15 @@ async function assertPollCount(this: BasementGuardianWorld, count: number): Prom
 
 Then('the plugin polls the vendor at least {int} times', { timeout: STEP_TIMEOUT_MS }, assertPollCount);
 
-// Proves the parked state rather than assuming it. The poll loop issues one inventory request at a
-// time and waits for it, so a request recorded after the hold was armed proves the poll before it
-// completed and reported, and a count that then stops advancing proves the loop is sitting inside
-// the held request. The failure message names what it saw, so a scenario that times out here says
-// whether the polling never parked or never started.
+// The Given saves the first request count after the hold was armed. This step proves the count
+// stays there across a window long enough for a running poll loop to ask again.
 async function assertPollingParked(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
-  const atArming = deviceRequestCount(service);
-
-  await this.untilTrue(
-    () => deviceRequestCount(service) > atArming,
-    DEADLINE_MS,
-    `the plugin asked for the device list no further time after the hold was armed; it had asked ${String(atArming)} times`,
-  );
-
-  const held = deviceRequestCount(service);
+  const held = this.recall(PARKED_DEVICE_REQUESTS);
   await delay(PARKED_WINDOW_MS);
   const afterTheWindow = deviceRequestCount(service);
 
   assert.equal(afterTheWindow, held, `the plugin kept polling: it asked for the device list ${String(held)} times, then ${String(afterTheWindow)} times`);
-  this.remember(PARKED_DEVICE_REQUESTS, held);
 }
 
 Then('the plugin stops asking for the device list', { timeout: STEP_TIMEOUT_MS }, assertPollingParked);
