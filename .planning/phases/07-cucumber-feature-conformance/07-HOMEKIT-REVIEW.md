@@ -35,9 +35,10 @@ WARNING. Locations below are qualified by the reviewed commit above.
 | CR-07-HOMEKIT-007 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios and §Steps | 0 | `71be722:features/homekit/official-controls.feature:162-164`; `71be722:features/homekit/safety-state.feature:42-44` | W | fixed in Round 1: a pre-start vendor state was expressed as a first `When`. | `588e350`: registered `Given` steps seed both pre-start states; two focused scenarios passed. |
 | CR-07-HOMEKIT-008 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/official-controls.feature:3-14` | W | fixed in Round 1: the description exceeded three lines and obscured the stand-in boundary. | `704a402`: three-line behavior and fake-vendor description; focused alarm-mute scenario passed. |
 | CR-07-HOMEKIT-009 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/safety-state.feature:3-6` | W | fixed in Round 1: the description has three lines and names the fake vendor. | `2df7337`: focused mains-power scenario passed. |
-| CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | repaired, pending independent Round 2 review: “the vendor receives no command” ignored POST and PATCH requests. | `4a3c0f6`: compares the complete non-GET request set with `[]`; temporary POST and PATCH records each failed at the assertion. |
-| CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | repaired, pending independent Round 2 review: the timeout scenario checked command count before the pending window ended. | `c0c97fd`: advances past the pending window, then checks one command, a readable switch, and exact `On=false`; a temporary second post-window PUT failed at the new count assertion. |
-| CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | repaired, pending independent Round 2 review: the title claimed no service published although Sump Mains Power must publish. | `25d5f46`: title names only the two unpublished pit services; the focused scenario passed. |
+| CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | fixed in Round 2: the no-command step checks all non-GET requests. | `4a3c0f6`: temporary POST and PATCH records each failed at the assertion. |
+| CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | fixed in Round 2: the timeout scenario checks command count after the pending window and reads exact switch state. | `c0c97fd`: post-window synthetic second PUT failed the one-command assertion; switch read and `On=false` passed. |
+| CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | fixed in Round 2: the title names only the absent pit services. | `25d5f46`: focused pit-service scenario passed and still required Sump Mains Power. |
+| CR-07-HOMEKIT-013 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 2 | `a14e30e:features/homekit/safety-state.feature:92-112` | B | open: a partial heartbeat can deactivate the self-test or alarm-mute trust scope without failing the scenario's “every scope” claim. | Pending exact post-heartbeat Status Active and On values for both control services, plus wrong-result control. |
 
 No source repair preceded this triage. The default profile's phase-start count
 was 104 scenarios and 1,156 steps. Earlier ACCOUNT and ACCESSORY batches have
@@ -114,5 +115,23 @@ with **104 scenarios and 1,168 steps**, all passed. The command compiled with
 `npm run build:test` before it ran Cucumber. It exited 0 on Node `v26.12.0`
 on 2026-10-20. The Git tree had no diff or untracked file at that run. Each
 commit passed the normal hook and a preceding `fallow audit --base HEAD`.
-Verification ran in the main shared checkout. Independent complete-file
-Round 2 review is pending; these repairs do not claim the closing count.
+Verification ran in the main shared checkout.
+
+### Round 2
+
+Independent reviewer `/root/phase7_plan04/homekit_round2_reviewer` read all
+current owned files from line 1 to the final line at commit
+`a14e30e60c163b02bcb65dab39fd865be0d0e77f`.
+
+| Owned path | Reviewed blob | Contiguous lines |
+| --- | --- | ---: |
+| `features/homekit/official-controls.feature` | `f79c1bbbd523a45f68becddd7803399f0e461882` | 1-212 |
+| `features/homekit/safety-state.feature` | `bdd6a7f4edfc81ac4d1ba2b2aff6b8560934c636` | 1-153 |
+| `features/step_definitions/controls.steps.ts` | `409cec6b482daa009610906e88a52b945239a772` | 1-319 |
+| `features/step_definitions/homekit.steps.ts` | `958b06c58b03d5d21f575b20f0e8b61067cbbd79` | 1-275 |
+
+Opening **3** (010-012); fixed **3** (010-012); rejected **0**; new **1**
+(013); reopened **0**; closing **1** (013). Equation:
+`3 - 3 - 0 + 1 + 0 = 1`. The count fell and no previously fixed finding
+reopened, so correction round 3 is permitted. The reviewer found no other
+accepted cause in the complete current owned files.
