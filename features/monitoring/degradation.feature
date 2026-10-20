@@ -531,6 +531,7 @@ Feature: Monitoring degradation
     When the plugin restarts
     Then the log names how to correct the account
     Then the "Sump Pit Flood" service answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
   Scenario: A credential refused after a healthy start makes every service unreadable
@@ -554,6 +555,7 @@ Feature: Monitoring degradation
     Given the tenant refuses the account credentials
     When the scenario clock moves forward by 120 seconds
     Then the "Sump Pit Flood" service answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the log names how to correct the account
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
@@ -595,6 +597,7 @@ Feature: Monitoring degradation
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
     Then the "Basement Guardian Offline" service still answers no read for "Status Active"
     Then the "System Self-Test" service still answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
     When the scenario clock moves forward by 7200 seconds
     When the device publishes these heartbeat fields:
@@ -602,6 +605,7 @@ Feature: Monitoring degradation
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
     Then the "Basement Guardian Offline" service still answers no read for "Status Active"
     Then the "System Self-Test" service still answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
   Scenario: A press after a refused credential leaves both controls still refusing reads
@@ -647,6 +651,7 @@ Feature: Monitoring degradation
     Then the "System Self-Test" service still answers no read for "Status Active"
     Then the "Alarm Mute" service still answers no read for "Status Active"
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
     When a controller presses the "Alarm Mute" switch
     Then the write reports that the control is not allowed now
@@ -655,6 +660,7 @@ Feature: Monitoring degradation
     Then the "Alarm Mute" service still answers no read for "Status Active"
     Then the "System Self-Test" service still answers no read for "Status Active"
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
+    Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
 
   Scenario: A transport outage leaves every service readable

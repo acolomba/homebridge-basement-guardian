@@ -13,7 +13,8 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { currentAccessory, pushedValue } from '../lib/publishedServices.js';
 
-import type { FakeServiceClass } from '../lib/hap.js';
+import type { FakeHapCharacteristic, FakeServiceClass } from '../lib/hap.js';
+import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { FakeRestApi } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { API } from 'homebridge';
@@ -145,8 +146,7 @@ function assertMonitoringPath(this: BasementGuardianWorld, path: string): Promis
 
 Then('the monitoring path is {string}', { timeout: STEP_TIMEOUT_MS }, assertMonitoringPath);
 
-async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld): Promise<void> {
-  const homebridge = await this.homebridge();
+function publishedTrustReports(homebridge: FakeHomebridgeApi): readonly { service: string; characteristic: FakeHapCharacteristic | undefined }[] {
   const accessory = currentAccessory(homebridge);
 
   if (accessory === undefined) {
@@ -154,7 +154,7 @@ async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld):
   }
 
   const statusActiveUuid = homebridge.hap.Characteristic.StatusActive.UUID;
-  const statuses = createServiceCatalogue(homebridge.hap as unknown as API['hap']).flatMap((row) => {
+  const reports = createServiceCatalogue(homebridge.hap as unknown as API['hap']).flatMap((row) => {
     const service = accessory.getServiceById(row.serviceClass as unknown as FakeServiceClass, row.subtype);
 
     if (service === undefined) {
@@ -163,10 +163,18 @@ async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld):
 
     const characteristic = service.characteristics.find((candidate) => candidate.UUID === statusActiveUuid);
 
-    return [{ service: row.displayName, active: pushedValue(characteristic) }];
+    return [{ service: row.displayName, characteristic }];
   });
 
-  assert.notEqual(statuses.length, 0);
+  assert.notEqual(reports.length, 0);
+
+  return reports;
+}
+
+async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  const statuses = publishedTrustReports(homebridge).map(({ service, characteristic }) => ({ service, active: pushedValue(characteristic) }));
+
   assert.deepStrictEqual(
     statuses,
     statuses.map(({ service }) => ({ service, active: false })),
@@ -174,6 +182,25 @@ async function assertEveryPublishedServiceInactive(this: BasementGuardianWorld):
 }
 
 Then('every published service reports "Status Active" as "false"', assertEveryPublishedServiceInactive);
+
+async function assertEveryPublishedServiceTrustReadRefused(this: BasementGuardianWorld): Promise<void> {
+  const homebridge = await this.homebridge();
+  for (const { service, characteristic } of publishedTrustReports(homebridge)) {
+    if (characteristic === undefined) {
+      throw new Error(`the ${service} service carries no trust report`);
+    }
+
+    await assert.rejects(
+      async () => {
+        await characteristic.handleGetRequest();
+      },
+      (error: unknown) => error === homebridge.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+      `the ${service} service answered its trust read`,
+    );
+  }
+}
+
+Then('every published service refuses its trust read', assertEveryPublishedServiceTrustReadRefused);
 
 function assertNoUnhandledRejection(this: BasementGuardianWorld): void {
   assert.deepEqual(this.rejections, []);
