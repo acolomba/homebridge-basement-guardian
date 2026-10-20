@@ -1,7 +1,7 @@
 Feature: Account configuration
 
-  The plugin refuses an account it cannot use and stays idle, so a half-configured install reaches
-  no vendor service and says what to fix.
+  The plugin refuses invalid account settings and stays idle. It explains what to fix without
+  contacting the vendor service. A local fake cloud stands in for the vendor service.
 
   Scenario: The plugin starts nothing when the account email is missing
     Given the fake cloud
