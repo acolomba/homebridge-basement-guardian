@@ -66,5 +66,5 @@ Feature: Plugin lifecycle
     Then the fake service holds 2 vendor requests
     When homebridge shuts down
     When the plugin starts again
-    Then the fake service holds 2 vendor requests
+    Then the stopped plugin makes no later cloud contact
     Then the plugin records no unhandled rejection

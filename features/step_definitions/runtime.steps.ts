@@ -51,6 +51,7 @@ const SHUTDOWN_RETRY_WINDOW_MS = 2500;
 // The inventory-request count read at the moment polling was seen parked, which the closing step
 // compares against.
 const PARKED_DEVICE_REQUESTS = 'parked device requests';
+const CLOUD_WORK_BEFORE_RESTART = 'cloud work before restart';
 
 const DEGRADED_LINE = 'warn The shadow connection is unavailable, so device state is coming from polling alone until it returns.';
 const RECOVERY_LINE = 'info The shadow connection recovered.';
@@ -119,6 +120,14 @@ When('the plugin starts in the background', function (this: BasementGuardianWorl
 });
 
 When('the plugin starts again', async function (this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+  const service = await this.restApi();
+  const broker = await this.broker();
+  this.remember(CLOUD_WORK_BEFORE_RESTART, {
+    grants: tenant.requests.length,
+    requests: service.requests.length,
+    handshakes: broker.handshakes.length,
+  });
   await this.startPluginAgain();
 });
 
@@ -213,6 +222,17 @@ Then('the stopped plugin makes no later shadow connection attempt', { timeout: S
 
   assert.equal(countOf(this.logged, ATTEMPT_REFUSED_LINE), refusedAtShutdown, 'the stopped plugin tried a refused shadow connection');
   assert.equal(broker.handshakes.length, handshakesAtShutdown, 'the stopped plugin opened a shadow connection');
+});
+
+Then('the stopped plugin makes no later cloud contact', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+  const service = await this.restApi();
+  const broker = await this.broker();
+  const beforeRestart = this.recall(CLOUD_WORK_BEFORE_RESTART);
+
+  await delay(SHUTDOWN_RETRY_WINDOW_MS);
+
+  assert.deepStrictEqual({ grants: tenant.requests.length, requests: service.requests.length, handshakes: broker.handshakes.length }, beforeRestart);
 });
 
 Then('the log warns once about the degraded path', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
