@@ -71,6 +71,7 @@ Feature: HomeKit official controls
     Then the plugin publishes the "System Self-Test" service
     Then the plugin publishes 1 complete shadow request
     When a controller presses the "System Self-Test" switch
+    Then the vendor receives 1 self-test command
     Then the write reports a communication failure
     When the scenario clock does not move
     Then the "System Self-Test" switch answers a read
@@ -84,6 +85,7 @@ Feature: HomeKit official controls
     Then the plugin publishes the "System Self-Test" service
     Then the plugin publishes 1 complete shadow request
     When a controller presses the "System Self-Test" switch
+    Then the vendor receives 1 self-test command
     Then the write reports a communication failure
     When the scenario clock does not move
     Then the "System Self-Test" switch answers a read
