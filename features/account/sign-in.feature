@@ -30,6 +30,7 @@ Feature: Account sign-in
     Then the tenant holds 1 token request
     Then the token cache is absent
     Then the log names how to correct the account
+    Then the log carries no credential
     Then the fake service holds 0 vendor requests
 
   Scenario: A throttled account waits instead of stopping
@@ -38,6 +39,7 @@ Feature: Account sign-in
     Then the tenant holds 1 token request
     Then the log names the throttling and how to stop the plugin
     Then the log carries no error
+    Then the log carries no credential
 
   Scenario: No credential reaches the log
     Given the shadow credentials
