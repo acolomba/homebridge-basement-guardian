@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview Steps about the devices on the account and the shadow that carries their state.
  *
