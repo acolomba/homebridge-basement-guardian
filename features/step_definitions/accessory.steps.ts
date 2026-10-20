@@ -175,25 +175,19 @@ async function applyDevicesFromTable(world: BasementGuardianWorld, table: DataTa
   service.setDevices(world.devices);
 }
 
-async function devices(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+Given('these devices:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   await applyDevicesFromTable(this, table);
-}
+});
 
-Given('these devices:', devices);
-
-async function devicesReported(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+When('the vendor reports these devices:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   await applyDevicesFromTable(this, table);
-}
+});
 
-When('the vendor reports these devices:', devicesReported);
-
-async function devicesOmitted(this: BasementGuardianWorld): Promise<void> {
+When('the vendor reports no devices', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   service.setDevices([]);
-}
-
-When('the vendor reports no devices', devicesOmitted);
+});
 
 // Arms exactly the next N `/devices` GET responses as an empty inventory,
 // then falls back to the standing device list a scenario already set. This
@@ -201,29 +195,25 @@ When('the vendor reports no devices', devicesOmitted);
 // (DEV-05) independently: the two happen back to back with no
 // scenario-controllable gap between them, so only request order -- not real
 // time -- can distinguish them.
-async function deviceOmittedFromNextChecks(this: BasementGuardianWorld, count: number): Promise<void> {
+When('the vendor omits the device from the next {int} inventory checks', async function (this: BasementGuardianWorld, count: number): Promise<void> {
   const service = await this.restApi();
 
   for (let check = 0; check < count; check += 1) {
     service.armDevicesAnswer([]);
   }
-}
-
-When('the vendor omits the device from the next {int} inventory checks', deviceOmittedFromNextChecks);
+});
 
 // Arms exactly the next `/devices` GET response with these devices, then falls back to the
 // standing device list a scenario already set. This lands a chosen inventory on one specific poll
 // regardless of how many polls a short interval has already run in the background, so a scenario
 // can prove what a later, distinct poll sees rather than racing a real poll timer.
-async function devicesReportedForNextCheck(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+When('the vendor reports these devices for the next inventory check:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const service = await this.restApi();
 
   service.armDevicesAnswer(parseDevices(table));
-}
+});
 
-When('the vendor reports these devices for the next inventory check:', devicesReportedForNextCheck);
-
-async function userRenamesAccessory(this: BasementGuardianWorld, name: string): Promise<void> {
+When('the user renames the accessory to {string} in the home app', async function (this: BasementGuardianWorld, name: string): Promise<void> {
   const homebridge = await this.homebridge();
   const accessory = currentAccessory(homebridge);
 
@@ -232,9 +222,7 @@ async function userRenamesAccessory(this: BasementGuardianWorld, name: string): 
   }
 
   accessory.displayName = name;
-}
-
-When('the user renames the accessory to {string} in the home app', userRenamesAccessory);
+});
 
 const EXPECTED_MANUFACTURER = 'Wayne';
 const EXPECTED_MODEL = 'Gemini';
@@ -260,8 +248,8 @@ const EXPECTED_GEMINI_SERVICE_KINDS: readonly string[] = [
   'basement-guardian-offline',
 ];
 
-async function assertOneAccessoryWithTruthfulAccessoryInformation(this: BasementGuardianWorld): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertOneAccessoryWithTruthfulAccessoryInformation(world: BasementGuardianWorld): Promise<void> {
+  const homebridge = await world.homebridge();
 
   assert.equal(homebridge.registerPlatformAccessoryCalls.length, 1);
 
@@ -274,7 +262,7 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
   assert.equal(accessories[0]?.UUID, homebridge.hap.uuid.generate(DEVICE_ID));
   assert.deepEqual(accessories[0].context.device, {
     deviceId: DEVICE_ID,
-    deviceTypeId: this.devices.find((device) => device.deviceId === DEVICE_ID)?.deviceTypeId,
+    deviceTypeId: world.devices.find((device) => device.deviceId === DEVICE_ID)?.deviceTypeId,
   });
 
   const accessoryInformation = accessories[0].getService(homebridge.hap.Service.AccessoryInformation);
@@ -304,7 +292,9 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(this: Basement
   );
 }
 
-Then('the plugin registers one accessory with a truthful accessory information service', assertOneAccessoryWithTruthfulAccessoryInformation);
+Then('the plugin registers one accessory with a truthful accessory information service', async function (this: BasementGuardianWorld): Promise<void> {
+  await assertOneAccessoryWithTruthfulAccessoryInformation(this);
+});
 
 const HALO_ROW_DEVICE_ID = 'placeholder-halo';
 const UNKNOWN_ROW_DEVICE_ID = 'placeholder-other';
@@ -316,56 +306,64 @@ const EXPECTED_UNKNOWN_EXPLANATION = `info Skipping ${UNKNOWN_ROW_DEVICE_ID}: ${
 
 // Asserted after every poll a scenario forces, so a repeat proves the explanation logs once per
 // device per run rather than once per poll (D-05).
-function assertHaloAndUnknownExplainedOnceEach(this: BasementGuardianWorld): void {
+function assertHaloAndUnknownExplainedOnceEach(world: BasementGuardianWorld): void {
   assert.deepEqual(
-    this.logged.filter((line) => line === EXPECTED_HALO_EXPLANATION || line === EXPECTED_UNKNOWN_EXPLANATION),
+    world.logged.filter((line) => line === EXPECTED_HALO_EXPLANATION || line === EXPECTED_UNKNOWN_EXPLANATION),
     [EXPECTED_HALO_EXPLANATION, EXPECTED_UNKNOWN_EXPLANATION],
   );
 }
 
-Then('the plugin explains the halo and the unknown device once each', assertHaloAndUnknownExplainedOnceEach);
+Then('the plugin explains the halo and the unknown device once each', function (this: BasementGuardianWorld): void {
+  assertHaloAndUnknownExplainedOnceEach(this);
+});
 
 // Waits for the accessory's stored vendor name to advance to what a scenario just reported, which
 // only happens once a discovery poll has actually applied the new device data (D-030). A scenario
 // asserts this before reading `displayName`, so that read is never a race against the poll.
-async function assertAccessoryRemembersVendorName(this: BasementGuardianWorld, name: string): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertAccessoryRemembersVendorName(world: BasementGuardianWorld, name: string): Promise<void> {
+  const homebridge = await world.homebridge();
 
-  await this.untilTrue(
+  await world.untilTrue(
     () => currentAccessory(homebridge)?.context.lastVendorName === name,
     DISCOVERY_CHANGE_DEADLINE_MS,
     `the accessory never remembered the vendor name ${name}`,
   );
 }
 
-Then('the accessory remembers the vendor name {string}', assertAccessoryRemembersVendorName);
+Then('the accessory remembers the vendor name {string}', async function (this: BasementGuardianWorld, name: string): Promise<void> {
+  await assertAccessoryRemembersVendorName(this, name);
+});
 
-async function assertAccessoryDisplayName(this: BasementGuardianWorld, name: string): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertAccessoryDisplayName(world: BasementGuardianWorld, name: string): Promise<void> {
+  const homebridge = await world.homebridge();
 
   assert.equal(currentAccessory(homebridge)?.displayName, name);
 }
 
-Then('the accessory is named {string}', assertAccessoryDisplayName);
+Then('the accessory is named {string}', async function (this: BasementGuardianWorld, name: string): Promise<void> {
+  await assertAccessoryDisplayName(this, name);
+});
 
 // Waits for the accessory's stored deviceTypeId to advance to what a scenario just reported, which
 // only happens once a discovery poll has refreshed the context of the same, already-cached
 // accessory (DEV-04). Also proves the accessory context was actually refreshed rather than left
 // untouched, which a bare register-count assertion cannot tell apart.
-async function assertAccessoryRemembersDeviceType(this: BasementGuardianWorld, deviceTypeId: string): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertAccessoryRemembersDeviceType(world: BasementGuardianWorld, deviceTypeId: string): Promise<void> {
+  const homebridge = await world.homebridge();
 
-  await this.untilTrue(
+  await world.untilTrue(
     () => rememberedDeviceTypeId(currentAccessory(homebridge)) === deviceTypeId,
     DISCOVERY_CHANGE_DEADLINE_MS,
     `the accessory never remembered the device type ${deviceTypeId}`,
   );
 }
 
-Then('the accessory remembers the device type {string}', assertAccessoryRemembersDeviceType);
+Then('the accessory remembers the device type {string}', async function (this: BasementGuardianWorld, deviceTypeId: string): Promise<void> {
+  await assertAccessoryRemembersDeviceType(this, deviceTypeId);
+});
 
-async function assertCachedGeminiServicesInactive(this: BasementGuardianWorld): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertCachedGeminiServicesInactive(world: BasementGuardianWorld): Promise<void> {
+  const homebridge = await world.homebridge();
   const accessory = currentAccessory(homebridge);
   const rows = createServiceCatalogue(homebridge.hap as unknown as API['hap']).filter((row) => row.kind !== 'basement-guardian-offline');
 
@@ -379,12 +377,14 @@ async function assertCachedGeminiServicesInactive(this: BasementGuardianWorld): 
   );
 }
 
-Then('the cached Gemini services are inactive', assertCachedGeminiServicesInactive);
+Then('the cached Gemini services are inactive', async function (this: BasementGuardianWorld): Promise<void> {
+  await assertCachedGeminiServicesInactive(this);
+});
 
-async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertPluginUnregistersTheAccessory(world: BasementGuardianWorld): Promise<void> {
+  const homebridge = await world.homebridge();
 
-  await this.untilTrue(
+  await world.untilTrue(
     () => homebridge.unregisterPlatformAccessoryCalls.length > 0,
     DISCOVERY_CHANGE_DEADLINE_MS,
     'the plugin never unregistered the accessory',
@@ -402,15 +402,19 @@ async function assertPluginUnregistersTheAccessory(this: BasementGuardianWorld):
   assert.equal(serviceOf(homebridge, 'Sump Pit Flood'), undefined);
 }
 
-Then('the plugin unregisters the accessory', assertPluginUnregistersTheAccessory);
+Then('the plugin unregisters the accessory', async function (this: BasementGuardianWorld): Promise<void> {
+  await assertPluginUnregistersTheAccessory(this);
+});
 
-async function assertPluginNeverUnregistersTheAccessory(this: BasementGuardianWorld): Promise<void> {
-  const homebridge = await this.homebridge();
+async function assertPluginNeverUnregistersTheAccessory(world: BasementGuardianWorld): Promise<void> {
+  const homebridge = await world.homebridge();
 
   assert.equal(homebridge.unregisterPlatformAccessoryCalls.length, 0);
 }
 
-Then('the plugin never unregisters the accessory', assertPluginNeverUnregistersTheAccessory);
+Then('the plugin never unregisters the accessory', async function (this: BasementGuardianWorld): Promise<void> {
+  await assertPluginNeverUnregistersTheAccessory(this);
+});
 
 const EXPECTED_DEGRADATION_EXPLANATION =
   `warn Degraded ${DEVICE_ID}: the profile or payload stopped validating. ` +
@@ -418,17 +422,19 @@ const EXPECTED_DEGRADATION_EXPLANATION =
 
 // Waits for the poll that carries the out-of-domain telemetry to actually run, then asserts the
 // degradation transition logged exactly once (DEV-08) -- not once per poll.
-async function assertPluginExplainsTheDegradationOnce(this: BasementGuardianWorld): Promise<void> {
-  await this.untilTrue(
-    () => this.logged.includes(EXPECTED_DEGRADATION_EXPLANATION),
+async function assertPluginExplainsTheDegradationOnce(world: BasementGuardianWorld): Promise<void> {
+  await world.untilTrue(
+    () => world.logged.includes(EXPECTED_DEGRADATION_EXPLANATION),
     DISCOVERY_CHANGE_DEADLINE_MS,
     'the plugin never logged the degradation explanation',
   );
 
   assert.deepEqual(
-    this.logged.filter((line) => line === EXPECTED_DEGRADATION_EXPLANATION),
+    world.logged.filter((line) => line === EXPECTED_DEGRADATION_EXPLANATION),
     [EXPECTED_DEGRADATION_EXPLANATION],
   );
 }
 
-Then('the plugin explains the degradation once', assertPluginExplainsTheDegradationOnce);
+Then('the plugin explains the degradation once', async function (this: BasementGuardianWorld): Promise<void> {
+  await assertPluginExplainsTheDegradationOnce(this);
+});
