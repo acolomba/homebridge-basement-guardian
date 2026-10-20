@@ -34,6 +34,10 @@ Feature: Accessory discovery
     Given a short poll interval
     When the plugin starts
     Then the plugin registers one accessory with a truthful accessory information service
+    When the vendor reports these devices:
+      | deviceId           | name          | waterLevel |
+      | placeholder-gemini | Sump Guardian | 3          |
+    Then the "Sump Pit Level" service reports "Raw Water Level Code" as "3"
     Then the plugin polls the vendor at least 3 times
     Then the plugin registers one accessory with a truthful accessory information service
 
