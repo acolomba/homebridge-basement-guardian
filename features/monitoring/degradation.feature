@@ -88,11 +88,10 @@ Feature: Monitoring degradation
     Then the log announces the recovery once
     Then the log warns once about the degraded path
 
-  Scenario: Shadow silence withdraws trust while polling continues
-    A shadow that stops speaking costs more than a shadow that never opened. Polls keep arriving, so
-    every tile still reads normal, while a pump run lasting seconds begins and ends between two of
-    them and is never seen at all. The plugin therefore stops vouching for what it can no longer
-    watch, and keeps vouching for the one verdict polling still sources.
+  Scenario: Shadow silence withdraws flood trust while offline status stays current
+    A shadow that stops speaking can miss a short pump run between polls. The plugin withdraws
+    trust from the flood tile while the offline tile still reports a current status. Neither tile
+    reports an alarm from this silence alone.
 
     Given a short poll interval
     Given these devices:
