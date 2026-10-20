@@ -13,7 +13,7 @@ Feature: Account sign-in
     Given the shadow credentials
     When the plugin starts
     Then the tenant holds 1 token request
-    Then the grant carries the account the scenario configured
+    Then the grant carries the configured account
     Then the token cache is present
 
   Scenario: A restart reuses the cached token

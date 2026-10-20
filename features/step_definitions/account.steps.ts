@@ -157,7 +157,7 @@ async function assertGrantCarriesTheAccount(this: BasementGuardianWorld): Promis
   });
 }
 
-Then('the grant carries the account the scenario configured', assertGrantCarriesTheAccount);
+Then('the grant carries the configured account', assertGrantCarriesTheAccount);
 
 async function assertTokenCachePresent(this: BasementGuardianWorld): Promise<void> {
   assert.equal(await isPresent(await tokenCachePath(this)), true);
