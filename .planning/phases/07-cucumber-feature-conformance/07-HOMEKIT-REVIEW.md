@@ -35,9 +35,9 @@ WARNING. Locations below are qualified by the reviewed commit above.
 | CR-07-HOMEKIT-007 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios and §Steps | 0 | `71be722:features/homekit/official-controls.feature:162-164`; `71be722:features/homekit/safety-state.feature:42-44` | W | fixed in Round 1: a pre-start vendor state was expressed as a first `When`. | `588e350`: registered `Given` steps seed both pre-start states; two focused scenarios passed. |
 | CR-07-HOMEKIT-008 | FEAT-01 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/official-controls.feature:3-14` | W | fixed in Round 1: the description exceeded three lines and obscured the stand-in boundary. | `704a402`: three-line behavior and fake-vendor description; focused alarm-mute scenario passed. |
 | CR-07-HOMEKIT-009 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Feature description | 0 | `71be722:features/homekit/safety-state.feature:3-6` | W | fixed in Round 1: the description has three lines and names the fake vendor. | `2df7337`: focused mains-power scenario passed. |
-| CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | open: “the vendor receives no command” ignores POST and PATCH requests. | Pending complete non-GET request assertion and wrong-result control. |
-| CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | open: the timeout scenario checks command count before the pending window ends, so a late retry can pass. | Pending clock advance and post-window command count and switch read result. |
-| CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | open: the title says no service is published, but the scenario requires Sump Mains Power. | Pending title naming only the absent pit services. |
+| CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | repaired, pending independent Round 2 review: “the vendor receives no command” ignored POST and PATCH requests. | `4a3c0f6`: compares the complete non-GET request set with `[]`; temporary POST and PATCH records each failed at the assertion. |
+| CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | repaired, pending independent Round 2 review: the timeout scenario checked command count before the pending window ended. | `c0c97fd`: advances past the pending window, then checks one command, a readable switch, and exact `On=false`; a temporary second post-window PUT failed at the new count assertion. |
+| CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | repaired, pending independent Round 2 review: the title claimed no service published although Sump Mains Power must publish. | `25d5f46`: title names only the two unpublished pit services; the focused scenario passed. |
 
 No source repair preceded this triage. The default profile's phase-start count
 was 104 scenarios and 1,156 steps. Earlier ACCOUNT and ACCESSORY batches have
@@ -71,6 +71,7 @@ The command exited 0 on Node `v26.12.0` on 2026-10-20. Its input was a clean
 Git tree with no untracked files. Every individual commit passed the normal
 commit hook, and each source change passed `fallow audit --base HEAD` before
 its commit. The Cucumber run happened in the main shared checkout.
+
 ## Correction rounds
 
 ### Round 1
@@ -93,3 +94,25 @@ rejected **0**; new **3** (010-012); reopened **0**; closing **3**
 ID reopened, so correction round 2 is permitted. ID 006 was rejected in
 Round 0 and is not part of this opening set. The default usage dry run at
 `f74b3d4` exited 0 with no `UNUSED`, undefined, or ambiguous definition.
+
+### Round 2 repairs
+
+The three Round 1 findings each have a separate hook-passing Conventional
+Commit. No production source changed. Temporary wrong-result controls changed
+only the owned controls step module and were removed before the commits.
+
+| ID | Commit | Focused check and active control | Scenario delta | Step delta |
+| --- | --- | --- | ---: | ---: |
+| 010 | `4a3c0f6` | Two no-command scenarios passed; synthetic POST and PATCH records each failed the assertion. | 0 | 0 |
+| 011 | `c0c97fd` | Timeout scenario passed 19 steps. A second PUT after the pending-window advance failed at the new post-window command count. The switch answered a read and reported exact `On=false`. | 0 | +3 |
+| 012 | `25d5f46` | Renamed pit-service scenario passed nine steps and still required Sump Mains Power to publish. | 0 | 0 |
+
+Round 2 adds **0 scenarios and 3 steps**. The combined HOMEKIT change from
+the phase-start baseline is 0 scenarios and 8 steps. `npm run test:cucumber`
+passed at clean commit `25d5f46a3ce7630368c2ff4fc5e14277435f680d`
+with **104 scenarios and 1,168 steps**, all passed. The command compiled with
+`npm run build:test` before it ran Cucumber. It exited 0 on Node `v26.12.0`
+on 2026-10-20. The Git tree had no diff or untracked file at that run. Each
+commit passed the normal hook and a preceding `fallow audit --base HEAD`.
+Verification ran in the main shared checkout. Independent complete-file
+Round 2 review is pending; these repairs do not claim the closing count.
