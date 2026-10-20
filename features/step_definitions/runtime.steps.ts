@@ -44,6 +44,10 @@ const SETTLE_MS = 200;
 // reading landed between two polls.
 const PARKED_WINDOW_MS = 500;
 
+// After three refused attempts, the next reconnect wait is 2000 ms. Observe beyond it so a
+// shutdown that fails to cancel the pending retry cannot pass before that retry runs.
+const SHUTDOWN_RETRY_WINDOW_MS = 2500;
+
 // The inventory-request count read at the moment polling was seen parked, which the closing step
 // compares against.
 const PARKED_DEVICE_REQUESTS = 'parked device requests';
@@ -198,6 +202,17 @@ Then('every published service answers its trust read', async function (this: Bas
 
 Then('the plugin records no unhandled rejection', function (this: BasementGuardianWorld): void {
   assert.deepEqual(this.rejections, []);
+});
+
+Then('the stopped plugin makes no later shadow connection attempt', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+  const refusedAtShutdown = countOf(this.logged, ATTEMPT_REFUSED_LINE);
+  const handshakesAtShutdown = broker.handshakes.length;
+
+  await delay(SHUTDOWN_RETRY_WINDOW_MS);
+
+  assert.equal(countOf(this.logged, ATTEMPT_REFUSED_LINE), refusedAtShutdown, 'the stopped plugin tried a refused shadow connection');
+  assert.equal(broker.handshakes.length, handshakesAtShutdown, 'the stopped plugin opened a shadow connection');
 });
 
 Then('the log warns once about the degraded path', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {

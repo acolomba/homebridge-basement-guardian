@@ -16,6 +16,7 @@ Feature: Plugin lifecycle
     When the plugin starts
     Then the log warns once about the degraded path
     When homebridge shuts down
+    Then the stopped plugin makes no later shadow connection attempt
     Then the plugin records no unhandled rejection
 
   Scenario: Shutdown during a request in flight raises nothing
@@ -46,6 +47,7 @@ Feature: Plugin lifecycle
     Then the log warns once about the degraded path
     When the broker accepts connections
     When homebridge shuts down
+    Then the stopped plugin makes no later shadow connection attempt
     Then the broker holds no live connection
     Then the plugin records no unhandled rejection
 
