@@ -1,9 +1,8 @@
 Feature: Shadow credential rotation
 
-  The temporary credentials the shadow connection signs with last about an hour, and nothing
-  re-signs a connection that is already established. The plugin refreshes the cache the next
-  handshake reads, leaves the live connection alone, and signs the following handshake with the
-  material and the client identifier the vendor issued last.
+  The temporary shadow credentials last about an hour. An established connection is not re-signed.
+  The plugin refreshes the cache for the next handshake and leaves the live connection alone.
+  The following handshake uses the material and client identifier the vendor issued last.
 
   Background:
     Given the fake cloud
