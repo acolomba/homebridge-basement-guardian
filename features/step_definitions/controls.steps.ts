@@ -256,7 +256,7 @@ async function assertNoCommand(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   assert.deepStrictEqual(
-    service.requests.filter((request) => request.method === 'PUT').map((request) => request.path),
+    service.requests.filter((request) => request.method !== 'GET'),
     [],
   );
 }
