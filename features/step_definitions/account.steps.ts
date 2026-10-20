@@ -34,6 +34,8 @@ const REFUSED_STATUS = 403;
 const THROTTLED_STATUS = 429;
 const TOKEN_LIFETIME_MS = 2_592_000_000;
 const CACHE_SALT = 'placeholder-salt';
+const FOREIGN_CACHE_SALT = 'placeholder-cache-salt';
+const FOREIGN_ACCOUNT_EMAIL = 'foreign@example.test';
 
 const GRANT_TYPE = 'http://auth0.com/oauth/grant-type/password-realm';
 const GRANT_SCOPE = 'openid profile email';
@@ -62,8 +64,8 @@ const REJECTION_ERROR =
 const FOREIGN_CACHE = {
   idToken: 'placeholder-cached-token',
   expiresAt: SCENARIO_START_TIME + TOKEN_LIFETIME_MS,
-  emailFingerprint: 'placeholder-fingerprint-of-another-account',
-  salt: 'placeholder-cache-salt',
+  emailFingerprint: createHash('sha256').update(`${FOREIGN_CACHE_SALT}${FOREIGN_ACCOUNT_EMAIL}`).digest('hex'),
+  salt: FOREIGN_CACHE_SALT,
 };
 
 async function tokenCachePath(world: BasementGuardianWorld): Promise<string> {
