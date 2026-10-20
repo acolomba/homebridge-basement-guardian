@@ -34,4 +34,25 @@ Every candidate first appeared in Round 0. Severity is the reviewer's proposed B
 
 ## Correction rounds
 
-Not started. The Round 0 opening set is nine accepted IDs, 001 through 009. Later rounds apply `closing = opening - fixed - rejected + new + reopened` with complete-file reviews and the protocol's STOP conditions.
+### Round 1 at `46bf1fff006120a446568327c19c1ea9e765e8ad`
+
+Claude Opus 5.5 reviewed the current files through a human-authorized, read-only CLI session. The reviewer did not author the repairs, edit files, or run tests. It reported one new WARNING, 010, and no reopened IDs. The coordinator checked that output against the explicit Phase 7 header rule and added 011 as a separate candidate: the reviewer saw the missing header but excluded it because it predates the RECORDS edits, while this protocol requires the header on every reviewed TypeScript file. Neither candidate is a confirmed production defect.
+
+| Current path | Blob at review | Contiguous lines read |
+| --- | --- | ---: |
+| `features/plugin/lifecycle.feature` | `0f924798ba246f15ff0347251af56c20979c3070` | 1-71 |
+| `features/pump/records.feature` | `a1eb4f9e2576cbfefb4862319fa21ea10d76d4f0` | 1-64 |
+| `features/lib/vendorRestApi.ts` | `827f4b6b518f240feaaa7edbd50c755e7bd8b946` | 1-422 |
+| `features/step_definitions/runtime.steps.ts` | `3f0b668624a4a32bd52fdd795bd3fe4d6bb25f56` | 1-345 |
+| `features/step_definitions/shadow.steps.ts` | `d891a8f9047f779803a9fc06101530224223be13` | 1-491 |
+| `features/harness/fakes.feature` | `e8e4b87d0bf96530ff3b9bb5d5db1ee5888cd8c5` | 1-116 |
+| `features/step_definitions/harness.steps.ts` | `427a0d4318522b4372159f512b96b259e446db5b` | 1-432 |
+
+The reviewer also read `features/support/world.ts`, this report, the review protocol, the Cucumber skill and its four applicable rules, and the TypeScript style skill and its applicable rules. Its checks found 001-009 still fixed. It did not verify Git blobs itself; the coordinator matched the committed blobs above to the reviewed HEAD.
+
+| ID | Requirement | Rule path and heading | First observed location | Severity | Disposition and candidate result |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-RECORDS-010 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Steps | `46bf1ff:features/harness/fakes.feature:55`; matching definition `46bf1ff:features/step_definitions/harness.steps.ts:248` | WARNING | Open for maintainer ruling. The unquoted `JSON` is upper-case in a step that must be lower-case. Writing the step in the required spelling would make it undefined or invite a duplicate definition. No production behavior is implicated. |
+| CR-07-RECORDS-011 | FEAT-02 | `07-REVIEW-PROTOCOL.md` §Rules and acceptance source; `.agents/skills/typescript-style/rules/modules-and-data.md` §Files and modules | `46bf1ff:features/step_definitions/harness.steps.ts:1-7` | WARNING | Open for maintainer ruling. The touched step module lacks the required SPDX line and separate copyright JSDoc before its existing `@fileoverview`. This is a file-header rule, not a behavior defect. |
+
+Opening IDs: 001-009 (9). Fixed: 001-009 (9). Rejected: none (0). New: 010-011 (2, including the coordinator supplement). Reopened: none (0). Closing: `9 - 9 - 0 + 2 + 0 = 2`, open IDs 010 and 011. The count fell, so the STOP rule did not trigger. Do not begin Round 2 until both candidate rulings and any accepted repairs are recorded.
