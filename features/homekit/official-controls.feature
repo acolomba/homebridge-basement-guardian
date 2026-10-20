@@ -109,7 +109,10 @@ Feature: HomeKit official controls
     When the vendor changes these device fields:
       | water_level | 15 |
     Then the "Sump Pit Level" service reports "Raw Water Level Code" as "15"
+    When the scenario clock moves past the control pending window
     Then the vendor receives 1 self-test command
+    Then the "System Self-Test" switch answers a read
+    Then the "System Self-Test" service reports "On" as "false"
 
   Scenario: An armed refusal applies to one command and the next press reaches the vendor
     Given the shadow credentials
