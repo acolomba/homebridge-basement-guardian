@@ -1,13 +1,8 @@
 Feature: Pump records
 
-  The cloud reports a pump running and one timestamp for the backup pump. It reports no count and no
-  history, so the only count that can exist is the one this plugin built while it was watching, which
-  is why every record publishes the moment observation began beside it (CTRL-01, D-020).
-
-  A run already under way at the first snapshot is not counted: counting it would add a second
-  activation for one physical run on every restart that landed mid-cycle (D-009). A backup run the
-  plugin missed is recovered from the device's own timestamp, once, and carries the device's time
-  rather than the moment the plugin heard about it (D-010, D-011).
+  The plugin counts observed pump runs and publishes when observation began (CTRL-01, D-020).
+  It skips runs active at startup and recovers missed backup runs once at device time (D-009 to D-011).
+  The scenarios use a local fake cloud in place of vendor services.
 
   Background:
     Given the fake cloud
