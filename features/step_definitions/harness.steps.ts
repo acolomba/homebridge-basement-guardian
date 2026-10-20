@@ -217,6 +217,16 @@ async function requestDeviceList(this: BasementGuardianWorld): Promise<void> {
 
 When('the harness requests the device list', requestDeviceList);
 
+async function requestDeviceWithId(this: BasementGuardianWorld, deviceId: string): Promise<void> {
+  const service = await this.restApi();
+
+  await record(this, `${service.baseUrl}/devices/${encodeURIComponent(deviceId)}`, {
+    headers: { authorization: AUTHORIZATION_HEADER },
+  });
+}
+
+When('the harness requests the device with id {string}', requestDeviceWithId);
+
 async function requestTemporaryCredentials(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
@@ -324,6 +334,22 @@ function assertDeviceListHoldsTheDevices(this: BasementGuardianWorld): void {
 }
 
 Then('the device list holds the devices the scenario sets', assertDeviceListHoldsTheDevices);
+
+function assertDeviceAnswerHoldsTheDevice(this: BasementGuardianWorld): void {
+  const device = this.devices.at(0);
+
+  if (device === undefined || this.devices.length !== 1) {
+    assert.fail('the scenario needs exactly one device');
+  }
+
+  assert.deepStrictEqual(wireIdentity(field(this.response().body, 'device')), {
+    deviceId: device.deviceId,
+    name: device.name,
+    serialNumber: device.serialNumber,
+  });
+}
+
+Then('the device answer holds the device the scenario sets', assertDeviceAnswerHoldsTheDevice);
 
 async function assertRequestCarriesTheAuthorizationHeader(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();

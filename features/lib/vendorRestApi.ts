@@ -207,7 +207,15 @@ function deviceIdIn(pathname: string, suffix: string): string | undefined {
 
   const deviceId = pathname.slice(prefix.length, pathname.length - suffix.length);
 
-  return deviceId === '' || deviceId.includes('/') ? undefined : deviceId;
+  if (deviceId === '' || deviceId.includes('/')) {
+    return undefined;
+  }
+
+  try {
+    return decodeURIComponent(deviceId);
+  } catch {
+    return undefined;
+  }
 }
 
 function answerDevice(state: ServiceState, deviceId: string, response: ServerResponse): void {

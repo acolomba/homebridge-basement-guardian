@@ -25,6 +25,15 @@ Feature: Harness fakes
     Then the device list holds the devices the scenario sets
     Then the recorded request carries the authorization header
 
+  Scenario: The fake service answers a device whose id needs encoding
+    Given the fake rest service
+    Given these devices:
+      | device id          | name          |
+      | placeholder gemini | Sump Guardian |
+    When the harness requests the device with id "placeholder gemini"
+    Then the response carries status 200
+    Then the device answer holds the device the scenario sets
+
   Scenario: The fake service answers the temporary credentials
     Given the fake rest service
     Given the temporary credentials
