@@ -6,7 +6,7 @@ Feature: Account sign-in
   Background:
     Given the fake cloud
     Given these gemini devices:
-      | deviceId                             | name        |
+      | device id                            | name        |
       | placeholder-account_placeholder-pump | Sump System |
 
   Scenario: A first start performs the grant and caches the token
@@ -25,7 +25,7 @@ Feature: Account sign-in
     Then the vendor receives a second device list request with the cached token
 
   Scenario: A refused credential clears the cache and reports how to correct the account
-    Given the storage holds a token for another account
+    Given the storage holds an expired token for the configured account
     Given the tenant refuses the account credentials
     When the plugin starts
     Then the tenant holds 1 token request

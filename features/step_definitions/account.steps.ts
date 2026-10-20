@@ -67,6 +67,13 @@ const FOREIGN_CACHE = {
   salt: FOREIGN_CACHE_SALT,
 };
 
+const EXPIRED_ACCOUNT_CACHE = {
+  idToken: FOREIGN_CACHE.idToken,
+  expiresAt: SCENARIO_START_TIME - 1000,
+  emailFingerprint: createHash('sha256').update(`${CACHE_SALT}${ACCOUNT_EMAIL}`).digest('hex'),
+  salt: CACHE_SALT,
+};
+
 async function tokenCachePath(world: BasementGuardianWorld): Promise<string> {
   const homebridge = await world.homebridge();
 
@@ -113,6 +120,15 @@ async function cachedTokenOfAnotherAccount(this: BasementGuardianWorld): Promise
 }
 
 Given('the storage holds a token for another account', cachedTokenOfAnotherAccount);
+
+async function expiredTokenOfConfiguredAccount(this: BasementGuardianWorld): Promise<void> {
+  const path = await tokenCachePath(this);
+
+  await writeFile(path, JSON.stringify(EXPIRED_ACCOUNT_CACHE), 'utf8');
+  assert.equal(await isPresent(path), true, 'the configured account cache was not seeded');
+}
+
+Given('the storage holds an expired token for the configured account', expiredTokenOfConfiguredAccount);
 
 async function restartPlugin(this: BasementGuardianWorld): Promise<void> {
   await this.restartPlugin();

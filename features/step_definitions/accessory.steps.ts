@@ -16,11 +16,11 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { createServiceCatalogue } from '../../src/accessories/serviceCatalogue.js';
 import { HALO_DEVICE_TYPE_ID, HALO_DISPLAY_NAME } from '../../src/device/halo.js';
 import { PLATFORM_NAME, PLUGIN_NAME } from '../../src/settings.js';
+import { parseAccessoryDevices } from '../lib/deviceTables.js';
 import { currentAccessory, pushedValue, serviceOf } from '../lib/publishedServices.js';
 
 import type { FakeServiceClass } from '../lib/hap.js';
 import type { FakeAccessory } from '../lib/homebridgeApi.js';
-import type { ApiDevice } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
 import type { API } from 'homebridge';
@@ -31,134 +31,6 @@ const DEVICE_ID = 'placeholder-gemini';
 // state to reach the value a later step just reported, so the deadline is what turns a poll that
 // never picked up the change into a named failure rather than a false pass.
 const DISCOVERY_CHANGE_DEADLINE_MS = 2000;
-
-const DEFAULT_DEVICE_TYPE_ID = 'wayneWaterGemini';
-
-// A full, legal Gemini telemetry payload, so a scenario's device validates without stating all 16
-// required fields itself. `toDevice` uses this only for the default `wayneWaterGemini` type; a
-// scenario naming a different `deviceTypeId` gets no telemetry, because Gemini's fields carry no
-// meaning for another family.
-const VALID_GEMINI_TELEMETRY: Readonly<Record<string, unknown>> = {
-  water_level: 1,
-  primary_pump_running: false,
-  primary_pump_fault: false,
-  backup_pump_running: false,
-  backup_pump_fault: false,
-  backup_pump_fuse_blown: false,
-  ac_power: true,
-  battery_charging: false,
-  battery_voltage_low: false,
-  battery_health: 8,
-  hours_of_protection: 8,
-  water_sensor_fault: false,
-  serial_communications: true,
-  alarm_audio_muted: false,
-  test_running: false,
-  offline: false,
-};
-
-interface DeviceRow {
-  deviceId: string;
-  name: string;
-  deviceTypeId?: string;
-  waterLevel?: string;
-}
-
-const DEVICE_COLUMNS: ReadonlyMap<string, keyof DeviceRow> = new Map([
-  ['deviceId', 'deviceId'],
-  ['device id', 'deviceId'],
-  ['name', 'name'],
-  ['deviceTypeId', 'deviceTypeId'],
-  ['device type id', 'deviceTypeId'],
-  ['waterLevel', 'waterLevel'],
-  ['water level', 'waterLevel'],
-]);
-
-function parseDevices(table: DataTable): readonly ApiDevice[] {
-  const [headers, ...rows] = table.raw();
-
-  if (headers === undefined) {
-    throw new Error('a device table needs a header');
-  }
-
-  const fields = headers.map((header) => {
-    const field = DEVICE_COLUMNS.get(header);
-
-    if (field === undefined) {
-      throw new Error(`unknown device column: ${header}`);
-    }
-
-    return field;
-  });
-
-  if (new Set(fields).size !== fields.length || !fields.includes('deviceId') || !fields.includes('name')) {
-    throw new Error('a device table needs one device id and one name column, with no repeated field');
-  }
-
-  return rows.map((cells, index) => {
-    if (cells.length !== fields.length) {
-      throw new Error(`device row ${String(index + 1)} has ${String(cells.length)} cells; expected ${String(fields.length)}`);
-    }
-
-    const values: Partial<Record<keyof DeviceRow, string>> = {};
-
-    for (const [column, field] of fields.entries()) {
-      const value = cells[column];
-
-      if (value === undefined || value.trim() === '') {
-        throw new Error(`device row ${String(index + 1)} needs a value for ${field}`);
-      }
-
-      values[field] = value;
-    }
-
-    if (values.deviceId === undefined || values.name === undefined) {
-      throw new Error(`device row ${String(index + 1)} needs a device id and a name`);
-    }
-
-    const row: DeviceRow = { deviceId: values.deviceId, name: values.name };
-
-    if (values.deviceTypeId !== undefined) {
-      row.deviceTypeId = values.deviceTypeId;
-    }
-
-    if (values.waterLevel !== undefined) {
-      row.waterLevel = values.waterLevel;
-    }
-
-    return toDevice(row);
-  });
-}
-
-// An optional water level overrides one otherwise valid field, so a scenario can supply an
-// out-of-domain value without repeating every required telemetry field.
-function withWaterLevelOverride(telemetry: Readonly<Record<string, unknown>>, row: DeviceRow): Readonly<Record<string, unknown>> {
-  if (row.waterLevel === undefined) {
-    return telemetry;
-  }
-
-  const level = Number(row.waterLevel);
-
-  if (!Number.isFinite(level)) {
-    throw new Error(`water level must be numeric: ${row.waterLevel}`);
-  }
-
-  return { ...telemetry, water_level: level };
-}
-
-function toDevice(row: DeviceRow): ApiDevice {
-  const deviceTypeId = row.deviceTypeId ?? DEFAULT_DEVICE_TYPE_ID;
-  const telemetry = deviceTypeId === DEFAULT_DEVICE_TYPE_ID ? VALID_GEMINI_TELEMETRY : {};
-
-  return {
-    deviceId: row.deviceId,
-    deviceTypeId,
-    name: row.name,
-    serialNumber: 'placeholder-serial-number',
-    connectivity: { connected: true, timestamp: 0 },
-    data: withWaterLevelOverride(telemetry, row),
-  };
-}
 
 // The accessory context is whatever the plugin stored, so the device record is read without
 // assuming its shape.
@@ -171,7 +43,7 @@ function rememberedDeviceTypeId(accessory: FakeAccessory | undefined): unknown {
 async function applyDevicesFromTable(world: BasementGuardianWorld, table: DataTable): Promise<void> {
   const service = await world.restApi();
 
-  world.devices = parseDevices(table);
+  world.devices = parseAccessoryDevices(table);
   service.setDevices(world.devices);
 }
 
@@ -210,7 +82,7 @@ When('the vendor omits the device from the next {int} inventory checks', async f
 When('the vendor reports these devices for the next inventory check:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const service = await this.restApi();
 
-  service.armDevicesAnswer(parseDevices(table));
+  service.armDevicesAnswer(parseAccessoryDevices(table));
 });
 
 When('the user renames the accessory to {string} in the home app', async function (this: BasementGuardianWorld, name: string): Promise<void> {

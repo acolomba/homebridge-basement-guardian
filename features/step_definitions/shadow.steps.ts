@@ -12,9 +12,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { SHADOW_TOPICS } from '../../src/cloud/shadow.js';
+import { parseDeviceRows } from '../lib/deviceTables.js';
 import { ROTATED_SHADOW_CREDENTIALS, SCENARIO_START_TIME, SHADOW_CREDENTIALS } from '../support/world.js';
 
 import type { DeviceSnapshot } from '../../src/device/state.js';
+import type { DeviceRow } from '../lib/deviceTables.js';
 import type { ApiDevice } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
 import type { DataTable } from '@cucumber/cucumber';
@@ -62,11 +64,11 @@ function fieldsOf(table: DataTable): Record<string, unknown> {
   return Object.fromEntries(Object.entries(table.rowsHash()).map(([name, text]) => [name, fieldValue(text)]));
 }
 
-function toDevice(row: Record<string, string>): ApiDevice {
+function toDevice(row: DeviceRow): ApiDevice {
   return {
-    deviceId: row.deviceId ?? '',
+    deviceId: row.deviceId,
     deviceTypeId: DEVICE_TYPE_ID,
-    name: row.name ?? '',
+    name: row.name,
     serialNumber: SERIAL_NUMBER,
     connectivity: { connected: true, timestamp: DEVICE_TIME },
     data: {},
@@ -128,7 +130,7 @@ async function setDevices(world: BasementGuardianWorld, devices: readonly ApiDev
 async function geminiDevices(this: BasementGuardianWorld, table: DataTable): Promise<void> {
   await setDevices(
     this,
-    table.hashes().map((row) => toDevice(row)),
+    parseDeviceRows(table).map((row) => toDevice(row)),
   );
 }
 
