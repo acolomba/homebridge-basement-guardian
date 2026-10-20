@@ -38,7 +38,7 @@ WARNING. Locations below are qualified by the reviewed commit above.
 | CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | fixed in Round 2: the no-command step checks all non-GET requests. | `4a3c0f6`: temporary POST and PATCH records each failed at the assertion. |
 | CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | fixed in Round 2: the timeout scenario checks command count after the pending window and reads exact switch state. | `c0c97fd`: post-window synthetic second PUT failed the one-command assertion; switch read and `On=false` passed. |
 | CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | fixed in Round 2: the title names only the absent pit services. | `25d5f46`: focused pit-service scenario passed and still required Sump Mains Power. |
-| CR-07-HOMEKIT-013 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 2 | `a14e30e:features/homekit/safety-state.feature:92-112` | B | open: a partial heartbeat can deactivate the self-test or alarm-mute trust scope without failing the scenario's “every scope” claim. | Pending exact post-heartbeat Status Active and On values for both control services, plus wrong-result control. |
+| CR-07-HOMEKIT-013 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 2 | `a14e30e:features/homekit/safety-state.feature:92-112` | B | repaired in Round 3, pending independent review: the partial-heartbeat scenario now checks both omitted control trust scopes. | `ed93d5b`: exact post-heartbeat `Status Active=true` and `On=false` reads for System Self-Test and Alarm Mute; false trust values for each scope separately failed at its assertion. |
 
 No source repair preceded this triage. The default profile's phase-start count
 was 104 scenarios and 1,156 steps. Earlier ACCOUNT and ACCESSORY batches have
@@ -135,3 +135,22 @@ Opening **3** (010-012); fixed **3** (010-012); rejected **0**; new **1**
 `3 - 3 - 0 + 1 + 0 = 1`. The count fell and no previously fixed finding
 reopened, so correction round 3 is permitted. The reviewer found no other
 accepted cause in the complete current owned files.
+
+### Round 3 repairs
+
+| ID | Commit | Focused check and active control | Scenario delta | Step delta |
+| --- | --- | --- | ---: | ---: |
+| 013 | `ed93d5b` | Partial-heartbeat scenario passed 23 steps. A temporary `Status Active=false` value for System Self-Test failed at its exact trust assertion; the same independent control for Alarm Mute failed at its exact trust assertion. Both controls were removed before commit. | 0 | +6 |
+
+The two control switches each have a baseline `On=false` precheck, followed by
+post-heartbeat `Status Active=true` and `On=false` assertions. The registered
+whole-value step checks both the pushed value and the exact HAP controller
+read. Round 3 adds **0 scenarios and 6 steps**. The combined HOMEKIT change
+from the phase-start baseline is 0 scenarios and 14 steps. No production file
+changed. `npm run build:test` and the focused scenario passed after the controls
+were removed. `npm run test:cucumber` compiled first and passed at clean commit
+`ed93d5b58fe1c253c57c67c88045bdd46c127763` with **104 scenarios and 1,174
+steps**, all passed. It exited 0 on Node `v26.12.0` on 2026-10-20 in the main
+shared checkout. The source commit passed the normal hook and preceding
+`fallow audit --base HEAD`. Independent Round 3 complete-file review remains
+pending.
