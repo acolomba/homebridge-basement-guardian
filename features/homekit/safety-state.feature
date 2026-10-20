@@ -1,9 +1,8 @@
 Feature: HomeKit safety state
 
-  A validated vendor field reaches Apple Home as the exact fact the device reported. The plugin
-  invents no reading: a field that stops validating leaves the last trustworthy value published and
-  marks its service inactive, and the confirmed-offline adapter stays quiet while the vendor keeps
-  answering for the device.
+  Validated device facts reach Apple Home without invented readings.
+  Invalid fields keep their last trusted values and mark affected services inactive.
+  The scenarios use a fake vendor to check safety state and offline behavior.
 
   Background:
     Given the fake cloud
