@@ -472,7 +472,7 @@ Feature: Monitoring degradation
     Then the "Sump Pit Level" service reports "Water Level" as "20"
     Then the plugin records no poll outcome
 
-  Scenario: A restarted plugin marks restored values stale before any poll
+  Scenario: A restarted plugin marks restored values stale before any successful poll
     Homebridge serves the values it cached from the moment the bridge publishes, and this plugin
     publishes nothing until a poll succeeds, which never happens while the cloud is unreachable. The
     restored tile therefore says at once that the plugin cannot vouch for what it shows.
