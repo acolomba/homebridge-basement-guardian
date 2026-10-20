@@ -1,8 +1,8 @@
 Feature: Shadow state merging
 
-  A device reports its complete state once and then sends a partial heartbeat about every fifteen
-  minutes. The plugin merges each report into what it already holds, so the fields a heartbeat omits
-  keep their last reported values and a requested value never becomes device state.
+  A device reports complete state, then a partial heartbeat about every fifteen minutes.
+  These scenarios use a fake cloud and broker to show that omitted fields retain their last
+  reported values and requested values never become device state.
 
   Background:
     Given the fake cloud

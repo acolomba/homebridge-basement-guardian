@@ -1,8 +1,8 @@
 Feature: Shadow connection lifecycle
 
-  The shadow service reports current state rather than replaying what a disconnected plugin missed,
-  so the plugin asks for the complete shadow after every connection and lets the poll reconcile
-  whatever the connection did not carry.
+  The shadow service reports current state rather than replaying what a disconnected plugin missed.
+  These scenarios use a fake cloud and broker to show that reconnection requests the complete shadow
+  and polling reconciles any state the connection did not carry.
 
   Background:
     Given the fake cloud
