@@ -34,7 +34,7 @@ Feature: HomeKit safety state
     Then the "Sump Mains Power" service reports "Status Active" as "false"
     Then the "Sump Mains Power" service reports "Mains Power Present" as "true"
 
-  Scenario: A field that never validates publishes no service at all
+  Scenario: An invalid pit level leaves both pit services unpublished
     A service added before its row has a value to vouch for sits at the hap format defaults, and
     those read as an empty pit that reports no leak.
 
