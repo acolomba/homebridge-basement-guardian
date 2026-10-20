@@ -38,7 +38,8 @@ WARNING. Locations below are qualified by the reviewed commit above.
 | CR-07-HOMEKIT-010 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/steps.md` §Steps, whole-value assertions | 1 | `f74b3d4:features/step_definitions/controls.steps.ts:255-261` | B | fixed in Round 2: the no-command step checks all non-GET requests. | `4a3c0f6`: temporary POST and PATCH records each failed at the assertion. |
 | CR-07-HOMEKIT-011 | FEAT-01 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 1 | `f74b3d4:features/homekit/official-controls.feature:98-112` | B | fixed in Round 2: the timeout scenario checks command count after the pending window and reads exact switch state. | `c0c97fd`: post-window synthetic second PUT failed the one-command assertion; switch read and `On=false` passed. |
 | CR-07-HOMEKIT-012 | FEAT-02 | `.agents/skills/cucumber/rules/features.md` §Scenarios, behavior title | 1 | `f74b3d4:features/homekit/safety-state.feature:37,45-47` | W | fixed in Round 2: the title names only the absent pit services. | `25d5f46`: focused pit-service scenario passed and still required Sump Mains Power. |
-| CR-07-HOMEKIT-013 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 2 | `a14e30e:features/homekit/safety-state.feature:92-112` | B | repaired in Round 3, pending independent review: the partial-heartbeat scenario now checks both omitted control trust scopes. | `ed93d5b`: exact post-heartbeat `Status Active=true` and `On=false` reads for System Self-Test and Alarm Mute; false trust values for each scope separately failed at its assertion. |
+| CR-07-HOMEKIT-013 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review; `rules/features.md` §Scenarios | 2 | `a14e30e:features/homekit/safety-state.feature:92-112` | B | fixed in Round 3: the partial-heartbeat scenario checks both omitted control trust scopes. | `ed93d5b`: exact post-heartbeat `Status Active=true` and `On=false` reads for System Self-Test and Alarm Mute; false trust values for each scope separately failed at its assertion. |
+| CR-07-HOMEKIT-014 | FEAT-01 | `.agents/skills/cucumber/rules/steps.md` §Steps, whole-value assertions; `.agents/skills/cucumber/SKILL.md` §Review | 3 | `d6fc7f2:features/step_definitions/controls.steps.ts:115-121` | B | **open at Round 3 STOP**: the command assertion compares only URL pathname and ignores query parameters in the recorded vendor request. A command to `/devices/{id}/data?dryRun=1` could pass although the measured contract has no query. | No repair attempted after STOP. The next authorized correction must compare the full raw request path against the exact expected path and demonstrate the wrong-query control fails. |
 
 No source repair preceded this triage. The default profile's phase-start count
 was 104 scenarios and 1,156 steps. Earlier ACCOUNT and ACCESSORY batches have
@@ -152,5 +153,29 @@ were removed. `npm run test:cucumber` compiled first and passed at clean commit
 `ed93d5b58fe1c253c57c67c88045bdd46c127763` with **104 scenarios and 1,174
 steps**, all passed. It exited 0 on Node `v26.12.0` on 2026-10-20 in the main
 shared checkout. The source commit passed the normal hook and preceding
-`fallow audit --base HEAD`. Independent Round 3 complete-file review remains
-pending.
+`fallow audit --base HEAD`.
+
+### Round 3 — STOP
+
+Independent reviewer `/root/phase7_plan04/homekit_round3_reviewer` read every
+owned file completely at commit `d6fc7f2e299debabab76f55602a9bb7005cef4e1`.
+
+| Owned path | Reviewed blob | Contiguous lines |
+| --- | --- | ---: |
+| `features/homekit/official-controls.feature` | `f79c1bbbd523a45f68becddd7803399f0e461882` | 1-212 |
+| `features/homekit/safety-state.feature` | `d86cc7bc67caef9df73caa5e53eb242a14a7c243` | 1-159 |
+| `features/step_definitions/controls.steps.ts` | `409cec6b482daa009610906e88a52b945239a772` | 1-319 |
+| `features/step_definitions/homekit.steps.ts` | `958b06c58b03d5d21f575b20f0e8b61067cbbd79` | 1-275 |
+
+Opening **1** (013); fixed **1** (013); rejected **0**; new **1** (014);
+reopened **0**; closing **1** (014). Equation: `1 - 1 - 0 + 1 + 0 = 1`.
+The positive open count did not fall, so the batch **STOPs now**. No Round 4
+repair or review is permitted in this run. The source stays at the reviewed
+revision. The reviewer found no other accepted cause in the complete files.
+
+The final default profile passed **104 scenarios and 1,174 steps** on clean
+source commit `ed93d5b` with Node `v26.12.0`. After that compilation, the
+default usage dry run exited 0 and its complete output had no `UNUSED`,
+undefined, or ambiguous step definition. No real-profile step ran. The
+coordinator owns the combined-wave `npm run check` gate. FEAT-01 remains
+unproven by this batch while 014 is open.
