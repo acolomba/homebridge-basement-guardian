@@ -16,7 +16,7 @@ import { Then } from '@cucumber/cucumber';
 import { createFakeHap } from '../lib/hap.js';
 import { createFakeAccessory } from '../lib/homebridgeApi.js';
 
-import type { FakeCharacteristicClass, FakeHapCharacteristic, FakeHapService } from '../lib/hap.js';
+import type { FakeHapCharacteristic, FakeHapService } from '../lib/hap.js';
 
 const HAP = createFakeHap();
 
@@ -192,8 +192,8 @@ function assertAccessoryInformationDefaults(): void {
 
 Then('a fresh accessory information service reads at the hap string defaults', assertAccessoryInformationDefaults);
 
-function declaresOptional(service: FakeHapService, characteristicClass: FakeCharacteristicClass): boolean {
-  return service.optionalCharacteristics.some((declared) => declared.UUID === characteristicClass.UUID);
+function optionalUUIDsOf(service: FakeHapService): string[] {
+  return service.optionalCharacteristics.map((characteristic) => characteristic.UUID);
 }
 
 // The accessory pushes `StatusActive` onto every service it publishes, and `publishValue` declares
@@ -203,24 +203,36 @@ function declaresOptional(service: FakeHapService, characteristicClass: FakeChar
 // on. Apple's sensor definitions declare both status characteristics; the Battery definition
 // declares neither, which is what keeps the declaring branch reachable in production too.
 function assertStandardOptionalDeclarations(): void {
+  const accessoryInformation = new HAP.Service.AccessoryInformation('Sump System');
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
   const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
+  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
 
-  assert.deepEqual(
+  assert.deepStrictEqual(
     {
-      leakActive: declaresOptional(leakSensor, HAP.Characteristic.StatusActive),
-      leakFault: declaresOptional(leakSensor, HAP.Characteristic.StatusFault),
-      contactActive: declaresOptional(contactSensor, HAP.Characteristic.StatusActive),
-      contactFault: declaresOptional(contactSensor, HAP.Characteristic.StatusFault),
-      batteryActive: declaresOptional(battery, HAP.Characteristic.StatusActive),
-      batteryLevel: declaresOptional(battery, HAP.Characteristic.BatteryLevel),
+      accessoryInformation: optionalUUIDsOf(accessoryInformation),
+      leak: optionalUUIDsOf(leakSensor),
+      contact: optionalUUIDsOf(contactSensor),
+      battery: optionalUUIDsOf(battery),
+      switch: optionalUUIDsOf(switchService),
     },
-    { leakActive: true, leakFault: true, contactActive: true, contactFault: true, batteryActive: false, batteryLevel: true },
+    {
+      accessoryInformation: [HAP.Characteristic.ConfiguredName.UUID],
+      leak: [HAP.Characteristic.Name.UUID, HAP.Characteristic.StatusActive.UUID, HAP.Characteristic.StatusFault.UUID, HAP.Characteristic.StatusLowBattery.UUID],
+      contact: [
+        HAP.Characteristic.Name.UUID,
+        HAP.Characteristic.StatusActive.UUID,
+        HAP.Characteristic.StatusFault.UUID,
+        HAP.Characteristic.StatusLowBattery.UUID,
+      ],
+      battery: [HAP.Characteristic.BatteryLevel.UUID, HAP.Characteristic.ChargingState.UUID, HAP.Characteristic.Name.UUID],
+      switch: [HAP.Characteristic.Name.UUID],
+    },
   );
 }
 
-Then('a standard sensor service declares the optional characteristics apple declares', assertStandardOptionalDeclarations);
+Then('the standard hap services declare their optional characteristics', assertStandardOptionalDeclarations);
 
 function assertUpdateAddsTheCharacteristicItNames(): void {
   const contactSensor = new HAP.Service.ContactSensor('Water Sensor Fault', 'water-sensor-fault');
