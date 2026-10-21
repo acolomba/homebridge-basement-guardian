@@ -103,10 +103,10 @@ const HAP_STATUS: FakeHapStatus = {
 /**
  * One refused write, carrying the status the handler named.
  *
- * `hapStatus` is the one member `handleSetRequest` reads: a handler throwing anything else is
- * converted rather than read. The class implementing it is module-local, so every caller
- * constructs one through `hap.HapStatusError` as the plugin does through the injected namespace,
- * and no test reaches a HAP type by a route production does not have.
+ * `hapStatus` is the one member `handleSetRequest` reads. A bare number also names a status; other
+ * thrown values become communication failures. The class implementing it is module-local, so
+ * callers construct one through `hap.HapStatusError`, as the plugin does through the injected
+ * namespace. No test reaches a HAP type by a route production does not have.
  */
 export interface FakeHapStatusError extends Error {
   readonly hapStatus: number;
