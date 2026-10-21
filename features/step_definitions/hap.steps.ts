@@ -315,6 +315,30 @@ Then('the service appends an optional characteristic on every call', () => {
   assertOptionalCharacteristicsAppend();
 });
 
+Then('the fake hap answers the real status for each error form', async () => {
+  const service = new HAP.Service.Switch('System Self-Test', 'system-self-test');
+  const on = service.getCharacteristic(HAP.Characteristic.On);
+  const unknownStatus = new HAP.HapStatusError(0).hapStatus;
+
+  service.updateCharacteristic(HAP.Characteristic.On, new Error('-70412'));
+  const numericMessageStatus = on.statusCode;
+  service.updateCharacteristic(HAP.Characteristic.On, new Error('not a status'));
+  const plainErrorStatus = on.statusCode;
+  on.onSet(() => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- HAP accepts bare numeric handler statuses
+    throw 0;
+  });
+  const thrownNumberStatus: unknown = await on.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+
+  assert.deepStrictEqual(
+    { unknownStatus, numericMessageStatus, plainErrorStatus, thrownNumberStatus },
+    { unknownStatus: -70402, numericMessageStatus: -70412, plainErrorStatus: -70402, thrownNumberStatus: -70402 },
+  );
+});
+
 Then('the service refuses a duplicate characteristic', () => {
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
   const characteristicClass = HAP.Characteristic.ContactSensorState;

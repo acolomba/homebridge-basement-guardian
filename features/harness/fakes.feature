@@ -136,6 +136,9 @@ Feature: Harness fakes
   Scenario: A service appends every optional characteristic declaration
     Then the service appends an optional characteristic on every call
 
+  Scenario: The fake hap normalizes error statuses
+    Then the fake hap answers the real status for each error form
+
   Scenario: The fake hap refuses a duplicate characteristic
     Then the service refuses a duplicate characteristic
 

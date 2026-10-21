@@ -100,6 +100,12 @@ const HAP_STATUS: FakeHapStatus = {
   NOT_ALLOWED_IN_CURRENT_STATE: -70412,
 };
 
+const FIRST_HAP_ERROR = -70401;
+
+function normalizeHapError(status: number): number {
+  return status >= HAP_STATUS.NOT_ALLOWED_IN_CURRENT_STATE && status <= FIRST_HAP_ERROR ? status : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+}
+
 /**
  * One refused write, carrying the status the handler named.
  *
@@ -117,7 +123,7 @@ class StandInHapStatusError extends Error implements FakeHapStatusError {
 
   constructor(hapStatus: number) {
     super(`status code: ${String(hapStatus)}`);
-    this.hapStatus = hapStatus;
+    this.hapStatus = normalizeHapError(hapStatus);
     this.name = 'HapStatusError';
   }
 }
@@ -279,10 +285,18 @@ export interface FakeCharacteristicNamespace {
 // communication failure and warns about.
 function thrownStatusOf(error: unknown): number {
   if (typeof error === 'number') {
-    return error;
+    return normalizeHapError(error);
   }
 
   return error instanceof StandInHapStatusError ? error.hapStatus : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+}
+
+function updatedErrorStatusOf(error: Error): number {
+  if (error instanceof StandInHapStatusError) {
+    return error.hapStatus;
+  }
+
+  return /^-?\d+$/.test(error.message) ? normalizeHapError(Number.parseInt(error.message, 10)) : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
 }
 
 class StandInCharacteristic implements FakeHapCharacteristic {
@@ -532,10 +546,10 @@ class StandInService implements FakeHapService {
   updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
     const characteristic = this.getCharacteristic(characteristicClass);
 
-    // The same mapping the write path reads, so the two cannot disagree about what a given error
-    // means.
+    // HAP parses a known numeric Error message on the update path. A write handler instead
+    // converts a plain thrown Error to a communication failure.
     if (value instanceof Error) {
-      characteristic.statusCode = thrownStatusOf(value);
+      characteristic.statusCode = updatedErrorStatusOf(value);
 
       return this;
     }
