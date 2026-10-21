@@ -109,16 +109,28 @@ Feature: Harness fakes
     When the first due timer cancels the second due interval
     Then only the first due timer runs
 
-  Scenario: The fake hap namespace carries the definitions the accessories publish
+  Scenario: The fake hap namespace carries the standard identifiers
     Then the hap stand-in carries the standard service and characteristic identifiers
+
+  Scenario: The fake hap namespace carries the formats, perms, and units
     Then the hap stand-in carries the formats, perms, and units the plugin reads
+
+  Scenario: A plugin type extends the fake hap bases
     Then a plugin type extends the hap service and the hap characteristic
 
-  Scenario: The fake hap namespace reproduces the format defaults of the real hap
+  Scenario: A fresh sensor service has the real hap format defaults
     Then a fresh sensor service reads at the hap format defaults
+
+  Scenario: A fresh accessory information service has the real hap string defaults
     Then a fresh accessory information service reads at the hap string defaults
+
+  Scenario: The standard hap services declare their optional characteristics
     Then the standard hap services declare their optional characteristics
+
+  Scenario: A service update adds the named characteristic
     Then the service adds the characteristic an update names
+
+  Scenario: A service appends every optional characteristic declaration
     Then the service appends an optional characteristic on every call
 
   Scenario: The fake hap refuses a duplicate characteristic
