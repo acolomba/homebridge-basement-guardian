@@ -432,6 +432,14 @@ async function assertSubscriberObservesTheClose(this: BasementGuardianWorld): Pr
 
 Then('the subscriber observes the close', assertSubscriberObservesTheClose);
 
+async function assertNoCurrentSubscriptions(this: BasementGuardianWorld): Promise<void> {
+  const broker = await this.broker();
+
+  assert.deepStrictEqual(broker.currentSubscriptions(), []);
+}
+
+Then('the broker holds no current subscriptions', assertNoCurrentSubscriptions);
+
 function assertObservations(this: BasementGuardianWorld, observation: string): void {
   assert.equal(this.observations.at(-1), observation);
 }

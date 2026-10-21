@@ -27,6 +27,7 @@ import { WebSocketServer } from 'ws';
 
 import { LOOPBACK_ADDRESS } from './loopbackServer.js';
 
+import type { Client } from 'aedes';
 import type { IncomingMessage } from 'node:http';
 import type { WebSocket } from 'ws';
 
@@ -180,7 +181,7 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
   const handshakes: string[] = [];
   const clientIds: string[] = [];
   const publishedTopics: string[] = [];
-  const subscriptionsByClient = new Map<string, string[]>();
+  const subscriptionsByClient = new Map<Client, string[]>();
   let refusing = false;
 
   const server = new WebSocketServer({
@@ -196,16 +197,20 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     // A reconnecting plugin presents the same client identifier again, so the record starts empty
     // for each connection. Carrying the previous connection's subscriptions forward is exactly the
     // history that would answer a wait about a connection that no longer exists.
-    subscriptionsByClient.set(client.id, []);
+    subscriptionsByClient.set(client, []);
+  });
+
+  broker.on('clientDisconnect', (client) => {
+    subscriptionsByClient.delete(client);
   });
 
   // Only what a client sent is recorded, on the same reasoning the publish listener below states:
   // the broker's own subscribers are the scenario listening, not the plugin.
   broker.on('subscribe', (subscriptions, client) => {
-    const recorded = subscriptionsByClient.get(client.id) ?? [];
+    const recorded = subscriptionsByClient.get(client) ?? [];
 
     recorded.push(...subscriptions.map((subscription) => subscription.topic));
-    subscriptionsByClient.set(client.id, recorded);
+    subscriptionsByClient.set(client, recorded);
   });
 
   // A null client is the broker publishing to its own subscribers, which is the scenario speaking
@@ -229,7 +234,7 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     clientIds,
     publishedTopics,
     currentSubscriptions(): readonly string[] {
-      const newest = clientIds.at(-1);
+      const newest = [...subscriptionsByClient.keys()].at(-1);
 
       return newest === undefined ? [] : (subscriptionsByClient.get(newest) ?? []);
     },

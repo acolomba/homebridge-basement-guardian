@@ -607,7 +607,7 @@ Feature: Monitoring degradation
     When the scenario clock moves forward by 120 seconds
     Then the "Sump Pit Flood" service answers no read for "Status Active"
     Then the broker holds no live connection
-    When the device publishes these heartbeat fields:
+    When the broker publishes these heartbeat fields without a live subscriber:
       | water_level | 7 |
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
     Then the "Basement Guardian Offline" service still answers no read for "Status Active"
@@ -615,7 +615,7 @@ Feature: Monitoring degradation
     Then every published service refuses its trust read
     Then the "Sump Pit Flood" service reports "Leak Detected" as "0"
     When the scenario clock moves forward by 7200 seconds
-    When the device publishes these heartbeat fields:
+    When the broker publishes these heartbeat fields without a live subscriber:
       | water_level | 31 |
     Then the "Sump Pit Flood" service still answers no read for "Status Active"
     Then the "Basement Guardian Offline" service still answers no read for "Status Active"

@@ -81,6 +81,7 @@ Feature: Harness fakes
     Given a subscriber on the update-accepted topic
     When the broker closes every connection
     Then the subscriber observes the close
+    Then the broker holds no current subscriptions
 
   Scenario: A due timer does not run after another due timer cancels it
     When the first due timer cancels the second due timeout

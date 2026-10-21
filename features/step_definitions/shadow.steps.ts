@@ -214,6 +214,15 @@ function publishReportedFields(this: BasementGuardianWorld, table: DataTable): P
 
 When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
 
+async function publishWithoutSubscriber(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  const broker = await this.broker();
+
+  assert.equal(broker.liveConnectionCount(), 0);
+  broker.publishReported(theDeviceId(this), { data: fieldsOf(table) }, this.nextShadowVersion());
+}
+
+When('the broker publishes these heartbeat fields without a live subscriber:', publishWithoutSubscriber);
+
 // The same reported patch under a name that claims nothing about a heartbeat. A heartbeat carries
 // seven fields and `test_running` is not among them, so a scenario driving a control's reported
 // state says what it means: the device reported a state change.
