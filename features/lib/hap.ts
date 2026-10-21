@@ -180,7 +180,7 @@ export interface FakeHapCharacteristic {
   readonly props: FakeCharacteristicProps;
   value: unknown;
   /**
-   * Whether anything ever wrote this value, as against HAP having constructed it.
+   * Whether the plugin published an ordinary value through `updateCharacteristic`.
    *
    * The real HAP carries no such member, and no production code reads it. It exists because the
    * construction default of both alarm characteristics is `0`, which is also the quiet state, so a
