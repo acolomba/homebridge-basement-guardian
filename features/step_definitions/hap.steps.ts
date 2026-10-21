@@ -323,12 +323,13 @@ function assertOptionalCharacteristicsAppend(): void {
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
 
-  assert.deepEqual(
-    battery.optionalCharacteristics
-      .filter((characteristic) => characteristic.UUID === HAP.Characteristic.StatusFault.UUID)
-      .map((characteristic) => characteristic.UUID),
-    [HAP.Characteristic.StatusFault.UUID, HAP.Characteristic.StatusFault.UUID],
-  );
+  assert.deepStrictEqual(optionalUUIDsOf(battery), [
+    HAP.Characteristic.BatteryLevel.UUID,
+    HAP.Characteristic.ChargingState.UUID,
+    HAP.Characteristic.Name.UUID,
+    HAP.Characteristic.StatusFault.UUID,
+    HAP.Characteristic.StatusFault.UUID,
+  ]);
 }
 
 Then('the service appends an optional characteristic on every call', () => {
