@@ -148,6 +148,9 @@ Feature: Harness fakes
   Scenario: The fake hap routes a service set through its write handler
     Then setting a service characteristic calls its write handler
 
+  Scenario: The fake hap preserves a value after a refused service set
+    Then a refused service set preserves the prior value and stores its status
+
   Scenario: The fake hap names an unnamed accessory information service
     Then the accessory information service carries its unnamed service name
 

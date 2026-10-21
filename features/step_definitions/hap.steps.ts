@@ -414,9 +414,36 @@ Then('setting a service characteristic calls its write handler', async () => {
   await Promise.resolve();
 
   assert.deepStrictEqual(
-    { received, returnedSelf: returned === switchService, value: switchService.getCharacteristic(HAP.Characteristic.On).value },
-    { received: [true], returnedSelf: true, value: true },
+    { received, returnedSelf: returned === switchService, state: constructedStateOf(switchService.getCharacteristic(HAP.Characteristic.On)) },
+    { received: [true], returnedSelf: true, state: { value: true, pushed: false, statusCode: 0 } },
   );
+});
+
+Then('a refused service set preserves the prior value and stores its status', async () => {
+  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
+  const on = switchService.getCharacteristic(HAP.Characteristic.On);
+  switchService.updateCharacteristic(HAP.Characteristic.On, false);
+  on.onSet(() => Promise.reject(new HAP.HapStatusError(HAP.HAPStatus.RESOURCE_BUSY)));
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown): void => {
+    unhandled.push(reason);
+  };
+
+  process.on('unhandledRejection', onUnhandled);
+
+  try {
+    const returned = switchService.setCharacteristic(HAP.Characteristic.On, true);
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+
+    assert.deepStrictEqual(
+      { returnedSelf: returned === switchService, state: constructedStateOf(on), unhandled },
+      { returnedSelf: true, state: { value: false, pushed: true, statusCode: HAP.HAPStatus.RESOURCE_BUSY }, unhandled: [] },
+    );
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
 });
 
 Then('the accessory information service carries its unnamed service name', () => {
