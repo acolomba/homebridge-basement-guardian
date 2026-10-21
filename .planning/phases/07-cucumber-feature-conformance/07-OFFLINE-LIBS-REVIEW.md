@@ -32,3 +32,14 @@ Each candidate first appeared in Round 0. The observed location remains qualifie
 | CR-07-OFFLINE_LIBS-011 | FEAT-02 | `.agents/skills/typescript-style/rules/types.md` §Types | `338bdf0:features/lib/timers.ts:39` | WARNING | **Accepted; open.** `intervalMs` uses `number \| undefined` where the rule prefers an optional field. This is a type-style issue only. |
 
 Opening accepted count: 11. No rejected IDs. The first correction review has not run.
+
+## Repair evidence
+
+| ID | Fix commit | Verification |
+| --- | --- | --- |
+| 001 | `8f14085` | `SKIP=npm-check pre-commit run --files features/lib/auth0.ts`, Fallow audit, and normal commit hooks passed. |
+| 002 | `67baa34` | The same checks passed for `features/lib/loopbackServer.ts`. |
+| 003 | `fcd99e4` | The same checks passed for `features/lib/timers.ts`. |
+| 004 | `afa911d` | The same checks passed for `features/lib/shadowBroker.ts`. |
+
+The four header fixes have not yet received the combined-tree full gate or independent correction review.
