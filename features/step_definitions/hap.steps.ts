@@ -112,6 +112,33 @@ Then('the hap stand-in carries the standard service and characteristic identifie
   assertStandardIdentifiers();
 });
 
+Then('the hap stand-in carries the standard state and status values', () => {
+  assert.deepStrictEqual(
+    {
+      leak: [HAP.Characteristic.LeakDetected.LEAK_NOT_DETECTED, HAP.Characteristic.LeakDetected.LEAK_DETECTED],
+      contact: [HAP.Characteristic.ContactSensorState.CONTACT_DETECTED, HAP.Characteristic.ContactSensorState.CONTACT_NOT_DETECTED],
+      fault: [HAP.Characteristic.StatusFault.NO_FAULT, HAP.Characteristic.StatusFault.GENERAL_FAULT],
+      battery: [HAP.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL, HAP.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW],
+      charging: [HAP.Characteristic.ChargingState.NOT_CHARGING, HAP.Characteristic.ChargingState.CHARGING, HAP.Characteristic.ChargingState.NOT_CHARGEABLE],
+      status: HAP.HAPStatus,
+    },
+    {
+      leak: [0, 1],
+      contact: [0, 1],
+      fault: [0, 1],
+      battery: [0, 1],
+      charging: [0, 1, 2],
+      status: {
+        SUCCESS: 0,
+        SERVICE_COMMUNICATION_FAILURE: -70402,
+        RESOURCE_BUSY: -70403,
+        OPERATION_TIMED_OUT: -70408,
+        NOT_ALLOWED_IN_CURRENT_STATE: -70412,
+      },
+    },
+  );
+});
+
 function assertFormatsPermsAndUnits(): void {
   assert.deepStrictEqual(
     { formats: HAP.Formats, perms: HAP.Perms, units: HAP.Units },

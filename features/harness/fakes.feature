@@ -112,6 +112,9 @@ Feature: Harness fakes
   Scenario: The fake hap namespace carries the standard identifiers
     Then the hap stand-in carries the standard service and characteristic identifiers
 
+  Scenario: The fake hap namespace carries the standard state and status values
+    Then the hap stand-in carries the standard state and status values
+
   Scenario: The fake hap namespace carries the formats, perms, and units
     Then the hap stand-in carries the formats, perms, and units the plugin reads
 
