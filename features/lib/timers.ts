@@ -42,7 +42,7 @@ export interface FakeTimers extends Timers {
 // One armed timer: when it is due, whether it repeats, and what it runs.
 interface Armed {
   at: number;
-  intervalMs: number | undefined;
+  intervalMs?: number;
   run: () => void;
 }
 
@@ -53,8 +53,14 @@ export function createFakeTimers(clock: ScenarioClock): FakeTimers {
 
   function arm(run: () => void, delayMs: number, intervalMs: number | undefined): number {
     const handle = nextHandle;
+    const entry: Armed = { at: clock.now() + delayMs, run };
+
+    if (intervalMs !== undefined) {
+      entry.intervalMs = intervalMs;
+    }
+
     nextHandle += 1;
-    armed.set(handle, { at: clock.now() + delayMs, intervalMs, run });
+    armed.set(handle, entry);
 
     return handle;
   }
