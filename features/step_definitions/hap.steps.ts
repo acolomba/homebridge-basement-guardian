@@ -102,7 +102,9 @@ function assertStandardIdentifiers(): void {
   );
 }
 
-Then('the hap stand-in carries the standard service and characteristic identifiers', assertStandardIdentifiers);
+Then('the hap stand-in carries the standard service and characteristic identifiers', () => {
+  assertStandardIdentifiers();
+});
 
 function assertFormatsPermsAndUnits(): void {
   assert.deepStrictEqual(
@@ -115,7 +117,9 @@ function assertFormatsPermsAndUnits(): void {
   );
 }
 
-Then('the hap stand-in carries the formats, perms, and units the plugin reads', assertFormatsPermsAndUnits);
+Then('the hap stand-in carries the formats, perms, and units the plugin reads', () => {
+  assertFormatsPermsAndUnits();
+});
 
 function assertScratchTypeConstructs(): void {
   const scratchService = new ScratchService('Scratch Service', 'scratch');
@@ -131,7 +135,9 @@ function assertScratchTypeConstructs(): void {
   );
 }
 
-Then('a plugin type extends the hap service and the hap characteristic', assertScratchTypeConstructs);
+Then('a plugin type extends the hap service and the hap characteristic', () => {
+  assertScratchTypeConstructs();
+});
 
 // The real HAP creates each characteristic at its format default, and for this plugin those
 // defaults are the good-news values: a sensor published before the first valid decode would read
@@ -163,7 +169,9 @@ function assertFormatDefaults(): void {
   );
 }
 
-Then('a fresh sensor service reads at the hap format defaults', assertFormatDefaults);
+Then('a fresh sensor service reads at the hap format defaults', () => {
+  assertFormatDefaults();
+});
 
 // The real HAP starts four string characteristics at a named default rather than at the empty
 // string, and all four sit on `AccessoryInformation`. The accessory overwrites every one of them
@@ -190,7 +198,9 @@ function assertAccessoryInformationDefaults(): void {
   );
 }
 
-Then('a fresh accessory information service reads at the hap string defaults', assertAccessoryInformationDefaults);
+Then('a fresh accessory information service reads at the hap string defaults', () => {
+  assertAccessoryInformationDefaults();
+});
 
 function optionalUUIDsOf(service: FakeHapService): string[] {
   return service.optionalCharacteristics.map((characteristic) => characteristic.UUID);
@@ -232,7 +242,9 @@ function assertStandardOptionalDeclarations(): void {
   );
 }
 
-Then('the standard hap services declare their optional characteristics', assertStandardOptionalDeclarations);
+Then('the standard hap services declare their optional characteristics', () => {
+  assertStandardOptionalDeclarations();
+});
 
 function assertUpdateAddsTheCharacteristicItNames(): void {
   const contactSensor = new HAP.Service.ContactSensor('Water Sensor Fault', 'water-sensor-fault');
@@ -250,7 +262,9 @@ function assertUpdateAddsTheCharacteristicItNames(): void {
   );
 }
 
-Then('the service adds the characteristic an update names', assertUpdateAddsTheCharacteristicItNames);
+Then('the service adds the characteristic an update names', () => {
+  assertUpdateAddsTheCharacteristicItNames();
+});
 
 // The real `addOptionalCharacteristic` is not idempotent: two calls push two entries. Production
 // guards against the second call, so the stand-in has to be able to record one. The standard
@@ -270,7 +284,9 @@ function assertOptionalCharacteristicsAppend(): void {
   );
 }
 
-Then('the service appends an optional characteristic on every call', assertOptionalCharacteristicsAppend);
+Then('the service appends an optional characteristic on every call', () => {
+  assertOptionalCharacteristicsAppend();
+});
 
 Then('the service refuses a duplicate characteristic', () => {
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
@@ -372,7 +388,9 @@ function assertSiblingSubtypes(): void {
   );
 }
 
-Then('the accessory holds each contact sensor under its own subtype', assertSiblingSubtypes);
+Then('the accessory holds each contact sensor under its own subtype', () => {
+  assertSiblingSubtypes();
+});
 
 // Both refusals the real `Accessory.addService` makes, over an accessory that already carries one
 // contact sensor. The get-or-add reconciliation the accessory publishes with leans on them, so the
@@ -401,7 +419,9 @@ function assertDuplicateSubtypeRefused(): void {
   );
 }
 
-Then('the accessory refuses a second service with the same type and subtype', assertDuplicateSubtypeRefused);
+Then('the accessory refuses a second service with the same type and subtype', () => {
+  assertDuplicateSubtypeRefused();
+});
 
 function assertMissingSubtypeRefused(): void {
   refusalOfASecondContactSensor(
@@ -411,7 +431,9 @@ function assertMissingSubtypeRefused(): void {
   );
 }
 
-Then('the accessory refuses a second service of one type without a subtype', assertMissingSubtypeRefused);
+Then('the accessory refuses a second service of one type without a subtype', () => {
+  assertMissingSubtypeRefused();
+});
 
 // Removing a suppressed adapter is how `ignoredFaults` un-publishes one contact sensor, so the call
 // has to leave every sibling and the accessory information service in place (D-17).
@@ -432,4 +454,6 @@ function assertRemoveServiceRemovesOnlyItsTarget(): void {
   );
 }
 
-Then('the accessory removes only the service it is given', assertRemoveServiceRemovesOnlyItsTarget);
+Then('the accessory removes only the service it is given', () => {
+  assertRemoveServiceRemovesOnlyItsTarget();
+});
