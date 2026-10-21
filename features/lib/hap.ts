@@ -433,7 +433,7 @@ export interface FakeHapService {
   readonly characteristics: readonly FakeHapCharacteristic[];
   readonly optionalCharacteristics: readonly FakeHapCharacteristic[];
   addCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic;
-  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic | undefined;
+  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic;
   setCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService;
   updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService;
   testCharacteristic(characteristicClass: FakeCharacteristicClass): boolean;
@@ -499,8 +499,8 @@ class StandInService implements FakeHapService {
   // The real lookup matches by `instanceof` or by the type's own identifier, and an accessory
   // restored from the Homebridge cache carries plain `Characteristic` objects, so the identifier is
   // the match that always holds.
-  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic | undefined {
-    return this.characteristics.find((characteristic) => characteristic.UUID === characteristicClass.UUID);
+  getCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic {
+    return this.characteristics.find((characteristic) => characteristic.UUID === characteristicClass.UUID) ?? this.addCharacteristic(characteristicClass);
   }
 
   // The two writers differ only in how the real HAP notifies; both store the value and both add the
@@ -525,7 +525,7 @@ class StandInService implements FakeHapService {
   // Either way the effect is per characteristic: pushing `StatusActive` leaves a status stored on
   // `On` exactly where it was.
   updateCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
-    const characteristic = this.getCharacteristic(characteristicClass) ?? this.addCharacteristic(characteristicClass);
+    const characteristic = this.getCharacteristic(characteristicClass);
 
     // The same mapping the write path reads, so the two cannot disagree about what a given error
     // means.
@@ -543,7 +543,7 @@ class StandInService implements FakeHapService {
   }
 
   testCharacteristic(characteristicClass: FakeCharacteristicClass): boolean {
-    return this.getCharacteristic(characteristicClass) !== undefined;
+    return this.characteristics.some((characteristic) => characteristic.UUID === characteristicClass.UUID);
   }
 
   // The real call is not idempotent: two calls append two entries. Production guards against the

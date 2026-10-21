@@ -96,8 +96,8 @@ function assertScratchTypeConstructs(): void {
     {
       uuid: scratchService.UUID,
       subtype: scratchService.subtype,
-      name: scratchService.getCharacteristic(HAP.Characteristic.Name)?.value,
-      reading: scratchService.getCharacteristic(ScratchCharacteristic)?.value,
+      name: scratchService.getCharacteristic(HAP.Characteristic.Name).value,
+      reading: scratchService.getCharacteristic(ScratchCharacteristic).value,
     },
     { uuid: ScratchService.UUID, subtype: 'scratch', name: 'Scratch Service', reading: SCRATCH_CHARACTERISTIC_MINIMUM },
   );
@@ -117,9 +117,9 @@ function assertFormatDefaults(): void {
 
   assert.deepEqual(
     {
-      leak: leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
-      contact: contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
-      lowBattery: battery.getCharacteristic(HAP.Characteristic.StatusLowBattery)?.value,
+      leak: leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected).value,
+      contact: contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
+      lowBattery: battery.getCharacteristic(HAP.Characteristic.StatusLowBattery).value,
       active: leakSensor.addCharacteristic(HAP.Characteristic.StatusActive).value,
     },
     { leak: 0, contact: 0, lowBattery: 0, active: false },
@@ -137,11 +137,11 @@ function assertAccessoryInformationDefaults(): void {
 
   assert.deepEqual(
     {
-      manufacturer: accessoryInformation.getCharacteristic(HAP.Characteristic.Manufacturer)?.value,
-      model: accessoryInformation.getCharacteristic(HAP.Characteristic.Model)?.value,
-      serialNumber: accessoryInformation.getCharacteristic(HAP.Characteristic.SerialNumber)?.value,
-      firmwareRevision: accessoryInformation.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value,
-      name: accessoryInformation.getCharacteristic(HAP.Characteristic.Name)?.value,
+      manufacturer: accessoryInformation.getCharacteristic(HAP.Characteristic.Manufacturer).value,
+      model: accessoryInformation.getCharacteristic(HAP.Characteristic.Model).value,
+      serialNumber: accessoryInformation.getCharacteristic(HAP.Characteristic.SerialNumber).value,
+      firmwareRevision: accessoryInformation.getCharacteristic(HAP.Characteristic.FirmwareRevision).value,
+      name: accessoryInformation.getCharacteristic(HAP.Characteristic.Name).value,
     },
     {
       manufacturer: 'Default-Manufacturer',
@@ -195,7 +195,7 @@ function assertUpdateAddsTheCharacteristicItNames(): void {
     {
       before,
       after: contactSensor.testCharacteristic(HAP.Characteristic.StatusActive),
-      value: contactSensor.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+      value: contactSensor.getCharacteristic(HAP.Characteristic.StatusActive).value,
     },
     { before: false, after: true, value: true },
   );
@@ -243,6 +243,25 @@ Then('the service refuses a duplicate characteristic', () => {
   assert.deepStrictEqual(
     contactSensor.characteristics.map((characteristic) => characteristic.UUID),
     before,
+  );
+});
+
+Then('a service lookup adds the missing characteristic', () => {
+  const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
+  const characteristicClass = HAP.Characteristic.StatusActive;
+  const before = contactSensor.testCharacteristic(characteristicClass);
+  const characteristic = contactSensor.getCharacteristic(characteristicClass);
+
+  assert.deepStrictEqual(
+    {
+      before,
+      uuid: characteristic.UUID,
+      value: characteristic.value,
+      pushed: characteristic.pushed,
+      after: contactSensor.testCharacteristic(characteristicClass),
+      count: contactSensor.characteristics.filter((current) => current.UUID === characteristicClass.UUID).length,
+    },
+    { before: false, uuid: characteristicClass.UUID, value: false, pushed: false, after: true, count: 1 },
   );
 });
 

@@ -124,6 +124,9 @@ Feature: Harness fakes
   Scenario: The fake hap refuses a duplicate characteristic
     Then the service refuses a duplicate characteristic
 
+  Scenario: The fake hap adds a missing characteristic on lookup
+    Then a service lookup adds the missing characteristic
+
   Scenario: The fake accessory carries several services of one type
     Then the accessory holds each contact sensor under its own subtype
 
