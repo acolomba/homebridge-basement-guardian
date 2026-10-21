@@ -82,6 +82,14 @@ Feature: Harness fakes
     When the broker closes every connection
     Then the subscriber observes the close
 
+  Scenario: A due timer does not run after another due timer cancels it
+    When the first due timer cancels the second due timeout
+    Then only the first due timer runs
+
+  Scenario: A due interval does not run or repeat after another due timer cancels it
+    When the first due timer cancels the second due interval
+    Then only the first due timer runs
+
   Scenario: The fake hap namespace carries the definitions the accessories publish
     Then the hap stand-in carries the standard characteristic identifiers
     Then the hap stand-in carries the formats, perms, and units the plugin reads

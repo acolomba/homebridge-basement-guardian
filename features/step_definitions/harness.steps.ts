@@ -19,6 +19,7 @@ import { setImmediate as nextTurn } from 'node:timers/promises';
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { shadowTopic } from '../lib/shadowBroker.js';
+import { createFakeTimers } from '../lib/timers.js';
 import { SUBSCRIBER_CLIENT_ID } from '../support/world.js';
 
 import type { FakeAuth0TokenRequest } from '../lib/auth0.js';
@@ -293,6 +294,27 @@ async function shutDown(this: BasementGuardianWorld): Promise<void> {
 
 When('the api shuts down', shutDown);
 
+function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): void {
+  let now = 0;
+  const timers = createFakeTimers({ now: () => now });
+  const runSecond = (): void => {
+    this.observations.push('second');
+  };
+
+  const second = kind === 'interval' ? timers.setInterval(runSecond, 2) : timers.setTimeout(runSecond, 2);
+
+  timers.setTimeout(() => {
+    this.observations.push('first');
+    timers.clearTimeout(second);
+  }, 1);
+
+  now = 2;
+  timers.runDue();
+  timers.runDue();
+}
+
+When('the first due timer cancels the second due {word}', cancelTheSecondDueTimer);
+
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
@@ -300,6 +322,12 @@ async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<v
 }
 
 Then('the tenant holds the grant the harness sent', assertTenantHoldsTheGrant);
+
+function assertOnlyFirstDueTimerRuns(this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, ['first']);
+}
+
+Then('only the first due timer runs', assertOnlyFirstDueTimerRuns);
 
 function assertResponseStatus(this: BasementGuardianWorld, status: number): void {
   assert.equal(this.response().status, status);

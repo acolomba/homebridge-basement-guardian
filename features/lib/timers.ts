@@ -76,6 +76,10 @@ export function createFakeTimers(clock: ScenarioClock): FakeTimers {
       const due = [...armed.entries()].filter(([, entry]) => entry.at <= now).sort(([, left], [, right]) => left.at - right.at);
 
       for (const [handle, entry] of due) {
+        if (armed.get(handle) !== entry) {
+          continue;
+        }
+
         armed.delete(handle);
 
         if (entry.intervalMs !== undefined) {
