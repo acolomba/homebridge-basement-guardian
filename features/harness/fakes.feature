@@ -118,6 +118,9 @@ Feature: Harness fakes
   Scenario: A plugin type extends the fake hap bases
     Then a plugin type extends the hap service and the hap characteristic
 
+  Scenario: Fake hap characteristics keep separate properties
+    Then two fake hap characteristics keep separate properties
+
   Scenario: A fresh sensor service has the real hap format defaults
     Then a fresh sensor service reads at the hap format defaults
 

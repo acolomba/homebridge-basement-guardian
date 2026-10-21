@@ -303,7 +303,7 @@ class StandInCharacteristic implements FakeHapCharacteristic {
   constructor(displayName: string, UUID: string, props: FakeCharacteristicProps) {
     this.displayName = displayName;
     this.UUID = UUID;
-    this.props = props;
+    this.props = { ...props, perms: [...props.perms], ...(props.validValues === undefined ? {} : { validValues: [...props.validValues] }) };
     this.value = this.getDefaultValue();
   }
 

@@ -145,6 +145,26 @@ Then('a plugin type extends the hap service and the hap characteristic', () => {
   assertScratchTypeConstructs();
 });
 
+Then('two fake hap characteristics keep separate properties', () => {
+  const first = new HAP.Characteristic.On();
+  const second = new HAP.Characteristic.On();
+  const originalFormat = first.props.format;
+  const originalPerms = [...first.props.perms];
+
+  try {
+    first.props.format = HAP.Formats.STRING;
+    (first.props.perms as string[]).pop();
+
+    assert.deepStrictEqual(
+      { format: second.props.format, perms: second.props.perms },
+      { format: HAP.Formats.BOOL, perms: [HAP.Perms.NOTIFY, HAP.Perms.PAIRED_READ, HAP.Perms.PAIRED_WRITE] },
+    );
+  } finally {
+    first.props.format = originalFormat;
+    first.props.perms = originalPerms;
+  }
+});
+
 // The real HAP creates each characteristic at its format default, and for this plugin those
 // defaults are the good-news values: a sensor published before the first valid decode would read
 // "no leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
