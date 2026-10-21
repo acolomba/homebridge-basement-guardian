@@ -642,8 +642,8 @@ export function deserializeService(serialized: SerializedService): FakeHapServic
   return service;
 }
 
-// One definition per standard service, each adding the characteristics the real definition requires
-// and declaring the ones it declares optional.
+// The sensor and switch definitions add the characteristics this plugin reads and declare their
+// relevant optional characteristics.
 //
 // The optional list is not decoration. `publishValue` declares a characteristic before pushing it
 // only when the service neither carries nor declares it, and a stand-in that declared none would
@@ -674,15 +674,30 @@ function defineService({ uuid, required, optional = [] }: ServiceDefinition): Fa
   };
 }
 
-// The optional lists carry only the members this stand-in declares; the real definitions also name
-// `StatusTampered`, which this plugin publishes on nothing.
+// These sensor lists omit `StatusTampered`, which this plugin never publishes.
 const SENSOR_OPTIONAL: readonly FakeCharacteristicClass[] = [CHARACTERISTIC.Name, CHARACTERISTIC.StatusActive, CHARACTERISTIC.StatusFault];
 
+class StandInAccessoryInformation extends StandInService {
+  static readonly UUID = `0000003E${APPLE_BASE_UUID}`;
+
+  constructor(displayName?: string, subtype?: string) {
+    super(displayName, StandInAccessoryInformation.UUID, subtype);
+
+    this.addCharacteristic(CHARACTERISTIC.Identify);
+    this.addCharacteristic(CHARACTERISTIC.Manufacturer);
+    this.addCharacteristic(CHARACTERISTIC.Model);
+    if (!this.testCharacteristic(CHARACTERISTIC.Name)) {
+      this.addCharacteristic(CHARACTERISTIC.Name).value = 'Unnamed Service';
+    }
+
+    this.addCharacteristic(CHARACTERISTIC.SerialNumber);
+    this.addCharacteristic(CHARACTERISTIC.FirmwareRevision);
+    this.addOptionalCharacteristic(CHARACTERISTIC.ConfiguredName);
+  }
+}
+
 const SERVICE: FakeServiceNamespace = Object.assign(StandInService, {
-  AccessoryInformation: defineService({
-    uuid: `0000003E${APPLE_BASE_UUID}`,
-    required: [CHARACTERISTIC.Manufacturer, CHARACTERISTIC.Model, CHARACTERISTIC.SerialNumber, CHARACTERISTIC.FirmwareRevision, CHARACTERISTIC.Identify],
-  }),
+  AccessoryInformation: StandInAccessoryInformation,
   LeakSensor: defineService({
     uuid: `00000083${APPLE_BASE_UUID}`,
     required: [CHARACTERISTIC.LeakDetected],

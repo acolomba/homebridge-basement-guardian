@@ -282,6 +282,17 @@ Then('setting a service characteristic calls its write handler', async () => {
   );
 });
 
+Then('the accessory information service carries its unnamed service name', () => {
+  const accessoryInformation = new HAP.Service.AccessoryInformation();
+  const hasName = accessoryInformation.testCharacteristic(HAP.Characteristic.Name);
+  const name = accessoryInformation.getCharacteristic(HAP.Characteristic.Name).value;
+  const declaresConfiguredName = accessoryInformation.optionalCharacteristics.some(
+    (characteristic) => characteristic.UUID === HAP.Characteristic.ConfiguredName.UUID,
+  );
+
+  assert.deepStrictEqual({ hasName, name, declaresConfiguredName }, { hasName: true, name: 'Unnamed Service', declaresConfiguredName: true });
+});
+
 // The eight notification adapters this plugin publishes are all contact sensors on one accessory,
 // so several services of one type have to coexist under their own subtypes. A display name passed
 // where the real HAP takes one must also land as a display name: a stand-in that recorded it as the
