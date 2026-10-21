@@ -35,7 +35,7 @@ const SCRATCH_CHARACTERISTIC_MINIMUM = 3;
 
 // A plugin declares its own HomeKit types by subclassing the injected namespace, so both bases must
 // be constructible through the real argument orders. These two stand for a production type; nothing
-// outside this module uses them (SAFE-08, D-15).
+// outside this module uses them (SAFE-08, D-17).
 class ScratchCharacteristic extends HAP.Characteristic {
   static readonly UUID = 'placeholder-scratch-characteristic-uuid';
 
