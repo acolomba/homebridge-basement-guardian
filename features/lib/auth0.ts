@@ -24,15 +24,8 @@ export const DEFAULT_ID_TOKEN = 'fake-id-token';
 // The tenant reports the observed 30-day identity-token lifetime unless a scenario shortens it.
 const DEFAULT_EXPIRES_IN_SECONDS = 2592000;
 
-/** One password-realm grant, in the shape the tenant received it. */
-export interface FakeAuth0TokenRequest {
-  grantType: string;
-  realm: string;
-  clientId: string;
-  username: string;
-  password: string;
-  scope: string;
-}
+/** One password-realm grant, with every field and value type the tenant received. */
+export type FakeAuth0TokenRequest = Record<string, unknown>;
 
 /** A loopback Auth0 tenant that a scenario can arm and then inspect. */
 export interface FakeAuth0 {
@@ -78,28 +71,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function readString(record: Record<string, unknown>, key: string): string {
-  const value = record[key];
-
-  return typeof value === 'string' ? value : '';
-}
-
-function toTokenRequest(body: Record<string, unknown>): FakeAuth0TokenRequest {
-  return {
-    grantType: readString(body, 'grant_type'),
-    realm: readString(body, 'realm'),
-    clientId: readString(body, 'client_id'),
-    username: readString(body, 'username'),
-    password: readString(body, 'password'),
-    scope: readString(body, 'scope'),
-  };
-}
-
 async function readGrant(request: IncomingMessage): Promise<FakeAuth0TokenRequest> {
   const body = await readBody(request);
   const parsed: unknown = body === '' ? {} : JSON.parse(body);
 
-  return toTokenRequest(isRecord(parsed) ? parsed : {});
+  return isRecord(parsed) ? parsed : {};
 }
 
 async function route(state: TenantState, request: IncomingMessage, response: ServerResponse): Promise<void> {

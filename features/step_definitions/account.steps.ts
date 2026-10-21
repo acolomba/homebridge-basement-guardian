@@ -168,9 +168,9 @@ async function assertGrantCarriesTheAccount(this: BasementGuardianWorld): Promis
   const tenant = await this.auth0();
 
   assert.deepEqual(tenant.requests.at(-1), {
-    grantType: GRANT_TYPE,
+    grant_type: GRANT_TYPE,
     realm: HARNESS_REALM,
-    clientId: HARNESS_CLIENT_ID,
+    client_id: HARNESS_CLIENT_ID,
     username: ACCOUNT_EMAIL,
     password: ACCOUNT_PASSWORD,
     scope: GRANT_SCOPE,

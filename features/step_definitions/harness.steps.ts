@@ -22,7 +22,6 @@ import { shadowTopic } from '../lib/shadowBroker.js';
 import { createFakeTimers } from '../lib/timers.js';
 import { SUBSCRIBER_CLIENT_ID } from '../support/world.js';
 
-import type { FakeAuth0TokenRequest } from '../lib/auth0.js';
 import type { ShadowTopicLeaf } from '../lib/shadowBroker.js';
 import type { AwsCredentialsResponse } from '../lib/vendorRestApi.js';
 import type { BasementGuardianWorld } from '../support/world.js';
@@ -50,15 +49,6 @@ const GRANT = {
   username: 'harness@example.test',
   password: 'placeholder-password',
   scope: 'openid profile email',
-};
-
-const RECORDED_GRANT: FakeAuth0TokenRequest = {
-  grantType: GRANT.grant_type,
-  realm: GRANT.realm,
-  clientId: GRANT.client_id,
-  username: GRANT.username,
-  password: GRANT.password,
-  scope: GRANT.scope,
 };
 
 const HARNESS_CREDENTIALS: AwsCredentialsResponse = {
@@ -216,6 +206,18 @@ async function requestIdentityToken(this: BasementGuardianWorld): Promise<void> 
 
 When('the harness requests an identity token', requestIdentityToken);
 
+async function requestExtraGrant(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  await record(this, `${tenant.origin}/oauth/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...GRANT, client_secret: 'unexpected-credential', scope: 7 }),
+  });
+}
+
+When('the harness requests an identity token with an extra credential and a numeric scope', requestExtraGrant);
+
 async function requestDeviceList(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
@@ -318,10 +320,18 @@ When('the first due timer cancels the second due {word}', cancelTheSecondDueTime
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
-  assert.deepEqual(tenant.requests, [RECORDED_GRANT]);
+  assert.deepEqual(tenant.requests, [GRANT]);
 }
 
 Then('the tenant holds the grant the harness sent', assertTenantHoldsTheGrant);
+
+async function assertExactGrant(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  assert.deepStrictEqual(tenant.requests, [{ ...GRANT, client_secret: 'unexpected-credential', scope: 7 }]);
+}
+
+Then('the tenant holds the exact grant the harness sent', assertExactGrant);
 
 function assertOnlyFirstDueTimerRuns(this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, ['first']);
