@@ -51,7 +51,7 @@ export function createFakeTimers(clock: ScenarioClock): FakeTimers {
   const armed = new Map<number, Armed>();
   let nextHandle = 0;
 
-  function arm(run: () => void, delayMs: number, intervalMs: number | undefined): number {
+  function arm(run: () => void, delayMs: number, intervalMs?: number): number {
     const handle = nextHandle;
     const entry: Armed = { at: clock.now() + delayMs, run };
 
@@ -72,7 +72,7 @@ export function createFakeTimers(clock: ScenarioClock): FakeTimers {
   }
 
   return {
-    setTimeout: (run: () => void, delayMs: number) => arm(run, delayMs, undefined),
+    setTimeout: (run: () => void, delayMs: number) => arm(run, delayMs),
     setInterval: (run: () => void, delayMs: number) => arm(run, delayMs, delayMs),
     clearTimeout: disarm,
     clearInterval: disarm,
