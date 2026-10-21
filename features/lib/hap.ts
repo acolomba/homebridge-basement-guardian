@@ -151,14 +151,13 @@ export interface FakeCharacteristicProps {
 
 const BOUNDED_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ], maxLen: 64 };
 const PLAIN_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ] };
-// The one paired-write characteristic this plugin publishes. A controller writes the name a user
-// typed, and the real HAP names no default for this identifier, so it constructs at the empty
-// string -- which is the sentinel the seeding rule reads to tell an unnamed service from a renamed
-// one. A stand-in answering anything else would satisfy the no-clobber case vacuously.
+// ConfiguredName accepts a name written by a controller. The real HAP has no named default for
+// this identifier, so it starts empty. The seeding rule uses that value to distinguish an unnamed
+// service from a renamed one. Another fake default would invalidate the no-clobber check.
 const WRITABLE_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
 const WRITE_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.PAIRED_WRITE] };
-// The one characteristic a controller both reads and writes on this plugin, and the only route a
-// HomeKit press reaches the vendor through.
+// On is the writable boolean a controller reads back after a press. It is the route a HomeKit
+// press takes to reach the vendor.
 const WRITABLE_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ, PERMS.PAIRED_WRITE] };
 const READ_ONLY_BOOL: FakeCharacteristicProps = { format: FORMATS.BOOL, perms: [PERMS.NOTIFY, PERMS.PAIRED_READ] };
 const BINARY_STATE: FakeCharacteristicProps = {
