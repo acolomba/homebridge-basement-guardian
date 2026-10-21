@@ -161,7 +161,7 @@ interface ServiceState {
 
 // What the vendor answers a command it accepted. `constraints.md:103` records the shape and also
 // records that it is unverified, because the 2026-08-29 measurement sent no command: a command
-// operates a real sump pump. It is the body this service has always answered.
+// operates a real sump pump.
 const ACCEPTED_COMMAND_BODY: Record<string, unknown> = { success: true };
 
 const DEFAULT_CREDENTIALS: AwsCredentialsResponse = {
