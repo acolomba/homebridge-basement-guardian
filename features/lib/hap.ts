@@ -213,8 +213,8 @@ export interface FakeHapCharacteristic {
    * status as a bare number.
    */
   handleSetRequest(value: unknown): Promise<void>;
-  /** Answers a controller read: the stored status when there is one, and the stored value otherwise. */
-  handleGetRequest(): unknown;
+  /** Resolves a controller read with the stored value, or rejects with the stored status. */
+  handleGetRequest(): Promise<unknown>;
 }
 
 /** The one write handler a characteristic answers through. */
@@ -345,7 +345,7 @@ class StandInCharacteristic implements FakeHapCharacteristic {
 
   // A stored status rejects the read promise before the value is read, which makes a refused
   // write outlive the press that caused it.
-  handleGetRequest(): unknown {
+  handleGetRequest(): Promise<unknown> {
     if (this.statusCode !== HAP_STATUS.SUCCESS) {
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- real HAP rejects reads with the bare numeric status
       return Promise.reject(this.statusCode);
