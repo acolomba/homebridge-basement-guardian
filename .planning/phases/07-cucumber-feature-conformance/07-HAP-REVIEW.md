@@ -100,3 +100,26 @@ Each observed location below refers to this committed snapshot. New accepted IDs
 | CR-07-HAP-039 | 18 | FEAT-02; `steps.md` §Steps; `.agents/skills/cucumber/SKILL.md` §Review | `d065f1f:features/step_definitions/hap.steps.ts:339-354` | WARNING | **Accepted; open.** The set assertion does not check `pushed` or status, and no service-level case checks an asynchronously refused set. This is service-set outcome fidelity, distinct from 013's missing handler invocation. |
 
 Round 1 equation: **opening 19 - fixed 19 - rejected opening IDs 0 + new accepted 14 + reopened 0 = closing 14**. Exact open IDs: **022, 023, 025, 026, 028, 029, 030, 031, 032, 035, 036, 037, 038, 039**. The count fell, no fixed ID reopened, and round four has not completed. The STOP conditions did not fire. Rejected new candidates 024, 027, 033, and 034 are not included in the equation.
+
+### Round 1 repair evidence
+
+These 14 IDs have repair commits and await independent Round 2 confirmation. Every commit passed normal hooks. The regression controls below used active Cucumber steps or temporary wrong fake behavior; each temporary source edit was restored byte-for-byte before commit.
+
+| ID | Repair commit | Focused evidence |
+| --- | --- | --- |
+| 022 | `2c89ce6` | The two-line feature description names vendor, HAP, and Homebridge stand-ins. Normal hooks passed. |
+| 023 | `40f286d` | Split two mixed HAP scenarios into eight behavior-named scenarios without removing steps. The dry run resolved 121 scenarios and 1244 steps; six extra hook steps account for the step increase. |
+| 025 | `4d888ae` | The overview now names publication state and cache serialization as harness-only additions. |
+| 026 | `380ba02` | The status-error comment now distinguishes bare numeric statuses from other thrown values. |
+| 028 | `cf3e48a` | A named scenario failed on the original shared props with the second characteristic changing to `string` and losing permissions. Copying per-instance props and arrays made it pass; the test restores its local mutation. |
+| 029 | `d324b58` | A temporary wrong `ConfiguredName` default failed the named string-default scenario with `Wrong Name` versus `''`. The fake was restored, and the scenario passed. |
+| 030 | `9d0e507` | The `pushed` member description now names plugin publication through an ordinary update. |
+| 031 | `59d51f4` | The numeric-default comment now states the pinned order and the current definitions' finite, equal first-valid/minimum values without claiming the order is discriminated here. |
+| 032 | `4bfa9fb` | The named error-status scenario failed on the old fake in three fields: numeric Error message, unknown `HapStatusError`, and bare thrown number. The repair passed it and all 22 existing HAP fidelity unit cases. Pinned `HAPServer.js` and `Characteristic.js` supplied the status range and update-vs-write distinction. |
+| 035 | `9882ac0` | The step comment cites D-17 for the test-only HAP import instead of the unrelated D-15. |
+| 036 | `5670d2d` | The expanded default projection covers fault, float water level, battery level, charging, and switch state. A temporary FLOAT default of `undefined` failed the named scenario; restored source passed. |
+| 037 | `867710d` | The update projection checks state after a status error and after the ordinary push. A temporary update that left `pushed` false failed the named scenario; restored source passed. |
+| 038 | `05a532b` | The optional append assertion compares the complete ordered Battery declaration list. A temporary append that removed existing entries failed the named scenario; restored source passed. |
+| 039 | `9238dfc` | The accepted set checks full value, status, and pushed state. A new refused-set scenario checks prior value, stored status, service return, and no unhandled rejection. Temporarily removing the fake's rejection consumer made the named scenario fail with `unhandled: [-70403]`; restored source passed. |
+
+At clean source commit `9238dfc` on Node `v26.12.0`, `TEST_CONCURRENCY=1 npm run check` exited 0 with 124/124 offline scenarios, 1250/1250 steps, and 43 direct coverage pairs. The default usage dry run exited 0 with no `UNUSED`, `UNDEFINED`, or `AMBIGUOUS` definition. The real-profile dry run skipped all seven scenarios and 41 steps. No real-pump scenario ran live. Relative to the Round 1 reviewed 115/1238 suite, six scenario splits added six hook steps, and three new named contract scenarios added six steps. No prior scenario step was removed.
