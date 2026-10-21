@@ -1,6 +1,6 @@
 # OFFLINE_LIBS complete-file review
 
-Plan 07-08 reviews the four offline Auth0, loopback, timer, and shadow-broker helpers. Claude Opus 5.5 performed an independent, read-only Round 0 review at `338bdf0b5256b64c8bb9959b15514b87bb7ae0f0`. The maintainer's instruction to continue autonomously delegates triage of this batch. All eleven rule-backed candidates are accepted for repair. They are harness findings, not confirmed production plugin bugs. Verification and fix commits are pending.
+Plan 07-08 reviews the four offline Auth0, loopback, timer, and shadow-broker helpers. Claude Opus 5.5 performed an independent, read-only Round 0 review at `338bdf0b5256b64c8bb9959b15514b87bb7ae0f0`. The maintainer's instruction to continue autonomously delegates triage of this batch. All eleven rule-backed candidates were accepted and repaired. They are harness findings, not confirmed production plugin bugs. Independent correction review is pending.
 
 ## Round 0 complete-file review
 
@@ -41,5 +41,42 @@ Opening accepted count: 11. No rejected IDs. The first correction review has not
 | 002 | `67baa34` | The same checks passed for `features/lib/loopbackServer.ts`. |
 | 003 | `fcd99e4` | The same checks passed for `features/lib/timers.ts`. |
 | 004 | `afa911d` | The same checks passed for `features/lib/shadowBroker.ts`. |
+| 005 | `18340fa` | Two active timer scenarios failed on the old fake with an extra `second` observation, then passed 2/2 after the dispatch check. Normal hooks passed. |
+| 006 | `5d5cde2` | The broker-close scenario failed on stale subscriptions before repair, then passed. The affected credential-refusal scenario passed with a distinct publication step that requires no live subscriber. Normal hooks passed. |
+| 007 | `19d536b` | Unknown-route recording failed and malformed JSON timed out before repair. Both active scenarios then passed 2/2; normal hooks passed. |
+| 008 | `224a94f` | The extra-credential and numeric-scope scenario failed on the six-field projection, then passed. The original grant and real account sign-in scenarios also passed; normal hooks passed. |
+| 009 | `4a66a39` | The loopback handler comment now names the expected bad-input contract. The normal hook passed on retry after an unrelated temporary-directory cleanup race in `accountRuntime.test.ts`; that test passed 169/169 on direct rerun. |
+| 010 | `a74110d` | The armed-failure scenario passed after the optional-field change; normal hooks passed. |
+| 011 | `60cd834` | Both timer cancellation scenarios passed after the optional-field change; normal hooks passed. |
 
-The four header fixes have not yet received the combined-tree full gate or independent correction review.
+The combined-tree `npm run check` passed at `60cd834f31d4d50f23174601e041c5500da3b167` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. The prior 106/1208 count rose by five named harness scenarios and 22 steps; no default scenario was removed. `cucumber-js --dry-run --format usage` exited zero and listed zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. All fix commits passed normal hooks. The independent correction review follows.
+
+## Correction round 1
+
+Claude Opus 5.5 independently read the full current files at `60cd834f31d4d50f23174601e041c5500da3b167` using only read access. The reviewer ran no commands or tests; the coordinator verified the committed blobs below. It also read the Phase 7 review protocol, applicable Cucumber and TypeScript rules, the batch report, and `features/support/world.ts` for subscriber teardown behavior.
+
+| Reviewed path | Blob | Contiguous lines read |
+| --- | --- | ---: |
+| `features/lib/auth0.ts` | `178ee516e30b514c9024e0f1a66a6a076ad897ba` | 1-155 |
+| `features/lib/loopbackServer.ts` | `a94eed084485bdc615d1f4c6d3716c2032688d47` | 1-82 |
+| `features/lib/timers.ts` | `7f576b84a33d77806c2d8b3336da33186e0e2d30` | 1-99 |
+| `features/lib/shadowBroker.ts` | `aa2b3a8f780ffcbdae2a96176edad2968f034bb9` | 1-284 |
+| `features/harness/fakes.feature` | `775d6cf3928c741f4ed2ac405bd8ced47a7fa4c8` | 1-143 |
+| `features/step_definitions/harness.steps.ts` | `7719ad497a907da1246675b338c31bcc6e0f1d91` | 1-526 |
+| `features/step_definitions/account.steps.ts` | `e443e05a2c322995084e129f18189a823cc8aa2d` | 1-238 |
+| `features/monitoring/degradation.feature` | `ab504476d5ff5fd81374d10fc0d634b9c0f8399d` | 1-730 |
+| `features/step_definitions/shadow.steps.ts` | `368f0c8ce5869ded3b1e18858b17641b2fbcf836` | 1-498 |
+
+The reviewer found 001-011 fixed in code. It raised the following new findings, all accepted. The first review count fell, so this round did not trigger STOP.
+
+| ID | Requirement | Rule path and heading | Observed location | Severity | Disposition and plausible wrong result |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-OFFLINE_LIBS-012 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Cucumber behavioral tests and §Review | `60cd834:features/harness/fakes.feature:108-110`; `60cd834:features/step_definitions/harness.steps.ts:337-339` | BLOCKER | **Accepted; open.** The cancelled-interval scenario says “or repeat,” but the clock remains at 2 while a wrongly rearmed interval would be due at 4. Advancing past 4 must still leave only the first observation. |
+| CR-07-OFFLINE_LIBS-013 | FEAT-02 | `.agents/skills/typescript-style/rules/types.md` §Types | `60cd834:features/lib/timers.ts:54` | WARNING | **Accepted; open.** The private `arm` parameter still requires explicit `undefined`; use an optional parameter and omit it from the timeout call. |
+| CR-07-OFFLINE_LIBS-014 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Review | `60cd834:features/step_definitions/harness.steps.ts:487-491` | WARNING | **Accepted; open.** The subscriber can observe close before the broker has removed its subscription record. A single immediate read may fail at random; poll until cleanup completes within the named deadline. |
+
+| Opening IDs | Fixed | Rejected | New | Reopened | Closing IDs |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 001-011 (11) | 001-011 (11) | 0 | 012-014 (3) | 0 | 012-014 (3) |
+
+Closing = 11 - 11 - 0 + 3 + 0 = 3. Correction round 2 may follow the three separate repairs.
