@@ -199,10 +199,9 @@ Then('a fresh sensor service reads at the hap format defaults', () => {
   assertFormatDefaults();
 });
 
-// The real HAP starts four string characteristics at a named default rather than at the empty
-// string, and all four sit on `AccessoryInformation`. The accessory overwrites every one of them
-// from decoded metadata, so nothing depends on the value; reproducing it is what keeps a case that
-// reads an untouched service from comparing against a value only this stand-in would answer.
+// The real HAP starts four Accessory Information strings at named defaults. ConfiguredName starts
+// empty, which is the value the seeding rule checks before it writes a service name. These defaults
+// keep an untouched fake service from answering a value the real HAP would not.
 function assertAccessoryInformationDefaults(): void {
   const accessoryInformation = new HAP.Service.AccessoryInformation('Sump System');
 
@@ -213,6 +212,7 @@ function assertAccessoryInformationDefaults(): void {
       serialNumber: accessoryInformation.getCharacteristic(HAP.Characteristic.SerialNumber).value,
       firmwareRevision: accessoryInformation.getCharacteristic(HAP.Characteristic.FirmwareRevision).value,
       name: accessoryInformation.getCharacteristic(HAP.Characteristic.Name).value,
+      configuredName: accessoryInformation.getCharacteristic(HAP.Characteristic.ConfiguredName).value,
     },
     {
       manufacturer: 'Default-Manufacturer',
@@ -220,6 +220,7 @@ function assertAccessoryInformationDefaults(): void {
       serialNumber: 'Default-SerialNumber',
       firmwareRevision: '0.0.0',
       name: 'Sump System',
+      configuredName: '',
     },
   );
 }
