@@ -146,22 +146,26 @@ Then('a plugin type extends the hap service and the hap characteristic', () => {
 });
 
 Then('two fake hap characteristics keep separate properties', () => {
-  const first = new HAP.Characteristic.On();
-  const second = new HAP.Characteristic.On();
+  const first = new HAP.Characteristic.LeakDetected();
+  const second = new HAP.Characteristic.LeakDetected();
   const originalFormat = first.props.format;
   const originalPerms = [...first.props.perms];
+  assert.ok(first.props.validValues);
+  const originalValidValues = [...first.props.validValues];
 
   try {
     first.props.format = HAP.Formats.STRING;
     (first.props.perms as string[]).pop();
+    (first.props.validValues as number[]).pop();
 
     assert.deepStrictEqual(
-      { format: second.props.format, perms: second.props.perms },
-      { format: HAP.Formats.BOOL, perms: [HAP.Perms.NOTIFY, HAP.Perms.PAIRED_READ, HAP.Perms.PAIRED_WRITE] },
+      { format: second.props.format, perms: second.props.perms, validValues: second.props.validValues },
+      { format: HAP.Formats.UINT8, perms: [HAP.Perms.NOTIFY, HAP.Perms.PAIRED_READ], validValues: [0, 1] },
     );
   } finally {
     first.props.format = originalFormat;
     first.props.perms = originalPerms;
+    first.props.validValues = originalValidValues;
   }
 });
 
