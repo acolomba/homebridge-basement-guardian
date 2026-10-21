@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview Shared plumbing for the loopback HTTP stand-ins.
  *
