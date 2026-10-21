@@ -337,6 +337,8 @@ function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): voi
   now = 2;
   timers.runDue();
   timers.runDue();
+  now = 4;
+  timers.runDue();
 }
 
 When('the first due timer cancels the second due {word}', cancelTheSecondDueTimer);
