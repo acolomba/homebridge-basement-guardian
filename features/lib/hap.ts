@@ -503,10 +503,17 @@ class StandInService implements FakeHapService {
     return this.characteristics.find((characteristic) => characteristic.UUID === characteristicClass.UUID) ?? this.addCharacteristic(characteristicClass);
   }
 
-  // The two writers differ only in how the real HAP notifies; both store the value and both add the
-  // characteristic when the service does not carry it yet.
+  // A service set enters the write handler. HAP returns the service before an asynchronous handler
+  // settles and consumes a refused write when no callback was supplied.
   setCharacteristic(characteristicClass: FakeCharacteristicClass, value: unknown): FakeHapService {
-    return this.updateCharacteristic(characteristicClass, value);
+    if (value instanceof Error) {
+      return this.updateCharacteristic(characteristicClass, value);
+    }
+
+    const characteristic = this.getCharacteristic(characteristicClass);
+    void characteristic.handleSetRequest(value).catch(() => undefined);
+
+    return this;
   }
 
   // The real `updateValue` takes two branches, and which one it takes decides whether the stored

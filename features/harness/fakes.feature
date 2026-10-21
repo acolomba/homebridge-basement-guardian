@@ -127,6 +127,9 @@ Feature: Harness fakes
   Scenario: The fake hap adds a missing characteristic on lookup
     Then a service lookup adds the missing characteristic
 
+  Scenario: The fake hap routes a service set through its write handler
+    Then setting a service characteristic calls its write handler
+
   Scenario: The fake accessory carries several services of one type
     Then the accessory holds each contact sensor under its own subtype
 

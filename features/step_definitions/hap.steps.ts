@@ -265,6 +265,23 @@ Then('a service lookup adds the missing characteristic', () => {
   );
 });
 
+Then('setting a service characteristic calls its write handler', async () => {
+  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
+  const received: unknown[] = [];
+
+  switchService.getCharacteristic(HAP.Characteristic.On).onSet((value) => {
+    received.push(value);
+  });
+
+  const returned = switchService.setCharacteristic(HAP.Characteristic.On, true);
+  await Promise.resolve();
+
+  assert.deepStrictEqual(
+    { received, returnedSelf: returned === switchService, value: switchService.getCharacteristic(HAP.Characteristic.On).value },
+    { received: [true], returnedSelf: true, value: true },
+  );
+});
+
 // The eight notification adapters this plugin publishes are all contact sensors on one accessory,
 // so several services of one type have to coexist under their own subtypes. A display name passed
 // where the real HAP takes one must also land as a display name: a stand-in that recorded it as the
