@@ -347,6 +347,8 @@ Then('the fake hap answers the real status for each error form', async () => {
 
   service.updateCharacteristic(HAP.Characteristic.On, new Error('-70412'));
   const numericMessageStatus = on.statusCode;
+  service.updateCharacteristic(HAP.Characteristic.On, new Error('-70401'));
+  const upperNumericMessageStatus = on.statusCode;
   service.updateCharacteristic(HAP.Characteristic.On, new Error('not a status'));
   const plainErrorStatus = on.statusCode;
   on.onSet(() => {
@@ -357,10 +359,38 @@ Then('the fake hap answers the real status for each error form', async () => {
     () => undefined,
     (status: unknown) => status,
   );
+  const storedThrownNumberStatus = on.statusCode;
+  on.onSet(() => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- HAP accepts bare numeric handler statuses
+    throw -70408;
+  });
+  const knownThrownNumberStatus: unknown = await on.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+  const storedKnownThrownNumberStatus = on.statusCode;
 
   assert.deepStrictEqual(
-    { unknownStatus, numericMessageStatus, plainErrorStatus, thrownNumberStatus },
-    { unknownStatus: -70402, numericMessageStatus: -70412, plainErrorStatus: -70402, thrownNumberStatus: -70402 },
+    {
+      unknownStatus,
+      numericMessageStatus,
+      upperNumericMessageStatus,
+      plainErrorStatus,
+      thrownNumberStatus,
+      storedThrownNumberStatus,
+      knownThrownNumberStatus,
+      storedKnownThrownNumberStatus,
+    },
+    {
+      unknownStatus: -70402,
+      numericMessageStatus: -70412,
+      upperNumericMessageStatus: -70401,
+      plainErrorStatus: -70402,
+      thrownNumberStatus: -70402,
+      storedThrownNumberStatus: -70402,
+      knownThrownNumberStatus: -70408,
+      storedKnownThrownNumberStatus: -70408,
+    },
   );
 });
 
