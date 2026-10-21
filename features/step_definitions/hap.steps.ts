@@ -287,16 +287,25 @@ Then('the standard hap services declare their optional characteristics', () => {
 function assertUpdateAddsTheCharacteristicItNames(): void {
   const contactSensor = new HAP.Service.ContactSensor('Water Sensor Fault', 'water-sensor-fault');
   const before = contactSensor.testCharacteristic(HAP.Characteristic.StatusActive);
+  const characteristicClass = HAP.Characteristic.StatusActive;
 
-  contactSensor.updateCharacteristic(HAP.Characteristic.StatusActive, true);
+  contactSensor.updateCharacteristic(characteristicClass, new HAP.HapStatusError(HAP.HAPStatus.RESOURCE_BUSY));
+  const stateAfterError = constructedStateOf(contactSensor.getCharacteristic(characteristicClass));
+  contactSensor.updateCharacteristic(characteristicClass, true);
 
-  assert.deepEqual(
+  assert.deepStrictEqual(
     {
       before,
-      after: contactSensor.testCharacteristic(HAP.Characteristic.StatusActive),
-      value: contactSensor.getCharacteristic(HAP.Characteristic.StatusActive).value,
+      stateAfterError,
+      after: contactSensor.testCharacteristic(characteristicClass),
+      state: constructedStateOf(contactSensor.getCharacteristic(characteristicClass)),
     },
-    { before: false, after: true, value: true },
+    {
+      before: false,
+      stateAfterError: { value: false, pushed: false, statusCode: HAP.HAPStatus.RESOURCE_BUSY },
+      after: true,
+      state: { value: true, pushed: true, statusCode: 0 },
+    },
   );
 }
 
