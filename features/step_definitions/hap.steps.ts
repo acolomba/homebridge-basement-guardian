@@ -20,11 +20,6 @@ import type { FakeCharacteristicClass, FakeHapService } from '../lib/hap.js';
 
 const HAP = createFakeHap();
 
-// The identifiers Apple assigns, written out here rather than read back from the stand-in, so the
-// assertion fails when the stand-in's own literal drifts.
-const LEAK_DETECTED_UUID = '00000070-0000-1000-8000-0026BB765291';
-const CONTACT_SENSOR_STATE_UUID = '0000006A-0000-1000-8000-0026BB765291';
-const CONFIGURED_NAME_UUID = '000000E3-0000-1000-8000-0026BB765291';
 const CONTACT_SENSOR_UUID = '00000080-0000-1000-8000-0026BB765291';
 
 const ACCESSORY_NAME = 'Sump System';
@@ -59,18 +54,55 @@ class ScratchService extends HAP.Service {
   }
 }
 
+function identifiersOf(namespace: object): Record<string, string> {
+  const entries: [string, unknown][] = Object.entries(namespace);
+  const identifiers: Record<string, string> = {};
+
+  for (const [name, member] of entries) {
+    if (typeof member !== 'function' || !('UUID' in member) || typeof member.UUID !== 'string') {
+      throw new Error(`invalid HAP type ${name}`);
+    }
+
+    identifiers[name] = member.UUID;
+  }
+
+  return identifiers;
+}
+
 function assertStandardIdentifiers(): void {
-  assert.deepEqual(
+  assert.deepStrictEqual(
+    { characteristics: identifiersOf(HAP.Characteristic), services: identifiersOf(HAP.Service) },
     {
-      leakDetected: HAP.Characteristic.LeakDetected.UUID,
-      contactSensorState: HAP.Characteristic.ContactSensorState.UUID,
-      configuredName: HAP.Characteristic.ConfiguredName.UUID,
+      characteristics: {
+        Manufacturer: '00000020-0000-1000-8000-0026BB765291',
+        Model: '00000021-0000-1000-8000-0026BB765291',
+        SerialNumber: '00000030-0000-1000-8000-0026BB765291',
+        FirmwareRevision: '00000052-0000-1000-8000-0026BB765291',
+        Name: '00000023-0000-1000-8000-0026BB765291',
+        ConfiguredName: '000000E3-0000-1000-8000-0026BB765291',
+        Identify: '00000014-0000-1000-8000-0026BB765291',
+        LeakDetected: '00000070-0000-1000-8000-0026BB765291',
+        ContactSensorState: '0000006A-0000-1000-8000-0026BB765291',
+        WaterLevel: '000000B5-0000-1000-8000-0026BB765291',
+        StatusActive: '00000075-0000-1000-8000-0026BB765291',
+        StatusFault: '00000077-0000-1000-8000-0026BB765291',
+        StatusLowBattery: '00000079-0000-1000-8000-0026BB765291',
+        BatteryLevel: '00000068-0000-1000-8000-0026BB765291',
+        ChargingState: '0000008F-0000-1000-8000-0026BB765291',
+        On: '00000025-0000-1000-8000-0026BB765291',
+      },
+      services: {
+        AccessoryInformation: '0000003E-0000-1000-8000-0026BB765291',
+        LeakSensor: '00000083-0000-1000-8000-0026BB765291',
+        ContactSensor: '00000080-0000-1000-8000-0026BB765291',
+        Battery: '00000096-0000-1000-8000-0026BB765291',
+        Switch: '00000049-0000-1000-8000-0026BB765291',
+      },
     },
-    { leakDetected: LEAK_DETECTED_UUID, contactSensorState: CONTACT_SENSOR_STATE_UUID, configuredName: CONFIGURED_NAME_UUID },
   );
 }
 
-Then('the hap stand-in carries the standard characteristic identifiers', assertStandardIdentifiers);
+Then('the hap stand-in carries the standard service and characteristic identifiers', assertStandardIdentifiers);
 
 function assertFormatsPermsAndUnits(): void {
   assert.deepEqual(

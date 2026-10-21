@@ -110,7 +110,7 @@ Feature: Harness fakes
     Then only the first due timer runs
 
   Scenario: The fake hap namespace carries the definitions the accessories publish
-    Then the hap stand-in carries the standard characteristic identifiers
+    Then the hap stand-in carries the standard service and characteristic identifiers
     Then the hap stand-in carries the formats, perms, and units the plugin reads
     Then a plugin type extends the hap service and the hap characteristic
 
