@@ -532,6 +532,7 @@ function refusalOfASecondContactSensor(displayName: string, subtype: string | un
   const accessory = createFakeAccessory(ACCESSORY_NAME, ACCESSORY_UUID);
 
   accessory.addService(HAP.Service.ContactSensor, 'Primary Pump Running', 'primary-pump-running');
+  const before = accessory.services.map((service) => ({ uuid: service.UUID, subtype: service.subtype, name: service.displayName }));
 
   assert.throws(
     () => accessory.addService(HAP.Service.ContactSensor, displayName, subtype),
@@ -541,6 +542,10 @@ function refusalOfASecondContactSensor(displayName: string, subtype: string | un
 
       return true;
     },
+  );
+  assert.deepStrictEqual(
+    accessory.services.map((service) => ({ uuid: service.UUID, subtype: service.subtype, name: service.displayName })),
+    before,
   );
 }
 
