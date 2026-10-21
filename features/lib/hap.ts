@@ -21,7 +21,7 @@
  * assertion built on it pass while proving nothing.
  *
  * This module imports `@homebridge/hap-nodejs` nowhere, and neither does any other module the
- * plugin ships. The package is now an explicit development dependency pinned at the version the
+ * plugin ships. The package is an explicit development dependency pinned at the version the
  * plugin host itself pins, and exactly one file imports it: `test/accessories/hapWriteFidelity.test.ts`,
  * which runs the same write cases against the real package and against this stand-in and asserts
  * the two agree. That file exists to hold this one honest -- without it every write semantic the
