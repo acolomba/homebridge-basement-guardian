@@ -329,7 +329,6 @@ class StandInCharacteristic implements FakeHapCharacteristic {
     this.statusCode = HAP_STATUS.SUCCESS;
 
     if (this.setHandler === undefined) {
-      this.statusCode = HAP_STATUS.SUCCESS;
       this.value = value;
 
       return;
