@@ -119,8 +119,11 @@ export interface FakeHapStatusError extends Error {
 }
 
 class StandInHapStatusError extends Error implements FakeHapStatusError {
-  constructor(readonly hapStatus: number) {
+  readonly hapStatus: number;
+
+  constructor(hapStatus: number) {
     super(`status code: ${String(hapStatus)}`);
+    this.hapStatus = hapStatus;
     this.name = 'HapStatusError';
   }
 }
@@ -290,6 +293,12 @@ function thrownStatusOf(error: unknown): number {
 }
 
 class StandInCharacteristic implements FakeHapCharacteristic {
+  readonly displayName: string;
+
+  readonly UUID: string;
+
+  readonly props: FakeCharacteristicProps;
+
   value: unknown;
 
   pushed = false;
@@ -298,11 +307,10 @@ class StandInCharacteristic implements FakeHapCharacteristic {
 
   private setHandler: FakeSetHandler | undefined = undefined;
 
-  constructor(
-    readonly displayName: string,
-    readonly UUID: string,
-    readonly props: FakeCharacteristicProps,
-  ) {
+  constructor(displayName: string, UUID: string, props: FakeCharacteristicProps) {
+    this.displayName = displayName;
+    this.UUID = UUID;
+    this.props = props;
     this.value = this.getDefaultValue();
   }
 
