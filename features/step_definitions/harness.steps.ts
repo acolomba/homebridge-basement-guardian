@@ -331,7 +331,11 @@ function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): voi
 
   timers.setTimeout(() => {
     this.observations.push('first');
-    timers.clearTimeout(second);
+    if (kind === 'interval') {
+      timers.clearInterval(second);
+    } else {
+      timers.clearTimeout(second);
+    }
   }, 1);
 
   now = 2;
