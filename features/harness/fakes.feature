@@ -121,8 +121,8 @@ Feature: Harness fakes
   Scenario: Fake hap characteristics keep separate properties
     Then two fake hap characteristics keep separate properties
 
-  Scenario: A fresh sensor service has the real hap format defaults
-    Then a fresh sensor service reads at the hap format defaults
+  Scenario: Fresh hap characteristics have the real format defaults
+    Then fresh hap characteristics read at their format defaults
 
   Scenario: A fresh accessory information service has the real hap string defaults
     Then a fresh accessory information service reads at the hap string defaults

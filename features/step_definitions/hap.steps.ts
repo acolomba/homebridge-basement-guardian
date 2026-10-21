@@ -178,6 +178,7 @@ function assertFormatDefaults(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
   const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
+  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
 
   assert.deepStrictEqual(
     {
@@ -185,17 +186,27 @@ function assertFormatDefaults(): void {
       contact: constructedStateOf(contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState)),
       lowBattery: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.StatusLowBattery)),
       active: constructedStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusActive)),
+      fault: constructedStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusFault)),
+      waterLevel: constructedStateOf(new HAP.Characteristic.WaterLevel()),
+      batteryLevel: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.BatteryLevel)),
+      charging: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.ChargingState)),
+      on: constructedStateOf(switchService.getCharacteristic(HAP.Characteristic.On)),
     },
     {
       leak: { value: 0, pushed: false, statusCode: 0 },
       contact: { value: 0, pushed: false, statusCode: 0 },
       lowBattery: { value: 0, pushed: false, statusCode: 0 },
       active: { value: false, pushed: false, statusCode: 0 },
+      fault: { value: 0, pushed: false, statusCode: 0 },
+      waterLevel: { value: 0, pushed: false, statusCode: 0 },
+      batteryLevel: { value: 0, pushed: false, statusCode: 0 },
+      charging: { value: 0, pushed: false, statusCode: 0 },
+      on: { value: false, pushed: false, statusCode: 0 },
     },
   );
 }
 
-Then('a fresh sensor service reads at the hap format defaults', () => {
+Then('fresh hap characteristics read at their format defaults', () => {
   assertFormatDefaults();
 });
 
