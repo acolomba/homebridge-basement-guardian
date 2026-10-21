@@ -20,6 +20,19 @@ Feature: Harness fakes
     Then the response carries status 403
     Then the response carries the error "invalid_grant"
 
+  Scenario: The fake tenant records a request to an unknown route
+    Given the fake auth0 tenant
+    When the harness requests an unknown tenant route
+    Then the response carries status 404
+    Then the tenant records the unknown route request
+
+  Scenario: The fake tenant refuses malformed grant json without losing the request
+    Given the fake auth0 tenant
+    When the harness sends malformed grant json
+    Then the response carries status 400
+    Then the tenant records the malformed grant request
+    Then the fake service raises no unhandled rejection
+
   Scenario: The fake service answers the device list
     Given the fake rest service
     Given these devices:

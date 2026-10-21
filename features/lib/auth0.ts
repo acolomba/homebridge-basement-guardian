@@ -27,10 +27,18 @@ const DEFAULT_EXPIRES_IN_SECONDS = 2592000;
 /** One password-realm grant, with every field and value type the tenant received. */
 export type FakeAuth0TokenRequest = Record<string, unknown>;
 
+/** One HTTP request that reached the fake tenant, including its unparsed body. */
+export interface FakeAuth0ReceivedRequest {
+  method: string;
+  path: string;
+  body: string;
+}
+
 /** A loopback Auth0 tenant that a scenario can arm and then inspect. */
 export interface FakeAuth0 {
   readonly origin: string;
   readonly requests: readonly FakeAuth0TokenRequest[];
+  readonly receivedRequests: readonly FakeAuth0ReceivedRequest[];
 
   /** Sets the identity token and lifetime the tenant answers with from now on. */
   issueToken(idToken: string, expiresInSeconds: number): void;
@@ -63,6 +71,7 @@ interface ArmedFailure {
 
 interface TenantState {
   readonly requests: FakeAuth0TokenRequest[];
+  readonly receivedRequests: FakeAuth0ReceivedRequest[];
   issued: IssuedToken;
   armedFailure: ArmedFailure | undefined;
 }
@@ -71,21 +80,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-async function readGrant(request: IncomingMessage): Promise<FakeAuth0TokenRequest> {
-  const body = await readBody(request);
-  const parsed: unknown = body === '' ? {} : JSON.parse(body);
+function parseGrant(body: string): FakeAuth0TokenRequest | undefined {
+  try {
+    const parsed: unknown = body === '' ? {} : JSON.parse(body);
 
-  return isRecord(parsed) ? parsed : {};
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return undefined;
+  }
 }
 
 async function route(state: TenantState, request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const body = await readBody(request);
+  state.receivedRequests.push({ method: request.method ?? '', path: request.url ?? '', body });
+
   if (request.method !== 'POST' || request.url !== TOKEN_PATH) {
     respondJson(response, 404, { error: 'unknown_route' });
 
     return;
   }
 
-  state.requests.push(await readGrant(request));
+  const grant = parseGrant(body);
+
+  if (grant === undefined) {
+    respondJson(response, 400, { error: 'invalid_json' });
+
+    return;
+  }
+
+  state.requests.push(grant);
   const failure = state.armedFailure;
   state.armedFailure = undefined;
 
@@ -106,6 +129,7 @@ async function route(state: TenantState, request: IncomingMessage, response: Ser
 export async function createFakeAuth0(): Promise<FakeAuth0> {
   const state: TenantState = {
     requests: [],
+    receivedRequests: [],
     issued: { idToken: DEFAULT_ID_TOKEN, expiresInSeconds: DEFAULT_EXPIRES_IN_SECONDS },
     armedFailure: undefined,
   };
@@ -115,6 +139,7 @@ export async function createFakeAuth0(): Promise<FakeAuth0> {
   return {
     origin: server.baseUrl,
     requests: state.requests,
+    receivedRequests: state.receivedRequests,
     issueToken(idToken: string, expiresInSeconds: number): void {
       state.issued = { idToken, expiresInSeconds };
     },

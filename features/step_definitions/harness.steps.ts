@@ -218,6 +218,30 @@ async function requestExtraGrant(this: BasementGuardianWorld): Promise<void> {
 
 When('the harness requests an identity token with an extra credential and a numeric scope', requestExtraGrant);
 
+async function requestUnknownTenantRoute(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  await record(this, `${tenant.origin}/unknown`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{"unexpected":true}',
+  });
+}
+
+When('the harness requests an unknown tenant route', requestUnknownTenantRoute);
+
+async function sendMalformedGrant(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  await record(this, `${tenant.origin}/oauth/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{',
+  });
+}
+
+When('the harness sends malformed grant json', sendMalformedGrant);
+
 async function requestDeviceList(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
@@ -332,6 +356,24 @@ async function assertExactGrant(this: BasementGuardianWorld): Promise<void> {
 }
 
 Then('the tenant holds the exact grant the harness sent', assertExactGrant);
+
+async function assertUnknownRouteRecorded(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  assert.deepStrictEqual(tenant.receivedRequests, [{ method: 'POST', path: '/unknown', body: '{"unexpected":true}' }]);
+  assert.deepStrictEqual(tenant.requests, []);
+}
+
+Then('the tenant records the unknown route request', assertUnknownRouteRecorded);
+
+async function assertMalformedGrantRecorded(this: BasementGuardianWorld): Promise<void> {
+  const tenant = await this.auth0();
+
+  assert.deepStrictEqual(tenant.receivedRequests, [{ method: 'POST', path: '/oauth/token', body: '{' }]);
+  assert.deepStrictEqual(tenant.requests, []);
+}
+
+Then('the tenant records the malformed grant request', assertMalformedGrantRecorded);
 
 function assertOnlyFirstDueTimerRuns(this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, ['first']);
