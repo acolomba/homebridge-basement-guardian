@@ -296,7 +296,7 @@ function updatedErrorStatusOf(error: Error): number {
     return error.hapStatus;
   }
 
-  return /^-?\d+$/.test(error.message) ? normalizeHapError(Number.parseInt(error.message, 10)) : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
+  return /^-?\d+$/.test(error.message) ? normalizeHapError(Number(error.message)) : HAP_STATUS.SERVICE_COMMUNICATION_FAILURE;
 }
 
 class StandInCharacteristic implements FakeHapCharacteristic {
