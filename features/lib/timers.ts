@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The controllable timers a scenario drives deferred work with.
  *
