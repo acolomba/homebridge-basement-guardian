@@ -249,7 +249,7 @@ function optionalUUIDsOf(service: FakeHapService): string[] {
 // standard services declared nothing would send every one of those pushes through the declaring
 // branch while production took the other one, so the guard would be proven on a path it never runs
 // on. Apple's sensor definitions declare both status characteristics; the Battery definition
-// declares neither, which is what keeps the declaring branch reachable in production too.
+// declares neither, which keeps the declaring branch reachable here.
 function assertStandardOptionalDeclarations(): void {
   const accessoryInformation = new HAP.Service.AccessoryInformation('Sump System');
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
@@ -315,8 +315,8 @@ Then('the service adds the characteristic an update names', () => {
 
 // The real `addOptionalCharacteristic` is not idempotent: two calls push two entries. Production
 // guards against the second call, so the stand-in has to be able to record one. The standard
-// Battery service is the one this plugin publishes on that declares neither status characteristic,
-// so its own declarations cannot be mistaken for the two appended here.
+// Battery service declares neither status characteristic, so its own declarations cannot be
+// mistaken for the two appended here.
 function assertOptionalCharacteristicsAppend(): void {
   const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
 
