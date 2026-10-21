@@ -19,7 +19,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 /** The only address a harness service ever binds. */
 export const LOOPBACK_ADDRESS = '127.0.0.1';
 
-/** Answers one request. Exceptions bubble: a stack trace beats a swallowed error. */
+/** Answers one request. The handler must answer expected bad input itself. */
 export type RequestHandler = (request: IncomingMessage, response: ServerResponse) => Promise<void>;
 
 /** A running loopback service. */
