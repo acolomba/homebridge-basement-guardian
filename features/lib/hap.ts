@@ -356,11 +356,9 @@ class StandInCharacteristic implements FakeHapCharacteristic {
 
   // The real HAP answers `false` for a bool; for a string, one of four named defaults by identifier
   // and the empty string otherwise; and for a numeric format the first declared valid value, then
-  // the declared minimum, then zero. The numeric order matters: a characteristic whose domain
-  // excludes zero would otherwise start at a code its own `validValues` forbids here while the real
-  // HAP started it at a legal one. The real numeric fallback also takes the declared minimum only
-  // when it is finite; every numeric characteristic defined here declares a finite one, so that
-  // guard has nothing to discriminate and is not reproduced.
+  // the declared minimum, then zero. Every numeric characteristic defined here has a finite
+  // minimum, and each first valid value equals that minimum. The real HAP also checks that a
+  // minimum is finite, which these definitions do not need to distinguish.
   //
   // Those defaults are this plugin's good-news values, so a service published before the first
   // valid decode would read as a healthy sump pit. That is why the accessory adds no service until
