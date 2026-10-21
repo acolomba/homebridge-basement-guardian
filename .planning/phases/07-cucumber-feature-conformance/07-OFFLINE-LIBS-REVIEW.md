@@ -123,4 +123,32 @@ Closing = 3 - 3 - 0 + 1 + 0 = 1. The count fell and no fixed ID reopened, so cor
 
 Finding 015 was repaired in `702f14e`. The previous interval scenario passed with a temporary no-op `clearInterval`, proving the false pass. The revised scenario calls `clearInterval` for an interval handle and `clearTimeout` for a timeout handle. Both variants passed on the real fake. With the same temporary no-op `clearInterval`, the revised interval scenario failed with `['first', 'second', 'second']` instead of `['first']`. The fake was restored exactly, and the normal commit hook passed with `TEST_CONCURRENCY=1`.
 
-The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `702f14e9a0fa58b401265f29f1fa58149de866db` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. Default usage exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 3 is pending.
+The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `702f14e9a0fa58b401265f29f1fa58149de866db` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. Default usage exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 3 follows.
+
+## Correction round 3 — STOP
+
+A fresh Claude Opus 5.5 reviewer read the complete nine current files at source revision `702f14e9a0fa58b401265f29f1fa58149de866db` using only read access. It read the Phase 7 protocol, all applicable Cucumber rules, every TypeScript style rule, this report, the runtime timer port, and the scenario world. It ran no command or test. The coordinator checked the committed blobs.
+
+| Reviewed path | Blob | Contiguous lines read |
+| --- | --- | ---: |
+| `features/lib/auth0.ts` | `178ee516e30b514c9024e0f1a66a6a076ad897ba` | 1-155 |
+| `features/lib/loopbackServer.ts` | `a94eed084485bdc615d1f4c6d3716c2032688d47` | 1-82 |
+| `features/lib/timers.ts` | `2d28246cbd0802b8c42bb02eff6a2be0a855b89d` | 1-99 |
+| `features/lib/shadowBroker.ts` | `aa2b3a8f780ffcbdae2a96176edad2968f034bb9` | 1-284 |
+| `features/harness/fakes.feature` | `775d6cf3928c741f4ed2ac405bd8ced47a7fa4c8` | 1-143 |
+| `features/step_definitions/harness.steps.ts` | `a730820e6718ab65dd930b81eb04e961e6001748` | 1-533 |
+| `features/step_definitions/account.steps.ts` | `e443e05a2c322995084e129f18189a823cc8aa2d` | 1-238 |
+| `features/monitoring/degradation.feature` | `ab504476d5ff5fd81374d10fc0d634b9c0f8399d` | 1-730 |
+| `features/step_definitions/shadow.steps.ts` | `368f0c8ce5869ded3b1e18858b17641b2fbcf836` | 1-498 |
+
+Finding 015 is fixed and 001-014 did not reopen. The reviewer raised one new accepted comment finding:
+
+| ID | Requirement | Rule path and heading | Observed location | Severity | Disposition and plausible wrong result |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-OFFLINE_LIBS-016 | FEAT-02 | `.agents/skills/typescript-style/rules/comments.md` §Comments and test titles | `702f14e:features/lib/shadowBroker.ts:207-208` | WARNING | **Accepted; open at STOP.** The comment says the subscribe listener excludes scenario subscribers, but it records every MQTT client's subscriptions, including the scenario's. A reader could trust the comment and use `currentSubscriptions()` to assert a plugin connection when it actually reads a later-connected harness subscriber. The comment needs to state that every connection's topics are recorded and the newest live client's topics are returned. |
+
+| Opening IDs | Fixed | Rejected | New | Reopened | Closing IDs |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 015 (1) | 015 (1) | 0 | 016 (1) | 0 | 016 (1) |
+
+Closing = 1 - 1 - 0 + 1 + 0 = 1. The positive open count did not fall. **STOP applies immediately after correction round 3.** No fourth correction review or further OFFLINE_LIBS repair is authorized by this plan. ID 016 remains open at review close; no production plugin defect was confirmed in this batch.
