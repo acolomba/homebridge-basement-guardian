@@ -73,7 +73,7 @@ interface TenantState {
   readonly requests: FakeAuth0TokenRequest[];
   readonly receivedRequests: FakeAuth0ReceivedRequest[];
   issued: IssuedToken;
-  armedFailure: ArmedFailure | undefined;
+  armedFailure?: ArmedFailure;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,7 +110,7 @@ async function route(state: TenantState, request: IncomingMessage, response: Ser
 
   state.requests.push(grant);
   const failure = state.armedFailure;
-  state.armedFailure = undefined;
+  delete state.armedFailure;
 
   if (failure !== undefined) {
     respondJson(response, failure.status, { error: failure.error, error_description: 'the scenario armed this failure' });
@@ -131,7 +131,6 @@ export async function createFakeAuth0(): Promise<FakeAuth0> {
     requests: [],
     receivedRequests: [],
     issued: { idToken: DEFAULT_ID_TOKEN, expiresInSeconds: DEFAULT_EXPIRES_IN_SECONDS },
-    armedFailure: undefined,
   };
 
   const server = await startLoopbackServer((request, response) => route(state, request, response));
