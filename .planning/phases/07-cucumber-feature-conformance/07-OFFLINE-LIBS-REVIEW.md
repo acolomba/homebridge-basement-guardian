@@ -89,4 +89,32 @@ Closing = 11 - 11 - 0 + 3 + 0 = 3. Correction round 2 may follow the three separ
 | 013 | `5dc312d` | Both timer cancellation scenarios passed after making the private parameter optional; normal hooks passed. |
 | 014 | `ddb0f91` | The broker-close scenario passed with bounded polling for subscription cleanup. The normal hook passed with `TEST_CONCURRENCY=1` after the unrelated account-runtime temporary-directory cleanup race recurred under concurrent execution; the account test passed directly on rerun. |
 
-The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `ddb0f916bfb29e1ab029bdb7bec9829f00d754c1` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. The default usage check exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 2 remains pending.
+The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `ddb0f916bfb29e1ab029bdb7bec9829f00d754c1` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. The default usage check exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 2 follows.
+
+## Correction round 2
+
+A new Claude Sonnet reviewer independently read the complete nine current files at source revision `ddb0f916bfb29e1ab029bdb7bec9829f00d754c1` using only read access. It read the Phase 7 protocol and applicable Cucumber and TypeScript rules, this report, and the runtime timer port. It ran no command or test. The coordinator checked the committed blobs.
+
+| Reviewed path | Blob | Contiguous lines read |
+| --- | --- | ---: |
+| `features/lib/auth0.ts` | `178ee516e30b514c9024e0f1a66a6a076ad897ba` | 1-155 |
+| `features/lib/loopbackServer.ts` | `a94eed084485bdc615d1f4c6d3716c2032688d47` | 1-82 |
+| `features/lib/timers.ts` | `2d28246cbd0802b8c42bb02eff6a2be0a855b89d` | 1-99 |
+| `features/lib/shadowBroker.ts` | `aa2b3a8f780ffcbdae2a96176edad2968f034bb9` | 1-284 |
+| `features/harness/fakes.feature` | `775d6cf3928c741f4ed2ac405bd8ced47a7fa4c8` | 1-143 |
+| `features/step_definitions/harness.steps.ts` | `b7760a036f102f0882c5e38da352d267d92fccf2` | 1-529 |
+| `features/step_definitions/account.steps.ts` | `e443e05a2c322995084e129f18189a823cc8aa2d` | 1-238 |
+| `features/monitoring/degradation.feature` | `ab504476d5ff5fd81374d10fc0d634b9c0f8399d` | 1-730 |
+| `features/step_definitions/shadow.steps.ts` | `368f0c8ce5869ded3b1e18858b17641b2fbcf836` | 1-498 |
+
+The reviewer found 012-014 fixed and 001-011 still fixed. It raised one new accepted finding:
+
+| ID | Requirement | Rule path and heading | Observed location | Severity | Disposition and plausible wrong result |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-OFFLINE_LIBS-015 | FEAT-02 | `.agents/skills/cucumber/SKILL.md` §Cucumber behavioral tests and §Review; `src/runtime/timers.ts` `Timers.clearInterval` contract | `ddb0f91:features/step_definitions/harness.steps.ts:330-335`; `ddb0f91:features/lib/timers.ts:78` | BLOCKER | **Accepted; open.** The interval scenario calls `clearTimeout` for its interval handle. A no-op `clearInterval` can pass the suite, so the scenario must use `clearInterval` for that variant. |
+
+| Opening IDs | Fixed | Rejected | New | Reopened | Closing IDs |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 012-014 (3) | 012-014 (3) | 0 | 015 (1) | 0 | 015 (1) |
+
+Closing = 3 - 3 - 0 + 1 + 0 = 1. The count fell and no fixed ID reopened, so correction round 3 may follow repair 015.
