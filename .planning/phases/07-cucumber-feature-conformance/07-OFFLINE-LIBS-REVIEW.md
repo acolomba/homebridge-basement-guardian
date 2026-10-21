@@ -80,3 +80,13 @@ The reviewer found 001-011 fixed in code. It raised the following new findings, 
 | 001-011 (11) | 001-011 (11) | 0 | 012-014 (3) | 0 | 012-014 (3) |
 
 Closing = 11 - 11 - 0 + 3 + 0 = 3. Correction round 2 may follow the three separate repairs.
+
+## Correction round 1 repair evidence
+
+| ID | Fix commit | Verification |
+| --- | --- | --- |
+| 012 | `fe59b67` | The interval scenario passed after advancing past its next deadline. A temporary wrong fake that rearmed a cancelled interval failed the active scenario with `['first', 'second']` instead of `['first']`; the fake source was restored exactly before commit. Normal hooks passed. |
+| 013 | `5dc312d` | Both timer cancellation scenarios passed after making the private parameter optional; normal hooks passed. |
+| 014 | `ddb0f91` | The broker-close scenario passed with bounded polling for subscription cleanup. The normal hook passed with `TEST_CONCURRENCY=1` after the unrelated account-runtime temporary-directory cleanup race recurred under concurrent execution; the account test passed directly on rerun. |
+
+The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `ddb0f916bfb29e1ab029bdb7bec9829f00d754c1` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. The default usage check exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 2 remains pending.
