@@ -385,7 +385,7 @@ class StandInCharacteristic implements FakeHapCharacteristic {
   }
 }
 
-// One definition per standard characteristic, so fourteen near-identical class bodies never exist.
+// One definition per standard characteristic avoids a separate class body for each type.
 function defineCharacteristic(displayName: string, uuid: string, props: FakeCharacteristicProps): FakeCharacteristicClass {
   return class extends StandInCharacteristic {
     static readonly UUID = uuid;
