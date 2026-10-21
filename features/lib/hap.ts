@@ -101,12 +101,6 @@ const HAP_STATUS: FakeHapStatus = {
 };
 
 /**
- * The error a write handler throws to refuse a write with a named status.
- *
- * The real class carries the status on `hapStatus` and nothing else, which is the member
- * `handleSetRequest` reads; a handler throwing anything else is converted rather than read.
- */
-/**
  * One refused write, carrying the status the handler named.
  *
  * `hapStatus` is the one member `handleSetRequest` reads: a handler throwing anything else is
