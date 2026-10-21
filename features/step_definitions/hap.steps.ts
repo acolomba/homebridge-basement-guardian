@@ -16,7 +16,7 @@ import { Then } from '@cucumber/cucumber';
 import { createFakeHap } from '../lib/hap.js';
 import { createFakeAccessory } from '../lib/homebridgeApi.js';
 
-import type { FakeCharacteristicClass, FakeHapService } from '../lib/hap.js';
+import type { FakeCharacteristicClass, FakeHapCharacteristic, FakeHapService } from '../lib/hap.js';
 
 const HAP = createFakeHap();
 
@@ -138,19 +138,28 @@ Then('a plugin type extends the hap service and the hap characteristic', assertS
 // "no leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
 // default that is honest. The accessory never relies on that: it adds no service until its row has
 // a value to vouch for, and pushes `StatusActive` on every service it does add (D-05, D-014).
+function constructedStateOf(characteristic: FakeHapCharacteristic): { value: unknown; pushed: boolean; statusCode: number } {
+  return { value: characteristic.value, pushed: characteristic.pushed, statusCode: characteristic.statusCode };
+}
+
 function assertFormatDefaults(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
   const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
 
-  assert.deepEqual(
+  assert.deepStrictEqual(
     {
-      leak: leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected).value,
-      contact: contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
-      lowBattery: battery.getCharacteristic(HAP.Characteristic.StatusLowBattery).value,
-      active: leakSensor.addCharacteristic(HAP.Characteristic.StatusActive).value,
+      leak: constructedStateOf(leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected)),
+      contact: constructedStateOf(contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState)),
+      lowBattery: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.StatusLowBattery)),
+      active: constructedStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusActive)),
     },
-    { leak: 0, contact: 0, lowBattery: 0, active: false },
+    {
+      leak: { value: 0, pushed: false, statusCode: 0 },
+      contact: { value: 0, pushed: false, statusCode: 0 },
+      lowBattery: { value: 0, pushed: false, statusCode: 0 },
+      active: { value: false, pushed: false, statusCode: 0 },
+    },
   );
 }
 
