@@ -489,6 +489,7 @@ Then('the subscriber observes the close', assertSubscriberObservesTheClose);
 async function assertNoCurrentSubscriptions(this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
+  await this.untilTrue(() => broker.currentSubscriptions().length === 0, MESSAGE_DEADLINE_MS, 'the broker kept a closed connection subscription');
   assert.deepStrictEqual(broker.currentSubscriptions(), []);
 }
 
