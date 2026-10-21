@@ -149,7 +149,7 @@ export interface FakeCharacteristicProps {
   validValues?: readonly number[];
 }
 
-const NAMED_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ], maxLen: 64 };
+const BOUNDED_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ], maxLen: 64 };
 const PLAIN_STRING: FakeCharacteristicProps = { format: FORMATS.STRING, perms: [PERMS.PAIRED_READ] };
 // The one paired-write characteristic this plugin publishes. A controller writes the name a user
 // typed, and the real HAP names no default for this identifier, so it constructs at the empty
@@ -399,11 +399,11 @@ function defineCharacteristic(displayName: string, uuid: string, props: FakeChar
 }
 
 const CHARACTERISTIC: FakeCharacteristicNamespace = Object.assign(StandInCharacteristic, {
-  Manufacturer: defineCharacteristic('Manufacturer', `00000020${APPLE_BASE_UUID}`, NAMED_STRING),
-  Model: defineCharacteristic('Model', `00000021${APPLE_BASE_UUID}`, NAMED_STRING),
-  SerialNumber: defineCharacteristic('Serial Number', `00000030${APPLE_BASE_UUID}`, NAMED_STRING),
+  Manufacturer: defineCharacteristic('Manufacturer', `00000020${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  Model: defineCharacteristic('Model', `00000021${APPLE_BASE_UUID}`, BOUNDED_STRING),
+  SerialNumber: defineCharacteristic('Serial Number', `00000030${APPLE_BASE_UUID}`, BOUNDED_STRING),
   FirmwareRevision: defineCharacteristic('Firmware Revision', `00000052${APPLE_BASE_UUID}`, PLAIN_STRING),
-  Name: defineCharacteristic('Name', `00000023${APPLE_BASE_UUID}`, NAMED_STRING),
+  Name: defineCharacteristic('Name', `00000023${APPLE_BASE_UUID}`, BOUNDED_STRING),
   ConfiguredName: defineCharacteristic('Configured Name', `000000E3${APPLE_BASE_UUID}`, WRITABLE_STRING),
   Identify: defineCharacteristic('Identify', `00000014${APPLE_BASE_UUID}`, WRITE_ONLY_BOOL),
   LeakDetected: Object.assign(defineCharacteristic('Leak Detected', `00000070${APPLE_BASE_UUID}`, BINARY_STATE), {
