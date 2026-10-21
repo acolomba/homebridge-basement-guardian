@@ -9,10 +9,10 @@
  *
  * This is a stand-in rather than the real `@homebridge/hap-nodejs`, matching every other external
  * boundary in this codebase. It answers the members the plugin reads, with the real argument
- * orders, the real duplicate refusals, and the real format defaults, and nothing more; it is not a
- * reimplementation of HAP-NodeJS. There is exactly one of these in the repository, because two
- * stand-ins of one boundary drift apart silently and the drift surfaces as a green test over broken
- * production behavior.
+ * orders, duplicate refusals, and format defaults. It also carries harness-only publication state
+ * and cache serialization; it is not a reimplementation of HAP-NodeJS. There is exactly one in the
+ * repository, because two stand-ins of one boundary drift apart silently. That drift can leave a
+ * green test over broken production behavior.
  *
  * The argument orders matter more than they look. A plugin declares its own HomeKit types by
  * subclassing the injected namespace, so `Service` and `Characteristic` are constructible base
