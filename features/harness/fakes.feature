@@ -121,6 +121,9 @@ Feature: Harness fakes
     Then the service adds the characteristic an update names
     Then the service appends an optional characteristic on every call
 
+  Scenario: The fake hap refuses a duplicate characteristic
+    Then the service refuses a duplicate characteristic
+
   Scenario: The fake accessory carries several services of one type
     Then the accessory holds each contact sensor under its own subtype
 

@@ -481,6 +481,15 @@ class StandInService implements FakeHapService {
 
   addCharacteristic(characteristicClass: FakeCharacteristicClass): FakeHapCharacteristic {
     const characteristic = new characteristicClass();
+    const existing = this.characteristics.find((candidate) => candidate.UUID === characteristic.UUID);
+
+    if (existing !== undefined) {
+      if (characteristic.UUID === CHARACTERISTIC.FirmwareRevision.UUID) {
+        return existing;
+      }
+
+      throw new Error(`Cannot add a Characteristic with the same UUID as another Characteristic in this Service: ${characteristic.UUID}`);
+    }
 
     this.characteristics.push(characteristic);
 

@@ -223,6 +223,29 @@ function assertOptionalCharacteristicsAppend(): void {
 
 Then('the service appends an optional characteristic on every call', assertOptionalCharacteristicsAppend);
 
+Then('the service refuses a duplicate characteristic', () => {
+  const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
+  const characteristicClass = HAP.Characteristic.ContactSensorState;
+  const before = contactSensor.characteristics.map((characteristic) => characteristic.UUID);
+
+  assert.throws(
+    () => contactSensor.addCharacteristic(characteristicClass),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.strictEqual(
+        error.message,
+        `Cannot add a Characteristic with the same UUID as another Characteristic in this Service: ${characteristicClass.UUID}`,
+      );
+
+      return true;
+    },
+  );
+  assert.deepStrictEqual(
+    contactSensor.characteristics.map((characteristic) => characteristic.UUID),
+    before,
+  );
+});
+
 // The eight notification adapters this plugin publishes are all contact sensors on one accessory,
 // so several services of one type have to coexist under their own subtypes. A display name passed
 // where the real HAP takes one must also land as a display name: a stand-in that recorded it as the
