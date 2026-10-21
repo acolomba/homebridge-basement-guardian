@@ -105,17 +105,13 @@ function assertStandardIdentifiers(): void {
 Then('the hap stand-in carries the standard service and characteristic identifiers', assertStandardIdentifiers);
 
 function assertFormatsPermsAndUnits(): void {
-  assert.deepEqual(
+  assert.deepStrictEqual(
+    { formats: HAP.Formats, perms: HAP.Perms, units: HAP.Units },
     {
-      bool: HAP.Formats.BOOL,
-      uint8: HAP.Formats.UINT8,
-      float: HAP.Formats.FLOAT,
-      string: HAP.Formats.STRING,
-      pairedRead: HAP.Perms.PAIRED_READ,
-      notify: HAP.Perms.NOTIFY,
-      percentage: HAP.Units.PERCENTAGE,
+      formats: { BOOL: 'bool', UINT8: 'uint8', UINT32: 'uint32', STRING: 'string', FLOAT: 'float' },
+      perms: { PAIRED_READ: 'pr', PAIRED_WRITE: 'pw', NOTIFY: 'ev' },
+      units: { PERCENTAGE: 'percentage' },
     },
-    { bool: 'bool', uint8: 'uint8', float: 'float', string: 'string', pairedRead: 'pr', notify: 'ev', percentage: 'percentage' },
   );
 }
 
