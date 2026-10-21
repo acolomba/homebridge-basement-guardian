@@ -118,3 +118,9 @@ The reviewer found 012-014 fixed and 001-011 still fixed. It raised one new acce
 | 012-014 (3) | 012-014 (3) | 0 | 015 (1) | 0 | 015 (1) |
 
 Closing = 3 - 3 - 0 + 1 + 0 = 1. The count fell and no fixed ID reopened, so correction round 3 may follow repair 015.
+
+## Correction round 2 repair evidence
+
+Finding 015 was repaired in `702f14e`. The previous interval scenario passed with a temporary no-op `clearInterval`, proving the false pass. The revised scenario calls `clearInterval` for an interval handle and `clearTimeout` for a timeout handle. Both variants passed on the real fake. With the same temporary no-op `clearInterval`, the revised interval scenario failed with `['first', 'second', 'second']` instead of `['first']`. The fake was restored exactly, and the normal commit hook passed with `TEST_CONCURRENCY=1`.
+
+The combined-tree `TEST_CONCURRENCY=1 npm run check` passed at `702f14e9a0fa58b401265f29f1fa58149de866db` on Node v26.12.0: 111/111 offline scenarios, 1230/1230 steps, and 43 direct coverage pairs. Default usage exited zero with zero UNUSED definitions. The real profile dry run exited zero with 7 skipped scenarios and 41 skipped steps. Correction round 3 is pending.
