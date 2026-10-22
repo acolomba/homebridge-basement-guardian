@@ -63,7 +63,7 @@ Feature: Harness fakes
     Given the temporary credentials
     When the harness requests the temporary credentials
     Then the response carries status 200
-    Then the credentials response carries the endpoint, client identifier, and temporary AWS credentials
+    Then the credentials response carries the endpoint, client identifier, and temporary aws credentials
 
   Scenario: The fake service fails one armed request
     Given the fake rest service
