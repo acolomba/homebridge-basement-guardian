@@ -88,16 +88,15 @@ first is recorded in Plan 07-16 and of the second in `07-REAL-STEPS-REVIEW.md`.
 | SHADOW | 4 | `07-SHADOW-REVIEW.md` `0940f537caf8b7b94daa17603355ead3da34c6f3` | Round 2 clean | No forward open ID. |
 | MONITORING | 2 | `07-MONITORING-REVIEW.md` `62d1e013631c98df1ceaae7bafe5faefc99965e3` | Round 1 STOP: 004 | Narrowed in Plan 07-17. |
 | RECORDS | 3 | `07-RECORDS-REVIEW.md` `04390413fa8a1b8277f29501cdad6cc4315f74e9` | Round 2 STOP: 012, 013 | Both repaired after STOP; no further batch round. |
-| OFFLINE_LIBS | 4 | `07-OFFLINE-LIBS-REVIEW.md` `6d7597b4d582ac2dc44d86e15faf30d856255090` | Round 3 STOP: 016 | 016 closed forward by Plan 07-19; addendum IDs 017/018 remain open. |
+| OFFLINE_LIBS | 4 | `07-OFFLINE-LIBS-REVIEW.md` `6d7597b4d582ac2dc44d86e15faf30d856255090` | Round 3 STOP: 016 | 016/017 closed forward by Plans 07-19/20; addendum ID 018 remains open. |
 | HAP | 2 | `07-HAP-REVIEW.md` `822581fd6c6987c14128b96e2034efa097247310` | Round 3 STOP: 025, 028, 032, 048, 050, 051 | All six remain open. |
 | HARNESS | 3 | `07-HARNESS-REVIEW.md` `c8ee48517ebb33b4d73b07578081eb4e6904fac8` | Round 3 clean | No forward open ID. |
 | REAL_FEATURES | 3 | `07-REAL-FEATURES-REVIEW.md` `98ca087f0d71b95776831a7f5f7cbfdc449aa9ab` | Round 2 clean | No forward open ID. |
 | REAL_WORLD | 1 | `07-REAL-WORLD-REVIEW.md` `f85e1bfcad9d137972375604685b27236ba56421` | Round 2 clean | No forward open ID. |
 | REAL_STEPS | 3 | `07-REAL-STEPS-REVIEW.md` `b06870d305349331433d5cb296d13b1ceb5f965e` | Round 2 STOP: 017 | 017 closed forward by the reviewed Plan 07-18 addendum. |
 
-The current forward open set has eight IDs:
-`CR-07-OFFLINE_LIBS-017`, `CR-07-OFFLINE_LIBS-018`, `CR-07-HAP-025`,
-`CR-07-HAP-028`,
+The current forward open set has seven IDs:
+`CR-07-OFFLINE_LIBS-018`, `CR-07-HAP-025`, `CR-07-HAP-028`,
 `CR-07-HAP-032`, `CR-07-HAP-048`, `CR-07-HAP-050`, and `CR-07-HAP-051`.
 This is a status inventory, not a clean phase sign-off. The detailed finding
 and round ledger follows after further reconciliation.
@@ -241,6 +240,16 @@ STOP remain historical evidence. Details and verification are in
 
 - **CR-07-OFFLINE_LIBS-017** (`07-OFFLINE-LIBS-ADDENDUM.md:44`): Requirement: FEAT-02; Rule: `.agents/skills/typescript-style/rules/naming-and-docs.md` §Comments and documentation, method descriptions start with a third-person verb phrase; First observed location: `e5f3601:features/lib/shadowBroker.ts:47,57`; Severity: WARNING; Forward disposition: **Open.** Two method descriptions start with noun phrases. No repair or new source check has occurred for this ID.
 - **CR-07-OFFLINE_LIBS-018** (`07-OFFLINE-LIBS-ADDENDUM.md:45`): Requirement: FEAT-02; Rule: `.agents/skills/typescript-style/rules/naming-and-docs.md` §Comments and documentation, unclear member purpose needs documentation; First observed location: `e5f3601:features/lib/shadowBroker.ts:40,225`; Severity: WARNING; Forward disposition: **Open.** `handshakes` holds handshake query strings, which its name and `readonly string[]` type do not explain. No repair or new source check has occurred for this ID.
+
+Plan 07-20 closed `CR-07-OFFLINE_LIBS-017` forward after one independent
+complete-file review of blob `8edcfa483b3bdaa47ab6abdc58702febd820a42d`
+at `792ef40`. The reviewer also proposed
+`CR-07-OFFLINE_LIBS-019` (`07-OFFLINE-LIBS-DOCS-ADDENDUM.md:43`) at
+`792ef40:features/lib/shadowBroker.ts:91`: the exported free function's
+JSDoc starts with a noun phrase. The cited rule applies to **methods**, so
+019 is **rejected on rule scope** and is not forward-open.
+[07-OFFLINE-LIBS-DOCS-ADDENDUM.md](07-OFFLINE-LIBS-DOCS-ADDENDUM.md) records
+the review and current verification. ID 018 remains open.
 
 ### HAP
 
@@ -471,10 +480,10 @@ addenda.
 
 The later forward closures of ACCOUNT 015/016, ACCESSORY 007/009/019,
 HOMEKIT 014, MONITORING 004, RECORDS 012/013, REAL_STEPS 017, and
-OFFLINE_LIBS 016 are recorded separately in `07-ADJUDICATION.md` and Plans
-07-15 through 07-19. Those closures do not turn the original stopped rounds
-into clean rounds. OFFLINE_LIBS 017/018 were found in the Plan 07-19
-addendum review and remain open.
+OFFLINE_LIBS 016/017 are recorded separately in `07-ADJUDICATION.md` and
+Plans 07-15 through 07-20. Those closures do not turn the original stopped
+rounds into clean rounds. OFFLINE_LIBS 018 was found in the Plan 07-19
+addendum review and remains open.
 
 ## Offline baseline
 
