@@ -30,7 +30,6 @@ import type { DeviceSnapshot } from '../../../src/device/state.js';
 import type { RedactingLogger } from '../../../src/logging.js';
 import type { AccountRuntime } from '../../../src/runtime/accountRuntime.js';
 import type { MonitoringTrust } from '../../../src/runtime/monitoringHealth.js';
-import type { IWorldOptions } from '@cucumber/cucumber';
 import type { LogLevel, Logging } from 'homebridge';
 
 /** Where every scenario's scratch storage directory is created. Removed again in the After hook. */
@@ -133,10 +132,6 @@ export class RealPumpWorld extends World {
   private credentialEmail: string | undefined = undefined;
 
   private credentialPassword: string | undefined = undefined;
-
-  constructor(readonly options: IWorldOptions) {
-    super(options);
-  }
 
   /** Every deviceId a trustworthy inventory response has named so far, in discovery order. */
   deviceIds(): readonly string[] {
