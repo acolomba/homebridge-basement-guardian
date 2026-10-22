@@ -7,8 +7,8 @@
 /**
  * @fileoverview Steps that check the local harness stand-ins.
  *
- * They check the fake Auth0, REST, broker, timer, and Homebridge contracts used by the offline
- * plugin scenarios.
+ * They check fake Auth0, REST, broker, timer, Homebridge, and World release contracts used by
+ * offline plugin scenarios, including cleanup after a failed startup.
  */
 
 import assert from 'node:assert/strict';
