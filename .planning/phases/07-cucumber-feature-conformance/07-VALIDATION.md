@@ -63,12 +63,12 @@ degraded-status check are outside this phase.
 
 ## Current combined-tree evidence
 
-At clean executable-input commit `d98c805` on Node `v26.12.1`, the command
+At clean executable-input commit `7616dc2` on Node `v26.12.1`, the command
 `TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
 unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
 and 43 isolated direct source/test coverage pairs passed. The Cucumber part
-reported 37.251 seconds. `git status --porcelain=v1 --untracked-files=all`
-was empty at the source commit, and `git diff --exit-code d98c805
+reported 37.544 seconds. `git status --porcelain=v1 --untracked-files=all`
+was empty at the source commit, and `git diff --exit-code 7616dc2
 -- . ':(exclude,glob).planning/**/*.md'` exited 0. This evidence is reusable
 only while executable inputs remain unchanged; any later source edit needs a
 fresh full gate.
@@ -80,8 +80,7 @@ exited 0 with exactly six skipped scenarios and 35 skipped steps. It reported
 zero executing time and no undefined or ambiguous status. No real-profile
 step body or vendor request ran.
 
-The forward open set at this draft is `CR-07-HAP-054` and
-`CR-07-HAP-055`. The reviewed Plan
+The forward open set at this draft is empty. The reviewed Plan
 07-18 addendum
 closed `CR-07-REAL_STEPS-017` forward after the historical Round 2 STOP.
 The reviewed Plan 07-19 addendum closed `CR-07-OFFLINE_LIBS-016` forward
@@ -108,8 +107,12 @@ It stopped with 050 still open. Plan 07-28 corrected that JSDoc and an
 independent complete-file review closed 050 forward with no new finding.
 Plan 07-29's independent complete-file review closed HAP 051 forward but
 raised two distinct warnings, HAP 054 and HAP 055. Its open-count equation
-`1-1-0+2+0=2` required a separate STOP. The two current warnings still
-block a clean phase sign-off.
+`1-1-0+2+0=2` required a separate STOP. Plan 07-30's two focused
+source commits and one independent complete-file review closed HAP 054
+and 055 forward with equation `2-2-0+0+0=0`. Candidate 056 concerned
+unchanged code and was rejected under the TypeScript style skill's
+review scope. The historical STOPs remain visible; Plan 07-14 must
+still reconcile the final phase evidence before sign-off.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
 FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
 open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and
