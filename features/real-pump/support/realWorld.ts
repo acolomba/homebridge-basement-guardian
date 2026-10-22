@@ -133,27 +133,27 @@ export class RealPumpWorld extends World {
 
   private credentialPassword: string | undefined = undefined;
 
-  /** Every deviceId a trustworthy inventory response has named so far, in discovery order. */
+  /** Returns device IDs named by trustworthy inventory responses, in discovery order. */
   deviceIds(): readonly string[] {
     return this.discoveredDeviceIds;
   }
 
-  /** The canonical snapshot the runtime holds for one device, or `undefined` if it holds none. */
+  /** Returns the canonical snapshot for one device, or `undefined` if none is held. */
   snapshot(deviceId: string): DeviceSnapshot | undefined {
     return this.runtime().store.snapshot(deviceId);
   }
 
-  /** Every monitoring-health summary the runtime has reported so far, in report order. */
+  /** Returns monitoring-health summaries in report order. */
   observations(): readonly string[] {
     return this.monitoringObservations;
   }
 
-  /** Every log line recorded at warn or error level, level-prefixed, in arrival order. */
+  /** Returns warn and error log lines, level-prefixed and in arrival order. */
   failureLines(): readonly string[] {
     return this.loggedLines.filter((line) => line.startsWith('warn ') || line.startsWith('error '));
   }
 
-  /** Every unhandled rejection the process reported while this scenario ran. */
+  /** Returns one non-sensitive marker per unhandled rejection observed during this scenario. */
   unhandledRejections(): readonly string[] {
     return this.rejectedReasons;
   }
@@ -163,7 +163,7 @@ export class RealPumpWorld extends World {
     this.remembered.set(name, value);
   }
 
-  /** The value a step remembered earlier in the scenario. */
+  /** Returns a value remembered by an earlier step in the scenario. */
   recall(name: string): unknown {
     if (!this.remembered.has(name)) {
       throw new Error(`no step has remembered ${name} yet`);
@@ -173,8 +173,8 @@ export class RealPumpWorld extends World {
   }
 
   /**
-   * A content fingerprint of the cached Auth0 token file, or `undefined` while it does not exist
-   * yet.
+   * Returns a content fingerprint of the cached Auth0 token file, or `undefined` while it does
+   * not exist yet.
    *
    * A fresh grant rewrites the file, and rewrites this fingerprint with it. A restart that reuses
    * the cached token leaves both untouched (AUTH-01).
