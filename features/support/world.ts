@@ -211,7 +211,7 @@ export class BasementGuardianWorld extends World {
 
   private readonly watchedDeviceIds = new Set<string>();
 
-  // Scenario values a step saves for a later step, including readings and fake API instances.
+  // Scenario values a step saves for a later step, including readings and setup paths.
   private readonly remembered = new Map<string, unknown>();
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
@@ -515,7 +515,7 @@ export class BasementGuardianWorld extends World {
    * Remembers a scenario value under a name a later step uses.
    *
    * A record assertion across a restart can compare what the plugin published before with what it
-   * published after. Harness steps also use this map to retain a fake API created during setup.
+   * published after. Harness steps also use this map to retain a storage path created during setup.
    */
   remember(name: string, value: unknown): void {
     this.remembered.set(name, value);

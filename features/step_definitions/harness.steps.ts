@@ -39,7 +39,7 @@ const DEVICE_ID = 'placeholder-gemini';
 const ACCESSORY_NAME = 'Sump Guardian';
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 const SHADOW_VERSION = 7;
-const OTHER_HOMEBRIDGE = 'other fake homebridge api';
+const OTHER_HOMEBRIDGE_STORAGE_PATH = 'other fake homebridge storage path';
 const REJECTION_CODE = 404;
 const REPORTED_PATCH = { water_level: 1, serial_communications: true };
 
@@ -178,7 +178,8 @@ Given('another fake homebridge api', async function (this: BasementGuardianWorld
   const other = await createFakeHomebridgeApi();
 
   this.onRelease(() => other.cleanup());
-  this.remember(OTHER_HOMEBRIDGE, other);
+  assert.equal(other.api.user.storagePath(), other.storagePath);
+  this.remember(OTHER_HOMEBRIDGE_STORAGE_PATH, other.storagePath);
 });
 
 Given('a listener on each lifecycle event', async function (this: BasementGuardianWorld): Promise<void> {
@@ -511,15 +512,18 @@ Then('the world observes that the plugin "shut down"', function (this: BasementG
 
 Then('the storage path is an empty directory the scenario owns', async function (this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
-  const other = this.recall(OTHER_HOMEBRIDGE) as FakeHomebridgeApi;
+  const otherStoragePath = this.recall(OTHER_HOMEBRIDGE_STORAGE_PATH);
+
+  if (typeof otherStoragePath !== 'string') {
+    assert.fail('the other fake homebridge storage path is missing');
+  }
 
   assert.equal(homebridge.api.user.storagePath(), homebridge.storagePath);
-  assert.equal(other.api.user.storagePath(), other.storagePath);
   assert.equal(dirname(homebridge.storagePath), tmpdir());
-  assert.equal(dirname(other.storagePath), tmpdir());
-  assert.notEqual(homebridge.storagePath, other.storagePath);
+  assert.equal(dirname(otherStoragePath), tmpdir());
+  assert.notEqual(homebridge.storagePath, otherStoragePath);
   assert.deepEqual(await readdir(homebridge.storagePath), []);
-  assert.deepEqual(await readdir(other.storagePath), []);
+  assert.deepEqual(await readdir(otherStoragePath), []);
 });
 
 Then('the api exposes the hap namespace', async function (this: BasementGuardianWorld): Promise<void> {
