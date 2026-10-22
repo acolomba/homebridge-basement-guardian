@@ -1,7 +1,8 @@
 Feature: Harness fakes
 
-  The deterministic suite uses local stand-ins for vendor services, the hap namespace, and the
-  Homebridge accessory surface. No scenario needs an account, hardware, or the public network.
+  The deterministic suite uses local stand-ins for vendor services, HAP, and Homebridge.
+  It checks timer and scenario resource release contracts used by offline plugin tests.
+  No scenario needs an account, hardware, or the public network.
 
   Scenario: The fake tenant records the grant it receives
     Given the fake auth0 tenant
