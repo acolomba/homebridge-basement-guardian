@@ -214,6 +214,7 @@ export class RealPumpWorld extends World {
    */
   async restart(): Promise<void> {
     await this.stop();
+    this.discoveredDeviceIds.length = 0;
     this.accountRuntime = this.createRuntime();
     await this.start();
   }
