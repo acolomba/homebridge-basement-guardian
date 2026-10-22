@@ -22,11 +22,15 @@ When('the harness stops within 5 seconds', { timeout: 5_000 }, async function (t
   await this.stop();
 });
 
-When('the harness remembers the token cache fingerprint as {string} within {int} seconds', async function (this: RealPumpWorld, name: string, seconds: number) {
-  const fingerprint = await until(() => this.tokenCacheFingerprint(), seconds * MILLISECONDS_PER_SECOND, 'the token cache was not written');
+When(
+  'the harness remembers the token cache fingerprint as {string} within {int} seconds',
+  { timeout: 15_000 },
+  async function (this: RealPumpWorld, name: string, seconds: number) {
+    const fingerprint = await until(() => this.tokenCacheFingerprint(), seconds * MILLISECONDS_PER_SECOND, 'the token cache was not written');
 
-  this.remember(name, fingerprint);
-});
+    this.remember(name, fingerprint);
+  },
+);
 
 Then('the token cache fingerprint matches {string}', async function (this: RealPumpWorld, name: string) {
   const fingerprint = await this.tokenCacheFingerprint();
