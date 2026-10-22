@@ -798,5 +798,23 @@ Before(function (this: BasementGuardianWorld) {
 });
 
 After(async function (this: BasementGuardianWorld) {
-  await this.cleanUp();
+  const failures: unknown[] = [];
+
+  try {
+    await this.cleanUp();
+  } catch (error) {
+    failures.push(error);
+  }
+
+  if (this.rejections.length > 0) {
+    failures.push(new Error('scenario reported an unhandled rejection'));
+  }
+
+  if (failures.length === 1) {
+    throw failures[0];
+  }
+
+  if (failures.length > 1) {
+    throw new AggregateError(failures, 'scenario teardown failed');
+  }
 });
