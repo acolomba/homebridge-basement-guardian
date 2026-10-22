@@ -88,23 +88,28 @@ first is recorded in Plan 07-16 and of the second in `07-REAL-STEPS-REVIEW.md`.
 | SHADOW | 4 | `07-SHADOW-REVIEW.md` `0940f537caf8b7b94daa17603355ead3da34c6f3` | Round 2 clean | No forward open ID. |
 | MONITORING | 2 | `07-MONITORING-REVIEW.md` `62d1e013631c98df1ceaae7bafe5faefc99965e3` | Round 1 STOP: 004 | Narrowed in Plan 07-17. |
 | RECORDS | 3 | `07-RECORDS-REVIEW.md` `04390413fa8a1b8277f29501cdad6cc4315f74e9` | Round 2 STOP: 012, 013 | Both repaired after STOP; no further batch round. |
-| OFFLINE_LIBS | 4 | `07-OFFLINE-LIBS-REVIEW.md` `6d7597b4d582ac2dc44d86e15faf30d856255090` | Round 3 STOP: 016 | 016 remains open. |
+| OFFLINE_LIBS | 4 | `07-OFFLINE-LIBS-REVIEW.md` `6d7597b4d582ac2dc44d86e15faf30d856255090` | Round 3 STOP: 016 | 016 closed forward by Plan 07-19; addendum IDs 017/018 remain open. |
 | HAP | 2 | `07-HAP-REVIEW.md` `822581fd6c6987c14128b96e2034efa097247310` | Round 3 STOP: 025, 028, 032, 048, 050, 051 | All six remain open. |
 | HARNESS | 3 | `07-HARNESS-REVIEW.md` `c8ee48517ebb33b4d73b07578081eb4e6904fac8` | Round 3 clean | No forward open ID. |
 | REAL_FEATURES | 3 | `07-REAL-FEATURES-REVIEW.md` `98ca087f0d71b95776831a7f5f7cbfdc449aa9ab` | Round 2 clean | No forward open ID. |
 | REAL_WORLD | 1 | `07-REAL-WORLD-REVIEW.md` `f85e1bfcad9d137972375604685b27236ba56421` | Round 2 clean | No forward open ID. |
 | REAL_STEPS | 3 | `07-REAL-STEPS-REVIEW.md` `b06870d305349331433d5cb296d13b1ceb5f965e` | Round 2 STOP: 017 | 017 closed forward by the reviewed Plan 07-18 addendum. |
 
-The current forward open set has seven IDs:
-`CR-07-OFFLINE_LIBS-016`, `CR-07-HAP-025`, `CR-07-HAP-028`,
+The current forward open set has eight IDs:
+`CR-07-OFFLINE_LIBS-017`, `CR-07-OFFLINE_LIBS-018`, `CR-07-HAP-025`,
+`CR-07-HAP-028`,
 `CR-07-HAP-032`, `CR-07-HAP-048`, `CR-07-HAP-050`, and `CR-07-HAP-051`.
-This is a status inventory, not a clean phase
-sign-off. The detailed finding and round ledger follows after further
-reconciliation.
+This is a status inventory, not a clean phase sign-off. The detailed finding
+and round ledger follows after further reconciliation.
 
 ## Finding ledger
 
-The rows below preserve every stable finding record from the twelve committed batch reports. Each entry names the source report line and carries its rule, revision-qualified location, severity, disposition, and evidence as recorded there. Repeated IDs show later round or repair evidence; the forward open set and historical STOPs remain separate in the inventory above.
+The rows below preserve every stable finding record from the twelve committed
+batch reports and append new IDs from later addenda. Each entry names its
+source report line and carries the recorded rule, revision-qualified location,
+severity, disposition, and evidence. Repeated IDs show later round or repair
+evidence; the forward open set and historical STOPs remain separate in the
+inventory above.
 
 ### ACCOUNT
 
@@ -225,6 +230,17 @@ The rows below preserve every stable finding record from the twelve committed ba
 - **CR-07-OFFLINE_LIBS-014** (`07-OFFLINE-LIBS-REVIEW.md:76`): Requirement: FEAT-02; Rule path and heading: `.agents/skills/cucumber/SKILL.md` §Review; Observed location: `60cd834:features/step_definitions/harness.steps.ts:487-491`; Severity: WARNING; Disposition and plausible wrong result: **Accepted; open.** The subscriber can observe close before the broker has removed its subscription record. A single immediate read may fail at random; poll until cleanup completes within the named deadline.
 - **CR-07-OFFLINE_LIBS-015** (`07-OFFLINE-LIBS-REVIEW.md:114`): Requirement: FEAT-02; Rule path and heading: `.agents/skills/cucumber/SKILL.md` §Cucumber behavioral tests and §Review; `src/runtime/timers.ts` `Timers.clearInterval` contract; Observed location: `ddb0f91:features/step_definitions/harness.steps.ts:330-335`; `ddb0f91:features/lib/timers.ts:78`; Severity: BLOCKER; Disposition and plausible wrong result: **Accepted; open.** The interval scenario calls `clearTimeout` for its interval handle. A no-op `clearInterval` can pass the suite, so the scenario must use `clearInterval` for that variant.
 - **CR-07-OFFLINE_LIBS-016** (`07-OFFLINE-LIBS-REVIEW.md:148`): Requirement: FEAT-02; Rule path and heading: `.agents/skills/typescript-style/rules/comments.md` §Comments and test titles; Observed location: `702f14e:features/lib/shadowBroker.ts:207-208`; Severity: WARNING; Disposition and plausible wrong result: **Accepted; open at STOP.** The comment says the subscribe listener excludes scenario subscribers, but it records every MQTT client's subscriptions, including the scenario's. A reader could trust the comment and use `currentSubscriptions()` to assert a plugin connection when it actually reads a later-connected harness subscriber. The comment needs to state that every connection's topics are recorded and the newest live client's topics are returned.
+
+Plan 07-19 closed the forward status of `CR-07-OFFLINE_LIBS-016` after one
+independent complete-file review of blob
+`a95db8b9503521e3c2bc5e60bbd70a182bf39cfe` at `e5f3601`.
+The following new IDs came from that same complete-file review; they were
+not introduced by the comment edit. The original row above and Round 3
+STOP remain historical evidence. Details and verification are in
+[07-OFFLINE-LIBS-ADDENDUM.md](07-OFFLINE-LIBS-ADDENDUM.md).
+
+- **CR-07-OFFLINE_LIBS-017** (`07-OFFLINE-LIBS-ADDENDUM.md:44`): Requirement: FEAT-02; Rule: `.agents/skills/typescript-style/rules/naming-and-docs.md` §Comments and documentation, method descriptions start with a third-person verb phrase; First observed location: `e5f3601:features/lib/shadowBroker.ts:47,57`; Severity: WARNING; Forward disposition: **Open.** Two method descriptions start with noun phrases. No repair or new source check has occurred for this ID.
+- **CR-07-OFFLINE_LIBS-018** (`07-OFFLINE-LIBS-ADDENDUM.md:45`): Requirement: FEAT-02; Rule: `.agents/skills/typescript-style/rules/naming-and-docs.md` §Comments and documentation, unclear member purpose needs documentation; First observed location: `e5f3601:features/lib/shadowBroker.ts:40,225`; Severity: WARNING; Forward disposition: **Open.** `handshakes` holds handshake query strings, which its name and `readonly string[]` type do not explain. No repair or new source check has occurred for this ID.
 
 ### HAP
 
@@ -446,7 +462,7 @@ addenda.
 | SHADOW | 5 | R1 `5-5-0+3+0=3`; R2 `3-3-0+0+0=0` | Clean at R2. |
 | MONITORING | 10 | R1 `10-10-0+0+1=1` | STOP at R1 on 004 reopening; later narrowed in Plan 07-17. |
 | RECORDS | 9 | R1 `9-9-0+2+0=2`; R2 `2-2-0+2+0=2` | STOP at R2, 012/013 open then; both later repaired. |
-| OFFLINE_LIBS | 11 | R1 `11-11-0+3+0=3`; R2 `3-3-0+1+0=1`; R3 `1-1-0+1+0=1` | STOP at R3, 016 remains open. |
+| OFFLINE_LIBS | 11 | R1 `11-11-0+3+0=3`; R2 `3-3-0+1+0=1`; R3 `1-1-0+1+0=1` | STOP at R3, 016 open then; closed forward in Plan 07-19. |
 | HAP | 19 | R1 `19-19-0+14+0=14`; R2 `14-12-0+5+0=7`; R3 `7-5-0+3+1=6` | STOP at R3 on 025 reopening; 025/028/032/048/050/051 remain open. |
 | HARNESS | 21 | R1 `21-21-0+13+0=13`; R2 `13-13-0+7+0=7`; R3 `7-7-0+0+0=0` | Clean at R3. |
 | REAL_FEATURES | 10 | R1 `10-10-0+1+0=1`; R2 `1-1-0+0+0=0` | Clean at R2. |
@@ -454,10 +470,11 @@ addenda.
 | REAL_STEPS | 15 | R1 `15-15-0+1+0=1`; R2 `1-1-0+1+0=1` | STOP at R2, 017 open then; closed forward in Plan 07-18. |
 
 The later forward closures of ACCOUNT 015/016, ACCESSORY 007/009/019,
-HOMEKIT 014, MONITORING 004, RECORDS 012/013, and REAL_STEPS 017 are
-recorded separately in `07-ADJUDICATION.md` and Plans 07-15 through 07-18.
-They do not turn the
-original stopped rounds into clean rounds.
+HOMEKIT 014, MONITORING 004, RECORDS 012/013, REAL_STEPS 017, and
+OFFLINE_LIBS 016 are recorded separately in `07-ADJUDICATION.md` and Plans
+07-15 through 07-19. Those closures do not turn the original stopped rounds
+into clean rounds. OFFLINE_LIBS 017/018 were found in the Plan 07-19
+addendum review and remain open.
 
 ## Offline baseline
 
