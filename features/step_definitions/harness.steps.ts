@@ -447,10 +447,10 @@ Then('the device answer holds the device with id {string}', function (this: Base
   });
 });
 
-Then('the recorded request carries the authorization header', async function (this: BasementGuardianWorld): Promise<void> {
+Then('the service records only the authorized device-list request', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
-  assert.equal(service.requests.at(-1)?.authorization, AUTHORIZATION_HEADER);
+  assert.deepStrictEqual(service.requests, [{ method: 'GET', path: '/devices', authorization: AUTHORIZATION_HEADER, body: '' }]);
 });
 
 Then('the credentials response carries the endpoint and the client identifier', function (this: BasementGuardianWorld): void {

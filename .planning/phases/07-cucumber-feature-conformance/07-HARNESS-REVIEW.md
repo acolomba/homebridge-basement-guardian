@@ -104,3 +104,4 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 ## Round 1 repair evidence
 
 - **025:** The device-list scenario now supplies two distinct systems. A temporary owned-step control truncated the returned list to its first row; the named scenario failed on the missing second row (6/8 steps passed, one skipped). After removing the control byte-for-byte, it passed 8/8. The scenario count and step count are unchanged.
+- **026:** The device-list assertion now compares the complete request list, including method, path, authorization, and body. A temporary extra `/unexpected` request made the named scenario fail at that assertion (7/8 steps passed); after removing the control, it passed 8/8. The scenario count and step count are unchanged.

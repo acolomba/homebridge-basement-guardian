@@ -44,7 +44,7 @@ Feature: Harness fakes
     When the harness requests the device list
     Then the response carries status 200
     Then the device list holds the devices the scenario sets
-    Then the recorded request carries the authorization header
+    Then the service records only the authorized device-list request
 
   Scenario: The fake service answers a device whose id needs encoding
     Given the fake rest service
