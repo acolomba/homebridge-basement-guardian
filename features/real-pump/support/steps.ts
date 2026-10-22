@@ -49,7 +49,7 @@ Then('the harness discovers one device within {int} seconds', async function (th
   await until(() => (this.deviceIds().length > 0 ? true : undefined), seconds * 1000, 'no device was discovered');
 });
 
-Then('the discovered device snapshot has a valid deviceId', function (this: RealPumpWorld) {
+Then('the discovered device snapshot has a valid device id', function (this: RealPumpWorld) {
   const [deviceId] = this.deviceIds();
 
   assert.ok(deviceId !== undefined && deviceId.length > 0, 'no device has been discovered yet');

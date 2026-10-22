@@ -13,10 +13,10 @@ Feature: Discovering the real Gemini and its initial state
     When the harness starts
     Then the harness discovers one device within 30 seconds
 
-  Scenario: The discovered device initial snapshot carries a valid deviceId
+  Scenario: The discovered device's initial snapshot carries a valid device id
     When the harness starts
     Then the harness discovers one device within 30 seconds
-    Then the discovered device snapshot has a valid deviceId
+    Then the discovered device snapshot has a valid device id
 
   Scenario: The discovered device snapshot gains shadow-sourced fields within a bounded timeout
     # 45 seconds, distinct from discovery's 30, because this wait also spans fetching temporary
