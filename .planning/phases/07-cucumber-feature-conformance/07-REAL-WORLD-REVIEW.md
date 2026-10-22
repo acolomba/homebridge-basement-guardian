@@ -41,3 +41,37 @@ still reject; current step consumers do not retain `deviceIds()` or
 `observations()` arrays; Cucumber's default step timeout already bounds
 unqualified start and restart steps. The World header has the approved SPDX,
 copyright, and overview blocks. Source edits follow this triage record.
+
+## Round 0 repairs
+
+All 14 accepted causes were repaired in separate normal-hook commits. The
+offline controls below compiled a temporary, unregistered copy of the World
+from `dist-test/`, injected a fake runtime or scenario state, and removed that
+copy afterward. No vendor endpoint, account, or hardware was used. A RED exit
+here is the named control's intended assertion failure against the unchanged
+test support, not a TypeScript build or infrastructure error. `npm run
+build:test` and the real-profile `--dry-run --format summary` exited 0 after
+each functional repair; the profile remained six skipped scenarios and 35
+skipped steps, with no undefined or ambiguous status. Every source commit
+passed focused pre-commit, `fallow audit --base HEAD`, and normal commit hooks.
+
+| ID | Commit | Focused evidence |
+| --- | --- | --- |
+| CR-07-REAL_WORLD-001 | `13af2eb` | Injected stop rejection: cleanup control exited 1 before repair because the scratch directory remained; exited 0 afterward because removal completed. Failure text is static and private values are omitted. |
+| CR-07-REAL_WORLD-002 | `cd88d41` | Removed the unused parameter property, then the forwarding constructor and import after the normal hook identified `no-useless-constructor`. Build and normal hooks passed. |
+| CR-07-REAL_WORLD-003 | `16d1d13` | Converted the logging callback to a block that discards `push`'s return. Normal hooks passed. |
+| CR-07-REAL_WORLD-004 | `99c725d` | Declared the local `info` function. Normal hooks passed. |
+| CR-07-REAL_WORLD-005 | `7b81dc0` | Changed seven method descriptions to third-person verb phrases. Normal hooks passed. |
+| CR-07-REAL_WORLD-006 | `79d41d2` | Explained when Cucumber creates and initializes this World. Normal hooks passed. |
+| CR-07-REAL_WORLD-007 | `fbee20e` | Corrected the five-minute poll comment without changing its value. Normal hooks passed. |
+| CR-07-REAL_WORLD-008 | `2af5209` | Corrected the Before-hook and restart rationale. Normal hooks passed. |
+| CR-07-REAL_WORLD-009 | `047a0c5` | Unreadable-cache control exited 1 before repair because the error was treated as absence; exited 0 after only `ENOENT` returned undefined. Build and dry run passed. |
+| CR-07-REAL_WORLD-011 | `c2eccbd` | Injected rejection: teardown-gate control exited 1 before repair because cleanup passed; exited 0 afterward because every scenario fails after release. Build and dry run passed. |
+| CR-07-REAL_WORLD-012 | `f3b58dc` | Construction-listener control exited 1 before repair because construction installed a process listener; exited 0 after registration moved to the live Before path. Build and dry run passed. |
+| CR-07-REAL_WORLD-013 | `1ede1b3` | Fake restart control exited 1 before repair because old device IDs survived; exited 0 after restart cleared them. Build and dry run passed. |
+| CR-07-REAL_WORLD-014 | `fa4a527` | Registered the private account email with the redacting logger. Build and dry run passed; no actual email log was observed. |
+| CR-07-REAL_WORLD-015 | `9781444` | Injected private rejection text: privacy control exited 1 before repair because raw text was retained; exited 0 after storage changed to a fixed marker. Build and dry run passed. |
+
+The layout candidate 010 stays rejected for the profile-isolation reason in
+Round 0. An independent current-file correction review will determine whether
+any accepted cause remains or a new cause is open.
