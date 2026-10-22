@@ -534,9 +534,10 @@ class StandInService implements FakeHapService {
   // and it is the whole reason a persistent failure can be published without erasing anything
   // (D-10, D-014).
   //
-  // Handed anything else it clears the stored status and stores, so any ordinary push -- even one
-  // carrying the value the characteristic already holds -- makes an unreadable or refused
-  // characteristic readable again.
+  // For a non-error input, real `updateValue` validates before clearing status or storing the
+  // value. Validation may coerce or clamp it, or fail and preserve the prior status. This stand-in
+  // models the accepted path for the valid values this plugin publishes: even a push of the value
+  // already held clears refusal and makes the characteristic readable again.
   //
   // Either way the effect is per characteristic: pushing `StatusActive` leaves a status stored on
   // `On` exactly where it was.
