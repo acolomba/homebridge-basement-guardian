@@ -170,3 +170,44 @@ attempt finish while remaining bounded. `npm run build:test` and
 exited 0 after the edit, with six scenarios and 35 steps all skipped. The
 pre-commit hooks, Fallow audit, and normal commit hooks passed. The real
 profile was not run live; the correction reviewer must confirm the source.
+
+## Round 2 complete-file correction review — STOP
+
+A different fresh Claude Opus 5.5 read-only session reviewed all four current
+files and applicable rules from first through final line at clean commit
+`59b2c576b22c24b36d41910c376ceac5ad640b02`. It did not edit files or
+run commands. The coordinator confirmed these full spans and committed blobs:
+
+| Path | Lines read | Blob |
+| --- | ---: | --- |
+| `features/real-pump/step_definitions/discovery.steps.ts` | 1–47 | `b7dd65c12036f7ea5757139c3ce0a325a02409df` |
+| `features/real-pump/step_definitions/heartbeats.steps.ts` | 1–32 | `7835e707e98dfebfe06eb22f5407c99414bb65e5` |
+| `features/real-pump/step_definitions/lifecycle.steps.ts` | 1–54 | `159f91f00ee77e4d4f2c14fc8d2b748f14a86bc1` |
+| `features/lib/realPumpPolling.ts` | 1–38 | `df8ae4058d9f45e6adaf1951ab5ce4bcfcd11ec7` |
+
+The reviewer confirmed 016 fixed at
+`59b2c57:features/real-pump/step_definitions/lifecycle.steps.ts:23,27`; both
+network lifecycle actions now have a 30-second Cucumber ceiling. It found no
+return of any fixed ID and no new BLOCKER. The coordinator accepted this new
+cause:
+
+| ID | Requirement | Rule | Observed location | Severity | Disposition |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-REAL_STEPS-017 | FEAT-02 | `.agents/skills/cucumber/rules/steps.md` §Module structure, overview says what its steps own; `typescript-style/rules/comments.md` §Forbidden in comments and test titles, describe current code | `59b2c57:features/real-pump/step_definitions/lifecycle.steps.ts:7-10` | WARNING | **Open at Round 2 STOP.** The overview says the module owns restarting and shutting down. It also registers start at line 23, token-cache observations at 35–49, and a rejection check at 51–54. This overview omission is distinct from 009 (discovery overview) and 010 (heartbeat overview), so no fixed ID reopened. A later bounded addendum, if authorized, would name the complete current lifecycle scope. |
+
+The repeated rejection-text hypothesis is rejected because `RealPumpWorld`
+records only the fixed marker `unhandled rejection`; its assertion cannot
+print a raw reason. The reviewer could not read features, but the coordinator
+confirmed their 30-, 45-, 10-, 1-, and 960-second arguments remain within
+the registered ceilings. The source trace from Round 1 confirms that the
+30-second start/restart ceiling exceeds the first Auth0/inventory request
+chain's configured deadlines. No live vendor timing was claimed.
+
+Round 2 equation: **opening 1 - fixed 1 - rejected opening 0 + new accepted 1 + reopened 0 = closing 1**. Exact open set: `017`. The positive open count did not fall, so the protocol requires **STOP now**. No Round 3 source repair or review runs in this batch. The historical Round 2 STOP and ID 017 must remain visible even if a later user-adjudicated addendum closes the forward issue.
+
+At clean executable input revision `f04d330` (the subsequent `59b2c57`
+commit changed only this planning record), Node `v26.12.1`,
+`TEST_CONCURRENCY=1 npm run check` exited 0: 130/130 offline scenarios,
+1400/1400 steps, and 43 isolated direct coverage pairs. The real profile's
+last dry run after the source repair resolved six scenarios and 35 steps, all
+skipped. No real step body ran.
