@@ -173,7 +173,11 @@ Given('the fake shadow broker', async function (this: BasementGuardianWorld): Pr
 });
 
 Given('a subscriber on the {word} topic', async function (this: BasementGuardianWorld, topicName: string): Promise<void> {
-  await this.subscribe(topicNamed(DEVICE_ID, topicName));
+  const topic = topicNamed(DEVICE_ID, topicName);
+  await this.subscribe(topic);
+
+  const broker = await this.broker();
+  assert.deepStrictEqual(broker.currentSubscriptions(), [topic]);
 });
 
 Given('the fake homebridge api', async function (this: BasementGuardianWorld): Promise<void> {
