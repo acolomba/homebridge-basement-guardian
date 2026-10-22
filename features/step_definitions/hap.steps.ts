@@ -275,7 +275,7 @@ Then('a fresh accessory information service reads at the hap string defaults', (
   assertAccessoryInformationDefaults();
 });
 
-function optionalUUIDsOf(service: FakeHapService): string[] {
+function optionalUuidsOf(service: FakeHapService): string[] {
   return service.optionalCharacteristics.map((characteristic) => characteristic.UUID);
 }
 
@@ -294,11 +294,11 @@ function assertStandardOptionalDeclarations(): void {
 
   assert.deepStrictEqual(
     {
-      accessoryInformation: optionalUUIDsOf(accessoryInformation),
-      leak: optionalUUIDsOf(leakSensor),
-      contact: optionalUUIDsOf(contactSensor),
-      battery: optionalUUIDsOf(battery),
-      switch: optionalUUIDsOf(switchService),
+      accessoryInformation: optionalUuidsOf(accessoryInformation),
+      leak: optionalUuidsOf(leakSensor),
+      contact: optionalUuidsOf(contactSensor),
+      battery: optionalUuidsOf(battery),
+      switch: optionalUuidsOf(switchService),
     },
     {
       accessoryInformation: [HAP.Characteristic.ConfiguredName.UUID],
@@ -358,7 +358,7 @@ function assertOptionalCharacteristicsAppend(): void {
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
   battery.addOptionalCharacteristic(HAP.Characteristic.StatusFault);
 
-  assert.deepStrictEqual(optionalUUIDsOf(battery), [
+  assert.deepStrictEqual(optionalUuidsOf(battery), [
     HAP.Characteristic.BatteryLevel.UUID,
     HAP.Characteristic.ChargingState.UUID,
     HAP.Characteristic.Name.UUID,
