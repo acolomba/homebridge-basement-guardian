@@ -204,8 +204,8 @@ export async function createFakeShadowBroker(): Promise<FakeShadowBroker> {
     subscriptionsByClient.delete(client);
   });
 
-  // Only what a client sent is recorded, on the same reasoning the publish listener below states:
-  // the broker's own subscribers are the scenario listening, not the plugin.
+  // Record subscriptions from every MQTT client, including clients created by the scenario.
+  // currentSubscriptions() returns the newest live client's topics.
   broker.on('subscribe', (subscriptions, client) => {
     const recorded = subscriptionsByClient.get(client) ?? [];
 
