@@ -120,8 +120,8 @@ export class RealPumpWorld extends World {
   // A stable bound reference, because the listener has to be removed again in cleanUp(). Recording
   // is what lets the shutdown scenario assert the absence of a rejection rather than hope the
   // process would have crashed on one (SYNC-05).
-  private readonly recordRejection = (reason: unknown): void => {
-    this.rejectedReasons.push(String(reason));
+  private readonly recordRejection = (): void => {
+    this.rejectedReasons.push('unhandled rejection');
   };
 
   private redactingLog: RedactingLogger | undefined = undefined;
