@@ -14,4 +14,4 @@ Feature: Real pump heartbeats
     Then the harness discovers one device within 30 seconds
     Then the discovered device snapshot gains shadow-sourced fields within 45 seconds
     When the harness waits 960 seconds
-    Then the connection reports no failure
+    Then the connection reports no failure or unhandled rejection

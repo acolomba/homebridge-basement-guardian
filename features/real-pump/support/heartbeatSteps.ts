@@ -21,7 +21,7 @@ When('the harness waits {int} seconds', { timeout: STEP_TIMEOUT_MS }, async (sec
   await delay(seconds * MILLISECONDS_PER_SECOND);
 });
 
-Then('the connection reports no failure', function (this: RealPumpWorld) {
+Then('the connection reports no failure or unhandled rejection', function (this: RealPumpWorld) {
   assert.deepStrictEqual(this.failureLines(), []);
   assert.deepStrictEqual(this.unhandledRejections(), []);
 });
