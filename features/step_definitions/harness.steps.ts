@@ -14,14 +14,18 @@
 
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname } from 'node:path';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { createFakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import { shadowTopic } from '../lib/shadowBroker.js';
 import { createFakeTimers } from '../lib/timers.js';
 import { BasementGuardianWorld, SUBSCRIBER_CLIENT_ID } from '../support/world.js';
 
+import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { ShadowTopicLeaf } from '../lib/shadowBroker.js';
 import type { AwsCredentialsResponse } from '../lib/vendorRestApi.js';
 
@@ -36,6 +40,7 @@ const DEVICE_ID = 'placeholder-gemini';
 const ACCESSORY_NAME = 'Sump Guardian';
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 const SHADOW_VERSION = 7;
+const OTHER_HOMEBRIDGE = 'other fake homebridge api';
 const REJECTION_CODE = 404;
 const REPORTED_PATCH = { water_level: 1, serial_communications: true };
 
@@ -178,6 +183,13 @@ async function fakeHomebridgeApi(this: BasementGuardianWorld): Promise<void> {
 }
 
 Given('the fake homebridge api', fakeHomebridgeApi);
+
+Given('another fake homebridge api', async function (this: BasementGuardianWorld): Promise<void> {
+  const other = await createFakeHomebridgeApi();
+
+  this.onRelease(() => other.cleanup());
+  this.remember(OTHER_HOMEBRIDGE, other);
+});
 
 async function listenerOnEachLifecycleEvent(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
@@ -568,9 +580,15 @@ Then('the world observes that the plugin "shut down"', function (this: BasementG
 
 async function assertStoragePathIsAnEmptyDirectory(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
+  const other = this.recall(OTHER_HOMEBRIDGE) as FakeHomebridgeApi;
 
   assert.equal(homebridge.api.user.storagePath(), homebridge.storagePath);
+  assert.equal(other.api.user.storagePath(), other.storagePath);
+  assert.equal(dirname(homebridge.storagePath), tmpdir());
+  assert.equal(dirname(other.storagePath), tmpdir());
+  assert.notEqual(homebridge.storagePath, other.storagePath);
   assert.deepEqual(await readdir(homebridge.storagePath), []);
+  assert.deepEqual(await readdir(other.storagePath), []);
 }
 
 Then('the storage path is an empty directory the scenario owns', assertStoragePathIsAnEmptyDirectory);
