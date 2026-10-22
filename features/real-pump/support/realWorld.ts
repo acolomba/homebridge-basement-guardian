@@ -240,10 +240,24 @@ export class RealPumpWorld extends World {
   /** Stops the runtime this world built and removes its scratch directory. Runs from the `After` hook. */
   async cleanUp(): Promise<void> {
     process.off('unhandledRejection', this.recordRejection);
-    await this.accountRuntime?.stop();
+    const failures: Error[] = [];
+
+    try {
+      await this.accountRuntime?.stop();
+    } catch (error: unknown) {
+      failures.push(new Error('real-pump runtime stop failed'));
+    }
 
     if (this.scratchDirectory !== undefined) {
-      await rm(this.scratchDirectory, { recursive: true, force: true });
+      try {
+        await rm(this.scratchDirectory, { recursive: true, force: true });
+      } catch (error: unknown) {
+        failures.push(new Error('real-pump scratch directory removal failed'));
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'real-pump scenario release failed');
     }
   }
 
