@@ -4,7 +4,7 @@
   "phase": "08-final-sweep-and-gate",
   "sourceManifest": "08-MANIFEST.json",
   "sourceFindings": "08-FINDINGS.md",
-  "state": "round-zero-triaged",
+  "state": "corrections-in-progress",
   "roundLimit": 4,
   "batches": {
     "CLOUD": {
@@ -35,7 +35,20 @@
       "pathCount": 15,
       "report": "08-ROOT-REVIEW.md",
       "openingIds": ["CR-08-ROOT-001"],
-      "rounds": []
+      "rounds": [
+        {
+          "round": 1,
+          "reviewer": "/root/phase8_root_review",
+          "revision": "7bcf55bb9e9314506bdc91a57d30b27d327dc2bf",
+          "openingIds": ["CR-08-ROOT-001"],
+          "fixedIds": ["CR-08-ROOT-001"],
+          "rejectedIds": [],
+          "newIds": [],
+          "reopenedIds": [],
+          "closingIds": [],
+          "stopReason": null
+        }
+      ]
     },
     "FEATURES": {
       "pathCount": 39,
@@ -108,7 +121,6 @@
     "CR-08-RUNTIME-001",
     "CR-08-RUNTIME-002",
     "CR-08-RUNTIME-003",
-    "CR-08-ROOT-001",
     "CR-08-FEATURES-001",
     "CR-08-FEATURES-002"
   ],

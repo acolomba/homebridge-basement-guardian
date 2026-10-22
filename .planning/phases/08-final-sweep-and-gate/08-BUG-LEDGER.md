@@ -107,9 +107,13 @@ ENTRY-017's original “preserves a following field” target is no longer liter
 
 RECORDS-004 is a fake REST service defect. It is not a confirmed plugin production defect. The other accepted Phase 7 findings concern scenario, step, and assertion evidence; the original STOPs remain recorded.
 
-## Phase 8 intake
+## Phase 8
 
-Plan 08-14 must append only confirmed new Phase 8 behavior bugs after native RED and Git proof. This plan does not classify any Phase 8 review candidate. Do not infer zero Phase 8 bugs from an incomplete review.
+| Milestone ID | Original finding | Owner and named regression | Source → evidence → fix | Native RED assertion / current GREEN |
+| --- | --- | --- | --- | --- |
+| B-08-052 | CR-08-ROOT-001 | `src/platform.ts`; `test/platform.test.ts` — keeps a restored vendor email out of logs | `b924697` → `d44f3a0` → `7bcf55b`; [08-ROOT-001-RED-EVIDENCE.json](08-ROOT-001-RED-EVIDENCE.json) | RED exit 1 with one executed target: the complete `log.info` call contained `account@example.test` as its second argument. `RED_EVIDENCE_OK` on unchanged production. GREEN named 1/1; platform owner 77/77; direct coverage 100% for lines, functions, branches; combined gate exit 0 at `7bcf55b`. |
+
+Further Plan 08-14 behavior bugs remain open in the [correction queue](08-CORRECTION-ROUNDS.md); do not infer their closure from this row.
 
 ## Negative controls and non-bug findings
 
