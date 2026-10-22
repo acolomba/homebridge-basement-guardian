@@ -457,7 +457,7 @@ Then('the service records only the authorized device-list request', async functi
   assert.deepStrictEqual(service.requests, [{ method: 'GET', path: '/devices', authorization: AUTHORIZATION_HEADER, body: '' }]);
 });
 
-Then('the credentials response carries the endpoint and the client identifier', function (this: BasementGuardianWorld): void {
+Then('the credentials response carries the endpoint, client identifier, and temporary AWS credentials', function (this: BasementGuardianWorld): void {
   assert.deepEqual(this.response().body, HARNESS_CREDENTIALS);
 });
 

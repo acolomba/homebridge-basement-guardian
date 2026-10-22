@@ -109,3 +109,4 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 - **028:** The one-shot REST failure scenario now supplies two devices and checks the complete recovered list. A temporary empty-list control after the 503 response made the named scenario fail at the new assertion (9/10 steps passed); after removing the control, it passed 10/10. The scenario count is unchanged and the step count increases by two.
 - **029:** The Auth0 scenario title now names the one-shot failure and recovery it proves. The scenario count and step count are unchanged.
 - **030:** The feature description now names timer behavior and scenario resource release while retaining the local fake-cloud boundary. The scenario count and step count are unchanged.
+- **031:** The credential step now names its complete response, including temporary AWS credentials, matching the existing whole-body assertion. The scenario count and step count are unchanged.
