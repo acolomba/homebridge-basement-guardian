@@ -63,16 +63,15 @@ degraded-status check are outside this phase.
 
 ## Current combined-tree evidence
 
-At clean executable-input commit `f04d330` on Node `v26.12.1`, the command
+At clean executable-input commit `aa4d21a` on Node `v26.12.1`, the command
 `TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
 unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
 and 43 isolated direct source/test coverage pairs passed. The Cucumber part
-reported 37.176 seconds. Later commits through `499bf7f` changed only
-`.planning/**/*.md`: `git diff --exit-code f04d330 -- . ':(exclude,glob).planning/**/*.md'`
-exited 0, and
-`git status --porcelain=v1 --untracked-files=all` was empty before this edit.
-This evidence is reusable on those unchanged executable inputs under the
-local-verification gate rule, but any later source edit requires a fresh gate.
+reported 37.85 seconds. `git status --porcelain=v1 --untracked-files=all`
+was empty before this planning-only edit, and `git diff --exit-code aa4d21a
+-- . ':(exclude,glob).planning/**/*.md'` exited 0. This evidence is reusable
+only while executable inputs remain unchanged; any later source edit needs a
+fresh full gate.
 
 After that full build, `./node_modules/.bin/cucumber-js --dry-run --format usage`
 exited 0 and its complete output contained no `UNUSED` definition.
@@ -83,7 +82,8 @@ step body or vendor request ran.
 
 The forward open set at this draft is `CR-07-OFFLINE_LIBS-016`,
 `CR-07-HAP-025`, `CR-07-HAP-028`, `CR-07-HAP-032`, `CR-07-HAP-048`,
-`CR-07-HAP-050`, `CR-07-HAP-051`, and `CR-07-REAL_STEPS-017`. Historical
-STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and FEAT-02
+`CR-07-HAP-050`, and `CR-07-HAP-051`. The reviewed Plan 07-18 addendum
+closed `CR-07-REAL_STEPS-017` forward after the historical Round 2 STOP.
+Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and FEAT-02
 cannot receive a clean phase sign-off while any forward ID remains open. The
 FEAT-01 and FEAT-02 spec-less probes stay unclassified and unresolved.

@@ -93,12 +93,12 @@ first is recorded in Plan 07-16 and of the second in `07-REAL-STEPS-REVIEW.md`.
 | HARNESS | 3 | `07-HARNESS-REVIEW.md` `c8ee48517ebb33b4d73b07578081eb4e6904fac8` | Round 3 clean | No forward open ID. |
 | REAL_FEATURES | 3 | `07-REAL-FEATURES-REVIEW.md` `98ca087f0d71b95776831a7f5f7cbfdc449aa9ab` | Round 2 clean | No forward open ID. |
 | REAL_WORLD | 1 | `07-REAL-WORLD-REVIEW.md` `f85e1bfcad9d137972375604685b27236ba56421` | Round 2 clean | No forward open ID. |
-| REAL_STEPS | 3 | `07-REAL-STEPS-REVIEW.md` `b06870d305349331433d5cb296d13b1ceb5f965e` | Round 2 STOP: 017 | 017 remains open pending maintainer ruling. |
+| REAL_STEPS | 3 | `07-REAL-STEPS-REVIEW.md` `b06870d305349331433d5cb296d13b1ceb5f965e` | Round 2 STOP: 017 | 017 closed forward by the reviewed Plan 07-18 addendum. |
 
-The current forward open set has eight IDs:
+The current forward open set has seven IDs:
 `CR-07-OFFLINE_LIBS-016`, `CR-07-HAP-025`, `CR-07-HAP-028`,
-`CR-07-HAP-032`, `CR-07-HAP-048`, `CR-07-HAP-050`, `CR-07-HAP-051`, and
-`CR-07-REAL_STEPS-017`. This is a status inventory, not a clean phase
+`CR-07-HAP-032`, `CR-07-HAP-048`, `CR-07-HAP-050`, and `CR-07-HAP-051`.
+This is a status inventory, not a clean phase
 sign-off. The detailed finding and round ledger follows after further
 reconciliation.
 
@@ -421,6 +421,14 @@ The rows below preserve every stable finding record from the twelve committed ba
 - **CR-07-REAL_STEPS-016** (`07-REAL-STEPS-REVIEW.md:148`): Disposition: **Accepted, open BLOCKER.** `da81d2d:features/real-pump/step_definitions/lifecycle.steps.ts:23-29` registers start and restart without a timeout. `src/runtime/accountRuntime.ts:1173-1205` awaits `launch()`, which awaits the vendor device-list request at `:1098-1113`; the request has a 10-second deadline (`:49,1318`), before considering Auth0. A correct but slow start can exceed Cucumber's five-second default and fail before the later 30-second discovery step. Rule: `cucumber/SKILL.md` §Review, scenario must be able to run; `cucumber/rules/steps.md` §Tools. Give both registrations a fixed ceiling above the network attempt.
 - **CR-07-REAL_STEPS-017** (`07-REAL-STEPS-REVIEW.md:196`): Requirement: FEAT-02; Rule: `.agents/skills/cucumber/rules/steps.md` §Module structure, overview says what its steps own; `typescript-style/rules/comments.md` §Forbidden in comments and test titles, describe current code; Observed location: `59b2c57:features/real-pump/step_definitions/lifecycle.steps.ts:7-10`; Severity: WARNING; Disposition: **Open at Round 2 STOP.** The overview says the module owns restarting and shutting down. It also registers start at line 23, token-cache observations at 35–49, and a rejection check at 51–54. This overview omission is distinct from 009 (discovery overview) and 010 (heartbeat overview), so no fixed ID reopened. A later bounded addendum, if authorized, would name the complete current lifecycle scope.
 
+Plan 07-18 closed the forward status of `CR-07-REAL_STEPS-017` after one
+independent complete-file review of blob
+`ef8a50cec18379c8c8e651ab01603d26fee1039c` at `aa4d21a`.
+[07-REAL-STEPS-ADDENDUM.md](07-REAL-STEPS-ADDENDUM.md) records the current
+finding disposition and explains why the reviewer's separate module-location
+candidate was already adjudicated. The original row above and Round 2 STOP
+remain historical evidence.
+
 ## Correction rounds
 
 Each equation below uses `closing = opening - fixed - rejected + new + reopened`.
@@ -443,11 +451,12 @@ addenda.
 | HARNESS | 21 | R1 `21-21-0+13+0=13`; R2 `13-13-0+7+0=7`; R3 `7-7-0+0+0=0` | Clean at R3. |
 | REAL_FEATURES | 10 | R1 `10-10-0+1+0=1`; R2 `1-1-0+0+0=0` | Clean at R2. |
 | REAL_WORLD | 14 | R1 `14-14-0+1+0=1`; R2 `1-1-0+0+0=0` | Clean at R2. |
-| REAL_STEPS | 15 | R1 `15-15-0+1+0=1`; R2 `1-1-0+1+0=1` | STOP at R2, 017 remains open pending ruling. |
+| REAL_STEPS | 15 | R1 `15-15-0+1+0=1`; R2 `1-1-0+1+0=1` | STOP at R2, 017 open then; closed forward in Plan 07-18. |
 
 The later forward closures of ACCOUNT 015/016, ACCESSORY 007/009/019,
-HOMEKIT 014, MONITORING 004, and RECORDS 012/013 are recorded separately in
-`07-ADJUDICATION.md` and Plans 07-15, 07-16, and 07-17. They do not turn the
+HOMEKIT 014, MONITORING 004, RECORDS 012/013, and REAL_STEPS 017 are
+recorded separately in `07-ADJUDICATION.md` and Plans 07-15 through 07-18.
+They do not turn the
 original stopped rounds into clean rounds.
 
 ## Offline baseline
