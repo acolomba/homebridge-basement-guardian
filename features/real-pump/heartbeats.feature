@@ -5,7 +5,7 @@ Feature: Real pump heartbeats
   It checks bounded discovery and initial shadow state, then reported failures and rejections.
   It accepts a quiet connection and changes no device status (REL-09).
 
-  Scenario: The connection stays healthy across one heartbeat interval
+  Scenario: The connection reports no failure across one heartbeat interval
     # 960 seconds (16 minutes) is long enough to plausibly span one 898-second heartbeat, and short
     # enough that a maintainer running this suite by hand is not left waiting half an hour. A quiet
     # connection counts as success after discovery and initial shadow state arrive. A reported
