@@ -558,11 +558,13 @@ async function assertNoCurrentSubscriptions(this: BasementGuardianWorld): Promis
 
 Then('the broker holds no current subscriptions', assertNoCurrentSubscriptions);
 
-function assertObservations(this: BasementGuardianWorld, observation: string): void {
-  assert.equal(this.observations.at(-1), observation);
-}
+Then('the world observes that the plugin "launched"', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, ['launched']);
+});
 
-Then('the world observes that the plugin {string}', assertObservations);
+Then('the world observes that the plugin "shut down"', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, ['launched', 'shut down']);
+});
 
 async function assertStoragePathIsAnEmptyDirectory(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
