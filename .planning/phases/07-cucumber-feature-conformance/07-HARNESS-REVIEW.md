@@ -116,3 +116,29 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 - **036:** World documentation now describes remembered scenario values, including readings and fake APIs. The scenario count and step count are unchanged.
 - **037:** Setup now checks the second fake API's storage path and remembers only that path. The assertion narrows the recalled value before reading the directory; the unchecked API cast is gone. World comments were updated to describe the stored path. The focused scenario passed 5/5 steps; the scenario count and step count are unchanged.
 - **038:** `cleanUp()` documentation now states that it waits for startup and reports startup and release failures after running every release. The scenario count and step count are unchanged.
+
+## Round 2 complete-file correction review
+
+Claude CLI Opus performed an independent read-only review at `fbf6bbaf20e26d6caa3aa3f834cf41aadc530778`. It read all 208 lines of `features/harness/fakes.feature` (blob `1dc46c95555213c61375cdd057e5688f456539b0`), all 541 lines of `features/step_definitions/harness.steps.ts` (blob `68c8c9cdcecee0ec782c29ad51d5a266748afbc3`), and all 827 lines of `features/support/world.ts` (blob `d29d633a0f2d57ade39116253e84de9c7303e39c`), plus the applicable rules. It reported seven candidates. The coordinator checked their locations and rules against the current files. All 13 Round 1 accepted causes have normal-hook repairs:
+
+| ID | Commit | ID | Commit | ID | Commit |
+| --- | --- | --- | --- | --- | --- |
+| 025 | `3d0c08b` | 026 | `ab199dc` | 027 | `8c1e0ca` |
+| 028 | `3c9f837` | 029 | `037fb24` | 030 | `1303fdd` |
+| 031 | `9ae4186` | 033 | `fc389c5` | 034 | `6ad0af5` |
+| 035 | `7b16c80` | 036 | `5682a9c` | 037 | `45a93a2` |
+| 038 | `fbf6bba` | | | | |
+
+The offline full gate at `fbf6bba` passed `TEST_CONCURRENCY=1 npm run check`: static checks, 130/130 scenarios, 1400/1400 steps, and 43 direct coverage pairs. The worktree was clean. The real profile did not execute.
+
+| New ID | Reviewer candidate | Requirement and rule | Observed location | Severity | Triage and cause |
+| --- | --- | --- | --- | --- | --- |
+| CR-07-HARNESS-040 | 1 | FEAT-02; `cucumber/SKILL.md` §Review; `cucumber/rules/world-and-stand-ins.md` §The world | `fbf6bba:features/step_definitions/harness.steps.ts:68-72,356-358` | BLOCKER | **Accepted; open.** The startup failure settles before cleanup starts, so a cleanup implementation that snapshots releases before awaiting startup still passes. Have the scratch World register a release after cleanup begins, then reject startup, and assert the late release ran. This supersedes the now-unneeded 035 catch comment without reopening 035's original comment cause. |
+| CR-07-HARNESS-041 | 2 | FEAT-02; `cucumber/SKILL.md` §Review; `cucumber/rules/steps.md` §Steps | `fbf6bba:features/step_definitions/harness.steps.ts:169-171,498-503` | BLOCKER | **Accepted; open.** The broker close scenario can pass if it never stored a subscription. Check the exact live subscription after setup. The cross-owner close action only calls `disconnectAll()` and supplies no positive check. |
+| CR-07-HARNESS-042 | 3 | FEAT-01; `cucumber/rules/features.md` §Steps | `fbf6bba:features/harness/fakes.feature:66`; `fbf6bba:features/step_definitions/harness.steps.ts:468` | WARNING | **Accepted; open.** The unquoted step text uses uppercase `AWS`, contrary to the lower-case step rule. Change both binding and feature wording. |
+| CR-07-HARNESS-043 | 4 | FEAT-01; `cucumber/rules/features.md` §Steps; `cucumber/SKILL.md` §Review | `fbf6bba:features/harness/fakes.feature:193,195`; `fbf6bba:features/step_definitions/harness.steps.ts:505,509` | WARNING | **Accepted; open.** The lifecycle steps name a plugin though only harness listeners run. Name the listeners in the feature and definitions. |
+| CR-07-HARNESS-044 | 5 | FEAT-01; `cucumber/SKILL.md` §Review | `fbf6bba:features/harness/fakes.feature:200`; `fbf6bba:features/step_definitions/harness.steps.ts:513-527` | WARNING | **Accepted; open.** The storage-path step says the scenario owns the directory but checks only location, emptiness, and uniqueness. Narrow the wording to those observed properties. A cleanup check is outside this scenario's claim. |
+| CR-07-HARNESS-045 | 6 | FEAT-02; `typescript-style/rules/functions.md` §Errors | `fbf6bba:features/step_definitions/harness.steps.ts:345,363` | WARNING | **Accepted for the two changed step catches; open.** Use `catch (error: unknown)`. The three `world.ts` catches cited by the reviewer predate this repair series and were not modified; they are outside the changed-code style scope, so this ID does not include them. |
+| CR-07-HARNESS-046 | 7 | FEAT-02; `cucumber/rules/steps.md` §Module structure | `fbf6bba:features/step_definitions/harness.steps.ts:7-12` | WARNING | **Accepted; open.** The overview lists stand-ins but omits World release and startup-failure steps. Add that owned contract. |
+
+Round 2 opening: **13**. Fixed: **13**. Rejected from opening: **0**. New accepted: **7** (040-046). Reopened: **0**. Closing: **7** (`13 - 13 - 0 + 7 + 0 = 7`). The count fell, no fixed cause reopened, and round four has not completed. The protocol permits one more correction round. The unchanged `world.ts` catch locations are a rejected part of candidate 6 and do not enter the count.
