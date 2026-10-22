@@ -188,10 +188,13 @@ export class RealPumpWorld extends World {
       const contents = await readFile(path, 'utf8');
 
       return createHash('sha256').update(contents).digest('hex');
-    } catch {
-      // Not yet written is not a failure here; a step definition's own bounded wait decides when
-      // the absence has gone on too long.
-      return undefined;
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        // A step definition's bounded wait decides when an absent cache has gone on too long.
+        return undefined;
+      }
+
+      throw error;
     }
   }
 
