@@ -13,7 +13,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Then, When } from '@cucumber/cucumber';
 
-import type { RealPumpWorld } from './realWorld.js';
+import type { RealPumpWorld } from '../support/realWorld.js';
 
 const MILLISECONDS_PER_SECOND = 1_000;
 
