@@ -406,7 +406,7 @@ export class BasementGuardianWorld extends World {
     this.starting = this.launch();
   }
 
-  /** Resolves once the launch attempt has finished, however it finished. */
+  /** Waits for launch to finish and rejects if launch fails. */
   async awaitStart(): Promise<void> {
     await this.starting;
   }

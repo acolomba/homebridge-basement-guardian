@@ -51,3 +51,4 @@ Opening accepted count: **21** (001-004, 006-009, 011-014, 016-024). Rejected ca
 - **016:** Added the approved SPDX line and separate copyright block above the existing World overview. This is a header-only repair; the Cucumber scenario count is unchanged.
 - **017:** The World overview now describes the actual teardown guarantee: every registered release is attempted and failures are reported. It no longer promises that a failed release cannot leak a resource. No executable behavior changed.
 - **018:** Renamed the World release registration method from `own()` to the prescribed `onRelease()`. A caller search found eight calls inside `world.ts` and four in the two harness teardown steps; all were changed together. The startup and release regression scenarios check the behavior.
+- **022:** Corrected `awaitStart()` documentation to say that it rejects when launch fails. The startup failure scenario exercises that path; no executable behavior changed.
