@@ -44,7 +44,7 @@ export interface FakeShadowBroker {
   readonly publishedTopics: readonly string[];
 
   /**
-   * The topics the connection now open subscribed to.
+   * Returns the topics subscribed to by the newest live client.
    *
    * A subscription held by a connection that has already ended proves nothing about the one now
    * open: the plugin reconnects by opening a fresh connection and subscribing again, so a wait that
@@ -54,7 +54,7 @@ export interface FakeShadowBroker {
   currentSubscriptions(): readonly string[];
 
   /**
-   * How many connections the broker is holding open right now.
+   * Counts the connections the broker holds open right now.
    *
    * A leaked connection raises nothing, so a scenario asserting that a shutdown released
    * everything has to ask the broker rather than read the absence of a rejection.
