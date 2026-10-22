@@ -331,6 +331,10 @@ async function shutDown(this: BasementGuardianWorld): Promise<void> {
 When('the api shuts down', shutDown);
 
 function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): void {
+  if (kind !== 'timeout' && kind !== 'interval') {
+    throw new Error(`unknown due timer kind: ${kind}`);
+  }
+
   let now = 0;
   const timers = createFakeTimers({ now: () => now });
   const runSecond = (): void => {
