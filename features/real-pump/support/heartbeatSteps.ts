@@ -1,6 +1,5 @@
 /**
- * @fileoverview Step definitions for observing heartbeats and natural updates against the real
- * Gemini, without ever requiring one to happen.
+ * @fileoverview Steps that wait on the real connection and check for reported failures.
  */
 
 import assert from 'node:assert/strict';
