@@ -56,8 +56,8 @@ Then('the discovered device snapshot has a valid device id', function (this: Rea
 
   const snapshot = this.snapshot(deviceId);
 
-  assert.ok(snapshot !== undefined, `the harness holds no snapshot for ${deviceId}`);
-  assert.strictEqual(snapshot.identity.deviceId, deviceId);
+  assert.ok(snapshot !== undefined, 'the harness holds no discovered snapshot');
+  assert.ok(snapshot.identity.deviceId === deviceId, 'the snapshot device id differs from discovery');
 });
 
 Then('the discovered device snapshot gains shadow-sourced fields within {int} seconds', async function (this: RealPumpWorld, seconds: number) {
