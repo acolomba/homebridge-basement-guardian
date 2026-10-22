@@ -3,7 +3,7 @@ Feature: Real pump discovery
 
   The configured real Gemini is discovered through the vendor account within a bounded wait.
   Its initial REST snapshot has a device id; its live shadow supplies state within another bound.
-  The suite checks structure without asserting any live measurement (REL-09, D-04).
+  The suite checks structure without asserting any live measurement (REL-09).
 
   Scenario: The configured Gemini is discovered within a bounded timeout
     # 30 seconds is long enough for a real Auth0 grant plus one REST inventory round trip, and

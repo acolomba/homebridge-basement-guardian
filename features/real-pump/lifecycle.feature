@@ -3,7 +3,7 @@ Feature: Real pump lifecycle
 
   Against the configured real account, a restart rebuilds the plugin over the same storage.
   The cached Auth0 token file stays unchanged within its renewal margin (AUTH-01).
-  A clean shutdown leaves no unhandled rejection (SYNC-05, REL-09, D-04).
+  A clean shutdown leaves no unhandled rejection (SYNC-05, REL-09).
 
   Scenario: A restart keeps the cached Auth0 token unchanged
     When the harness starts
