@@ -17,5 +17,5 @@ Feature: Real pump lifecycle
   Scenario: A clean shutdown records no unhandled rejection
     When the harness starts
     Then the harness discovers one device within 30 seconds
-    When the harness stops
-    Then the harness reports no unhandled rejection
+    When the harness stops within 5 seconds
+    Then the harness reports no unhandled rejection for 1 second

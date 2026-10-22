@@ -4,6 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { Then, When } from '@cucumber/cucumber';
 
@@ -17,7 +18,7 @@ When('the harness restarts', async function (this: RealPumpWorld) {
   await this.restart();
 });
 
-When('the harness stops', async function (this: RealPumpWorld) {
+When('the harness stops within 5 seconds', { timeout: 5_000 }, async function (this: RealPumpWorld) {
   await this.stop();
 });
 
@@ -33,6 +34,7 @@ Then('the token cache fingerprint matches {string}', async function (this: RealP
   assert.strictEqual(fingerprint, this.recall(name));
 });
 
-Then('the harness reports no unhandled rejection', function (this: RealPumpWorld) {
+Then('the harness reports no unhandled rejection for {int} second', { timeout: 10_000 }, async function (this: RealPumpWorld, seconds: number) {
+  await delay(seconds * MILLISECONDS_PER_SECOND);
   assert.deepStrictEqual(this.unhandledRejections(), []);
 });
