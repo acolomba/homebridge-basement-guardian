@@ -14,7 +14,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 import { Then, When } from '@cucumber/cucumber';
 
-import { until } from './steps.js';
+import { until } from '../../lib/realPumpPolling.js';
 
 import type { RealPumpWorld } from './realWorld.js';
 
