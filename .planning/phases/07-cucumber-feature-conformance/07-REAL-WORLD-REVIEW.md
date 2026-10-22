@@ -100,3 +100,27 @@ post-restart step reads `deviceIds()` after its reset. The production runtime's
 `stop()` is explicitly idempotent. These are not new findings. The public
 `observations()` method has no current step consumer; it predates this batch's
 changes and is left for the Plan 07-13 step review to assess.
+
+## Round 2 complete-file correction review
+
+ID 016 was repaired in normal-hook commit `c0a286c`; the `start()` JSDoc now
+describes the current runtime. `npm run build:test` and the real-profile dry
+run exited 0 at six skipped scenarios and 35 skipped steps, with no undefined
+or ambiguous status. A new read-only Claude Opus 5.5 session independently
+read all of the current World, contiguous lines 1-364, and the applicable
+rules at clean HEAD `c0a286c6684143368f26e232b3e321af441ea4ea`, blob
+`50616b5d8ae9b6a9b69823d07eda45e903be8ded`. The coordinator confirmed
+the object identity. The reviewer confirmed 016 fixed and not reopened.
+
+The reviewer raised one low-strength new candidate. It receives a stable ID
+and evidence-backed rejection below; it is not an open defect:
+
+| ID | Severity | Observed location | Rule | Disposition and reason |
+| --- | --- | --- | --- | --- |
+| CR-07-REAL_WORLD-017 | WARNING | `c0a286c:features/real-pump/support/realWorld.ts:138` | `typescript-style/rules/comments.md`, Comments | Rejected. `deviceIds()` returns the current runtime's discovered IDs in discovery order. The comment says they are named by trustworthy inventory responses, not that it retains every ID ever named. `restart()` starts a new runtime and `onDeviceRemoved` removes IDs that are no longer current. The reviewer explicitly noted this current-state reading is valid; no misleading promise remains. |
+
+Opening ID: 016 (1). Fixed ID: 016 (1). New accepted IDs: none. Reopened IDs:
+none. Closing IDs: **none (0)**. Equation: `0 = 1 - 1 - 0 + 0 + 0`.
+ID 017 is a rejected new candidate and was never in the open count. The
+reviewer found no BLOCKER. Plan 07-12 closes with zero open IDs after two
+correction rounds; neither a no-progress nor fourth-round STOP applies.
