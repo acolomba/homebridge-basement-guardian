@@ -112,3 +112,4 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 - **031:** The credential step now names its complete response, including temporary AWS credentials, matching the existing whole-body assertion. The scenario count and step count are unchanged.
 - **033:** The release-failure scenario now registers and runs releases on a scratch World, leaving the executing World's listener for its `After` hook. The focused scenario passed 4/4 steps; the scenario count and step count are unchanged.
 - **034:** The startup-failure scratch World now overrides `homebridge()` in a small subclass instead of replacing the method after construction. The scenario count and step count are unchanged.
+- **035:** A comment at the expected startup rejection explains why the step consumes it before cleanup reports it. The scenario count and step count are unchanged.

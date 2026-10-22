@@ -353,6 +353,7 @@ When('startup fails after a scenario release is registered', async function (thi
     return Promise.resolve();
   });
   scratch.startPlugin();
+  // Cleanup reports this expected startup rejection together with any release failures.
   await scratch.awaitStart().catch(() => undefined);
 
   try {
