@@ -31,7 +31,7 @@ When('the harness remembers the token cache fingerprint as {string} within {int}
 Then('the token cache fingerprint matches {string}', async function (this: RealPumpWorld, name: string) {
   const fingerprint = await this.tokenCacheFingerprint();
 
-  assert.strictEqual(fingerprint, this.recall(name));
+  assert.ok(fingerprint === this.recall(name), 'the token cache fingerprint changed');
 });
 
 Then('the harness reports no unhandled rejection for {int} second', { timeout: 10_000 }, async function (this: RealPumpWorld, seconds: number) {
