@@ -239,7 +239,6 @@ export class RealPumpWorld extends World {
 
   /** Stops the runtime this world built and removes its scratch directory. Runs from the `After` hook. */
   async cleanUp(): Promise<void> {
-    process.off('unhandledRejection', this.recordRejection);
     const failures: Error[] = [];
 
     try {
@@ -254,6 +253,12 @@ export class RealPumpWorld extends World {
       } catch (error: unknown) {
         failures.push(new Error('real-pump scratch directory removal failed'));
       }
+    }
+
+    process.off('unhandledRejection', this.recordRejection);
+
+    if (this.rejectedReasons.length > 0) {
+      failures.push(new Error('real-pump scenario observed an unhandled rejection'));
     }
 
     if (failures.length > 0) {
