@@ -211,7 +211,7 @@ export class BasementGuardianWorld extends World {
 
   private readonly watchedDeviceIds = new Set<string>();
 
-  // Published values a step read, so a later step can assert the same value came back.
+  // Scenario values a step saves for a later step, including readings and fake API instances.
   private readonly remembered = new Map<string, unknown>();
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
@@ -512,17 +512,16 @@ export class BasementGuardianWorld extends World {
   }
 
   /**
-   * Remembers a published value a step read, under a name a later step names it by.
+   * Remembers a scenario value under a name a later step uses.
    *
-   * A record assertion across a restart compares what the plugin published before with what it
-   * published after, rather than recomputing the expected value: a scenario that recomputed one
-   * would assert its own arithmetic instead of the record that came back.
+   * A record assertion across a restart can compare what the plugin published before with what it
+   * published after. Harness steps also use this map to retain a fake API created during setup.
    */
   remember(name: string, value: unknown): void {
     this.remembered.set(name, value);
   }
 
-  /** The value a step read under that name earlier in the scenario. */
+  /** The scenario value a step saved under that name. */
   recall(name: string): unknown {
     if (!this.remembered.has(name)) {
       throw new Error(`no step has read ${name} yet`);
