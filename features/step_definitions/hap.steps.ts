@@ -382,6 +382,8 @@ Then('the fake hap answers the real status for each error form', async () => {
   const upperNumericMessageStatus = on.statusCode;
   service.updateCharacteristic(HAP.Characteristic.On, new Error('not a status'));
   const plainErrorStatus = on.statusCode;
+  // Seed a different status so each fallback must store its own result.
+  on.statusCode = -70408;
   on.onSet(() => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- HAP accepts bare numeric handler statuses
     throw 0;
@@ -400,6 +402,7 @@ Then('the fake hap answers the real status for each error form', async () => {
     (status: unknown) => status,
   );
   const storedKnownThrownNumberStatus = on.statusCode;
+  on.statusCode = -70408;
   on.onSet(() => {
     throw new Error('-70412');
   });
@@ -408,6 +411,7 @@ Then('the fake hap answers the real status for each error form', async () => {
     (status: unknown) => status,
   );
   const storedThrownNumericMessageStatus = on.statusCode;
+  on.statusCode = -70408;
   on.onSet(() => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- HAP accepts bare numeric handler statuses
     throw -70413;
