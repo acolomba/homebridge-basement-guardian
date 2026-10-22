@@ -152,3 +152,16 @@ Round 2 opening: **13**. Fixed: **13**. Rejected from opening: **0**. New accept
 - **044:** The storage-path step now claims only the distinct, empty, temporary directories that its assertions verify. The scenario count and step count are unchanged.
 - **045:** The two changed harness catch bindings now explicitly type the caught value as `unknown`. The unchanged World catches remain outside this cause. The scenario count and step count are unchanged.
 - **046:** The step module overview now names its World release and failed-startup cleanup steps. The scenario count and step count are unchanged.
+
+## Round 3 complete-file correction review
+
+Claude CLI Opus performed an independent read-only review at `8db3a376add2a3b583e49f6f10814460cf745c56`. It read all 208 lines of `features/harness/fakes.feature` (blob `c9245c20505c852f1b7bcf31130d6c07c0b9b11d`), all 551 lines of `features/step_definitions/harness.steps.ts` (blob `e8bcfd607f94a03e84359d31f6f3f454399ddff3`), and all 827 lines of `features/support/world.ts` (blob `d29d633a0f2d57ade39116253e84de9c7303e39c`), plus the applicable rules. It reported zero new causes and zero reopened causes. All seven accepted Round 2 causes have normal-hook repairs:
+
+| ID | Commit | ID | Commit | ID | Commit | ID | Commit |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 040 | `1551bde` | 041 | `691c43d` | 042 | `99bba8c` | 043 | `eea995f` |
+| 044 | `e8ece33` | 045 | `8bd0b1f` | 046 | `8db3a37` | | |
+
+The offline full gate at `8db3a37` passed `TEST_CONCURRENCY=1 npm run check`: static checks, 130/130 scenarios, 1400/1400 steps, and 43 direct coverage pairs. The worktree was clean. The real profile did not execute. The reviewer noted three untyped catches in `world.ts` but did not count them because they appeared unchanged. `git show 26f2d7d:features/support/world.ts` confirms those same catches at lines 554, 563, and 810 before the Round 1 repair series; subsequent World changes touched comments only. The unchanged-code style ruling applies, so no additional finding is opened.
+
+Round 3 opening: **7** (040-046). Fixed: **7**. Rejected from opening: **0**. New accepted: **0**. Reopened: **0**. Closing: **0** (`7 - 7 - 0 + 0 + 0 = 0`). Plan 07-10 HARNESS is clean at the reviewed source revision. No further correction round is needed.
