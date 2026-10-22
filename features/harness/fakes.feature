@@ -178,13 +178,22 @@ Feature: Harness fakes
   Scenario: The fake accessory removes one service
     Then the accessory removes only the service it is given
 
-  Scenario: The fake homebridge api answers the surface this version needs
+  Scenario: The fake homebridge api delivers lifecycle events in order
     Given the fake homebridge api
     Given a listener on each lifecycle event
     When the api finishes launching
     Then the world observes that the plugin "launched"
     When the api shuts down
     Then the world observes that the plugin "shut down"
+
+  Scenario: The fake homebridge api gives the scenario temporary storage
+    Given the fake homebridge api
     Then the storage path is an empty directory the scenario owns
+
+  Scenario: The fake homebridge api exposes its hap namespace
+    Given the fake homebridge api
     Then the api exposes the hap namespace
+
+  Scenario: The fake homebridge api constructs an accessory with its supplied identity
+    Given the fake homebridge api
     Then the accessory carries the identity the plugin gives it
