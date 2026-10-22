@@ -110,3 +110,4 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 - **029:** The Auth0 scenario title now names the one-shot failure and recovery it proves. The scenario count and step count are unchanged.
 - **030:** The feature description now names timer behavior and scenario resource release while retaining the local fake-cloud boundary. The scenario count and step count are unchanged.
 - **031:** The credential step now names its complete response, including temporary AWS credentials, matching the existing whole-body assertion. The scenario count and step count are unchanged.
+- **033:** The release-failure scenario now registers and runs releases on a scratch World, leaving the executing World's listener for its `After` hook. The focused scenario passed 4/4 steps; the scenario count and step count are unchanged.

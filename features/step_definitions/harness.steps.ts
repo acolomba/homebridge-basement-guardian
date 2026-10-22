@@ -317,21 +317,23 @@ When('the first due timer cancels the second due {word}', function (this: Baseme
 });
 
 When('scenario releases fail before another release runs', async function (this: BasementGuardianWorld): Promise<void> {
-  this.onRelease(() => {
+  const scratch = new BasementGuardianWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
+
+  scratch.onRelease(() => {
     this.observations.push('later release');
     return Promise.resolve();
   });
-  this.onRelease(() => {
+  scratch.onRelease(() => {
     this.observations.push('second failed release');
     return Promise.reject(new Error('second release failed'));
   });
-  this.onRelease(() => {
+  scratch.onRelease(() => {
     this.observations.push('first failed release');
     return Promise.reject(new Error('first release failed'));
   });
 
   try {
-    await this.cleanUp();
+    await scratch.cleanUp();
     this.observations.push('no failure');
   } catch (error) {
     this.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
