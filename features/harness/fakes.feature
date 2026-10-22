@@ -113,6 +113,10 @@ Feature: Harness fakes
     When scenario releases fail before another release runs
     Then the world reports both failures after running every release
 
+  Scenario: A failed startup still releases scenario resources
+    When startup fails after a scenario release is registered
+    Then the world runs the release and reports the startup failure
+
   Scenario: The fake hap namespace carries the standard identifiers
     Then the hap stand-in carries the standard service and characteristic identifiers
 

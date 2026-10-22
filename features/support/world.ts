@@ -547,10 +547,15 @@ export class BasementGuardianWorld extends World {
 
   /** Runs every registered teardown step in reverse order. */
   async cleanUp(): Promise<void> {
-    await this.starting;
+    const failures: unknown[] = [];
+
+    try {
+      await this.starting;
+    } catch (error) {
+      failures.push(error);
+    }
 
     const cleanups = this.cleanups.splice(0).reverse();
-    const failures: unknown[] = [];
 
     for (const cleanup of cleanups) {
       try {

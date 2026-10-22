@@ -20,11 +20,10 @@ import { Given, Then, When } from '@cucumber/cucumber';
 
 import { shadowTopic } from '../lib/shadowBroker.js';
 import { createFakeTimers } from '../lib/timers.js';
-import { SUBSCRIBER_CLIENT_ID } from '../support/world.js';
+import { BasementGuardianWorld, SUBSCRIBER_CLIENT_ID } from '../support/world.js';
 
 import type { ShadowTopicLeaf } from '../lib/shadowBroker.js';
 import type { AwsCredentialsResponse } from '../lib/vendorRestApi.js';
-import type { BasementGuardianWorld } from '../support/world.js';
 
 const REQUEST_DEADLINE_MS = 2000;
 const AUTHORIZATION_HEADER = 'Bearer fake-id-token';
@@ -376,6 +375,29 @@ Then('the world reports both failures after running every release', function (th
     'later release',
     'Error: first release failed, Error: second release failed',
   ]);
+});
+
+When('startup fails after a scenario release is registered', async function (this: BasementGuardianWorld): Promise<void> {
+  const scratch = new BasementGuardianWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
+
+  scratch.homebridge = () => Promise.reject(new Error('startup failed'));
+  scratch.own(() => {
+    this.observations.push('release ran');
+    return Promise.resolve();
+  });
+  scratch.startPlugin();
+  await scratch.awaitStart().catch(() => undefined);
+
+  try {
+    await scratch.cleanUp();
+    this.observations.push('no failure');
+  } catch (error) {
+    this.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
+  }
+});
+
+Then('the world runs the release and reports the startup failure', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, ['release ran', 'Error: startup failed']);
 });
 
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
