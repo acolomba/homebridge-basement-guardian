@@ -5,8 +5,8 @@
  */
 
 /**
- * @fileoverview Step definitions for restarting and shutting down the harness against the real
- * Gemini.
+ * @fileoverview Real-pump steps for starting, restarting, and stopping the harness,
+ * checking token-cache reuse, and checking for unhandled rejections.
  */
 
 import assert from 'node:assert/strict';
