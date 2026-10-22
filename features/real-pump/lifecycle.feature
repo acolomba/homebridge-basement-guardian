@@ -1,10 +1,9 @@
 @real @read-only
 Feature: Real pump lifecycle
 
-  A Homebridge restart rebuilds the plugin over the storage directory the previous run wrote to.
-  The cached Auth0 token file remains unchanged through that restart while the first grant is
-  within its renewal margin (AUTH-01). A clean shutdown leaves no
-  unhandled rejection behind (SYNC-05, REL-09, D-04).
+  Against the configured real account, a restart rebuilds the plugin over the same storage.
+  The cached Auth0 token file stays unchanged within its renewal margin (AUTH-01).
+  A clean shutdown leaves no unhandled rejection (SYNC-05, REL-09, D-04).
 
   Scenario: A restart keeps the cached Auth0 token unchanged
     When the harness starts

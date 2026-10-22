@@ -1,11 +1,9 @@
 @real @read-only
 Feature: Real pump discovery
 
-  The one real Gemini on the configured account is discovered within a bounded timeout, its
-  initial REST snapshot carries a valid deviceId, and its snapshot gains shadow-sourced fields
-  within its own bounded timeout once the first shadow "get" response arrives. No scenario asserts
-  a specific water level, pump state, or other live value: only that state of a valid shape
-  arrives (REL-09, D-04).
+  The configured real Gemini is discovered through the vendor account within a bounded wait.
+  Its initial REST snapshot has a device id; its live shadow supplies state within another bound.
+  The suite checks structure without asserting any live measurement (REL-09, D-04).
 
   Scenario: The configured Gemini is discovered within a bounded timeout
     # 30 seconds is long enough for a real Auth0 grant plus one REST inventory round trip, and

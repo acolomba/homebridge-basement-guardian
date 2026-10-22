@@ -1,11 +1,9 @@
 @real @read-only
 Feature: Real pump heartbeats
 
-  The configured Gemini's live path is observed across one 960-second interval (README.md).
-  A quiet connection is acceptable after the initial shadow state arrives. The run fails if
-  discovery or initial shadow observation misses its bound, or if the connection logs a
-  failure or the process reports an unhandled rejection. No device status is changed to
-  make this suite pass (REL-09, D-04).
+  The suite observes the configured real Gemini across one 960-second live interval.
+  It checks bounded discovery and initial shadow state, then reported failures and rejections.
+  It accepts a quiet connection and changes no device status (REL-09, D-04).
 
   Scenario: The connection stays healthy across one heartbeat interval
     # 960 seconds (16 minutes) is long enough to plausibly span one 898-second heartbeat, and short
