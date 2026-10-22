@@ -63,12 +63,12 @@ degraded-status check are outside this phase.
 
 ## Current combined-tree evidence
 
-At clean executable-input commit `a7545ab` on Node `v26.12.1`, the command
+At clean executable-input commit `3a3fe19` on Node `v26.12.1`, the command
 `TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
 unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
 and 43 isolated direct source/test coverage pairs passed. The Cucumber part
-reported 37.238 seconds. `git status --porcelain=v1 --untracked-files=all`
-was empty before this planning-only edit, and `git diff --exit-code a7545ab
+reported 37.332 seconds. `git status --porcelain=v1 --untracked-files=all`
+was empty before this planning-only edit, and `git diff --exit-code 3a3fe19
 -- . ':(exclude,glob).planning/**/*.md'` exited 0. This evidence is reusable
 only while executable inputs remain unchanged; any later source edit needs a
 fresh full gate.
@@ -80,8 +80,8 @@ exited 0 with exactly six skipped scenarios and 35 skipped steps. It reported
 zero executing time and no undefined or ambiguous status. No real-profile
 step body or vendor request ran.
 
-The forward open set at this draft is `CR-07-HAP-048`, `CR-07-HAP-050`,
-and `CR-07-HAP-051`. The reviewed Plan 07-18 addendum
+The forward open set at this draft is `CR-07-HAP-050` and
+`CR-07-HAP-051`. The reviewed Plan 07-18 addendum
 closed `CR-07-REAL_STEPS-017` forward after the historical Round 2 STOP.
 The reviewed Plan 07-19 addendum closed `CR-07-OFFLINE_LIBS-016` forward
 after its historical Round 3 STOP; its complete-file review found 017/018.
@@ -98,8 +98,9 @@ post-review source fix at `a7545ab` passed the current full check but was
 unreviewed when that plan stopped.
 Plan 07-25 separately reviewed the complete corrected module and closed
 HAP 032 forward with no new finding. The original and Plan 07-24 STOPs
-remain recorded. No clean phase sign-off is claimed while 048/050/051
-remain open.
+remain recorded. Plan 07-26 renamed four HAP identifier parameters and
+closed HAP 048 forward after an independent complete-file review. No
+clean phase sign-off is claimed while 050/051 remain open.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
 FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
 open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and
