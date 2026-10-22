@@ -136,7 +136,6 @@ export class RealPumpWorld extends World {
 
   constructor(readonly options: IWorldOptions) {
     super(options);
-    process.on('unhandledRejection', this.recordRejection);
   }
 
   /** Every deviceId a trustworthy inventory response has named so far, in discovery order. */
@@ -234,6 +233,7 @@ export class RealPumpWorld extends World {
 
     this.logger().registerSecret(this.credentialPassword);
 
+    process.on('unhandledRejection', this.recordRejection);
     this.accountRuntime = this.createRuntime();
   }
 
