@@ -457,7 +457,7 @@ async function assertNoUnhandledRejection(this: BasementGuardianWorld): Promise<
   assert.deepStrictEqual(this.rejections, []);
 }
 
-Then('the fake service raises no unhandled rejection', assertNoUnhandledRejection);
+Then('the harness observes no unhandled rejection', assertNoUnhandledRejection);
 
 function assertResponseError(this: BasementGuardianWorld, error: string): void {
   assert.deepStrictEqual(this.response().body, {

@@ -33,7 +33,7 @@ Feature: Harness fakes
     When the harness sends malformed grant json
     Then the response carries status 400
     Then the tenant records the malformed grant request
-    Then the fake service raises no unhandled rejection
+    Then the harness observes no unhandled rejection
 
   Scenario: The fake service answers the device list
     Given the fake rest service
@@ -75,7 +75,7 @@ Feature: Harness fakes
     When the harness sends malformed command json
     Then the response carries status 400
     Then the fake service records no accepted command
-    Then the fake service raises no unhandled rejection
+    Then the harness observes no unhandled rejection
 
   Scenario: The fake broker delivers a reported patch
     Given the fake shadow broker
