@@ -75,3 +75,28 @@ passed focused pre-commit, `fallow audit --base HEAD`, and normal commit hooks.
 The layout candidate 010 stays rejected for the profile-isolation reason in
 Round 0. An independent current-file correction review will determine whether
 any accepted cause remains or a new cause is open.
+
+## Round 1 complete-file correction review
+
+A fresh read-only Claude Opus 5.5 session read all of
+`features/real-pump/support/realWorld.ts`, contiguous lines 1-364, at clean
+HEAD `0af8caeb01ce3b596ced87ca65a9af1c152dafc6`, blob
+`4f77efca3493f98c62b2c419b6e77c89d7ae5299`, and all applicable project
+rules. The coordinator confirmed the committed blob. The reviewer grouped the
+Round 0 fixes into eight themes; the coordinator reconciled all 14 accepted
+IDs against the current file. None reopened.
+
+Opening IDs: 001-009 and 011-015 (14). Fixed IDs: all 14. Rejected IDs in this
+round: none. New ID: 016 (1). Reopened IDs: none. Closing ID: 016 (1).
+Equation: `1 = 14 - 14 - 0 + 1 + 0`. The count fell, so correction may continue.
+
+| ID | Severity | Observed location | Rule | Disposition and repair |
+| --- | --- | --- | --- | --- |
+| CR-07-REAL_WORLD-016 | WARNING | `0af8cae:features/real-pump/support/realWorld.ts:201` | `typescript-style/rules/comments.md`, Comments; `rules/naming-and-docs.md`, Comments and documentation | Open. The `start()` comment says its runtime was built in Before, but restart builds another current runtime. Say that `start()` starts the world's current account runtime. This is distinct from 008, which concerned the `initialize()` and `createRuntime()` comments. |
+
+The reviewer's unconfirmed restart-observation hypothesis was checked locally:
+none of the current real step modules calls `observations()`, and the
+post-restart step reads `deviceIds()` after its reset. The production runtime's
+`stop()` is explicitly idempotent. These are not new findings. The public
+`observations()` method has no current step consumer; it predates this batch's
+changes and is left for the Plan 07-13 step review to assess.
