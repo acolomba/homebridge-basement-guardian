@@ -2,11 +2,11 @@
 Feature: Restarting and shutting down against the real Gemini
 
   A Homebridge restart rebuilds the plugin over the storage directory the previous run wrote to.
-  The cached Auth0 token survives that rebuild whenever the first grant is still inside its renewal
-  margin, so a restart costs no fresh vendor authentication (AUTH-01). A clean shutdown leaves no
+  The cached Auth0 token file remains unchanged through that restart while the first grant is
+  within its renewal margin (AUTH-01). A clean shutdown leaves no
   unhandled rejection behind (SYNC-05, REL-09, D-04).
 
-  Scenario: A restart reuses the cached Auth0 token rather than granting a fresh one
+  Scenario: A restart keeps the cached Auth0 token unchanged
     When the harness starts
     Then the harness discovers one device within 30 seconds
     When the harness remembers the token cache fingerprint as "before the restart" within 10 seconds
