@@ -1,8 +1,8 @@
 ---
 phase: "07"
 slug: "cucumber-feature-conformance"
-status: draft
-nyquist_compliant: false
+status: validated
+nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-19"
 ---
@@ -53,13 +53,14 @@ degraded-status check are outside this phase.
 
 ## Validation Sign-Off
 
-- [ ] Every planned task has an exact automated verify command.
-- [ ] No three consecutive tasks lack automated verification.
-- [ ] Every combined wave has a passing full gate, including any later addendum.
+- [x] Every planned task has an exact automated verify command.
+- [x] No three consecutive tasks lack automated verification.
+- [x] Every combined wave has a passing full gate, including any later addendum.
 - [x] Real-profile checks remain dry-run only, with status inspection.
-- [ ] `nyquist_compliant: true` is set after the plan and evidence pass review.
+- [x] `nyquist_compliant: true` is set after the plan and evidence pass review.
 
-**Approval:** pending
+**Approval:** Phase 7 automated validation passed; no Phase 7 manual-only
+check was required.
 
 ## Current combined-tree evidence
 
@@ -113,7 +114,14 @@ and 055 forward with equation `2-2-0+0+0=0`. Candidate 056 concerned
 unchanged code and was rejected under the TypeScript style skill's
 review scope. The historical STOPs remain visible; Plan 07-14 must
 still reconcile the final phase evidence before sign-off.
-Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
-FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
-open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and
-unresolved.
+Historical STOP sets are indexed separately in `07-FINDINGS.md`. The
+forward-open set is empty. The 12 owner report blobs, 37 original paths,
+and 12 correction equations reconcile; Plan 07-30's separately bounded
+review closed HAP 054/055. The phase-end `TEST_CONCURRENCY=1 npm run
+check` at the same clean executable-input commit `7616dc2` exited 0
+with 130/130 offline scenarios, 1400/1400 steps, and 43 isolated direct
+coverage pairs. Default usage had zero unused definitions. The real
+dry run selected six scenarios and 35 steps, all skipped. No vendor
+step ran. FEAT-01 and FEAT-02 satisfy the five concrete Phase 7 roadmap
+criteria on this evidence. Their spec-less probes stay
+unclassified/unresolved and are not claimed as proof or backstops.

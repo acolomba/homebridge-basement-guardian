@@ -630,3 +630,59 @@ The [Cucumber.js 13.2.1 dry-run documentation](https://github.com/cucumber/cucum
 states that hooks and step bodies do not run. It also states that undefined
 and ambiguous steps do not force a failing process status. This ledger
 therefore checks the real summary text as well as exit 0.
+
+## Phase-end reconciliation
+
+The combined-wave gate records are retained in their plan summaries.
+Each cited record names its check command, exit, Node version, and
+source revision; the final tree is checked again below.
+
+| Waves | Passing gate records, in wave order |
+| --- | --- |
+| 1–5 | `07-01-SUMMARY.md`, `07-04-SUMMARY.md`, `07-15-SUMMARY.md`, `07-16-SUMMARY.md`, `07-05-SUMMARY.md` |
+| 6–10 | `07-08-SUMMARY.md`, `07-17-SUMMARY.md`, `07-09-SUMMARY.md`, `07-10-SUMMARY.md`, `07-12-SUMMARY.md` |
+| 11–15 | `07-13-SUMMARY.md`, `07-19-SUMMARY.md`, `07-20-SUMMARY.md`, `07-21-SUMMARY.md`, `07-22-SUMMARY.md` |
+| 16–20 | `07-23-SUMMARY.md`, `07-24-SUMMARY.md`, `07-25-SUMMARY.md`, `07-26-SUMMARY.md`, `07-27-SUMMARY.md` |
+| 21–23 | `07-28-SUMMARY.md`, `07-29-SUMMARY.md`, `07-30-SUMMARY.md` |
+| 24 | This phase-end gate and `07-14-SUMMARY.md` |
+
+At source commit `7616dc2dc5c763ba30c9ea0e2419a15c595228e0`, the
+original inventory has 37 unique paths: 15 feature files and 22
+TypeScript files. All 12 original owner reports are committed, and their
+current Git blobs match the report index above. Every original path's
+starting blob matches commit `213d9af`; the two new library paths and
+three real-step moves are recorded separately. Every stable ID in those
+12 reports appears in this ledger. The 12 owner correction rows above
+recompute without an arithmetic error. Historical STOPs stay visible;
+all later accepted findings are fixed forward or closed by an explicit
+maintainer ruling. The current forward-open set is empty.
+
+The default scenario count rose from 104 to 130. The sole scenario
+count change in the default feature files is
+`features/harness/fakes.feature`, from 15 to 41 scenarios. Its 26 added
+offline stand-in contract cases are recorded in the HARNESS and HAP
+reviews and addenda. Other default feature files kept their scenario
+counts while repairs expanded steps and assertions. The executed step
+count rose from 1,156 to 1,400; Gherkin edits, the 26 new scenarios,
+and repeated Background steps account for the change. Owner reports
+record the individual changes. In the real profile, Plan 07-11 removed
+one unprovable optional scenario and added a shadow observation step;
+the dry-run selection changed from seven scenarios/41 steps to six/35.
+
+The phase-end combined-tree gate ran after Plan 07-30 on Node
+`v26.12.1`. `TEST_CONCURRENCY=1 npm run check` exited 0 at clean
+executable-input commit `7616dc2`: static checks, test build, unpaired
+tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
+and all 43 isolated direct coverage pairs passed. Cucumber reported
+37.498 seconds. `./node_modules/.bin/cucumber-js --dry-run --format
+usage` exited 0 and contained no `UNUSED`, `UNDEFINED`, or `AMBIGUOUS`
+marker. `./node_modules/.bin/cucumber-js --profile real --dry-run
+--format summary` exited 0 with six skipped scenarios and 35 skipped
+steps, no undefined or ambiguous status, and zero executing time.
+No real-profile step body or vendor request ran.
+
+`git diff --exit-code 7616dc2 -- .
+':(exclude,glob).planning/**/*.md'` exited 0 at the phase gate.
+There was no untracked executable input. Later planning-only records
+reuse this gate only while those exact executable inputs remain
+unchanged. Node 26 evidence makes no Node 22 or 24 compatibility claim.
