@@ -667,10 +667,10 @@ function accessoryInformationOf(accessory: FakeAccessory): {
   const service = accessory.getService(HAP.Service.AccessoryInformation);
 
   return {
-    manufacturer: service?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value,
-    model: service?.getCharacteristic(HAP.Characteristic.Model)?.value,
-    serialNumber: service?.getCharacteristic(HAP.Characteristic.SerialNumber)?.value,
-    firmwareRevision: service?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value,
+    manufacturer: service?.getCharacteristic(HAP.Characteristic.Manufacturer).value,
+    model: service?.getCharacteristic(HAP.Characteristic.Model).value,
+    serialNumber: service?.getCharacteristic(HAP.Characteristic.SerialNumber).value,
+    firmwareRevision: service?.getCharacteristic(HAP.Characteristic.FirmwareRevision).value,
   };
 }
 
@@ -713,7 +713,7 @@ function movedSince(before: ReadonlyMap<string, unknown>, accessory: FakeAccesso
 // looking at (D-10).
 async function statusActiveReadOf(accessory: FakeAccessory, displayName: string): Promise<unknown> {
   try {
-    return await serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.StatusActive)?.handleGetRequest();
+    return await serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.StatusActive).handleGetRequest();
   } catch (thrown: unknown) {
     return `refused ${String(thrown)}`;
   }
@@ -777,10 +777,6 @@ function refuseTheCredentials(accessory: FakeAccessory, basementGuardianAccessor
 // The `On` characteristic of a published Switch, which is where a controller write enters.
 function onCharacteristicOf(accessory: FakeAccessory, displayName: string): FakeHapCharacteristic {
   const characteristic = serviceOf(accessory, displayName).getCharacteristic(HAP.Characteristic.On);
-
-  if (characteristic === undefined) {
-    throw new Error(`the ${displayName} service carries no On characteristic`);
-  }
 
   return characteristic;
 }
@@ -1102,7 +1098,7 @@ test('reports degraded services without claiming refreshed metadata stayed uncha
   const basementGuardianAccessory = accessoryWith(accessory, { registry: registryWith({ kind: 'implemented', family: geminiFamily }), log });
   basementGuardianAccessory.update({ ...buildSnapshot({ data: GEMINI_TELEMETRY }), metadata: { mcu_firmware_version: '1.0' } }, 'poll');
   const accessoryInformation = accessory.getService(HAP.Service.AccessoryInformation);
-  const before = accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value;
+  const before = accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision).value;
 
   // act
   basementGuardianAccessory.update(
@@ -1112,7 +1108,7 @@ test('reports degraded services without claiming refreshed metadata stayed uncha
 
   // assert
   assert.deepStrictEqual(
-    { before, after: accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value },
+    { before, after: accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision).value },
     { before: '1.0', after: '2.0' },
   );
   assert.deepStrictEqual(warnings, [
@@ -1224,10 +1220,10 @@ test('refreshes AccessoryInformation from the decoded metadata', () => {
   // assert
   assert.deepStrictEqual(
     {
-      manufacturer: accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer)?.value,
-      model: accessoryInformation?.getCharacteristic(HAP.Characteristic.Model)?.value,
-      serialNumber: accessoryInformation?.getCharacteristic(HAP.Characteristic.SerialNumber)?.value,
-      firmwareRevision: accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value,
+      manufacturer: accessoryInformation?.getCharacteristic(HAP.Characteristic.Manufacturer).value,
+      model: accessoryInformation?.getCharacteristic(HAP.Characteristic.Model).value,
+      serialNumber: accessoryInformation?.getCharacteristic(HAP.Characteristic.SerialNumber).value,
+      firmwareRevision: accessoryInformation?.getCharacteristic(HAP.Characteristic.FirmwareRevision).value,
     },
     { manufacturer: 'Wayne', model: 'Gemini', serialNumber: 'serial-1', firmwareRevision: '1.2.3' },
   );
@@ -1247,7 +1243,7 @@ for (const { label, decoded } of [
     basementGuardianAccessory.update(buildSnapshot(), 'poll');
 
     // assert
-    assert.strictEqual(accessory.getService(HAP.Service.AccessoryInformation)?.getCharacteristic(HAP.Characteristic.FirmwareRevision)?.value, 'unknown');
+    assert.strictEqual(accessory.getService(HAP.Service.AccessoryInformation)?.getCharacteristic(HAP.Characteristic.FirmwareRevision).value, 'unknown');
   });
 }
 

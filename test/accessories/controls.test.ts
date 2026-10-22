@@ -127,10 +127,6 @@ function switchService(): FakeHapService {
 function onCharacteristic(service: FakeHapService): FakeHapCharacteristic {
   const characteristic = service.getCharacteristic(HAP.Characteristic.On);
 
-  if (characteristic === undefined) {
-    throw new Error('the Switch stand-in carries no On characteristic');
-  }
-
   return characteristic;
 }
 

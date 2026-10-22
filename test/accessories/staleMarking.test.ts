@@ -178,10 +178,6 @@ function recordingTimers(deferrals: Deferral[]): Timers {
 async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
   const on = service.getCharacteristic(HAP.Characteristic.On);
 
-  if (on === undefined) {
-    throw new Error('the restored control carries no On characteristic');
-  }
-
   try {
     await on.handleSetRequest(true);
 
@@ -216,12 +212,12 @@ async function readOf(service: FakeHapService, characteristicClass: FakeCharacte
   let threw: unknown = undefined;
 
   try {
-    await held?.handleGetRequest();
+    await held.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
 
-  return { value: held?.value, threw };
+  return { value: held.value, threw };
 }
 
 describe('markRestoredServicesStale', () => {
@@ -241,10 +237,10 @@ describe('markRestoredServicesStale', () => {
     assert.deepStrictEqual(
       {
         result,
-        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
-        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel)?.value,
+        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
+        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel).value,
       },
       { result: { reached: 1, failed: 1 }, flood: true, battery: false, leakDetected: 1, batteryLevel: 80 },
     );
@@ -276,8 +272,8 @@ describe('markRestoredServicesStale', () => {
     // assert
     assert.deepStrictEqual(
       {
-        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
+        flood: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+        battery: battery.getCharacteristic(HAP.Characteristic.StatusActive).value,
       },
       { flood: false, battery: false },
     );
@@ -293,7 +289,7 @@ describe('markRestoredServicesStale', () => {
 
     // assert
     assert.deepStrictEqual(
-      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: control.getCharacteristic(HAP.Characteristic.On)?.value },
+      { marked, carriesTrust: control.testCharacteristic(HAP.Characteristic.StatusActive), on: control.getCharacteristic(HAP.Characteristic.On).value },
       { marked: 0, carriesTrust: false, on: true },
     );
   });
@@ -310,8 +306,8 @@ describe('markRestoredServicesStale', () => {
     // assert
     assert.deepStrictEqual(
       {
-        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
-        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel)?.value,
+        leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
+        batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel).value,
       },
       { leakDetected: HAP.Characteristic.LeakDetected.LEAK_DETECTED, batteryLevel: 80 },
     );
@@ -326,7 +322,7 @@ describe('markRestoredServicesStale', () => {
     const marked = markStale(accessory);
 
     // assert
-    assert.deepStrictEqual({ marked, statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value }, { marked: 1, statusActive: false });
+    assert.deepStrictEqual({ marked, statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive).value }, { marked: 1, statusActive: false });
   });
 
   test('marks nothing on an accessory the cache restored with no services at all', () => {
@@ -502,7 +498,7 @@ describe('refuseRestoredControls', () => {
       {
         result,
         laterPress: await pressOutcomeOf(later),
-        laterOn: later.getCharacteristic(HAP.Characteristic.On)?.value,
+        laterOn: later.getCharacteristic(HAP.Characteristic.On).value,
       },
       { result: { reached: 1, failed: 1 }, laterPress: NOT_ALLOWED_IN_CURRENT_STATE, laterOn: false },
     );

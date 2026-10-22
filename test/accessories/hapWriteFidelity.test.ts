@@ -201,10 +201,6 @@ function realSubject(): WriteSubject {
 function fakeCharacteristicOf(service: FakeHapService): { value: unknown; statusCode: number; handleSetRequest: (value: unknown) => Promise<void> } {
   const characteristic = service.getCharacteristic(FAKE.Characteristic.On);
 
-  if (characteristic === undefined) {
-    throw new Error('the stand-in Switch carries no On characteristic');
-  }
-
   return characteristic;
 }
 
@@ -215,10 +211,10 @@ function fakeSubject(): WriteSubject {
 
   return {
     onSet(handler) {
-      service.getCharacteristic(FAKE.Characteristic.On)?.onSet(handler);
+      service.getCharacteristic(FAKE.Characteristic.On).onSet(handler);
     },
     set: (value) => recorded(read, () => characteristic.handleSetRequest(value)),
-    get: () => recorded(read, () => Promise.resolve(service.getCharacteristic(FAKE.Characteristic.On)?.handleGetRequest())),
+    get: () => recorded(read, () => Promise.resolve(service.getCharacteristic(FAKE.Characteristic.On).handleGetRequest())),
     pushOn(value) {
       service.updateCharacteristic(FAKE.Characteristic.On, value);
     },
@@ -480,9 +476,6 @@ test('returns a rejecting promise for a refused read, on both implementations', 
   const realOn = realService.getCharacteristic(Characteristic.On);
   const fakeService = new FAKE.Service.Switch(SWITCH_NAME, SWITCH_SUBTYPE);
   const fakeOn = fakeService.getCharacteristic(FAKE.Characteristic.On);
-  if (fakeOn === undefined) {
-    throw new Error('the stand-in Switch carries no On characteristic');
-  }
 
   realOn.onSet(() => Promise.reject(new HapStatusError(HAPStatus.RESOURCE_BUSY)));
   fakeOn.onSet(() => Promise.reject(new FAKE.HapStatusError(HAPStatus.RESOURCE_BUSY)));

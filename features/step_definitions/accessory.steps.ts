@@ -150,10 +150,10 @@ async function assertOneAccessoryWithTruthfulAccessoryInformation(world: Basemen
 
   assert.deepEqual(
     {
-      manufacturer: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Manufacturer)?.value,
-      model: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Model)?.value,
-      serialNumber: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.SerialNumber)?.value,
-      firmwareRevision: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.FirmwareRevision)?.value,
+      manufacturer: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Manufacturer).value,
+      model: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.Model).value,
+      serialNumber: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.SerialNumber).value,
+      firmwareRevision: accessoryInformation?.getCharacteristic(homebridge.hap.Characteristic.FirmwareRevision).value,
     },
     {
       manufacturer: EXPECTED_MANUFACTURER,

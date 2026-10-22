@@ -173,10 +173,6 @@ const NOT_ALLOWED_IN_CURRENT_STATE = -70412;
 async function pressOutcomeOf(service: FakeHapService): Promise<unknown> {
   const on = service.getCharacteristic(HAP.Characteristic.On);
 
-  if (on === undefined) {
-    throw new Error('the restored control carries no On characteristic');
-  }
-
   try {
     await on.handleSetRequest(true);
 
@@ -382,12 +378,12 @@ async function readOf(service: FakeHapService, characteristicClass: FakeCharacte
   let threw: unknown = undefined;
 
   try {
-    await held?.handleGetRequest();
+    await held.handleGetRequest();
   } catch (error: unknown) {
     threw = error;
   }
 
-  return { value: held?.value, threw };
+  return { value: held.value, threw };
 }
 
 // The trust row beside a reading the pass must not touch, so preserve-and-erase fails here as
@@ -404,7 +400,7 @@ async function trustReadsOf(
 }
 
 function statusesOf(floods: readonly FakeHapService[]): readonly (number | undefined)[] {
-  return floods.map((flood) => flood.getCharacteristic(HAP.Characteristic.StatusActive)?.statusCode);
+  return floods.map((flood) => flood.getCharacteristic(HAP.Characteristic.StatusActive).statusCode);
 }
 
 // The accessory the platform built for this device, so a case can watch the calls the store's own
@@ -1567,15 +1563,15 @@ describe('configureAccessory', () => {
         threw: thrown === undefined ? undefined : 'restored service failure escaped',
         owned: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
         flood: {
-          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
         },
         offline: {
-          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive).value,
+          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
         },
-        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On)?.value },
-        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On)?.value },
+        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On).value },
+        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On).value },
         messages: configureMessages,
       },
       {
@@ -1663,12 +1659,12 @@ describe('configureAccessory', () => {
     assert.deepStrictEqual(
       {
         flood: {
-          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected)?.value,
+          statusActive: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
+          leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
         },
         offline: {
-          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive)?.value,
-          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+          statusActive: offline.getCharacteristic(HAP.Characteristic.StatusActive).value,
+          contactState: offline.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
         },
         recorded: platform.accessories.get(ACCESSORY_UUID) === (restoredAccessory as unknown as BasementGuardianPlatformAccessory),
       },
@@ -1701,8 +1697,8 @@ describe('configureAccessory', () => {
     // assert
     assert.deepStrictEqual(
       {
-        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On)?.value },
-        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On)?.value },
+        selfTest: { press: await pressOutcomeOf(selfTest), on: selfTest.getCharacteristic(HAP.Characteristic.On).value },
+        alarmMute: { press: await pressOutcomeOf(alarmMute), on: alarmMute.getCharacteristic(HAP.Characteristic.On).value },
       },
       {
         selfTest: { press: NOT_ALLOWED_IN_CURRENT_STATE, on: false },
@@ -2594,7 +2590,7 @@ describe('registerDiscoveredDevices', () => {
             plugin: PLUGIN_NAME,
             platform: PLATFORM_NAME,
             uuids: candidates.map((candidate) => candidate.UUID),
-            mainsLost: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost')?.getCharacteristic(HAP.Characteristic.ContactSensorState)?.value,
+            mainsLost: accessory.getServiceById(HAP.Service.ContactSensor, 'mains-power-lost')?.getCharacteristic(HAP.Characteristic.ContactSensorState).value,
           });
           return true;
         }),
