@@ -66,8 +66,14 @@ const HARNESS_CREDENTIALS: AwsCredentialsResponse = {
 };
 
 class StartupFailingWorld extends BasementGuardianWorld {
-  override homebridge(): Promise<FakeHomebridgeApi> {
-    return Promise.reject(new Error('startup failed'));
+  override async homebridge(): Promise<FakeHomebridgeApi> {
+    await nextTurn();
+    this.onRelease(() => {
+      this.observations.push('startup release ran');
+      return Promise.resolve();
+    });
+
+    throw new Error('startup failed');
   }
 }
 
@@ -350,19 +356,19 @@ When('scenario releases fail before another release runs', async function (this:
 When('startup fails after a scenario release is registered', async function (this: BasementGuardianWorld): Promise<void> {
   const scratch = new StartupFailingWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
   scratch.onRelease(() => {
-    this.observations.push('release ran');
+    scratch.observations.push('release ran');
     return Promise.resolve();
   });
   scratch.startPlugin();
-  // Cleanup reports this expected startup rejection together with any release failures.
-  await scratch.awaitStart().catch(() => undefined);
 
   try {
     await scratch.cleanUp();
-    this.observations.push('no failure');
+    scratch.observations.push('no failure');
   } catch (error) {
-    this.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
+    scratch.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
   }
+
+  this.observations.push(...scratch.observations);
 });
 
 Then('the world reports both failures after running every release', function (this: BasementGuardianWorld): void {
@@ -375,7 +381,7 @@ Then('the world reports both failures after running every release', function (th
 });
 
 Then('the world runs the release and reports the startup failure', function (this: BasementGuardianWorld): void {
-  assert.deepStrictEqual(this.observations, ['release ran', 'Error: startup failed']);
+  assert.deepStrictEqual(this.observations, ['startup release ran', 'release ran', 'Error: startup failed']);
 });
 
 Then('the tenant holds the grant the harness sent', async function (this: BasementGuardianWorld): Promise<void> {

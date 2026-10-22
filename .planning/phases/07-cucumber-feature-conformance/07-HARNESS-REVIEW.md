@@ -142,3 +142,7 @@ The offline full gate at `fbf6bba` passed `TEST_CONCURRENCY=1 npm run check`: st
 | CR-07-HARNESS-046 | 7 | FEAT-02; `cucumber/rules/steps.md` §Module structure | `fbf6bba:features/step_definitions/harness.steps.ts:7-12` | WARNING | **Accepted; open.** The overview lists stand-ins but omits World release and startup-failure steps. Add that owned contract. |
 
 Round 2 opening: **13**. Fixed: **13**. Rejected from opening: **0**. New accepted: **7** (040-046). Reopened: **0**. Closing: **7** (`13 - 13 - 0 + 7 + 0 = 7`). The count fell, no fixed cause reopened, and round four has not completed. The protocol permits one more correction round. The unchanged `world.ts` catch locations are a rejected part of candidate 6 and do not enter the count.
+
+## Round 2 repair evidence
+
+- **040:** The scratch startup waits one event-loop turn before registering its release and rejecting. The step calls cleanup immediately, then checks that the late startup release ran before the earlier release and that the startup error was reported. A temporary wrong `cleanUp()` implementation that spliced releases before awaiting startup failed the named scenario at the missing late release (3/4 steps passed). The temporary edit was restored byte-for-byte; the named scenario then passed 4/4. No scenario or step count changes. The prior expected-rejection catch and its 035 comment are no longer needed and were removed.
