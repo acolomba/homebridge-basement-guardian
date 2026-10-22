@@ -38,7 +38,7 @@ Phase 1 fixes the five spot-check findings and uses them to prove the review loo
 - [x] **Phase 4: Runtime Conformance** - `src/runtime/**` and `test/runtime/**` conform to the rules. (completed 2026-10-16)
 - [x] **Phase 5: Accessories Conformance** - `src/accessories/**` and `test/accessories/**` conform to the rules. (completed 2026-10-19)
 - [x] **Phase 6: Root Module Conformance** - The root modules `src/*.ts` and their tests conform to the rules. (completed 2026-10-19)
-- [ ] **Phase 7: Cucumber Feature Conformance** - Gherkin, step definitions, and support code under `features/**` conform to the rules.
+- [x] **Phase 7: Cucumber Feature Conformance** - Gherkin, step definitions, and support code under `features/**` conform to the rules. (completed 2026-10-22)
 - [ ] **Phase 8: Final Sweep and Gate** - A full-repo re-review finds nothing open, the bug ledger is complete, and the full `npm run check` passes.
 
 ## Phase Details
@@ -309,7 +309,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   4. The phase ledger records each finding's rule, location, severity, and outcome, and the last re-review round reports no open finding, or the phase stopped at the round cap with a report (applies PROC-01 and PROC-02).
   5. Every bug found has a regression test that was committed and seen failing before its fix, and every source/test pair a fix touched still reaches 100% direct coverage (applies BUG-01).
 
-**Plans**: 11/17 plans executed
+**Plans**: 30/30 plans complete
 - [x] 07-01-PLAN.md
 - [x] 07-02-PLAN.md
 - [x] 07-03-PLAN.md
@@ -318,15 +318,28 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 07-06-PLAN.md — stopped at Round 1 with MONITORING-004 open
 - [x] 07-07-PLAN.md — stopped at Round 2 with RECORDS-012/013 open at review close; later comment repairs committed
 - [x] 07-08-PLAN.md — stopped at Round 3 with OFFLINE_LIBS-016 open
-- [ ] 07-09-PLAN.md
-- [ ] 07-10-PLAN.md
-- [ ] 07-11-PLAN.md
-- [ ] 07-12-PLAN.md
-- [ ] 07-13-PLAN.md
-- [ ] 07-14-PLAN.md
+- [x] 07-09-PLAN.md
+- [x] 07-10-PLAN.md
+- [x] 07-11-PLAN.md
+- [x] 07-12-PLAN.md
+- [x] 07-13-PLAN.md
+- [x] 07-14-PLAN.md
 - [x] 07-15-PLAN.md
 - [x] 07-16-PLAN.md
 - [x] 07-17-PLAN.md — bounded monitoring wording repair after Round 1 STOP
+- [x] 07-18-PLAN.md
+- [x] 07-19-PLAN.md
+- [x] 07-20-PLAN.md
+- [x] 07-21-PLAN.md
+- [x] 07-22-PLAN.md
+- [x] 07-23-PLAN.md
+- [x] 07-24-PLAN.md
+- [x] 07-25-PLAN.md
+- [x] 07-26-PLAN.md
+- [x] 07-27-PLAN.md
+- [x] 07-28-PLAN.md
+- [x] 07-29-PLAN.md
+- [x] 07-30-PLAN.md
 
 **Batching**: Batches split the `.feature` files (Gherkin rules) from the TypeScript step and support code. `features/support/world.ts` and `features/support/steps/harness.ts` serve every scenario, so a batch that edits them runs in a wave of its own. The real-pump files get static review and a dry run only, never a live run. Plans are batches grouped so that no two plans in the same wave edit the same file. Each batch runs review → triage → fix → re-review, capped at about four rounds, and stops early on a round that does not lower the open count or that brings back a fixed finding. `gsd-code-reviewer` subagents review and `gsd-code-fixer` subagents fix, each with the project's `agent_skills`. Each fix is an atomic commit that passes the pre-commit hooks; never `--no-verify`.
 
@@ -356,5 +369,5 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 4. Runtime Conformance | code-review-sweep | 19/19 | Complete    | 2026-10-16 |
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 6. Root Module Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
-| 7. Cucumber Feature Conformance | code-review-sweep | 11/17 | In Progress | - |
+| 7. Cucumber Feature Conformance | code-review-sweep | 30/30 | Complete    | 2026-10-22 |
 | 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |
