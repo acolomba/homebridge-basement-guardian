@@ -45,7 +45,7 @@ When('the harness starts', async function (this: RealPumpWorld) {
   await this.start();
 });
 
-Then('the harness discovers one device within {int} seconds', async function (this: RealPumpWorld, seconds: number) {
+Then('the harness discovers at least one device within {int} seconds', async function (this: RealPumpWorld, seconds: number) {
   await until(() => (this.deviceIds().length > 0 ? true : undefined), seconds * 1000, 'no device was discovered');
 });
 

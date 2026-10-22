@@ -11,7 +11,7 @@ Feature: Real pump heartbeats
     # connection counts as success after discovery and initial shadow state arrive. A reported
     # connection failure or an unhandled rejection fails this scenario.
     When the harness starts
-    Then the harness discovers one device within 30 seconds
+    Then the harness discovers at least one device within 30 seconds
     Then the discovered device snapshot gains shadow-sourced fields within 45 seconds
     When the harness waits 960 seconds
     Then the connection reports no failure or unhandled rejection

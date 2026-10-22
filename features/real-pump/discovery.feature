@@ -9,16 +9,16 @@ Feature: Real pump discovery
     # 30 seconds is long enough for a real Auth0 grant plus one REST inventory round trip, and
     # short enough to fail fast rather than hang a maintainer's terminal.
     When the harness starts
-    Then the harness discovers one device within 30 seconds
+    Then the harness discovers at least one device within 30 seconds
 
   Scenario: The discovered device's initial snapshot carries a valid device id
     When the harness starts
-    Then the harness discovers one device within 30 seconds
+    Then the harness discovers at least one device within 30 seconds
     Then the discovered device snapshot has a valid device id
 
   Scenario: The discovered device snapshot gains shadow-sourced fields within a bounded timeout
     # 45 seconds, distinct from discovery's 30, because this wait also spans fetching temporary
     # AWS credentials, opening the MQTT connection, and the round trip of the initial shadow "get".
     When the harness starts
-    Then the harness discovers one device within 30 seconds
+    Then the harness discovers at least one device within 30 seconds
     Then the discovered device snapshot gains shadow-sourced fields within 45 seconds
