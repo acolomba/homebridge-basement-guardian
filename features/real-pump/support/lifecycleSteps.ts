@@ -1,3 +1,9 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview Step definitions for restarting and shutting down the harness against the real
  * Gemini.
