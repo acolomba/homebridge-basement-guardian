@@ -40,6 +40,7 @@ Feature: Harness fakes
     Given these devices:
       | device id          | name          |
       | placeholder-gemini | Sump Guardian |
+      | placeholder-backup | Backup System |
     When the harness requests the device list
     Then the response carries status 200
     Then the device list holds the devices the scenario sets

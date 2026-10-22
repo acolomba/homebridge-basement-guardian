@@ -100,3 +100,7 @@ All 21 accepted Round 0 causes are fixed at the reviewed revision. Earlier rejec
 | CR-07-HARNESS-039 | 12 | FEAT-02; `typescript-style/rules/types.md` §Types | `26f2d7d:features/support/world.ts:176,210` | WARNING candidate | **Rejected.** Both declarations predate this repair series. The TypeScript style skill says an existing file's unchanged code is outside a change review. No requested behavior depends on their spelling. |
 
 Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accepted: **13** (025-031, 033-038). Reopened: **0**. Closing: **13** (`21 - 21 - 0 + 13 + 0 = 13`). The count fell, no fixed ID reopened, and round four has not completed. The protocol permits another correction round after these 13 causes are repaired. New rejected candidates 032 and 039 do not enter the open count.
+
+## Round 1 repair evidence
+
+- **025:** The device-list scenario now supplies two distinct systems. A temporary owned-step control truncated the returned list to its first row; the named scenario failed on the missing second row (6/8 steps passed, one skipped). After removing the control byte-for-byte, it passed 8/8. The scenario count and step count are unchanged.
