@@ -400,6 +400,23 @@ Then('the fake hap answers the real status for each error form', async () => {
     (status: unknown) => status,
   );
   const storedKnownThrownNumberStatus = on.statusCode;
+  on.onSet(() => {
+    throw new Error('-70412');
+  });
+  const thrownNumericMessageStatus: unknown = await on.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+  const storedThrownNumericMessageStatus = on.statusCode;
+  on.onSet(() => {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- HAP accepts bare numeric handler statuses
+    throw -70413;
+  });
+  const belowRangeThrownStatus: unknown = await on.handleSetRequest(true).then(
+    () => undefined,
+    (status: unknown) => status,
+  );
+  const storedBelowRangeThrownStatus = on.statusCode;
 
   assert.deepStrictEqual(
     {
@@ -411,6 +428,10 @@ Then('the fake hap answers the real status for each error form', async () => {
       storedThrownNumberStatus,
       knownThrownNumberStatus,
       storedKnownThrownNumberStatus,
+      thrownNumericMessageStatus,
+      storedThrownNumericMessageStatus,
+      belowRangeThrownStatus,
+      storedBelowRangeThrownStatus,
     },
     {
       unknownStatus: -70402,
@@ -421,6 +442,10 @@ Then('the fake hap answers the real status for each error form', async () => {
       storedThrownNumberStatus: -70402,
       knownThrownNumberStatus: -70408,
       storedKnownThrownNumberStatus: -70408,
+      thrownNumericMessageStatus: -70402,
+      storedThrownNumericMessageStatus: -70402,
+      belowRangeThrownStatus: -70402,
+      storedBelowRangeThrownStatus: -70402,
     },
   );
 });
