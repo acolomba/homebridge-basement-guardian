@@ -37,6 +37,8 @@ export type ShadowTopicLeaf = 'get/accepted' | 'get/rejected' | 'update/accepted
 /** An in-process shadow broker a scenario drives directly. */
 export interface FakeShadowBroker {
   readonly host: string;
+
+  /** Query strings from accepted WebSocket handshakes, in arrival order. */
   readonly handshakes: readonly string[];
   readonly clientIds: readonly string[];
 
