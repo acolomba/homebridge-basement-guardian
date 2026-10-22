@@ -48,7 +48,6 @@ import type { FakeAuth0 } from '../lib/auth0.js';
 import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
 import type { FakeShadowBroker } from '../lib/shadowBroker.js';
 import type { ApiDevice, FakeRestApi } from '../lib/vendorRestApi.js';
-import type { IWorldOptions } from '@cucumber/cucumber';
 import type { API, LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
 
@@ -224,10 +223,6 @@ export class BasementGuardianWorld extends World {
   private readonly recordRejection = (reason: unknown): void => {
     this.rejections.push(String(reason));
   };
-
-  constructor(readonly options: IWorldOptions) {
-    super(options);
-  }
 
   /** Watches for unhandled rejections during an executing scenario. */
   watchUnhandledRejections(): void {
