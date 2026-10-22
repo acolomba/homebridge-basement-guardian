@@ -573,7 +573,7 @@ Then('the storage path is an empty directory the scenario owns', assertStoragePa
 async function assertApiExposesTheHapNamespace(this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
 
-  assert.equal(typeof homebridge.api.hap, 'object');
+  assert.strictEqual(homebridge.api.hap, homebridge.hap);
 }
 
 Then('the api exposes the hap namespace', assertApiExposesTheHapNamespace);
