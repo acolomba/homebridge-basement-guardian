@@ -404,6 +404,10 @@ Then('the response carries status {int}', function (this: BasementGuardianWorld,
   assert.equal(this.response().status, status);
 });
 
+Then('the response carries the issued identity token', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.response().body, { id_token: 'fake-id-token', expires_in: 2592000, token_type: 'Bearer' });
+});
+
 Then('the fake service records no accepted command', function (this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, []);
 });

@@ -21,6 +21,7 @@ Feature: Harness fakes
     Then the response contains only the error "invalid_grant" and its description
     When the harness requests an identity token
     Then the response carries status 200
+    Then the response carries the issued identity token
 
   Scenario: The fake tenant records a request to an unknown route
     Given the fake auth0 tenant
