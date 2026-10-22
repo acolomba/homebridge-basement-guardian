@@ -17,7 +17,7 @@
 
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { After, setWorldConstructor, World } from '@cucumber/cucumber';
+import { After, Before, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
 import { markRestoredServicesStale, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
@@ -227,6 +227,10 @@ export class BasementGuardianWorld extends World {
 
   constructor(readonly options: IWorldOptions) {
     super(options);
+  }
+
+  /** Watches for unhandled rejections during an executing scenario. */
+  watchUnhandledRejections(): void {
     process.on('unhandledRejection', this.recordRejection);
     this.own(() => {
       process.off('unhandledRejection', this.recordRejection);
@@ -779,6 +783,10 @@ export class BasementGuardianWorld extends World {
 }
 
 setWorldConstructor(BasementGuardianWorld);
+
+Before(function (this: BasementGuardianWorld) {
+  this.watchUnhandledRejections();
+});
 
 After(async function (this: BasementGuardianWorld) {
   await this.cleanUp();
