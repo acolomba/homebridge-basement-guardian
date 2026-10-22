@@ -520,7 +520,7 @@ Then('the lifecycle listeners observe "shut down"', function (this: BasementGuar
   assert.deepStrictEqual(this.observations, ['launched', 'shut down']);
 });
 
-Then('the storage path is an empty directory the scenario owns', async function (this: BasementGuardianWorld): Promise<void> {
+Then('the storage paths are distinct empty temporary directories', async function (this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
   const otherStoragePath = this.recall(OTHER_HOMEBRIDGE_STORAGE_PATH);
 

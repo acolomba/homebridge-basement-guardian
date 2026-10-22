@@ -197,7 +197,7 @@ Feature: Harness fakes
   Scenario: The fake homebridge api gives the scenario temporary storage
     Given the fake homebridge api
     Given another fake homebridge api
-    Then the storage path is an empty directory the scenario owns
+    Then the storage paths are distinct empty temporary directories
 
   Scenario: The fake homebridge api exposes its hap namespace
     Given the fake homebridge api

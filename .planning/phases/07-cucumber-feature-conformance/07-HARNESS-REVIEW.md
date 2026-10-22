@@ -149,3 +149,4 @@ Round 2 opening: **13**. Fixed: **13**. Rejected from opening: **0**. New accept
 - **041:** Subscriber setup now checks the complete live subscription list before any close. A temporary disconnect during setup made the broker-close scenario fail at the new assertion (3/7 steps passed, three skipped); after removing the control, it passed 7/7. No scenario or step count changes.
 - **042:** The unquoted credentials step uses lower-case `aws` in both Gherkin and its binding. The scenario count and step count are unchanged.
 - **043:** The lifecycle assertions now name the harness listeners that observe the events. No plugin is loaded in that scenario. The scenario count and step count are unchanged.
+- **044:** The storage-path step now claims only the distinct, empty, temporary directories that its assertions verify. The scenario count and step count are unchanged.
