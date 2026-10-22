@@ -33,8 +33,31 @@ accepted and two are rejected; opening open count is **10**.
 | CR-07-REAL_FEATURES-011 | WARNING | `dfa97e3:features/real-pump/discovery.feature:12` and other real-profile steps | `rules/features.md`, Steps | Rejected. These are explicitly diagnostic read-only observations of a real vendor connection; the maintainer accepted diagnostic outcomes in this phase. `harness` describes the operator-owned runner. Rewording every binding adds no behavioral evidence. |
 | CR-07-REAL_FEATURES-012 | WARNING | `dfa97e3:features/real-pump/heartbeats.feature:15-18`; `dfa97e3:features/real-pump/lifecycle.feature:10-15` | `rules/features.md`, Scenarios and Steps | Rejected. Start, discovery, wait, and restart are sequential actions and observations for one lifecycle behavior. The rule permits alternating `When` and `Then` and says a second `When` *usually* hides another behavior; these scenarios do not. |
 
-Findings 005, 006, and 008 require changes to existing step bindings owned by
-Plan 07-13. Those exact paths and the revised dry-run counts must enter an
-approved plan revision before source changes. Each accepted cause receives a
-focused check and one normal-hook commit. An independent current-file review
-will record the correction equation and exact remaining IDs.
+Findings 001, 005, 006, and 008 required changes to support paths originally
+owned by Plans 07-12 and 07-13. Exact-path and count revisions were recorded
+before those source changes. An independent current-file review will record
+the correction equation and exact remaining IDs.
+
+## Round 0 repairs
+
+The exact-path and 6/35 count revision was committed as `dcd3c20`, `5d707aa`,
+and `ff47970` before touching the additional step and World paths. The real
+profile was invoked only with `--dry-run`. `npm run build:test` exited 0 before
+each changed-binding dry run; the final dry run exited 0 with six skipped
+scenarios, 35 skipped steps, and no undefined or ambiguous status. Each source
+commit passed `SKIP=npm-check pre-commit run --files ...`, `fallow audit --base
+HEAD`, and normal `git commit` hooks. The profile's step bodies were not run;
+the shutdown timing change has binding and type-check evidence only.
+
+| ID | Repair commit | Focused evidence and disposition |
+| --- | --- | --- |
+| CR-07-REAL_FEATURES-001 | `98a2b3b` | Removed the optional scenario, its unused bindings, and the orphaned World change recorder. Build and dry run exited 0 at the intermediate 6 scenarios/34 steps; fixed pending independent review. |
+| CR-07-REAL_FEATURES-002 | `f21c6c4`, `997cc2b` | Added the existing bounded shadow observation and narrowed the title to reported failure. Build and dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-003 | `6d08069` | Limited the restart claim to unchanged cached-token content. Real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-004 | `0338bd2` | Replaced false heartbeat prose with the actual discovery, shadow, log, and rejection checks. Real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-005 | `99bb04d` | Changed the rejection outcome and binding to present tense. Build and real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-006 | `0294b26` | Corrected the possessive title and matched lower-case `device id` step/binding. Build and real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-007 | `2dac0ab` | Aligned three feature titles with their directory and file names. Real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-008 | `96d8699` | Bounded shutdown at five seconds and observed rejections for one second afterward. Build and real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-009 | `9bd28c3` | Condensed all three descriptions to three lines. Real dry run exited 0 at 6/35; fixed pending independent review. |
+| CR-07-REAL_FEATURES-010 | `43d3d03` | Removed the ambiguous internal decision and test references. Real dry run exited 0 at 6/35; fixed pending independent review. |
