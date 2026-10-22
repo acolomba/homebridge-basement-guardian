@@ -10,15 +10,11 @@
 
 import assert from 'node:assert/strict';
 
-import { Then, When } from '@cucumber/cucumber';
+import { Then } from '@cucumber/cucumber';
 
 import { until } from '../../lib/realPumpPolling.js';
 
 import type { RealPumpWorld } from './realWorld.js';
-
-When('the harness starts', async function (this: RealPumpWorld) {
-  await this.start();
-});
 
 Then('the harness discovers at least one device within {int} seconds', { timeout: 35_000 }, async function (this: RealPumpWorld, seconds: number) {
   await until(() => (this.deviceIds().length > 0 ? true : undefined), seconds * 1000, 'no device was discovered');

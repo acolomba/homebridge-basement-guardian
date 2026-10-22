@@ -20,6 +20,10 @@ import type { RealPumpWorld } from './realWorld.js';
 
 const MILLISECONDS_PER_SECOND = 1_000;
 
+When('the harness starts', async function (this: RealPumpWorld) {
+  await this.start();
+});
+
 When('the harness restarts', async function (this: RealPumpWorld) {
   await this.restart();
 });
