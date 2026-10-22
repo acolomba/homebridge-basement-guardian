@@ -1,10 +1,5 @@
 /**
- * @fileoverview Step definitions for the real-pump suite's harness lifecycle and discovery
- * observations.
- *
- * Kept in one module because every step so far belongs to the same function: driving and
- * observing the harness this suite builds. A later scenario category (heartbeats, restart,
- * shutdown) gets its own module once it stops being that.
+ * @fileoverview Registers real-profile steps for device discovery and initial shadow state.
  */
 
 import assert from 'node:assert/strict';
