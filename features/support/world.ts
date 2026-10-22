@@ -8,9 +8,8 @@
  * @fileoverview The per-scenario world.
  *
  * Every scenario gets a fresh world. The world owns the lifetime of each fake it hands out, keeps
- * the scenario clock and the observation log, and tears everything down in reverse order once the
- * scenario ends, so no scenario leaks a listening socket, an open connection, or a temporary
- * directory into the next one.
+ * the scenario clock and the observation log, and runs registered releases in reverse order when
+ * the scenario ends. It reports startup and release failures after attempting every release.
  *
  * The world also builds the plugin's own account runtime against those fakes, through the single
  * composition seam the runtime publishes. The protocol constants are an ordinary injected
