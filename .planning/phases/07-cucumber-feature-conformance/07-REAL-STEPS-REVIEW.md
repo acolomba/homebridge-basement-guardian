@@ -158,3 +158,15 @@ executable inputs at `da81d2d` with Node `v26.12.1` was
 `TEST_CONCURRENCY=1 npm run check`, exit 0: 130/130 offline scenarios,
 1400/1400 steps, and 43 isolated direct coverage pairs. That gate does not
 exercise the real profile live.
+
+## Round 1 repair evidence
+
+`CR-07-REAL_STEPS-016` was repaired in `f04d330`. Both `the harness starts`
+and `the harness restarts` have a fixed 30,000 ms Cucumber ceiling. The
+runtime's first vendor inventory attempt has a 10,000 ms request deadline,
+and Auth0 can require its own request before it; this ceiling lets a correct
+attempt finish while remaining bounded. `npm run build:test` and
+`./node_modules/.bin/cucumber-js --profile real --dry-run --format summary`
+exited 0 after the edit, with six scenarios and 35 steps all skipped. The
+pre-commit hooks, Fallow audit, and normal commit hooks passed. The real
+profile was not run live; the correction reviewer must confirm the source.
