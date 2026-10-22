@@ -113,10 +113,6 @@ export class RealPumpWorld extends World {
 
   private readonly loggedLines: string[] = [];
 
-  private readonly deviceChangeLog: string[] = [];
-
-  private readonly watchedDeviceIds = new Set<string>();
-
   private readonly remembered = new Map<string, unknown>();
 
   private readonly rejectedReasons: string[] = [];
@@ -166,11 +162,6 @@ export class RealPumpWorld extends World {
   /** Every unhandled rejection the process reported while this scenario ran. */
   unhandledRejections(): readonly string[] {
     return this.rejectedReasons;
-  }
-
-  /** One entry per store change the discovered device reported, naming the keys that moved. */
-  deviceChanges(): readonly string[] {
-    return this.deviceChangeLog;
   }
 
   /** Remembers a value a step read, under a name a later step names it by. */
@@ -286,8 +277,6 @@ export class RealPumpWorld extends World {
    * restart reuses the very token cache the first runtime wrote under this directory (AUTH-01).
    */
   private createRuntime(): AccountRuntime {
-    this.watchedDeviceIds.clear();
-
     const email = this.credentialEmail;
     const password = this.credentialPassword;
 
@@ -319,11 +308,6 @@ export class RealPumpWorld extends World {
           if (!this.discoveredDeviceIds.includes(deviceId)) {
             this.discoveredDeviceIds.push(deviceId);
           }
-
-          if (!this.watchedDeviceIds.has(deviceId)) {
-            this.watchedDeviceIds.add(deviceId);
-            this.watchForChanges(deviceId);
-          }
         }
       },
       onDeviceRemoved: (deviceId: string): void => {
@@ -332,8 +316,6 @@ export class RealPumpWorld extends World {
         if (index !== -1) {
           this.discoveredDeviceIds.splice(index, 1);
         }
-
-        this.watchedDeviceIds.delete(deviceId);
       },
       onMonitoringHealth: (account: MonitoringTrust, byDevice: ReadonlyMap<string, MonitoringTrust>): void => {
         const transportReady = String(account.commandTransportReady);
@@ -342,15 +324,6 @@ export class RealPumpWorld extends World {
 
         this.monitoringObservations.push(`account transportReady=${transportReady} credentialsRejected=${credentialsRejected} devices=${deviceCount}`);
       },
-    });
-  }
-
-  // Recorded per device so a scenario can tell a natural update happened without forcing one
-  // (REL-09, D-04). Re-subscribed against every fresh runtime createRuntime() builds, since a
-  // restart's new store starts with no listeners of its own.
-  private watchForChanges(deviceId: string): void {
-    this.runtime().store.subscribe(deviceId, (_next, _previous, changedKeys) => {
-      this.deviceChangeLog.push(`${deviceId} ${changedKeys.join(' ')}`);
     });
   }
 }

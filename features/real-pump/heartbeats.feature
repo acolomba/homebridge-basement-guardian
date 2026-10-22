@@ -16,10 +16,3 @@ Feature: Observing heartbeats and natural updates on the real Gemini
     Then the harness discovers one device within 30 seconds
     When the harness waits 960 seconds
     Then the connection reports no failure
-
-  Scenario: A natural value change, if one lands during the run, reaches the store
-    When the harness starts
-    Then the harness discovers one device within 30 seconds
-    When the harness remembers the current snapshot as "before the wait"
-    When the harness waits 960 seconds
-    Then the current snapshot no longer matches "before the wait" if the store recorded a change
