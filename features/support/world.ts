@@ -550,9 +550,18 @@ export class BasementGuardianWorld extends World {
     await this.starting;
 
     const cleanups = this.cleanups.splice(0).reverse();
+    const failures: unknown[] = [];
 
     for (const cleanup of cleanups) {
-      await cleanup();
+      try {
+        await cleanup();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'scenario release failed');
     }
   }
 

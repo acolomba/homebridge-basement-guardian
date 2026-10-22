@@ -347,6 +347,37 @@ function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): voi
 
 When('the first due timer cancels the second due {word}', cancelTheSecondDueTimer);
 
+When('scenario releases fail before another release runs', async function (this: BasementGuardianWorld): Promise<void> {
+  this.own(() => {
+    this.observations.push('later release');
+    return Promise.resolve();
+  });
+  this.own(() => {
+    this.observations.push('second failed release');
+    return Promise.reject(new Error('second release failed'));
+  });
+  this.own(() => {
+    this.observations.push('first failed release');
+    return Promise.reject(new Error('first release failed'));
+  });
+
+  try {
+    await this.cleanUp();
+    this.observations.push('no failure');
+  } catch (error) {
+    this.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
+  }
+});
+
+Then('the world reports both failures after running every release', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(this.observations, [
+    'first failed release',
+    'second failed release',
+    'later release',
+    'Error: first release failed, Error: second release failed',
+  ]);
+});
+
 async function assertTenantHoldsTheGrant(this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 

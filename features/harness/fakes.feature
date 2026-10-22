@@ -109,6 +109,10 @@ Feature: Harness fakes
     When the first due timer cancels the second due interval
     Then only the first due timer runs
 
+  Scenario: Every release runs after earlier releases fail
+    When scenario releases fail before another release runs
+    Then the world reports both failures after running every release
+
   Scenario: The fake hap namespace carries the standard identifiers
     Then the hap stand-in carries the standard service and characteristic identifiers
 

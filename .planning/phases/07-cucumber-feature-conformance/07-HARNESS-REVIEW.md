@@ -40,3 +40,8 @@ The reviewer read `AGENTS.md`, Plan 07-10, the Phase 7 review protocol, and the 
 | CR-07-HARNESS-024 | 23 | FEAT-02; `cucumber/rules/world-and-stand-ins.md` §The world | `31f7701:features/support/world.ts:548-552` | BLOCKER | **Accepted; open.** The first rejected release ends the cleanup loop. Run every release in reverse and collect failures into one `AggregateError`. |
 
 Opening accepted count: **21** (001-004, 006-009, 011-014, 016-024). Rejected candidates: **005, 010, 015**. The current default suite has 125 scenarios and 1252 steps; the real profile remains dry-run only. A dry run of the default profile exited 0 with 125 skipped scenarios and 1252 skipped steps, but stderr reported `MaxListenersExceededWarning` after the eleventh World constructor. Installed Cucumber 13.2.1 creates a World in `test_case_runner.js:63-72`; its `shouldSkipHook` skips hooks in dry-run at lines 100-103. No source edit preceded this triage.
+
+## Repair evidence
+
+- **019:** The unchanged dry run emitted `MaxListenersExceededWarning` after 11 World constructors. Moving listener registration into `Before` removed the warning from stderr in a 125-scenario dry run. The executing offline suite passed 125/125 scenarios and 1377/1377 steps. Normal-hook commit: `c4120d5`.
+- **024:** At source `c4120d5`, the active named scenario `Every release runs after one release fails` failed with only `failed release` and `other failure`; the later release did not run. The final scenario now arms two failed releases and one later release. After the World collected both failures and threw one `AggregateError`, the named scenario passed 1/1 with four steps. This adds one scenario and four steps to the default suite. The fix commit is the commit that adds this evidence row.
