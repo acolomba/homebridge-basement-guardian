@@ -16,7 +16,7 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { until } from '../../lib/realPumpPolling.js';
 
-import type { RealPumpWorld } from './realWorld.js';
+import type { RealPumpWorld } from '../support/realWorld.js';
 
 const MILLISECONDS_PER_SECOND = 1_000;
 
