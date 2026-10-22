@@ -5,11 +5,10 @@
  */
 
 /**
- * @fileoverview Steps that drive the harness fakes directly.
+ * @fileoverview Steps that check the local harness stand-ins.
  *
- * These steps exercise the stand-ins themselves rather than the plugin, because the seam that
- * points the plugin at a fake cloud arrives with the account runtime. Proving the harness on its
- * own is what makes it usable as a regression guard for the scenarios that follow.
+ * They check the fake Auth0, REST, broker, timer, and Homebridge contracts used by the offline
+ * plugin scenarios.
  */
 
 import assert from 'node:assert/strict';
