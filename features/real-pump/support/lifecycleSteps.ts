@@ -33,6 +33,6 @@ Then('the token cache fingerprint matches {string}', async function (this: RealP
   assert.strictEqual(fingerprint, this.recall(name));
 });
 
-Then('the harness recorded no unhandled rejection', function (this: RealPumpWorld) {
+Then('the harness reports no unhandled rejection', function (this: RealPumpWorld) {
   assert.deepStrictEqual(this.unhandledRejections(), []);
 });

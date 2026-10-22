@@ -18,4 +18,4 @@ Feature: Restarting and shutting down against the real Gemini
     When the harness starts
     Then the harness discovers one device within 30 seconds
     When the harness stops
-    Then the harness recorded no unhandled rejection
+    Then the harness reports no unhandled rejection
