@@ -13,7 +13,7 @@ Feature: Harness fakes
     When the harness requests an identity token with an extra credential and a numeric scope
     Then the tenant holds the exact grant the harness sent
 
-  Scenario: The fake tenant answers an armed failure
+  Scenario: The fake tenant recovers after one armed failure
     Given the fake auth0 tenant
     Given the tenant fails the next grant with status 403 and error "invalid_grant"
     When the harness requests an identity token
