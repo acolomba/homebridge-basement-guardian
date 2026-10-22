@@ -89,3 +89,36 @@ correction round record `closing = opening - fixed - rejected + new + reopened`
 and the exact open set. Stop immediately if a positive closing count does not
 fall, a fixed ID returns, or round four completes. Preserve any STOP as an
 observation even if later user adjudication changes forward disposition.
+
+## Round 0 repair evidence
+
+Each accepted cause has one normal-hook source commit. These are feature and
+test-support repairs; no production source changed, so no production
+source/test RED pair was needed. The real profile was never run live.
+
+| ID | Repair commit | Focused evidence |
+| --- | --- | --- |
+| 001 | `d9f9a31` | Three real features and the binding say “at least one”; build and real dry run passed 6/35 skipped. |
+| 002 | `ab9be77` | Discovery header has SPDX, separate copyright, and overview; pre-commit and normal hooks passed. |
+| 003 | `5fa7ccf` | Heartbeat header has the approved form; pre-commit and normal hooks passed. |
+| 004 | `1288e20` | Lifecycle header has the approved form; pre-commit and normal hooks passed. |
+| 005 | `4ea0759` | Discovery registrations moved to `real-pump/step_definitions/discovery.steps.ts`; build and real 6/35 dry run passed. |
+| 006 | `49dc7ed` | Heartbeat registrations moved to `real-pump/step_definitions/heartbeats.steps.ts`; build and real 6/35 dry run passed. |
+| 007 | `ccc5db3` | Lifecycle registrations moved to `real-pump/step_definitions/lifecycle.steps.ts`; build and real 6/35 dry run passed. Default usage dry run showed zero `UNUSED`. |
+| 008 | `8338e98` | Shared `until` moved unchanged to `features/lib/realPumpPolling.ts`; both imports resolved; build and real 6/35 dry run passed. |
+| 009 | `c782c0c` | Discovery overview now describes the current module; pre-commit and normal hooks passed. |
+| 010 | `c1f83a0` | Heartbeat overview now describes the wait and failure check; pre-commit and normal hooks passed. |
+| 011 | `1fffda4` | “Harness starts” moved beside restart and stop; build and real 6/35 dry run passed. |
+| 012 | `c53a2a1` | Fixed Cucumber ceilings of 35, 50, and 15 seconds exceed the feature waits of 30, 45, and 10 seconds; `until` still enforces each feature bound. Build and real 6/35 dry run passed. This dry run proves binding, not live timing. |
+| 013 | `6784a74` | Snapshot failure messages no longer include the real ID or an actual/expected ID diff; build and normal hooks passed. |
+| 014 | `b457639` | Token-cache equality failure no longer prints either fingerprint; build and normal hooks passed. |
+| 015 | `81fd0ed` | Warning/error assertion prints only a count and fixed message; build and normal hooks passed. |
+
+At clean commit `ccc5db3`, the real-profile command
+`./node_modules/.bin/cucumber-js --profile real --dry-run --format summary`
+exited 0 with exactly six skipped scenarios and 35 skipped steps; the output
+reported 0.0 seconds executing code. The default
+`./node_modules/.bin/cucumber-js --dry-run --format usage` exited 0 and had no
+`UNUSED` definitions. Build, pre-commit, Fallow audit, and normal commit hooks
+passed for the individual changes. The correction reviewer must confirm the
+current four complete files before the forward set may close.
