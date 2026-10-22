@@ -63,12 +63,12 @@ degraded-status check are outside this phase.
 
 ## Current combined-tree evidence
 
-At clean executable-input commit `8785450` on Node `v26.12.1`, the command
+At clean executable-input commit `ed90a39` on Node `v26.12.1`, the command
 `TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
 unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
 and 43 isolated direct source/test coverage pairs passed. The Cucumber part
-reported 37.209 seconds. `git status --porcelain=v1 --untracked-files=all`
-was empty before this planning-only edit, and `git diff --exit-code 8785450
+reported 37.222 seconds. `git status --porcelain=v1 --untracked-files=all`
+was empty before this planning-only edit, and `git diff --exit-code ed90a39
 -- . ':(exclude,glob).planning/**/*.md'` exited 0. This evidence is reusable
 only while executable inputs remain unchanged; any later source edit needs a
 fresh full gate.
@@ -80,8 +80,7 @@ exited 0 with exactly six skipped scenarios and 35 skipped steps. It reported
 zero executing time and no undefined or ambiguous status. No real-profile
 step body or vendor request ran.
 
-The forward open set at this draft is `CR-07-HAP-028`,
-`CR-07-HAP-032`, `CR-07-HAP-048`,
+The forward open set at this draft is `CR-07-HAP-032`, `CR-07-HAP-048`,
 `CR-07-HAP-050`, and `CR-07-HAP-051`. The reviewed Plan 07-18 addendum
 closed `CR-07-REAL_STEPS-017` forward after the historical Round 2 STOP.
 The reviewed Plan 07-19 addendum closed `CR-07-OFFLINE_LIBS-016` forward
@@ -92,6 +91,8 @@ Plan 07-21 closed 018 forward after an independent complete-file review
 found no new source violation. No OFFLINE_LIBS ID remains forward-open.
 Plan 07-22 closed HAP 025 forward after an independent complete-file
 review. The reviewer's other warning maps to existing HAP 048.
+Plan 07-23 closed HAP 028 forward after an independent complete-file
+review. Its warnings repeat rejected HAP 020/024 and open HAP 051.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
 FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
 open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and
