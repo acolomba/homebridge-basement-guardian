@@ -1,5 +1,5 @@
 @real @read-only
-Feature: Restarting and shutting down against the real Gemini
+Feature: Real pump lifecycle
 
   A Homebridge restart rebuilds the plugin over the storage directory the previous run wrote to.
   The cached Auth0 token file remains unchanged through that restart while the first grant is

@@ -1,5 +1,5 @@
 @real @read-only
-Feature: Discovering the real Gemini and its initial state
+Feature: Real pump discovery
 
   The one real Gemini on the configured account is discovered within a bounded timeout, its
   initial REST snapshot carries a valid deviceId, and its snapshot gains shadow-sourced fields

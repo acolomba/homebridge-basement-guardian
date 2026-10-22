@@ -1,5 +1,5 @@
 @real @read-only
-Feature: Observing heartbeats and natural updates on the real Gemini
+Feature: Real pump heartbeats
 
   The configured Gemini's live path is observed across one 960-second interval (README.md).
   A quiet connection is acceptable after the initial shadow state arrives. The run fails if
