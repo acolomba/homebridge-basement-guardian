@@ -352,7 +352,7 @@ When('scenario releases fail before another release runs', async function (this:
   try {
     await scratch.cleanUp();
     this.observations.push('no failure');
-  } catch (error) {
+  } catch (error: unknown) {
     this.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
   }
 });
@@ -368,7 +368,7 @@ When('startup fails after a scenario release is registered', async function (thi
   try {
     await scratch.cleanUp();
     scratch.observations.push('no failure');
-  } catch (error) {
+  } catch (error: unknown) {
     scratch.observations.push(error instanceof AggregateError ? error.errors.map(String).join(', ') : 'other failure');
   }
 
