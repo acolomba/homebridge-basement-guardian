@@ -41,9 +41,8 @@ const SALT_BYTES = 16;
 /**
  * How often the runtime polls the vendor REST inventory, in seconds.
  *
- * The lowest value CONF-05 permits, because this suite is short-lived: a scenario waits at most a
- * couple of minutes, so a long production-scale poll interval would leave most scenarios with no
- * second poll to observe at all.
+ * The lowest value CONF-05 permits. Discovery observes the startup inventory; shorter scenarios
+ * do not require a second poll. The 960-second heartbeat scenario spans later five-minute polls.
  */
 const POLL_INTERVAL_SECONDS = 300;
 
