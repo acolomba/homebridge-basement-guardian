@@ -460,10 +460,13 @@ async function assertNoUnhandledRejection(this: BasementGuardianWorld): Promise<
 Then('the fake service raises no unhandled rejection', assertNoUnhandledRejection);
 
 function assertResponseError(this: BasementGuardianWorld, error: string): void {
-  assert.equal(field(this.response().body, 'error'), error);
+  assert.deepStrictEqual(this.response().body, {
+    error,
+    error_description: 'the scenario armed this failure',
+  });
 }
 
-Then('the response carries the error {string}', assertResponseError);
+Then('the response contains only the error {string} and its description', assertResponseError);
 
 function assertDeviceListHoldsTheDevices(this: BasementGuardianWorld): void {
   const wireDevices = field(this.response().body, 'devices');

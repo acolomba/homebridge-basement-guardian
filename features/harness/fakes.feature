@@ -18,7 +18,7 @@ Feature: Harness fakes
     Given the tenant fails the next grant with status 403 and error "invalid_grant"
     When the harness requests an identity token
     Then the response carries status 403
-    Then the response carries the error "invalid_grant"
+    Then the response contains only the error "invalid_grant" and its description
     When the harness requests an identity token
     Then the response carries status 200
 
