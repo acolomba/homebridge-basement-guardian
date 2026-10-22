@@ -198,7 +198,7 @@ export class RealPumpWorld extends World {
     }
   }
 
-  /** Starts the account runtime this world built in its `Before` hook. */
+  /** Starts the world's current account runtime. */
   async start(): Promise<void> {
     await this.runtime().start();
   }
