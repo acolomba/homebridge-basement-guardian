@@ -1525,6 +1525,28 @@ describe('BasementGuardianPlatform', () => {
 });
 
 describe('configureAccessory', () => {
+  test('keeps a restored vendor email out of logs', () => {
+    // arrange
+    const restoredAccessory = new HarnessPlatformAccessory('account@example.test', ACCESSORY_UUID);
+    restoredAccessory.context.lastVendorName = 'account@example.test';
+    const infoCalls: unknown[][] = [];
+    const log = createSilentLog();
+    log.info = (...args: unknown[]): void => {
+      infoCalls.push(args);
+    };
+
+    const platform = new BasementGuardianPlatform(log, emptyConfig(), fakeDiscoveryApi([]));
+    when(() => platform.api.hap).thenReturn(HAP_NAMESPACE);
+
+    // act
+    platform.configureAccessory(restoredAccessory as unknown as PlatformAccessory);
+
+    // assert
+    assert.strictEqual(platform.accessories.get(ACCESSORY_UUID), restoredAccessory);
+    assert.deepStrictEqual(infoCalls, [['Loading accessory from cache:', '(0 services no longer vouched for, 0 controls refusing presses)']]);
+    verify(platform.api);
+  });
+
   test('keeps ownership and prepares later restored services when an early service throws', async (t: TestContext) => {
     // arrange
     const restoredAccessory = new HarnessPlatformAccessory('Sump Guardian', ACCESSORY_UUID);
@@ -1593,7 +1615,6 @@ describe('configureAccessory', () => {
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const restoredAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'restored accessory' });
     when(() => restoredAccessory.UUID).thenReturn('accessory-uuid-1');
-    when(() => restoredAccessory.displayName).thenReturn('Sump Pump');
     when(() => restoredAccessory.services)
       .thenReturn([])
       .times(2);
@@ -1617,9 +1638,6 @@ describe('configureAccessory', () => {
     const restoredAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'restored accessory' });
     when(() => restoredAccessory.UUID)
       .thenReturn('accessory-uuid-1')
-      .times(2);
-    when(() => restoredAccessory.displayName)
-      .thenReturn('Sump Pump')
       .times(2);
     when(() => restoredAccessory.services)
       .thenReturn([])
@@ -1714,7 +1732,6 @@ describe('configureAccessory', () => {
     const api = mock<API>({ exactParams: true, name: 'homebridge api' });
     const staleAccessory = mock<PlatformAccessory>({ exactParams: true, name: 'stale accessory' });
     when(() => staleAccessory.UUID).thenReturn('accessory-uuid-gone');
-    when(() => staleAccessory.displayName).thenReturn('Retired Pump');
     when(() => staleAccessory.services)
       .thenReturn([])
       .times(2);

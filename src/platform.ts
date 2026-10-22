@@ -693,7 +693,6 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
 
     this.log.info(
       'Loading accessory from cache:',
-      accessory.displayName,
       `(${String(marked.reached)} services no longer vouched for, ${String(refusing.reached)} controls refusing presses)`,
     );
   }
