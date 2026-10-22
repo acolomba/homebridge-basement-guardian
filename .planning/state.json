@@ -41,13 +41,13 @@
     {
       "number": "8",
       "name": "Final Sweep and Gate",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "next": {
     "command": "/gsd-progress --next",
     "label": "Advance to the next step",
-    "reason": "Phase 8 of 8 · 85% · executing"
+    "reason": "Phase 8 of 8 · 88% · executing"
   },
-  "updated_at": "2026-10-22T23:15:05.354Z"
+  "updated_at": "2026-10-22T23:42:20.079Z"
 }

@@ -355,6 +355,22 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   4. Every phase ledger from Phase 1 to Phase 8 gives every finding an outcome, fixed or rejected with a stated reason, and every phase that stopped at the round cap has a report.
 
 **Plans**: TBD
+- [x] 08-01-PLAN.md
+- [x] 08-02-PLAN.md
+- [x] 08-03-PLAN.md
+- [x] 08-04-PLAN.md
+- [x] 08-05-PLAN.md
+- [x] 08-06-PLAN.md
+- [x] 08-07-PLAN.md
+- [x] 08-08-PLAN.md
+- [ ] 08-09-PLAN.md
+- [ ] 08-10-PLAN.md
+- [ ] 08-11-PLAN.md
+- [ ] 08-12-PLAN.md
+- [ ] 08-13-PLAN.md
+- [ ] 08-14-PLAN.md
+- [ ] 08-15-PLAN.md
+
 **Batching**: One full-repo review pass, split across reviewer subagents by subsystem, then fix batches under the same rules as earlier phases: no two plans in the same wave edit the same file, review → triage → fix → re-review capped at about four rounds, `gsd-code-reviewer` and `gsd-code-fixer` subagents with the project's `agent_skills`, and atomic commits that pass the pre-commit hooks; never `--no-verify`. The full `npm run check` runs on the combined tree after the last fix.
 
 ## Progress
@@ -370,4 +386,4 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 6. Root Module Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 7. Cucumber Feature Conformance | code-review-sweep | 30/30 | Complete    | 2026-10-22 |
-| 8. Final Sweep and Gate | code-review-sweep | 0/TBD | Not started | - |
+| 8. Final Sweep and Gate | code-review-sweep | 8/15 | In Progress | - |
