@@ -264,7 +264,12 @@ export class RealPumpWorld extends World {
   }
 
   private logger(): RedactingLogger {
-    this.redactingLog ??= createRedactingLogger({ delegate: terminalLogging((line) => this.loggedLines.push(line)), secrets: [] });
+    this.redactingLog ??= createRedactingLogger({
+      delegate: terminalLogging((line) => {
+        this.loggedLines.push(line);
+      }),
+      secrets: [],
+    });
 
     return this.redactingLog;
   }
