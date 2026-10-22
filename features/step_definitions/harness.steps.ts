@@ -512,11 +512,11 @@ Then('the broker holds no current subscriptions', async function (this: Basement
   assert.deepStrictEqual(broker.currentSubscriptions(), []);
 });
 
-Then('the world observes that the plugin "launched"', function (this: BasementGuardianWorld): void {
+Then('the lifecycle listeners observe "launched"', function (this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, ['launched']);
 });
 
-Then('the world observes that the plugin "shut down"', function (this: BasementGuardianWorld): void {
+Then('the lifecycle listeners observe "shut down"', function (this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, ['launched', 'shut down']);
 });
 

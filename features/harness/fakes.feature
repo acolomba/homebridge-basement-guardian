@@ -190,9 +190,9 @@ Feature: Harness fakes
     Given the fake homebridge api
     Given a listener on each lifecycle event
     When the api finishes launching
-    Then the world observes that the plugin "launched"
+    Then the lifecycle listeners observe "launched"
     When the api shuts down
-    Then the world observes that the plugin "shut down"
+    Then the lifecycle listeners observe "shut down"
 
   Scenario: The fake homebridge api gives the scenario temporary storage
     Given the fake homebridge api
