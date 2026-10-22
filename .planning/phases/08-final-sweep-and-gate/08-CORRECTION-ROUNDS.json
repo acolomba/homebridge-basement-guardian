@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "milestone": "code-review-sweep",
+  "phase": "08-final-sweep-and-gate",
+  "sourceManifest": "08-MANIFEST.json",
+  "sourceFindings": "08-FINDINGS.md",
+  "state": "round-zero-triaged",
+  "roundLimit": 4,
+  "batches": {
+    "CLOUD": {
+      "pathCount": 19,
+      "report": "08-CLOUD-REVIEW.md",
+      "openingIds": [],
+      "rounds": []
+    },
+    "DEVICE": {
+      "pathCount": 20,
+      "report": "08-DEVICE-REVIEW.md",
+      "openingIds": ["CR-08-DEVICE-001", "CR-08-DEVICE-002"],
+      "rounds": []
+    },
+    "RUNTIME": {
+      "pathCount": 23,
+      "report": "08-RUNTIME-REVIEW.md",
+      "openingIds": ["CR-08-RUNTIME-001", "CR-08-RUNTIME-002", "CR-08-RUNTIME-003"],
+      "rounds": []
+    },
+    "ACCESSORY": {
+      "pathCount": 21,
+      "report": "08-ACCESSORY-REVIEW.md",
+      "openingIds": [],
+      "rounds": []
+    },
+    "ROOT": {
+      "pathCount": 15,
+      "report": "08-ROOT-REVIEW.md",
+      "openingIds": ["CR-08-ROOT-001"],
+      "rounds": []
+    },
+    "FEATURES": {
+      "pathCount": 39,
+      "report": "08-FEATURES-REVIEW.md",
+      "openingIds": ["CR-08-FEATURES-001", "CR-08-FEATURES-002"],
+      "rounds": []
+    }
+  },
+  "queue": [
+    {
+      "order": 1,
+      "id": "CR-08-ROOT-001",
+      "owner": "ROOT",
+      "editPaths": ["src/platform.ts", "test/platform.test.ts"],
+      "boundedConsumerPaths": ["src/cloud/types.ts", "src/device/state.ts", "src/logging.ts"]
+    },
+    {
+      "order": 2,
+      "id": "CR-08-DEVICE-001",
+      "owner": "DEVICE",
+      "editPaths": ["src/device/state.ts", "test/device/state.test.ts"],
+      "boundedConsumerPaths": ["src/cloud/shadow.ts", "src/runtime/accountRuntime.ts"]
+    },
+    {
+      "order": 3,
+      "id": "CR-08-DEVICE-002",
+      "owner": "DEVICE",
+      "editPaths": ["src/device/state.ts", "test/device/state.test.ts"],
+      "boundedConsumerPaths": ["src/platform.ts", "test/platform.test.ts", "src/accessories/basementGuardian.ts", "test/accessories/basementGuardian.test.ts", "src/device/health.ts"]
+    },
+    {
+      "order": 4,
+      "id": "CR-08-RUNTIME-002",
+      "owner": "RUNTIME",
+      "editPaths": ["src/runtime/arrivalAnchors.ts", "test/runtime/arrivalAnchors.test.ts"],
+      "boundedConsumerPaths": ["src/runtime/accountRuntime.ts", "test/runtime/accountRuntime.test.ts"]
+    },
+    {
+      "order": 5,
+      "id": "CR-08-RUNTIME-001",
+      "owner": "RUNTIME",
+      "editPaths": ["src/runtime/accountRuntime.ts", "test/runtime/accountRuntime.test.ts"],
+      "boundedConsumerPaths": ["src/runtime/failureLog.ts", "src/cloud/api.ts", "src/cloud/shadow.ts"]
+    },
+    {
+      "order": 6,
+      "id": "CR-08-RUNTIME-003",
+      "owner": "RUNTIME",
+      "editPaths": ["src/runtime/failureLog.ts", "test/runtime/failureLog.test.ts"],
+      "boundedConsumerPaths": ["src/runtime/accountRuntime.ts", "test/runtime/accountRuntime.test.ts"]
+    },
+    {
+      "order": 7,
+      "id": "CR-08-FEATURES-002",
+      "owner": "FEATURES",
+      "editPaths": ["features/step_definitions/account.steps.ts"],
+      "boundedConsumerPaths": ["features/account/sign-in.feature", "features/support/world.ts", "src/cloud/auth.ts"]
+    },
+    {
+      "order": 8,
+      "id": "CR-08-FEATURES-001",
+      "owner": "FEATURES",
+      "editPaths": ["features/step_definitions/account.steps.ts", "features/step_definitions/configuration.steps.ts", "features/step_definitions/controls.steps.ts", "features/step_definitions/homekit.steps.ts", "features/step_definitions/shadow.steps.ts"],
+      "boundedConsumerPaths": []
+    }
+  ],
+  "forwardOpenIds": [
+    "CR-08-DEVICE-001",
+    "CR-08-DEVICE-002",
+    "CR-08-RUNTIME-001",
+    "CR-08-RUNTIME-002",
+    "CR-08-RUNTIME-003",
+    "CR-08-ROOT-001",
+    "CR-08-FEATURES-001",
+    "CR-08-FEATURES-002"
+  ],
+  "stop": {
+    "active": false,
+    "reason": null,
+    "round": null,
+    "historicalReferences": [
+      "../05-accessories-conformance/05-FINDINGS.md",
+      "../06-root-module-conformance/06-FINDINGS.md",
+      "../07-cucumber-feature-conformance/07-FINDINGS.md"
+    ]
+  },
+  "requirements": {
+    "GATE-02": "open",
+    "BUG-01": "open"
+  }
+}

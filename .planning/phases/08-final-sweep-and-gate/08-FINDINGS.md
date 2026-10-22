@@ -1,75 +1,53 @@
-# Phase 08 findings and review index
+# Phase 08 findings and complete-file review index
 
-This ledger belongs to the `code-review-sweep` milestone. Round zero starts
-with the independent tracer in [08-TRACER-REVIEW.md](08-TRACER-REVIEW.md).
-The six complete-file batch reports will fill this ledger in Plans 08-02
-through 08-07, 08-12, and 08-13. Plans 08-09 and 08-14 own cause triage and
-repair; this tracer changes no product code.
+Milestone: `code-review-sweep`. Round zero reviewed the current 137 tracked in-scope paths at their full Git blobs. [08-MANIFEST.json](08-MANIFEST.json) is the path-level index; each path has one exact `1-N` row in its named owner report. The independent [tracer](08-TRACER-REVIEW.md) adds evidence for three paths, not a seventh owner. No Phase 08 product file has changed or correction round started.
 
-## Source snapshot and inventory
+## Current inventory and evidence
 
-- Starting committed revision: `0217a8ac4e0c049eb152dc2b01d2952b1ae826d1`.
-- [08-MANIFEST.json](08-MANIFEST.json) assigns 137 in-scope tracked paths
-  exactly once: CLOUD 19, DEVICE 20, RUNTIME 23, ACCESSORY 21, ROOT 15,
-  FEATURES 39. Research also counted 137; delta is zero.
-- Ten repository-level gate tests are excluded from complete-file review but
-  remain in the full gate. `test/configSchema.test.ts` and
-  `test/packageManifest.test.ts` remain absent.
-- Node for this plan: `v26.12.1`. This is local evidence, not Node 22/24
-  compatibility proof. Pairing and full-gate results are recorded below.
+| Owner | Paths | Complete report | Opening and forward-open IDs | Rejected candidates |
+| --- | ---: | --- | --- | ---: |
+| CLOUD | 19 | [08-CLOUD-REVIEW.md](08-CLOUD-REVIEW.md) | none | 5 |
+| DEVICE | 20 | [08-DEVICE-REVIEW.md](08-DEVICE-REVIEW.md) | 001, 002 | 3 |
+| RUNTIME | 23 | [08-RUNTIME-REVIEW.md](08-RUNTIME-REVIEW.md) | 001, 002, 003 | 8 |
+| ACCESSORY | 21 | [08-ACCESSORY-REVIEW.md](08-ACCESSORY-REVIEW.md) | none | 8 |
+| ROOT | 15 | [08-ROOT-REVIEW.md](08-ROOT-REVIEW.md) | 001 | 3 |
+| FEATURES | 39 | [08-FEATURES-REVIEW.md](08-FEATURES-REVIEW.md) | 001, 002 | 4 |
+| **Total** | **137** | **six reports** | **eight distinct IDs** | **31** |
 
-## Requirement and probe status
+The live `git ls-files src test features` set contains 147 paths. Removing the manifest's ten named repository gate tests leaves exactly its 137 unique paths. `test/configSchema.test.ts` and `test/packageManifest.test.ts` remain absent. Every manifest blob equals the current file blob, and each report has the same path, `1-N` span, full blob, and reviewer. `test/runtime/accountRuntime.test.ts` has adjacent 1-4702 and 4703-9404 reads by two reviewers; its aggregate 1-9404 row records their union. Earlier partial wording in that report remains historical. The six owner reports certify all paths.
 
-| Requirement | Current Phase 08 evidence | Status |
-| --- | --- | --- |
-| GATE-02 | Live manifest and three independent tracer rows below; 134 paths remain assigned for later complete-file review. | In progress; no final zero-open claim. |
-| BUG-01 | Regression-before-fix and milestone bug audit are specified in the protocol; Plan 08-08 and repair plans own evidence. | In progress. |
-| GATE-01 | Current pairing result below; the full combined-tree gate belongs to Plan 08-11 after repair. | In progress; no current full-gate claim. |
+## Accepted round-zero causes
 
-| Flagged spec-less row | Disposition | Acceptance source |
-| --- | --- | --- |
-| BUG-01 adjacency | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criteria 3-4 |
-| BUG-01 empty | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criteria 3-4 |
-| BUG-01 ordering | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criteria 3-4 |
-| GATE-01 adjacency | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criterion 2 |
-| GATE-01 empty | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criterion 2 |
-| GATE-01 ordering | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criterion 2 |
-| GATE-02 unclassified | Unresolved; no probe proof or backstop | Phase 8 ROADMAP criterion 1 |
+All locations below are initial **and current** at the reviewed revision. All eight dispositions are **open**. No RED record, GREEN commit, named owner-test exit, direct-coverage result, or Phase 08 combined-gate exit is claimed. Each linked owner report names its required check. The serial owner-path queue is in [08-CORRECTION-ROUNDS.md](08-CORRECTION-ROUNDS.md).
 
-Seven surfaced = zero lifted as proven edge predicates + seven flagged.
+| ID | Requirement and exact rule | Current revision:path:line; severity | Cause and disposition |
+| --- | --- | --- | --- |
+| CR-08-DEVICE-001 | GATE-02; `AGENTS.md` §Project Safety semantics; `08-REVIEW-PROTOCOL.md` §Scope and acceptance | `157092f765fd7e8f120a272be1e32995ea1ff48b:src/device/state.ts:247-252`; **BLOCKER** | Empty shadow `data` establishes a watermark and receipt without a reading, so a later poll cannot replace older telemetry. Open; paired gap `test/device/state.test.ts:393-507`. [Evidence](08-DEVICE-REVIEW.md#accepted-round-zero-findings). |
+| CR-08-DEVICE-002 | GATE-02; `AGENTS.md` §Project Safety semantics; `.agents/skills/typescript-unit-tests/rules/cases.md` §Assertions | `157092f765fd7e8f120a272be1e32995ea1ff48b:src/device/state.ts:301-305,346-355`; **WARNING** | A valid unchanged heartbeat advances store receipt without notifying the accessory; later distrust can retain an old `lastTrustedAt`. Open; paired gap `test/device/state.test.ts:834-845`. [Evidence](08-DEVICE-REVIEW.md#accepted-round-zero-findings). |
+| CR-08-RUNTIME-001 | GATE-02; `AGENTS.md` §Project Safety semantics; `.agents/skills/typescript-unit-tests/rules/review.md` §§Reviewing, Classifying findings | `157092f765fd7e8f120a272be1e32995ea1ff48b:src/runtime/accountRuntime.ts:966-988`; **WARNING** | A late successful credential response can emit recovery after terminal refusal or shutdown. Open; paired gap `test/runtime/accountRuntime.test.ts:3619-3749,6110-6141`. [Evidence](08-RUNTIME-REVIEW.md#cr-08-runtime-001--late-credential-success-reports-recovery-after-terminal-refusal). |
+| CR-08-RUNTIME-002 | GATE-02; `AGENTS.md` §Project Safety semantics and Persistence; `.agents/skills/typescript-unit-tests/rules/review.md` §§Reviewing, Classifying findings | `217fa2cddfbbe6e38c2bf5030593c9d52f7af6c7:src/runtime/arrivalAnchors.ts:198-203`; **BLOCKER** | Concurrent snapshots can rename to one target out of order and lose a newly admitted device's durable anchor. Open; related caller `src/runtime/accountRuntime.ts:695-703`, paired gap `test/runtime/arrivalAnchors.test.ts:140-163,207-234,258-288`. [Evidence](08-RUNTIME-REVIEW.md#cr-08-runtime-002--overlapping-anchor-writes-can-discard-a-newly-admitted-devices-durable-anchor). |
+| CR-08-RUNTIME-003 | GATE-02; D-14 reminder promise in `src/runtime/failureLog.ts:49-60`; `.agents/skills/typescript-unit-tests/rules/review.md` §§Reviewing, Classifying findings | `217fa2cddfbbe6e38c2bf5030593c9d52f7af6c7:src/runtime/failureLog.ts:69-80`; **WARNING** | Backward wall-clock movement delays warning reminders beyond fifteen elapsed minutes. Open; paired gap `test/runtime/failureLog.test.ts:107-203`. [Evidence](08-RUNTIME-REVIEW.md#cr-08-runtime-003--backward-wall-clock-correction-suppresses-failure-reminders). |
+| CR-08-ROOT-001 | AUTH-02, GATE-02; `AGENTS.md` §Project Privacy; `.agents/skills/typescript-unit-tests/rules/cases.md` §Assertions and `rules/review.md` §Classifying findings | `01bc3a3b8d542054bfdb98a13ee180155dd92fd2:src/platform.ts:694-698`; **BLOCKER** | A restored vendor-derived display name can carry an account email into the plugin log. Open; paired gap `test/platform.test.ts:79-95,1528-1585`. [Evidence](08-ROOT-REVIEW.md#cr-08-root-001--restored-accessory-name-can-disclose-an-account-identifier). |
+| CR-08-FEATURES-001 | GATE-02; `.agents/skills/cucumber/rules/steps.md` §Steps; `.agents/skills/typescript-style/rules/functions.md` §Functions | At `01bc3a3b8d542054bfdb98a13ee180155dd92fd2`: `features/step_definitions/account.steps.ts:96,238`, `features/step_definitions/configuration.steps.ts:37,94`, `features/step_definitions/controls.steps.ts:137,319`, `features/step_definitions/homekit.steps.ts:112,275`, `features/step_definitions/shadow.steps.ts:147,498`; **WARNING** | Five World-bound step modules use named function declarations instead of the prescribed anonymous expressions. Open. Cucumber still binds `this`; no runtime binding failure is claimed. [Evidence](08-FEATURES-REVIEW.md#accepted-round-zero-findings). |
+| CR-08-FEATURES-002 | GATE-02; `.agents/skills/cucumber/SKILL.md` §Review; `.agents/skills/cucumber/rules/steps.md` §Steps; `.agents/skills/typescript-style/rules/functions.md` §Errors | `01bc3a3b8d542054bfdb98a13ee180155dd92fd2:features/step_definitions/account.steps.ts:83-88,204-208`; **BLOCKER** | Cache-absence `Then` treats every filesystem access failure as absence, so a permission error can falsely pass. Open; scenario `features/account/sign-in.feature:27-35`. [Evidence](08-FEATURES-REVIEW.md#accepted-round-zero-findings). |
 
-## Batch report index
+These are distinct current causes. The repeated anonymous-callback form is one FEATURES cause across five files. The RUNTIME late-grant finding is a false diagnostic, not a reopened broker connection. The DEVICE heartbeat finding concerns last-trusted timing, not the rejected metadata-only update concern. No report identifies a previously fixed Phase 1–7 cause returning. If repair review finds that an old fixed cause returned, reopen its original ID and trigger the protocol STOP.
 
-| Owner | Assigned paths | Report | Current state |
-| --- | ---: | --- | --- |
-| CLOUD | 19 | `08-CLOUD-REVIEW.md` | Assigned, pending complete-file review |
-| DEVICE | 20 | `08-DEVICE-REVIEW.md` | Assigned, pending complete-file review |
-| RUNTIME | 23 | `08-RUNTIME-REVIEW.md` | Assigned, pending complete-file review |
-| ACCESSORY | 21 | `08-ACCESSORY-REVIEW.md` | Assigned, pending complete-file review |
-| ROOT | 15 | `08-ROOT-REVIEW.md` | Two tracer files clean; batch review pending |
-| FEATURES | 39 | `08-FEATURES-REVIEW.md` | One tracer file clean; batch review pending |
+## Rejected round-zero candidates
 
-## Tracer file ledger
+Each candidate below remains **rejected without a CR-08 ID**. Its linked report supplies the exact rule, revision-qualified location, and full evidence. This index records the reason and prevents a silent clean classification.
 
-These rows link one manifest path and full blob to its independent
-complete-file result. They do not certify the other 134 assigned paths.
+| Owner | Candidate and reason |
+| --- | --- |
+| CLOUD | Authentication exception vendor text: typed runtime consumers log fixed text. Metadata-only shadow arrival: no demonstrated vendor payload or telemetry ownership. Nonfinite connectivity timestamp: no freshness consumer of that wire field. Invalid credential expiry string: runtime chooses the minimum rotation delay. Late MQTT callback: settled deadline and released-connection guards prevent state change. [Five rows](08-CLOUD-REVIEW.md). |
+| DEVICE | Illegal flood-code helper input: production decoder validates the enum first. Invalid metadata group: narrow non-safety distrust retains safety scopes. Metadata-only listener omission: later inventory update retains metadata; it does not resolve DEVICE-002. [Three rows](08-DEVICE-REVIEW.md#rejected-candidates-without-ids). |
+| RUNTIME | Removed-device shadow callback: membership guard blocks recreation. Uncertain command retry: one send and no retry branch. Overlapping shadow starts: production start resolves without injected stand-in delay. Composite ID log: D-14/D-027 local-log ruling applies. Late grant reopening broker: tests assert both refusal orderings. Stray message restoring removed anchor: membership and persisted-anchor checks block it. Retry policy resending command: policy schedules reconnect only. Malformed anchor file failing startup: specified recovery rejects file and uses this run's term. [Eight rows](08-RUNTIME-REVIEW.md). |
+| ACCESSORY | Invalid first self-test default: `StatusActive=false` and no pushed `On` are asserted. Timed-out command resend: pending window blocks another press. Control-warning ID: scoped local-log ruling. Firmware `unknown`: explicitly unknown metadata, not a guessed measurement. Incomplete battery group: decoder gives complete group or absence. Record with absent running fact: publication withholds record. Restored service without prior trust characteristic: older-cache limit is documented, with no demonstrated current false-normal regression. Refused write erasing value or retaining status: fidelity tests cover both. [Eight rows](08-ACCESSORY-REVIEW.md). |
+| ROOT | Local diagnostic `deviceId`: D-14/D-027 scoped ruling, unlike ROOT-001 display name. Default entry export: loader-required exception. Test `.bind`/`Object.defineProperty`: scoped spies and synthetic getter failure, not production mutation. [Three rows](08-ROOT-REVIEW.md#rejected-candidates). |
+| FEATURES | Late `Given`: maintainer rejected the same cause in Phase 7. Real-profile separation: deliberate import boundary. Self-contained HAP `Then`: prior ruling permits local contract assertions. Post-restart change listener: no current scenario observes that counter. [Four rows](08-FEATURES-REVIEW.md#rejected-candidates). |
 
-| Path | Owner/shard | Revision | Full blob | Lines | Reviewer | Finding result |
-| --- | --- | --- | --- | --- | --- | --- |
-| `src/config.ts` | ROOT/B | `0217a8ac4e0c049eb152dc2b01d2952b1ae826d1` | `3d299fd1fe718a5ddb6835417849d01b7694f21b` | 1-216 | `/root/phase8_plan01/independent_tracer` | 0, clean |
-| `test/config.test.ts` | ROOT/B | `0217a8ac4e0c049eb152dc2b01d2952b1ae826d1` | `33e1d51f1db305e2adb9ef4d898a3ccd27ca9e56` | 1-503 | `/root/phase8_plan01/independent_tracer` | 0, clean |
-| `features/account/configuration.feature` | FEATURES/A | `0217a8ac4e0c049eb152dc2b01d2952b1ae826d1` | `7e35c417f02a3a8b021e0f6b717b2c724874864b` | 1-48 | `/root/phase8_plan01/independent_tracer` | 0, clean |
+## Historical STOPs and forward requirements
 
-**Tracer finding IDs:** none allocated. The observed forward-open set from
-this tracer is empty; the phase-wide forward-open set remains undetermined
-until all six owner reviews and correction rounds finish. Historical STOPs
-from earlier phases remain in their ledgers and will be audited, not erased.
+Phase 5 GATES round-15 STOP, Phase 6 ENTRY round-four STOP, and the Phase 7 batch STOPs remain in their original ledgers. Later authorized closures did not erase those observations. The [milestone bug ledger](08-BUG-LEDGER.md) retains 51 prior behavior-defect claims and three debug-only evidence limits. Phase 08 has **no correction round yet** and no Phase 08 STOP event. Current forward-open set: `CR-08-DEVICE-001`, `CR-08-DEVICE-002`, `CR-08-RUNTIME-001`, `CR-08-RUNTIME-002`, `CR-08-RUNTIME-003`, `CR-08-ROOT-001`, `CR-08-FEATURES-001`, `CR-08-FEATURES-002`.
 
-## Plan 08-01 verification
-
-At commit `56c1f74` on Node `v26.12.1`, `npm run --silent
-test:corresponding` exited `0` and printed `Corresponding-tests gate passed.`
-The commit contains only Phase 08 planning records; executable inputs match
-the tracer's starting revision. The final `TEST_CONCURRENCY=1 npm run check`
-has not run for Phase 08 and must not be inferred from a prior phase or
-commit hook.
+GATE-02 remains open through correction review and the final combined gate. BUG-01 remains open for the evidence and current-input limits in [08-BUG-LEDGER.md](08-BUG-LEDGER.md). GATE-01 awaits the final `TEST_CONCURRENCY=1 npm run check` on the repaired combined tree. The seven spec-less probe rows remain unresolved: zero lifted as proven edge predicates and seven flagged. No prior gate pass is treated as Phase 08 final evidence.
