@@ -131,7 +131,9 @@ each modified production source/test pair.
 
 Compile with `npm run build:test` before any Cucumber command. The default
 profile must execute offline. The real profile may run only with `--dry-run`.
-Inspect its summary for seven skipped scenarios, 41 skipped steps, and no
+Inspect its summary for six skipped scenarios, 35 skipped steps after the
+Plan 07-11 removal of one unprovable optional scenario and addition of one
+shadow observation step (baseline seven/41), and no
 undefined or ambiguous status; its exit code alone is insufficient. Check
 default usage for `UNUSED` definitions. Keep the scenario count at 104 unless
 the ledger explains each change. Run `npm run check` on the combined tree
