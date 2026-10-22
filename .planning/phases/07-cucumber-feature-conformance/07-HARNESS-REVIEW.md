@@ -115,3 +115,4 @@ Round 1 opening: **21**. Fixed: **21**. Rejected from opening: **0**. New accept
 - **035:** A comment at the expected startup rejection explains why the step consumes it before cleanup reports it. The scenario count and step count are unchanged.
 - **036:** World documentation now describes remembered scenario values, including readings and fake APIs. The scenario count and step count are unchanged.
 - **037:** Setup now checks the second fake API's storage path and remembers only that path. The assertion narrows the recalled value before reading the directory; the unchecked API cast is gone. World comments were updated to describe the stored path. The focused scenario passed 5/5 steps; the scenario count and step count are unchanged.
+- **038:** `cleanUp()` documentation now states that it waits for startup and reports startup and release failures after running every release. The scenario count and step count are unchanged.

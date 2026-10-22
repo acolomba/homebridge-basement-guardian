@@ -544,7 +544,10 @@ export class BasementGuardianWorld extends World {
     return this.lastWrite.status;
   }
 
-  /** Runs every registered teardown step in reverse order. */
+  /**
+   * Waits for startup, then runs every registered teardown step in reverse order.
+   * Collects startup and release failures and reports them together after every release runs.
+   */
   async cleanUp(): Promise<void> {
     const failures: unknown[] = [];
 
