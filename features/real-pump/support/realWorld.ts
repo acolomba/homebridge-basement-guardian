@@ -79,9 +79,9 @@ function terminalLogging(record: (line: string) => void): Logging {
     stdoutLine(level, message);
   }
 
-  const info = (message: string): void => {
+  function info(message: string): void {
     write('info', message);
-  };
+  }
 
   return Object.assign(info, {
     prefix: 'basement guardian (real-pump)',
