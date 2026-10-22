@@ -200,15 +200,15 @@ Then('two fake hap characteristics keep separate properties', () => {
   }
 });
 
+function characteristicStateOf(characteristic: FakeHapCharacteristic): { value: unknown; pushed: boolean; statusCode: number } {
+  return { value: characteristic.value, pushed: characteristic.pushed, statusCode: characteristic.statusCode };
+}
+
 // The real HAP creates each characteristic at its format default, and for this plugin those
 // defaults are the good-news values: a sensor published before the first valid decode would read
 // "no leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
 // default that is honest. The accessory never relies on that: it adds no service until its row has
 // a value to vouch for, and pushes `StatusActive` on every service it does add (D-05, D-014).
-function constructedStateOf(characteristic: FakeHapCharacteristic): { value: unknown; pushed: boolean; statusCode: number } {
-  return { value: characteristic.value, pushed: characteristic.pushed, statusCode: characteristic.statusCode };
-}
-
 function assertFormatDefaults(): void {
   const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
   const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
@@ -217,15 +217,15 @@ function assertFormatDefaults(): void {
 
   assert.deepStrictEqual(
     {
-      leak: constructedStateOf(leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected)),
-      contact: constructedStateOf(contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState)),
-      lowBattery: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.StatusLowBattery)),
-      active: constructedStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusActive)),
-      fault: constructedStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusFault)),
-      waterLevel: constructedStateOf(new HAP.Characteristic.WaterLevel()),
-      batteryLevel: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.BatteryLevel)),
-      charging: constructedStateOf(battery.getCharacteristic(HAP.Characteristic.ChargingState)),
-      on: constructedStateOf(switchService.getCharacteristic(HAP.Characteristic.On)),
+      leak: characteristicStateOf(leakSensor.getCharacteristic(HAP.Characteristic.LeakDetected)),
+      contact: characteristicStateOf(contactSensor.getCharacteristic(HAP.Characteristic.ContactSensorState)),
+      lowBattery: characteristicStateOf(battery.getCharacteristic(HAP.Characteristic.StatusLowBattery)),
+      active: characteristicStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusActive)),
+      fault: characteristicStateOf(leakSensor.addCharacteristic(HAP.Characteristic.StatusFault)),
+      waterLevel: characteristicStateOf(new HAP.Characteristic.WaterLevel()),
+      batteryLevel: characteristicStateOf(battery.getCharacteristic(HAP.Characteristic.BatteryLevel)),
+      charging: characteristicStateOf(battery.getCharacteristic(HAP.Characteristic.ChargingState)),
+      on: characteristicStateOf(switchService.getCharacteristic(HAP.Characteristic.On)),
     },
     {
       leak: { value: 0, pushed: false, statusCode: 0 },
@@ -325,7 +325,7 @@ function assertUpdateAddsTheCharacteristicItNames(): void {
   const characteristicClass = HAP.Characteristic.StatusActive;
 
   contactSensor.updateCharacteristic(characteristicClass, new HAP.HapStatusError(HAP.HAPStatus.RESOURCE_BUSY));
-  const stateAfterError = constructedStateOf(contactSensor.getCharacteristic(characteristicClass));
+  const stateAfterError = characteristicStateOf(contactSensor.getCharacteristic(characteristicClass));
   contactSensor.updateCharacteristic(characteristicClass, true);
 
   assert.deepStrictEqual(
@@ -333,7 +333,7 @@ function assertUpdateAddsTheCharacteristicItNames(): void {
       before,
       stateAfterError,
       after: contactSensor.testCharacteristic(characteristicClass),
-      state: constructedStateOf(contactSensor.getCharacteristic(characteristicClass)),
+      state: characteristicStateOf(contactSensor.getCharacteristic(characteristicClass)),
     },
     {
       before: false,
@@ -508,7 +508,7 @@ Then('setting a service characteristic calls its write handler', async () => {
   await Promise.resolve();
 
   assert.deepStrictEqual(
-    { received, returnedSelf: returned === switchService, state: constructedStateOf(switchService.getCharacteristic(HAP.Characteristic.On)) },
+    { received, returnedSelf: returned === switchService, state: characteristicStateOf(switchService.getCharacteristic(HAP.Characteristic.On)) },
     { received: [true], returnedSelf: true, state: { value: true, pushed: false, statusCode: 0 } },
   );
 });
@@ -532,7 +532,7 @@ Then('a refused service set preserves the prior value and stores its status', as
     });
 
     assert.deepStrictEqual(
-      { returnedSelf: returned === switchService, state: constructedStateOf(on), unhandled },
+      { returnedSelf: returned === switchService, state: characteristicStateOf(on), unhandled },
       { returnedSelf: true, state: { value: false, pushed: true, statusCode: HAP.HAPStatus.RESOURCE_BUSY }, unhandled: [] },
     );
   } finally {
