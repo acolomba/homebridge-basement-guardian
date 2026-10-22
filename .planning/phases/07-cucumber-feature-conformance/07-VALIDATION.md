@@ -17,7 +17,7 @@ created: "2026-10-19"
 | Config file | `cucumber.json` |
 | Quick run command | `npm run build:test && ./node_modules/.bin/cucumber-js --dry-run --format summary` |
 | Full suite command | `npm run check` |
-| Estimated runtime | Default Cucumber execution took about 28 seconds at baseline; record full-gate timing during execution. |
+| Measured runtime | The current default Cucumber run took about 37 seconds; the full gate also runs static, unpaired, and direct-coverage checks. |
 
 ## Sampling Rate
 
@@ -31,11 +31,11 @@ created: "2026-10-19"
 
 ## Per-Task Verification Map
 
-The planner will fill task IDs and exact commands after defining review batches.
+The owner batches and their report blobs are indexed in `07-FINDINGS.md`.
 
 | Task family | Requirement | Automated verification |
 |-------------|-------------|------------------------|
-| Gherkin review and repair | FEAT-01 | Default profile pass with scenario count 104; real-profile dry-run 7 scenarios and 41 bound, skipped steps. |
+| Gherkin review and repair | FEAT-01 | `TEST_CONCURRENCY=1 npm run check`: current default profile 130 scenarios and 1400 steps, with the 104/1156 baseline and each change explained in the owner reports; real-profile dry run 6/35 skipped. |
 | Step and support review and repair | FEAT-02 | Default profile pass, usage formatter has no `UNUSED`, TypeScript and formatting gates pass. |
 | Genuine behavior bug | BUG-01 | Active RED evidence on unchanged production before GREEN; focused scenario and any touched direct source/test pair pass. |
 | Phase closure | PROC-01, PROC-02 | Ledger reconciles all 37 files and each batch's independent round/STOP result; `npm run check` passes. |
@@ -55,8 +55,35 @@ degraded-status check are outside this phase.
 
 - [ ] Every planned task has an exact automated verify command.
 - [ ] No three consecutive tasks lack automated verification.
-- [ ] Every combined wave has a passing full gate.
-- [ ] Real-profile checks remain dry-run only, with status inspection.
+- [ ] Every combined wave has a passing full gate, including any later addendum.
+- [x] Real-profile checks remain dry-run only, with status inspection.
 - [ ] `nyquist_compliant: true` is set after the plan and evidence pass review.
 
 **Approval:** pending
+
+## Current combined-tree evidence
+
+At clean executable-input commit `f04d330` on Node `v26.12.1`, the command
+`TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
+unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
+and 43 isolated direct source/test coverage pairs passed. The Cucumber part
+reported 37.176 seconds. Later commits through `499bf7f` changed only
+`.planning/**/*.md`: `git diff --exit-code f04d330 -- . ':(exclude,glob).planning/**/*.md'`
+exited 0, and
+`git status --porcelain=v1 --untracked-files=all` was empty before this edit.
+This evidence is reusable on those unchanged executable inputs under the
+local-verification gate rule, but any later source edit requires a fresh gate.
+
+After that full build, `./node_modules/.bin/cucumber-js --dry-run --format usage`
+exited 0 and its complete output contained no `UNUSED` definition.
+`./node_modules/.bin/cucumber-js --profile real --dry-run --format summary`
+exited 0 with exactly six skipped scenarios and 35 skipped steps. It reported
+zero executing time and no undefined or ambiguous status. No real-profile
+step body or vendor request ran.
+
+The forward open set at this draft is `CR-07-OFFLINE_LIBS-016`,
+`CR-07-HAP-025`, `CR-07-HAP-028`, `CR-07-HAP-032`, `CR-07-HAP-048`,
+`CR-07-HAP-050`, `CR-07-HAP-051`, and `CR-07-REAL_STEPS-017`. Historical
+STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and FEAT-02
+cannot receive a clean phase sign-off while any forward ID remains open. The
+FEAT-01 and FEAT-02 spec-less probes stay unclassified and unresolved.
