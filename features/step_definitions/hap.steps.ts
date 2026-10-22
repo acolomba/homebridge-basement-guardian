@@ -371,7 +371,7 @@ Then('the service appends an optional characteristic on every call', () => {
   assertOptionalCharacteristicsAppend();
 });
 
-Then('the fake hap answers the real status for each error form', async () => {
+async function assertStatusForms(): Promise<void> {
   const service = new HAP.Service.Switch('System Self-Test', 'system-self-test');
   const on = service.getCharacteristic(HAP.Characteristic.On);
   const unknownStatus = new HAP.HapStatusError(0).hapStatus;
@@ -452,6 +452,10 @@ Then('the fake hap answers the real status for each error form', async () => {
       storedBelowRangeThrownStatus: -70402,
     },
   );
+}
+
+Then('the fake hap answers the real status for each error form', async () => {
+  await assertStatusForms();
 });
 
 Then('the service refuses a duplicate characteristic', () => {
