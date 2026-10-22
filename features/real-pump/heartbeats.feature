@@ -14,5 +14,6 @@ Feature: Observing heartbeats and natural updates on the real Gemini
     # unhandled rejection fails this scenario (T-06-20).
     When the harness starts
     Then the harness discovers one device within 30 seconds
+    Then the discovered device snapshot gains shadow-sourced fields within 45 seconds
     When the harness waits 960 seconds
     Then the connection reports no failure
