@@ -122,3 +122,39 @@ reported 0.0 seconds executing code. The default
 `UNUSED` definitions. Build, pre-commit, Fallow audit, and normal commit hooks
 passed for the individual changes. The correction reviewer must confirm the
 current four complete files before the forward set may close.
+
+## Round 1 complete-file correction review
+
+A fresh, independent Claude Opus 5.5 read-only session reviewed all four
+current files and applicable rules. It did not edit or run commands. The
+coordinator confirmed clean commit
+`da81d2d71c7208774ceb1d5031fb1c0505d40836` and the complete spans and
+blobs it read:
+
+| Path | Lines read | Blob |
+| --- | ---: | --- |
+| `features/real-pump/step_definitions/discovery.steps.ts` | 1–47 | `b7dd65c12036f7ea5757139c3ce0a325a02409df` |
+| `features/real-pump/step_definitions/heartbeats.steps.ts` | 1–32 | `7835e707e98dfebfe06eb22f5407c99414bb65e5` |
+| `features/real-pump/step_definitions/lifecycle.steps.ts` | 1–54 | `8d6beee1e197f4146e3d8d1476580bf30fdefb24` |
+| `features/lib/realPumpPolling.ts` | 1–38 | `df8ae4058d9f45e6adaf1951ab5ce4bcfcd11ec7` |
+
+The reviewer confirmed 001–015 absent and none reopened. It proposed one
+conditional privacy concern, one conditional all-devices assertion concern, a
+module-name warning, and two timeout hypotheses. The coordinator checked the
+needed files locally and triaged them:
+
+| Candidate | Disposition |
+| --- | --- |
+| `CR-07-REAL_STEPS-016` | **Accepted, open BLOCKER.** `da81d2d:features/real-pump/step_definitions/lifecycle.steps.ts:23-29` registers start and restart without a timeout. `src/runtime/accountRuntime.ts:1173-1205` awaits `launch()`, which awaits the vendor device-list request at `:1098-1113`; the request has a 10-second deadline (`:49,1318`), before considering Auth0. A correct but slow start can exceed Cucumber's five-second default and fail before the later 30-second discovery step. Rule: `cucumber/SKILL.md` §Review, scenario must be able to run; `cucumber/rules/steps.md` §Tools. Give both registrations a fixed ceiling above the network attempt. |
+| Rejection text | **Rejected.** `realWorld.ts:121-123,159-160` stores only the fixed string `unhandled rejection`, not the raw reason. The two deep-equality failures cannot print a private rejection payload. |
+| Singular snapshot observations | **Rejected.** `discovery.feature:14-24` and `heartbeats.feature:8-17` describe the configured Gemini and “the discovered device” in the singular. They do not claim all devices in a multi-system account. The step deliberately selects the first discovered ID as a read-only smoke observation. The separate product and offline scenarios own complete publication behavior. |
+| `heartbeats.steps.ts` filename | **Rejected.** The vertical is observing the connection across a heartbeat interval, as the feature says. The module holds that wait and its failure assertion, and the exact path was approved in Plan 07-13. |
+| Polling ceilings and 960-second comment | **Rejected.** The current real features pass 30, 45, 10, 1, and 960 seconds in the corresponding steps; their fixed ceilings exceed those waits. |
+
+Round 1 equation: **opening 15 - fixed 15 - rejected opening 0 + new accepted 1 + reopened 0 = closing 1**. Exact open set: `016`. The count fell, no
+fixed ID reopened, and round four has not completed, so the protocol permits
+one focused repair and an independent Round 2 review. The gate run on clean
+executable inputs at `da81d2d` with Node `v26.12.1` was
+`TEST_CONCURRENCY=1 npm run check`, exit 0: 130/130 offline scenarios,
+1400/1400 steps, and 43 isolated direct coverage pairs. That gate does not
+exercise the real profile live.
