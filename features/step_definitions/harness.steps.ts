@@ -526,7 +526,10 @@ async function assertSubscriberReceivesTheFullShadow(this: BasementGuardianWorld
 Then('the subscriber receives the full shadow document', assertSubscriberReceivesTheFullShadow);
 
 async function assertSubscriberReceivesTheRejection(this: BasementGuardianWorld): Promise<void> {
-  assert.equal(field(await receivedDocument(this, 'get-rejected'), 'code'), REJECTION_CODE);
+  assert.deepStrictEqual(await receivedDocument(this, 'get-rejected'), {
+    code: REJECTION_CODE,
+    message: 'the scenario rejected the shadow request',
+  });
 }
 
 Then('the subscriber receives the rejection', assertSubscriberReceivesTheRejection);
