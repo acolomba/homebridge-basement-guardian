@@ -232,7 +232,7 @@ export class BasementGuardianWorld extends World {
   /** Watches for unhandled rejections during an executing scenario. */
   watchUnhandledRejections(): void {
     process.on('unhandledRejection', this.recordRejection);
-    this.own(() => {
+    this.onRelease(() => {
       process.off('unhandledRejection', this.recordRejection);
 
       return Promise.resolve();
@@ -286,7 +286,7 @@ export class BasementGuardianWorld extends World {
   }
 
   /** Registers a teardown step. The world runs registered steps in reverse order. */
-  own(cleanup: () => Promise<void>): void {
+  onRelease(cleanup: () => Promise<void>): void {
     this.cleanups.push(cleanup);
   }
 
@@ -294,7 +294,7 @@ export class BasementGuardianWorld extends World {
   async auth0(): Promise<FakeAuth0> {
     if (this.auth0Tenant === undefined) {
       const tenant = await createFakeAuth0();
-      this.own(() => tenant.close());
+      this.onRelease(() => tenant.close());
       this.auth0Tenant = tenant;
     }
 
@@ -305,7 +305,7 @@ export class BasementGuardianWorld extends World {
   async restApi(): Promise<FakeRestApi> {
     if (this.restService === undefined) {
       const service = await createFakeRestApi();
-      this.own(() => service.close());
+      this.onRelease(() => service.close());
       service.onCommandAccepted((deviceId, desiredData) => {
         this.reactToAcceptedCommand(deviceId, desiredData);
       });
@@ -319,7 +319,7 @@ export class BasementGuardianWorld extends World {
   async broker(): Promise<FakeShadowBroker> {
     if (this.shadowBroker === undefined) {
       const broker = await createFakeShadowBroker();
-      this.own(() => broker.close());
+      this.onRelease(() => broker.close());
       this.shadowBroker = broker;
     }
 
@@ -330,7 +330,7 @@ export class BasementGuardianWorld extends World {
   async homebridge(): Promise<FakeHomebridgeApi> {
     if (this.homebridgeApi === undefined) {
       const homebridge = await createFakeHomebridgeApi();
-      this.own(() => homebridge.cleanup());
+      this.onRelease(() => homebridge.cleanup());
       this.homebridgeApi = homebridge;
     }
 
@@ -717,7 +717,7 @@ export class BasementGuardianWorld extends World {
     });
 
     this.accountRuntime = runtime;
-    this.own(() => runtime.stop());
+    this.onRelease(() => runtime.stop());
     await runtime.start();
     this.watchDevices(runtime);
   }
@@ -767,7 +767,7 @@ export class BasementGuardianWorld extends World {
         this.changes.push(`${deviceId} ${changedKeys.join(' ')}`);
       });
 
-      this.own(() => {
+      this.onRelease(() => {
         unsubscribe();
 
         return Promise.resolve();
@@ -788,7 +788,7 @@ export class BasementGuardianWorld extends World {
         this.subscriberClosed = true;
       });
 
-      this.own(() => subscriber.endAsync(true));
+      this.onRelease(() => subscriber.endAsync(true));
       this.subscriber = subscriber;
     }
 

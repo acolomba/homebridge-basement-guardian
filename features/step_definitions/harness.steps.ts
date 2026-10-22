@@ -347,15 +347,15 @@ function cancelTheSecondDueTimer(this: BasementGuardianWorld, kind: string): voi
 When('the first due timer cancels the second due {word}', cancelTheSecondDueTimer);
 
 When('scenario releases fail before another release runs', async function (this: BasementGuardianWorld): Promise<void> {
-  this.own(() => {
+  this.onRelease(() => {
     this.observations.push('later release');
     return Promise.resolve();
   });
-  this.own(() => {
+  this.onRelease(() => {
     this.observations.push('second failed release');
     return Promise.reject(new Error('second release failed'));
   });
-  this.own(() => {
+  this.onRelease(() => {
     this.observations.push('first failed release');
     return Promise.reject(new Error('first release failed'));
   });
@@ -381,7 +381,7 @@ When('startup fails after a scenario release is registered', async function (thi
   const scratch = new BasementGuardianWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
 
   scratch.homebridge = () => Promise.reject(new Error('startup failed'));
-  scratch.own(() => {
+  scratch.onRelease(() => {
     this.observations.push('release ran');
     return Promise.resolve();
   });
