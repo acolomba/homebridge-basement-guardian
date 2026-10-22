@@ -80,8 +80,8 @@ exited 0 with exactly six skipped scenarios and 35 skipped steps. It reported
 zero executing time and no undefined or ambiguous status. No real-profile
 step body or vendor request ran.
 
-The forward open set at this draft is `CR-07-HAP-032`, `CR-07-HAP-048`,
-`CR-07-HAP-050`, and `CR-07-HAP-051`. The reviewed Plan 07-18 addendum
+The forward open set at this draft is `CR-07-HAP-048`, `CR-07-HAP-050`,
+and `CR-07-HAP-051`. The reviewed Plan 07-18 addendum
 closed `CR-07-REAL_STEPS-017` forward after the historical Round 2 STOP.
 The reviewed Plan 07-19 addendum closed `CR-07-OFFLINE_LIBS-016` forward
 after its historical Round 3 STOP; its complete-file review found 017/018.
@@ -94,8 +94,12 @@ review. The reviewer's other warning maps to existing HAP 048.
 Plan 07-23 closed HAP 028 forward after an independent complete-file
 review. Its warnings repeat rejected HAP 020/024 and open HAP 051.
 Plan 07-24's one independent review left HAP 032 open and stopped. The
-post-review source fix at `a7545ab` passed the current full check but has
-not had an independent complete-file review. No clean sign-off is claimed.
+post-review source fix at `a7545ab` passed the current full check but was
+unreviewed when that plan stopped.
+Plan 07-25 separately reviewed the complete corrected module and closed
+HAP 032 forward with no new finding. The original and Plan 07-24 STOPs
+remain recorded. No clean phase sign-off is claimed while 048/050/051
+remain open.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
 FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
 open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and

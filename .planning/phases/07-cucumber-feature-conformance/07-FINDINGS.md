@@ -89,15 +89,14 @@ first is recorded in Plan 07-16 and of the second in `07-REAL-STEPS-REVIEW.md`.
 | MONITORING | 2 | `07-MONITORING-REVIEW.md` `62d1e013631c98df1ceaae7bafe5faefc99965e3` | Round 1 STOP: 004 | Narrowed in Plan 07-17. |
 | RECORDS | 3 | `07-RECORDS-REVIEW.md` `04390413fa8a1b8277f29501cdad6cc4315f74e9` | Round 2 STOP: 012, 013 | Both repaired after STOP; no further batch round. |
 | OFFLINE_LIBS | 4 | `07-OFFLINE-LIBS-REVIEW.md` `6d7597b4d582ac2dc44d86e15faf30d856255090` | Round 3 STOP: 016 | 016–018 closed forward by Plans 07-19 through 07-21; no forward-open ID. |
-| HAP | 2 | `07-HAP-REVIEW.md` `822581fd6c6987c14128b96e2034efa097247310` | Round 3 STOP: 025, 028, 032, 048, 050, 051 | 025/028 closed forward by Plans 07-22/23; Plan 07-24 stopped with 032 still open; four remain open. |
+| HAP | 2 | `07-HAP-REVIEW.md` `822581fd6c6987c14128b96e2034efa097247310` | Round 3 STOP: 025, 028, 032, 048, 050, 051 | 025/028/032 closed forward by Plans 07-22/23/25; Plan 07-24 STOP remains; three remain open. |
 | HARNESS | 3 | `07-HARNESS-REVIEW.md` `c8ee48517ebb33b4d73b07578081eb4e6904fac8` | Round 3 clean | No forward open ID. |
 | REAL_FEATURES | 3 | `07-REAL-FEATURES-REVIEW.md` `98ca087f0d71b95776831a7f5f7cbfdc449aa9ab` | Round 2 clean | No forward open ID. |
 | REAL_WORLD | 1 | `07-REAL-WORLD-REVIEW.md` `f85e1bfcad9d137972375604685b27236ba56421` | Round 2 clean | No forward open ID. |
 | REAL_STEPS | 3 | `07-REAL-STEPS-REVIEW.md` `b06870d305349331433d5cb296d13b1ceb5f965e` | Round 2 STOP: 017 | 017 closed forward by the reviewed Plan 07-18 addendum. |
 
-The current forward open set has four IDs:
-`CR-07-HAP-032`, `CR-07-HAP-048`, `CR-07-HAP-050`, and
-`CR-07-HAP-051`.
+The current forward open set has three IDs:
+`CR-07-HAP-048`, `CR-07-HAP-050`, and `CR-07-HAP-051`.
 This is a status inventory, not a clean phase sign-off. The detailed finding
 and round ledger follows after further reconciliation.
 
@@ -352,6 +351,15 @@ had an independent review. [07-HAP-STATUS-ADDENDUM.md](07-HAP-STATUS-ADDENDUM.md
 records both source revisions and the truthful forward-open status. The
 historical HAP Round 3 STOP is unchanged.
 
+Plan 07-25 independently reviewed the corrected blob
+`2f017766417351f79f3ba0835a38751a6282d7c0` at clean HEAD
+`24a774e` and closed `CR-07-HAP-032` forward. Its equation was
+`1-1-0+0+0=0`; no new ID was accepted. Local inspection confirmed the
+seed writes a plain numeric field in the fake. The current full gate at
+clean source commit `a7545ab` remains applicable because no executable
+input changed. [07-HAP-STATUS-REVIEW.md](07-HAP-STATUS-REVIEW.md) records
+the review scope and its limits. Neither earlier STOP record changed.
+
 ### HARNESS
 
 - **CR-07-HARNESS-001** (`07-HARNESS-REVIEW.md:17`): Reviewer candidate: 1a; Requirement and rule: FEAT-01; `cucumber/SKILL.md` §Review; Observed location: `31f7701:features/harness/fakes.feature:16-21`; Severity: BLOCKER; Disposition and cause: **Accepted; open.** The scenario says only the next Auth0 grant fails but sends no following grant. A persistent failure would pass. The fake currently clears `armedFailure` before responding at `features/lib/auth0.ts:112-117`; assert a later success.
@@ -507,7 +515,7 @@ addenda.
 | MONITORING | 10 | R1 `10-10-0+0+1=1` | STOP at R1 on 004 reopening; later narrowed in Plan 07-17. |
 | RECORDS | 9 | R1 `9-9-0+2+0=2`; R2 `2-2-0+2+0=2` | STOP at R2, 012/013 open then; both later repaired. |
 | OFFLINE_LIBS | 11 | R1 `11-11-0+3+0=3`; R2 `3-3-0+1+0=1`; R3 `1-1-0+1+0=1` | STOP at R3, 016 open then; closed forward in Plan 07-19. |
-| HAP | 19 | R1 `19-19-0+14+0=14`; R2 `14-12-0+5+0=7`; R3 `7-5-0+3+1=6` | STOP at R3 on 025 reopening; 025/028 closed forward in Plans 07-22/23; Plan 07-24 STOP leaves 032 open pending new review; 032/048/050/051 remain open. |
+| HAP | 19 | R1 `19-19-0+14+0=14`; R2 `14-12-0+5+0=7`; R3 `7-5-0+3+1=6` | STOP at R3 on 025 reopening; 025/028/032 closed forward in Plans 07-22/23/25; Plan 07-24 STOP remains; 048/050/051 remain open. |
 | HARNESS | 21 | R1 `21-21-0+13+0=13`; R2 `13-13-0+7+0=7`; R3 `7-7-0+0+0=0` | Clean at R3. |
 | REAL_FEATURES | 10 | R1 `10-10-0+1+0=1`; R2 `1-1-0+0+0=0` | Clean at R2. |
 | REAL_WORLD | 14 | R1 `14-14-0+1+0=1`; R2 `1-1-0+0+0=0` | Clean at R2. |
@@ -517,8 +525,9 @@ The later forward closures of ACCOUNT 015/016, ACCESSORY 007/009/019,
 HOMEKIT 014, MONITORING 004, RECORDS 012/013, REAL_STEPS 017, and
 OFFLINE_LIBS 016–018 are recorded in `07-ADJUDICATION.md` and Plans 07-15
 through 07-21. HAP 025/028 are closed forward in Plans 07-22/23; Plan
-07-24 stopped with HAP 032 open. Those later records do not turn the
-original stopped rounds into clean rounds.
+07-24 stopped with HAP 032 open; Plan 07-25 closed it forward after a
+separate review. Those later records do not turn the original stopped
+rounds into clean rounds.
 
 ## Offline baseline
 
