@@ -61,3 +61,31 @@ the shutdown timing change has binding and type-check evidence only.
 | CR-07-REAL_FEATURES-008 | `96d8699` | Bounded shutdown at five seconds and observed rejections for one second afterward. Build and real dry run exited 0 at 6/35; fixed pending independent review. |
 | CR-07-REAL_FEATURES-009 | `9bd28c3` | Condensed all three descriptions to three lines. Real dry run exited 0 at 6/35; fixed pending independent review. |
 | CR-07-REAL_FEATURES-010 | `43d3d03` | Removed the ambiguous internal decision and test references. Real dry run exited 0 at 6/35; fixed pending independent review. |
+
+## Round 1 complete-file correction review
+
+Independent reviewer: a fresh read-only Claude Opus 5.5 session on 2026-10-22.
+The coordinator confirmed HEAD `c404e90a007c77f3af575e0f9103a236cd3875e2`
+was clean and the expected blobs before the review. The reviewer read each
+feature completely and the same project rules; it did not read step or World
+code. The current real-profile dry run remained six skipped scenarios and 35
+skipped steps. Reviewed spans and committed blobs:
+
+| File | Complete contiguous span | Blob |
+| --- | ---: | --- |
+| `features/real-pump/discovery.feature` | 1-24 | `e0531e72a2d615ec322d4d2d86ae851e94fa99eb` |
+| `features/real-pump/heartbeats.feature` | 1-17 | `101d01ee4801680a367b7c79afe5054f86cef033` |
+| `features/real-pump/lifecycle.feature` | 1-20 | `b7f2aea35808b62e51a71899e3f36470911b343a` |
+
+Opening IDs: 001-010 (10). Fixed IDs: 001-010 (10). Rejected IDs in this
+round: none. New ID: 013 (1). Reopened IDs: none. Closing IDs: 013 (1).
+Equation: `1 = 10 - 10 - 0 + 1 + 0`. The count fell and no fixed ID reopened,
+so one correction is allowed before round 2. IDs 011 and 012 remain rejected
+from the initial triage and are not in the opening count. The independent
+review could inspect feature text for IDs 005, 006, and 008 but not their
+TypeScript binding implementation; the local build and dry-run are recorded
+above, and the step modules have a separate Plan 07-13 review.
+
+| ID | Severity | Observed location | Rule | Disposition and repair |
+| --- | --- | --- | --- | --- |
+| CR-07-REAL_FEATURES-013 | WARNING | `c404e90:features/real-pump/heartbeats.feature:5,11-17` | `cucumber/SKILL.md`, Review; `rules/features.md`, Steps | Open. The description and comment name unhandled rejections, but the visible outcome step names only connection failure. The existing binding checks both. Name both in the step text and its binding without changing the 6/35 count. |
