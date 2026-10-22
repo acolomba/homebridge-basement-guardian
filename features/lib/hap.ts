@@ -258,7 +258,7 @@ export interface FakeChargingStateValues {
 
 /** The `Characteristic` member of the stand-in namespace: a constructible base carrying the standard definitions. */
 export interface FakeCharacteristicNamespace {
-  new (displayName: string, UUID: string, props: FakeCharacteristicProps): FakeHapCharacteristic;
+  new (displayName: string, uuid: string, props: FakeCharacteristicProps): FakeHapCharacteristic;
   readonly Manufacturer: FakeCharacteristicClass;
   readonly Model: FakeCharacteristicClass;
   readonly SerialNumber: FakeCharacteristicClass;
@@ -311,9 +311,9 @@ class StandInCharacteristic implements FakeHapCharacteristic {
 
   private setHandler: FakeSetHandler | undefined = undefined;
 
-  constructor(displayName: string, UUID: string, props: FakeCharacteristicProps) {
+  constructor(displayName: string, uuid: string, props: FakeCharacteristicProps) {
     this.displayName = displayName;
-    this.UUID = UUID;
+    this.UUID = uuid;
     this.props = { ...props, perms: [...props.perms], ...(props.validValues === undefined ? {} : { validValues: [...props.validValues] }) };
     this.value = this.getDefaultValue();
   }
@@ -457,7 +457,7 @@ export interface FakeServiceClass {
 
 /** The `Service` member of the stand-in namespace: a constructible base carrying the standard definitions. */
 export interface FakeServiceNamespace {
-  new (displayName: string | undefined, UUID: string, subtype?: string): FakeHapService;
+  new (displayName: string | undefined, uuid: string, subtype?: string): FakeHapService;
   readonly AccessoryInformation: FakeServiceClass;
   readonly LeakSensor: FakeServiceClass;
   readonly ContactSensor: FakeServiceClass;
@@ -476,9 +476,9 @@ class StandInService implements FakeHapService {
 
   readonly optionalCharacteristics: FakeHapCharacteristic[] = [];
 
-  constructor(displayName: string | undefined, UUID: string, subtype?: string) {
+  constructor(displayName: string | undefined, uuid: string, subtype?: string) {
     this.displayName = displayName ?? '';
-    this.UUID = UUID;
+    this.UUID = uuid;
     this.subtype = subtype;
 
     // The real `Service` constructor creates `Name` from the display name it was given, and only
