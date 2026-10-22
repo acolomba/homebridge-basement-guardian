@@ -104,7 +104,10 @@ function terminalLogging(record: (line: string) => void): Logging {
   });
 }
 
-/** The scenario state for one real-pump run, observation-only. */
+/**
+ * Provides observation-only state to one real-profile scenario's steps.
+ * Cucumber creates each instance; the live Before hook initializes it and After releases it.
+ */
 export class RealPumpWorld extends World {
   private readonly discoveredDeviceIds: string[] = [];
 
