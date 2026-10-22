@@ -37,6 +37,11 @@ recompute. The historical batch and addendum STOPs remain visible.
 Later verified repairs and maintainer rulings leave **zero forward-open
 findings**.
 
+No plugin production bug was confirmed. The one confirmed fake-service
+defect, RECORDS 004, has active RED evidence commit `4a0d43b` before
+fix `9f993a3` in Git ancestry. Other behavior findings closed
+test-evidence gaps with named wrong-result controls.
+
 The default scenario count changed from 104 to 130 because the HARNESS
 feature grew from 15 to 41 offline stand-in contract scenarios. Other
 default feature files retained their scenario counts. Step additions

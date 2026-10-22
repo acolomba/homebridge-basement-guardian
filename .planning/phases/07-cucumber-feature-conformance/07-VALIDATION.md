@@ -112,8 +112,8 @@ raised two distinct warnings, HAP 054 and HAP 055. Its open-count equation
 source commits and one independent complete-file review closed HAP 054
 and 055 forward with equation `2-2-0+0+0=0`. Candidate 056 concerned
 unchanged code and was rejected under the TypeScript style skill's
-review scope. The historical STOPs remain visible; Plan 07-14 must
-still reconcile the final phase evidence before sign-off.
+review scope. The historical STOPs remain visible; Plan 07-14
+reconciles them with the final phase evidence.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. The
 forward-open set is empty. The 12 owner report blobs, 37 original paths,
 and 12 correction equations reconcile; Plan 07-30's separately bounded
@@ -125,3 +125,8 @@ dry run selected six scenarios and 35 steps, all skipped. No vendor
 step ran. FEAT-01 and FEAT-02 satisfy the five concrete Phase 7 roadmap
 criteria on this evidence. Their spec-less probes stay
 unclassified/unresolved and are not claimed as proof or backstops.
+No plugin production bug was confirmed in Phase 7. The confirmed fake
+service defect RECORDS 004 has active RED evidence commit `4a0d43b`
+before GREEN fix `9f993a3`; the owner report records the exact failing
+and passing assertion. Other behavior repairs changed test evidence
+and carry named wrong-result controls in their owner reports.

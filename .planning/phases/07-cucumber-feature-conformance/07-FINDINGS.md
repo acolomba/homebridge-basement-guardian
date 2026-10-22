@@ -669,6 +669,15 @@ record the individual changes. In the real profile, Plan 07-11 removed
 one unprovable optional scenario and added a shadow observation step;
 the dry-run selection changed from seven scenarios/41 steps to six/35.
 
+No plugin production bug was confirmed in this phase. The confirmed
+fake-service defect `CR-07-RECORDS-004` has active RED evidence in commit
+`4a0d43b` before GREEN fix `9f993a3`; Git ancestry confirms that order.
+Other accepted behavior findings were gaps in test assertions or
+scenario evidence. Their owner reports record focused wrong-result
+controls and passing results after repair. The current full gate's 43
+direct pairs enforce 100% line, function, and branch coverage for every
+production source/test pair.
+
 The phase-end combined-tree gate ran after Plan 07-30 on Node
 `v26.12.1`. `TEST_CONCURRENCY=1 npm run check` exited 0 at clean
 executable-input commit `7616dc2`: static checks, test build, unpaired
