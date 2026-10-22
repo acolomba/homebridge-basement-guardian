@@ -63,12 +63,12 @@ degraded-status check are outside this phase.
 
 ## Current combined-tree evidence
 
-At clean executable-input commit `ed90a39` on Node `v26.12.1`, the command
+At clean executable-input commit `a7545ab` on Node `v26.12.1`, the command
 `TEST_CONCURRENCY=1 npm run check` exited 0. Static checks, the test build,
 unpaired tests, 130/130 default offline Cucumber scenarios, 1400/1400 steps,
 and 43 isolated direct source/test coverage pairs passed. The Cucumber part
-reported 37.222 seconds. `git status --porcelain=v1 --untracked-files=all`
-was empty before this planning-only edit, and `git diff --exit-code ed90a39
+reported 37.238 seconds. `git status --porcelain=v1 --untracked-files=all`
+was empty before this planning-only edit, and `git diff --exit-code a7545ab
 -- . ':(exclude,glob).planning/**/*.md'` exited 0. This evidence is reusable
 only while executable inputs remain unchanged; any later source edit needs a
 fresh full gate.
@@ -93,6 +93,9 @@ Plan 07-22 closed HAP 025 forward after an independent complete-file
 review. The reviewer's other warning maps to existing HAP 048.
 Plan 07-23 closed HAP 028 forward after an independent complete-file
 review. Its warnings repeat rejected HAP 020/024 and open HAP 051.
+Plan 07-24's one independent review left HAP 032 open and stopped. The
+post-review source fix at `a7545ab` passed the current full check but has
+not had an independent complete-file review. No clean sign-off is claimed.
 Historical STOP sets are indexed separately in `07-FINDINGS.md`. FEAT-01 and
 FEAT-02 cannot receive a clean phase sign-off while any forward ID remains
 open. The FEAT-01 and FEAT-02 spec-less probes stay unclassified and
