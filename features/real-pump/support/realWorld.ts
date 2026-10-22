@@ -232,6 +232,7 @@ export class RealPumpWorld extends World {
 
     this.scratchDirectory = await mkdtemp(SCRATCH_DIRECTORY_PREFIX);
 
+    this.logger().registerSecret(this.credentialEmail);
     this.logger().registerSecret(this.credentialPassword);
 
     process.on('unhandledRejection', this.recordRejection);
