@@ -483,11 +483,11 @@ function assertDeviceListHoldsTheDevices(this: BasementGuardianWorld): void {
 
 Then('the device list holds the devices the scenario sets', assertDeviceListHoldsTheDevices);
 
-function assertDeviceAnswerHoldsTheDevice(this: BasementGuardianWorld): void {
-  const device = this.devices.at(0);
+function assertDeviceAnswerHoldsTheDevice(this: BasementGuardianWorld, deviceId: string): void {
+  const device = this.devices.find((candidate) => candidate.deviceId === deviceId);
 
-  if (device === undefined || this.devices.length !== 1) {
-    assert.fail('the scenario needs exactly one device');
+  if (device === undefined) {
+    assert.fail(`the scenario has no device with id ${deviceId}`);
   }
 
   assert.deepStrictEqual(wireIdentity(field(this.response().body, 'device')), {
@@ -497,7 +497,7 @@ function assertDeviceAnswerHoldsTheDevice(this: BasementGuardianWorld): void {
   });
 }
 
-Then('the device answer holds the device the scenario sets', assertDeviceAnswerHoldsTheDevice);
+Then('the device answer holds the device with id {string}', assertDeviceAnswerHoldsTheDevice);
 
 async function assertRequestCarriesTheAuthorizationHeader(this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();

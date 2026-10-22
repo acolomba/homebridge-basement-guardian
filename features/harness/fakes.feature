@@ -49,10 +49,11 @@ Feature: Harness fakes
     Given the fake rest service
     Given these devices:
       | device id          | name          |
+      | placeholder-first  | First System  |
       | placeholder gemini | Sump Guardian |
     When the harness requests the device with id "placeholder gemini"
     Then the response carries status 200
-    Then the device answer holds the device the scenario sets
+    Then the device answer holds the device with id "placeholder gemini"
 
   Scenario: The fake service answers the temporary credentials
     Given the fake rest service
