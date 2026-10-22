@@ -219,9 +219,8 @@ export class RealPumpWorld extends World {
   /**
    * Builds the account runtime against the real vendor cloud, from operator-supplied credentials.
    *
-   * Building the runtime opens no connection and starts no timer; only `start()` does. Called from
-   * the `Before` hook below, kept as an instance method (rather than inline in the hook) so a
-   * `catch` block anywhere in this file never needs to spell out this world's own construction.
+   * Building the runtime opens no connection and starts no timer; only `start()` does. The live
+   * `Before` hook calls this method once per scenario.
    */
   async initialize(): Promise<void> {
     this.credentialEmail = requireEnv('BG_EMAIL');
@@ -296,7 +295,7 @@ export class RealPumpWorld extends World {
    * Builds a fresh account runtime against the real vendor cloud, over this world's scratch storage
    * directory.
    *
-   * Called from `initialize()` on the first start and from `restart()` on every one after, so a
+   * Called from `initialize()` in the `Before` hook and from `restart()` after shutdown, so a
    * restart reuses the very token cache the first runtime wrote under this directory (AUTH-01).
    */
   private createRuntime(): AccountRuntime {
