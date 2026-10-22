@@ -196,9 +196,10 @@ export interface FakeHapCharacteristic {
    *
    * The real HAP carries this member too, and it is the whole reason the write path is modelled
    * here rather than assumed: a rejected write stores the thrown status and every later read
-   * answers it until an accepted write or ordinary push clears it, which is a service reading as
-   * unavailable long after the press that refused it. An ordinary push clears it whatever the
-   * value is; a push of an error sets it and stores nothing.
+   * answers it until an accepted write or valid ordinary push clears it, which is a service
+   * reading as unavailable long after the press that refused it. Real HAP validates an ordinary
+   * push first; failed validation preserves the prior status and value. A push of an error sets
+   * the status and stores nothing.
    */
   statusCode: number;
   getDefaultValue(): unknown;
