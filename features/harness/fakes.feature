@@ -66,11 +66,16 @@ Feature: Harness fakes
 
   Scenario: The fake service fails one armed request
     Given the fake rest service
+    Given these devices:
+      | device id          | name          |
+      | placeholder-gemini | Sump Guardian |
+      | placeholder-backup | Backup System |
     Given the service fails the next request with status 503
     When the harness requests the device list
     Then the response carries status 503
     When the harness requests the device list
     Then the response carries status 200
+    Then the device list holds the devices the scenario sets
 
   Scenario: The fake service refuses malformed command JSON
     Given the fake rest service
