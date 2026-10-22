@@ -176,14 +176,18 @@ Then('two fake hap characteristics keep separate properties', () => {
   const first = new HAP.Characteristic.LeakDetected();
   const second = new HAP.Characteristic.LeakDetected();
   const originalFormat = first.props.format;
-  const originalPerms = [...first.props.perms];
   assert.ok(first.props.validValues);
-  const originalValidValues = [...first.props.validValues];
+  // The public props are readonly; this test mutates them to check that instances do not share arrays.
+  // Keep each array reference so a failing assertion can restore shared data in place.
+  const mutablePerms = first.props.perms as string[];
+  const mutableValidValues = first.props.validValues as number[];
+  const originalPerms = [...mutablePerms];
+  const originalValidValues = [...mutableValidValues];
 
   try {
     first.props.format = HAP.Formats.STRING;
-    (first.props.perms as string[]).pop();
-    (first.props.validValues as number[]).pop();
+    mutablePerms.pop();
+    mutableValidValues.pop();
 
     assert.deepStrictEqual(
       { format: second.props.format, perms: second.props.perms, validValues: second.props.validValues },
@@ -191,8 +195,8 @@ Then('two fake hap characteristics keep separate properties', () => {
     );
   } finally {
     first.props.format = originalFormat;
-    first.props.perms = originalPerms;
-    first.props.validValues = originalValidValues;
+    mutablePerms.splice(0, mutablePerms.length, ...originalPerms);
+    mutableValidValues.splice(0, mutableValidValues.length, ...originalValidValues);
   }
 });
 
