@@ -67,6 +67,9 @@ from earlier phases remain in their ledgers and will be audited, not erased.
 
 ## Plan 08-01 verification
 
-Current pairing command, raw exit, and revision will be recorded after the
-protocol task's check. The final `TEST_CONCURRENCY=1 npm run check` has not
-run for Phase 08 and must not be inferred from a prior phase or commit hook.
+At commit `56c1f74` on Node `v26.12.1`, `npm run --silent
+test:corresponding` exited `0` and printed `Corresponding-tests gate passed.`
+The commit contains only Phase 08 planning records; executable inputs match
+the tracer's starting revision. The final `TEST_CONCURRENCY=1 npm run check`
+has not run for Phase 08 and must not be inferred from a prior phase or
+commit hook.

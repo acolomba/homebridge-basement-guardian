@@ -94,6 +94,13 @@ state. A prior phase's pass is historical; reuse only evidence from this
 session with unchanged executable inputs under `local-verification/rules/gates.md`.
 Default Cucumber uses offline stand-ins; the real profile is dry-run only.
 
+At plan setup on Node `v26.12.1`, `npm run --silent
+test:corresponding` exited `0` at commit `56c1f74` with
+`Corresponding-tests gate passed.` No executable input changed between the
+starting snapshot and this planning-only commit. This pairing result checks
+the current tree's owner map; it does not replace the required final combined
+gate or establish Node 22/24 compatibility.
+
 ## Unresolved spec-less probe rows
 
 Seven surfaced rows remain flagged: BUG-01 adjacency, empty, and ordering;
