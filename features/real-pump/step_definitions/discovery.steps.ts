@@ -14,7 +14,7 @@ import { Then } from '@cucumber/cucumber';
 
 import { until } from '../../lib/realPumpPolling.js';
 
-import type { RealPumpWorld } from './realWorld.js';
+import type { RealPumpWorld } from '../support/realWorld.js';
 
 Then('the harness discovers at least one device within {int} seconds', { timeout: 35_000 }, async function (this: RealPumpWorld, seconds: number) {
   await until(() => (this.deviceIds().length > 0 ? true : undefined), seconds * 1000, 'no device was discovered');
