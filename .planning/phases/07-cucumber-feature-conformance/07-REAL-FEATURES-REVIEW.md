@@ -89,3 +89,29 @@ above, and the step modules have a separate Plan 07-13 review.
 | ID | Severity | Observed location | Rule | Disposition and repair |
 | --- | --- | --- | --- | --- |
 | CR-07-REAL_FEATURES-013 | WARNING | `c404e90:features/real-pump/heartbeats.feature:5,11-17` | `cucumber/SKILL.md`, Review; `rules/features.md`, Steps | Open. The description and comment name unhandled rejections, but the visible outcome step names only connection failure. The existing binding checks both. Name both in the step text and its binding without changing the 6/35 count. |
+
+## Round 2 complete-file correction review
+
+ID 013 was repaired in normal-hook commit `0753b42`: the visible heartbeat
+outcome and its existing binding now name both connection failures and
+unhandled rejections. `npm run build:test` and the real-profile dry run each
+exited 0, with six skipped scenarios, 35 skipped steps, and no undefined or
+ambiguous step. The coordinator confirmed a clean HEAD
+`0753b429bde749066097f9291321a1d074a54cfa` and the three blobs below
+before a new read-only Claude Opus 5.5 session independently read the complete
+current feature files and applicable rules. The reviewer used only Read and
+did not inspect step code; its binding result relies on the coordinator's
+build and dry-run evidence.
+
+| File | Complete contiguous span | Blob |
+| --- | ---: | --- |
+| `features/real-pump/discovery.feature` | 1-24 | `e0531e72a2d615ec322d4d2d86ae851e94fa99eb` |
+| `features/real-pump/heartbeats.feature` | 1-17 | `2bf68c15efe7950b3a6b798c34a078fef7b6a6aa` |
+| `features/real-pump/lifecycle.feature` | 1-20 | `b7f2aea35808b62e51a71899e3f36470911b343a` |
+
+Opening ID: 013 (1). Fixed ID: 013 (1). Rejected, new, and reopened IDs:
+none. Closing IDs: **none (0)**. Equation: `0 = 1 - 1 - 0 + 0 + 0`.
+The reviewer reported zero current BLOCKERs and zero current WARNINGs. It
+confirmed that 013 did not reopen. Plan 07-11 closes with zero open IDs after
+two correction rounds; neither a no-progress nor a fourth-round STOP applies.
+The default-profile usage dry run exited 0 and contained no `UNUSED` entry.
