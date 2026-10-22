@@ -14,11 +14,8 @@
  * repository, because two stand-ins of one boundary drift apart silently. That drift can leave a
  * green test over broken production behavior.
  *
- * The argument orders matter more than they look. A plugin declares its own HomeKit types by
- * subclassing the injected namespace, so `Service` and `Characteristic` are constructible base
- * classes here rather than identifier constants, and `addService` takes a display name where the
- * real one does. A stand-in that recorded a display name as a subtype would let every safety
- * assertion built on it pass while proving nothing.
+ * The plugin declares its own HomeKit types by subclassing the injected namespace. Therefore,
+ * `Service` and `Characteristic` are constructible base classes here, not identifier constants.
  *
  * This module imports `@homebridge/hap-nodejs` nowhere, and neither does any other module the
  * plugin ships. The package is an explicit development dependency pinned at the version the
