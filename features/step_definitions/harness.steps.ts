@@ -65,6 +65,12 @@ const HARNESS_CREDENTIALS: AwsCredentialsResponse = {
   },
 };
 
+class StartupFailingWorld extends BasementGuardianWorld {
+  override homebridge(): Promise<FakeHomebridgeApi> {
+    return Promise.reject(new Error('startup failed'));
+  }
+}
+
 const TOPIC_LEAVES = new Map<string, ShadowTopicLeaf>([
   ['update-accepted', 'update/accepted'],
   ['get-accepted', 'get/accepted'],
@@ -341,9 +347,7 @@ When('scenario releases fail before another release runs', async function (this:
 });
 
 When('startup fails after a scenario release is registered', async function (this: BasementGuardianWorld): Promise<void> {
-  const scratch = new BasementGuardianWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
-
-  scratch.homebridge = () => Promise.reject(new Error('startup failed'));
+  const scratch = new StartupFailingWorld({ attach: this.attach, log: this.log, link: this.link, parameters: {} });
   scratch.onRelease(() => {
     this.observations.push('release ran');
     return Promise.resolve();
