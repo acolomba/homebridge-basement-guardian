@@ -81,11 +81,13 @@ function redactText(text: string, secrets: readonly string[]): string {
   }
 
   for (const secret of secrets) {
-    let start = text.indexOf(secret);
+    for (const candidate of [secret, JSON.stringify(secret).slice(1, -1)]) {
+      let start = text.indexOf(candidate);
 
-    while (start !== -1) {
-      spans.push({ start, end: start + secret.length });
-      start = text.indexOf(secret, start + 1);
+      while (start !== -1) {
+        spans.push({ start, end: start + candidate.length });
+        start = text.indexOf(candidate, start + 1);
+      }
     }
   }
 
@@ -136,9 +138,7 @@ function redactParameter(parameter: unknown, secrets: readonly string[]): unknow
   }
 
   if (typeof parameter === 'object' && parameter !== null) {
-    const escapedSecrets = secrets.map((secret) => JSON.stringify(secret).slice(1, -1));
-
-    return redactText(describeObject(parameter), [...secrets, ...escapedSecrets]);
+    return redactText(describeObject(parameter), secrets);
   }
 
   return parameter;

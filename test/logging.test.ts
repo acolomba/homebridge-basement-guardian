@@ -207,6 +207,22 @@ test('substitutes a registered secret inside an Error parameter and keeps its cl
   verify(delegate);
 });
 
+test('redacts a serialized registered secret inside an Error parameter', () => {
+  // arrange
+  const secret = 'my"pass';
+  const delegate = createDelegate();
+  when(() => {
+    delegate.error('the grant was rejected', `TypeError: rejected {"credential":"${REDACTED}"}`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: [secret] });
+
+  // act
+  log.error('the grant was rejected', new TypeError(`rejected ${JSON.stringify({ credential: secret })}`));
+
+  // assert
+  verify(delegate);
+});
+
 test('describes a parameter that cannot be serialized', () => {
   // arrange
   const delegate = createDelegate();
