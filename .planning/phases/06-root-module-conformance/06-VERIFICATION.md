@@ -1,7 +1,7 @@
 ---
 phase: 06-root-module-conformance
-verified: 2026-10-19T19:02:41Z
-status: passed
+verified: 2026-10-23T07:48:54Z
+status: human_needed
 score: 5/5 must-haves verified
 covered_files:
   - .planning/debug/monitoring-trust-publication.md
@@ -37,6 +37,11 @@ covered_files:
   - .planning/phases/06-root-module-conformance/06-REVIEW.md
   - .planning/phases/06-root-module-conformance/06-SECURITY.md
   - .planning/phases/06-root-module-conformance/06-VALIDATION.md
+  - .planning/phases/08-final-sweep-and-gate/08-MANIFEST.json
+  - .planning/phases/08-final-sweep-and-gate/08-ROOT-002-RED-EVIDENCE.json
+  - .planning/phases/08-final-sweep-and-gate/08-ROOT-003-CONTINUATION.json
+  - .planning/phases/08-final-sweep-and-gate/08-ROOT-003-RED-EVIDENCE.json
+  - .planning/phases/08-final-sweep-and-gate/08-ROOT-REVIEW.md
   - features/account/configuration.feature
   - src/accessories/pumpRecords.ts
   - src/accessories/staleMarking.ts
@@ -54,25 +59,33 @@ covered_files:
   - test/platform.test.ts
   - test/protocol.test.ts
   - test/settings.test.ts
-covered_digest: "v3:sha256:997cf12b7318adaf842f49411f1b5f29f22207cd309362f5a751724cc2e35c28"
+covered_digest: "v3:sha256:2ae52f9f22c6186bf1d1342dd736ed15ab3bfca8c835cc593069e03a8be99cee"
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - must_have: "Every bug found has a regression test that was committed and seen failing before its fix, and the ledger names the test and the fix commit."
+    reason: "The approved D-05 path commits complete active RED output as planning-only evidence before a hook-passing test-and-fix commit. D-07 separately accepts the ENTRY-019/020 debug RED and revert/reconfirm record without claiming a planning-only RED commit. Both retain real failing-before-fix observations and current regression tests."
+    accepted_by: "maintainer through Phase 6 D-05 and D-07"
+    accepted_at: "2026-10-23T07:48:54Z"
 re_verification:
-  previous_status: gaps_found
-  previous_score: 4/5
-  gaps_closed:
-    - "Current-revision complete-file review of test/platform.test.ts after WR-01"
+  previous_status: passed
+  previous_score: 5/5
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
+human_verification:
+  - test: "Repeat a degraded Homebridge status where one characteristic write fails, then deliver the same status again."
+    expected: "Other affected services become inactive, and the failed service is retried successfully on the identical report."
+    why_human: "The maintainer answered 'Cannot verify now'; the synthetic owner regression passed, but the real Homebridge publication behavior is still unobserved."
 ---
 
 # Phase 6: Root Module Conformance Verification Report
 
 **Phase goal:** The six root source modules and paired tests conform to the style, comment, and unit-testing rules, and each bug found there is fixed behind a regression test.
 
-**Verified:** 2026-10-19T19:02:41Z
-**Status:** passed
-**Re-verification:** Yes; the prior report had one current-revision review-provenance gap.
+**Verified:** 2026-10-23T07:48:54Z
+**Status:** human_needed
+**Re-verification:** Yes; the prior report passed, but the executable tree changed during Phase 8.
 
 ## Goal Achievement
 
@@ -80,24 +93,24 @@ re_verification:
 
 | # | Roadmap success criterion | Status | Current-code evidence |
 | --- | --- | --- | --- |
-| 1 | Six complete root pairs reviewed at current revisions; approved headers; retired tests excluded | ✓ VERIFIED | The post-advisory addendum records independent review of all 4,276 lines of `test/platform.test.ts` at commit `5c28cf7`, blob `3394de874847cf919b531e98d473c6a3fb049274`, in 15 contiguous spans. HEAD has that exact blob. The `src/platform.ts` blob equals its round-three reviewed blob. All twelve current files have the approved headers; both retired tests remain absent. |
+| 1 | Six complete root pairs reviewed at current revisions; approved headers; retired tests excluded | ✓ VERIFIED | Phase 6's full-file reports cover all twelve owners. Phase 8 then independently reviewed the changed current `src/platform.ts` blob `fef29878` (1–700), `test/platform.test.ts` blob `ac471273` (1–4362), and `src/logging.ts` / `test/logging.test.ts` blobs `a1bb84c1` / `21389fb4` (1–227 / 1–684). These match the current Git blobs and `08-MANIFEST.json`; the other eight root blobs did not change. All twelve retain the approved headers; both retired tests remain absent. |
 | 2 | Ledger gives each finding a rule, location, severity, and reasoned outcome | ✓ VERIFIED | `06-FINDINGS.md` contains 43 distinct batch IDs (8 CONFIG_PROTOCOL, 20 ENTRY, 15 PLATFORM); all appear in their batch reports. The later CR-01, CR-02, and WR-01 are separately described and dispositioned in `06-REVIEW.md` and `06-REVIEW-DISPOSITION.md`. |
 | 3 | Correction rounds close or stop with exact open causes | ✓ VERIFIED | All twelve ledger equations recompute. CONFIG_PROTOCOL ends at zero in round 2; PLATFORM ends at zero in round 3. ENTRY round 4 remains a STOP at `1 - 1 - 0 + 2 + 0 = 2`, IDs 019/020. A separately authorized post-debug six-file review and the maintainer's original Homebridge logging confirmation close those two in current code; there is no invented round 5. |
-| 4 | Each touched root pair has 100% isolated direct line, function, and branch coverage | ✓ VERIFIED | This re-verification ran the full `npm run check` on the unchanged reviewed executable inputs; its direct-coverage stage exited 0 for all 43 isolated pairs. The separately recorded platform direct run reached 100% line, function, and branch coverage. |
-| 5 | Genuine bugs have observed RED regressions before GREEN fixes | ✓ VERIFIED | Batch reports link sixteen evidence-only RED commits to later GREEN fixes. Sampled Git histories show evidence-only `03db78f` before CR-01 fix `68114f4`, and debug RED `4bca6a9` before CR-02 fix `646b327`; the latter exact StatusActive assertion is recorded at `e5b1470`. The two post-cap ENTRY repairs have active RED and revert/reconfirm evidence in the resolved debug record, accurately distinguished from Phase 6 evidence-only commits. Four named current regressions passed below. |
+| 4 | Each touched root pair has 100% isolated direct line, function, and branch coverage | ✓ VERIFIED | The full `npm run check` at `499659b` passed the direct-coverage stage for all 43 isolated source/test pairs. `git diff 499659b -- src test features scripts` is empty on this tree; Node is v26.12.1 for that gate. |
+| 5 | Genuine bugs have observed RED regressions before GREEN fixes | ✓ PASSED (override) | Phase 6's approved D-05 evidence-only path records sixteen active RED observations in planning commits before GREEN test-and-fix commits. CR-01 has evidence `03db78f` before fix `68114f4`; CR-02 has debug evidence `4bca6a9` before fix `646b327`. ENTRY-019/020 have active RED and revert/reconfirm observations before repair commits `24f3620`/`2d291cc`, but **no planning-only RED commit or archived complete TAP**. Their tests were committed with fixes. The literal separate test-commit wording is overridden by the maintainer's D-05/D-07 process decision; no separate test commit is claimed. Phase 8 ROOT-001/002/003 add their own validated planning-only RED records and current GREEN cases. |
 
-**Score:** 5/5 roadmap truths verified; 0 present but behavior-unverified.
+**Score:** 4 directly verified + 1 approved evidence-path override = 5/5; 0 present but behavior-unverified. One external Homebridge judgment remains pending.
 
 ### Required Artifacts
 
 | Artifact | Existence and substance | Wiring or final state |
 | --- | --- | --- |
-| Six root source/test pairs | All twelve tracked; approved headers inspected in current files; no disabled owner tests or debt markers found | Imports, exports, registration, and owner tests connect. The platform source and current test blobs match their documented complete-file reviews. |
+| Six root source/test pairs | All twelve tracked; approved headers inspected in current files; no disabled owner tests or debt markers found | Imports, exports, registration, and owner tests connect. Four changed current blobs match the Phase 8 complete-file correction reviews; eight other root blobs match their earlier reviews. |
 | `06-REVIEW-PROTOCOL.md`, `06-FINDINGS.md` | Present; three batches, 43 stable IDs, twelve numeric rounds | Protocol and ledger implement the same ID and stop contract; ENTRY history is retained. |
 | Three batch reports | Present and substantive, with revision-qualified full-file spans and finding dispositions | CONFIG_PROTOCOL and PLATFORM closed normally; ENTRY has a separate post-debug closure rather than another correction round. |
 | `06-VALIDATION.md`, `06-SECURITY.md`, advisory review and disposition | Present; evidence names current commits and tests | Advisory CR-01, CR-02, and WR-01 have current fixes and active owner regressions. The later post-advisory full-file review is recorded in the PLATFORM report, ledger, disposition, and validation map. |
 
-The plan artifact verifier returned `all_passed: true` for all nine plans (21 declared artifacts). For the prior gap, I also compared the reviewed commit and blob with HEAD, checked the listed spans cover lines 1–4276 without a break, inspected the WR-01 watcher case and supporting platform path, and confirmed the four phase records agree. The later correction to `06-09-SUMMARY.md` changed only coverage-reference metadata; executable inputs are identical to the passing full gate. The report records no new candidate and does not alter a correction counter.
+The plan artifact verifier returned `all_passed: true` for all nine plans (21 declared artifacts). The prior 4,276-line platform review remains historical proof for its former blob. The later Phase 8 independent reads cover the current 4,362-line owner, 700-line platform source, 227-line logger source, and 684-line logger owner at the blobs in the current manifest. The changed source/test files were reviewed under Phase 8 without rewriting Phase 6 correction rounds.
 
 ### Key Link Verification
 
@@ -106,7 +119,7 @@ The plan artifact verifier returned `all_passed: true` for all nine plans (21 de
 | `config.ts` → platform acceptance/refusal; `protocol.ts` → bundled JSON | ✓ WIRED | `platform.ts` imports and calls `validateConfig`, and passes the typed `PROTOCOL` to account runtime; `protocol.ts` imports `protocol.json`. |
 | `logging.ts` → platform diagnostics; settings → entry registration | ✓ WIRED | The constructor installs `createRedactingLogger` before config diagnostics; `index.ts` calls `api.registerPlatform(PLATFORM_NAME, BasementGuardianPlatform)`. |
 | Platform → runtime and accessory trust; owner tests → production | ✓ WIRED | `createAccountRuntimeFromConfig` supplies discovery and monitoring callbacks; `applyMonitoringHealth` calls each accessory's `markMonitoring`; current owner tests import their source modules and assert resulting behavior. |
-| Current platform owner → PLATFORM report → findings/disposition/validation | ✓ SEMANTICALLY WIRED | The same blob, commit, complete spans, no-new-candidate result, and unchanged gate inputs appear across the four records. The generic `verify.key-links` query returns false for these three document links because it searches for literal target filenames in the source file; it cannot evaluate this evidence relationship. |
+| Current platform owner → Phase 6 PLATFORM report → Phase 8 correction record and manifest | ✓ SEMANTICALLY WIRED | The Phase 6 report records its then-current full-file blob; Phase 8 correction records cover both later changed platform blobs at `fef29878` and `ac471273`. The generic `verify.key-links` query reports false for document links because it searches for literal target filenames, not matching Git blob and complete-span evidence. |
 | Protocol, batch reports, ledger, and validation records | ✓ SEMANTICALLY WIRED | IDs, counts, historical ENTRY STOP, separate closure, and check revisions agree on manual inspection. |
 
 ### Data-Flow Trace
@@ -123,19 +136,21 @@ The plan artifact verifier returned `all_passed: true` for all nine plans (21 de
 | --- | --- | --- |
 | ENTRY-019 password suffix redaction | Named `node --test --test-name-pattern 'AUTH-02 redacts a field-shaped suffix inside an unquoted password'` | ✓ 1/1 pass |
 | ENTRY-020 field-name collision redaction | Named `node --test --test-name-pattern 'AUTH-02 redacts a new password when its field name is a registered secret'` | ✓ 1/1 pass |
+| ROOT-001 restored email privacy | Named `node --test --test-name-pattern 'keeps a restored vendor email out of logs' dist-test/test/platform.test.js` | ✓ 1/1 pass |
+| ROOT-002/003 Error parameter redaction | Named `node --test --test-name-pattern 'redacts a registered secret in an Error class name\|redacts a serialized registered secret inside an Error parameter' dist-test/test/logging.test.js` | ✓ 2/2 pass |
 | CR-01 rejects a negative restored count | Named `node --test --test-name-pattern 'starts observation again and says so once for a pump record with a negative count'` | ✓ 1/1 pass |
 | CR-02 completes and retries trust publication | Named `node --test --test-name-pattern 'marks later services inactive after one trust write fails and retries the failed service on the same report'` | ✓ 1/1 pass |
-| Current repository gate | `NPM_CONFIG_CACHE=/private/tmp/guardian-06-reverify-npm-cache npm run check` on Node v26.12.0 | ✓ exit 0: six static gates, compiled unpaired tests, 104/104 Cucumber scenarios, 1156/1156 steps, 43 isolated coverage pairs |
+| Current repository gate | `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` at `499659b`, Node v26.12.1 | ✓ exit 0: six static gates, compiled unpaired tests, 130/130 Cucumber scenarios, 1401/1401 steps, 43 isolated coverage pairs |
 
-The named checks used the corresponding compiled `dist-test/test/...` files after the current build in the previous verification; the executable inputs are unchanged. The first fresh full-gate attempt in this re-verification passed static checks but Cucumber's fake cloud could not bind `127.0.0.1` in the restricted sandbox (`EPERM`: 6 scenarios passed, 98 failed at setup). The same command then exited 0 with local socket access, without changing executable inputs. No phase probe was declared or found; probe execution is not applicable.
+This refresh ran the seven named cases on the current compiled `dist-test/test/...` files. The full combined gate was run once for Plan 08-21 on the same executable inputs, then reused here under the unchanged-input rule; the current working tree differs only in planning reports. No Phase 6 probe was declared or found; probe execution is not applicable.
 
 ### Requirements Coverage
 
 | Requirement | Scope | Status | Evidence |
 | --- | --- | --- | --- |
-| ROOT-01 | Phase 6 | ✓ SATISFIED | Twelve reviewed current root owners; the last platform test edit is covered at its exact current blob. Ledger, corrections, regressions, and current coverage/gate evidence agree. |
+| ROOT-01 | Phase 6 | ✓ SATISFIED for automated conformance | Twelve reviewed current root owners; Phase 8 independently reviewed the changed platform and logger blobs at their exact current revisions. Ledger, corrections, regressions, and current coverage/gate evidence agree. The real trust-publication judgment remains below. |
 | PROC-01 / PROC-02 | Carried into Phase 6 from Phase 1 | ✓ SATISFIED for Phase 6 process | 43 batch IDs and twelve reconciled counters; historical STOP and separate closure retained. |
-| BUG-01 | Applied to Phase 6; milestone audit belongs to Phase 8 | ✓ SATISFIED for sampled Phase 6 causes | RED evidence and ancestry precede GREEN; named regressions pass. |
+| BUG-01 | Applied to Phase 6; milestone audit belongs to Phase 8 | ✓ PASSED under D-05/D-07 evidence-path override for Phase 6 | Validated evidence-only RED commits precede GREEN in the planned paths. ENTRY-019/020 use observed debug RED and revert/reconfirm, without a planning-only RED commit or complete native TAP. The literal separate-test-commit wording is not claimed. |
 
 No requirement mapped to Phase 6 in `REQUIREMENTS.md` is orphaned from its plans. The decision-coverage query found all 7 trackable CONTEXT decisions honored.
 
@@ -150,17 +165,23 @@ No requirement mapped to Phase 6 in `REQUIREMENTS.md` is orphaned from its plans
 
 ### Advisory (New Scope, Unevidenced)
 
-None. The prior gap was carried forward and closed with deterministic revision and report evidence; no new unsupported blocker was introduced in this re-verification.
+None. No new unsupported blocker was introduced in this refresh. The pending real Homebridge trust-publication judgment is listed separately below.
 
-### Human Verification and Scope
+### Human Verification Required
 
-The original ENTRY logger workflow has an explicit maintainer **“Confirmed fixed”** result. The separate CR-02 debug session still awaits real Homebridge trust-publication confirmation. That confirmation is valuable for the later real-home/release gate, but Phase 6's stated goal and five success criteria concern code conformance, owner regressions, review records, and coverage. The active CR-02 synthetic regression tests the failure and retry invariant and passed here. The pending real-home result is **not** counted as a Phase 6 failed truth or as `behavior_unverified`; this report makes no claim that real Homebridge behavior has been observed.
+The original ENTRY logger workflow has the maintainer's explicit **“Confirmed fixed”** result. The separate CR-02 trust-publication debug session has only the maintainer's **“Cannot verify now”** result for the real Homebridge path. Its synthetic failure-and-retry regression passes and its source is wired, but that does not establish actual Homebridge service behavior.
+
+**Test:** In a degraded Homebridge status, make one characteristic write fail, then deliver the same status again.
+
+**Expected:** Later affected services become inactive despite the first failure, and the failed service is retried on the identical report.
+
+**Why human:** This integration depends on Homebridge's real characteristic publication and has not been observed by the maintainer. This one pending judgment makes the overall status `human_needed`; it is not a failed automated truth or a `behavior_unverified` source transition.
 
 ### Gaps Summary
 
-The sole prior blocker is closed. The independent post-advisory review covers the current platform owner in full, and its revision, blob, spans, rules, and zero-candidate disposition are synchronized across the PLATFORM report, findings ledger, advisory disposition, and validation map. The current full repository gate passes. No Phase 6 gap remains. Phase 8's whole-tree re-review and the separate real-home release checks retain their own milestones.
+No automated Phase 6 gap remains. The current platform and logger owners have independent complete-file correction reviews at their current blobs. The full repository gate passes on unchanged executable inputs. The trust-publication result remains `human_needed` until the real Homebridge check is performed; Phase 8 and release retain their separate signoff gates.
 
 ---
 
-_Verified: 2026-10-19T19:02:41Z_
+_Verified: 2026-10-23T07:48:54Z_
 _Verifier: the agent (gsd-verifier)_

@@ -55,19 +55,51 @@ planning-only evidence `919d70d` < active test and fix `3878103`. This is a
 metadata reconciliation, not a new RED/GREEN sequence. No old verifier status
 was edited.
 
-| Phase | Refresh result before Plan 08-20 source/test changes | Current live status after Plan 08-20 | Next action |
-| --- | --- | --- | --- |
-| 01 | TDD gate `block: true`, one plan violation; verifier not run | stale | Run the normal verifier route now that approved evidence and execution metadata agree. |
-| 02 | Fresh full route and typed verifier: passed, 18/18; full gate 130 scenarios, 1401 steps, 43 pairs | passed | Keep the fresh covered-file fingerprint. |
-| 03 | Fresh full route and typed verifier: `human_needed`, 19/22, with E-03-01 and P-03-01/02 open | stale | Rerun after source seal, then retain any human-needed result. |
-| 04 | Nyquist and security passed; advisory review found ROOT-002 and RUNTIME-007; later gates not run | stale | Rerun after the new separate ROOT-003 closure and seal. |
-| 05–07 | Not yet refreshed | stale | Run each normal route after the current sealed source tree. |
+| Phase | Current GSD status after the Plan 08-21 seal | Remaining condition |
+| --- | --- | --- |
+| 01 | passed, 14/14 | Approved D-06 RED lineage retained; the standard checkpoint skips the custom path. |
+| 02 | passed, 18/18 | No current gap. |
+| 03 | human_needed, 19/22 | E-03-01, P-03-01, and P-03-02 require current maintainer judgments; WINDOWS 46/47 remain open. |
+| 04 | passed, 27/27 | Phase 8 repairs close the two earlier advisory findings. |
+| 05 | passed, 12/12 | Historical GATES STOP and retired scanner findings stay visible. |
+| 06 | human_needed, 5/5 concrete truths | Real Homebridge failed-write/retry check remains unverified; the maintainer previously answered “Cannot verify now.” |
+| 07 | passed, 5/5 | Historical batch STOPs stay visible. |
 
 At `9863d9b`, the Plan 08-20 full `npm run check` passed 130/130 scenarios,
 1401/1401 steps, and all 43 direct coverage pairs on Node `v26.12.1`. This is
 a combined-tree test result, not a verifier pass or a current review seal.
 
 At `499659b`, Plan 08-21's full `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` exited 0 on Node `v26.12.1`: 130/130 Cucumber scenarios, 1401/1401 steps, and 43 direct coverage pairs. The separate ROOT-003 review closed its only ID and a one-off exact-blob audit passed all 137 current paths. Both earlier STOP records remain unchanged. The source tree is ready for the stale verifier routes; no Phase 8 signoff is claimed yet.
+
+The six fresh verifier reports were generated through GSD's verifier route, with the report's covered-input fingerprint computed by GSD. Phase 2's existing report remains current. GSD status queries after the refresh returned exactly the statuses above. No report frontmatter was edited by the coordinator to force a pass. No executable input changed from `499659b` through the planning-only report refresh at `51ffc50`; `git diff --exit-code 499659b HEAD -- src test features package.json package-lock.json cucumber.json tsconfig.json tsconfig.test.json eslint.config.js scripts` exited 0.
+
+## Final profile and window audit
+
+The default `./node_modules/.bin/cucumber-js --dry-run --format usage` exited 0 and listed no `UNUSED`, undefined, or ambiguous definition. The read-only `./node_modules/.bin/cucumber-js --profile real --dry-run --format summary` exited 0: six scenarios and 35 steps were all skipped. The latter bound steps without contacting the vendor or running hardware. Both commands used the compiled inputs from the `499659b` full gate.
+
+`gsd-tools windows status --raw` reconciled all 58 rows with the ledger counts. The original research baseline was 18 open, 19 waived, and 21 fixed. Window 36's three stale STATE statements have already been corrected; `gsd-tools windows fixed 36` changed only its status through the supported command. The current ledger is **17 open, 19 waived, 22 fixed**. All 19 waivers retain reasons.
+
+| Open ID | Current disposition after individual audit |
+| --- | --- |
+| 11 | The old stale-marking binder mutation was never run; current tests do not reconstruct that assertion-strength proof. Keep open. |
+| 14 | The earlier WR-05 and IN-03 deferral/disposition record is historical; do not infer closure from later code without its exact acceptance evidence. Keep open. |
+| 35 | `carriesObservation` has unit and one scenario observation, but the historical single-tier concern is not retroactively disproved. Keep open. |
+| 44 | Private vulnerability reporting still requires an external GitHub account/repository decision. Keep open. |
+| 46 | Phase 3 formatter/commit ordering cannot be reconstructed; keep open. |
+| 47 | Phase 3 alias-specific pre-edit trace cannot be reconstructed; keep open. |
+| 48 | Phase 4 summary's pre-edit guard timing cannot be reconstructed; keep open. |
+| 49 | Phase 4 fixer overlap with a still-running lint session cannot be reconstructed; keep open. |
+| 50 | Phase 4 pre-first-commit ledger remains absent; keep open. |
+| 51 | Phase 4 initial formatter/lint input bytes remain uncaptured; keep open. |
+| 52 | Phase 4 canonical-root containment was checked only after the write; keep open. |
+| 53 | Phase 4 generated state JSON lacked the original pre-mutation guard; keep open. |
+| 54 | Phase 4 follow-up plans lacked a fresh guard before formatter edits; keep open. |
+| 55 | Phase 4 native capture and serial-order gaps for Plan 14 remain historical; keep open. |
+| 56 | Phase 4 native capture and read/compile ordering gaps for Plan 15 remain historical; keep open. |
+| 57 | Phase 4 native capture and failed sandbox-attempt limits for Plan 16 remain historical; keep open. |
+| 58 | Phase 4 explicit agent-effort dispatch and capture limits remain historical; keep open. |
+
+These windows are separate from the Phase 8 review findings. The current Phase 8 forward-open ID set is empty. Window 11 is an old test-strength limit, 14 and 35 are evidence/deferral limits, 44 is external account configuration, and 46–58 are historical process records. None is silently counted as a current code defect or waived.
 
 ## Wave 0 Requirements
 

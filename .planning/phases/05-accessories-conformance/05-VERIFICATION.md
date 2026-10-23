@@ -1,6 +1,6 @@
 ---
 phase: 05-accessories-conformance
-verified: "2026-10-19T12:45:26Z"
+verified: "2026-10-23T07:46:37Z"
 status: passed
 score: "12/12 checks verified; 4 by one bundled maintainer acceptance"
 covered_files:
@@ -31,6 +31,8 @@ covered_files:
   - .planning/phases/05-accessories-conformance/05-ledger-tracer.mjs
   - eslint.config.js
   - features/lib/hap.ts
+  - package-lock.json
+  - package.json
   - scripts/check-corresponding-tests.mjs
   - scripts/test-coverage-direct.mjs
   - src/accessories/alarmMute.ts
@@ -43,6 +45,8 @@ covered_files:
   - src/accessories/serviceCatalogue.ts
   - src/accessories/services.ts
   - src/accessories/staleMarking.ts
+  - src/config.ts
+  - src/platform.ts
   - test/accessories/alarmMute.test.ts
   - test/accessories/basementGuardian.test.ts
   - test/accessories/controls.test.ts
@@ -54,9 +58,16 @@ covered_files:
   - test/accessories/serviceCatalogue.test.ts
   - test/accessories/services.test.ts
   - test/accessories/staleMarking.test.ts
-covered_digest: "v3:sha256:27cc9fb9ae82fa9d9b31eefd055c27456dcf1c5a1561f2860c7e1fde10b3e09a"
+  - test/platform.test.ts
+covered_digest: "v3:sha256:7bc0a30799efd66dfe4dc0fad8af275c79504c2d4280bffe3e17cd119660998d"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: passed
+  previous_score: "12/12"
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 decision_coverage:
   honored: 18
   total: 18
@@ -118,8 +129,8 @@ style, comment and unit-test rules; confirmed production bugs have RED
 regressions before fixes.
 
 **Status:** Passed after one bundled maintainer acceptance of the four
-closeout judgments. The automated checks below passed again after removal of
-two unrelated unpaired repository tests. The historical GATES
+closeout judgments. Current accessory code and tests were checked again after
+later Phase 6-8 edits. The historical GATES
 review stopped at round 15 with two valid findings against retired scanner
 code. These remain open in the historical ledger; the old all-clean predicate
 still fails.
@@ -128,29 +139,39 @@ still fails.
 
 | # | Observable truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Current accessory scope is inventoried and carries required headers | VERIFIED | Ten sources, ten paired tests and one HAP parity test; header tracer exit 0, files=21. The ledger retains the four retired historical paths. |
+| 1 | Current accessory scope is inventoried and carries required headers | VERIFIED | Ten sources, ten paired tests and one HAP parity test; current header tracer exit 0, files=21. All 21 current blobs match Phase 8's ACCESSORY manifest and complete-file review. The ledger retains the four retired historical paths. |
 | 2 | Findings and review outcomes remain auditable | VERIFIED with disclosed STOP | Ordinary ledger tracer exit 0, inventory=31, findings=247, open=2, rounds=47. Open IDs 074/075 are valid findings against retired scanners. |
-| 3 | Review convergence is reported honestly | VERIFIED | Five batch clean checks exit 0; GATES round 15 is STOP; all-clean exits 1 for GATES and its two open IDs. No round 16 exists. |
-| 4 | Current paired code retains isolated direct coverage | VERIFIED | After removal of the two unpaired repository tests, full `npm run check` exited 0; direct LCOV still merged 43 pairs under the repository's 100% pair gate. |
+| 3 | Review convergence is reported honestly | VERIFIED | Five batch final rows are clean; GATES round 15 is STOP; all-clean exits 1 for GATES and its two open IDs. No round 16 exists. |
+| 4 | Current paired code retains isolated direct coverage | VERIFIED | Full `npm run check` at `499659b` exited 0; direct LCOV merged 43 pairs under the repository's 100% pair gate. No executable input changed between that commit and this verifier refresh. |
 | 5 | Confirmed bug histories retain RED-before-GREEN evidence | VERIFIED | Four current RED evidence files each return RED_EVIDENCE_OK; the ledger names affected owners and fix commits. Scanner IDs 074/075 claim no production defect. |
 | 6 | Replacement lint boundaries are wired | VERIFIED within stated syntax scope | Eleven forbidden probes reported their configured ESLint rules; current controls and parity modules have no restricted-rule finding; full lint passed. Alias and computed-name forms are outside the claimed syntax scope. |
-| 7 | Real HAP checks the stand-in's write behavior | VERIFIED | Retained `hapWriteFidelity.test.ts` imports the installed HAP package and compares real and fake write records; compiled owner passed 22/22. |
-| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | After commit `9605a63` removed the two unpaired tests and their check-script entries, `npm run check` exited 0: 104 Cucumber scenarios, 1,156 steps and 43 direct pairs. Later commits before this refresh changed planning Markdown only. The earlier Phase 5 gates remain in `05-09-SUMMARY.md`. |
+| 7 | Real HAP checks the stand-in's write behavior | VERIFIED | Retained `hapWriteFidelity.test.ts` imports the installed HAP package and compares real and fake write records; its current compiled owner passed 22/22. |
+| 8 | The combined repository gate passes on final code/config inputs | VERIFIED | `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` at `499659b` exited 0 on Node v26.12.1: 130/130 Cucumber scenarios, 1,401/1,401 steps and 43 direct pairs. A Git diff from `499659b` to this refresh found no changes in `src`, `test`, `features`, scripts, or build configuration. |
 | 9-12 | E-05-01 and P-05-01 through P-05-03 | VERIFIED by maintainer judgment | One bundled "Accept" response is recorded in `05-UAT.md`. The edge taxonomy and historical GATES STOP remain as qualified there. |
 
 ## Test quality and decision coverage
 
-No disabled or todo test was found under `test/accessories` or `features`.
+No disabled, todo or only test was found under `test/accessories`.
 The parity test invokes the installed real-HAP implementation as an
 independent comparison source. The context-decision check reports 18 of 18
-trackable decisions honored; it is advisory. No new production behavior was
-introduced by the test removal or closeout records. The incremental
-`05-REVIEW.md` found no new defect in the two roster-script edits and the
-comment-only `services.ts` change. `05-VALIDATION.md` records no new test
-gap in the accessory scope; `05-SECURITY.md` records the bounded ASVS level 1
-threat review. The execute:post TDD checkpoint reported no `type:tdd` plans
-and no blocking violation. The full `npm run check` also served as the
-prior-phase regression gate.
+trackable decisions honored; it is advisory. Four Phase 5 RED archives each
+returned `RED_EVIDENCE_OK` with `target_test_failed`; the Phase 8 bug ledger
+also checks their Git source-evidence-fix chains. Later Phase 6-8 repairs changed
+the restored-service walk, failed pump-record persistence, trust republication,
+and the offline HAP stand-in. Current tests assert the later service is still
+marked, a failed write is retried, and a failed row is republished on the same
+monitoring report. The Phase 8 ACCESSORY review read all 21 current blobs and
+found no new accessory finding. No `TBD`, `FIXME` or `XXX` marker was found in
+the current accessory scope.
+
+The mechanical Plan 05-02 link check still searches for the old
+`REMOVABLE_SENSOR_NAMES` name in production. Current `services.ts` exports
+`NOTIFICATION_SERVICE_KINDS`, which `src/config.ts` imports and validates;
+`services.test.ts` checks its seven values against an independent list. Plan
+05-08's `hapImportScope.test.ts` artifact is absent because the maintainer
+retired that scanner and superseded its acceptance predicate with Plan 05-09.
+Neither mechanical result is evidence that a current accessory link is broken.
+`05-SECURITY.md` retains the bounded ASVS level 1 threat review.
 
 ## Human verification resolution
 
@@ -160,6 +181,11 @@ ACC-01 boundary and bounded safety, disclosure and replacement evidence.
 The edge taxonomy remains unclassified; no exhaustive safety proof or clean
 GATES result is claimed.
 
+## Advisory (new scope, unevidenced)
+
+None. The two scanner findings remain evidenced historical findings under the
+accepted GATES STOP, rather than new speculative blockers.
+
 ## Gaps summary
 
 No current executable gate failed. The accepted boundary leaves the two
@@ -168,3 +194,5 @@ unchanged. The old `--require-clean all` predicate remains false by design.
 Removing `test/configSchema.test.ts` and `test/packageManifest.test.ts`
 removed their schema and package assertions from the repository suite at the
 maintainer's request; the passing full gate does not replace those assertions.
+The Phase 8 milestone bug ledger still reports its own evidence limits and
+does not receive a BUG-01 milestone signoff from this Phase 5 result.

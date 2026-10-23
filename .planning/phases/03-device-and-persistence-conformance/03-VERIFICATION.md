@@ -1,12 +1,18 @@
 ---
 phase: 03-device-and-persistence-conformance
-verified: "2026-10-23T02:32:39Z"
+verified: "2026-10-23T07:40:38Z"
 status: human_needed
 score: "19/22 must-haves verified"
 covered_files: [".agents/skills/local-verification/SKILL.md",".agents/skills/typescript-style/SKILL.md",".agents/skills/typescript-unit-tests/SKILL.md",".planning/phases/03-device-and-persistence-conformance/03-01-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-01-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-02-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-02-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-03-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-03-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-04-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-04-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-05-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-05-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-06-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-06-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-07-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-07-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-08-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-08-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-CONTEXT.md",".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-FINDINGS.md",".planning/phases/03-device-and-persistence-conformance/03-PATTERNS.md",".planning/phases/03-device-and-persistence-conformance/03-RESEARCH.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SEAL-AUDIT.json",".planning/phases/03-device-and-persistence-conformance/03-SECURITY.md",".planning/phases/03-device-and-persistence-conformance/03-SOURCE-AUDIT.md",".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SUPPORT-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-UAT.md",".planning/phases/03-device-and-persistence-conformance/03-VALIDATION.md",".planning/phases/08-final-sweep-and-gate/08-BUG-LEDGER.md",".planning/phases/08-final-sweep-and-gate/08-DEVICE-001-RED-EVIDENCE.json",".planning/phases/08-final-sweep-and-gate/08-DEVICE-002-RED-EVIDENCE-V2.json",".planning/phases/08-final-sweep-and-gate/08-FINDINGS.md",".planning/phases/08-final-sweep-and-gate/08-MANIFEST.json",".planning/phases/08-final-sweep-and-gate/08-RUNTIME-006-RED-EVIDENCE-V2.json","package.json","scripts/check-corresponding-tests.mjs","scripts/test-coverage-direct.mjs","src/accessories/basementGuardian.ts","src/accessories/pumpRecords.ts","src/accessories/serviceCatalogue.ts","src/cloud/shadow.ts","src/device/events.ts","src/device/family.ts","src/device/gemini.ts","src/device/halo.ts","src/device/health.ts","src/device/registry.ts","src/device/state.ts","src/device/waterLevel.ts","src/persistence/accessoryContext.ts","src/platform.ts","src/runtime/accountRuntime.ts","test/accessories/pumpRecords.test.ts","test/device/events.test.ts","test/device/family.test.ts","test/device/gemini.test.ts","test/device/geminiSeeds.ts","test/device/halo.test.ts","test/device/health.test.ts","test/device/registry.test.ts","test/device/state.test.ts","test/device/stateSeeds.ts","test/device/waterLevel.test.ts","test/persistence/accessoryContext.test.ts","test/platform.test.ts"]
-covered_digest: "v3:sha256:8614a0a1f8bf6994b43c4f82b66f795178b30ad34d248c20109572ccd54102fe"
+covered_digest: "v3:sha256:d9ca6318a0757d4b0b64bed7fc765996bc883c52fc4f82c6b73c085945c9ed08"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: 19/22
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 flagged_assumptions:
   - id: E-03-01
     requirement: DEV-01
@@ -53,9 +59,9 @@ human_verification:
 
 **Phase goal:** Every module under src/device/** and src/persistence/**, and each paired test, conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
 
-**Status:** human_needed. **Score:** 19/22 must-haves verified; three current human judgments remain. **Checked revision:** a18d3141fd7aceab702d04c2bc482e8e7ed7512b. This is a verification-only refresh of the prior report; no source or test was edited.
+**Status:** human_needed. **Score:** 19/22 must-haves verified; three current human judgments remain. **Checked revision:** 51ffc50. This is a verification-only refresh of the prior report; no source or test was edited.
 
-The current ROADMAP and REQUIREMENTS files mark Phase 3 and DEV-01 complete. That workflow metadata does not replace this evidence verdict. The previous report's frontmatter said passed while its body and three human items said human_needed. This report resolves that contradiction in favor of the pending current judgments. The 2026-10-14 UAT file records three historical pass responses; they do not expressly accept E-03-01, P-03-01 and P-03-02 for the changed, current Phase 8 sealed inputs. No Phase 2 answer is inherited.
+The current ROADMAP and REQUIREMENTS files mark Phase 3 and DEV-01 complete. That workflow metadata does not replace this evidence verdict. This re-verification preserves the prior human_needed verdict. The 2026-10-14 UAT file records three historical pass responses; they do not expressly accept E-03-01, P-03-01 and P-03-02 for the current Phase 8 sealed inputs. No Phase 2 answer is inherited.
 
 ## Goal Achievement
 
@@ -65,7 +71,7 @@ The five ROADMAP success criteria are retained. The eight plans add 28 frontmatt
 
 | # | Observable truth | Status | Codebase evidence |
 | --- | --- | --- | --- |
-| 1 | All nine source/test pairs and two real helpers have complete review, headers and six state seed dispositions. | VERIFIED | Live src/device, src/persistence and mirrored test inventory has 18 core paths plus stateSeeds/geminiSeeds. The refreshed 03-REVIEW lists all 20 at the sealed manifest blobs, zero new findings; 03-FINDINGS records each seed decision. |
+| 1 | All nine source/test pairs and two real helpers have complete review, headers and six state seed dispositions. | VERIFIED | Live src/device, src/persistence and mirrored test inventory has 18 core paths plus stateSeeds/geminiSeeds. Every current blob matches the newer Phase 8 manifest and the earlier 03-REVIEW's 20 reviewed blobs; 03-FINDINGS records each seed decision. |
 | 2 | Every accepted Phase 3 cause has a rule, revision-qualified location, severity and fixed or rejected outcome. | VERIFIED | 03-FINDINGS indexes 38 unique accepted causes: STATE 11, DECODING 15, SUPPORT 12; nine BLOCKER and 29 WARNING. Current code and review records support closure. Rejected candidates remain separate. |
 | 3 | Independent correction rounds converge or stop under D-03. | VERIFIED | The three complete batch reports retain continuous counts 10→1→0, 14→1→0 and 10→2→0, all closed in round 2. No Phase 3 reopened ID, stall or fourth round appears; the later Phase 8 global STOP remains a distinct historical record. |
 | 4 | Every touched pair reaches isolated 100% direct line, function and branch coverage or an honest declaration-only verdict. | VERIFIED | Fresh full npm run check exits zero and runs all 43 pairs alone. The direct nine-pair check and Nyquist 18/18 refresh cover this scope; 181 compiled owner tests pass. Family, events, health and context are compiler contracts, not numerical runtime coverage. |
@@ -82,13 +88,17 @@ The five ROADMAP success criteria are retained. The eight plans add 28 frontmatt
 | 15 | Health declarations keep narrow trust and absence contracts and actual readers compile. | VERIFIED | health.ts contracts and health.test.ts negatives; serviceCatalogue filters candidate values by scope and omits untrustworthy ones. |
 | 16 | HALO remains unsupported and registry separates profile from physical identity and explanation cadence. | VERIFIED | halo.ts identity/name, registry.ts implemented/unsupported/unknown outcomes, registry.test.ts cadence cases; platform seeds UUID from deviceId and chooses adapter by deviceTypeId. |
 | 17 | Persisted observations remain writable, retain first-run absence and clock units, and reach explicit persistence. | VERIFIED | accessoryContext.ts type contract includes the current backupEdgeAwaitingTimestamp marker; pumpRecords.ts mutates/reconciles records and calls persist; platform supplies updatePlatformAccessories. The owner contracts and consumer tests pass. |
-| 18 | The current full combined gate covers the executable inputs under review. | VERIFIED | Parent's authorized unsandboxed gate at clean a18d3141, Node v26.12.1, TEST_CONCURRENCY=1, exit 0: six static checks, 130/130 offline scenarios, 1401/1401 steps, 43 isolated pairs. Git diff from that commit shows no source, test, feature, package, script or config change. |
+| 18 | The current full combined gate covers the executable inputs under review. | VERIFIED | Full `npm run check` at source commit 499659b, Node v26.12.1, TEST_CONCURRENCY=1, exit 0: six static checks, 130/130 offline scenarios, 1401/1401 steps, 43 isolated pairs. Git diff from that commit through 51ffc50 shows no source, test, feature, package, script or config change. |
 | 19 | E/P items, actual open historical limits and current check scope are disclosed without silent completion claims. | VERIFIED | 03-SEAL-AUDIT retains equality 1 = 0 lifted + 1 flagged assumption and 2 = 2 authored + 0 omitted prohibitions. Current VALIDATION covers 18/18 tasks, SECURITY closes 18/18 threats, REVIEW reports zero new findings; none resolves E/P. |
 | 20 | E-03-01 has a fresh current Phase 3 taxonomy-boundary acceptance. | UNCERTAIN — WARNING | No deterministic taxonomy proof or explicit current-scope acceptance; the 2026-10-14 UAT response is historical. |
 | 21 | P-03-01 excludes guessed normal telemetry under the current scope. | UNCERTAIN — WARNING | Current code/tests support narrow preservation, but this descriptorless prohibition lacks wired enforcement and current human acceptance. |
 | 22 | P-03-02 certifies the truthful current completion boundary. | UNCERTAIN — WARNING | Current evidence is bounded and historical limits remain. Maintainer acceptance of the refreshed boundary is still needed. |
 
 **Score:** 19/22 verified, zero behavior-dependent truths left unexercised. The three uncertain items are human judgments, not implementation blockers or silently passed prohibitions.
+
+### Advisory (New Scope, Unevidenced)
+
+None. No new-scope concern was raised in this re-verification.
 
 ### PLAN Must-Have Crosswalk
 
@@ -138,11 +148,15 @@ Level-4 trace: real vendor discovery/reported data flows through shadow/runtime 
 
 ### Behavioral Spot-Checks and Probes
 
-The verifier ran three exact named compiled state tests after the fresh same-input full gate. Each passed 1/1 with no fail, skip or cancellation: empty telemetry allows a later poll to replace it; duplicate/old/unversioned replay cannot erase a silent device flood; an accepted unchanged heartbeat notifies its listener. The full gate additionally runs the relevant owners and all direct pairs.
+The verifier ran three exact named compiled state tests after the fresh same-input full gate. Each passed 1/1 with no fail, skip or cancellation: empty telemetry allows a later poll to replace it; only a newer telemetry version takes ownership after silence; an accepted unchanged heartbeat notifies its listener while a duplicate does not. The full gate additionally runs the relevant owners and all direct pairs.
 
 The two exact Plan 08 node predicates were executed in this verification process. Both exited zero and printed DEVICE_LEDGER_TRACER_OK and DEVICE_SEAL_AUTOMATED_AUDIT_OK. No scripts/**/tests/probe-*.sh path is declared for this phase. The predicates validate aggregate structure; direct code, tests and Git evidence above supply the behavior check.
 
-The first sandboxed full-gate attempt failed with EPERM on loopback listeners. The authorized unsandboxed npm run check is the operative result, logged at /private/tmp/guardian-phase3-verification-regression-check-unsandboxed.log. No live vendor, hardware or real-pump profile was run.
+The operative full gate is logged at `/private/tmp/guardian-phase8-plan21-check.log`. Its checked commit is 499659b; subsequent changes through 51ffc50 are planning records only. This verifier reused that same-input gate under the local-verification rule and ran the three named tests above. No live vendor, hardware or real-pump profile was run.
+
+### Decision Coverage and Test Quality
+
+The GSD decision-coverage query reports 7/7 trackable CONTEXT decisions honored. All 28 declared artifact occurrences pass the artifact query. Its literal key-link query reports 0/16 because it expects literal target paths, while the project's ESM imports use `.js` paths and several declared links name the inverse consumer; the manual call-site trace above resolves all 16. The linked test files contain no disabled cases. The state regressions compare concrete returned, stored and listener values, not only existence or status; the declaration-only owners use strict compiler positives and negatives. No circular expected-output generator was found in this scope.
 
 ### Requirements, Anti-Patterns and Limits
 
@@ -171,5 +185,5 @@ No current implementation BLOCKER, missing artifact, broken manual key link, unc
 
 ---
 
-_Verified: 2026-10-23T02:32:39Z_
+_Verified: 2026-10-23T07:40:38Z_
 _Verifier: gsd-verifier_
