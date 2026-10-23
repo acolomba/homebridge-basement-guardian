@@ -1,5 +1,27 @@
 # Milestones
 
+## code-review-sweep Code Review Sweep (Archived: 2026-10-23)
+
+**Phases completed:** 8 phases, 106 plans
+
+**Scope:** Repository review and bug repair. This archive does not close the real-home or hardware release gates.
+
+**Key accomplishments:**
+- Reviewed all 137 current in-scope source, test, and Cucumber files at their exact revisions.
+- Fixed the five initial spot-check findings and recorded each later finding, repair, and bounded STOP.
+- Added active regression tests for bugs found in cloud, device, runtime, accessory, and root modules.
+- Reconciled every phase verifier and all 17 milestone requirements.
+- Passed the full repository check: 130 offline Cucumber scenarios, 1401 steps, and 43 direct coverage pairs.
+- Confirmed the trust-publication retry in Homebridge 2.4.0 with a synthetic Docker probe.
+
+**Accepted limits:** Three bug histories retain limited pre-fix evidence. The shadow-liveness fix still awaits confirmation with live vendor traffic. Historical STOPs and open Windows remain in the archived records.
+
+Known verification overrides: 1 newly acknowledged, 2 carried forward from a prior close (see STATE.md Deferred Items).
+
+The [milestone audit](milestones/code-review-sweep-MILESTONE-AUDIT.md) gives the evidence and limits.
+
+---
+
 ## v1.0 Initial Release (Shipped: 2026-10-13)
 
 **Phases completed:** 7 phases, 73 plans, 177 tasks

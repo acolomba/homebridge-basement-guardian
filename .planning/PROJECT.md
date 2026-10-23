@@ -12,19 +12,11 @@ HomeKit must promptly show trustworthy basement-protection conditions while clea
 
 An npm-ready v1 release candidate passes repository quality checks on Node.js 22 and 24 and supported Homebridge 1.x/2.x runtimes, with hardware and real-home gates G-001, G-002, G-003, and G-004 closed before `1.0.0` can be published.
 
-## Current Milestone: code-review-sweep -- Code Review Sweep
+## Current State
 
-**Goal:** Every source, unit-test, and Cucumber file conforms to the project's TypeScript style, comment, unit-testing, and behavioral-testing rules, and every bug found on the way is fixed behind a regression test.
+The code-review-sweep milestone is archived. Its eight phases and 17 requirements passed verification. The full repository check passed on the final executable tree. The [milestone audit](milestones/code-review-sweep-MILESTONE-AUDIT.md) records the accepted evidence limits and deferred live vendor confirmation.
 
-**Target features:**
-- Fix the five spot-check findings (`SC-01` to `SC-05` in `.planning/research/SPOT-CHECK-FINDINGS.md`) and prove the batch loop on them.
-- Review and fix each subsystem in turn: `src/cloud`, `src/device` + `src/persistence`, `src/runtime`, `src/accessories`, and the root modules, each with its paired tests.
-- Review and fix `features/**` against `skills/cucumber-behavioral-testing` and `features/CLAUDE.md`.
-- Close with a full-repo re-review and the complete `npm run check` gate.
-
-**Rulebooks:** `skills/typescript-google-style-review`, `skills/typescript-comments`, `skills/typescript-unit-testing` (+ `-review`), `skills/cucumber-behavioral-testing`, `features/CLAUDE.md`, `skills/local-verification`.
-
-**Working method:** Each phase runs a bounded review → triage → fix → re-review loop, modelled on `.claude/commands/babysit-pr.md`: reviewers and fixers run as subagents, each fix is an atomic commit that passes the hooks, and the loop stops after about four rounds or a round that does not reduce the open count. Fix scope is every finding, not only blockers. A bug gets an active failing regression before its fix. The maintainer approved committing its complete patch and observed failure as a planning-only record first, then the active test and fix together after GREEN and passing hooks (code-review-sweep Phase 1, D-06).
+The next milestone has not been selected. Real-home and hardware gates G-001 through G-004 still block publication of `1.0.0`.
 
 ## Requirements
 
@@ -34,6 +26,9 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 - ✓ RUN-01: Runtime source modules and their paired tests conform. All 87 findings are independently closed; nine genuine bug histories retain regression evidence. The full check and three explicit human judgments pass. Historical audit and process limits remain recorded. — code-review-sweep, Phase 4
 - ✓ SC-01 through SC-05 have discriminating regression or mutation evidence, clean independent reviews, and a passing full repository gate. — code-review-sweep, Phase 1
 - ✓ All 19 cloud source/test/helper files conform to the rules. All 56 findings and six genuine bug histories are closed with independent verification and the full gate. Taxonomy and ALPN limits remain explicit. — code-review-sweep, Phase 2
+- ✓ The in-scope `src/` modules and paired tests passed the TypeScript, comment, and unit-test review. — code-review-sweep
+- ✓ The in-scope `features/**` files passed the behavioral-testing review. — code-review-sweep
+- ✓ Bugs found in the sweep have regressions within the accepted evidence boundary. The audit keeps three limited pre-fix histories visible. — code-review-sweep
 - ✓ A Homebridge administrator can configure one Basement Guardian account without exposing secrets in logs or accessory state. — Phase 1
 - ✓ Every valid Gemini on that account appears as one stable HomeKit accessory; unsupported or invalid profiles never produce fabricated state. — Phase 2
 - ✓ Flood risk, pump activity, mains power, battery condition, equipment faults, and connectivity health use truthful HomeKit semantics. — v1.0
@@ -44,9 +39,6 @@ An npm-ready v1 release candidate passes repository quality checks on Node.js 22
 ### Active
 
 - [ ] The real-home and hardware gates G-001, G-002, G-003, and G-004 close before `1.0.0` is published.
-- [ ] Every `src/` module and its paired test conform to the TypeScript style, comment, and unit-testing rules (code-review-sweep).
-- [ ] Every `features/**` file conforms to the behavioral-testing rules and `features/CLAUDE.md` (code-review-sweep).
-- [ ] Every bug found during the sweep is fixed behind a regression test (code-review-sweep).
 
 ### Out of Scope
 
@@ -208,4 +200,4 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **Constructor dependency injection — preferred.** Prefer manual constructor injection for plugin-owned services, including vendor clients, token stores, transports, clocks, and state managers. Keep the Homebridge platform constructor compatible with `new (log, config, api)`. Production code can provide defaults through factories. Tests can inject fakes explicitly. This pattern is an implementation preference, not an ADR-locked decision. If another pattern gives a clear benefit, revisit this preference during phase discussion.
 
 ---
-*Last updated: 2026-10-19 after completing code-review-sweep Phase 5*
+*Last updated: 2026-10-23 after archiving code-review-sweep*

@@ -2,38 +2,36 @@
 gsd_state_version: "1.0"
 milestone: code-review-sweep
 milestone_name: Code Review Sweep
-current_phase: 8
-status: completed
+status: Awaiting next milestone
 stopped_at: Phase 8 complete — all phases complete
-last_updated: "2026-10-23T14:15:05.514Z"
+last_updated: "2026-10-23T15:44:21.337Z"
 last_activity: 2026-10-23
-last_activity_desc: Phase 8 complete
-state_head: ed35f84aa5b21c665308a5bf869c75f5c05dad78
+last_activity_desc: Milestone code-review-sweep completed and archived
+state_head: 0c2adafb44a71a6c18c66fe69991cb7d238de3b1
 progress:
   total_phases: 8
   completed_phases: 8
   total_plans: 106
   completed_plans: 106
   percent: 100
+current_phase: 8
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-19)
+See: .planning/PROJECT.md (updated 2026-10-23)
 
 **Core value:** HomeKit must promptly show trustworthy basement-protection conditions while clearly marking stale or invalid telemetry instead of reporting a false normal state.
-**Current focus:** Phase 8 — Final Sweep and Gate
+**Current focus:** Planning the next milestone; G-001 through G-004 remain release gates.
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-10-23 — Phase 8 complete
-
-Progress: [██████████] 100%
+Phase: Milestone code-review-sweep complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-23 — Milestone code-review-sweep completed and archived
 
 ## Performance Metrics
 
@@ -784,4 +782,4 @@ completion exists only locally until someone pushes it.
 
 ## Operator Next Steps
 
-- Discuss Phase 1 with /gsd-discuss-phase 1, and decide the file-header form there, before planning.
+- Start the next milestone with /gsd-new-milestone
