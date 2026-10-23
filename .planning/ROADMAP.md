@@ -363,11 +363,11 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 08-06-PLAN.md
 - [x] 08-07-PLAN.md
 - [x] 08-08-PLAN.md
-- [ ] 08-09-PLAN.md
+- [x] 08-09-PLAN.md
 - [ ] 08-10-PLAN.md
 - [ ] 08-11-PLAN.md
-- [ ] 08-12-PLAN.md
-- [ ] 08-13-PLAN.md
+- [x] 08-12-PLAN.md
+- [x] 08-13-PLAN.md
 - [ ] 08-14-PLAN.md
 - [ ] 08-15-PLAN.md
 
@@ -386,4 +386,4 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 6. Root Module Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 7. Cucumber Feature Conformance | code-review-sweep | 30/30 | Complete    | 2026-10-22 |
-| 8. Final Sweep and Gate | code-review-sweep | 8/15 | In Progress | - |
+| 8. Final Sweep and Gate | code-review-sweep | 11/15 | In Progress | - |
