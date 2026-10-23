@@ -1,0 +1,29 @@
+{
+  "findingId": "CR-08-ROOT-003",
+  "command": "node --test --test-reporter=tap --test-name-pattern='redacts a registered secret in an Error class name' dist-test/test/logging.test.js",
+  "argv": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "--test-name-pattern=redacts a registered secret in an Error class name",
+    "dist-test/test/logging.test.js"
+  ],
+  "cwd": "/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian",
+  "sourceCommit": "4093bad3361fc3f31c8cfc2033359335bb90a50d",
+  "sourceBlob": "e3f40d3fd281d0f0b1a38bd23f1b6e1ed5142ff4",
+  "testBlob": "a48a46224448d24fea09da1eba434c1a179e36a3",
+  "nodeVersion": "v26.12.1",
+  "startedAt": "2026-10-23T07:30:25.068526+00:00",
+  "finishedAt": "2026-10-23T07:30:25.344043+00:00",
+  "exitCode": 1,
+  "targetTest": "redacts a registered secret in an Error class name",
+  "targetFile": "test/logging.test.ts",
+  "expected": "The Homebridge error delegate receives [redacted]: failure; no character of the registered class-name secret reaches it.",
+  "actual": "The delegate received CredentialValue: failure, exposing the synthetic registered secret from the Error class name.",
+  "semanticAssessment": "The active named case compiled and executed once against the unchanged committed src/logging.ts blob. Its exact delegated-call assertion failed for the intended class-name disclosure, not a build, runner, or environment failure. All credential text is synthetic.",
+  "productionUnchanged": true,
+  "compileCommand": "npm run build:test",
+  "compileExitCode": 0,
+  "regressionPatch": "diff --git a/test/logging.test.ts b/test/logging.test.ts\nindex a48a462..21389fb 100644\n--- a/test/logging.test.ts\n+++ b/test/logging.test.ts\n@@ -223,6 +223,22 @@ test('redacts a serialized registered secret inside an Error parameter', () => {\n   verify(delegate);\n });\n \n+test('redacts a registered secret in an Error class name', () => {\n+  // arrange\n+  class CredentialValue extends Error {}\n+  const delegate = createDelegate();\n+  when(() => {\n+    delegate.error('the grant was rejected', `${REDACTED}: failure`);\n+  }).thenReturn(undefined);\n+  const log = createRedactingLogger({ delegate, secrets: ['CredentialValue'] });\n+\n+  // act\n+  log.error('the grant was rejected', new CredentialValue('failure'));\n+\n+  // assert\n+  verify(delegate);\n+});\n+\n test('describes a parameter that cannot be serialized', () => {\n   // arrange\n   const delegate = createDelegate();\n",
+  "output": "TAP version 13\n# Subtest: redacts a registered secret in an Error class name\nnot ok 1 - redacts a registered secret in an Error class name\n  ---\n  duration_ms: 3.405375\n  type: 'test'\n  location: '/Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/logging.test.js:173:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Didn't expect homebridge logging.error(\"the grant was rejected\", \"CredentialValue: failure\") to be called.\n    \n    Remaining expectations:\n    when(() => homebridge logging.error(\"the grant was rejected\", \"[redacted]: failure\")).thenReturn(undefined).between(1, 1)\n    - Expected\n    + Received\n    \n        \"the grant was rejected\",\n    -   \"[redacted]: failure\",\n    +   \"CredentialValue: failure\"\n  code: 'ERR_TEST_FAILURE'\n  expected:\n    0: 'the grant was rejected'\n    1: '[redacted]: failure'\n  actual:\n    0: 'the grant was rejected'\n    1: 'CredentialValue: failure'\n  stack: |-\n    FlexibleRepository.getValueForUnexpectedCall (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/node_modules/strong-mock/dist/index.js:401:11)\n    Proxy.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/node_modules/strong-mock/dist/index.js:303:21)\n    write.error (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/src/logging.js:94:25)\n    TestContext.<anonymous> (file:///Users/acolomba/src/homebridge-basement-guardian-code-review-sweep/homebridge-basement-guardian/dist-test/test/logging.test.js:183:9)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1402:25)\n    Test.start (node:internal/test_runner/test:1262:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 0\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 158.805083\n"
+}
