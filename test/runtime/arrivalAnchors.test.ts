@@ -15,7 +15,6 @@ import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import timers from 'node:timers/promises';
 
 import { mock, verify, when } from 'strong-mock';
 
@@ -290,7 +289,7 @@ test('persists and restores complete anchors using the supplied temporary path',
   verify(temporaryPath);
 });
 
-test('keeps both anchors durable when overlapping writes finish newest first', async (t) => {
+test('serializes overlapping persist calls so the newer snapshot stays durable', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
   const olderTemporary = join(storagePath, 'older.tmp');
@@ -298,15 +297,11 @@ test('keeps both anchors durable when overlapping writes finish newest first', a
   const nativeRename = fsPromises.rename;
   let releaseOlderRename = (): void => undefined;
   let signalOlderReady = (): void => undefined;
-  let signalNewerFinished = (): void => undefined;
   const olderRenameGate = new Promise<void>((resolve) => {
     releaseOlderRename = resolve;
   });
   const olderReady = new Promise<void>((resolve) => {
     signalOlderReady = resolve;
-  });
-  const newerFinished = new Promise<void>((resolve) => {
-    signalNewerFinished = resolve;
   });
   t.mock.method(fsPromises, 'rename', async (temporary: string, target: string): Promise<void> => {
     if (temporary === olderTemporary) {
@@ -315,10 +310,6 @@ test('keeps both anchors durable when overlapping writes finish newest first', a
     }
 
     await nativeRename(temporary, target);
-
-    if (temporary === newerTemporary) {
-      signalNewerFinished();
-    }
   });
   syncBuiltinESMExports();
   let temporaryWrites = 0;
@@ -339,7 +330,10 @@ test('keeps both anchors durable when overlapping writes finish newest first', a
     await olderReady;
     writer.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
     const newerPersist = writer.persist();
-    await Promise.race([newerFinished, timers.setTimeout(100)]);
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+    const temporaryWritesBeforeOlderRename = temporaryWrites;
     releaseOlderRename();
     await Promise.all([olderPersist, newerPersist]);
     const reader = storeOver(storagePath, []);
@@ -348,11 +342,13 @@ test('keeps both anchors durable when overlapping writes finish newest first', a
     // assert
     assert.deepStrictEqual(
       {
+        temporaryWritesBeforeOlderRename,
         contents: await readFile(join(storagePath, ARRIVAL_ANCHOR_FILENAME), 'utf8'),
         anchor: reader.get(DEVICE_ID),
         otherAnchor: reader.get(OTHER_DEVICE_ID),
       },
       {
+        temporaryWritesBeforeOlderRename: 1,
         contents: '{"placeholder-device":1700000000000,"placeholder-other-device":1700000898000}',
         anchor: ANCHOR,
         otherAnchor: OTHER_ANCHOR,
