@@ -24,7 +24,7 @@ Plan 08-16 repaired four distinct causes in separate active RED and GREEN sequen
 
 The combined `TEST_CONCURRENCY=1 npm run check` at clean revision `6ba036f92b526887ac04ba80256de5d7e2ed210b` on Node `v26.12.1` exited 0: 130/130 Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. No executable input changed between that gate and the independent review.
 
-Independent reviewer `/root/phase8_runtime_continuation_review` read every changed current file completely at `6ba036f92b526887ac04ba80256de5d7e2ed210b`:
+Independent reviewer `/root/phase8_runtime_continuation_review` read every changed current file completely at `6ba036f92b526887ac04ba80256de5d7e2ed210b`. Executor `/root/phase8_runtime005_red` edited those six files and did not conduct their independent review. Each machine review row records `editedBy` and `reviewScope: owner`:
 
 | Path | Full blob | Complete lines and contiguous reads | Result |
 | --- | --- | --- | --- |

@@ -46,42 +46,54 @@
             "blob": "2f21725db1d718ce8a9b69653b04de4a6607f59d",
             "completeLines": "1-1346",
             "readSpans": ["1-300", "301-650", "651-1000", "901-1200", "1201-1346"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           },
           {
             "path": "test/runtime/accountRuntime.test.ts",
             "blob": "9aa0a99a18eea2d18022497bec2f2cedcda01b58",
             "completeLines": "1-9672",
             "readSpans": ["1-1000", "1001-2000", "1460-1505", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4500", "4501-5000", "5001-5500", "5501-6000", "6001-6500", "6501-7000", "7001-7500", "7501-8000", "8001-8500", "8501-9000", "9001-9500", "9501-9672"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           },
           {
             "path": "src/runtime/arrivalAnchors.ts",
             "blob": "024b729789a271be9c90cb65e0885b5ba5c4cfd6",
             "completeLines": "1-218",
             "readSpans": ["1-218"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           },
           {
             "path": "test/runtime/arrivalAnchors.test.ts",
             "blob": "34d9f112497ea5dafc728609bf676b31f0ac528d",
             "completeLines": "1-457",
             "readSpans": ["1-126", "127-367", "368-457"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           },
           {
             "path": "src/runtime/failureLog.ts",
             "blob": "ce344523252d659f811cfdab41d349096f7f900c",
             "completeLines": "1-95",
             "readSpans": ["1-95"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           },
           {
             "path": "test/runtime/failureLog.test.ts",
             "blob": "ec7d605191eedb14e83a47e705e0a323970a3561",
             "completeLines": "1-361",
             "readSpans": ["1-361"],
-            "reviewer": "/root/phase8_runtime_continuation_review"
+            "reviewer": "/root/phase8_runtime_continuation_review",
+            "editedBy": "/root/phase8_runtime005_red",
+            "reviewScope": "owner"
           }
         ],
         "combinedGate": {

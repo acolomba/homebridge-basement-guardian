@@ -354,7 +354,7 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
   3. The milestone bug ledger lists every bug found in Phases 1 to 8. Each entry names its regression test and its fix commit, and the test fails when run against the tree just before the fix (BUG-01).
   4. Every phase ledger from Phase 1 to Phase 8 gives every finding an outcome, fixed or rejected with a stated reason, and every phase that stopped at the round cap has a report.
 
-**Plans**: 18 plans; 11 complete, 1 historically halted, 6 pending
+**Plans**: 19 plans; 12 complete, 1 historically halted, 6 pending
 - [x] 08-01-PLAN.md
 - [x] 08-02-PLAN.md
 - [x] 08-03-PLAN.md
@@ -370,11 +370,12 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 - [x] 08-13-PLAN.md
 - [ ] 08-14-PLAN.md — halted at the preserved DEVICE round-one no-progress STOP
 - [ ] 08-15-PLAN.md — seal final current blobs after the authorized continuation
-- [ ] 08-16-PLAN.md — repair all four forward-open RUNTIME causes, then review complete changed files
+- [x] 08-16-PLAN.md — repair all four forward-open RUNTIME causes, then review complete changed files
 - [ ] 08-17-PLAN.md — repair DEVICE-002 and review complete changed files at DEVICE round 2
 - [ ] 08-18-PLAN.md — repair both FEATURES causes, then review complete changed files
+- [ ] 08-19-PLAN.md — repair RUNTIME-006 after silence and review complete changed files in RUNTIME round 2
 
-**Batching**: The full-repo round-zero review is complete. Plan 08-14 stopped after DEVICE round 1 with its original seven-ID snapshot. The separately authorized `08-STOP-CONTINUATION.json` records later work without changing that STOP. Plans 08-16 through 08-18 repair all known findings within each owner before one independent complete-file correction review per owner: RUNTIME first, DEVICE second, FEATURES third. Each owner wave runs the full combined check; no-progress, reopening, or round four stops the whole continuation. Plan 08-15 seals only independently reviewed current blobs with zero current forward-open IDs. Plans 08-10 and 08-11 then refresh prior verifiers and run the final full gate. Cause commits use normal hooks; no external AI CLI review or live vendor/hardware execution is authorized.
+**Batching**: The full-repo round-zero review is complete. Plan 08-14 stopped after DEVICE round 1 with its original seven-ID snapshot. The separately authorized `08-STOP-CONTINUATION.json` records later work without changing that STOP. Plan 08-16 completed RUNTIME round 1, closing four causes and finding RUNTIME-006. Plan 08-19 handles RUNTIME round 2 before Plan 08-17's DEVICE round 2 and Plan 08-18's FEATURES round 1. Each owner wave runs the full combined check and an independent complete-current-file review; no-progress, reopening, or round four stops the whole continuation. Plan 08-15 seals only independently reviewed current blobs with zero current forward-open IDs. Plans 08-10 and 08-11 then refresh prior verifiers and run the final full gate. Cause commits use normal hooks; no external AI CLI review or live vendor/hardware execution is authorized.
 
 ## Progress
 
@@ -389,4 +390,4 @@ the subsequent full combined gate passed. Plan 09 metadata closeout and 10 seal 
 | 5. Accessories Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 6. Root Module Conformance | code-review-sweep | 9/9 | Complete    | 2026-10-19 |
 | 7. Cucumber Feature Conformance | code-review-sweep | 30/30 | Complete    | 2026-10-22 |
-| 8. Final Sweep and Gate | code-review-sweep | 11/18 | In Progress (08-14 historically halted; authorized continuation pending) | - |
+| 8. Final Sweep and Gate | code-review-sweep | 12/19 | In Progress (08-14 historically halted; authorized continuation pending) | - |
