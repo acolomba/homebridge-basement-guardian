@@ -214,11 +214,16 @@ function toSnapshot(device: ApiDevice, previous: DeviceSnapshot | undefined, rec
   });
 }
 
-// Whether the message said anything about the device at all. A document with
-// neither reported section observed nothing: the vendor publishes one on every
-// command it delivers, as the accepted update for a desired-only write.
+// An empty telemetry object has no reading. It cannot claim ownership or
+// restamp receipt time, but a reported metadata section still observes the device.
+function hasTelemetryReading(patch: ReportedPatch): boolean {
+  return patch.data !== undefined && Object.keys(patch.data).length > 0;
+}
+
+// A document with neither a telemetry reading nor a reported metadata section
+// observed nothing. The vendor also publishes documents for desired-only writes.
 function carriesObservation(patch: ReportedPatch): boolean {
-  return patch.data !== undefined || patch.state !== undefined;
+  return hasTelemetryReading(patch) || patch.state !== undefined;
 }
 
 // A watermark is ordering information, so a document that observed nothing is
@@ -228,13 +233,11 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // strength of having seen nothing, freezing telemetry at whatever the poll last
 // wrote (SYNC-02, D-014).
 //
-// The section ownership governs is the telemetry one, which is why this reads
-// `patch.data` rather than the wider observation test above. That member is
-// absent for two inputs, not one: a document that carried no telemetry section,
-// and a document that carried one which is not an object. `toReportedPatch`
-// keeps the section only when `isRecord` accepts it.
+// The section ownership governs is telemetry, so this checks for a reading
+// rather than using the wider observation test. The data section can be
+// missing, invalid, or empty. `toReportedPatch` drops invalid sections.
 //
-// Nothing upstream refuses the second input. Validation above checks only
+// Nothing upstream refuses an invalid data section. Validation above checks only
 // two levels -- the payload is an object and its `state` is an object -- and
 // says nothing about `reported` or the sections under it, so a truncated or
 // corrupt telemetry section parses, validates, and arrives here with the
@@ -245,7 +248,7 @@ function carriesObservation(patch: ReportedPatch): boolean {
 // the poll while the same message keeps the silence rule quiet, leaving nothing
 // to hand them back (CR-03).
 function nextShadowVersion(previous: DeviceSnapshot, patch: ReportedPatch): number | undefined {
-  if (patch.data === undefined && previous.shadowVersion === undefined) {
+  if (!hasTelemetryReading(patch) && previous.shadowVersion === undefined) {
     return undefined;
   }
 

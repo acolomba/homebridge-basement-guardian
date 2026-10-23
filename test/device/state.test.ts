@@ -413,6 +413,32 @@ describe('applyReportedPatch', () => {
     });
   });
 
+  test('leaves empty reported telemetry unobserved so a later poll replaces it', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const clock: Clock = { now: () => currentTime };
+    const store = createDeviceStateStore(storeOptions(clock));
+    store.applyDiscovery(geminiDevice());
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    const emptyPatch = store.applyReportedPatch(DEVICE_ID, { data: {}, state: undefined, version: 42 });
+    currentTime += 1;
+    const laterPoll = store.applyDiscovery({ ...geminiDevice(), data: { water_level: 9 } });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        emptyPatch: { data: emptyPatch?.data, shadowVersion: emptyPatch?.shadowVersion, receivedAt: emptyPatch?.receivedAt },
+        laterPoll: { data: laterPoll.data, shadowVersion: laterPoll.shadowVersion, receivedAt: laterPoll.receivedAt },
+      },
+      {
+        emptyPatch: { data: { water_level: 1, primary_pump_running: false, ac_power: true }, shadowVersion: undefined, receivedAt: FIRST_RECEIPT },
+        laterPoll: { data: { water_level: 9 }, shadowVersion: undefined, receivedAt: SECOND_RECEIPT + 1 },
+      },
+    );
+  });
+
   test('leaves the receipt time alone and advances the watermark it already held for a patch that reports neither section', () => {
     // arrange
     let currentTime = FIRST_RECEIPT;
