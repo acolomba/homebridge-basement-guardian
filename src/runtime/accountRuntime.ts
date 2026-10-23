@@ -1333,7 +1333,7 @@ export function createAccountRuntimeFromConfig(deps: AccountRuntimeDeps): Accoun
     pollIntervalMs: deps.config.pollIntervalSeconds * MILLISECONDS_PER_SECOND,
     rotationLeadMs: deps.rotationLeadMs ?? ROTATION_LEAD_MS,
     minRotationDelayMs: deps.minRotationDelayMs ?? MIN_ROTATION_DELAY_MS,
-    failures: createFailureLog({ clock: deps.clock, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
+    failures: createFailureLog({ monotonic: deps.monotonic, log: deps.log, reminderIntervalMs: FAILURE_REMINDER_MS }),
     registerSecret,
     onTrustworthyInventory: deps.onTrustworthyInventory ?? (() => undefined),
     onDeviceRemoved: deps.onDeviceRemoved ?? (() => undefined),

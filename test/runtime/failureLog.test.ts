@@ -15,6 +15,7 @@ import { createFailureLog, FAILURE_REMINDER_MS } from '../../src/runtime/failure
 
 import type { Clock } from '../../src/runtime/clock.js';
 import type { FailureLog } from '../../src/runtime/failureLog.js';
+import type { MonotonicClock } from '../../src/runtime/monotonicClock.js';
 import type { LogLevel, Logging } from 'homebridge';
 
 const ROTATION = 'Credential rotation';
@@ -57,8 +58,10 @@ function recordingLog(recorded: string[]): Logging {
   });
 }
 
-function failureLogWith(recorded: string[], clock: Clock): FailureLog {
-  return createFailureLog({ clock, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS });
+function failureLogWith(recorded: string[], monotonic: MonotonicClock): FailureLog {
+  const options = { clock: monotonic, monotonic, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS };
+
+  return createFailureLog(options);
 }
 
 describe('FAILURE_REMINDER_MS', () => {
@@ -117,6 +120,37 @@ describe('recordFailure', () => {
 
     // assert
     assert.deepStrictEqual(recorded, [`warn ${ROTATION_REASON}`, `warn ${ROTATION_REASON}`]);
+  });
+
+  test('reminds after fifteen elapsed minutes despite a backward wall-clock correction', () => {
+    // arrange
+    const recorded: string[] = [];
+    let wallTimeMs = 1_700_000_000_000;
+    let elapsedMs = 0;
+    const clock: Clock = { now: () => wallTimeMs };
+    const monotonic: MonotonicClock = { now: () => elapsedMs };
+    const options = { clock, monotonic, log: recordingLog(recorded), reminderIntervalMs: FAILURE_REMINDER_MS };
+    const failures = createFailureLog(options);
+
+    // act
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    wallTimeMs += THIRTY_SECONDS_MS;
+    elapsedMs += THIRTY_SECONDS_MS;
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    wallTimeMs -= ONE_HOUR_MS;
+    elapsedMs += FAILURE_REMINDER_MS - THIRTY_SECONDS_MS;
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+    failures.recordSuccess(ROTATION);
+    failures.recordFailure(ROTATION, ROTATION_REASON);
+
+    // assert
+    assert.deepStrictEqual(recorded, [
+      `warn ${ROTATION_REASON}`,
+      `debug ${ROTATION_REASON}`,
+      `warn ${ROTATION_REASON}`,
+      `info ${ROTATION} recovered.`,
+      `warn ${ROTATION_REASON}`,
+    ]);
   });
 
   test('restarts the reminder interval from the reminder it emitted', () => {
