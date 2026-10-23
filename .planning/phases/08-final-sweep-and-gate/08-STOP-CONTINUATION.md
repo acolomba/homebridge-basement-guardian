@@ -39,6 +39,23 @@ The reviewer also traced bounded `src/device/state.ts`, `src/runtime/monitoringH
 
 RUNTIME-006 arises after a still-open shadow connection falls silent. `src/device/state.ts:404-408` clears its version watermark on source release, so an older duplicate can be accepted at `:349-360`, replace a newer REST flood observation at `:263-274`, and renew runtime liveness at `src/runtime/accountRuntime.ts:892-900`. The existing 005 test sends duplicates before release. A read-only inline reproduction against the already-built state module applied version 7 normal, released shadow, applied REST flood level 3, then replayed version 7 normal. It yielded `afterRest.waterLevel=3` and `afterReplay.waterLevel=2`, with `accepted=true`. This confirms the store-side transition; a named end-to-end RED and focused repair remain due. The reviewer judged this a new source-release/version-fence cause, not a return of 005's stamp-before-rejection cause. Vendor replay frequency is unknown. A focused round-2 plan must precede DEVICE work; the historical STOP and its round counts remain unchanged.
 
+## RUNTIME continuation correction round 2
+
+Plan 08-19 added two named end-to-end runtime regressions at the unchanged source revision `53afb50`: a duplicate version 7 and an unversioned telemetry replay after shadow silence and a newer REST flood both changed level 31 back to normal level 2 and renewed liveness. [The exact final-patch RED record](08-RUNTIME-006-RED-EVIDENCE-V2.json) contains both native failures and passed `tdd-red-evidence --raw`; its planning-only commit is `80e290d`. The initial RED record remains archived at `cf4d940`. The GREEN repair `31a07f4` retains a per-device version fence across silence while leaving REST ownership free, rejects older, duplicate, and unversioned replay, admits a strictly newer version, and clears the fence on real disconnect or removal. The named cases, 333 owner and adjacent cases, static checks, normal commit hooks, and isolated 100% line/function/branch direct coverage for both changed source pairs passed.
+
+The combined `TEST_CONCURRENCY=1 npm run check` at clean revision `31a07f4d40a8f87716bb792f6f5c56a668b3ebc5` on Node `v26.12.1` exited 0: 130/130 Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. No executable input changed between the gate and review.
+
+Independent reviewer `/root/phase8_runtime006_review` read all four changed current files completely at that revision. Executor `/root/phase8_runtime005_red` edited them and did not review them. The RUNTIME pair has owner scope; the DEVICE pair is cross-owner safety context and still needs final DEVICE owner review in Plan 08-17.
+
+| Path | Full blob | Complete lines and read spans | Review scope |
+| --- | --- | --- | --- |
+| `src/runtime/accountRuntime.ts` | `03ad2704c0e88d812b58f8e31c263265419c260e` | 1-1346; 1-700, 701-1346 | RUNTIME owner |
+| `test/runtime/accountRuntime.test.ts` | `381cfc0c0381024b4f9e53b3afcaa21b8081e398` | 1-9765; 1-500, 501-1100, 1101-1700, 1701-2300, 2301-2900, 2901-3500, 3501-4100, 4101-4700, 4701-5400, 5401-6100, 6101-6800, 6801-7500, 7501-8200, 8201-8900, 8901-9500, 9501-9765 | RUNTIME owner |
+| `src/device/state.ts` | `88c621f4c9f362a7947c51ef5d9c48b3d6a9465a` | 1-439 | DEVICE cross-owner context |
+| `test/device/state.test.ts` | `97bb7aa40286a747a4f6a4fc5f85540533acccf5` | 1-1318; 1-400, 401-800, 801-1318 | DEVICE cross-owner context |
+
+The reviewer traced the shadow decoder, REST handover, monitoring-health anchor, runtime callback, disconnect and removal paths, and HAP publication. RUNTIME-006 is fixed at current blobs. The round opened with one ID, fixed one, rejected none, found none, reopened none, and closed empty: **1 − 1 − 0 + 0 + 0 = 0**. The open count fell, so no continuation STOP fired. The current whole-phase forward-open set has three IDs: `CR-08-DEVICE-002`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`. The original DEVICE round-one STOP and its seven-ID snapshot remain unchanged.
+
 ## Threat Flags
 
-RUNTIME-006 can replace a newer REST flood reading with an older shadow normal reading after silence release. It remains open for active RED, a cause repair, and independent complete-file review. The original STOP remains visible and active in its historical record.
+RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. The repaired boundary has active RED and independent current-file review. DEVICE-002 and two FEATURES findings remain forward-open; the original STOP remains visible and active in its historical record.
