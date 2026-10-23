@@ -3,6 +3,7 @@ phase: 08-final-sweep-and-gate
 plan: "11"
 status: complete
 subsystem: milestone-signoff
+requirements-completed: [GATE-01, GATE-02, BUG-01]
 provides:
   - current full-gate and dry-run evidence
   - audited windows and prior-phase statuses

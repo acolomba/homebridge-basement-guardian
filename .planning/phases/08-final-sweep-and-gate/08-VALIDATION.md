@@ -1,9 +1,9 @@
 ---
 phase: "08"
 slug: "final-sweep-and-gate"
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-22"
 ---
 
@@ -32,14 +32,17 @@ created: "2026-10-22"
 
 ## Per-Task Verification Map
 
-The plan IDs and task commands will be added when Phase 8 plans exist.
+All 22 plans have summaries. Their review, regression, and gate tasks map to
+the checks below. The accepted historical RED-evidence limits are recorded
+separately; `nyquist_compliant` describes current verification coverage, not
+complete provenance for those three episodes.
 
-| Task family | Requirement | Test type | Automated command | Status |
+| Task family | Requirement | Test type | Verification | Status |
 |-------------|-------------|-----------|-------------------|--------|
-| Six complete-file review batches and correction rounds | GATE-02 | static review and owner checks | `TEST_CONCURRENCY=1 npm run check` after each combined repair wave | pending |
-| Genuine bug provenance and new RED/GREEN evidence | BUG-01 | active target regression and Git audit | `gsd-tools check tdd-red-evidence <archive> --raw`, named owner test and Git ancestry checks | pending |
-| Final combined tree | GATE-01 | static, unpaired, offline Cucumber and isolated direct coverage | `TEST_CONCURRENCY=1 npm run check` | pending |
-| Prior phase verification freshness | GATE-01, GATE-02 | GSD verifier | `gsd-tools query verification.status <phase-dir>` for Phases 1–7 | blocked by current ROOT STOP |
+| Six complete-file review batches and correction rounds | GATE-02 | Independent full-file reviews, exact-blob manifest audit, and owner checks | 137/137 reviewed current paths; zero forward-open findings; final full gate passed | complete |
+| Genuine bug provenance and new RED/GREEN evidence | BUG-01 | Active target regressions, RED archives or accepted debug evidence, and Git audit | Phase 8 RED classifiers returned `RED_EVIDENCE_OK`; named owner tests passed; three debug-only episodes accepted with limits in 08-UAT.md | complete within accepted scope |
+| Final combined tree | GATE-01 | Static, unpaired, offline Cucumber and isolated direct coverage | `NPM_CONFIG_CACHE=/private/tmp/guardian-homebridge-closeout-npm-cache TEST_CONCURRENCY=1 npm run check` exited 0: six static checks, 130/130 scenarios, 1401/1401 steps, 43 direct pairs | complete |
+| Prior phase verification freshness | GATE-01, GATE-02 | GSD verifier | `gsd-tools query verification.status <phase-dir>` returned `passed` for Phases 1–7; Phase 8 verifier also reports `passed` | complete |
 
 ## Prior-phase verifier refresh attempt
 
@@ -148,18 +151,30 @@ the tree changes.
 
 ## Manual-Only Verifications
 
-Phase 8 adds no new live vendor or hardware test. The real Cucumber profile
-is dry-run only. The refreshed Phase 6 verifier still requires one real
-Homebridge failed-write and retry check before the inherited phase result can
-pass; the maintainer cannot run it now. Phase 8 signoff keeps that limit open.
+Phase 8 adds no live vendor or hardware test. The real Cucumber profile was a
+binding-only dry run. A launched Homebridge 2.4.0 Docker process passed the
+failed-write and identical-retry check with synthetic data; the physical-pump,
+vendor, and Apple Home release gates remain separate. The maintainer accepted
+the three debug-only BUG-01 provenance limits in 08-UAT.md.
 
 ## Validation Sign-Off
 
-- [ ] Every plan task has a concrete automated check or explicit evidence audit.
-- [ ] No three consecutive tasks lack automated verification.
-- [ ] Every combined repair wave and the final tree pass the full gate.
-- [ ] All 43 direct source/test pairs reach 100% line, function and branch coverage.
-- [ ] No watch-mode flags or live real-pump execution.
-- [ ] `nyquist_compliant: true` is set after the final evidence audit.
+- [x] Every plan task has a concrete automated check or explicit evidence audit.
+- [x] No three consecutive tasks lack automated verification.
+- [x] Every combined repair wave and the final tree pass the full gate.
+- [x] All 43 direct source/test pairs reach 100% line, function and branch coverage.
+- [x] No watch-mode flags or live real-pump execution.
+- [x] `nyquist_compliant: true` is set after the final evidence audit.
 
-**Approval:** Pending Phase 8 execution and verification.
+**Approval:** Validated against the completed plans and passing Phase 8
+verification. The final check used unchanged executable inputs and exited 0.
+The Phase 8 verifier passed 7/7 concrete truths. Both historical review STOPs
+and the accepted provenance limits remain visible.
+
+## Validation Audit 2026-10-23
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |

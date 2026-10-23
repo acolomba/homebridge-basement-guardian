@@ -1,6 +1,6 @@
 ---
 phase: 08-final-sweep-and-gate
-verified: 2026-10-23T14:06:55Z
+verified: 2026-10-23T15:36:40Z
 status: passed
 score: 7/7 must-haves verified; BUG-01 includes bounded debug-evidence acceptance
 covered_files:
@@ -69,13 +69,13 @@ covered_files:
   - test/logging.test.ts
   - test/runtime/accountRuntime.test.ts
   - test/runtime/arrivalAnchors.test.ts
-covered_digest: "v3:sha256:fa29cf14023f849f84d44dafdc3a8717f7f59b2aec6cd350fb56bbe282f0fa70"
+covered_digest: "v3:sha256:d471912ce208307186bf644d967b66d8509c447f77d214dd8b74af2cc3081977"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
-  previous_status: human_needed
+  previous_status: passed
   previous_score: 7/7
-  gaps_closed: ["Phase 6 Homebridge 2.4.0 Docker check passed with a synthetic bridged accessory"]
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
 judgment_resolutions:
@@ -100,19 +100,19 @@ prohibitions:
 
 **Phase goal:** The whole in-scope tree passes one more review as a unit, the milestone bug ledger is complete and audited, and the full `npm run check` gate passes at milestone end.
 
-**Verified:** 2026-10-23T14:06:55Z. **Status:** passed. **Re-verification:** The prior report verified 7/7 concrete truths but awaited a Homebridge runtime check. That check now passed in a launched Homebridge 2.4.0 Docker instance with synthetic data, and Phase 6 reports `passed`.
+**Verified:** 2026-10-23T15:36:40Z. **Status:** passed. **Re-verification:** The prior report passed 7/7 truths, then became stale when Plan 08-11 gained its three `requirements-completed` IDs and `08-VALIDATION.md` was reconciled. This refresh evaluates those two planning changes. The executable-input diff from `499659b` remains empty, so the same-session full gate still applies; targeted tests and the current manifest check passed again.
 
 ## Goal achievement
 
 | # | Observable truth | Status | Independent evidence |
 | --- | --- | --- | --- |
-| 1 | Every current in-scope file has an exact-blob complete review and no current finding remains open (ROADMAP SC1; GATE-02). | VERIFIED | I joined `git ls-files src test features`, the ten documented exclusions, all 137 manifest rows, current `HEAD:path` blobs and line counts, six owner report tables, and later structured review rows. The set is 137/137 with no mismatch. `08-ROOT-003-CONTINUATION.json` closes its one opening ID and leaves `forwardOpenIds: []`. Both historical STOPs remain active in their original records. |
-| 2 | The final combined tree passes static, unpaired, offline Cucumber, and all isolated direct-coverage checks (SC2; GATE-01). | VERIFIED | A fresh full check with local socket access exited 0 and logged six static passes, 130/130 scenarios, 1401/1401 steps, and `Merged LCOV ... (43 pairs)` in `/private/tmp/guardian-homebridge-closeout-check-authorized.log`. `coverage/direct.lcov` has 37 source records, each with equal hit/total line, function, and branch counts; the pair runner returned success for all 43. The executable-input diff from `499659b` is empty. The sandboxed attempt had `listen EPERM` and was not counted as a pass. |
+| 1 | Every current in-scope file has an exact-blob complete review and no current finding remains open (ROADMAP SC1; GATE-02). | VERIFIED | I rechecked `git ls-files src test features` less the ten documented exclusions against all 137 manifest rows, current file blobs and line counts: 137/137 match. The six owner report tables and later structured review rows supply complete-file coverage. `08-ROOT-003-CONTINUATION.json` closes its one opening ID and leaves `forwardOpenIds: []`. Both historical STOPs remain active in their original records. |
+| 2 | The final combined tree passes static, unpaired, offline Cucumber, and all isolated direct-coverage checks (SC2; GATE-01). | VERIFIED | The same-session full check with local socket access exited 0 and logged six static passes, 130/130 scenarios, 1401/1401 steps, and `Merged LCOV ... (43 pairs)` in `/private/tmp/guardian-homebridge-closeout-check-authorized.log`. `coverage/direct.lcov` has 37 source records, each with equal hit/total line, function, and branch counts; the pair runner returned success for all 43. `git diff --exit-code 499659b -- src test features package.json package-lock.json cucumber.json tsconfig.json tsconfig.test.json eslint.config.js scripts` remains empty. The sandboxed attempt had `listen EPERM` and was not counted as a pass. |
 | 3 | Every accepted bug has a pre-fix failing regression and fix lineage within the approved evidence boundary (SC3; BUG-01). | PASSED (judgment) | The ledger has 51 prior and 11 Phase 8 behavior claims. The 48 prior archives and 11 Phase 8 archives have classified native RED evidence; I reran the Phase 8 classifiers, which returned `RED_EVIDENCE_OK`. The maintainer's current 08-UAT.md response accepts the pre-fix debug failures for B-08-042/043/050 within their stated limits. They still lack complete native RED archives and planning-only evidence commits, and B-08-050's exact committed assertion follows its fix. ENTRY-017's earlier field-preservation oracle was superseded by the approved privacy-first policy; the current test is not described as that old regression. |
 | 4 | Every finding has a recorded disposition or a preserved STOP report (SC4). | VERIFIED | The Phase 1–8 finding indexes and Phase 8 review index preserve accepted, rejected and historical STOP outcomes. The two retired Phase 5 scanner findings remain explicitly open in the historical STOP, as the maintainer accepted; they are absent from the current in-scope tree. The original Phase 8 DEVICE STOP still holds seven IDs and the first continuation ROOT STOP still holds one at its stop time. The later authorized continuation closes the current forward set without rewriting either. |
 | 5 | All prior-phase verification statuses are fresh and accurately represented. | VERIFIED | GSD status queries return `passed` for all Phases 1–7, including Phase 3's bounded 22/22 acceptance. Phase 6's 5/5 report now includes the Homebridge 2.4.0 Docker observation. The signoff says `Decision: READY for Phase 8 verification` and retains the synthetic scope. |
 | 6 | Windows and dry-run profile boundaries are audited. | VERIFIED | GSD Windows status reports 58 entries: 17 open, 19 waived with reasons, and 22 fixed. I reran default Cucumber usage dry run: no `UNUSED`, undefined or ambiguous definition; the real profile dry run exited 0 with 6 scenarios and 35 steps all skipped. |
-| 7 | Signoff distinguishes current passes from accepted limited evidence and unresolved assumptions. | VERIFIED | `08-SIGNOFF.md` gives GATE-01 and GATE-02 current evidence, marks BUG-01 accepted with explicit debug-only limits, retains seven flagged spec-less rows and both historical STOPs, records all prior-phase statuses passed, and keeps vendor/physical-device gates separate. Its READY decision is supported by the passing Homebridge Docker check and fresh full gate. |
+| 7 | Signoff distinguishes current passes from accepted limited evidence and unresolved assumptions. | VERIFIED | `08-SIGNOFF.md` gives GATE-01 and GATE-02 current evidence, marks BUG-01 accepted with explicit debug-only limits, retains seven flagged spec-less rows and both historical STOPs, records all prior-phase statuses passed, and keeps vendor/physical-device gates separate. `08-11-SUMMARY.md` now lists GATE-01, GATE-02, and BUG-01 as completed, matching its plan and the signoff. `08-VALIDATION.md` now marks the current coverage map validated while explicitly retaining the three historical RED-evidence limits. Its READY decision is supported by the passing Homebridge Docker check and fresh full gate. |
 
 **Score:** 7/7 truths verified, including one bounded historical-evidence judgment; zero present-but-behavior-unverified. The Homebridge 2.x integration check passed with a synthetic bridged accessory.
 
@@ -136,6 +136,8 @@ No user-facing value is rendered by the planning artifacts. Their Level-4 inputs
 | `./node_modules/.bin/cucumber-js --dry-run --format usage` | Exit 0; no UNUSED, undefined or ambiguous definition |
 | `./node_modules/.bin/cucumber-js --profile real --dry-run --format summary` | Exit 0; 6 scenarios and 35 steps skipped |
 | Homebridge 2.4.0 Docker probe | Exit 0; synthetic accessory bridged, 17 services, injected one flood StatusActive failure, 15 other affected rows inactive after first report, all 16 affected rows inactive after identical retry. |
+| Exact-blob manifest recheck | Exit 0; all 137 current paths and all 137 Git blobs and line counts match the manifest. |
+| Phase 8 TDD review checkpoint | `block: false`, `violations: 0`, `tddPlans: 0`; the approved custom Phase 1 RED record stays separately documented. |
 | Plan-declared `probe-*.sh` | Not applicable; Phase 8 plans declare no such executable probe. |
 
 ## Requirements, test quality and anti-pattern audit
@@ -154,9 +156,9 @@ The maintainer's current [08-UAT.md](08-UAT.md) accepts the limited debug eviden
 
 The inherited Homebridge check passed after the maintainer authorized a Docker run. A launched Homebridge 2.4.0 process registered a synthetic platform accessory. A one-shot flood `StatusActive` exception left that row active while the other 15 affected services became inactive; an identical second degraded report retried and deactivated it. The unaffected connectivity row stayed active. The [resolved debug record](../../debug/resolved/monitoring-trust-publication.md) contains the image ID, probe hash, and observed result. This tests Homebridge's supplied HAP objects and bridge registration with synthetic data; it does not test vendor transport, a physical pump, or Apple Home rendering.
 
-There is no observed current Phase 8 code failure in this pass. All 7/7 concrete truths pass, all seven prior-phase statuses are fresh and passed, and the signoff is READY within its stated limits. The two historical STOPs, seven flagged spec-less rows, missing native RED archives, ENTRY-017 supersession and hardware release limits remain recorded.
+There is no observed current Phase 8 code failure in this pass. All 7/7 concrete truths pass, all seven prior-phase statuses are fresh and passed, and the signoff is READY within its stated limits. The reconciled validation map is `validated`, `nyquist_compliant: true`, and `wave_0_complete: true`; these fields describe current coverage, not complete historical RED provenance. The two historical STOPs, seven flagged spec-less rows, missing native RED archives, ENTRY-017 supersession and hardware release limits remain recorded.
 
 ---
 
-_Verified: 2026-10-23T14:06:55Z_
-_Verifier: inline GSD re-verification of the earlier independent report, with a fresh full gate and Docker integration result_
+_Verified: 2026-10-23T15:36:40Z_
+_Verifier: GSD stale-report refresh of the earlier independent report, with unchanged executable inputs, targeted behavioral checks, and a regenerated fingerprint_
