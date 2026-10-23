@@ -21,6 +21,7 @@ tech_debt:
   - phase: "08"
     items:
       - "Three BUG-01 episodes retain the maintainer-accepted debug-only RED evidence limit."
+      - "The resolved shadow no-telemetry liveness repair still has a debug session awaiting confirmation with real vendor traffic; its automated regression and full gate pass."
   - phase: cross-phase
     items:
       - "CloudApi.device has no production caller; its inventory path uses devices()."
@@ -57,5 +58,7 @@ An independent integration check found **7/7 links wired** and **5/5 in-scope of
 All eight phases have validated, Nyquist-compliant validation records. Phase 8's task map was reconciled with its completed gate and the verifier was refreshed afterward. GSD reports `passed`, 7/7, for the current Phase 8 record.
 
 The Phase 8 summary now lists BUG-01 and both gates in `requirements-completed` frontmatter. The Phase 8 verifier and signoff contain the passing evidence. The maintainer accepted the three debug-only RED records for BUG-01 while retaining their provenance limits. Historical review STOPs and open Windows remain visible; zero findings are forward-open in the current Phase 8 review set.
+
+The open-artifact closeout check found one debug session, `shadow-no-telemetry-liveness`, still marked `awaiting_human_verify`. Its deterministic regression, source-reversal check, independent review, and full gate passed. Confirmation with live vendor traffic has not occurred. The earlier Docker probe exercised the separate HomeKit trust-publication fix with synthetic data; it did not exercise this shadow-liveness path. The debug session must remain open or be explicitly acknowledged as deferred at milestone close.
 
 **Next:** The code-review-sweep milestone can be archived with its accepted debt. No source repair is indicated by this audit.
