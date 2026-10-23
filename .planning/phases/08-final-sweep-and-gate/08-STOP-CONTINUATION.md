@@ -56,6 +56,18 @@ Independent reviewer `/root/phase8_runtime006_review` read all four changed curr
 
 The reviewer traced the shadow decoder, REST handover, monitoring-health anchor, runtime callback, disconnect and removal paths, and HAP publication. RUNTIME-006 is fixed at current blobs. The round opened with one ID, fixed one, rejected none, found none, reopened none, and closed empty: **1 − 1 − 0 + 0 + 0 = 0**. The open count fell, so no continuation STOP fired. The current whole-phase forward-open set has three IDs: `CR-08-DEVICE-002`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`. The original DEVICE round-one STOP and its seven-ID snapshot remain unchanged.
 
+## DEVICE continuation correction round 2
+
+Plan 08-17 proved the unchanged-heartbeat trust defect at unchanged production revision `e3783df`. The exact final-patch [V2 RED evidence](08-DEVICE-002-RED-EVIDENCE-V2.json) contains both the store and platform failures, passed `tdd-red-evidence --raw`, and was committed alone at `897d318`. The initial RED remains archived. The GREEN commit `f118cc8` forwards accepted data-bearing heartbeats with no changed keys to listeners. Rejected duplicate versions still do not notify. The platform integration case observes the power scope's trusted time move from T1 to T2 before invalid power at T3 without counting another activation.
+
+The behavior change exposed two old test expectations. The shadow feature's notification count was updated at `459345e`, then its title was narrowed at `87e08a3` to describe the asserted notification instead of an unasserted receipt time. The runtime unit test was updated at `bf1c41c` to expect the accepted unchanged heartbeat callback. The platform source received only a comment correction at `87e08a3`; its executable code did not change. The named tests and scenarios passed after those corrections.
+
+The final combined `TEST_CONCURRENCY=1 npm run check` at clean revision `87e08a355abb600786f8b6f22c8371cb63d9ffd1` on Node `v26.12.1` exited 0: 130/130 offline Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. The exact executable inputs were unchanged between this gate and review.
+
+Independent reviewer `/root/phase8_device002_review` read the complete current DEVICE owner source/test pair and changed ROOT platform test at the combined-gate revision, and found DEVICE-002 fixed with no new or reopened finding. Executor `/root/phase8_runtime005_red` edited those three files. The machine record gives their exact blobs, full line ranges, contiguous read spans, and distinct reviewer/editor identities. The same reviewer also read the complete current ROOT-owned runtime test, platform source, and shadow feature after their separate oracle/comment corrections; those exact final blobs appear under `supplementalReviews` rather than inflating the three-file DEVICE owner round.
+
+The round opened with DEVICE-002, fixed it, rejected none, added none, reopened none, and closed empty: **1 − 1 − 0 + 0 + 0 = 0**. The continuation STOP predicate did not fire. The whole-phase forward-open set is now `CR-08-FEATURES-001` and `CR-08-FEATURES-002`. The historical DEVICE round-one STOP and its seven-ID snapshot remain unchanged.
+
 ## Threat Flags
 
-RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. The repaired boundary has active RED and independent current-file review. DEVICE-002 and two FEATURES findings remain forward-open; the original STOP remains visible and active in its historical record.
+RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. DEVICE-002 previously left a trusted observation timestamp stale. Both repairs have active RED and independent current-file review. Two FEATURES findings remain forward-open; the original STOP remains visible and active in its historical record.
