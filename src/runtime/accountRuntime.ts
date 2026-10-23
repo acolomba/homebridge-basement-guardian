@@ -856,18 +856,15 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           credentials: cache,
           retry: shadowRetry,
           onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
-            // This callback fires upstream of the store's change filter. A
-            // nonempty telemetry section proves the device is still reporting,
-            // even when its values match the last reading and no subscriber is
-            // notified. Empty or metadata-only messages do not renew that
-            // evidence (D-05, D-11).
+            // The store decides version ordering. It returns the previous
+            // snapshot for a rejected patch and a new one for an accepted patch,
+            // even when the values match and no subscriber is notified. Only an
+            // accepted, nonempty telemetry section renews liveness. Empty and
+            // metadata-only messages do not (D-05, D-11).
             //
-            // The three steps are in this order deliberately. Stamping first is
-            // what makes the recomputed trust see this arrival. Applying the patch
-            // before the report is what puts the new value on the tile before the
-            // marker says the plugin vouches for it again, so there is no instant
-            // in which the accessory claims to vouch for a value it has not yet
-            // published.
+            // Apply before stamping so a rejected version cannot refresh the
+            // silence clock or durable anchor. Report after both, so recovery
+            // never vouches for a reading before the store has published it.
             //
             // Reporting here is what makes the recovery arrive with the evidence
             // rather than at the next poll tick, which the configuration lets run
@@ -886,17 +883,18 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
             // account one heartbeat vouches for a neighbour that has stopped
             // speaking, and that controller's silence is never noticed at all.
             //
-            // Guarded on store membership because the shadow client stays
+            // Guarded on a prior store snapshot because the shadow client stays
             // subscribed to a removed device's topics until the connection is
             // rebuilt, so a stray message can still arrive after removal. Left
             // unguarded, it would resurrect the in-memory arrival stamp and the
             // persisted anchor the removal branch already dropped for a system
             // that has left the account (D-14).
-            if (options.store.deviceIds().includes(deviceId) && patch.data !== undefined && Object.keys(patch.data).length > 0) {
+            const previous = options.store.snapshot(deviceId);
+            const applied = options.store.applyReportedPatch(deviceId, patch);
+
+            if (previous !== undefined && applied !== previous && patch.data !== undefined && Object.keys(patch.data).length > 0) {
               health.recordShadowMessage(deviceId);
             }
-
-            options.store.applyReportedPatch(deviceId, patch);
 
             if (reportedSilentDevices.has(deviceId)) {
               reportMonitoringHealth();

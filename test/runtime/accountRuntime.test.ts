@@ -4240,6 +4240,75 @@ describe('createAccountRuntime', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
+  test('hands stale shadow telemetry to the poll despite repeated rejected versions', async (t) => {
+    // arrange
+    const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+    const { runtime, shadows, store, anchors, monitoringByDevice, advance, commandRequests } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+    });
+    await runtime.start();
+    await settle();
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    const snapshot = store.snapshot(DEVICE_ID);
+    assert.deepStrictEqual(
+      {
+        data: snapshot?.data,
+        shadowVersion: snapshot?.shadowVersion,
+        shadowSilent: monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent,
+        anchor: anchors.stored.get(DEVICE_ID),
+      },
+      {
+        data: { water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE, primary_pump_running: false, ac_power: true },
+        shadowVersion: undefined,
+        shadowSilent: true,
+        anchor: START_TIME,
+      },
+    );
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
+  test('keeps shadow telemetry live when a higher-version heartbeat repeats the same reading', async (t) => {
+    // arrange
+    const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+    const { runtime, shadows, store, anchors, monitoringByDevice, advance, commandRequests } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+    });
+    await runtime.start();
+    await settle();
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+
+    // act
+    await advance(POLL_INTERVAL_MS);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 8 });
+    await advance(POLL_INTERVAL_MS);
+
+    // assert
+    const snapshot = store.snapshot(DEVICE_ID);
+    assert.deepStrictEqual(
+      {
+        data: snapshot?.data,
+        shadowVersion: snapshot?.shadowVersion,
+        shadowSilent: monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent,
+        anchor: anchors.stored.get(DEVICE_ID),
+      },
+      {
+        data: { water_level: 2, primary_pump_running: false, ac_power: true },
+        shadowVersion: 8,
+        shadowSilent: false,
+        anchor: START_TIME + POLL_INTERVAL_MS,
+      },
+    );
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
   // A report of device metadata delivered no reading, so it cannot take the
   // readings back from the poll. The runtime is where the two halves of that
   // meet, and the review's reproduction was at this seam: the same message
