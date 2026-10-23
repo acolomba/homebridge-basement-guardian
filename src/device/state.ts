@@ -121,11 +121,12 @@ export interface DeviceStateStore {
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
   /**
-   * Hands one device's telemetry back to polling and permits a reconnect refresh.
+   * Hands one device's telemetry back to polling. A silence keeps the current
+   * connection's version fence; a disconnect permits a reconnect refresh.
    * Preserves observed values and receipt time, and notifies no listener.
    * An unknown device is a no-op; repeated releases leave observations unchanged.
    */
-  releaseShadowSource(deviceId: string): void;
+  releaseShadowSource(deviceId: string, reason?: 'silence' | 'disconnect'): void;
 }
 
 const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
@@ -138,7 +139,8 @@ function mergeRecord(base: Readonly<Record<string, unknown>>, patch: Readonly<Re
 }
 
 // Shadow delivery can arrive out of order or twice, so a patch may only move
-// the version forward. A patch carrying no version is always applied.
+// the version forward. A patch carrying no version is applied while no silence
+// fence holds the still-open connection to a newer observation.
 function isStalePatch(applied: number | undefined, incoming: number | undefined): boolean {
   return applied !== undefined && incoming !== undefined && incoming <= applied;
 }
@@ -327,6 +329,7 @@ function notify(listeners: ReadonlySet<DeviceSnapshotListener>, log: Logging, ne
 export function createDeviceStateStore(options: DeviceStateStoreOptions): DeviceStateStore {
   const snapshots = new Map<string, DeviceSnapshot>();
   const listeners = new Map<string, Set<DeviceSnapshotListener>>();
+  const silenceVersions = new Map<string, number | null>();
 
   return {
     snapshot(deviceId: string): DeviceSnapshot | undefined {
@@ -348,13 +351,28 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
 
     applyReportedPatch(deviceId: string, patch: ReportedPatch): DeviceSnapshot | undefined {
       const previous = snapshots.get(deviceId);
+      const silenceVersion = silenceVersions.get(deviceId);
 
-      if (previous === undefined || isStalePatch(previous.shadowVersion, patch.version)) {
+      if (
+        previous === undefined ||
+        (silenceVersions.has(deviceId) &&
+          ((patch.version !== undefined && silenceVersion !== undefined && silenceVersion !== null && patch.version <= silenceVersion) ||
+            (patch.version === undefined && hasTelemetryReading(patch)))) ||
+        isStalePatch(previous.shadowVersion, patch.version)
+      ) {
         return previous;
       }
 
       const snapshot = nextSnapshot(previous, patch, options.clock.now());
       snapshots.set(deviceId, snapshot);
+      if (silenceVersions.has(deviceId) && patch.version !== undefined) {
+        if (snapshot.shadowVersion === undefined) {
+          silenceVersions.set(deviceId, patch.version);
+        } else {
+          silenceVersions.delete(deviceId);
+        }
+      }
+
       notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
 
       return snapshot;
@@ -365,15 +383,16 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       // toSnapshot and starts a fresh observation epoch (D-020).
       snapshots.delete(deviceId);
       listeners.delete(deviceId);
+      silenceVersions.delete(deviceId);
     },
 
     // Nobody is notified: clearing the watermark moves no telemetry key, and a
     // listener filtering on the change report would be handed a change that
     // did not happen.
-    // Clearing that device's watermark hands its telemetry back to the poll and
-    // lets the complete shadow requested after a reconnect be applied rather than
-    // refused as stale, which is what makes the reconnect refresh restore
-    // anything (SYNC-03). A caller handing back a whole fleet loops, which is
+    // Clearing that device's ownership watermark hands its telemetry back to
+    // the poll. A disconnect also clears its version fence so a reconnect's
+    // complete shadow can start a new stream (SYNC-03). A caller handing back
+    // a whole fleet loops, which is
     // what keeps a fact about one controller from being spent on its neighbours:
     // a healthy pump released alongside a silent one has every poll overwrite the
     // fresher readings its own live path just delivered. A `deviceId` the store
@@ -388,23 +407,21 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     // therefore reachable on every poll of a silence that can last hours, which
     // it is written to cost nothing.
     //
-    // Ownership returns on the next document carrying a telemetry observation, through
-    // `applyReportedPatch`: with no watermark held the patch is not stale, and
-    // `nextShadowVersion` establishes the watermark again. Nothing else restores
-    // it, and a document that observed nothing does not, so REST keeps feeding
-    // telemetry until a real report arrives.
-    //
-    // It also gives up out-of-order protection for the first document after a
-    // release, which silence triggers on the same terms as a reconnect rather
-    // than on new ones. That is bounded: the connection is opened with a clean session
-    // and no replay, so no queued backlog can arrive out of order, and a document
-    // that did arrive late still carries telemetry the device genuinely sent and
-    // merges key by key, with the next heartbeat correcting it. The alternative
-    // is a silently discarded refresh, which is a false normal.
-    releaseShadowSource(deviceId: string): void {
+    // A still-open silent connection keeps its last accepted version, so only
+    // newer telemetry can take ownership back from REST. Repeated silent polls
+    // keep that fence; disconnect and removal start a fresh version epoch.
+    releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect' = 'disconnect'): void {
       const snapshot = snapshots.get(deviceId);
 
+      if (reason === 'disconnect') {
+        silenceVersions.delete(deviceId);
+      }
+
       if (snapshot !== undefined) {
+        if (reason === 'silence' && !silenceVersions.has(deviceId)) {
+          silenceVersions.set(deviceId, snapshot.shadowVersion ?? null);
+        }
+
         snapshots.set(deviceId, freeze({ ...snapshot, shadowVersion: undefined }));
       }
     },

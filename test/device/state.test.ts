@@ -591,6 +591,154 @@ describe('applyReportedPatch', () => {
 });
 
 describe('releaseShadowSource', () => {
+  test('keeps a silent device flood through duplicate, older, and unversioned telemetry while its neighbour stays live', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
+    store.applyDiscovery(geminiDevice());
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+    store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 4 }, state: undefined, version: 9 });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    currentTime = SECOND_RECEIPT;
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    const flood = store.snapshot(DEVICE_ID);
+
+    // act
+    const duplicate = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    const older = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+    const unversioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: undefined });
+    store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        flood: store.snapshot(DEVICE_ID),
+        neighbour: store.snapshot(SECOND_DEVICE_ID),
+      },
+      {
+        flood,
+        neighbour: {
+          identity: { deviceId: SECOND_DEVICE_ID, deviceTypeId: 'wayneWaterGemini', name: 'Sump System', serialNumber: 'serial-2' },
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 4, primary_pump_running: false, ac_power: true },
+          metadata: {},
+          shadowVersion: 9,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: SECOND_RECEIPT,
+        },
+      },
+    );
+    assert.strictEqual(duplicate, flood);
+    assert.strictEqual(older, flood);
+    assert.strictEqual(unversioned, flood);
+  });
+
+  test('lets only a newer telemetry version take ownership after silence', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const snapshot = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+
+    // assert
+    assert.deepStrictEqual(snapshot, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 2, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 6,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('keeps a newer metadata version fenced until later telemetry is newer still', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const metadata = store.applyReportedPatch(DEVICE_ID, { data: undefined, state: { firmware: 'v9' }, version: 6 });
+    const duplicate = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 6 });
+    const accepted = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+
+    // assert
+    assert.deepStrictEqual(
+      { metadata, accepted },
+      {
+        metadata: {
+          identity: geminiIdentity(),
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 31, primary_pump_running: false, ac_power: true },
+          metadata: { firmware: 'v9' },
+          shadowVersion: undefined,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: FIRST_RECEIPT,
+        },
+        accepted: {
+          identity: geminiIdentity(),
+          connectivity: { connected: true, timestamp: DEVICE_TIME },
+          data: { water_level: 2, primary_pump_running: false, ac_power: true },
+          metadata: { firmware: 'v9' },
+          shadowVersion: 7,
+          deviceTimestamp: DEVICE_TIME,
+          receivedAt: FIRST_RECEIPT,
+        },
+      },
+    );
+    assert.strictEqual(duplicate, metadata);
+  });
+
+  test('requires a version after silence even when no earlier shadow version exists', () => {
+    // arrange
+    const store = createDeviceStateStore(fixedStoreOptions());
+    store.applyDiscovery(geminiDevice());
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    const flood = store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    const unversioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: undefined });
+    const versioned = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 1 });
+
+    // assert
+    assert.strictEqual(unversioned, flood);
+    assert.deepStrictEqual(versioned, {
+      identity: geminiIdentity(),
+      connectivity: { connected: true, timestamp: DEVICE_TIME },
+      data: { water_level: 2, primary_pump_running: false, ac_power: true },
+      metadata: {},
+      shadowVersion: 1,
+      deviceTimestamp: DEVICE_TIME,
+      receivedAt: FIRST_RECEIPT,
+    });
+  });
+
+  test('clears a silence fence on disconnect and on removal before rediscovery', () => {
+    // arrange
+    const store = versionedStore();
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.applyDiscovery({ ...geminiDevice(), data: { ...geminiDevice().data, water_level: 31 } });
+
+    // act
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    const reconnected = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 5 });
+    store.releaseShadowSource(DEVICE_ID, 'silence');
+    store.remove(DEVICE_ID);
+    store.applyDiscovery(geminiDevice());
+    const rediscovered = store.applyReportedPatch(DEVICE_ID, { data: { water_level: 3 }, state: undefined, version: 5 });
+
+    // assert
+    assert.deepStrictEqual(
+      { reconnected: reconnected?.data.water_level, rediscovered: rediscovered?.data.water_level, version: rediscovered?.shadowVersion },
+      { reconnected: 2, rediscovered: 3, version: 5 },
+    );
+  });
+
   test('clears the watermark on each device it is given and leaves the rest of each snapshot alone', () => {
     // arrange
     const store = createDeviceStateStore(fixedStoreOptions());

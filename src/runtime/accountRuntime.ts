@@ -444,7 +444,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // by the loop below is therefore never released on the same poll, because
     // the loop runs after this one and the device holds no watermark yet.
     for (const deviceId of health.silentDevices()) {
-      options.store.releaseShadowSource(deviceId);
+      options.store.releaseShadowSource(deviceId, 'silence');
     }
 
     for (const device of devices) {
@@ -821,7 +821,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
     // device, so none keeps a live path when it ends. A silence release names
     // its device because silence is a fact about one controller.
     for (const deviceId of options.store.deviceIds()) {
-      options.store.releaseShadowSource(deviceId);
+      options.store.releaseShadowSource(deviceId, 'disconnect');
     }
 
     if (reason !== 'transport-closed') {

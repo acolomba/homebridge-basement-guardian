@@ -4275,6 +4275,99 @@ describe('createAccountRuntime', () => {
     assert.deepStrictEqual(commandRequests, []);
   });
 
+  for (const { title, version } of [
+    { title: 'post-silence shadow replay leaves the REST flood after duplicate version 7', version: 7 },
+    { title: 'post-silence unversioned shadow telemetry leaves the REST flood', version: undefined },
+  ] as const) {
+    test(title, async (t) => {
+      // arrange
+      const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+      const { runtime, shadows, store, anchors, monitoringByDevice, advance, commandRequests } = harness(t, {
+        devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+      });
+      await runtime.start();
+      await settle();
+      shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+      await advance(POLL_INTERVAL_MS);
+      await advance(POLL_INTERVAL_MS);
+      assert.deepStrictEqual(
+        {
+          waterLevel: store.snapshot(DEVICE_ID)?.data.water_level,
+          shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion,
+          receivedAt: store.snapshot(DEVICE_ID)?.receivedAt,
+          shadowSilent: monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent,
+          anchor: anchors.stored.get(DEVICE_ID),
+        },
+        {
+          waterLevel: PROVISIONAL_FLOOD_WATER_LEVEL_CODE,
+          shadowVersion: undefined,
+          receivedAt: START_TIME + 2 * POLL_INTERVAL_MS,
+          shadowSilent: true,
+          anchor: START_TIME,
+        },
+      );
+
+      // act
+      await advance(1);
+      shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version });
+
+      // assert
+      assert.deepStrictEqual(
+        {
+          waterLevel: store.snapshot(DEVICE_ID)?.data.water_level,
+          shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion,
+          receivedAt: store.snapshot(DEVICE_ID)?.receivedAt,
+          shadowSilent: monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent,
+          anchor: anchors.stored.get(DEVICE_ID),
+        },
+        {
+          waterLevel: PROVISIONAL_FLOOD_WATER_LEVEL_CODE,
+          shadowVersion: undefined,
+          receivedAt: START_TIME + 2 * POLL_INTERVAL_MS,
+          shadowSilent: true,
+          anchor: START_TIME,
+        },
+      );
+      assert.deepStrictEqual(commandRequests, []);
+    });
+  }
+
+  test('post-silence version 8 restores shadow telemetry and liveness after the REST flood', async (t) => {
+    // arrange
+    const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
+    const { runtime, shadows, store, anchors, monitoringByDevice, advance, commandRequests } = harness(t, {
+      devices: [() => Promise.resolve([geminiDevice()]), () => Promise.resolve([geminiDevice()]), () => Promise.resolve([floodedDevice])],
+    });
+    await runtime.start();
+    await settle();
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 7 });
+    await advance(POLL_INTERVAL_MS);
+    await advance(POLL_INTERVAL_MS);
+
+    // act
+    await advance(1);
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { data: { water_level: 2 }, state: undefined, version: 8 });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        waterLevel: store.snapshot(DEVICE_ID)?.data.water_level,
+        shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion,
+        receivedAt: store.snapshot(DEVICE_ID)?.receivedAt,
+        shadowSilent: monitoringByDevice.at(-1)?.get(DEVICE_ID)?.shadowSilent,
+        anchor: anchors.stored.get(DEVICE_ID),
+      },
+      {
+        waterLevel: 2,
+        shadowVersion: 8,
+        receivedAt: START_TIME + 2 * POLL_INTERVAL_MS + 1,
+        shadowSilent: false,
+        anchor: START_TIME + 2 * POLL_INTERVAL_MS + 1,
+      },
+    );
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
   test('keeps shadow telemetry live when a higher-version heartbeat repeats the same reading', async (t) => {
     // arrange
     const floodedDevice = { ...geminiDevice(), data: { ...geminiDevice().data, water_level: PROVISIONAL_FLOOD_WATER_LEVEL_CODE } };
@@ -6681,7 +6774,7 @@ describe('createAccountRuntime', () => {
     await advance(TWO_MISSED_HEARTBEATS_MS);
 
     // act
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
     await advance(FAST_POLL_INTERVAL_MS);
 
     const pathBeforeStop = runtime.monitoringPath;
@@ -6890,7 +6983,7 @@ describe('createAccountRuntime', () => {
     const atSilence = [...calls];
 
     // act
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
     const devicesBeforeStop = [...monitoringByDevice];
     await runtime.stop();
 
@@ -6961,9 +7054,9 @@ describe('createAccountRuntime', () => {
     const atSilence = monitoringHealth.length;
 
     // act
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
     const afterFirstMessage = monitoringHealth.length;
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 2 });
     const healthBeforeStop = [...monitoringHealth];
     await runtime.stop();
 
@@ -7081,8 +7174,8 @@ describe('createAccountRuntime', () => {
     await advance(HEARTBEAT_MS);
 
     // act
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 2 });
 
     const pathBeforeStop = runtime.monitoringPath;
     const devicesBeforeStop = [...monitoringByDevice];
@@ -7154,7 +7247,7 @@ describe('createAccountRuntime', () => {
     store.subscribe(DEVICE_ID, subscription);
 
     // act
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
     const devicesBeforeStop = [...monitoringByDevice];
     await runtime.stop();
 
@@ -7164,7 +7257,7 @@ describe('createAccountRuntime', () => {
       connectivity: { connected: true, timestamp: DEVICE_TIME },
       data: { water_level: 1, primary_pump_running: false, ac_power: true },
       metadata: {},
-      shadowVersion: undefined,
+      shadowVersion: 1,
       deviceTimestamp: DEVICE_TIME,
       receivedAt: START_TIME + 1_796_000,
     });
@@ -7232,7 +7325,7 @@ describe('createAccountRuntime', () => {
 
     // act
     await advance(HEARTBEAT_MS);
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
     const devicesBeforeStop = [...monitoringByDevice];
     await runtime.stop();
 
@@ -7347,7 +7440,7 @@ describe('createAccountRuntime', () => {
     // act
     shadowOptionsOf(shadows).onReportedPatch(OTHER_DEVICE_ID, heartbeatPatch());
     const afterNeighbourHeartbeat = monitoringByDevice.length;
-    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, heartbeatPatch());
+    shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
 
     const pathBeforeStop = runtime.monitoringPath;
     const accountBeforeStop = monitoringHealth.at(-1);
