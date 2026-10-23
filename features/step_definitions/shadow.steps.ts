@@ -137,61 +137,47 @@ async function setDevices(world: BasementGuardianWorld, devices: readonly ApiDev
   service.setDevices(devices);
 }
 
-async function geminiDevices(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+Given('these gemini devices:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   await setDevices(
     this,
     parseDeviceRows(table).map((row) => toDevice(row)),
   );
-}
+});
 
-Given('these gemini devices:', geminiDevices);
-
-async function reportedDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+Given('these reported device fields:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const fields = fieldsOf(table);
 
   await setDevices(
     this,
     this.devices.map((device) => withData(device, fields)),
   );
-}
+});
 
-Given('these reported device fields:', reportedDeviceFields);
-
-async function shadowCredentials(this: BasementGuardianWorld): Promise<void> {
+Given('the shadow credentials', async function (this: BasementGuardianWorld): Promise<void> {
   await this.issueShadowCredentials(SHADOW_CREDENTIALS);
-}
+});
 
-Given('the shadow credentials', shadowCredentials);
-
-async function refusedConnections(this: BasementGuardianWorld): Promise<void> {
+Given('the broker refuses connections', async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   broker.refuseConnections();
-}
+});
 
-Given('the broker refuses connections', refusedConnections);
-
-async function rotatedShadowCredentials(this: BasementGuardianWorld): Promise<void> {
+When('the vendor issues the rotated shadow credentials', async function (this: BasementGuardianWorld): Promise<void> {
   await this.issueShadowCredentials(ROTATED_SHADOW_CREDENTIALS);
-}
+});
 
-When('the vendor issues the rotated shadow credentials', rotatedShadowCredentials);
-
-async function acceptedConnections(this: BasementGuardianWorld): Promise<void> {
+When('the broker accepts connections', async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   broker.acceptConnections();
-}
+});
 
-When('the broker accepts connections', acceptedConnections);
-
-async function closeEveryConnection(this: BasementGuardianWorld): Promise<void> {
+When('the broker closes every connection', async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   broker.disconnectAll();
-}
-
-When('the broker closes every connection', closeEveryConnection);
+});
 
 // The vendor carries telemetry under `reported.data` and device metadata under `reported.state`, so
 // a report's fields go into one of those two sections rather than directly under `reported`. Each
@@ -208,88 +194,76 @@ async function publishReported(world: BasementGuardianWorld, deviceId: string, r
   broker.publishReported(deviceId, reported, world.nextShadowVersion());
 }
 
-function publishReportedFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   return publishReported(this, theDeviceId(this), { data: fieldsOf(table) });
-}
+});
 
-When('the device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
-
-async function publishWithoutSubscriber(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+When('the broker publishes these heartbeat fields without a live subscriber:', async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   const broker = await this.broker();
 
   assert.equal(broker.liveConnectionCount(), 0);
   broker.publishReported(theDeviceId(this), { data: fieldsOf(table) }, this.nextShadowVersion());
-}
-
-When('the broker publishes these heartbeat fields without a live subscriber:', publishWithoutSubscriber);
+});
 
 // The same reported patch under a name that claims nothing about a heartbeat. A heartbeat carries
 // seven fields and `test_running` is not among them, so a scenario driving a control's reported
 // state says what it means: the device reported a state change.
-When('the device reports these fields:', { timeout: STEP_TIMEOUT_MS }, publishReportedFields);
+When('the device reports these fields:', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
+  return publishReported(this, theDeviceId(this), { data: fieldsOf(table) });
+});
 
 // The same heartbeat from one named system, for a scenario seeding more than one. The step above
 // publishes for position zero of the device table, which is right while an account carries one
 // system and cannot say which of several spoke.
-function publishNamedReportedFields(this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
-  return publishReported(this, deviceIdNamed(this, deviceName), { data: fieldsOf(table) });
-}
-
-When('the {string} device publishes these heartbeat fields:', { timeout: STEP_TIMEOUT_MS }, publishNamedReportedFields);
+When(
+  'the {string} device publishes these heartbeat fields:',
+  { timeout: STEP_TIMEOUT_MS },
+  function (this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
+    return publishReported(this, deviceIdNamed(this, deviceName), { data: fieldsOf(table) });
+  },
+);
 
 // A report about the device that delivers no reading. The table lands in the metadata section, and
 // the telemetry section travels beside it as `null`. That is the corruption shape rather than an
 // omission: the reading is present on the wire and cannot be read. The account-wide form is enough,
 // because the scenario that needs it runs one system; a named variant would be a step no scenario
 // calls.
-function publishReportedMetadataFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  return publishReported(this, theDeviceId(this), { data: null, state: fieldsOf(table) });
-}
-
 When(
   'the device reports these device metadata fields and a telemetry section that cannot be read:',
   { timeout: STEP_TIMEOUT_MS },
-  publishReportedMetadataFields,
+  function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
+    return publishReported(this, theDeviceId(this), { data: null, state: fieldsOf(table) });
+  },
 );
 
-async function publishRequestedState(this: BasementGuardianWorld): Promise<void> {
+When('the shadow service returns a requested value', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
   const deviceId = theDeviceId(this);
 
   await awaitSubscription(this, deviceId);
 
   broker.publishGetAccepted(deviceId, REQUESTED_STATE, this.nextShadowVersion());
-}
+});
 
-When('the shadow service returns a requested value', { timeout: STEP_TIMEOUT_MS }, publishRequestedState);
-
-function advanceTheScenarioClock(this: BasementGuardianWorld): void {
+When('the scenario clock moves forward', function (this: BasementGuardianWorld): void {
   this.advanceClock(CLOCK_STEP_MS);
-}
+});
 
-When('the scenario clock moves forward', advanceTheScenarioClock);
-
-function advanceTheScenarioClockBySeconds(this: BasementGuardianWorld, seconds: number): void {
+When('the scenario clock moves forward by {int} seconds', function (this: BasementGuardianWorld, seconds: number): void {
   this.advanceClock(seconds * MILLISECONDS_PER_SECOND);
-}
-
-When('the scenario clock moves forward by {int} seconds', advanceTheScenarioClockBySeconds);
+});
 
 // A wall-clock correction, which is a different event from time passing: it moves the wall base and
 // leaves the forward-only base where it was.
-function jumpTheSystemClockBackBySeconds(this: BasementGuardianWorld, seconds: number): void {
+When('the system clock jumps back {int} seconds', function (this: BasementGuardianWorld, seconds: number): void {
   this.jumpWallClock(-seconds * MILLISECONDS_PER_SECOND);
-}
-
-When('the system clock jumps back {int} seconds', jumpTheSystemClockBackBySeconds);
+});
 
 // SAFE-07 forbids any plugin-added delay, so a scenario asserting a transition after zero elapsed
 // scenario time is one of the layers proving the transition was not deferred (D-18).
-function theScenarioClockDoesNotMove(this: BasementGuardianWorld): void {
+When('the scenario clock does not move', function (this: BasementGuardianWorld): void {
   this.advanceClock(0);
-}
-
-When('the scenario clock does not move', theScenarioClockDoesNotMove);
+});
 
 // A vendor-side change rewrites the data of the devices the caller selects and leaves every other
 // seeded device's data exactly as it was, so the two steps below differ only in what they select.
@@ -302,22 +276,18 @@ function changeFieldsOf(world: BasementGuardianWorld, table: DataTable, rewrites
   );
 }
 
-function changeDeviceFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+When('the vendor changes these device fields:', function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   return changeFieldsOf(this, table, () => true);
-}
-
-When('the vendor changes these device fields:', changeDeviceFields);
+});
 
 // The same change to one named system. The step above says every pump on the account reports the
 // new body, so on a two-pump account it cannot say that one pit is filling while its neighbour is
 // not, which is the sentence a scenario about per-device state has to be able to write.
-function changeNamedDeviceFields(this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
+When('the vendor changes the {string} device fields:', function (this: BasementGuardianWorld, deviceName: string, table: DataTable): Promise<void> {
   const deviceId = deviceIdNamed(this, deviceName);
 
   return changeFieldsOf(this, table, (device) => device.deviceId === deviceId);
-}
-
-When('the vendor changes the {string} device fields:', changeNamedDeviceFields);
+});
 
 // The snapshot keeps telemetry and device metadata in two records, so an assertion about one must
 // not be able to read the other. The two steps below therefore differ in the record they read and in
@@ -334,32 +304,32 @@ function assertSnapshotRecord(world: BasementGuardianWorld, section: 'data' | 'm
   return world.untilTrue(holds, DEADLINE_MS, `the canonical snapshot never carried the ${held} the scenario expects`);
 }
 
-function assertSnapshotFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
+Then('the canonical snapshot carries these fields:', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
   return assertSnapshotRecord(this, 'data', 'fields', table);
-}
+});
 
-Then('the canonical snapshot carries these fields:', { timeout: STEP_TIMEOUT_MS }, assertSnapshotFields);
-
-async function assertExactSnapshotFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  await assertSnapshotRecord(this, 'data', 'fields', table);
-  assert.deepStrictEqual(this.snapshot(theDeviceId(this)).data, fieldsOf(table));
-}
-
-Then('the canonical snapshot has exactly these fields:', { timeout: STEP_TIMEOUT_MS }, assertExactSnapshotFields);
+Then(
+  'the canonical snapshot has exactly these fields:',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
+    await assertSnapshotRecord(this, 'data', 'fields', table);
+    assert.deepStrictEqual(this.snapshot(theDeviceId(this)).data, fieldsOf(table));
+  },
+);
 
 // A metadata-only shadow document has no data fields to assert. This step checks its metadata in
 // the canonical snapshot.
-function assertSnapshotMetadataFields(this: BasementGuardianWorld, table: DataTable): Promise<void> {
-  return assertSnapshotRecord(this, 'metadata', 'device metadata fields', table);
-}
+Then(
+  'the canonical snapshot carries these device metadata fields:',
+  { timeout: STEP_TIMEOUT_MS },
+  function (this: BasementGuardianWorld, table: DataTable): Promise<void> {
+    return assertSnapshotRecord(this, 'metadata', 'device metadata fields', table);
+  },
+);
 
-Then('the canonical snapshot carries these device metadata fields:', { timeout: STEP_TIMEOUT_MS }, assertSnapshotMetadataFields);
-
-function assertSnapshotOmitsField(this: BasementGuardianWorld, name: string): void {
+Then('the canonical snapshot carries no {string} field', function (this: BasementGuardianWorld, name: string): void {
   assert.equal(Object.hasOwn(this.snapshot(theDeviceId(this)).data, name), false);
-}
-
-Then('the canonical snapshot carries no {string} field', assertSnapshotOmitsField);
+});
 
 async function settledSnapshot(world: BasementGuardianWorld): Promise<DeviceSnapshot> {
   await delay(DELIVERY_SETTLE_MS);
@@ -367,89 +337,79 @@ async function settledSnapshot(world: BasementGuardianWorld): Promise<DeviceSnap
   return world.snapshot(theDeviceId(world));
 }
 
-async function assertNoShadowVersion(this: BasementGuardianWorld): Promise<void> {
+Then('the canonical snapshot carries no shadow version', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const snapshot = await settledSnapshot(this);
 
   assert.equal(snapshot.shadowVersion, undefined);
-}
+});
 
-Then('the canonical snapshot carries no shadow version', { timeout: STEP_TIMEOUT_MS }, assertNoShadowVersion);
+Then(
+  'the canonical snapshot carries the receipt time the scenario started at',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld): Promise<void> {
+    const snapshot = await settledSnapshot(this);
 
-async function assertStartingReceiptTime(this: BasementGuardianWorld): Promise<void> {
-  const snapshot = await settledSnapshot(this);
+    assert.equal(snapshot.receivedAt, SCENARIO_START_TIME);
+  },
+);
 
-  assert.equal(snapshot.receivedAt, SCENARIO_START_TIME);
-}
-
-Then('the canonical snapshot carries the receipt time the scenario started at', { timeout: STEP_TIMEOUT_MS }, assertStartingReceiptTime);
-
-function assertShadowVersion(this: BasementGuardianWorld, version: number): Promise<void> {
+Then('the canonical snapshot is at shadow version {int}', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, version: number): Promise<void> {
   return this.untilTrue(
     () => this.snapshot(theDeviceId(this)).shadowVersion === version,
     DEADLINE_MS,
     `the canonical snapshot never reached shadow version ${String(version)}`,
   );
-}
+});
 
-Then('the canonical snapshot is at shadow version {int}', { timeout: STEP_TIMEOUT_MS }, assertShadowVersion);
-
-async function assertCanonicalChangeCount(this: BasementGuardianWorld, count: number): Promise<void> {
+Then('the plugin reports {int} canonical change(s)', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld, count: number): Promise<void> {
   await this.untilTrue(() => this.changes.length >= count, DEADLINE_MS, `the plugin reported fewer than ${String(count)} canonical changes`);
   assert.equal(this.changes.length, count);
-}
+});
 
-Then('the plugin reports {int} canonical change(s)', { timeout: STEP_TIMEOUT_MS }, assertCanonicalChangeCount);
+Then(
+  'the plugin publishes {int} complete shadow request(s)',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, count: number): Promise<void> {
+    const broker = await this.broker();
+    const topic = SHADOW_TOPICS.get(theDeviceId(this));
+    const requested = (): number => broker.publishedTopics.filter((candidate) => candidate === topic).length;
 
-async function assertCompleteShadowRequests(this: BasementGuardianWorld, count: number): Promise<void> {
-  const broker = await this.broker();
-  const topic = SHADOW_TOPICS.get(theDeviceId(this));
-  const requested = (): number => broker.publishedTopics.filter((candidate) => candidate === topic).length;
+    await this.untilTrue(() => requested() >= count, DEADLINE_MS, `the plugin published fewer than ${String(count)} complete shadow requests`);
+    assert.equal(requested(), count);
+  },
+);
 
-  await this.untilTrue(() => requested() >= count, DEADLINE_MS, `the plugin published fewer than ${String(count)} complete shadow requests`);
-  assert.equal(requested(), count);
-}
-
-Then('the plugin publishes {int} complete shadow request(s)', { timeout: STEP_TIMEOUT_MS }, assertCompleteShadowRequests);
-
-async function assertNoCompleteShadowRequest(this: BasementGuardianWorld): Promise<void> {
+Then('the plugin publishes no complete shadow request', async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   assert.deepEqual(broker.publishedTopics, []);
-}
+});
 
-Then('the plugin publishes no complete shadow request', assertNoCompleteShadowRequest);
-
-async function assertHandshakeCount(this: BasementGuardianWorld, count: number): Promise<void> {
+Then('the broker holds {int} handshake(s)', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld, count: number): Promise<void> {
   const broker = await this.broker();
 
   await this.untilTrue(() => broker.handshakes.length >= count, DEADLINE_MS, `the broker saw fewer than ${String(count)} handshakes`);
   assert.equal(broker.handshakes.length, count);
-}
+});
 
-Then('the broker holds {int} handshake(s)', { timeout: STEP_TIMEOUT_MS }, assertHandshakeCount);
-
-async function assertOneLiveConnection(this: BasementGuardianWorld): Promise<void> {
+Then('the broker holds one live connection', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   await this.untilTrue(() => broker.liveConnectionCount() >= 1, DEADLINE_MS, 'the broker held no live connection');
   assert.equal(broker.liveConnectionCount(), 1);
-}
+});
 
-Then('the broker holds one live connection', { timeout: STEP_TIMEOUT_MS }, assertOneLiveConnection);
-
-async function assertNoLiveConnection(this: BasementGuardianWorld): Promise<void> {
+Then('the broker holds no live connection', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   await this.untilTrue(() => broker.liveConnectionCount() === 0, DEADLINE_MS, 'the broker kept holding a live connection');
-}
-
-Then('the broker holds no live connection', { timeout: STEP_TIMEOUT_MS }, assertNoLiveConnection);
+});
 
 // The plugin subscribes to every route of every device in one awaited call, before it publishes any
 // complete-shadow request, so a subscription the connection now open holds is what says a message
 // for that device can arrive. A scenario that reconnected leaves a predecessor whose subscriptions
 // the broker still remembers; asserting on the live connection is what tells the two apart.
-async function assertLiveSubscriptions(this: BasementGuardianWorld): Promise<void> {
+Then('the live connection is subscribed to every seeded device', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   // Every device of an empty list is subscribed vacuously, so an unseeded scenario would pass this
@@ -465,11 +425,9 @@ async function assertLiveSubscriptions(this: BasementGuardianWorld): Promise<voi
     DEADLINE_MS,
     `the live connection never subscribed to every one of ${expected.join(', ')}`,
   );
-}
+});
 
-Then('the live connection is subscribed to every seeded device', { timeout: STEP_TIMEOUT_MS }, assertLiveSubscriptions);
-
-async function assertHandshakeCarriesRotatedKeyAndToken(this: BasementGuardianWorld): Promise<void> {
+Then('the newest handshake carries the rotated key and token', async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
   const handshake = broker.handshakes.at(-1) ?? '';
 
@@ -481,11 +439,9 @@ async function assertHandshakeCarriesRotatedKeyAndToken(this: BasementGuardianWo
     },
     { key: true, token: true, stale: false },
   );
-}
+});
 
-Then('the newest handshake carries the rotated key and token', assertHandshakeCarriesRotatedKeyAndToken);
-
-async function assertClientIdentifiers(this: BasementGuardianWorld): Promise<void> {
+Then('the broker holds the first and the rotated client identifier', { timeout: STEP_TIMEOUT_MS }, async function (this: BasementGuardianWorld): Promise<void> {
   const broker = await this.broker();
 
   // The broker records a client identifier when it reads the MQTT connect packet, which is a later
@@ -493,6 +449,4 @@ async function assertClientIdentifiers(this: BasementGuardianWorld): Promise<voi
   // themselves is what keeps the assertion from reading one packet early.
   await this.untilTrue(() => broker.clientIds.length >= EXPECTED_CLIENT_IDS.length, DEADLINE_MS, `the broker never held ${EXPECTED_CLIENT_IDS.join(' and ')}`);
   assert.deepEqual([...broker.clientIds], EXPECTED_CLIENT_IDS);
-}
-
-Then('the broker holds the first and the rotated client identifier', { timeout: STEP_TIMEOUT_MS }, assertClientIdentifiers);
+});

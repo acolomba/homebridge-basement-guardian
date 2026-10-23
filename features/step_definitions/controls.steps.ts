@@ -128,192 +128,165 @@ async function assertWriteRefusedWith(world: BasementGuardianWorld, status: (sta
   assert.strictEqual(world.writeStatus(), status(homebridge.hap.HAPStatus));
 }
 
-async function refusedCommand(this: BasementGuardianWorld): Promise<void> {
+Given('the vendor refuses the next command', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   service.rejectNextCommand(REFUSED_COMMAND_STATUS);
-}
+});
 
-Given('the vendor refuses the next command', refusedCommand);
-
-async function unsuccessfulCommand(this: BasementGuardianWorld): Promise<void> {
+Given('the vendor answers the next command unsuccessfully', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   service.answerNextCommandWith(UNSUCCESSFUL_COMMAND_BODY);
-}
+});
 
-Given('the vendor answers the next command unsuccessfully', unsuccessfulCommand);
-
-async function unansweredCommand(this: BasementGuardianWorld): Promise<void> {
+Given('the vendor never answers the next command', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   service.holdNextCommand();
-}
-
-Given('the vendor never answers the next command', unansweredCommand);
+});
 
 // The acceptance the fake pump stays quiet after. It is what lets a scenario hold the device's
 // confirming report until after the pending window has closed.
-async function acceptedCommandWithNoReport(this: BasementGuardianWorld): Promise<void> {
+Given('the vendor accepts the next command with no device report', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   service.answerNextCommandWith(ACCEPTED_COMMAND_BODY);
-}
-
-Given('the vendor accepts the next command with no device report', acceptedCommandWithNoReport);
+});
 
 // The write a scenario expects to be accepted. A refusal here raises rather than being recorded, so
 // a scenario about an accepted press fails on the press instead of on a later assertion.
-async function turnOnTheSwitch(this: BasementGuardianWorld, displayName: string): Promise<void> {
-  const homebridge = await this.homebridge();
+When(
+  'a controller turns on the {string} switch',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, displayName: string): Promise<void> {
+    const homebridge = await this.homebridge();
 
-  await this.untilTrue(() => onCharacteristicOf(homebridge, displayName) !== undefined, PUBLISH_DEADLINE_MS, `the plugin published no ${displayName} switch`);
+    await this.untilTrue(() => onCharacteristicOf(homebridge, displayName) !== undefined, PUBLISH_DEADLINE_MS, `the plugin published no ${displayName} switch`);
 
-  await publishedSwitch(homebridge, displayName).handleSetRequest(true);
-}
-
-When('a controller turns on the {string} switch', { timeout: STEP_TIMEOUT_MS }, turnOnTheSwitch);
+    await publishedSwitch(homebridge, displayName).handleSetRequest(true);
+  },
+);
 
 // The same write, for a scenario that asserts how it ended.
-function pressTheSwitch(this: BasementGuardianWorld, displayName: string): Promise<void> {
+When('a controller presses the {string} switch', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   return writeToSwitch(this, displayName, true);
-}
+});
 
-When('a controller presses the {string} switch', { timeout: STEP_TIMEOUT_MS }, pressTheSwitch);
-
-function turnOffTheSwitch(this: BasementGuardianWorld, displayName: string): Promise<void> {
+When('a controller turns off the {string} switch', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   return writeToSwitch(this, displayName, false);
-}
-
-When('a controller turns off the {string} switch', { timeout: STEP_TIMEOUT_MS }, turnOffTheSwitch);
+});
 
 // A published record value, read through the pushed gate and kept for a later step to compare
 // against. Reading it is what makes the comparison after a restart a comparison of two published
 // values rather than of a value against the scenario's own arithmetic (CTRL-01).
-async function readPublishedValue(this: BasementGuardianWorld, characteristicName: string, serviceName: string): Promise<void> {
-  const homebridge = await this.homebridge();
-  const value = pushedValue(characteristicOf(homebridge, serviceName, characteristicName));
+When(
+  'the scenario reads {string} on the {string} service',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, characteristicName: string, serviceName: string): Promise<void> {
+    const homebridge = await this.homebridge();
+    const value = pushedValue(characteristicOf(homebridge, serviceName, characteristicName));
 
-  if (value === undefined) {
-    throw new Error(`the ${serviceName} service published no ${characteristicName}`);
-  }
+    if (value === undefined) {
+      throw new Error(`the ${serviceName} service published no ${characteristicName}`);
+    }
 
-  this.remember(`${serviceName} ${characteristicName}`, value);
-}
-
-When('the scenario reads {string} on the {string} service', { timeout: STEP_TIMEOUT_MS }, readPublishedValue);
+    this.remember(`${serviceName} ${characteristicName}`, value);
+  },
+);
 
 // The plugin holds the request open for a fixed window and then gives up on it. Advancing the
 // scenario clock past that window runs the deadline the plugin armed, so a scenario observes the
 // window closing without sleeping and without racing a process timer.
-function movePastThePendingWindow(this: BasementGuardianWorld): void {
+When('the scenario clock moves past the control pending window', function (this: BasementGuardianWorld): void {
   this.advanceClock(PAST_THE_PENDING_WINDOW_MS);
-}
+});
 
-When('the scenario clock moves past the control pending window', movePastThePendingWindow);
-
-async function startFailingVendorRequests(this: BasementGuardianWorld, status: number): Promise<void> {
+When('the vendor starts failing every request with status {int}', async function (this: BasementGuardianWorld, status: number): Promise<void> {
   const service = await this.restApi();
 
   service.failEveryRequestWith(status);
-}
+});
 
-When('the vendor starts failing every request with status {int}', startFailingVendorRequests);
-
-async function assertSwitchReadsOn(this: BasementGuardianWorld, displayName: string): Promise<void> {
+Then('the {string} switch reads on', async function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
   const characteristic = onCharacteristicOf(homebridge, displayName);
 
   assert.strictEqual(pushedValue(characteristic), true);
   assert.strictEqual(await characteristic?.handleGetRequest(), true);
-}
-
-Then('the {string} switch reads on', assertSwitchReadsOn);
+});
 
 // A refused write leaves a HAP status on the characteristic, so the awaited read rejects with
 // that status (D-04). If the switch is absent, publishedSwitch throws before the read.
-async function assertSwitchAnswersARead(this: BasementGuardianWorld, displayName: string): Promise<void> {
+Then('the {string} switch answers a read', async function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   const homebridge = await this.homebridge();
 
   await publishedSwitch(homebridge, displayName).handleGetRequest();
-}
+});
 
-Then('the {string} switch answers a read', assertSwitchAnswersARead);
-
-function assertSelfTestCommands(this: BasementGuardianWorld, count: number): Promise<void> {
+Then('the vendor receives {int} self-test command(s)', function (this: BasementGuardianWorld, count: number): Promise<void> {
   return assertCommandBodies(this, count, SELF_TEST_COMMAND);
-}
+});
 
-Then('the vendor receives {int} self-test command(s)', assertSelfTestCommands);
-
-function assertAlarmMuteCommands(this: BasementGuardianWorld, count: number): Promise<void> {
+Then('the vendor receives {int} alarm mute command(s)', function (this: BasementGuardianWorld, count: number): Promise<void> {
   return assertCommandBodies(this, count, ALARM_MUTE_COMMAND);
-}
+});
 
-Then('the vendor receives {int} alarm mute command(s)', assertAlarmMuteCommands);
-
-async function assertNoCommand(this: BasementGuardianWorld): Promise<void> {
+Then('the vendor receives no command', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   assert.deepStrictEqual(
     service.requests.filter((request) => request.method !== 'GET'),
     [],
   );
-}
+});
 
-Then('the vendor receives no command', assertNoCommand);
-
-function assertCommunicationFailure(this: BasementGuardianWorld): Promise<void> {
+Then('the write reports a communication failure', function (this: BasementGuardianWorld): Promise<void> {
   return assertWriteRefusedWith(this, (statuses) => statuses.SERVICE_COMMUNICATION_FAILURE);
-}
+});
 
-Then('the write reports a communication failure', assertCommunicationFailure);
-
-function assertOperationTimedOut(this: BasementGuardianWorld): Promise<void> {
+Then('the write reports a timeout', function (this: BasementGuardianWorld): Promise<void> {
   return assertWriteRefusedWith(this, (statuses) => statuses.OPERATION_TIMED_OUT);
-}
+});
 
-Then('the write reports a timeout', assertOperationTimedOut);
-
-function assertNotAllowedNow(this: BasementGuardianWorld): Promise<void> {
+Then('the write reports that the control is not allowed now', function (this: BasementGuardianWorld): Promise<void> {
   return assertWriteRefusedWith(this, (statuses) => statuses.NOT_ALLOWED_IN_CURRENT_STATE);
-}
-
-Then('the write reports that the control is not allowed now', assertNotAllowedNow);
+});
 
 // The value the plugin published after a restart, against the one it published before it. The read
 // waits, because a restarted plugin publishes nothing until its first poll has landed.
-async function assertPublishedValueCameBack(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  const homebridge = await this.homebridge();
-  const expected = this.recall(`${serviceName} ${characteristicName}`);
-  const failure = `the ${serviceName} service never published ${characteristicName} again`;
+Then(
+  'the {string} service reports {string} as the value the scenario read',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+    const homebridge = await this.homebridge();
+    const expected = this.recall(`${serviceName} ${characteristicName}`);
+    const failure = `the ${serviceName} service never published ${characteristicName} again`;
 
-  await this.untilTrue(() => pushedValue(characteristicOf(homebridge, serviceName, characteristicName)) === expected, PUBLISH_DEADLINE_MS, failure);
-  assert.deepStrictEqual(await characteristicOf(homebridge, serviceName, characteristicName)?.handleGetRequest(), expected);
-}
-
-Then('the {string} service reports {string} as the value the scenario read', { timeout: STEP_TIMEOUT_MS }, assertPublishedValueCameBack);
+    await this.untilTrue(() => pushedValue(characteristicOf(homebridge, serviceName, characteristicName)) === expected, PUBLISH_DEADLINE_MS, failure);
+    assert.deepStrictEqual(await characteristicOf(homebridge, serviceName, characteristicName)?.handleGetRequest(), expected);
+  },
+);
 
 // The whole line, not a fragment of it. The vendor deviceId is in it deliberately: without it a
 // multi-pump account cannot tell which pump never confirmed a control, so an assertion that
 // tolerated its absence would let a later reading of the privacy rule quietly remove it again.
-function assertUnconfirmedWarning(this: BasementGuardianWorld, capability: string): void {
+Then('the log warns once that the device never confirmed the {string} request', function (this: BasementGuardianWorld, capability: string): void {
   const deviceId = this.devices.at(0)?.deviceId;
   const warnings = this.logged.filter((line) => line.startsWith('warn ') && line.includes('never confirmed'));
 
   assert.deepStrictEqual(warnings, [`warn The ${capability} request on ${String(deviceId)} was never confirmed by the device. It is not retried.`]);
-}
-
-Then('the log warns once that the device never confirmed the {string} request', assertUnconfirmedWarning);
+});
 
 // The whole line, like the unconfirmed-request assertion above and for the same reason: the cause is
 // the whole content of a per-cause refusal table, so an assertion matching a fragment would pass on a
 // line naming a different condition. The `deviceId` is asserted present for the reason recorded there.
-function assertRefusalWarning(this: BasementGuardianWorld, capability: string, cause: string): void {
-  const deviceId = this.devices.at(0)?.deviceId;
-  const warnings = this.logged.filter((line) => line.startsWith('warn Refused '));
+Then(
+  'the log warns once that the {string} press was refused because {string}',
+  function (this: BasementGuardianWorld, capability: string, cause: string): void {
+    const deviceId = this.devices.at(0)?.deviceId;
+    const warnings = this.logged.filter((line) => line.startsWith('warn Refused '));
 
-  assert.deepStrictEqual(warnings, [`warn Refused ${capability} on ${String(deviceId)}: ${cause}.`]);
-}
-
-Then('the log warns once that the {string} press was refused because {string}', assertRefusalWarning);
+    assert.deepStrictEqual(warnings, [`warn Refused ${capability} on ${String(deviceId)}: ${cause}.`]);
+  },
+);

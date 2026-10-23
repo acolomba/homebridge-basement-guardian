@@ -30,11 +30,9 @@ function settingValue(text: string): unknown {
   return /^-?\d+$/.test(text) ? Number(text) : text;
 }
 
-function accountSettings(this: BasementGuardianWorld, table: DataTable): void {
+Given('these account settings:', function (this: BasementGuardianWorld, table: DataTable): void {
   this.settings = Object.fromEntries(Object.entries(table.rowsHash()).map(([name, text]) => [name, settingValue(text)]));
-}
-
-Given('these account settings:', accountSettings);
+});
 
 // The slug an administrator types into `ignoredFaults` is the adapter's own configuration name, so
 // a scenario naming one the plugin never publishes fails here rather than quietly suppressing
@@ -47,48 +45,36 @@ function ignoredFaultAdapter(slug: string | undefined): NotificationServiceKind 
   return slug;
 }
 
-function ignoredFaultAdapters(this: BasementGuardianWorld, table: DataTable): void {
+Given('the plugin ignores these fault adapters:', function (this: BasementGuardianWorld, table: DataTable): void {
   this.ignoredFaults = table.raw().map(([slug]) => ignoredFaultAdapter(slug));
-}
+});
 
-Given('the plugin ignores these fault adapters:', ignoredFaultAdapters);
-
-async function loadPlugin(this: BasementGuardianWorld): Promise<void> {
+When('the plugin loads', async function (this: BasementGuardianWorld): Promise<void> {
   await this.loadPlatform();
-}
+});
 
-When('the plugin loads', loadPlugin);
-
-function assertRefusal(this: BasementGuardianWorld, reason: string): void {
+Then('the plugin refuses to start because {string}', function (this: BasementGuardianWorld, reason: string): void {
   assert.deepEqual(this.logged, [`error Not starting: ${reason} ${REFUSAL_ADVICE}`]);
-}
+});
 
-Then('the plugin refuses to start because {string}', assertRefusal);
-
-async function assertNoLifecycleListener(this: BasementGuardianWorld): Promise<void> {
+Then('the plugin registers no lifecycle listener', async function (this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
 
   assert.deepEqual(homebridge.registrations, []);
-}
+});
 
-Then('the plugin registers no lifecycle listener', assertNoLifecycleListener);
-
-function assertNoAccessory(this: BasementGuardianWorld): void {
+Then('the plugin holds no accessory', function (this: BasementGuardianWorld): void {
   assert.equal(this.accessoryCount(), 0);
-}
-
-Then('the plugin holds no accessory', assertNoAccessory);
+});
 
 // The email comes from the settings the scenario gave rather than a constant, so the assertion
 // stays true when a scenario changes the value. An account email is an account identifier, and no
 // refusal may carry one into the log.
-function assertNoLoggedAccountEmail(this: BasementGuardianWorld): void {
+Then('no logged line contains the configured account email', function (this: BasementGuardianWorld): void {
   const email = String(this.settings.email);
 
   assert.deepEqual(
     this.logged.filter((line) => line.includes(email)),
     [],
   );
-}
-
-Then('no logged line contains the configured account email', assertNoLoggedAccountEmail);
+});

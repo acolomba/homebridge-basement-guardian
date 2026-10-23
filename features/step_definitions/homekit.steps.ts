@@ -103,13 +103,15 @@ async function untilAlarmState(world: BasementGuardianWorld, displayName: string
   );
 }
 
-async function assertServicePublished(this: BasementGuardianWorld, displayName: string): Promise<void> {
-  const homebridge = await this.homebridge();
+Then(
+  'the plugin publishes the {string} service',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, displayName: string): Promise<void> {
+    const homebridge = await this.homebridge();
 
-  await this.untilTrue(() => serviceOf(homebridge, displayName) !== undefined, PUBLISH_DEADLINE_MS, `the plugin never published the ${displayName} service`);
-}
-
-Then('the plugin publishes the {string} service', { timeout: STEP_TIMEOUT_MS }, assertServicePublished);
+    await this.untilTrue(() => serviceOf(homebridge, displayName) !== undefined, PUBLISH_DEADLINE_MS, `the plugin never published the ${displayName} service`);
+  },
+);
 
 // How many catalogue services the one registered accessory carries. Nothing is registered until the
 // first poll completes, and an unregistered accessory answers `undefined` for every service name, so
@@ -128,29 +130,33 @@ function publishedServiceCount(homebridge: FakeHomebridgeApi): number {
   ).length;
 }
 
-async function assertServiceNotPublished(this: BasementGuardianWorld, displayName: string): Promise<void> {
-  const homebridge = await this.homebridge();
+Then(
+  'the plugin publishes no {string} service',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, displayName: string): Promise<void> {
+    const homebridge = await this.homebridge();
 
-  await this.untilTrue(() => publishedServiceCount(homebridge) > 0, PUBLISH_DEADLINE_MS, 'the plugin never published a service');
+    await this.untilTrue(() => publishedServiceCount(homebridge) > 0, PUBLISH_DEADLINE_MS, 'the plugin never published a service');
 
-  assert.equal(serviceOf(homebridge, displayName), undefined);
-}
+    assert.equal(serviceOf(homebridge, displayName), undefined);
+  },
+);
 
-Then('the plugin publishes no {string} service', { timeout: STEP_TIMEOUT_MS }, assertServiceNotPublished);
+Then(
+  'the {string} service reports {string} as {string}',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, serviceName: string, characteristicName: string, text: string): Promise<void> {
+    const homebridge = await this.homebridge();
+    const failure = `the ${serviceName} service never reported ${characteristicName} as ${text}`;
+    const expected = publishedValue(text);
 
-async function assertCharacteristicValue(this: BasementGuardianWorld, serviceName: string, characteristicName: string, text: string): Promise<void> {
-  const homebridge = await this.homebridge();
-  const failure = `the ${serviceName} service never reported ${characteristicName} as ${text}`;
-  const expected = publishedValue(text);
-
-  await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), expected, failure);
-  await assertPushedRead(
-    serviceOf(homebridge, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
-    expected,
-  );
-}
-
-Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValue);
+    await untilPublished(this, () => characteristicValue(serviceOf(homebridge, serviceName), characteristicName), expected, failure);
+    await assertPushedRead(
+      serviceOf(homebridge, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
+      expected,
+    );
+  },
+);
 
 // The same assertion about one named system among several. The account-wide read above answers
 // through the newest accessory, which is right while an account carries one device and cannot state
@@ -158,25 +164,21 @@ Then('the {string} service reports {string} as {string}', { timeout: STEP_TIMEOU
 // account-wide one, and every per-device rule in this feature went unobserved end to end. The
 // accessory name is the vendor name the account carries, which is what a scenario already seeds and
 // what an owner reads on the tile.
-async function assertCharacteristicValueOn(
-  this: BasementGuardianWorld,
-  serviceName: string,
-  accessoryName: string,
-  characteristicName: string,
-  text: string,
-): Promise<void> {
-  const homebridge = await this.homebridge();
-  const failure = `the ${serviceName} service on ${accessoryName} never reported ${characteristicName} as ${text}`;
-  const expected = publishedValue(text);
+Then(
+  'the {string} service on {string} reports {string} as {string}',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, serviceName: string, accessoryName: string, characteristicName: string, text: string): Promise<void> {
+    const homebridge = await this.homebridge();
+    const failure = `the ${serviceName} service on ${accessoryName} never reported ${characteristicName} as ${text}`;
+    const expected = publishedValue(text);
 
-  await untilPublished(this, () => characteristicValue(serviceOnNamed(homebridge, accessoryName, serviceName), characteristicName), expected, failure);
-  await assertPushedRead(
-    serviceOnNamed(homebridge, accessoryName, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
-    expected,
-  );
-}
-
-Then('the {string} service on {string} reports {string} as {string}', { timeout: STEP_TIMEOUT_MS }, assertCharacteristicValueOn);
+    await untilPublished(this, () => characteristicValue(serviceOnNamed(homebridge, accessoryName, serviceName), characteristicName), expected, failure);
+    await assertPushedRead(
+      serviceOnNamed(homebridge, accessoryName, serviceName)?.characteristics.find((candidate) => candidate.displayName === characteristicName),
+      expected,
+    );
+  },
+);
 
 /** What a controller read of one characteristic met. */
 type ReadOutcome = 'answered' | 'refused' | 'absent';
@@ -238,38 +240,40 @@ async function untilReadOutcome(world: BasementGuardianWorld, serviceName: strin
   }
 }
 
-function assertNoReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  return untilReadOutcome(this, serviceName, characteristicName, 'refused');
-}
-
-Then('the {string} service answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadAnswered);
+Then(
+  'the {string} service answers no read for {string}',
+  { timeout: STEP_TIMEOUT_MS },
+  function (this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+    return untilReadOutcome(this, serviceName, characteristicName, 'refused');
+  },
+);
 
 // The same assertion about a later moment, and the settle above it is the whole difference. The wait
 // behind the step above reads its condition before its first delay, so a plain refusal step placed
 // straight after a publish answers from the marking that was already in place and passes whether or
 // not the message was ever delivered. This one lets the message arrive first, which is what makes a
 // scenario able to see a refusal that a later value push undid (D-10).
-async function assertNoReadStillAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  await delay(DELIVERY_SETTLE_MS);
-  await untilReadOutcome(this, serviceName, characteristicName, 'refused');
-}
+Then(
+  'the {string} service still answers no read for {string}',
+  { timeout: STEP_TIMEOUT_MS },
+  async function (this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+    await delay(DELIVERY_SETTLE_MS);
+    await untilReadOutcome(this, serviceName, characteristicName, 'refused');
+  },
+);
 
-Then('the {string} service still answers no read for {string}', { timeout: STEP_TIMEOUT_MS }, assertNoReadStillAnswered);
+Then(
+  'the {string} service answers a read for {string}',
+  { timeout: STEP_TIMEOUT_MS },
+  function (this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
+    return untilReadOutcome(this, serviceName, characteristicName, 'answered');
+  },
+);
 
-function assertReadAnswered(this: BasementGuardianWorld, serviceName: string, characteristicName: string): Promise<void> {
-  return untilReadOutcome(this, serviceName, characteristicName, 'answered');
-}
-
-Then('the {string} service answers a read for {string}', { timeout: STEP_TIMEOUT_MS }, assertReadAnswered);
-
-function assertSensorActivated(this: BasementGuardianWorld, displayName: string): Promise<void> {
+Then('the {string} sensor is activated', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   return untilAlarmState(this, displayName, ALARM_ACTIVATED, `the ${displayName} sensor never activated`);
-}
+});
 
-Then('the {string} sensor is activated', { timeout: STEP_TIMEOUT_MS }, assertSensorActivated);
-
-function assertSensorNotActivated(this: BasementGuardianWorld, displayName: string): Promise<void> {
+Then('the {string} sensor is not activated', { timeout: STEP_TIMEOUT_MS }, function (this: BasementGuardianWorld, displayName: string): Promise<void> {
   return untilAlarmState(this, displayName, ALARM_QUIET, `the ${displayName} sensor never reported a quiet state`);
-}
-
-Then('the {string} sensor is not activated', { timeout: STEP_TIMEOUT_MS }, assertSensorNotActivated);
+});
