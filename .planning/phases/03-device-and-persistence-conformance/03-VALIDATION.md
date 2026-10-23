@@ -326,3 +326,40 @@ it supplies no invented RED→GREEN proof. Independently established Phase03
 zero genuine production bugs and empty current/history RED inventory remain
 the actual D-04 applicability evidence. No finding disposition row is needed
 for the clean additional review. E/P answers and goal verification stay pending.
+
+## Nyquist refresh — 2026-10-22
+
+The eight Phase 03 plans still define 18 tasks, all mapped to DEV-01. The
+task-to-command map above remains applicable: nine source/test pairs exist,
+the four declaration-only owners have compiler contracts, and the two Plan 08
+artifact predicates have recorded executions. Classification remains 18
+COVERED, zero PARTIAL, zero MISSING. This refresh found no test gap and made no
+test, fixture, or implementation change.
+
+Fresh on the current checkout (HEAD `a18d3141fd7aceab702d04c2bc482e8e7ed7512b`,
+Node v26.12.1), `npm run test:coverage:direct --` with all nine Phase 03
+source/test pairs exited 0 after a strict test build. A separate
+`node --test` invocation of their compiled owners exited 0: 181 tests passed,
+zero failed, skipped, or cancelled. The latter includes file-load sentinels
+for declaration-only owners; it is not 181 authored behavioral cases. These
+fresh checks replace the older 170-case figure as a current raw test count,
+without reasserting the historical per-pair LCOV denominators above.
+
+The parent supplied a full `npm run check` run at this same HEAD with
+`TEST_CONCURRENCY=1` and Node v26.12.1. Its retained stdout is
+`/private/tmp/guardian-phase2-verification-regression-check-unsandboxed.log`
+(mtime 2026-10-22 22:17 local). It reports all six static checks passed,
+130/130 Cucumber scenarios, 1401/1401 steps and merged direct coverage from
+43 pairs. The parent reports exit 0; this log has no separate native exit
+envelope. A fresh exact-input comparison found no tracked diff outside
+`.planning/**/*.md` from that verified HEAD and no untracked executable input.
+Thus the supplied full-gate evidence remains current under the project's
+local-verification reuse rule. Later changes to executable inputs or Node
+require a new full gate.
+
+The original Oct 14 review, controls, LCOV numerators, and process exceptions
+above remain historical evidence at their stated revisions. This refresh does
+not rerun the two Plan 08 Git predicates or resolve WINDOWS 46/47, the
+historical Gemini 247/247 claim, vendor/hardware semantics, or the Phase 03
+human judgments. No new BLOCKER arose; the missing native exit envelope and
+offline scope are evidence limits, not a passing test invented by this audit.

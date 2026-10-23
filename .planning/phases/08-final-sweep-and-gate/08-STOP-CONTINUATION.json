@@ -4,7 +4,7 @@
   "phase": "08-final-sweep-and-gate",
   "historicalStopRecord": "08-CORRECTION-ROUNDS.json",
   "historicalStopPreserved": true,
-  "correctionRoundsAdded": 4,
+  "correctionRoundsAdded": 6,
   "authorization": "Maintainer authorized a bounded GSD debug and replan for the seven open findings after DEVICE round 1 STOP.",
   "debugFix": {
     "id": "CR-08-RUNTIME-004",
@@ -15,32 +15,56 @@
     "completeSourceBlob": "aed73e14c401fa2bea25e27e637a1ff06cd25a72",
     "completeTestBlob": "558caccde2e5210dca3197bcdaae5e8937669ac4"
   },
-  "newOpenIds": ["CR-08-RUNTIME-005"],
+  "newOpenIds": [
+    "CR-08-RUNTIME-005"
+  ],
   "oracleCorrection": {
     "id": "CR-08-FEATURES-003",
     "commit": "6c578b8",
     "independentReviewer": "/root/phase8_feature_oracle_review",
     "completeFeatureBlob": "9bde291114d45a579f50251189f6e54035fe732c"
   },
-  "forwardOpenIds": [],
+  "forwardOpenIds": [
+    "CR-08-ROOT-003"
+  ],
   "continuationRounds": {
     "RUNTIME": [
       {
         "round": 1,
         "reviewer": "/root/phase8_runtime_continuation_review",
         "revision": "6ba036f92b526887ac04ba80256de5d7e2ed210b",
-        "openingIds": ["CR-08-RUNTIME-001", "CR-08-RUNTIME-002", "CR-08-RUNTIME-003", "CR-08-RUNTIME-005"],
-        "fixedIds": ["CR-08-RUNTIME-001", "CR-08-RUNTIME-002", "CR-08-RUNTIME-003", "CR-08-RUNTIME-005"],
+        "openingIds": [
+          "CR-08-RUNTIME-001",
+          "CR-08-RUNTIME-002",
+          "CR-08-RUNTIME-003",
+          "CR-08-RUNTIME-005"
+        ],
+        "fixedIds": [
+          "CR-08-RUNTIME-001",
+          "CR-08-RUNTIME-002",
+          "CR-08-RUNTIME-003",
+          "CR-08-RUNTIME-005"
+        ],
         "rejectedIds": [],
-        "newIds": ["CR-08-RUNTIME-006"],
+        "newIds": [
+          "CR-08-RUNTIME-006"
+        ],
         "reopenedIds": [],
-        "closingIds": ["CR-08-RUNTIME-006"],
+        "closingIds": [
+          "CR-08-RUNTIME-006"
+        ],
         "reviewedFiles": [
           {
             "path": "src/runtime/accountRuntime.ts",
             "blob": "2f21725db1d718ce8a9b69653b04de4a6607f59d",
             "completeLines": "1-1346",
-            "readSpans": ["1-300", "301-650", "651-1000", "901-1200", "1201-1346"],
+            "readSpans": [
+              "1-300",
+              "301-650",
+              "651-1000",
+              "901-1200",
+              "1201-1346"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -49,7 +73,27 @@
             "path": "test/runtime/accountRuntime.test.ts",
             "blob": "9aa0a99a18eea2d18022497bec2f2cedcda01b58",
             "completeLines": "1-9672",
-            "readSpans": ["1-1000", "1001-2000", "1460-1505", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4500", "4501-5000", "5001-5500", "5501-6000", "6001-6500", "6501-7000", "7001-7500", "7501-8000", "8001-8500", "8501-9000", "9001-9500", "9501-9672"],
+            "readSpans": [
+              "1-1000",
+              "1001-2000",
+              "1460-1505",
+              "2001-2500",
+              "2501-3000",
+              "3001-3500",
+              "3501-4000",
+              "4001-4500",
+              "4501-5000",
+              "5001-5500",
+              "5501-6000",
+              "6001-6500",
+              "6501-7000",
+              "7001-7500",
+              "7501-8000",
+              "8001-8500",
+              "8501-9000",
+              "9001-9500",
+              "9501-9672"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -58,7 +102,9 @@
             "path": "src/runtime/arrivalAnchors.ts",
             "blob": "024b729789a271be9c90cb65e0885b5ba5c4cfd6",
             "completeLines": "1-218",
-            "readSpans": ["1-218"],
+            "readSpans": [
+              "1-218"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -67,7 +113,11 @@
             "path": "test/runtime/arrivalAnchors.test.ts",
             "blob": "34d9f112497ea5dafc728609bf676b31f0ac528d",
             "completeLines": "1-457",
-            "readSpans": ["1-126", "127-367", "368-457"],
+            "readSpans": [
+              "1-126",
+              "127-367",
+              "368-457"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -76,7 +126,9 @@
             "path": "src/runtime/failureLog.ts",
             "blob": "ce344523252d659f811cfdab41d349096f7f900c",
             "completeLines": "1-95",
-            "readSpans": ["1-95"],
+            "readSpans": [
+              "1-95"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -85,7 +137,9 @@
             "path": "test/runtime/failureLog.test.ts",
             "blob": "ec7d605191eedb14e83a47e705e0a323970a3561",
             "completeLines": "1-361",
-            "readSpans": ["1-361"],
+            "readSpans": [
+              "1-361"
+            ],
             "reviewer": "/root/phase8_runtime_continuation_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -107,8 +161,12 @@
         "round": 2,
         "reviewer": "/root/phase8_runtime006_review",
         "revision": "31a07f4d40a8f87716bb792f6f5c56a668b3ebc5",
-        "openingIds": ["CR-08-RUNTIME-006"],
-        "fixedIds": ["CR-08-RUNTIME-006"],
+        "openingIds": [
+          "CR-08-RUNTIME-006"
+        ],
+        "fixedIds": [
+          "CR-08-RUNTIME-006"
+        ],
         "rejectedIds": [],
         "newIds": [],
         "reopenedIds": [],
@@ -118,7 +176,10 @@
             "path": "src/runtime/accountRuntime.ts",
             "blob": "03ad2704c0e88d812b58f8e31c263265419c260e",
             "completeLines": "1-1346",
-            "readSpans": ["1-700", "701-1346"],
+            "readSpans": [
+              "1-700",
+              "701-1346"
+            ],
             "reviewer": "/root/phase8_runtime006_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -127,7 +188,24 @@
             "path": "test/runtime/accountRuntime.test.ts",
             "blob": "381cfc0c0381024b4f9e53b3afcaa21b8081e398",
             "completeLines": "1-9765",
-            "readSpans": ["1-500", "501-1100", "1101-1700", "1701-2300", "2301-2900", "2901-3500", "3501-4100", "4101-4700", "4701-5400", "5401-6100", "6101-6800", "6801-7500", "7501-8200", "8201-8900", "8901-9500", "9501-9765"],
+            "readSpans": [
+              "1-500",
+              "501-1100",
+              "1101-1700",
+              "1701-2300",
+              "2301-2900",
+              "2901-3500",
+              "3501-4100",
+              "4101-4700",
+              "4701-5400",
+              "5401-6100",
+              "6101-6800",
+              "6801-7500",
+              "7501-8200",
+              "8201-8900",
+              "8901-9500",
+              "9501-9765"
+            ],
             "reviewer": "/root/phase8_runtime006_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -136,7 +214,9 @@
             "path": "src/device/state.ts",
             "blob": "88c621f4c9f362a7947c51ef5d9c48b3d6a9465a",
             "completeLines": "1-439",
-            "readSpans": ["1-439"],
+            "readSpans": [
+              "1-439"
+            ],
             "reviewer": "/root/phase8_runtime006_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "cross-owner-context"
@@ -145,7 +225,11 @@
             "path": "test/device/state.test.ts",
             "blob": "97bb7aa40286a747a4f6a4fc5f85540533acccf5",
             "completeLines": "1-1318",
-            "readSpans": ["1-400", "401-800", "801-1318"],
+            "readSpans": [
+              "1-400",
+              "401-800",
+              "801-1318"
+            ],
             "reviewer": "/root/phase8_runtime006_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "cross-owner-context"
@@ -162,6 +246,47 @@
           "executableInputsClean": true
         },
         "stopReason": null
+      },
+      {
+        "round": 3,
+        "reviewer": "/root/phase8_plan20_owner_review",
+        "revision": "9863d9b99a99fd7ea87b7236da2e5b4ee4aa9c52",
+        "openingIds": [
+          "CR-08-RUNTIME-007"
+        ],
+        "fixedIds": [
+          "CR-08-RUNTIME-007"
+        ],
+        "rejectedIds": [],
+        "newIds": [],
+        "reopenedIds": [],
+        "closingIds": [],
+        "reviewedFiles": [
+          {
+            "path": "test/runtime/arrivalAnchors.test.ts",
+            "blob": "972cf75df28dae2e31cbeaafee62cce68a3bc581",
+            "completeLines": "1-453",
+            "readSpans": [
+              "1-180",
+              "181-360",
+              "361-453"
+            ],
+            "reviewer": "/root/phase8_plan20_owner_review",
+            "editedBy": "/root",
+            "reviewScope": "owner"
+          }
+        ],
+        "combinedGate": {
+          "command": "NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan20-npm-cache TEST_CONCURRENCY=1 npm run check",
+          "nodeVersion": "v26.12.1",
+          "exitCode": 0,
+          "scenarios": "130/130",
+          "steps": "1401/1401",
+          "directCoveragePairs": 43,
+          "revision": "9863d9b99a99fd7ea87b7236da2e5b4ee4aa9c52",
+          "executableInputsClean": true
+        },
+        "stopReason": null
       }
     ],
     "DEVICE": [
@@ -169,8 +294,12 @@
         "round": 2,
         "reviewer": "/root/phase8_device002_review",
         "revision": "87e08a355abb600786f8b6f22c8371cb63d9ffd1",
-        "openingIds": ["CR-08-DEVICE-002"],
-        "fixedIds": ["CR-08-DEVICE-002"],
+        "openingIds": [
+          "CR-08-DEVICE-002"
+        ],
+        "fixedIds": [
+          "CR-08-DEVICE-002"
+        ],
         "rejectedIds": [],
         "newIds": [],
         "reopenedIds": [],
@@ -180,7 +309,9 @@
             "path": "src/device/state.ts",
             "blob": "db675d3dd7b8fcfb5a53a231480a97d19672f347",
             "completeLines": "1-444",
-            "readSpans": ["1-444"],
+            "readSpans": [
+              "1-444"
+            ],
             "reviewer": "/root/phase8_device002_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -189,7 +320,11 @@
             "path": "test/device/state.test.ts",
             "blob": "a84383484786374116f17d1747f51326b157ae2e",
             "completeLines": "1-1355",
-            "readSpans": ["1-470", "471-940", "941-1355"],
+            "readSpans": [
+              "1-470",
+              "471-940",
+              "941-1355"
+            ],
             "reviewer": "/root/phase8_device002_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "owner"
@@ -198,7 +333,17 @@
             "path": "test/platform.test.ts",
             "blob": "ac471273131e3411d00cc80f4a267ca0a84acadf",
             "completeLines": "1-4362",
-            "readSpans": ["1-500", "501-1000", "1001-1500", "1501-2000", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4362"],
+            "readSpans": [
+              "1-500",
+              "501-1000",
+              "1001-1500",
+              "1501-2000",
+              "2001-2500",
+              "2501-3000",
+              "3001-3500",
+              "3501-4000",
+              "4001-4362"
+            ],
             "reviewer": "/root/phase8_device002_review",
             "editedBy": "/root/phase8_runtime005_red",
             "reviewScope": "cross-owner-context"
@@ -222,8 +367,14 @@
         "round": 1,
         "reviewer": "/root/phase8_features_round1_review",
         "revision": "dd878480671f4e8caaf69d0c59b908db9c3fc146",
-        "openingIds": ["CR-08-FEATURES-001", "CR-08-FEATURES-002"],
-        "fixedIds": ["CR-08-FEATURES-001", "CR-08-FEATURES-002"],
+        "openingIds": [
+          "CR-08-FEATURES-001",
+          "CR-08-FEATURES-002"
+        ],
+        "fixedIds": [
+          "CR-08-FEATURES-001",
+          "CR-08-FEATURES-002"
+        ],
         "rejectedIds": [],
         "newIds": [],
         "reopenedIds": [],
@@ -233,7 +384,9 @@
             "path": "features/step_definitions/account.steps.ts",
             "blob": "f133a1ccb6834ed51f728a6cf6267055a3b963f3",
             "completeLines": "1-213",
-            "readSpans": ["1-213"],
+            "readSpans": [
+              "1-213"
+            ],
             "reviewer": "/root/phase8_features_round1_review",
             "editedBy": "/root",
             "reviewScope": "owner"
@@ -242,7 +395,9 @@
             "path": "features/step_definitions/configuration.steps.ts",
             "blob": "c8b6e79c1cfb3656b663bd954c2aabf33d17f576",
             "completeLines": "1-80",
-            "readSpans": ["1-80"],
+            "readSpans": [
+              "1-80"
+            ],
             "reviewer": "/root/phase8_features_round1_review",
             "editedBy": "/root",
             "reviewScope": "owner"
@@ -251,7 +406,9 @@
             "path": "features/step_definitions/controls.steps.ts",
             "blob": "33f03b197d8f8d4964f333e96ecd53c90936a13e",
             "completeLines": "1-292",
-            "readSpans": ["1-292"],
+            "readSpans": [
+              "1-292"
+            ],
             "reviewer": "/root/phase8_features_round1_review",
             "editedBy": "/root",
             "reviewScope": "owner"
@@ -260,7 +417,9 @@
             "path": "features/step_definitions/homekit.steps.ts",
             "blob": "65d91595cb67c3c935cb4e36c2cc715edd9d9bb1",
             "completeLines": "1-279",
-            "readSpans": ["1-279"],
+            "readSpans": [
+              "1-279"
+            ],
             "reviewer": "/root/phase8_features_round1_review",
             "editedBy": "/root",
             "reviewScope": "owner"
@@ -269,7 +428,10 @@
             "path": "features/step_definitions/shadow.steps.ts",
             "blob": "0f650de6360e015c40d93fd5921063b5a0f2551b",
             "completeLines": "1-452",
-            "readSpans": ["1-240", "241-452"],
+            "readSpans": [
+              "1-240",
+              "241-452"
+            ],
             "reviewer": "/root/phase8_features_round1_review",
             "editedBy": "/root",
             "reviewScope": "owner"
@@ -287,6 +449,64 @@
         },
         "stopReason": null
       }
+    ],
+    "ROOT": [
+      {
+        "round": 2,
+        "reviewer": "/root/phase8_plan20_owner_review",
+        "revision": "9863d9b99a99fd7ea87b7236da2e5b4ee4aa9c52",
+        "openingIds": [
+          "CR-08-ROOT-002"
+        ],
+        "fixedIds": [
+          "CR-08-ROOT-002"
+        ],
+        "rejectedIds": [],
+        "newIds": [
+          "CR-08-ROOT-003"
+        ],
+        "reopenedIds": [],
+        "closingIds": [
+          "CR-08-ROOT-003"
+        ],
+        "reviewedFiles": [
+          {
+            "path": "src/logging.ts",
+            "blob": "e3f40d3fd281d0f0b1a38bd23f1b6e1ed5142ff4",
+            "completeLines": "1-227",
+            "readSpans": [
+              "1-227"
+            ],
+            "reviewer": "/root/phase8_plan20_owner_review",
+            "editedBy": "/root",
+            "reviewScope": "owner"
+          },
+          {
+            "path": "test/logging.test.ts",
+            "blob": "a48a46224448d24fea09da1eba434c1a179e36a3",
+            "completeLines": "1-668",
+            "readSpans": [
+              "1-220",
+              "221-440",
+              "441-668"
+            ],
+            "reviewer": "/root/phase8_plan20_owner_review",
+            "editedBy": "/root",
+            "reviewScope": "owner"
+          }
+        ],
+        "combinedGate": {
+          "command": "NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan20-npm-cache TEST_CONCURRENCY=1 npm run check",
+          "nodeVersion": "v26.12.1",
+          "exitCode": 0,
+          "scenarios": "130/130",
+          "steps": "1401/1401",
+          "directCoveragePairs": 43,
+          "revision": "9863d9b99a99fd7ea87b7236da2e5b4ee4aa9c52",
+          "executableInputsClean": true
+        },
+        "stopReason": "No progress: one opening ID was fixed, one new ID was found, and one ID remains open."
+      }
     ]
   },
   "supplementalReviews": [
@@ -299,7 +519,12 @@
           "path": "features/monitoring/degradation.feature",
           "blob": "9bde291114d45a579f50251189f6e54035fe732c",
           "completeLines": "1-730",
-          "readSpans": ["1-180", "181-360", "361-540", "541-730"],
+          "readSpans": [
+            "1-180",
+            "181-360",
+            "361-540",
+            "541-730"
+          ],
           "reviewer": "/root/phase8_feature_oracle_review",
           "editedBy": "/root",
           "reviewScope": "owner"
@@ -315,7 +540,17 @@
           "path": "test/platform.test.ts",
           "blob": "ac471273131e3411d00cc80f4a267ca0a84acadf",
           "completeLines": "1-4362",
-          "readSpans": ["1-500", "501-1000", "1001-1500", "1501-2000", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4362"],
+          "readSpans": [
+            "1-500",
+            "501-1000",
+            "1001-1500",
+            "1501-2000",
+            "2001-2500",
+            "2501-3000",
+            "3001-3500",
+            "3501-4000",
+            "4001-4362"
+          ],
           "reviewer": "/root/phase8_device002_review",
           "editedBy": "/root/phase8_runtime005_red",
           "reviewScope": "owner"
@@ -324,7 +559,28 @@
           "path": "test/runtime/accountRuntime.test.ts",
           "blob": "185ffe9933ee1adf9b6ff0e28290dcfc2b867d73",
           "completeLines": "1-9766",
-          "readSpans": ["1-500", "501-1000", "1001-1500", "1501-2000", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4500", "4501-5000", "5001-5500", "5501-6000", "6001-6500", "6501-7000", "7001-7500", "7501-8000", "8001-8500", "8501-9000", "9001-9500", "9501-9766"],
+          "readSpans": [
+            "1-500",
+            "501-1000",
+            "1001-1500",
+            "1501-2000",
+            "2001-2500",
+            "2501-3000",
+            "3001-3500",
+            "3501-4000",
+            "4001-4500",
+            "4501-5000",
+            "5001-5500",
+            "5501-6000",
+            "6001-6500",
+            "6501-7000",
+            "7001-7500",
+            "7501-8000",
+            "8001-8500",
+            "8501-9000",
+            "9001-9500",
+            "9501-9766"
+          ],
           "reviewer": "/root/phase8_device002_review",
           "editedBy": "/root",
           "reviewScope": "owner"
@@ -340,7 +596,9 @@
           "path": "features/shadow/state-merging.feature",
           "blob": "011379dac901e0df09e2650d290afaca5f833fa6",
           "completeLines": "1-91",
-          "readSpans": ["1-91"],
+          "readSpans": [
+            "1-91"
+          ],
           "reviewer": "/root/phase8_device002_review",
           "editedBy": "/root",
           "reviewScope": "owner"
@@ -349,7 +607,10 @@
           "path": "src/platform.ts",
           "blob": "fef29878959704492a487568dc0d2469736e8869",
           "completeLines": "1-700",
-          "readSpans": ["1-350", "351-700"],
+          "readSpans": [
+            "1-350",
+            "351-700"
+          ],
           "reviewer": "/root/phase8_device002_review",
           "editedBy": "/root",
           "reviewScope": "owner"
@@ -357,6 +618,9 @@
       ]
     }
   ],
-  "continuationStop": { "active": false, "reason": null },
-  "state": "completed"
+  "continuationStop": {
+    "active": true,
+    "reason": "ROOT continuation round 2 made no progress: opening 1, closing 1; CR-08-ROOT-003 remains open."
+  },
+  "state": "stopped"
 }

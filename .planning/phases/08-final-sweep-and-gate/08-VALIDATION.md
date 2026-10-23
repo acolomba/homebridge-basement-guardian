@@ -39,7 +39,27 @@ The plan IDs and task commands will be added when Phase 8 plans exist.
 | Six complete-file review batches and correction rounds | GATE-02 | static review and owner checks | `TEST_CONCURRENCY=1 npm run check` after each combined repair wave | pending |
 | Genuine bug provenance and new RED/GREEN evidence | BUG-01 | active target regression and Git audit | `gsd-tools check tdd-red-evidence <archive> --raw`, named owner test and Git ancestry checks | pending |
 | Final combined tree | GATE-01 | static, unpaired, offline Cucumber and isolated direct coverage | `TEST_CONCURRENCY=1 npm run check` | pending |
-| Prior phase verification freshness | GATE-01, GATE-02 | GSD verifier | `gsd-tools query verification.status <phase-dir>` for Phases 1–7 | pending |
+| Prior phase verification freshness | GATE-01, GATE-02 | GSD verifier | `gsd-tools query verification.status <phase-dir>` for Phases 1–7 | blocked by current ROOT STOP |
+
+## Prior-phase verifier refresh attempt
+
+Plan 08-10 started after the former Phase 8 review seal. Phase 1's normal
+verification-only route stopped at `tdd.review-checkpoint`: it requires separate
+RED and GREEN commits for Plan 01-01, while the approved Phase 1 plan retained
+the active RED in a planning-only commit and committed the test with its fix.
+No old report status was edited to bypass that gate.
+
+| Phase | Refresh result before Plan 08-20 source/test changes | Current live status after Plan 08-20 | Next action |
+| --- | --- | --- | --- |
+| 01 | TDD gate `block: true`, one plan violation; verifier not run | stale | Reconcile the gate against the approved Phase 1 evidence before rerunning. |
+| 02 | Fresh full route and typed verifier: passed, 18/18; full gate 130 scenarios, 1401 steps, 43 pairs | passed | Keep the fresh covered-file fingerprint. |
+| 03 | Fresh full route and typed verifier: `human_needed`, 19/22, with E-03-01 and P-03-01/02 open | stale | Rerun after source seal, then retain any human-needed result. |
+| 04 | Nyquist and security passed; advisory review found ROOT-002 and RUNTIME-007; later gates not run | stale | Resolve current ROOT-003 STOP and rerun the route. |
+| 05–07 | Not yet refreshed | stale | Run each normal route after a sealed source tree exists. |
+
+At `9863d9b`, the Plan 08-20 full `npm run check` passed 130/130 scenarios,
+1401/1401 steps, and all 43 direct coverage pairs on Node `v26.12.1`. This is
+a combined-tree test result, not a verifier pass or a current review seal.
 
 ## Wave 0 Requirements
 

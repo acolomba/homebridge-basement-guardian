@@ -150,3 +150,27 @@ teardown remains explicitly unconfirmed/unmeasured and cleanup evidence
 covers current HTTP/1.1 consumers only. No risk is accepted or transferred
 by this judgment. The 17 authored mitigation closures remain unchanged;
 canonical goal-verification sealing follows.
+
+## Verification-Only Refresh 2026-10-22
+
+The authored register remains 17/17 closed at ASVS L1 with a high-severity
+blocking threshold. `src/cloud/**` is unchanged from the independent Phase 2
+security review. Later edits to two cloud consumers and `test/cloud/shadow.test.ts`
+are covered by the clean `dd878480671f4e8caaf69d0c59b908db9c3fc146` full gate.
+The current tree differs from that gate only in Phase 8 planning JSON and this
+verification-only planning work; no executable input changed. The recorded
+`TEST_CONCURRENCY=1 npm run check` exit was 0 on Node v26.12.1, with 130
+scenarios, 1,401 steps, and 43 direct pairs. The session record has no retained
+log path or wall time, so neither is claimed here.
+
+No new mitigation gap, install, accepted risk, or risk transfer was found.
+The acknowledged taxonomy assumption and unmeasured active-H2 teardown remain
+bounded as above. This hook does not make a new hardware or vendor claim.
+
+The later current-tree regression gate also passed: `TEST_CONCURRENCY=1 npm run
+check`, bounded by `run-with-timeout 2400`, exit 0 on Node v26.12.1 with an
+isolated npm cache and local loopback access. All six static checks, 130/130
+Cucumber scenarios, 1401/1401 steps, and 43 direct pairs passed. Its log is
+`/private/tmp/guardian-phase2-verification-regression-check-unsandboxed.log`.
+This does not expand the authored 17-threat register or the bounded HTTP/2
+assessment.

@@ -86,8 +86,30 @@ Independent reviewer `/root/phase8_features_round1_review` read every final step
 | `features/step_definitions/homekit.steps.ts` | `65d91595cb67c3c935cb4e36c2cc715edd9d9bb1` | 1-279 |
 | `features/step_definitions/shadow.steps.ts` | `0f650de6360e015c40d93fd5921063b5a0f2551b` | 1-240, 241-452 |
 
-The round opened with FEATURES-001 and FEATURES-002, fixed both, rejected none, added none, reopened none, and closed empty: **2 − 2 − 0 + 0 + 0 = 0**. The no-progress, reopening, and fourth-round STOP predicates did not fire. The current forward-open set is empty and the separate continuation is complete. The original DEVICE round-one STOP and seven-ID snapshot remain active and unchanged in their historical record.
+The round opened with FEATURES-001 and FEATURES-002, fixed both, rejected none, added none, reopened none, and closed empty: **2 − 2 − 0 + 0 + 0 = 0**. The no-progress, reopening, and fourth-round STOP predicates did not fire. The forward-open set was empty at that revision. The original DEVICE round-one STOP and seven-ID snapshot remain active and unchanged in their historical record.
+
+## Verification-refresh correction and new STOP
+
+Plan 08-10 refreshed Phase 2 to `passed` and Phase 3 to `human_needed`. Its Phase 4 advisory review found two new current findings. **CR-08-ROOT-002** exposed a JSON-escaped registered secret through an `Error` parameter in `src/logging.ts`; **CR-08-RUNTIME-007** identified a 100 ms escape in an arrival-anchor ordering test. Phase 4 verification remained stale while these were repaired under Plan 08-20.
+
+For ROOT-002, the active named test failed on unchanged production `a18d314` with exactly one intended delegate-call mismatch. [The complete RED record](08-ROOT-002-RED-EVIDENCE.json) passed `tdd-red-evidence --raw` and was committed alone at `d27a0be`. Commit `bf2e99c` moved raw and JSON-escaped registered-secret matching into shared `redactText`, so the `Error`, string, message, and object routes use the same candidates. The named test and isolated `src/logging.ts` direct coverage passed.
+
+For RUNTIME-007, commit `9863d9b` replaced the real-time fallback with an event-loop barrier and an assertion that the second temporary write has not started while the first rename is blocked. [The negative control](08-RUNTIME-007-NEGATIVE-CONTROL.json) reset the writer's queue locally: the strengthened case exited 1 because two writes had started, although the final file bytes still matched. The production source was restored to its exact HEAD blob; the named test and isolated `src/runtime/arrivalAnchors.ts` direct coverage passed. This is an assertion-strength repair, not a new production bug.
+
+The combined `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan20-npm-cache TEST_CONCURRENCY=1 npm run check` at clean source revision `9863d9b99a99fd7ea87b7236da2e5b4ee4aa9c52` on Node `v26.12.1` exited 0: 130/130 offline Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. The full log is `/private/tmp/guardian-phase8-plan20-check.log`.
+
+Independent reviewer `/root/phase8_plan20_owner_review` read all three complete current blobs after the combined gate. Executor `/root` edited them; the reviewer did not.
+
+| Path | Full blob | Complete lines and contiguous reads | Owner result |
+| --- | --- | --- | --- |
+| `src/logging.ts` | `e3f40d3fd281d0f0b1a38bd23f1b6e1ed5142ff4` | 1-227 | ROOT-002 fixed; new ROOT-003 |
+| `test/logging.test.ts` | `a48a46224448d24fea09da1eba434c1a179e36a3` | 1-668; 1-220, 221-440, 441-668 | ROOT-002 regression |
+| `test/runtime/arrivalAnchors.test.ts` | `972cf75df28dae2e31cbeaafee62cce68a3bc581` | 1-453; 1-180, 181-360, 361-453 | RUNTIME-007 fixed |
+
+RUNTIME continuation round 3 opened with RUNTIME-007, fixed it, rejected none, found none, reopened none, and closed empty: **1 − 1 − 0 + 0 + 0 = 0**. ROOT continuation round 2 opened with ROOT-002, fixed it, rejected none, found **CR-08-ROOT-003**, reopened none, and closed with ROOT-003: **1 − 1 − 0 + 1 + 0 = 1**. The reviewer reproduced ROOT-003 with a synthetic `Error` subclass whose constructor name equals a registered secret. `src/logging.ts:136-137` prepends that class name after redacting the message, so the delegate receives the secret. This is a distinct leak path, not a reopening of ROOT-002.
+
+**STOP:** ROOT round 2 made no progress because its opening and closing counts are both one. The separate continuation now has one forward-open ID, `CR-08-ROOT-003`, and an active no-progress STOP. No next correction round is authorized by this record. The original DEVICE round-one STOP remains untouched. The old Plan 08-15 manifest seal no longer covers the three changed blobs; Plan 08-10 and final signoff cannot advance on this tree.
 
 ## Threat Flags
 
-RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. DEVICE-002 previously left a trusted observation timestamp stale. Both repairs have active RED and independent current-file review. The cache absence assertion now rejects non-missing errors. There is no current forward-open finding; the original STOP remains visible and active in its historical record.
+ROOT-003 can expose a registered credential through an `Error` class name. The current full gate passes but has no case for that path. Its open ID and the new no-progress STOP block the final review seal. The original STOP remains visible in its separate historical record.

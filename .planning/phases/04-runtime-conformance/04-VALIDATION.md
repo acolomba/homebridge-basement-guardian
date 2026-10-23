@@ -203,3 +203,13 @@ The parent publishes this map from the independent read-only Nyquist audit. The 
 The preceding audit describes its original pending state. The maintainer has now answered "pass" separately for E-04-01, P-04-01 and P-04-02 in 04-UAT.md. All 25 UAT rows pass: 22 automated entries and three human judgments; no issues, skipped, blocked or pending rows remain. The independent goal report passed its 24 automated checks, and its canonical status became passed after the owning UAT predicate passed. The security record has zero open declared threats. The requirement owner reported RUN-01 ready and marked it Complete.
 
 Nyquist compliance is now true: all 48 tasks have feedback, and the three actual human obligations are satisfied. The edge remains unclassified/unresolved as an explicitly accepted coverage boundary; descriptorless prohibitions gained human judgments, not invented automated enforcement. The two historical audit exits remain null, the exact post-audit title qualification remains, and other WINDOWS46–58 remain OPEN/unwaived. No hardware, real-home, cross-version or release completion follows.
+
+## Validation Audit 2026-10-23
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Pending human judgments | 0 |
+| Automated tasks covered | 48 |

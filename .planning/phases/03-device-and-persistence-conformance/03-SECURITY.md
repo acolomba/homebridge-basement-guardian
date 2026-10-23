@@ -9,7 +9,7 @@ asvs_level: 1
 block_on: high
 register_authored_at_plan_time: true
 created: "2026-10-14"
-audited_revision: 96eb04b833664694b3c32e466d6985bea3c9a02b
+audited_revision: a18d3141fd7aceab702d04c2bc482e8e7ed7512b
 ---
 
 # Phase 3 — Security
@@ -19,6 +19,31 @@ above. All 18 authored threats have observed mitigations at ASVS L1 presence
 verification depth. Severity totals: 15 high, three medium, zero critical/low.
 All dispositions are mitigate. No risk was accepted or transferred.
 This verdict does not advance DEV-01 or resolve the maintainer judgments.
+
+## Current verification-only audit — 2026-10-22
+
+The active `verify:post` security hook rechecked all 18 authored mitigations
+against revision `a18d3141fd7aceab702d04c2bc482e8e7ed7512b` on Node
+v26.12.1. The result is **SECURED**: 18 closed, zero open, at the plan's ASVS L1
+presence depth and high-severity block threshold. This refresh did not edit
+implementation or run hardware/vendor checks.
+
+The auditor compared 25 Phase 3 and affected-consumer blobs with the sealed
+Phase 8 manifest; none differed. Current state freezing, replay refusal and
+fixed-text listener logging are in `src/device/state.ts:144–172,318–323,357–381,430`
+with current owner assertions in `test/device/state.test.ts:245–270,547–737,1232–1243`.
+Registry identity, context persistence, narrow health publication, official
+commands and private-field exclusions remain present at their current consumers.
+`package.json`, `package-lock.json` and `sonar-project.properties` match the
+prior security audit, and the secret hooks remain configured. All eight Phase 3
+summary Threat Flags sections still report no unregistered surface.
+
+The threat table below retains the **2026-10-14** line references and original
+evidence as history; later Phase 8 edits moved several lines. The current
+Nyquist record reports 181 compiled owner tests. The earlier 170 authored
+runtime-case count is a separate historical measure. The opaque `deviceId`
+policy assumption, hardware gates and Phase 3 human judgments remain open
+limits on goal verification; they are not open authored threat mitigations.
 
 ## Trust Boundaries
 
@@ -106,6 +131,7 @@ or phase advancement. Implementation/tests/Git state were untouched by the audit
 | Audit Date | Threats Total | Closed | Open blocking | Open non-blocking | Run By |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-14 | 18 | 18 | 0 | 0 | /root/phase3_security, gsd-security-auditor |
+| 2026-10-22 | 18 | 18 | 0 | 0 | /root/phase3_verification_refresh/phase3_security_refresh, gsd-security-auditor |
 
 ## Sign-Off
 

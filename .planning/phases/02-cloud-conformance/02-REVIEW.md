@@ -1,11 +1,10 @@
 ---
 phase: 02-cloud-conformance
-reviewed: 2026-10-14T13:41:17Z
+reviewed: 2026-10-23T02:11:02Z
 depth: standard
-files_reviewed: 22
+files_reviewed: 21
 files_reviewed_list:
   - features/real-pump/support/realWorld.ts
-  - features/support/steps/authentication.ts
   - src/cloud/api.ts
   - src/cloud/auth.ts
   - src/cloud/errors.ts
@@ -296,3 +295,65 @@ approval, taxonomy-completeness claim or overall CLOUD-01 completion.
 _Reviewed: 2026-10-14T13:41:17Z_
 _Reviewer: gsd-code-reviewer (/root/phase2_final_review)_
 _Depth: standard_
+
+## Advisory Review Refresh — 2026-10-23T02:11:02Z
+
+| Revision | Depth | Current files | New | Reopened | Status |
+| --- | --- | ---: | ---: | ---: | --- |
+| `a18d3141fd7aceab702d04c2bc482e8e7ed7512b` | standard | 21 | 0 | 0 | clean within the Phase 2 file inventory |
+
+Prior full-review revision: `a973483f4a9a47e8dc861be3138cbbad3a633e67`.
+
+The prior 22-file review and CR-02-API-017 correction history above remain
+historical records. The current inventory has 21 files: the former
+`features/support/steps/authentication.ts` was deleted during the later Cucumber
+reorganization. Its live account step definitions are in
+`features/step_definitions/account.steps.ts`; the current `cucumber.json` imports
+that step family. The deleted file was inspected at the prior revision for
+relocation and is not counted as a current file or represented as byte-identical.
+
+The complete current contents of `features/real-pump/support/realWorld.ts`,
+`test/cloud/shadow.test.ts`, and `test/platform.test.ts` were reread. Relevant
+callers and contracts were checked: real-pump lifecycle steps, the account
+runtime's inventory and removal callbacks, shadow client lifecycle and
+`test/runtime/accountShadowContract.ts`, the account step replacement, and
+platform discovery and monitoring entry points. The real-pump changes make
+cache read errors other than ENOENT visible, keep rejection markers free of
+secret material, release resources after stop failures, and clear discovery
+observations on restart. The shadow owner adds three shared lifecycle cases
+and a request-completion readiness case. The platform owner adds stricter
+Homebridge interactions and explicit observable state assertions. No changed
+production cloud file or new Phase 2 behavior defect was found.
+
+For each of the other 18 paths in the original inventory, `git rev-parse
+a973483f4a9a47e8dc861be3138cbbad3a633e67:<path>` equaled `git rev-parse
+HEAD:<path>` at the current revision. These are the eight `src/cloud/` modules
+and ten remaining cloud test/helper files in the frontmatter inventory. Their
+prior complete-file review remains applicable; this refresh does not claim to
+repeat it or to review later-phase source outside the Phase 2 inventory.
+
+The required Fallow orientation ran against the prior review revision. Its
+whole-repository `audit-brief` exited 0 with a `warn` verdict and 608 changed
+files because later phases changed many files outside this assessment. One
+reported clone is the previously recorded `realWorld.ts` / `world.ts`
+remember/recall duplication, present before this refresh. The other is in
+`features/step_definitions/hap.steps.ts` outside the Phase 2 inventory. The
+orientation is structural context, not correctness proof or a new Phase 2
+finding. `git diff --check` over the four historical changed paths found no
+whitespace error.
+
+The coordinator retained a same-session full-gate result at clean revision
+`dd878480671f4e8caaf69d0c59b908db9c3fc146`:
+`TEST_CONCURRENCY=1 npm run check`, exit 0, Node v26.12.1, 130/130 Cucumber
+scenarios, 1401/1401 steps, and 43 direct coverage pairs. This reviewer did
+not rerun that gate. A local Git comparison from the gate revision to the
+current revision found no changed path outside `.planning/`; no untracked
+executable input was present. Planning JSON and Markdown changed after the
+gate. No wall time or retained log path is claimed. The real-pump profile was
+not run against an account or hardware by this review.
+
+The previous 56 accepted Phase 2 causes remain historically fixed. No stable
+finding ID is added or reopened. This advisory result does not decide the
+pending human judgments, real-home evidence, or milestone signoff.
+
+_Refresh reviewer: gsd-code-reviewer (/root/phase2_verification_refresh/phase2_advisory_review)_

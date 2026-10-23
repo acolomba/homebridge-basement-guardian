@@ -387,3 +387,50 @@ assumption; safety semantics and truthful completion are confirmed for the
 reviewed cloud scope. Active-H2 teardown remains unconfirmed/unmeasured,
 without an all-protocol cleanup guarantee or risk waiver. This changes no
 automated input or measured result. Canonical goal verification follows.
+
+## Verification-Only Nyquist Refresh — 2026-10-22
+
+The 13 planned task rows and the API routing correction remain covered by
+behavioral owner tests or the recorded evidence checks: 14 covered, zero
+partial or missing. This refresh creates no test or new Phase 2 requirement.
+The four active routing refusal regressions remain in the API owner. The
+earlier 104-scenario and 33-case API counts are historical snapshots; the
+correction and later combined gate supersede them for current inputs.
+
+The current worktree is at `a18d3141fd7aceab702d04c2bc482e8e7ed7512b`.
+Against clean reviewed source baseline
+`dd878480671f4e8caaf69d0c59b908db9c3fc146`, `git diff --name-status`
+outside `.planning/**/*.md` shows only two Phase 8 planning JSON records.
+An exact `git diff --exit-code` excluding `.planning/**/*.md` and
+`.planning/**/*.json` exited 0 with zero output. The unstaged diff with the
+same exclusions was empty, `git ls-files --others --exclude-standard` was
+empty, and Node is `v26.12.1`. No source, test, feature, support, dependency,
+configuration, runtime, or tool input changed. The planning JSON records do
+not feed the build gate.
+
+The same-session `TEST_CONCURRENCY=1 npm run check` at clean `dd87848` exited
+0 on Node `v26.12.1`: 130/130 offline Cucumber scenarios, 1401/1401 steps,
+and all 43 isolated direct coverage pairs passed. This is reuse of the
+recorded full gate for unchanged executable inputs, not a new run. No retained
+log path or wall time was supplied for this refresh. No test was skipped or
+marked green based only on its presence. The Phase 2 validation status remains
+`validated` with `nyquist_compliant: true`; the acknowledged taxonomy
+assumption and unmeasured active-HTTP/2 teardown limit remain as stated in the
+maintainer judgment.
+
+### Current regression gate
+
+After the Nyquist hook, the configured one-shot regression gate ran on the
+current tree with `TEST_CONCURRENCY=1` and a 2,400-second bound. The first
+attempt exited 1 because `npm pack --dry-run` could not write to the
+root-owned default npm cache. The next sandboxed attempt reached Cucumber,
+where the fake cloud could not bind `127.0.0.1` (`EPERM`); that attempt was
+stopped with exit 130. Neither attempt is counted as a passing gate.
+
+The final command set `NPM_CONFIG_CACHE=/private/tmp/guardian-phase2-verification-npm-cache`
+and ran `TEST_CONCURRENCY=1 node .codex/gsd-core/bin/gsd-tools.cjs
+run-with-timeout 2400 -- bash -c 'npm run check'` with local loopback access.
+It exited 0 on Node v26.12.1. All six static checks, 130/130 Cucumber
+scenarios, 1401/1401 steps, and 43 direct coverage pairs passed. The retained
+log is `/private/tmp/guardian-phase2-verification-regression-check-unsandboxed.log`.
+This fresh gate supersedes same-session reuse for current executable inputs.
