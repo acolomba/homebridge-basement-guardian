@@ -68,7 +68,7 @@ Feature: Shadow state merging
       | test_running | false |
     Then the canonical snapshot carries no shadow version
 
-  Scenario: An identical heartbeat reports no change
+  Scenario: An identical heartbeat refreshes the canonical observation
     When the plugin starts
     When the device publishes these heartbeat fields:
       | battery_health        | 96    |
@@ -88,4 +88,4 @@ Feature: Shadow state merging
       | mcu_target_version    | 4     |
       | wifi_signal_dbm       | -55   |
     Then the canonical snapshot is at shadow version 2
-    Then the plugin reports 1 canonical change
+    Then the plugin reports 2 canonical changes
