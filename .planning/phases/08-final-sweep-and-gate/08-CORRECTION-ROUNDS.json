@@ -4,7 +4,7 @@
   "phase": "08-final-sweep-and-gate",
   "sourceManifest": "08-MANIFEST.json",
   "sourceFindings": "08-FINDINGS.md",
-  "state": "corrections-in-progress",
+  "state": "stopped-no-progress",
   "roundLimit": 4,
   "batches": {
     "CLOUD": {
@@ -17,7 +17,20 @@
       "pathCount": 20,
       "report": "08-DEVICE-REVIEW.md",
       "openingIds": ["CR-08-DEVICE-001", "CR-08-DEVICE-002"],
-      "rounds": []
+      "rounds": [
+        {
+          "round": 1,
+          "reviewer": "/root/phase8_device001_review",
+          "revision": "bc3406df6535a8d561078735e977fa27a68a52b9",
+          "openingIds": ["CR-08-DEVICE-001", "CR-08-DEVICE-002"],
+          "fixedIds": ["CR-08-DEVICE-001"],
+          "rejectedIds": [],
+          "newIds": ["CR-08-RUNTIME-004"],
+          "reopenedIds": [],
+          "closingIds": ["CR-08-DEVICE-002", "CR-08-RUNTIME-004"],
+          "stopReason": "No progress: two opening IDs, one fixed ID, one new ID, and two closing IDs. The global Phase 08 review stops before another repair."
+        }
+      ]
     },
     "RUNTIME": {
       "pathCount": 23,
@@ -113,21 +126,29 @@
       "owner": "FEATURES",
       "editPaths": ["features/step_definitions/account.steps.ts", "features/step_definitions/configuration.steps.ts", "features/step_definitions/controls.steps.ts", "features/step_definitions/homekit.steps.ts", "features/step_definitions/shadow.steps.ts"],
       "boundedConsumerPaths": []
+    },
+    {
+      "order": 9,
+      "id": "CR-08-RUNTIME-004",
+      "owner": "RUNTIME",
+      "editPaths": ["src/runtime/accountRuntime.ts", "test/runtime/accountRuntime.test.ts"],
+      "boundedConsumerPaths": ["src/device/state.ts", "src/runtime/monitoringHealth.ts", "src/accessories/basementGuardian.ts"]
     }
   ],
   "forwardOpenIds": [
-    "CR-08-DEVICE-001",
     "CR-08-DEVICE-002",
     "CR-08-RUNTIME-001",
     "CR-08-RUNTIME-002",
     "CR-08-RUNTIME-003",
+    "CR-08-RUNTIME-004",
     "CR-08-FEATURES-001",
     "CR-08-FEATURES-002"
   ],
   "stop": {
-    "active": false,
-    "reason": null,
-    "round": null,
+    "active": true,
+    "reason": "DEVICE correction round 1 made no progress: opening 2, fixed 1, new 1, closing 2. No further Phase 08 review or repair under Plan 08-14 is permitted without a separate maintainer-approved continuation.",
+    "round": 1,
+    "batch": "DEVICE",
     "historicalReferences": [
       "../05-accessories-conformance/05-FINDINGS.md",
       "../06-root-module-conformance/06-FINDINGS.md",

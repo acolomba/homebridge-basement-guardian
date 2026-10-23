@@ -112,8 +112,9 @@ RECORDS-004 is a fake REST service defect. It is not a confirmed plugin producti
 | Milestone ID | Original finding | Owner and named regression | Source → evidence → fix | Native RED assertion / current GREEN |
 | --- | --- | --- | --- | --- |
 | B-08-052 | CR-08-ROOT-001 | `src/platform.ts`; `test/platform.test.ts` — keeps a restored vendor email out of logs | `b924697` → `d44f3a0` → `7bcf55b`; [08-ROOT-001-RED-EVIDENCE.json](08-ROOT-001-RED-EVIDENCE.json) | RED exit 1 with one executed target: the complete `log.info` call contained `account@example.test` as its second argument. `RED_EVIDENCE_OK` on unchanged production. GREEN named 1/1; platform owner 77/77; direct coverage 100% for lines, functions, branches; combined gate exit 0 at `7bcf55b`. |
+| B-08-053 | CR-08-DEVICE-001 | `src/device/state.ts`; `test/device/state.test.ts` — leaves empty reported telemetry unobserved so a later poll replaces it | `d7fd10b` → `53ec758` → `bc3406d`; [08-DEVICE-001-RED-EVIDENCE.json](08-DEVICE-001-RED-EVIDENCE.json) | RED exit 1 with one executed target: empty `data: {}` stamped a receipt and version 42; later REST kept the old water level. `RED_EVIDENCE_OK` on unchanged production. GREEN named 1/1; state owner 53/53; direct coverage 100% for lines, functions, branches; combined gate exit 0 at `bc3406d`. |
 
-Further Plan 08-14 behavior bugs remain open in the [correction queue](08-CORRECTION-ROUNDS.md); do not infer their closure from this row.
+Further Phase 08 behavior bugs remain open in the [correction queue](08-CORRECTION-ROUNDS.md). New RUNTIME-004 has a static trace but no active RED or repair; the global no-progress STOP blocks further Plan 08-14 execution. Do not infer closure from the two GREEN rows.
 
 ## Negative controls and non-bug findings
 
