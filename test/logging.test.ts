@@ -223,6 +223,22 @@ test('redacts a serialized registered secret inside an Error parameter', () => {
   verify(delegate);
 });
 
+test('redacts a registered secret in an Error class name', () => {
+  // arrange
+  class CredentialValue extends Error {}
+  const delegate = createDelegate();
+  when(() => {
+    delegate.error('the grant was rejected', `${REDACTED}: failure`);
+  }).thenReturn(undefined);
+  const log = createRedactingLogger({ delegate, secrets: ['CredentialValue'] });
+
+  // act
+  log.error('the grant was rejected', new CredentialValue('failure'));
+
+  // assert
+  verify(delegate);
+});
+
 test('describes a parameter that cannot be serialized', () => {
   // arrange
   const delegate = createDelegate();

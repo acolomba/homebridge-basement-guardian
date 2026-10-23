@@ -134,7 +134,7 @@ function redactParameter(parameter: unknown, secrets: readonly string[]): unknow
   }
 
   if (parameter instanceof Error) {
-    return `${parameter.constructor.name}: ${redactText(parameter.message, secrets)}`;
+    return redactText(`${parameter.constructor.name}: ${parameter.message}`, secrets);
   }
 
   if (typeof parameter === 'object' && parameter !== null) {
