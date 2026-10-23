@@ -9,8 +9,8 @@ updated: 2026-10-23T00:13:41Z
 
 hypothesis: Confirmed. AccountRuntime records every routed patch as a telemetry heartbeat; MonitoringHealth renews silence and the anchor, while the store retains an earlier shadow watermark.
 test: The named GREEN regression, full runtime owner module, adjacent owner modules, direct isolated coverage, static checks, and revert-and-reconfirm passed. No Stryker installation exists.
-expecting: Independent complete-file review and coordinator commit precede any real-environment confirmation. Phase 8 stays at its STOP and current round.
-next_action: Coordinator reviews the complete accountRuntime source and owner test, commits the approved GREEN change, then requests human verification before resolution. Do not advance the Phase 8 STOP or round count.
+expecting: The independent complete-file review, GREEN commit, and combined gate are complete. Real-environment confirmation remains pending. Phase 8 stays at its historical STOP and round counts.
+next_action: Keep this debug session awaiting human confirmation of telemetry silence on a real Homebridge installation. Continue the separately approved Phase 8 replan for the distinct rejected-version finding RUNTIME-005; do not treat it as a reopening of RUNTIME-004 or erase the historical STOP.
 reasoning_checkpoint:
   hypothesis: AccountRuntime records a no-reading routed patch as a telemetry heartbeat, resetting MonitoringHealth silence and anchor; the existing watermark then blocks REST takeover.
   confirming_evidence:
@@ -96,6 +96,8 @@ timeline: Discovered during the independent complete-file review of Phase 8 DEVI
 
 ## Eliminated
 
+- RUNTIME-005 is separate: its data-bearing patch has an old or duplicate version that the store rejects after the runtime stamps liveness. RUNTIME-004's no-telemetry guard does not cover it.
+
 ## Resolution
 
 root_cause: AccountRuntime treats routed shadow messages without a telemetry reading as liveness evidence. MonitoringHealth then renews its silence clock and persisted anchor while the store retains an earlier shadow watermark, so successful REST polls cannot replace stale shadow telemetry.
@@ -109,3 +111,10 @@ verification:
   guardrail_verdict: accepted
 oracle_type: specified
 files_changed: [src/runtime/accountRuntime.ts, test/runtime/accountRuntime.test.ts, .planning/debug/shadow-no-telemetry-liveness.md]
+
+## Coordinator continuation
+
+- `c8aac01` committed the GREEN source, active regression, and debug session with normal hooks.
+- Independent reviewer `/root/phase8_shadow_debug_review` read complete current `src/runtime/accountRuntime.ts` lines 1-1346 at blob `aed73e14c401fa2bea25e27e637a1ff06cd25a72` and `test/runtime/accountRuntime.test.ts` lines 1-9445 at blob `558caccde2e5210dca3197bcdaae5e8937669ac4`. The reviewer confirmed the exact no-telemetry fix and found distinct RUNTIME-005.
+- The initial full `TEST_CONCURRENCY=1 npm run check` failed only on the obsolete `Status Active=true` assertion for unreadable telemetry in `features/monitoring/degradation.feature`. `6c578b8` corrected that oracle after the named scenario passed. An independent reviewer read the full current feature; the full combined check then passed on Node `v26.12.1`: 130 scenarios, 1401 steps, and 43 direct coverage pairs. The committed tree was clean.
+- Human confirmation on a real installation has not been supplied for this specific shadow-liveness repair. The debug session remains `awaiting_human_verify`; the Phase 8 continuation can address separate automated findings while that check is pending.

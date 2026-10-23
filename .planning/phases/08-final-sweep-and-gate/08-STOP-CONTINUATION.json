@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "milestone": "code-review-sweep",
+  "phase": "08-final-sweep-and-gate",
+  "historicalStopRecord": "08-CORRECTION-ROUNDS.json",
+  "historicalStopPreserved": true,
+  "correctionRoundsAdded": 0,
+  "authorization": "Maintainer authorized a bounded GSD debug and replan for the seven open findings after DEVICE round 1 STOP.",
+  "debugFix": {
+    "id": "CR-08-RUNTIME-004",
+    "redEvidence": "08-RUNTIME-004-RED-EVIDENCE.json",
+    "redCommit": "4b3d23a",
+    "greenCommit": "c8aac01",
+    "independentReviewer": "/root/phase8_shadow_debug_review",
+    "completeSourceBlob": "aed73e14c401fa2bea25e27e637a1ff06cd25a72",
+    "completeTestBlob": "558caccde2e5210dca3197bcdaae5e8937669ac4"
+  },
+  "newOpenIds": ["CR-08-RUNTIME-005"],
+  "oracleCorrection": {
+    "id": "CR-08-FEATURES-003",
+    "commit": "6c578b8",
+    "independentReviewer": "/root/phase8_feature_oracle_review",
+    "completeFeatureBlob": "9bde291114d45a579f50251189f6e54035fe732c"
+  },
+  "forwardOpenIds": [
+    "CR-08-DEVICE-002",
+    "CR-08-RUNTIME-001",
+    "CR-08-RUNTIME-002",
+    "CR-08-RUNTIME-003",
+    "CR-08-RUNTIME-005",
+    "CR-08-FEATURES-001",
+    "CR-08-FEATURES-002"
+  ],
+  "state": "replan-required"
+}
