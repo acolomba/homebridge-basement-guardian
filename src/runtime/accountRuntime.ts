@@ -981,7 +981,9 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
         cache.replace(toShadowCredentials(response));
       }
 
-      options.failures.recordSuccess(ROTATION);
+      if (!hasFinished()) {
+        options.failures.recordSuccess(ROTATION);
+      }
 
       return rotationDelayMs(response.credentials.Expiration, options.clock.now(), options);
     } catch (error: unknown) {

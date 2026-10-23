@@ -6250,6 +6250,164 @@ describe('createAccountRuntime', () => {
     verify(commands);
   });
 
+  test('does not report credential recovery when a refresh succeeds after terminal refusal', async (t) => {
+    // arrange
+    const rotationEvents: string[] = [];
+    const failures: FailureLog = {
+      recordFailure: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('failure');
+        }
+      },
+      recordSuccess: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('success');
+        }
+      },
+      forget: () => undefined,
+    };
+    let grantCredentials: (response: AwsCredentialsResponse) => void = () => undefined;
+    const granted = new Promise<AwsCredentialsResponse>((resolve) => {
+      grantCredentials = resolve;
+    });
+    const { runtime, advance, calls, commandRequests } = harness(
+      t,
+      {
+        devices: [() => Promise.resolve([geminiDevice()]), refusingTheAccount],
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)),
+          () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+          () => granted,
+        ],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+        pollIntervalMs: SHORT_CREDENTIAL_LIFETIME_MS,
+      },
+      failures,
+    );
+    await runtime.start();
+    await settle();
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS - SHORT_ROTATION_LEAD_MS);
+    await advance(SHORT_ROTATION_FLOOR_MS);
+    assert.deepStrictEqual(
+      calls.filter((call) => call === 'credentials'),
+      ['credentials', 'credentials', 'credentials'],
+    );
+    await advance(SHORT_ROTATION_LEAD_MS - SHORT_ROTATION_FLOOR_MS);
+
+    // act
+    grantCredentials(rotatedCredentialsAt(START_TIME + ONE_HOUR_MS));
+    await settle();
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual(rotationEvents, ['success', 'failure']);
+    assert.deepStrictEqual(
+      calls.filter((call) => call === 'shadow'),
+      ['shadow'],
+    );
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
+  test('does not report credential recovery when a refresh succeeds after shutdown', async (t) => {
+    // arrange
+    const rotationEvents: string[] = [];
+    const failures: FailureLog = {
+      recordFailure: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('failure');
+        }
+      },
+      recordSuccess: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('success');
+        }
+      },
+      forget: () => undefined,
+    };
+    let grantCredentials: (response: AwsCredentialsResponse) => void = () => undefined;
+    const granted = new Promise<AwsCredentialsResponse>((resolve) => {
+      grantCredentials = resolve;
+    });
+    const { runtime, advance, calls, commandRequests } = harness(
+      t,
+      {
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)),
+          () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+          () => granted,
+        ],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+      },
+      failures,
+    );
+    await runtime.start();
+    await settle();
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS - SHORT_ROTATION_LEAD_MS);
+    await advance(SHORT_ROTATION_FLOOR_MS);
+    assert.deepStrictEqual(
+      calls.filter((call) => call === 'credentials'),
+      ['credentials', 'credentials', 'credentials'],
+    );
+    await runtime.stop();
+
+    // act
+    grantCredentials(rotatedCredentialsAt(START_TIME + ONE_HOUR_MS));
+    await settle();
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'unavailable');
+    assert.deepStrictEqual(rotationEvents, ['success', 'failure']);
+    assert.deepStrictEqual(
+      calls.filter((call) => call === 'shadow'),
+      ['shadow'],
+    );
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
+  test('reports credential recovery once when a failed refresh succeeds while running', async (t) => {
+    // arrange
+    const rotationEvents: string[] = [];
+    const failures: FailureLog = {
+      recordFailure: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('failure');
+        }
+      },
+      recordSuccess: (kind) => {
+        if (kind === 'Credential rotation') {
+          rotationEvents.push('success');
+        }
+      },
+      forget: () => undefined,
+    };
+    const { runtime, advance, commandRequests } = harness(
+      t,
+      {
+        credentials: [
+          () => Promise.resolve(credentialsAt(START_TIME + SHORT_CREDENTIAL_LIFETIME_MS)),
+          () => Promise.reject(new CloudRequestError('GET /credentials/aws failed with HTTP 503.', 503, 'GET /credentials/aws')),
+          () => Promise.resolve(rotatedCredentialsAt(START_TIME + ONE_HOUR_MS)),
+        ],
+        rotationLeadMs: SHORT_ROTATION_LEAD_MS,
+        minRotationDelayMs: SHORT_ROTATION_FLOOR_MS,
+      },
+      failures,
+    );
+    await runtime.start();
+    await settle();
+
+    // act
+    await advance(SHORT_CREDENTIAL_LIFETIME_MS - SHORT_ROTATION_LEAD_MS);
+    await advance(SHORT_ROTATION_FLOOR_MS);
+
+    // assert
+    assert.strictEqual(runtime.monitoringPath, 'shadow-and-poll');
+    assert.deepStrictEqual(rotationEvents, ['success', 'failure', 'success']);
+    assert.deepStrictEqual(commandRequests, []);
+  });
+
   // The other half of the same claim, one function later. The connection was already opening when the
   // poll met the refusal, so the halt found no client to close and the check after the start is what
   // is left. A runtime that kept this one would be holding a socket it will never use (D-13, SYNC-05).
