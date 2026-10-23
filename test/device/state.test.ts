@@ -1005,18 +1005,55 @@ describe('subscribe', () => {
     assert.deepStrictEqual(notifications, [{ next: expectedSnapshot, previous: expectedPrevious, changedKeys: ['ac_power', 'water_level'] }]);
   });
 
-  test('notifies no listener for a heartbeat that repeats the stored values', () => {
+  test('notifies a listener of an accepted heartbeat that repeats the stored values', () => {
     // arrange
-    const store = createDeviceStateStore(fixedStoreOptions());
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
     store.applyDiscovery(geminiDevice());
     const notifications: Notification[] = [];
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
+    currentTime = SECOND_RECEIPT;
     store.applyReportedPatch(DEVICE_ID, { data: { water_level: 1, ac_power: true }, state: undefined, version: undefined });
 
     // assert
-    assert.deepStrictEqual(notifications, []);
+    assert.deepStrictEqual(
+      notifications.map(({ next, changedKeys }) => ({ receivedAt: next.receivedAt, changedKeys, data: next.data })),
+      [{ receivedAt: SECOND_RECEIPT, changedKeys: [], data: { water_level: 1, primary_pump_running: false, ac_power: true } }],
+    );
+  });
+
+  test('notifies an accepted unchanged heartbeat and ignores a duplicate before changed power', () => {
+    // arrange
+    let currentTime = FIRST_RECEIPT;
+    const store = createDeviceStateStore(storeOptions({ now: () => currentTime }));
+    store.applyDiscovery(geminiDevice());
+    const notifications: Notification[] = [];
+    store.subscribe(DEVICE_ID, recordInto(notifications));
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true, ac_power: true }, state: undefined, version: 7 });
+
+    // act
+    currentTime = SECOND_RECEIPT;
+    store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true, ac_power: true }, state: undefined, version: 8 });
+    currentTime += 1;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: false }, state: undefined, version: 8 });
+    currentTime += 1;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: 'invalid' }, state: undefined, version: 9 });
+
+    // assert
+    assert.deepStrictEqual(
+      notifications.map(({ next, changedKeys }) => ({ receivedAt: next.receivedAt, changedKeys, acPower: next.data.ac_power })),
+      [
+        { receivedAt: FIRST_RECEIPT, changedKeys: ['primary_pump_running'], acPower: true },
+        { receivedAt: SECOND_RECEIPT, changedKeys: [], acPower: true },
+        { receivedAt: SECOND_RECEIPT + 2, changedKeys: ['ac_power'], acPower: 'invalid' },
+      ],
+    );
+    assert.deepStrictEqual(
+      { receivedAt: store.snapshot(DEVICE_ID)?.receivedAt, shadowVersion: store.snapshot(DEVICE_ID)?.shadowVersion },
+      { receivedAt: SECOND_RECEIPT + 2, shadowVersion: 9 },
+    );
   });
 
   test('notifies no listener for a patch that reports neither section', () => {

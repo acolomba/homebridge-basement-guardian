@@ -75,9 +75,9 @@ export interface ReportedPatch {
  * Receives one canonical state change for one device.
  *
  * `changedKeys` names the telemetry keys whose values differ, in a stable
- * order, so a consumer filters on the list instead of comparing snapshots
- * again. Comparing again is where duplicate activation records come from
- * (D-19).
+ * order. It is empty for an accepted heartbeat that repeats the stored
+ * telemetry, so consumers can update trust time without counting another
+ * activation (D-19).
  */
 export type DeviceSnapshotListener = (next: DeviceSnapshot, previous: DeviceSnapshot | undefined, changedKeys: readonly string[]) => void;
 
@@ -116,8 +116,8 @@ export interface DeviceStateStore {
   /**
    * Registers a listener for one device and returns its unsubscribe function.
    *
-   * A change that leaves every telemetry value where it was notifies nobody,
-   * which is what keeps a repeated heartbeat silent.
+   * An accepted telemetry heartbeat notifies listeners even when its values
+   * are unchanged. Rejected patches and documents without telemetry do not.
    */
   subscribe(deviceId: string, listener: DeviceSnapshotListener): () => void;
   /**
@@ -290,10 +290,9 @@ function isSameValue(previous: unknown, next: unknown): boolean {
 // tier's to decide, downstream of here (D-19, D-20).
 //
 // Teaching a family adapter's notion of relevance to this function would be a
-// safety regression rather than a saving. `notify` returns on an empty changed
-// list, and that notification is the only path a between-poll pump run reaches
-// HomeKit on, so a key the filter judged uninteresting would silently suppress
-// the live update for a running pump (SAFE-03, SAFE-07).
+// safety regression. The changed-key list is the only clue a listener has that
+// a pump value moved, so filtering a pump key would hide its activation from
+// HomeKit (SAFE-03, SAFE-07).
 function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly<Record<string, unknown>>): readonly string[] {
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
 
@@ -303,10 +302,16 @@ function changedKeys(previous: Readonly<Record<string, unknown>>, next: Readonly
 // One listener's failure is contained: the others still run and the reducer
 // still returns. The report names no listener and repeats no state, because a
 // listener's own message can carry both.
-function notify(listeners: ReadonlySet<DeviceSnapshotListener>, log: Logging, next: DeviceSnapshot, previous: DeviceSnapshot | undefined): void {
+function notify(
+  listeners: ReadonlySet<DeviceSnapshotListener>,
+  log: Logging,
+  next: DeviceSnapshot,
+  previous: DeviceSnapshot | undefined,
+  telemetryObserved = false,
+): void {
   const changed = changedKeys(previous === undefined ? {} : previous.data, next.data);
 
-  if (changed.length === 0) {
+  if (changed.length === 0 && !telemetryObserved) {
     return;
   }
 
@@ -373,7 +378,7 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
         }
       }
 
-      notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous);
+      notify(listeners.get(deviceId) ?? NO_LISTENERS, options.log, snapshot, previous, hasTelemetryReading(patch));
 
       return snapshot;
     },

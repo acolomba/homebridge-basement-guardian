@@ -26,6 +26,7 @@ import { createBasementGuardianAccessory } from '../src/accessories/basementGuar
 import { createServiceCatalogue } from '../src/accessories/serviceCatalogue.js';
 import { markTrustReportsUnreadable } from '../src/accessories/staleMarking.js';
 import { isRecord } from '../src/cloud/types.js';
+import { createFamilyRegistry } from '../src/device/registry.js';
 import { createDeviceStateStore } from '../src/device/state.js';
 import { createRedactingLogger } from '../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../src/platform.js';
@@ -3546,6 +3547,78 @@ describe('registerDiscoveredDevices', () => {
       { beforePatch: CONTACT_NOT_DETECTED, afterPatch: CONTACT_DETECTED },
     );
     verify(context.api);
+  });
+
+  test('keeps the accepted heartbeat as the last trusted power time without another pump activation', () => {
+    // arrange
+    const wireDevice = geminiWireDeviceList().devices[0];
+    assert.ok(isRecord(wireDevice?.data));
+    const accessories = new Map<string, BasementGuardianPlatformAccessory>();
+    const basementGuardianAccessories = new Map<string, BasementGuardianAccessory>();
+    const sentCommands: { deviceId: string; requested: boolean }[] = [];
+    const commands: CommandPort = {
+      send: (deviceId, _capability, requested) => {
+        sentCommands.push({ deviceId, requested });
+
+        return Promise.resolve({ accepted: true });
+      },
+    };
+    let receivedAt = 1_000;
+    const store = createDeviceStateStore({ clock: { now: () => receivedAt }, log: createSilentLog() });
+    const api = fakeDiscoveryApi([], []);
+    when(() => api.hap)
+      .thenReturn(HAP_NAMESPACE)
+      .times(2);
+    when(() => api.updatePlatformAccessories)
+      .thenReturn(() => undefined)
+      .times(3);
+    const context = discoveryContext({ api, accessories, basementGuardianAccessories, registry: createFamilyRegistry(), commands });
+    const accessory = new HarnessPlatformAccessory('Sump System', ACCESSORY_UUID);
+    accessory.context.lastVendorName = 'Sump System';
+    accessory.context.device = { deviceId: DEVICE_ID, deviceTypeId: DEVICE_TYPE_ID };
+    accessories.set(ACCESSORY_UUID, accessory as unknown as BasementGuardianPlatformAccessory);
+    store.applyDiscovery({ ...geminiDevice(), data: wireDevice.data });
+    registerDiscoveredDevices(context, [DEVICE_ID], store);
+    const liveAccessory = builtAccessory(basementGuardianAccessories);
+
+    // act
+    receivedAt = 2_000;
+    store.applyReportedPatch(DEVICE_ID, { data: { backup_pump_running: true }, state: undefined, version: 7 });
+    const activationAtT1 = accessories.get(ACCESSORY_UUID)?.context.backupPump?.activationCount;
+    receivedAt = 3_000;
+    store.applyReportedPatch(DEVICE_ID, { data: { backup_pump_running: true, ac_power: true }, state: undefined, version: 8 });
+    const receiptAtT2 = store.snapshot(DEVICE_ID)?.receivedAt;
+    const trustAtT2 = liveAccessory.untrusted;
+    receivedAt = 3_001;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: false }, state: undefined, version: 8 });
+    const receiptAfterDuplicate = store.snapshot(DEVICE_ID)?.receivedAt;
+    receivedAt = 4_000;
+    store.applyReportedPatch(DEVICE_ID, { data: { ac_power: 'invalid' }, state: undefined, version: 9 });
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        activationAtT1,
+        activationAtT3: accessories.get(ACCESSORY_UUID)?.context.backupPump?.activationCount,
+        receiptAtT2,
+        receiptAfterDuplicate,
+        trustAtT2,
+        trustAtT3: liveAccessory.untrusted,
+        mainsPower: contactStateOf(accessory, 'mains-power-lost'),
+        sentCommands,
+      },
+      {
+        activationAtT1: 1,
+        activationAtT3: 1,
+        receiptAtT2: 3_000,
+        receiptAfterDuplicate: 3_000,
+        trustAtT2: [],
+        trustAtT3: [{ scope: 'power', reason: 'invalid', lastTrustedAt: 3_000 }],
+        mainsPower: CONTACT_DETECTED,
+        sentCommands: [],
+      },
+    );
+    verify(api);
   });
 
   test('updates from the poll as poll-sourced and from the store notification as live', (t) => {
