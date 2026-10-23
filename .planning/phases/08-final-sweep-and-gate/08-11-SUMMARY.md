@@ -23,15 +23,15 @@ the current forward-open Phase 8 set is empty. Both no-progress STOP records
 remain historical. The 58 Broken Windows rows reconcile to 17 open, 19
 waived with reasons, and 22 fixed after Window 36's documented correction.
 
-[08-SIGNOFF.md](08-SIGNOFF.md) records **Decision: BLOCKED**. Phase 3 has three
-current maintainer judgments, Phase 6 needs a real Homebridge failed-write
-check that the maintainer cannot run now, and BUG-01 has three historical
-debug-only evidence limits. No source failure is inferred from these limits.
-The Phase 8 verifier judged this state `human_needed`; roadmap completion
-waits for the listed human checks and evidence decisions.
+[08-SIGNOFF.md](08-SIGNOFF.md) records **Decision: BLOCKED**. The maintainer
+accepted the current Phase 3 boundary and the limited BUG-01 debug evidence;
+the three historical provenance limits remain visible. Phase 6 still needs a
+real Homebridge failed-write and retry check that the maintainer cannot run
+now. No source failure is inferred from that unobserved check. The refreshed
+Phase 8 verifier reports `human_needed`; roadmap completion remains pending.
 
 ## Threat Flags
 
-The unresolved human checks and debug-only evidence limits block a complete
-milestone claim. The current logging disclosure is repaired and independently
-reviewed; historical STOPs remain visible.
+The unobserved real Homebridge check blocks a complete milestone claim. The
+current logging disclosure is repaired and independently reviewed; historical
+STOPs and accepted debug-evidence limits remain visible.

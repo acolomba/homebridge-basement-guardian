@@ -1,10 +1,10 @@
 ---
 phase: 03-device-and-persistence-conformance
-verified: "2026-10-23T07:40:38Z"
-status: human_needed
-score: "19/22 must-haves verified"
+verified: "2026-10-23T08:39:08Z"
+status: passed
+score: "22/22 must-haves verified; 3 by current bounded maintainer acceptance"
 covered_files: [".agents/skills/local-verification/SKILL.md",".agents/skills/typescript-style/SKILL.md",".agents/skills/typescript-unit-tests/SKILL.md",".planning/phases/03-device-and-persistence-conformance/03-01-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-01-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-02-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-02-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-03-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-03-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-04-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-04-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-05-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-05-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-06-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-06-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-07-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-07-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-08-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-08-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-CONTEXT.md",".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-FINDINGS.md",".planning/phases/03-device-and-persistence-conformance/03-PATTERNS.md",".planning/phases/03-device-and-persistence-conformance/03-RESEARCH.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SEAL-AUDIT.json",".planning/phases/03-device-and-persistence-conformance/03-SECURITY.md",".planning/phases/03-device-and-persistence-conformance/03-SOURCE-AUDIT.md",".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SUPPORT-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-UAT.md",".planning/phases/03-device-and-persistence-conformance/03-VALIDATION.md",".planning/phases/08-final-sweep-and-gate/08-BUG-LEDGER.md",".planning/phases/08-final-sweep-and-gate/08-DEVICE-001-RED-EVIDENCE.json",".planning/phases/08-final-sweep-and-gate/08-DEVICE-002-RED-EVIDENCE-V2.json",".planning/phases/08-final-sweep-and-gate/08-FINDINGS.md",".planning/phases/08-final-sweep-and-gate/08-MANIFEST.json",".planning/phases/08-final-sweep-and-gate/08-RUNTIME-006-RED-EVIDENCE-V2.json","package.json","scripts/check-corresponding-tests.mjs","scripts/test-coverage-direct.mjs","src/accessories/basementGuardian.ts","src/accessories/pumpRecords.ts","src/accessories/serviceCatalogue.ts","src/cloud/shadow.ts","src/device/events.ts","src/device/family.ts","src/device/gemini.ts","src/device/halo.ts","src/device/health.ts","src/device/registry.ts","src/device/state.ts","src/device/waterLevel.ts","src/persistence/accessoryContext.ts","src/platform.ts","src/runtime/accountRuntime.ts","test/accessories/pumpRecords.test.ts","test/device/events.test.ts","test/device/family.test.ts","test/device/gemini.test.ts","test/device/geminiSeeds.ts","test/device/halo.test.ts","test/device/health.test.ts","test/device/registry.test.ts","test/device/state.test.ts","test/device/stateSeeds.ts","test/device/waterLevel.test.ts","test/persistence/accessoryContext.test.ts","test/platform.test.ts"]
-covered_digest: "v3:sha256:d9ca6318a0757d4b0b64bed7fc765996bc883c52fc4f82c6b73c085945c9ed08"
+covered_digest: "v3:sha256:8c7900d36e269789416e5644241b63b9cf936d89ed1163fd9ec68ffdcad5e0aa"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -13,25 +13,35 @@ re_verification:
   gaps_closed: []
   gaps_remaining: []
   regressions: []
+judgment_resolutions:
+  - {id: E-03-01, status: acknowledged_assumption, reported: pass, accepted_by: maintainer, source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"}
+  - {id: P-03-01, status: verified, reported: pass, accepted_by: maintainer, source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"}
+  - {id: P-03-02, status: verified, reported: pass, accepted_by: maintainer, source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"}
 flagged_assumptions:
   - id: E-03-01
     requirement: DEV-01
-    status: unresolved
+    status: acknowledged_assumption
     category: unclassified
     flagged: true
-    reason: "Current reviewed files and passing tests do not establish exhaustive taxonomy or a fresh Phase 3 acceptance."
+    current_boundary_decision: pass
+    source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"
+    reason: "The maintainer accepts complete reviewed files and concrete tests as this phase's bounded completion evidence; no exhaustive taxonomy or deterministic classification is claimed."
 prohibitions:
   - id: P-03-01
     statement: "MUST NOT turn unknown, stale, omitted or invalid basement telemetry into a guessed measurement or normal protection condition during conformance."
-    status: unverified
-    flagged: true
-    tier: null
+    status: verified
+    verification: judgment
+    flagged: false
+    accepted_by: maintainer
+    source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"
     enforcement_evidence: []
   - id: P-03-02
     statement: "MUST NOT present paused, skipped, unreviewed or unobserved device/persistence work, regression history or checks as completed or verified."
-    status: unverified
-    flagged: true
-    tier: null
+    status: verified
+    verification: judgment
+    flagged: false
+    accepted_by: maintainer
+    source: ".planning/phases/03-device-and-persistence-conformance/03-UAT.md#current-scope-reaffirmation"
     enforcement_evidence: []
 process_deviations:
   - windows_id: 46
@@ -40,34 +50,22 @@ process_deviations:
   - windows_id: 47
     status: open
     waived: false
-human_verification:
-  - id: E-03-01
-    test: "Accept or reject the current complete-file and concrete-test boundary while retaining the unclassified taxonomy assumption."
-    expected: "An explicit current Phase 3 decision without an exhaustive taxonomy claim."
-    why_human: "No current deterministic classification or fresh acceptance covers the sealed inputs."
-  - id: P-03-01
-    test: "Judge whether the current device and persistence result preserves absent or untrustworthy telemetry without guessed normal conditions."
-    expected: "A scope-qualified decision retaining provisional meanings, opaque-key and hardware limits."
-    why_human: "The descriptorless prohibition has no wired deterministic enforcement."
-  - id: P-03-02
-    test: "Judge the truthful current completion boundary with all historical limits disclosed."
-    expected: "A decision that leaves WINDOWS 46/47 open, the unsuccessful control unsuccessful, and historical Gemini 247/247 unconfirmed."
-    why_human: "Current checks cannot reconstruct missing historical procedure or accept this boundary for the maintainer."
+human_verification: []
 ---
 
 # Phase 3: Device and Persistence Conformance Verification Report
 
 **Phase goal:** Every module under src/device/** and src/persistence/**, and each paired test, conforms to the style, comment, and unit-testing rules, and any bug found there is fixed behind a regression test.
 
-**Status:** human_needed. **Score:** 19/22 must-haves verified; three current human judgments remain. **Checked revision:** 51ffc50. This is a verification-only refresh of the prior report; no source or test was edited.
+**Status:** passed. **Score:** 22/22 must-haves verified, including three current bounded maintainer judgments. **Checked source revision:** 499659b. No executable input changed after that revision; this refresh changes only the verifier record.
 
-The current ROADMAP and REQUIREMENTS files mark Phase 3 and DEV-01 complete. That workflow metadata does not replace this evidence verdict. This re-verification preserves the prior human_needed verdict. The 2026-10-14 UAT file records three historical pass responses; they do not expressly accept E-03-01, P-03-01 and P-03-02 for the current Phase 8 sealed inputs. No Phase 2 answer is inherited.
+The current ROADMAP and REQUIREMENTS files mark Phase 3 and DEV-01 complete. This verdict rests on the code and review evidence below plus the maintainer's 2026-10-23 **“Accept this bounded scope”** reaffirmation in 03-UAT.md. That current response expressly covers E-03-01 and P-03-01/02. It does not resolve the taxonomy, reconstruct historical process evidence or establish live hardware behavior. No Phase 2 answer is inherited.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-The five ROADMAP success criteria are retained. The eight plans add 28 frontmatter truths and two prohibitions. Overlapping statements merge into 19 concrete checks; E-03-01 and the two authored prohibitions are three separate current judgments. Every truth below resolves to VERIFIED or UNCERTAIN. None is marked FAILED.
+The five ROADMAP success criteria are retained. The eight plans add 28 frontmatter truths and two prohibitions. Overlapping statements merge into 19 concrete checks; E-03-01 and the two authored prohibitions are three separate current judgments. All 19 concrete checks are verified, and the three judgments have current bounded maintainer acceptance. None is marked FAILED.
 
 | # | Observable truth | Status | Codebase evidence |
 | --- | --- | --- | --- |
@@ -88,13 +86,13 @@ The five ROADMAP success criteria are retained. The eight plans add 28 frontmatt
 | 15 | Health declarations keep narrow trust and absence contracts and actual readers compile. | VERIFIED | health.ts contracts and health.test.ts negatives; serviceCatalogue filters candidate values by scope and omits untrustworthy ones. |
 | 16 | HALO remains unsupported and registry separates profile from physical identity and explanation cadence. | VERIFIED | halo.ts identity/name, registry.ts implemented/unsupported/unknown outcomes, registry.test.ts cadence cases; platform seeds UUID from deviceId and chooses adapter by deviceTypeId. |
 | 17 | Persisted observations remain writable, retain first-run absence and clock units, and reach explicit persistence. | VERIFIED | accessoryContext.ts type contract includes the current backupEdgeAwaitingTimestamp marker; pumpRecords.ts mutates/reconciles records and calls persist; platform supplies updatePlatformAccessories. The owner contracts and consumer tests pass. |
-| 18 | The current full combined gate covers the executable inputs under review. | VERIFIED | Full `npm run check` at source commit 499659b, Node v26.12.1, TEST_CONCURRENCY=1, exit 0: six static checks, 130/130 offline scenarios, 1401/1401 steps, 43 isolated pairs. Git diff from that commit through 51ffc50 shows no source, test, feature, package, script or config change. |
-| 19 | E/P items, actual open historical limits and current check scope are disclosed without silent completion claims. | VERIFIED | 03-SEAL-AUDIT retains equality 1 = 0 lifted + 1 flagged assumption and 2 = 2 authored + 0 omitted prohibitions. Current VALIDATION covers 18/18 tasks, SECURITY closes 18/18 threats, REVIEW reports zero new findings; none resolves E/P. |
-| 20 | E-03-01 has a fresh current Phase 3 taxonomy-boundary acceptance. | UNCERTAIN — WARNING | No deterministic taxonomy proof or explicit current-scope acceptance; the 2026-10-14 UAT response is historical. |
-| 21 | P-03-01 excludes guessed normal telemetry under the current scope. | UNCERTAIN — WARNING | Current code/tests support narrow preservation, but this descriptorless prohibition lacks wired enforcement and current human acceptance. |
-| 22 | P-03-02 certifies the truthful current completion boundary. | UNCERTAIN — WARNING | Current evidence is bounded and historical limits remain. Maintainer acceptance of the refreshed boundary is still needed. |
+| 18 | The current full combined gate covers the executable inputs under review. | VERIFIED | Full `npm run check` at source commit 499659b, Node v26.12.1, TEST_CONCURRENCY=1, exit 0: six static checks, 130/130 offline scenarios, 1401/1401 steps, 43 isolated pairs. The current diff from that commit has no source, test, feature, package, script or config change. |
+| 19 | E/P items, actual open historical limits and current check scope are disclosed without silent completion claims. | VERIFIED | 03-SEAL-AUDIT retains equality 1 = 0 lifted + 1 flagged assumption and 2 = 2 authored + 0 omitted prohibitions. Current VALIDATION covers 18/18 tasks, SECURITY closes 18/18 threats, REVIEW reports zero new findings. The new UAT resolves the bounded judgments without changing the underlying historical evidence. |
+| 20 | E-03-01 has a fresh current Phase 3 taxonomy-boundary acceptance. | PASSED (judgment) | The 2026-10-23 maintainer reaffirmation accepts the complete-file and concrete-test boundary. E-03-01 remains an acknowledged unclassified taxonomy assumption, not a deterministic or exhaustive claim. |
+| 21 | P-03-01 excludes guessed normal telemetry under the current scope. | PASSED (judgment) | The maintainer confirms bounded preservation of absent or untrustworthy values without guessed normal conditions. Provisional meanings, opaque-key and hardware/live-vendor limits remain. |
+| 22 | P-03-02 certifies the truthful current completion boundary. | PASSED (judgment) | The maintainer accepts the reviewed/tested scope with WINDOWS 46/47 open and unwaived, one unsuccessful control, three early hook streams without separate JSON, and historical Gemini 247/247 unconfirmed. |
 
-**Score:** 19/22 verified, zero behavior-dependent truths left unexercised. The three uncertain items are human judgments, not implementation blockers or silently passed prohibitions.
+**Score:** 22/22 verified, including three explicit bounded human judgments; zero behavior-dependent truths left unexercised. The prohibitions are not silently passed by source presence.
 
 ### Advisory (New Scope, Unevidenced)
 
@@ -152,7 +150,7 @@ The verifier ran three exact named compiled state tests after the fresh same-inp
 
 The two exact Plan 08 node predicates were executed in this verification process. Both exited zero and printed DEVICE_LEDGER_TRACER_OK and DEVICE_SEAL_AUTOMATED_AUDIT_OK. No scripts/**/tests/probe-*.sh path is declared for this phase. The predicates validate aggregate structure; direct code, tests and Git evidence above supply the behavior check.
 
-The operative full gate is logged at `/private/tmp/guardian-phase8-plan21-check.log`. Its checked commit is 499659b; subsequent changes through 51ffc50 are planning records only. This verifier reused that same-input gate under the local-verification rule and ran the three named tests above. No live vendor, hardware or real-pump profile was run.
+The operative full gate is logged at `/private/tmp/guardian-phase8-plan21-check.log`. Its checked commit is 499659b; the current executable-input comparison remains empty. This verifier reused that same-input gate under the local-verification rule. No live vendor, hardware or real-pump profile was run in this refresh.
 
 ### Decision Coverage and Test Quality
 
@@ -162,7 +160,7 @@ The GSD decision-coverage query reports 7/7 trackable CONTEXT decisions honored.
 
 | Requirement | Verdict | Evidence and boundary |
 | --- | --- | --- |
-| DEV-01 | Human decision pending | All 19 concrete checks pass; E-03-01/P-03-01/P-03-02 remain current judgment items. REQUIREMENTS marks it complete, but this verification does not infer a new acceptance. |
+| DEV-01 | Satisfied within accepted scope | All 19 concrete checks pass; current 03-UAT.md records the maintainer's bounded acceptance of E-03-01/P-03-01/P-03-02. The taxonomy and hardware limits remain explicit. |
 | PROC-01/PROC-02/PROC-03 | Satisfied in this bounded phase | 38 located/dispositioned causes, continuous closed rounds and 20 complete headers. Historical WINDOWS deviations remain. |
 | BUG-01 | Satisfied for current device fixes, milestone pending | No Phase 3 genuine bug; later Phase 8 state defects have committed active RED and passing owners. Phase 8 whole-milestone ledger remains separate. |
 | GATE-01/GATE-02 | Current scope passes; milestone seal separate | Full check and clean advisory 20-file review. Later Phase 8 final gate/review decisions are not asserted here. |
@@ -171,19 +169,15 @@ No unresolved TBD, FIXME, XXX, TODO, HACK, PLACEHOLDER, disabled test, stub hand
 
 Historical limits stay visible: WINDOWS 46 and 47 are OPEN/unwaived; three early hook streams lack separate JSON retention; the initial Gemini TypeError-before-assert control is unsuccessful; historical Gemini 247/247 cannot be confirmed from a retained raw LCOV. Current passing tests do not recreate that missing evidence. The opaque deviceId key assumption, provisional water/battery meanings and hardware gates remain outside this bounded claim. Security 18/18, Nyquist 18/18 and review zero findings are independent, limited checks.
 
-### Human Verification Required
+### Human Judgment Resolutions
 
-1. **E-03-01:** Decide whether complete reviewed files and concrete tests suffice for the current Phase 3 boundary while retaining the unclassified taxonomy assumption. Expected: explicit current-scope decision with no exhaustive taxonomy claim.
-2. **P-03-01:** Judge whether current conformance preserves absent/untrustworthy telemetry without guessed normal conditions. Expected: explicit scope-qualified decision retaining provisional meaning, opaque-key and hardware limits.
-3. **P-03-02:** Judge the truthful current completion boundary. Expected: explicit decision retaining WINDOWS 46/47 open, five successful controls separate from one unsuccessful attempt, and historical 247/247 unconfirmed.
-
-These are WARNING-level uncertain must-haves, not failed code truths. Their descriptorless checks cannot be silently accepted by source presence, current tests or older UAT responses.
+The maintainer's 2026-10-23 **“Accept this bounded scope”** response in 03-UAT.md resolves E-03-01 and P-03-01/02 for current Phase 3 verification. This is an explicit judgment on the present reviewed scope, not a deterministic classification or a live-system observation. E-03-01 stays flagged as an acknowledged unclassified assumption. WINDOWS 46/47 stay OPEN and unwaived; provisional water meanings, the opaque-key assumption, missing early hook JSON, the unsuccessful control, historical Gemini 247/247 and hardware/live-vendor limits stay visible. No human verification item remains for this phase's bounded claim.
 
 ### Gaps Summary
 
-No current implementation BLOCKER, missing artifact, broken manual key link, uncovered pair or reopened Phase 3 finding was established. There is no gaps frontmatter and no failed truth to defer to a later phase. Status remains human_needed until the three current judgments are resolved. No source, test, other phase, roadmap, requirements or state file was changed by this verifier.
+No current implementation BLOCKER, missing artifact, broken manual key link, uncovered pair or reopened Phase 3 finding was established. There is no gaps frontmatter and no failed truth to defer to a later phase. The current bounded judgments are resolved; the historical and hardware limits remain. No source, test, other phase, roadmap, requirements or state file was changed by this verifier.
 
 ---
 
-_Verified: 2026-10-23T07:40:38Z_
+_Verified: 2026-10-23T08:39:08Z_
 _Verifier: gsd-verifier_

@@ -3,7 +3,7 @@ status: complete
 phase: 03-device-and-persistence-conformance
 source: [03-VERIFICATION.md]
 started: "2026-10-14T21:45:38.598923+00:00"
-updated: 2026-10-14T21:57:54.675Z
+updated: 2026-10-23T08:36:17Z
 ---
 
 ## Current Test
@@ -139,3 +139,13 @@ skipped: 0
 blocked: 0
 
 ## Gaps
+
+## Current-scope reaffirmation
+
+On 2026-10-23, after the Phase 8 verifier refreshed the current Phase 3
+evidence, the maintainer answered **“Accept this bounded scope”** to the
+question covering E-03-01 and P-03-01/02. This accepts the reviewed and tested
+Phase 3 scope while retaining unclassified device meanings and historical
+process gaps. It does not claim exhaustive taxonomy, real hardware proof, or
+closure of WINDOWS 46/47. The three original pass judgments above remain
+unchanged.

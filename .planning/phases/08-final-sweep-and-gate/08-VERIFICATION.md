@@ -1,8 +1,8 @@
 ---
 phase: 08-final-sweep-and-gate
-verified: 2026-10-23T08:01:21Z
+verified: 2026-10-23T08:40:35Z
 status: human_needed
-score: 6/7 must-haves verified
+score: 7/7 must-haves verified; BUG-01 includes bounded debug-evidence acceptance
 covered_files:
   - .planning/REQUIREMENTS.md
   - .planning/ROADMAP.md
@@ -57,6 +57,7 @@ covered_files:
   - .planning/phases/08-final-sweep-and-gate/08-ROOT-003-CONTINUATION.json
   - .planning/phases/08-final-sweep-and-gate/08-SIGNOFF.md
   - .planning/phases/08-final-sweep-and-gate/08-STOP-CONTINUATION.json
+  - .planning/phases/08-final-sweep-and-gate/08-UAT.md
   - .planning/phases/08-final-sweep-and-gate/08-VALIDATION.md
   - features/monitoring/degradation.feature
   - src/device/state.ts
@@ -67,32 +68,42 @@ covered_files:
   - test/logging.test.ts
   - test/runtime/accountRuntime.test.ts
   - test/runtime/arrivalAnchors.test.ts
-covered_digest: "v3:sha256:910c9da2dc778809e42a8bcaf98d33a4936fdc4917d9173f4e96fa159230cfe2"
+covered_digest: "v3:sha256:2d7f5bd901ba4873a489efac65e1c872dff2acbfaf1702d504e67fd16a5d049e"
 behavior_unverified: 0
 overrides_applied: 0
+re_verification:
+  previous_status: human_needed
+  previous_score: 6/7
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
+judgment_resolutions:
+  - {ids: [B-08-042, B-08-043, B-08-050], result: accepted_limited_debug_evidence, accepted_by: maintainer, source: ".planning/phases/08-final-sweep-and-gate/08-UAT.md"}
+  - {scope: "both Plan 08-11 descriptorless prohibitions", result: accepted_bounded_judgment, accepted_by: maintainer, source: ".planning/phases/08-final-sweep-and-gate/08-UAT.md"}
+prohibitions:
+  - statement: "MUST NOT turn unknown, stale, omitted, or invalid basement telemetry into a guessed measurement or safe condition during a review repair."
+    status: verified
+    verification: judgment
+    flagged: false
+    accepted_by: maintainer
+    source: ".planning/phases/08-final-sweep-and-gate/08-UAT.md#5-phase-8-descriptorless-safety-prohibitions"
+  - statement: "MUST NOT present stale verification, partial gate output, historical STOP, or an unreviewed file as a current Phase 8 pass."
+    status: verified
+    verification: judgment
+    flagged: false
+    accepted_by: maintainer
+    source: ".planning/phases/08-final-sweep-and-gate/08-UAT.md#5-phase-8-descriptorless-safety-prohibitions"
 human_verification:
-  - test: "Judge whether the Phase 6 debug records for B-08-042 and B-08-043 satisfy BUG-01's pre-fix regression requirement."
-    expected: "Accept the recorded three named RED delegate failures with their stated output limits, or leave BUG-01 open; do not describe them as complete native archives."
-    why_human: "The debug record reports pre-fix named failures and revert/reconfirm, but retains neither a planning-only RED commit nor complete native TAP output."
-  - test: "Judge whether B-08-050's debug run and source reversal satisfy BUG-01."
-    expected: "Accept its recorded pre-fix failure with the later exact assertion and real-Homebridge limit stated, or leave BUG-01 open."
-    why_human: "The original debug record has no complete native output; the exact StatusActive assertion was committed after the source fix."
-  - test: "Resolve Phase 3's E-03-01, P-03-01 and P-03-02 current-scope judgments."
-    expected: "Explicit rulings preserve the unclassified taxonomy and historical process limits without implying exhaustive hardware proof."
-    why_human: "The current Phase 3 verifier is human_needed, 19/22."
   - test: "Exercise a degraded real Homebridge status where one StatusActive write fails, then send the same status again."
     expected: "Later services become inactive and the failed service is retried on the unchanged report."
-    why_human: "The current Phase 6 verifier is human_needed; the maintainer previously answered 'Cannot verify now'."
-  - test: "Judge Plan 08-11's two descriptorless prohibitions against the bounded current review."
-    expected: "Accept the no-guessed-normal and truthful-signoff boundaries only within the reviewed and automated scope, retaining real-hardware and historical evidence limits."
-    why_human: "Neither prohibition declares test-tier enforcement; the execution signoff does not itself resolve them."
+    why_human: "The current Phase 6 verifier remains human_needed; the maintainer answered 'Cannot verify now', and no real Homebridge observation has been supplied."
 ---
 
 # Phase 8: Final Sweep and Gate Verification Report
 
 **Phase goal:** The whole in-scope tree passes one more review as a unit, the milestone bug ledger is complete and audited, and the full `npm run check` gate passes at milestone end.
 
-**Verified:** 2026-10-23T08:01:21Z. **Status:** human_needed. **Re-verification:** Planning-only signoff wording refreshed; evidence verdict unchanged.
+**Verified:** 2026-10-23T08:40:35Z. **Status:** human_needed. **Re-verification:** Current bounded judgments resolved; final signoff wording agrees; the inherited real Homebridge check remains unobserved.
 
 ## Goal achievement
 
@@ -100,13 +111,13 @@ human_verification:
 | --- | --- | --- | --- |
 | 1 | Every current in-scope file has an exact-blob complete review and no current finding remains open (ROADMAP SC1; GATE-02). | VERIFIED | I joined `git ls-files src test features`, the ten documented exclusions, all 137 manifest rows, current `HEAD:path` blobs and line counts, six owner report tables, and later structured review rows. The set is 137/137 with no mismatch. `08-ROOT-003-CONTINUATION.json` closes its one opening ID and leaves `forwardOpenIds: []`. Both historical STOPs remain active in their original records. |
 | 2 | The final combined tree passes static, unpaired, offline Cucumber, and all isolated direct-coverage checks (SC2; GATE-01). | VERIFIED | The native `/private/tmp/guardian-phase8-plan21-check.log` ends after six static passes, 130/130 scenarios, 1401/1401 steps, and `Merged LCOV ... (43 pairs)`. `coverage/direct.lcov` has 37 source records, each with equal hit/total line, function, and branch counts; the pair runner returned success for all 43. `git diff --name-only 499659b HEAD -- src test features package.json package-lock.json cucumber.json tsconfig.json tsconfig.test.json eslint.config.js scripts` and current executable-input status were empty. |
-| 3 | Every accepted bug has a proven pre-fix failing regression and fix lineage (SC3; BUG-01). | UNCERTAIN — WARNING | The ledger has 51 prior and 11 Phase 8 behavior claims. The 48 prior archives and 11 current Phase 8 archives have classified native RED evidence; I independently reran the Phase 8 archive classifier, which returned `RED_EVIDENCE_OK` for each. B-08-042, B-08-043 and B-08-050 have debug records reporting pre-fix failures, but lack complete native RED output; B-08-050's exact committed assertion follows the fix. This is a provenance limit requiring a maintainer ruling, not evidence of a current product regression. |
+| 3 | Every accepted bug has a pre-fix failing regression and fix lineage within the approved evidence boundary (SC3; BUG-01). | PASSED (judgment) | The ledger has 51 prior and 11 Phase 8 behavior claims. The 48 prior archives and 11 Phase 8 archives have classified native RED evidence; I reran the Phase 8 classifiers, which returned `RED_EVIDENCE_OK`. The maintainer's current 08-UAT.md response accepts the pre-fix debug failures for B-08-042/043/050 within their stated limits. They still lack complete native RED archives and planning-only evidence commits, and B-08-050's exact committed assertion follows its fix. ENTRY-017's earlier field-preservation oracle was superseded by the approved privacy-first policy; the current test is not described as that old regression. |
 | 4 | Every finding has a recorded disposition or a preserved STOP report (SC4). | VERIFIED | The Phase 1–8 finding indexes and Phase 8 review index preserve accepted, rejected and historical STOP outcomes. The two retired Phase 5 scanner findings remain explicitly open in the historical STOP, as the maintainer accepted; they are absent from the current in-scope tree. The original Phase 8 DEVICE STOP still holds seven IDs and the first continuation ROOT STOP still holds one at its stop time. The later authorized continuation closes the current forward set without rewriting either. |
-| 5 | All prior-phase verification statuses are fresh and accurately represented. | VERIFIED | GSD status queries returned passed for Phases 1, 2, 4, 5 and 7; human_needed for Phase 3 (19/22) and Phase 6 (5/5 concrete truths, one real-Homebridge check). The signoff records these as limits and says `Decision: BLOCKED`. |
+| 5 | All prior-phase verification statuses are fresh and accurately represented. | VERIFIED | GSD status queries returned passed for Phases 1, 2, 3, 4, 5 and 7, including Phase 3's current bounded 22/22 acceptance; Phase 6 remains human_needed with five concrete truths verified and one real Homebridge check unobserved. The signoff records that limit and says `Decision: BLOCKED`. |
 | 6 | Windows and dry-run profile boundaries are audited. | VERIFIED | GSD Windows status reports 58 entries: 17 open, 19 waived with reasons, and 22 fixed. I reran default Cucumber usage dry run: no `UNUSED`, undefined or ambiguous definition; the real profile dry run exited 0 with 6 scenarios and 35 steps all skipped. |
-| 7 | Signoff distinguishes current passes from unresolved evidence and edge assumptions. | VERIFIED | `08-SIGNOFF.md` gives GATE-01 and GATE-02 current evidence, holds BUG-01 for the three debug-only rows, retains seven flagged spec-less edges, two historical STOPs, and the Phase 3/6 human limits. Its BLOCKED decision is supported by those records. |
+| 7 | Signoff distinguishes current passes from accepted limited evidence and unresolved assumptions. | VERIFIED | `08-SIGNOFF.md` gives GATE-01 and GATE-02 current evidence, marks BUG-01 accepted with explicit debug-only limits, retains seven flagged spec-less rows and both historical STOPs, records Phase 3 passed within scope, and leaves Phase 6 human_needed. Its BLOCKED decision is supported by the still-unobserved real Homebridge check. |
 
-**Score:** 6/7 truths verified; zero present-but-behavior-unverified. The pending item is a historical evidence judgment, so this report does not mark the phase passed.
+**Score:** 7/7 truths verified, including one bounded historical-evidence judgment; zero present-but-behavior-unverified. Overall status remains human_needed because the inherited Phase 6 real Homebridge check has no observation.
 
 ## Artifacts, wiring and data flow
 
@@ -135,21 +146,19 @@ No user-facing value is rendered by the planning artifacts. Their Level-4 inputs
 | --- | --- | --- |
 | GATE-01 | SATISFIED | Final combined gate log at unchanged executable inputs; 43 isolated pairs; direct LCOV hit/total equality. |
 | GATE-02 | SATISFIED for current tree | 137/137 exact-blob review rows and zero current forward-open IDs; historical STOPs separately preserved. |
-| BUG-01 | NEEDS HUMAN | Three debug-only prior bug rows cannot be promoted to complete native archive evidence by a current GREEN gate. |
+| BUG-01 | ACCEPTED WITH LIMIT | The maintainer accepted the three debug-only pre-fix failure records for this bounded decision. Their missing native archives, B-08-050 assertion order, and ENTRY-017 policy supersession remain explicit. |
 
 I found no disabled requirement-linked test (`test.skip`, `test.todo`, or equivalent) in the reviewed source/test/feature scope, and no `TBD`, `FIXME`, or `XXX` debt marker there. The sampled privacy and heartbeat cases assert exact delegated output and multi-step state, respectively. The 43-pair runner enforces 100% coverage, but coverage is not a substitute for missing regression provenance. No circular expected-value generator was identified in the sampled owner tests. Decision coverage query found no trackable Phase 8 CONTEXT decisions.
 
-## Human verification required
+## Judgment resolutions and remaining human verification
 
-1. Decide whether the B-08-042 and B-08-043 debug records satisfy BUG-01 despite missing complete native output and a planning-only RED commit.
-2. Decide whether B-08-050's documented pre-fix debug failure and later exact assertion satisfy BUG-01, while retaining the real-Homebridge limit.
-3. Resolve the three current Phase 3 judgment items, E-03-01 and P-03-01/02.
-4. Run the Phase 6 real Homebridge failed-StatusActive-write and identical-report retry check when available.
-5. Judge Plan 08-11's no-guessed-normal and truthful-signoff prohibitions within the bounded current review, preserving the stated limits.
+The maintainer's current [08-UAT.md](08-UAT.md) accepts the limited debug evidence for B-08-042/043/050 and accepts both Plan 08-11 descriptorless prohibitions within the reviewed and automated scope. This is explicit human judgment, not a reconstructed native RED archive, a direct test-tier prohibition, or a real hardware pass. Phase 3's E-03-01 and P-03-01/02 are now resolved within their bounded scope; its unclassified assumption and WINDOWS 46/47 remain visible.
 
-There is no observed current Phase 8 code failure in this pass. The incomplete historical provenance and existing human checks prevent final milestone acceptance. Phase 8 remains open with `Decision: BLOCKED` until those judgments are resolved.
+**One inherited check remains:** Run a real Homebridge degraded status where one `StatusActive` write fails, then send the same status again. Later affected services should become inactive and the failed service should be retried. Phase 6 remains `human_needed`; the maintainer previously answered “Cannot verify now,” and the synthetic owner regression cannot supply that observation.
+
+There is no observed current Phase 8 code failure in this pass. Phase 8 remains open with `Decision: BLOCKED` until the real Homebridge check is observed and its Phase 6 verification is refreshed. The two historical STOPs, seven flagged spec-less rows, missing native RED archives, ENTRY-017 supersession and hardware limits remain recorded.
 
 ---
 
-_Verified: 2026-10-23T08:01:21Z_
+_Verified: 2026-10-23T08:40:35Z_
 _Verifier: independent gsd-verifier agent_

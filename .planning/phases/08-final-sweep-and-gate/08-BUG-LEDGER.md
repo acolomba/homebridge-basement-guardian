@@ -173,3 +173,17 @@ Nested records retain their own commands and outputs inside `priorEvidence`.
 3. CR-06-CR-02 still awaits real Homebridge confirmation in its debug record. Current synthetic GREEN cannot replace that human gate.
 4. Run the named owner regressions and the required final combined-tree gate after all Phase 8 source edits. Record the revision, Node version, exact command, exit, and unchanged executable inputs. This delegated document audit did not run build, owner tests, or pre-commit checks.
 5. Reconcile any Phase 8 bugs from Plan 08-14 and the Phase 1–7 verification freshness checks before marking BUG-01 complete.
+
+## Current bounded BUG-01 disposition
+
+On 2026-10-23 the maintainer answered **“Accept the limited evidence”** for
+the three debug-only rows and the Phase 8 prohibitions. [08-UAT.md](08-UAT.md)
+records the exact question scope and response. B-08-042, B-08-043, and
+B-08-050 count toward the bounded milestone BUG-01 decision as recorded
+pre-fix debug failures. They do **not** become planning-only RED commits or
+complete native archives; B-08-050's exact assertion remains later than its
+source fix. ENTRY-017's old field-preservation oracle was superseded by the
+maintainer's privacy-first redaction decision, so the current test is not
+claimed as the same active regression. The Phase 8 named cases and full gate
+passed at `499659b`, with executable inputs unchanged through `e607cd1`.
+The real Homebridge failed-write and retry check remains blocked separately.
