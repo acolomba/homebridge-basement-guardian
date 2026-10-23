@@ -1,10 +1,10 @@
 ---
 phase: 06-root-module-conformance
-verified: 2026-10-23T07:48:54Z
-status: human_needed
+verified: 2026-10-23T14:06:55Z
+status: passed
 score: 5/5 must-haves verified
 covered_files:
-  - .planning/debug/monitoring-trust-publication.md
+  - .planning/debug/resolved/monitoring-trust-publication.md
   - .planning/debug/resolved/logging-redaction-leaks.md
   - .planning/phases/06-root-module-conformance/06-01-PLAN.md
   - .planning/phases/06-root-module-conformance/06-01-SUMMARY.md
@@ -59,7 +59,7 @@ covered_files:
   - test/platform.test.ts
   - test/protocol.test.ts
   - test/settings.test.ts
-covered_digest: "v3:sha256:2ae52f9f22c6186bf1d1342dd736ed15ab3bfca8c835cc593069e03a8be99cee"
+covered_digest: "v3:sha256:944e280f3dced1fcf12f395c4e2f419f25ac5b8160a7282d645796c651f637f6"
 behavior_unverified: 0
 overrides_applied: 1
 overrides:
@@ -68,24 +68,20 @@ overrides:
     accepted_by: "maintainer through Phase 6 D-05 and D-07"
     accepted_at: "2026-10-23T07:48:54Z"
 re_verification:
-  previous_status: passed
+  previous_status: human_needed
   previous_score: 5/5
-  gaps_closed: []
+  gaps_closed: ["CR-02 Homebridge 2.4.0 characteristic publication checked in Docker"]
   gaps_remaining: []
   regressions: []
-human_verification:
-  - test: "Repeat a degraded Homebridge status where one characteristic write fails, then deliver the same status again."
-    expected: "Other affected services become inactive, and the failed service is retried successfully on the identical report."
-    why_human: "The maintainer answered 'Cannot verify now'; the synthetic owner regression passed, but the real Homebridge publication behavior is still unobserved."
 ---
 
 # Phase 6: Root Module Conformance Verification Report
 
 **Phase goal:** The six root source modules and paired tests conform to the style, comment, and unit-testing rules, and each bug found there is fixed behind a regression test.
 
-**Verified:** 2026-10-23T07:48:54Z
-**Status:** human_needed
-**Re-verification:** Yes; the prior report passed, but the executable tree changed during Phase 8.
+**Verified:** 2026-10-23T14:06:55Z
+**Status:** passed
+**Re-verification:** The previous current report had 5/5 concrete truths verified but needed a Homebridge runtime check. The maintainer authorized a Docker run; a launched Homebridge 2.4.0 instance passed the synthetic failed-write and identical-retry check.
 
 ## Goal Achievement
 
@@ -99,7 +95,7 @@ human_verification:
 | 4 | Each touched root pair has 100% isolated direct line, function, and branch coverage | ✓ VERIFIED | The full `npm run check` at `499659b` passed the direct-coverage stage for all 43 isolated source/test pairs. `git diff 499659b -- src test features scripts` is empty on this tree; Node is v26.12.1 for that gate. |
 | 5 | Genuine bugs have observed RED regressions before GREEN fixes | ✓ PASSED (override) | Phase 6's approved D-05 evidence-only path records sixteen active RED observations in planning commits before GREEN test-and-fix commits. CR-01 has evidence `03db78f` before fix `68114f4`; CR-02 has debug evidence `4bca6a9` before fix `646b327`. ENTRY-019/020 have active RED and revert/reconfirm observations before repair commits `24f3620`/`2d291cc`, but **no planning-only RED commit or archived complete TAP**. Their tests were committed with fixes. The literal separate test-commit wording is overridden by the maintainer's D-05/D-07 process decision; no separate test commit is claimed. Phase 8 ROOT-001/002/003 add their own validated planning-only RED records and current GREEN cases. |
 
-**Score:** 4 directly verified + 1 approved evidence-path override = 5/5; 0 present but behavior-unverified. One external Homebridge judgment remains pending.
+**Score:** 4 directly verified + 1 approved evidence-path override = 5/5; 0 present but behavior-unverified. The Homebridge 2.x integration check passed with synthetic data.
 
 ### Required Artifacts
 
@@ -140,15 +136,16 @@ The plan artifact verifier returned `all_passed: true` for all nine plans (21 de
 | ROOT-002/003 Error parameter redaction | Named `node --test --test-name-pattern 'redacts a registered secret in an Error class name\|redacts a serialized registered secret inside an Error parameter' dist-test/test/logging.test.js` | ✓ 2/2 pass |
 | CR-01 rejects a negative restored count | Named `node --test --test-name-pattern 'starts observation again and says so once for a pump record with a negative count'` | ✓ 1/1 pass |
 | CR-02 completes and retries trust publication | Named `node --test --test-name-pattern 'marks later services inactive after one trust write fails and retries the failed service on the same report'` | ✓ 1/1 pass |
-| Current repository gate | `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` at `499659b`, Node v26.12.1 | ✓ exit 0: six static gates, compiled unpaired tests, 130/130 Cucumber scenarios, 1401/1401 steps, 43 isolated coverage pairs |
+| CR-02 Homebridge integration | Launched Homebridge 2.4.0 in offline Docker with a temporary synthetic platform plugin and a one-shot flood `StatusActive` write failure | ✓ Exit 0; real accessory bridged, 17 services, 15 other affected rows inactive after the first failed report, all 16 affected rows inactive after the identical retry; [resolved debug record](../../debug/resolved/monitoring-trust-publication.md) |
+| Current repository gate | `NPM_CONFIG_CACHE=/private/tmp/guardian-homebridge-closeout-npm-cache TEST_CONCURRENCY=1 npm run check` on unchanged executable inputs from `499659b`, Node v26.12.1 | ✓ exit 0: six static gates, compiled unpaired tests, 130/130 Cucumber scenarios, 1401/1401 steps, 43 isolated coverage pairs |
 
-This refresh ran the seven named cases on the current compiled `dist-test/test/...` files. The full combined gate was run once for Plan 08-21 on the same executable inputs, then reused here under the unchanged-input rule; the current working tree differs only in planning reports. No Phase 6 probe was declared or found; probe execution is not applicable.
+The earlier refresh ran the seven named cases on the current compiled `dist-test/test/...` files. The full combined gate ran again for this closeout with local socket access; its sandboxed attempt failed to bind the fake cloud and is not counted. This re-verification adds the Homebridge 2.4.0 Docker result. No executable input changed; the current working tree differs only in planning reports.
 
 ### Requirements Coverage
 
 | Requirement | Scope | Status | Evidence |
 | --- | --- | --- | --- |
-| ROOT-01 | Phase 6 | ✓ SATISFIED for automated conformance | Twelve reviewed current root owners; Phase 8 independently reviewed the changed platform and logger blobs at their exact current revisions. Ledger, corrections, regressions, and current coverage/gate evidence agree. The real trust-publication judgment remains below. |
+| ROOT-01 | Phase 6 | ✓ SATISFIED for automated conformance | Twelve reviewed current root owners; Phase 8 independently reviewed the changed platform and logger blobs at their exact current revisions. Ledger, corrections, regressions, current coverage/gate evidence, and the bounded Homebridge 2.x Docker result agree. |
 | PROC-01 / PROC-02 | Carried into Phase 6 from Phase 1 | ✓ SATISFIED for Phase 6 process | 43 batch IDs and twelve reconciled counters; historical STOP and separate closure retained. |
 | BUG-01 | Applied to Phase 6; milestone audit belongs to Phase 8 | ✓ PASSED under D-05/D-07 evidence-path override for Phase 6 | Validated evidence-only RED commits precede GREEN in the planned paths. ENTRY-019/020 use observed debug RED and revert/reconfirm, without a planning-only RED commit or complete native TAP. The literal separate-test-commit wording is not claimed. |
 
@@ -165,21 +162,17 @@ No requirement mapped to Phase 6 in `REQUIREMENTS.md` is orphaned from its plans
 
 ### Advisory (New Scope, Unevidenced)
 
-None. No new unsupported blocker was introduced in this refresh. The pending real Homebridge trust-publication judgment is listed separately below.
+None. No new unsupported blocker was introduced in this refresh.
 
-### Human Verification Required
+### Homebridge integration boundary
 
-The original ENTRY logger workflow has the maintainer's explicit **“Confirmed fixed”** result. The separate CR-02 trust-publication debug session has only the maintainer's **“Cannot verify now”** result for the real Homebridge path. Its synthetic failure-and-retry regression passes and its source is wired, but that does not establish actual Homebridge service behavior.
+The original ENTRY logger workflow has the maintainer's explicit **“Confirmed fixed”** result. For CR-02, the maintainer authorized instrumentation and a Docker run. A launched Homebridge 2.4.0 process registered and bridged a synthetic accessory using Homebridge's supplied HAP objects. One flood `StatusActive` update threw; the other 15 affected rows became inactive. An identical second degraded report retried and deactivated the flood row. The unaffected connectivity row stayed active throughout. The process exited 0. The [resolved debug record](../../debug/resolved/monitoring-trust-publication.md) records the image ID, runtime versions, probe hash, and observed states.
 
-**Test:** In a degraded Homebridge status, make one characteristic write fail, then deliver the same status again.
-
-**Expected:** Later affected services become inactive despite the first failure, and the failed service is retried on the identical report.
-
-**Why human:** This integration depends on Homebridge's real characteristic publication and has not been observed by the maintainer. This one pending judgment makes the overall status `human_needed`; it is not a failed automated truth or a `behavior_unverified` source transition.
+This confirms the Homebridge 2.x characteristic publication path. The probe used synthetic data and injected the failure; it does not claim a vendor-account run, physical-pump test, or Apple Home rendering result. Those release gates remain separate.
 
 ### Gaps Summary
 
-No automated Phase 6 gap remains. The current platform and logger owners have independent complete-file correction reviews at their current blobs. The full repository gate passes on unchanged executable inputs. The trust-publication result remains `human_needed` until the real Homebridge check is performed; Phase 8 and release retain their separate signoff gates.
+No Phase 6 gap remains. The current platform and logger owners have independent complete-file correction reviews at their current blobs. The full repository gate passes on unchanged executable inputs, and the previously pending Homebridge 2.x check passed in offline Docker. Phase 8 and release retain their separate signoff gates.
 
 ---
 

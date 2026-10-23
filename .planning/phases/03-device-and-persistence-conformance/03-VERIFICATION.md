@@ -1,10 +1,10 @@
 ---
 phase: 03-device-and-persistence-conformance
-verified: "2026-10-23T08:39:08Z"
+verified: "2026-10-23T14:06:55Z"
 status: passed
 score: "22/22 must-haves verified; 3 by current bounded maintainer acceptance"
 covered_files: [".agents/skills/local-verification/SKILL.md",".agents/skills/typescript-style/SKILL.md",".agents/skills/typescript-unit-tests/SKILL.md",".planning/phases/03-device-and-persistence-conformance/03-01-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-01-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-02-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-02-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-03-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-03-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-04-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-04-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-05-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-05-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-06-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-06-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-07-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-07-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-08-PLAN.md",".planning/phases/03-device-and-persistence-conformance/03-08-SUMMARY.md",".planning/phases/03-device-and-persistence-conformance/03-CONTEXT.md",".planning/phases/03-device-and-persistence-conformance/03-DECODING-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-FINDINGS.md",".planning/phases/03-device-and-persistence-conformance/03-PATTERNS.md",".planning/phases/03-device-and-persistence-conformance/03-RESEARCH.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW-PROTOCOL.md",".planning/phases/03-device-and-persistence-conformance/03-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SEAL-AUDIT.json",".planning/phases/03-device-and-persistence-conformance/03-SECURITY.md",".planning/phases/03-device-and-persistence-conformance/03-SOURCE-AUDIT.md",".planning/phases/03-device-and-persistence-conformance/03-STATE-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-SUPPORT-REVIEW.md",".planning/phases/03-device-and-persistence-conformance/03-UAT.md",".planning/phases/03-device-and-persistence-conformance/03-VALIDATION.md",".planning/phases/08-final-sweep-and-gate/08-BUG-LEDGER.md",".planning/phases/08-final-sweep-and-gate/08-DEVICE-001-RED-EVIDENCE.json",".planning/phases/08-final-sweep-and-gate/08-DEVICE-002-RED-EVIDENCE-V2.json",".planning/phases/08-final-sweep-and-gate/08-FINDINGS.md",".planning/phases/08-final-sweep-and-gate/08-MANIFEST.json",".planning/phases/08-final-sweep-and-gate/08-RUNTIME-006-RED-EVIDENCE-V2.json","package.json","scripts/check-corresponding-tests.mjs","scripts/test-coverage-direct.mjs","src/accessories/basementGuardian.ts","src/accessories/pumpRecords.ts","src/accessories/serviceCatalogue.ts","src/cloud/shadow.ts","src/device/events.ts","src/device/family.ts","src/device/gemini.ts","src/device/halo.ts","src/device/health.ts","src/device/registry.ts","src/device/state.ts","src/device/waterLevel.ts","src/persistence/accessoryContext.ts","src/platform.ts","src/runtime/accountRuntime.ts","test/accessories/pumpRecords.test.ts","test/device/events.test.ts","test/device/family.test.ts","test/device/gemini.test.ts","test/device/geminiSeeds.ts","test/device/halo.test.ts","test/device/health.test.ts","test/device/registry.test.ts","test/device/state.test.ts","test/device/stateSeeds.ts","test/device/waterLevel.test.ts","test/persistence/accessoryContext.test.ts","test/platform.test.ts"]
-covered_digest: "v3:sha256:8c7900d36e269789416e5644241b63b9cf936d89ed1163fd9ec68ffdcad5e0aa"
+covered_digest: "v3:sha256:78238b2928cf21ee7d43f76f8c3ae55b5f2bbcd5f4ef3351365f5f221957cedb"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -181,3 +181,14 @@ No current implementation BLOCKER, missing artifact, broken manual key link, unc
 
 _Verified: 2026-10-23T08:39:08Z_
 _Verifier: gsd-verifier_
+
+### Evidence-only freshness refresh — 2026-10-23
+
+The Phase 8 bug ledger changed only its CR-06-CR-02 entry and closeout text:
+the later Homebridge 2.4.0 Docker probe passed with synthetic device data.
+The historical RED limits remain, and no Phase 3 source, owner test, review
+blob, judgment, or finding changed. The current full `npm run check` exited 0
+with 130/130 scenarios, 1401/1401 steps, and 43 isolated pairs. The 22/22
+bounded verdict above remains supported; the fingerprint was refreshed for
+the changed covered ledger. This addendum is an inline freshness check, not
+a new independent complete-file review.

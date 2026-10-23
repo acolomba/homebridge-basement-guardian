@@ -1,18 +1,18 @@
 # Phase 8 execution signoff
 
-**Decision: BLOCKED.** The current code and complete-file review gates pass.
-The maintainer accepted the Phase 3 boundary and three historical BUG-01
-debug-evidence limits. Final milestone acceptance still needs the Phase 6
-real Homebridge check. This is an execution evidence report, not Phase 8
-verification or roadmap completion.
+**Decision: READY for Phase 8 verification.** The current code and
+complete-file review gates pass. The maintainer accepted the Phase 3 boundary
+and three historical BUG-01 debug-evidence limits. The Phase 6 Homebridge
+failed-write check passed in Docker with synthetic data. This execution
+signoff still requires the Phase 8 verifier before roadmap completion.
 
 ## Requirement evidence
 
 | Requirement | Current result | Evidence and limit |
 | --- | --- | --- |
-| GATE-01 | Automated pass | `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` exited 0 at source revision `499659b` on Node `v26.12.1`, npm `11.20.0`: static and unpaired checks, 130/130 offline Cucumber scenarios, 1401/1401 steps, and all 43 isolated direct source/test coverage pairs. No executable input changed through planning revision `51ffc50`. Default usage dry run exited 0 with no unused, undefined, or ambiguous step. The real profile dry run exited 0 with 6 scenarios and 35 steps all skipped. The real profile provides binding evidence only. |
+| GATE-01 | Automated pass | A fresh `NPM_CONFIG_CACHE=/private/tmp/guardian-homebridge-closeout-npm-cache TEST_CONCURRENCY=1 npm run check` exited 0 on Node `v26.12.1`, npm `11.20.0`: static and unpaired checks, 130/130 offline Cucumber scenarios, 1401/1401 steps, and all 43 isolated direct source/test coverage pairs. Executable inputs are unchanged from source revision `499659b`. Default usage dry run exited 0 with no unused, undefined, or ambiguous step. The real profile dry run exited 0 with 6 scenarios and 35 steps all skipped. The real profile provides binding evidence only. |
 | GATE-02 | Complete-file review pass | The [manifest](08-MANIFEST.json) lists 137 current in-scope paths, one owner each. Six batch reports cover the opening inventory. Subsequent correction and supplemental reviews cover changed blobs; the final three changes have independent complete-file owner rows in the [stopped continuation](08-STOP-CONTINUATION.json) and [separate ROOT-003 continuation](08-ROOT-003-CONTINUATION.json). The one-off seal audit checked all 137 current Git blobs and line counts, complete read spans, reviewer/editor separation, and zero current forward-open IDs; exit 0. The original DEVICE round-one STOP and ROOT round-two STOP remain active as historical records, with their opening and closing counts unchanged. |
-| BUG-01 | **Accepted with stated evidence limit** | The [bug ledger](08-BUG-LEDGER.md) has 51 accepted Phase 1–7 behavior claims: 48 complete planning-only RED archives and three debug-only records (B-08-042, B-08-043, B-08-050). It has 11 Phase 8 behavior bugs; all 11 current RED archives returned `RED_EVIDENCE_OK`, including ROOT-003's source `4093bad` → evidence `eff1a58` → fix `499659b`. The maintainer's [bounded acceptance](08-UAT.md) covers the three debug-only records without treating them as complete native archives or pre-fix committed tests. ENTRY-017's former field-preservation oracle was superseded by the approved privacy-first policy; the current test is not claimed as the old active regression. The real Homebridge check remains separate. |
+| BUG-01 | **Accepted with stated evidence limit** | The [bug ledger](08-BUG-LEDGER.md) has 51 accepted Phase 1–7 behavior claims: 48 complete planning-only RED archives and three debug-only records (B-08-042, B-08-043, B-08-050). It has 11 Phase 8 behavior bugs; all 11 current RED archives returned `RED_EVIDENCE_OK`, including ROOT-003's source `4093bad` → evidence `eff1a58` → fix `499659b`. The maintainer's [bounded acceptance](08-UAT.md) covers the three debug-only records without treating them as complete native archives or pre-fix committed tests. ENTRY-017's former field-preservation oracle was superseded by the approved privacy-first policy; the current test is not claimed as the old active regression. The separate Homebridge 2.4.0 Docker check passed with synthetic data. |
 
 ## Current prior-phase verification
 
@@ -23,12 +23,11 @@ verification or roadmap completion.
 | Phase 3 | passed, 22/22 | Current bounded acceptance resolves E-03-01 and P-03-01/02; WINDOWS 46/47 and provisional meanings remain disclosed. |
 | Phase 4 | passed, 27/27 | Current runtime and repaired Phase 8 findings checked. |
 | Phase 5 | passed, 12/12 | Historical GATES STOP and two retired scanner findings retained. |
-| Phase 6 | **human_needed, 5/5 concrete truths** | Real Homebridge trust publication after a failed write remains unverified; maintainer said “Cannot verify now.” |
+| Phase 6 | passed, 5/5 concrete truths | Homebridge 2.4.0 Docker check passed with a synthetic bridged accessory and one injected failed write; physical-device behavior remains outside this check. |
 | Phase 7 | passed, 5/5 | Historical batch STOPs retained. |
 
-All seven GSD status queries are current. Phase 6's `human_needed` report is
-not treated as a pass. Its outstanding real Homebridge check is in
-`06-VERIFICATION.md`.
+All seven GSD status queries are current and report `passed`. Phase 6's
+resolved Homebridge check is in [06-VERIFICATION.md](../06-root-module-conformance/06-VERIFICATION.md).
 
 ## Historical stops and windows
 
@@ -56,10 +55,12 @@ seven flagged**. The maintainer [accepted](08-UAT.md) the two descriptorless
 prohibitions within the reviewed and automated scope, without claiming direct
 test-tier enforcement; the independent verifier must judge this boundary.
 The repaired logging disclosure has active RED, GREEN, full-gate, and
-complete-file review evidence. No current open Phase 8
-finding or unmitigated high/critical repair threat is claimed. The real
-Homebridge result remains a separate human limit.
+complete-file review evidence. No current open Phase 8 finding or unmitigated
+high/critical repair threat is claimed. The Homebridge failed-write result
+passed with a synthetic accessory; vendor and physical-device release checks
+remain separate.
 
-The refreshed independent verifier accepts the bounded judgments and reports
-`human_needed`. Phase 8 stays open while the real Homebridge check remains
-unobserved.
+The earlier independent verifier accepted the bounded judgments but reported
+`human_needed` while the Homebridge check was unobserved. That check now has a
+passing Docker result, and the Phase 6 verifier reports `passed`. Phase 8
+remains open until its verifier evaluates this updated signoff.

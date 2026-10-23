@@ -62,7 +62,7 @@ was edited.
 | 03 | passed, 22/22 | The maintainer accepted the current bounded scope; E-03-01 stays an acknowledged unclassified assumption and WINDOWS 46/47 remain open. |
 | 04 | passed, 27/27 | Phase 8 repairs close the two earlier advisory findings. |
 | 05 | passed, 12/12 | Historical GATES STOP and retired scanner findings stay visible. |
-| 06 | human_needed, 5/5 concrete truths | Real Homebridge failed-write/retry check remains unverified; the maintainer previously answered “Cannot verify now.” |
+| 06 | passed, 5/5 concrete truths | A later Homebridge 2.4.0 Docker run passed the failed-write and identical-retry check with a synthetic bridged accessory. The resolved debug record retains the synthetic scope. |
 | 07 | passed, 5/5 | Historical batch STOPs stay visible. |
 
 At `9863d9b`, the Plan 08-20 full `npm run check` passed 130/130 scenarios,
@@ -77,9 +77,39 @@ The maintainer subsequently answered **“Accept this bounded scope”** for the
 three Phase 3 judgments and **“Accept the limited evidence”** for the three
 debug-only BUG-01 records and two Phase 8 prohibitions. The answers are in
 [03-UAT.md](../03-device-and-persistence-conformance/03-UAT.md) and
-[08-UAT.md](08-UAT.md). An independent Phase 3 verifier refresh now reports
-`passed`, 22/22; the remaining real Homebridge check in Phase 6 is still
-unobserved. No executable input changed after the `499659b` full gate.
+[08-UAT.md](08-UAT.md). An independent Phase 3 verifier refresh reports
+`passed`, 22/22. The later Homebridge 2.4.0 Docker run resolved Phase 6's
+pending failed-write check, and its current verifier now reports `passed`,
+5/5. No executable input changed after the `499659b` full gate.
+
+## Homebridge integration closeout and fresh combined gate
+
+On 2026-10-23 the maintainer authorized instrumentation and a Docker test.
+At repository revision `ed35f84aa5b21c665308a5bf869c75f5c05dad78`, a
+launched Homebridge 2.4.0 process on Node v24.22.1 registered and bridged a
+synthetic Gemini accessory. The probe injected one flood `StatusActive` write
+failure. The other 15 affected services became inactive on that report; an
+identical second report retried the failed flood write and made all 16 affected
+services inactive. The unaffected connectivity service stayed active. The
+container exited 0. The [resolved debug record](../../debug/resolved/monitoring-trust-publication.md)
+holds the image ID, probe hash, and observed values. The probe used no vendor
+credentials and did not exercise a physical pump or Apple Home rendering.
+
+The first fresh `TEST_CONCURRENCY=1 npm run check` attempt could not open the
+Cucumber fake cloud's loopback socket in the sandbox (`listen EPERM
+127.0.0.1`). It was interrupted after those environment failures and is not
+counted as a pass. With local socket access, the exact command
+`NPM_CONFIG_CACHE=/private/tmp/guardian-homebridge-closeout-npm-cache
+TEST_CONCURRENCY=1 npm run check` exited 0 on Node v26.12.1 and npm 11.20.0.
+Its log `/private/tmp/guardian-homebridge-closeout-check-authorized.log`
+records six static passes, 130/130 offline Cucumber scenarios, 1401/1401
+steps, and all 43 isolated direct coverage pairs. The executable-input diff
+from `499659b` is empty, and no executable inputs are untracked.
+
+Fresh default Cucumber usage dry run exited 0 with no unused, undefined, or
+ambiguous definition. The real profile dry run exited 0 with 6/6 scenarios
+and 35/35 steps skipped; it did not contact a vendor or device. GSD now
+returns `passed` for Phase 6. All seven prior-phase statuses are `passed`.
 
 ## Final profile and window audit
 

@@ -37,9 +37,9 @@ Each covers the source modules and their paired tests against the style, comment
 
 ### Bugs and gates
 
-- [ ] **BUG-01**: Each bug found gets a failing regression test before its fix and is listed in the phase ledger.
-- [ ] **GATE-01**: Every source/test pair keeps 100% direct coverage, and the full `npm run check` passes at milestone end.
-- [ ] **GATE-02**: A final full-repo re-review finds no open findings.
+- [x] **BUG-01**: Each bug found gets a failing regression test before its fix and is listed in the phase ledger.
+- [x] **GATE-01**: Every source/test pair keeps 100% direct coverage, and the full `npm run check` passes at milestone end.
+- [x] **GATE-02**: A final full-repo re-review finds no open findings.
 
 ## Future Requirements
 
@@ -72,9 +72,9 @@ Each covers the source modules and their paired tests against the style, comment
 | ROOT-01 | Phase 6 | Complete |
 | FEAT-01 | Phase 7 | Complete |
 | FEAT-02 | Phase 7 | Complete |
-| BUG-01 | Phase 8 | Pending |
-| GATE-01 | Phase 8 | Pending |
-| GATE-02 | Phase 8 | Pending |
+| BUG-01 | Phase 8 | Complete |
+| GATE-01 | Phase 8 | Complete |
+| GATE-02 | Phase 8 | Complete |
 
 PROC-01, PROC-02, and BUG-01 apply to every phase. Each maps to one phase for
 traceability: PROC-01 and PROC-02 to Phase 1, where the ledger format and the loop

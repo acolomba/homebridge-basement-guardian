@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Phase 6 advisory CR-02: failed HomeKit trust publication is never retried with unchanged monitoring health"
 created: 2026-10-19T00:00:00Z
-updated: 2026-10-19T18:31:40Z
+updated: 2026-10-23T14:06:55Z
 ---
 
 ## Current Focus
@@ -10,8 +10,8 @@ updated: 2026-10-19T18:31:40Z
 bug_class: bohrbug — a one-shot characteristic failure gives a deterministic partial publication.
 hypothesis: An exception from one service aborts republishPublishedRows, while markMonitoring has already stored the new trust; the unchanged check then skips an identical retry.
 test: The owner test now injects the one-shot failure at StatusActive; source reversal made it RED again, and restoration made it GREEN.
-expecting: A real Homebridge run shows degraded trust to the owner and recovers the failed row after a later identical health report.
-next_action: Ask the owner to confirm the monitoring trust display in a real Homebridge environment; archive only after that confirmation.
+expecting: A launched Homebridge 2.4.0 instance publishes the synthetic accessory and retries the failed row on an identical degraded report.
+next_action: Complete Phase 6 and Phase 8 verification refresh with the Docker Homebridge result; keep physical-device release checks separate.
 reasoning_checkpoint:
   hypothesis: A thrown service write aborts the catalogue pass, and an identical health report skips the unfinished pass because monitoring was already stored.
   confirming_evidence:
@@ -19,7 +19,7 @@ reasoning_checkpoint:
     - The code stores monitoring before publication and returns for unchanged reports without tracking incomplete publication.
   falsification_test: If isolating service writes and retrying an unchanged report leaves any affected row active, this explanation is incomplete.
   fix_rationale: Continue the catalogue after a failed service, propagate the aggregate failure, and keep publication pending until a complete pass succeeds.
-  blind_spots: No real Homebridge runtime was used; the test uses the repository's HAP stand-in and a one-shot injected failure.
+  blind_spots: The Docker Homebridge run uses synthetic device data and an injected write failure; it does not exercise vendor transport, a physical pump, or Apple Home rendering.
   candidate_causes:
     - code — the loop aborts on the first thrown characteristic write, and unchanged trust skips retry.
     - environment — a Homebridge characteristic write can throw, but the injected failure reproduces without a specific runtime or version.
@@ -80,6 +80,10 @@ timeline: Found in the Phase 6 final advisory review on 2026-10-19.
   checked: Exact failed characteristic in the regression test.
   found: The one-shot failure now targets the flood service's second write; the test confirms this call is StatusActive. Reversing committed source 646b327 made all 17 trust rows stay active and the test RED. Restoring it made the test GREEN, and direct accessory coverage passed.
   implication: The owner test matches the reported StatusActive failure and still discriminates the source fix.
+- timestamp: 2026-10-23T14:06:55Z
+  checked: Launched Homebridge 2.4.0 under Docker with Node v24.22.1, the current built plugin modules, a temporary synthetic platform plugin, and no network access. The probe plugin registered one real PlatformAccessory with the bridge, published a complete Gemini snapshot, injected a one-shot exception into the flood service's StatusActive update, and delivered two identical degraded health reports.
+  found: The first report threw AggregateError; the flood row stayed active, the other 15 affected rows became inactive, and the unaffected connectivity row stayed active. The identical second report retried the flood write, leaving all 16 affected rows inactive. The probe exited 0 with `GUARDIAN_PROBE_PASS`, `bridged: true`, 17 services, one injected failure, and two flood StatusActive write attempts. The Homebridge process reported running on port 52086 before exit.
+  implication: The previously unobserved Homebridge 2.x characteristic-publication path passes. This synthetic integration run does not prove vendor or physical-device behavior.
 
 ## Eliminated
 
@@ -96,3 +100,9 @@ verification:
   guardrail_verdict: accepted
 files_changed: [src/accessories/basementGuardian.ts, test/accessories/basementGuardian.test.ts]
 oracle_type: specified — every affected StatusActive must be inactive after a degraded report, and an incomplete pass must be retried.
+
+## Docker Homebridge evidence
+
+The 2026-10-23 probe used repository revision `ed35f84aa5b21c665308a5bf869c75f5c05dad78`, Homebridge `2.4.0`, Node `v24.22.1`, and Docker image ID `sha256:7c9848855ca7fad25a34b149eed937dd5f2b30979dd37872780f46d391d1ccce`. The temporary platform script's SHA-256 was `88fe804b95c401b1809f4579782efb8ea642b8fb49bed331acec6800df1da730`; the result JSON's SHA-256 was `5dd2a472368112256cef9d89029df5681b045668fbf24d2325bf90a6f04ee448`.
+
+The run mounted only `node_modules`, `dist`, and the synthetic platform plugin read-only, plus a temporary synthetic Homebridge storage directory for output. It used `--network none`, `--strict-plugin-resolution`, and no vendor credentials. Its exit code was 0. The script and output are temporary test artifacts outside this repository; the observation above records the checked values. No production code or test file changed during this confirmation.
