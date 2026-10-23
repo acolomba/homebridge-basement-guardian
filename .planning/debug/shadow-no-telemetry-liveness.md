@@ -1,16 +1,16 @@
 ---
-status: fixing
+status: awaiting_human_verify
 trigger: "Phase 8 CR-08-RUNTIME-004: shadow messages without telemetry can renew liveness and keep stale readings trusted"
 created: 2026-10-23T00:07:24Z
-updated: 2026-10-23T00:09:52Z
+updated: 2026-10-23T00:13:41Z
 ---
 
 ## Current Focus
 
 hypothesis: Confirmed. AccountRuntime records every routed patch as a telemetry heartbeat; MonitoringHealth renews silence and the anchor, while the store retains an earlier shadow watermark.
-test: The active named owner test compiled and failed against unchanged production at the intended deepStrictEqual assertion; its complete native TAP and patch validate as RED_EVIDENCE_OK.
-expecting: The coordinator commits planning-only RED evidence before any production change. A later targeted source repair must make the same named test green and preserve same-reading heartbeats.
-next_action: Hand the validated RED evidence path and active test to the coordinator; await its explicit confirmation that the planning-only evidence was committed before any production edit.
+test: The named GREEN regression, full runtime owner module, adjacent owner modules, direct isolated coverage, static checks, and revert-and-reconfirm passed. No Stryker installation exists.
+expecting: Independent complete-file review and coordinator commit precede any real-environment confirmation. Phase 8 stays at its STOP and current round.
+next_action: Coordinator reviews the complete accountRuntime source and owner test, commits the approved GREEN change, then requests human verification before resolution. Do not advance the Phase 8 STOP or round count.
 reasoning_checkpoint:
   hypothesis: AccountRuntime records a no-reading routed patch as a telemetry heartbeat, resetting MonitoringHealth silence and anchor; the existing watermark then blocks REST takeover.
   confirming_evidence:
@@ -28,7 +28,7 @@ reasoning_checkpoint:
 tdd_checkpoint:
   test_file: test/runtime/accountRuntime.test.ts
   test_name: hands stale shadow telemetry to the poll despite repeated messages without readings
-  status: red
+  status: green
   failure_output: Expected water_level 31, shadowVersion undefined, shadowSilent true, anchor 1787918400000; actual water_level 2, shadowVersion 7, shadowSilent false, anchor 1787920200000.
   evidence_file: .planning/phases/08-final-sweep-and-gate/08-RUNTIME-004-RED-EVIDENCE.json
   evidence_verdict: RED_EVIDENCE_OK
@@ -74,12 +74,38 @@ timeline: Discovered during the independent complete-file review of Phase 8 DEVI
   found: The evidence file contains the complete 72-line native TAP, exact command and exit 1, source commit and blob, active full test patch and blob, Node version, timing, expected and actual behavior, and semantic assessment. Validator returned RED_EVIDENCE_OK for exactly one failed named case. Production paths have no diff.
   implication: The RED stage is ready for a planning-only evidence commit by the coordinator; GREEN work has not started.
 
+- timestamp: 2026-10-23T00:11:43Z
+  checked: Coordinator continuation, the store's hasTelemetryReading predicate, the shadow parser, the callback, owner tests, and Fallow guard.
+  found: RED evidence was committed as 4b3d23a. The store treats nonempty patch.data as telemetry; the shadow parser supplies a record or undefined. Fallow reports no boundary rules for the source and test paths.
+  implication: The runtime can use the same reading condition without changing the store's metadata or ordering behavior.
+
+- timestamp: 2026-10-23T00:12:07Z
+  checked: Production callback guard and named GREEN regression after npm run build:test.
+  found: The one callback condition now requires a nonempty patch.data before recording liveness. The named regression passes, 1 test and 0 failures; compilation passed.
+  implication: The no-reading sequence now releases shadow ownership at the silence threshold and accepts the REST flood value. Full and held-out checks remain.
+
+- timestamp: 2026-10-23T00:12:45Z
+  checked: Full runtime owner module, direct accountRuntime pair coverage, adjacent shadow/store/monitoring-health owner modules, static checks, and mutation-tool availability.
+  found: Runtime owner passed 170/170; adjacent modules passed 150/150; direct coverage exited 0 and enforces 100% line, function, and branch; check:static passed all six steps. No Stryker configuration or binary is present.
+  implication: Held-out behavior and static gates pass. Mutation check will be recorded as skipped; revert-and-reconfirm remains.
+
+- timestamp: 2026-10-23T00:13:41Z
+  checked: Revert-and-reconfirm of only the runtime liveness condition, final direct isolated coverage, source/test diff, and Git state.
+  found: With the condition removed, the named test failed with stale level 2, shadowVersion 7, false silence, and a renewed anchor. After reapplication, it passed. Final direct coverage exited 0. The source blob is aed73e14c401fa2bea25e27e637a1ff06cd25a72, the test blob is 558caccde2e5210dca3197bcdaae5e8937669ac4, and no files are staged.
+  implication: The targeted condition causes the behavioral correction. GREEN is ready for independent complete-file review and a coordinator commit; no session archive or Phase 8 advancement has occurred.
+
 ## Eliminated
 
 ## Resolution
 
 root_cause: AccountRuntime treats routed shadow messages without a telemetry reading as liveness evidence. MonitoringHealth then renews its silence clock and persisted anchor while the store retains an earlier shadow watermark, so successful REST polls cannot replace stale shadow telemetry.
-fix:
-verification: RED only; npm run build:test passed, the named TAP run failed as intended, and tdd-red-evidence returned RED_EVIDENCE_OK. No fix or GREEN check has run.
+fix: Gate AccountRuntime's liveness stamp on a nonempty reported telemetry record while continuing to apply every patch to the store.
+verification:
+  target_test: { result: pass, command: "node --test --test-name-pattern 'hands stale shadow telemetry to the poll despite repeated messages without readings' dist-test/test/runtime/accountRuntime.test.js" }
+  mutation_check: { result: skipped, reason_if_skipped: "No Stryker configuration or installed binary" }
+  no_op_deletion: { result: pass, deletion_justified_by_rca: false, note: "The fix adds a condition to the liveness stamp and keeps store application and reporting." }
+  adjacent_tests: { result: pass, suites_run: ["accountRuntime: 170/170", "shadow, state, and monitoringHealth: 150/150", "accountRuntime direct coverage: 100% line/function/branch", "check:static: six steps passed"] }
+  revert_and_reconfirm: { result: pass, bug_returned_on_revert: true, fixed_on_reapply: true }
+  guardrail_verdict: accepted
 oracle_type: specified
-files_changed: [test/runtime/accountRuntime.test.ts, .planning/phases/08-final-sweep-and-gate/08-RUNTIME-004-RED-EVIDENCE.json, .planning/debug/shadow-no-telemetry-liveness.md]
+files_changed: [src/runtime/accountRuntime.ts, test/runtime/accountRuntime.test.ts, .planning/debug/shadow-no-telemetry-liveness.md]

@@ -856,11 +856,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
           credentials: cache,
           retry: shadowRetry,
           onReportedPatch: (deviceId: string, patch: ReportedPatch) => {
-            // This callback fires for every routed message, upstream of the
-            // store's change filter, which is why it and not a snapshot listener
-            // is the arrival signal: a heartbeat carrying values identical to the
-            // last one notifies no subscriber and still proves the live path is
-            // carrying messages (D-05, D-11).
+            // This callback fires upstream of the store's change filter. A
+            // nonempty telemetry section proves the device is still reporting,
+            // even when its values match the last reading and no subscriber is
+            // notified. Empty or metadata-only messages do not renew that
+            // evidence (D-05, D-11).
             //
             // The three steps are in this order deliberately. Stamping first is
             // what makes the recomputed trust see this arrival. Applying the patch
@@ -892,7 +892,7 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
             // unguarded, it would resurrect the in-memory arrival stamp and the
             // persisted anchor the removal branch already dropped for a system
             // that has left the account (D-14).
-            if (options.store.deviceIds().includes(deviceId)) {
+            if (options.store.deviceIds().includes(deviceId) && patch.data !== undefined && Object.keys(patch.data).length > 0) {
               health.recordShadowMessage(deviceId);
             }
 
