@@ -1,5 +1,5 @@
 {
-  "snapshotCommit": "5411aa7fb2468afc84aab7ce01ddf6c1e5d18c32",
+  "snapshotCommit": "499659b4e55238d2e7b5fdd97cd907e9daa7732c",
   "researchInScopeCount": 137,
   "actualInScopeCount": 137,
   "deltaFromResearch": 0,
@@ -568,7 +568,7 @@
       "path": "src/logging.ts",
       "owner": "ROOT",
       "shard": "B",
-      "blob": "b63fe57face52149c687e342026e6f36c433bc64",
+      "blob": "a1bb84c12ab1a89d8fb24c84c654f9ebcd593160",
       "lines": 227,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-ROOT-REVIEW.md"
     },
@@ -976,8 +976,8 @@
       "path": "test/logging.test.ts",
       "owner": "ROOT",
       "shard": "B",
-      "blob": "49ff7493e93ec88f5c525f60cd7438d05c3dea6a",
-      "lines": 652,
+      "blob": "21389fb44da516f8cce83462948d0fe4d58daa19",
+      "lines": 684,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-ROOT-REVIEW.md"
     },
     {
@@ -1056,8 +1056,8 @@
       "path": "test/runtime/arrivalAnchors.test.ts",
       "owner": "RUNTIME",
       "shard": "B",
-      "blob": "34d9f112497ea5dafc728609bf676b31f0ac528d",
-      "lines": 457,
+      "blob": "972cf75df28dae2e31cbeaafee62cce68a3bc581",
+      "lines": 453,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
     {

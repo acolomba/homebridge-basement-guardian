@@ -45,21 +45,29 @@ The plan IDs and task commands will be added when Phase 8 plans exist.
 
 Plan 08-10 started after the former Phase 8 review seal. Phase 1's normal
 verification-only route stopped at `tdd.review-checkpoint`: it requires separate
-RED and GREEN commits for Plan 01-01, while the approved Phase 1 plan retained
+`test(01-01)` and `feat(01-01)` commits, while the approved D-06 plan retained
 the active RED in a planning-only commit and committed the test with its fix.
-No old report status was edited to bypass that gate.
+Plan 08-22 corrected the plan's execution-mode metadata to `execute` and
+documented the approved custom TDD task. The GSD checkpoint now reports
+`block: false`, `violations: 0`, `tddPlans: 0` (skip). Separately, the actual
+RED archive still reports `RED_EVIDENCE_OK`; Git proves source `109fda7` <
+planning-only evidence `919d70d` < active test and fix `3878103`. This is a
+metadata reconciliation, not a new RED/GREEN sequence. No old verifier status
+was edited.
 
 | Phase | Refresh result before Plan 08-20 source/test changes | Current live status after Plan 08-20 | Next action |
 | --- | --- | --- | --- |
-| 01 | TDD gate `block: true`, one plan violation; verifier not run | stale | Reconcile the gate against the approved Phase 1 evidence before rerunning. |
+| 01 | TDD gate `block: true`, one plan violation; verifier not run | stale | Run the normal verifier route now that approved evidence and execution metadata agree. |
 | 02 | Fresh full route and typed verifier: passed, 18/18; full gate 130 scenarios, 1401 steps, 43 pairs | passed | Keep the fresh covered-file fingerprint. |
 | 03 | Fresh full route and typed verifier: `human_needed`, 19/22, with E-03-01 and P-03-01/02 open | stale | Rerun after source seal, then retain any human-needed result. |
-| 04 | Nyquist and security passed; advisory review found ROOT-002 and RUNTIME-007; later gates not run | stale | Resolve current ROOT-003 STOP and rerun the route. |
-| 05–07 | Not yet refreshed | stale | Run each normal route after a sealed source tree exists. |
+| 04 | Nyquist and security passed; advisory review found ROOT-002 and RUNTIME-007; later gates not run | stale | Rerun after the new separate ROOT-003 closure and seal. |
+| 05–07 | Not yet refreshed | stale | Run each normal route after the current sealed source tree. |
 
 At `9863d9b`, the Plan 08-20 full `npm run check` passed 130/130 scenarios,
 1401/1401 steps, and all 43 direct coverage pairs on Node `v26.12.1`. This is
 a combined-tree test result, not a verifier pass or a current review seal.
+
+At `499659b`, Plan 08-21's full `NPM_CONFIG_CACHE=/private/tmp/guardian-phase8-plan21-npm-cache TEST_CONCURRENCY=1 npm run check` exited 0 on Node `v26.12.1`: 130/130 Cucumber scenarios, 1401/1401 steps, and 43 direct coverage pairs. The separate ROOT-003 review closed its only ID and a one-off exact-blob audit passed all 137 current paths. Both earlier STOP records remain unchanged. The source tree is ready for the stale verifier routes; no Phase 8 signoff is claimed yet.
 
 ## Wave 0 Requirements
 
