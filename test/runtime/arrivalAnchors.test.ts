@@ -9,10 +9,13 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import fsPromises, { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+// eslint-disable-next-line no-restricted-imports -- Synchronizes the scoped rename mock with the existing static Node built-in import.
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import timers from 'node:timers/promises';
 
 import { mock, verify, when } from 'strong-mock';
 
@@ -285,6 +288,81 @@ test('persists and restores complete anchors using the supplied temporary path',
     },
   );
   verify(temporaryPath);
+});
+
+test('keeps both anchors durable when overlapping writes finish newest first', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const olderTemporary = join(storagePath, 'older.tmp');
+  const newerTemporary = join(storagePath, 'newer.tmp');
+  const nativeRename = fsPromises.rename;
+  let releaseOlderRename = (): void => undefined;
+  let signalOlderReady = (): void => undefined;
+  let signalNewerFinished = (): void => undefined;
+  const olderRenameGate = new Promise<void>((resolve) => {
+    releaseOlderRename = resolve;
+  });
+  const olderReady = new Promise<void>((resolve) => {
+    signalOlderReady = resolve;
+  });
+  const newerFinished = new Promise<void>((resolve) => {
+    signalNewerFinished = resolve;
+  });
+  t.mock.method(fsPromises, 'rename', async (temporary: string, target: string): Promise<void> => {
+    if (temporary === olderTemporary) {
+      signalOlderReady();
+      await olderRenameGate;
+    }
+
+    await nativeRename(temporary, target);
+
+    if (temporary === newerTemporary) {
+      signalNewerFinished();
+    }
+  });
+  syncBuiltinESMExports();
+  let temporaryWrites = 0;
+  const writer = createArrivalAnchors({
+    storagePath,
+    log: recordingLog([]),
+    temporaryPath: () => {
+      temporaryWrites += 1;
+
+      return temporaryWrites === 1 ? olderTemporary : newerTemporary;
+    },
+  });
+  writer.record(DEVICE_ID, ANCHOR);
+
+  try {
+    // act
+    const olderPersist = writer.persist();
+    await olderReady;
+    writer.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
+    const newerPersist = writer.persist();
+    await Promise.race([newerFinished, timers.setTimeout(100)]);
+    releaseOlderRename();
+    await Promise.all([olderPersist, newerPersist]);
+    const reader = storeOver(storagePath, []);
+    await reader.restore();
+
+    // assert
+    assert.deepStrictEqual(
+      {
+        contents: await readFile(join(storagePath, ARRIVAL_ANCHOR_FILENAME), 'utf8'),
+        anchor: reader.get(DEVICE_ID),
+        otherAnchor: reader.get(OTHER_DEVICE_ID),
+      },
+      {
+        contents: '{"placeholder-device":1700000000000,"placeholder-other-device":1700000898000}',
+        anchor: ANCHOR,
+        otherAnchor: OTHER_ANCHOR,
+      },
+    );
+  } finally {
+    releaseOlderRename();
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
 });
 
 test('preserves an occupied temporary file and prior durable anchors after exclusive creation fails', async (t) => {

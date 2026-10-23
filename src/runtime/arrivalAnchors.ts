@@ -169,6 +169,8 @@ async function storeAnchors(temporary: string, target: string, contents: string)
 export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnchors {
   // One anchor per device, supplied by restore, admission or an actual arrival.
   const anchors = new Map<string, number>();
+  // Keep renames to the shared target in persist-call order.
+  let pendingWrite = Promise.resolve();
 
   return {
     get(deviceId: string): number | undefined {
@@ -197,15 +199,20 @@ export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnc
 
     async persist(): Promise<void> {
       const target = anchorPath(options);
+      const snapshot = Object.fromEntries(anchors);
 
-      try {
-        await storeAnchors((options.temporaryPath ?? temporaryPath)(target), target, JSON.stringify(Object.fromEntries(anchors)));
-      } catch {
-        // A stale anchor is the safe direction -- the clamp can only ever report
-        // silence sooner, never later -- so a write that did not land costs
-        // nothing an owner is harmed by, and it must not stop the runtime.
-        options.log.debug(ANCHORS_NOT_WRITTEN);
-      }
+      const writing = pendingWrite.then(async () => {
+        try {
+          await storeAnchors((options.temporaryPath ?? temporaryPath)(target), target, JSON.stringify(snapshot));
+        } catch {
+          // A stale anchor is the safe direction -- the clamp can only ever report
+          // silence sooner, never later -- so a write that did not land costs
+          // nothing an owner is harmed by, and it must not stop the runtime.
+          options.log.debug(ANCHORS_NOT_WRITTEN);
+        }
+      });
+      pendingWrite = writing;
+      await writing;
     },
   };
 }
