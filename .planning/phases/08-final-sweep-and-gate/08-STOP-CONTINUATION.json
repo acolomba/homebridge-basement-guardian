@@ -291,6 +291,22 @@
   },
   "supplementalReviews": [
     {
+      "revision": "6c578b8",
+      "reviewer": "/root/phase8_feature_oracle_review",
+      "reason": "Corrected monitoring feature oracle after the RUNTIME-004 gate",
+      "reviewedFiles": [
+        {
+          "path": "features/monitoring/degradation.feature",
+          "blob": "9bde291114d45a579f50251189f6e54035fe732c",
+          "completeLines": "1-730",
+          "readSpans": ["1-180", "181-360", "361-540", "541-730"],
+          "reviewer": "/root/phase8_feature_oracle_review",
+          "editedBy": "/root",
+          "reviewScope": "owner"
+        }
+      ]
+    },
+    {
       "revision": "bf1c41c",
       "reviewer": "/root/phase8_device002_review",
       "reason": "Owner review of DEVICE integration consumer tests changed after the GREEN commit",

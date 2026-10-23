@@ -1,5 +1,5 @@
 {
-  "snapshotCommit": "0217a8ac4e0c049eb152dc2b01d2952b1ae826d1",
+  "snapshotCommit": "5411aa7fb2468afc84aab7ce01ddf6c1e5d18c32",
   "researchInScopeCount": 137,
   "actualInScopeCount": 137,
   "deltaFromResearch": 0,
@@ -160,7 +160,7 @@
       "path": "features/monitoring/degradation.feature",
       "owner": "FEATURES",
       "shard": "A",
-      "blob": "ab504476d5ff5fd81374d10fc0d634b9c0f8399d",
+      "blob": "9bde291114d45a579f50251189f6e54035fe732c",
       "lines": 730,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
@@ -256,7 +256,7 @@
       "path": "features/shadow/state-merging.feature",
       "owner": "FEATURES",
       "shard": "A",
-      "blob": "3cf481ad8d39e4dea4cd9acd2746955b3d55aa01",
+      "blob": "011379dac901e0df09e2650d290afaca5f833fa6",
       "lines": 91,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
@@ -272,24 +272,24 @@
       "path": "features/step_definitions/account.steps.ts",
       "owner": "FEATURES",
       "shard": "B",
-      "blob": "e443e05a2c322995084e129f18189a823cc8aa2d",
-      "lines": 238,
+      "blob": "f133a1ccb6834ed51f728a6cf6267055a3b963f3",
+      "lines": 213,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
     {
       "path": "features/step_definitions/configuration.steps.ts",
       "owner": "FEATURES",
       "shard": "B",
-      "blob": "29d20e0b06c1a6abd39e0e4bc77e9ba7a3644499",
-      "lines": 94,
+      "blob": "c8b6e79c1cfb3656b663bd954c2aabf33d17f576",
+      "lines": 80,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
     {
       "path": "features/step_definitions/controls.steps.ts",
       "owner": "FEATURES",
       "shard": "B",
-      "blob": "355a4bed8497b9403e4524079338a9c0325aee47",
-      "lines": 319,
+      "blob": "33f03b197d8f8d4964f333e96ecd53c90936a13e",
+      "lines": 292,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
     {
@@ -312,8 +312,8 @@
       "path": "features/step_definitions/homekit.steps.ts",
       "owner": "FEATURES",
       "shard": "B",
-      "blob": "958b06c58b03d5d21f575b20f0e8b61067cbbd79",
-      "lines": 275,
+      "blob": "65d91595cb67c3c935cb4e36c2cc715edd9d9bb1",
+      "lines": 279,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
     {
@@ -328,8 +328,8 @@
       "path": "features/step_definitions/shadow.steps.ts",
       "owner": "FEATURES",
       "shard": "B",
-      "blob": "368f0c8ce5869ded3b1e18858b17641b2fbcf836",
-      "lines": 498,
+      "blob": "0f650de6360e015c40d93fd5921063b5a0f2551b",
+      "lines": 452,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-FEATURES-REVIEW.md"
     },
     {
@@ -544,8 +544,8 @@
       "path": "src/device/state.ts",
       "owner": "DEVICE",
       "shard": "A",
-      "blob": "ccee11846085280f5618622a36d19b5ba511643d",
-      "lines": 419,
+      "blob": "db675d3dd7b8fcfb5a53a231480a97d19672f347",
+      "lines": 444,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-DEVICE-REVIEW.md"
     },
     {
@@ -584,7 +584,7 @@
       "path": "src/platform.ts",
       "owner": "ROOT",
       "shard": "A",
-      "blob": "e4bedd50206653eb6456a931edba97ab3bea12c1",
+      "blob": "fef29878959704492a487568dc0d2469736e8869",
       "lines": 700,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-ROOT-REVIEW.md"
     },
@@ -616,7 +616,7 @@
       "path": "src/runtime/accountRuntime.ts",
       "owner": "RUNTIME",
       "shard": "A",
-      "blob": "8a608ecbda2609774bcded0e185c8b79af819e82",
+      "blob": "03ad2704c0e88d812b58f8e31c263265419c260e",
       "lines": 1346,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
@@ -624,8 +624,8 @@
       "path": "src/runtime/arrivalAnchors.ts",
       "owner": "RUNTIME",
       "shard": "B",
-      "blob": "aa8bdebcfa86c8ad78b8f0c3d2d614252302fa64",
-      "lines": 211,
+      "blob": "024b729789a271be9c90cb65e0885b5ba5c4cfd6",
+      "lines": 218,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
     {
@@ -648,7 +648,7 @@
       "path": "src/runtime/failureLog.ts",
       "owner": "RUNTIME",
       "shard": "B",
-      "blob": "4d724a609b5da08f31b7978396fd4d240c93fe70",
+      "blob": "ce344523252d659f811cfdab41d349096f7f900c",
       "lines": 95,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
@@ -936,8 +936,8 @@
       "path": "test/device/state.test.ts",
       "owner": "DEVICE",
       "shard": "A",
-      "blob": "bc47c2e3fbf5f0ed48a10c549a80446923f25570",
-      "lines": 1144,
+      "blob": "a84383484786374116f17d1747f51326b157ae2e",
+      "lines": 1355,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-DEVICE-REVIEW.md"
     },
     {
@@ -992,8 +992,8 @@
       "path": "test/platform.test.ts",
       "owner": "ROOT",
       "shard": "A",
-      "blob": "f14616b7da2be4b8af73074914981d2f395db161",
-      "lines": 4272,
+      "blob": "ac471273131e3411d00cc80f4a267ca0a84acadf",
+      "lines": 4362,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-ROOT-REVIEW.md"
     },
     {
@@ -1024,8 +1024,8 @@
       "path": "test/runtime/accountRuntime.test.ts",
       "owner": "RUNTIME",
       "shard": "A",
-      "blob": "8ebf14ce198a88cc3cab2335def43d9f6896b5b8",
-      "lines": 9404,
+      "blob": "185ffe9933ee1adf9b6ff0e28290dcfc2b867d73",
+      "lines": 9766,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
     {
@@ -1056,8 +1056,8 @@
       "path": "test/runtime/arrivalAnchors.test.ts",
       "owner": "RUNTIME",
       "shard": "B",
-      "blob": "355c746c0052c87c3ea4312ac0cfb49a7a5ee9da",
-      "lines": 379,
+      "blob": "34d9f112497ea5dafc728609bf676b31f0ac528d",
+      "lines": 457,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
     {
@@ -1080,8 +1080,8 @@
       "path": "test/runtime/failureLog.test.ts",
       "owner": "RUNTIME",
       "shard": "B",
-      "blob": "b2a366267264b4fafb821a8d1c779c047e02019d",
-      "lines": 327,
+      "blob": "ec7d605191eedb14e83a47e705e0a323970a3561",
+      "lines": 361,
       "batchReport": ".planning/phases/08-final-sweep-and-gate/08-RUNTIME-REVIEW.md"
     },
     {

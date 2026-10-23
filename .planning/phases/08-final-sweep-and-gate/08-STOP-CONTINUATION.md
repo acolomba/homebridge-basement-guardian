@@ -14,6 +14,8 @@ The first combined `TEST_CONCURRENCY=1 npm run check` after `c8aac01` exited 1 b
 
 Independent reviewer `/root/phase8_feature_oracle_review` read the complete current 730-line feature at `6c578b8`, blob `9bde291114d45a579f50251189f6e54035fe732c`, in contiguous spans 1-180, 181-360, 361-540, and 541-730. The reviewer confirmed FEATURES-003 fixed with no new or reopened finding. The full `TEST_CONCURRENCY=1 npm run check` on Node `v26.12.1` exited 0 for the exact tree committed as `6c578b8`: six static checks, unpaired tests, 130/130 offline Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. The tree was clean after the commit. The initial sandbox-only named run failed at `listen EPERM`; the same named scenario passed with local loopback access, so that attempt is not a product RED.
 
+The complete current feature read also has a structured `supplementalReviews` row in this continuation's JSON so the final seal can match its exact blob. This records the already completed review; it does not add a correction round.
+
 ## Current forward work
 
 The original STOP's seven-ID snapshot remains in its machine record. At the start of this separately authorized continuation, the forward-open set had seven IDs: `CR-08-DEVICE-002`, `CR-08-RUNTIME-001`, `CR-08-RUNTIME-002`, `CR-08-RUNTIME-003`, `CR-08-RUNTIME-005`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`. RUNTIME-004 left the set after independent review; RUNTIME-005 entered it. FEATURES-003 arose and was fixed within this addendum. This is neither progress under Plan 08-14 nor permission to erase its STOP. The current set after RUNTIME round 1 is recorded below.
