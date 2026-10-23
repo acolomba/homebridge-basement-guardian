@@ -68,7 +68,7 @@ Feature: Shadow state merging
       | test_running | false |
     Then the canonical snapshot carries no shadow version
 
-  Scenario: An identical heartbeat refreshes the canonical observation
+  Scenario: An identical heartbeat reports another canonical notification
     When the plugin starts
     When the device publishes these heartbeat fields:
       | battery_health        | 96    |

@@ -182,8 +182,9 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
 // is about fifteen minutes, so an activation would almost never be observed
 // at all; canonical state that changes between polls has to reach HomeKit on
 // the store's own change notification instead (SAFE-03, SAFE-07). The store
-// notifies only when a telemetry value actually moved, and it contains a
-// failing listener itself, so nothing here filters or guards again.
+// also notifies for an accepted heartbeat with unchanged telemetry, so the
+// accessory can refresh trust time. The store contains listener failures,
+// so nothing here filters or guards again.
 //
 // No unsubscribe handle is kept: `store.remove(deviceId)`, which
 // `removeDiscoveredDevice` already calls, drops this device's whole listener
