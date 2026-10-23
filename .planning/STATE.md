@@ -664,6 +664,7 @@ with the `G-003` / `G-004` session before `1.0.0`:
 
 | Category | Item | Status | Deferred At | Milestone |
 |----------|------|--------|-------------|-----------|
+| debug_sessions | shadow-no-telemetry-liveness | awaiting_human_verify | 2026-10-23 | code-review-sweep |
 | review_advisory | Refused HomeKit removal still refetches the device inventory every poll, doubling the REST rate; only the log was throttled (8d8ffc0) | Deferred | 2026-09-07 | 1.0 |
 | Device family | HALO adapter implementation | Deferred | Initialization | v2 |
 | Setup | Custom setup interface | Deferred | Initialization | v2 |

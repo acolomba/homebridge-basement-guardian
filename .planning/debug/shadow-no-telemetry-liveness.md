@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "Phase 8 CR-08-RUNTIME-004: shadow messages without telemetry can renew liveness and keep stale readings trusted"
 created: 2026-10-23T00:07:24Z
 updated: 2026-10-23T00:13:41Z
+audit_acknowledged:
+  milestone: code-review-sweep
+  at: 2026-10-23
+  status: awaiting_human_verify
 ---
 
 ## Current Focus
@@ -37,6 +41,7 @@ candidate_causes:
   - code: runtime records all routed patches as telemetry arrivals
   - data: vendor may send desired-only or empty-telemetry patches while telemetry is stale
   - config: silence threshold may be too long, independently of message handling
+
 and_gate: The false-current symptom requires an existing shadow watermark and repeated no-reading patches within the silence window; the message classification error is the proposed code cause.
 
 ## Symptoms
