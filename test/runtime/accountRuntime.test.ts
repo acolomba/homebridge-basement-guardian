@@ -56,7 +56,7 @@ import type { HttpFetch } from '../../src/cloud/httpDispatcher.js';
 import type { MqttConnect, MqttTransport } from '../../src/cloud/mqttTransport.js';
 import type { CredentialCache, ShadowClient } from '../../src/cloud/shadow.js';
 import type { ApiDevice, AwsCredentialsResponse, CommandResult, DeviceCommand } from '../../src/cloud/types.js';
-import type { DeviceSnapshot, DeviceSnapshotListener, DeviceStateStore } from '../../src/device/state.js';
+import type { DeviceSnapshot, DeviceStateStore } from '../../src/device/state.js';
 import type { RedactingLogger, SecretRole } from '../../src/logging.js';
 import type { AccountRuntime, AccountRuntimeOptions, ShadowRuntimeOptions } from '../../src/runtime/accountRuntime.js';
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
@@ -7196,10 +7196,9 @@ describe('createAccountRuntime', () => {
     verify(listener);
   });
 
-  // Why the report is driven from the arrival callback and not from a snapshot listener. The
-  // canonical store notifies only when a telemetry value moved, so the heartbeat below reaches no
-  // subscriber at all, and it is still direct evidence that the live path is carrying (D-05, D-11).
-  test('clears the silence on a heartbeat carrying the values the store already holds, which notifies no subscriber', async (t) => {
+  // The accepted heartbeat refreshes canonical receipt and reaches subscribers
+  // with no changed telemetry keys. Arrival still clears shadow silence (D-05, D-11).
+  test('clears the silence on an unchanged heartbeat and notifies subscribers of its receipt', async (t) => {
     // arrange
     const listener = mock<AccountRuntimeOptions['onMonitoringHealth']>({ exactParams: true, name: 'monitoring trust listener' });
     when(() => {
@@ -7243,8 +7242,10 @@ describe('createAccountRuntime', () => {
     await runtime.start();
     await advance(HEARTBEAT_MS);
     await advance(HEARTBEAT_MS);
-    const subscription = mock<DeviceSnapshotListener>({ exactParams: true, name: 'unchanged snapshot listener' });
-    store.subscribe(DEVICE_ID, subscription);
+    const notifications: (readonly string[])[] = [];
+    store.subscribe(DEVICE_ID, (_next, _previous, changedKeys) => {
+      notifications.push(changedKeys);
+    });
 
     // act
     shadowOptionsOf(shadows).onReportedPatch(DEVICE_ID, { ...heartbeatPatch(), version: 1 });
@@ -7268,9 +7269,9 @@ describe('createAccountRuntime', () => {
       },
     );
     assert.deepStrictEqual(commandRequests, []);
+    assert.deepStrictEqual(notifications, [[]]);
     verify(commands);
     verify(listener);
-    verify(subscription);
   });
 
   // D-11 matches recovery to its cause: a successful poll leaves shadow silence unresolved,
