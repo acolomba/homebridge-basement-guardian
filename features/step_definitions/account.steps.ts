@@ -81,10 +81,17 @@ async function tokenCachePath(world: BasementGuardianWorld): Promise<string> {
 }
 
 async function isPresent(path: string): Promise<boolean> {
-  return access(path).then(
-    () => true,
-    () => false,
-  );
+  try {
+    await access(path);
+
+    return true;
+  } catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 async function refusedCredentials(this: BasementGuardianWorld): Promise<void> {
