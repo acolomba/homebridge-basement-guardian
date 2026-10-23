@@ -68,6 +68,24 @@ Independent reviewer `/root/phase8_device002_review` read the complete current D
 
 The round opened with DEVICE-002, fixed it, rejected none, added none, reopened none, and closed empty: **1 − 1 − 0 + 0 + 0 = 0**. The continuation STOP predicate did not fire. The whole-phase forward-open set is now `CR-08-FEATURES-001` and `CR-08-FEATURES-002`. The historical DEVICE round-one STOP and its seven-ID snapshot remain unchanged.
 
+## FEATURES continuation correction round 1
+
+Plan 08-18 fixed the two opening FEATURES causes in separate normal-hook commits. At `7735869`, the account cache-presence assertion distinguishes `ENOENT` from other filesystem errors. Its [negative-control record](08-FEATURES-002-NEGATIVE-CONTROL.json) contains a reproducible temporary scenario that makes the cache parent a regular file: the old `Then` falsely passed on `ENOTDIR` and the corrected `Then` propagates that error. This is an assertion repair, not a production behavior RED. At `dd87848`, all five World-bound step modules register anonymous typed function expressions without changing their step text, options, argument types, async flags, bodies, or order. The 88 registration shapes were compared by TypeScript AST; pinned Cucumber 13.2.1 and its installed runtime retain the World `this` binding. The default offline suite passed 130/130 scenarios and 1401/1401 steps, and usage dry run found no UNUSED definition.
+
+The combined `TEST_CONCURRENCY=1 npm run check` at clean revision `dd878480671f4e8caaf69d0c59b908db9c3fc146` on Node `v26.12.1` exited 0: 130/130 offline Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. No executable input changed between that gate and review.
+
+Independent reviewer `/root/phase8_features_round1_review` read every final step module completely at that revision; executor `/root` edited the five files and did not conduct their independent review. The machine record includes exact blobs and contiguous read spans. The reviewer confirmed both causes fixed, no new or reopened finding, and default/real profile isolation.
+
+| Path | Full blob | Complete lines and reads |
+| --- | --- | --- |
+| `features/step_definitions/account.steps.ts` | `f133a1ccb6834ed51f728a6cf6267055a3b963f3` | 1-213 |
+| `features/step_definitions/configuration.steps.ts` | `c8b6e79c1cfb3656b663bd954c2aabf33d17f576` | 1-80 |
+| `features/step_definitions/controls.steps.ts` | `33f03b197d8f8d4964f333e96ecd53c90936a13e` | 1-292 |
+| `features/step_definitions/homekit.steps.ts` | `65d91595cb67c3c935cb4e36c2cc715edd9d9bb1` | 1-279 |
+| `features/step_definitions/shadow.steps.ts` | `0f650de6360e015c40d93fd5921063b5a0f2551b` | 1-240, 241-452 |
+
+The round opened with FEATURES-001 and FEATURES-002, fixed both, rejected none, added none, reopened none, and closed empty: **2 − 2 − 0 + 0 + 0 = 0**. The no-progress, reopening, and fourth-round STOP predicates did not fire. The current forward-open set is empty and the separate continuation is complete. The original DEVICE round-one STOP and seven-ID snapshot remain active and unchanged in their historical record.
+
 ## Threat Flags
 
-RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. DEVICE-002 previously left a trusted observation timestamp stale. Both repairs have active RED and independent current-file review. Two FEATURES findings remain forward-open; the original STOP remains visible and active in its historical record.
+RUNTIME-006 previously allowed a shadow replay to replace a newer REST flood reading after silence release. DEVICE-002 previously left a trusted observation timestamp stale. Both repairs have active RED and independent current-file review. The cache absence assertion now rejects non-missing errors. There is no current forward-open finding; the original STOP remains visible and active in its historical record.
