@@ -16,8 +16,29 @@ Independent reviewer `/root/phase8_feature_oracle_review` read the complete curr
 
 ## Current forward work
 
-The original STOP's seven-ID snapshot remains in its machine record. After this separately authorized debug, the **current forward-open set still has seven IDs**: `CR-08-DEVICE-002`, `CR-08-RUNTIME-001`, `CR-08-RUNTIME-002`, `CR-08-RUNTIME-003`, `CR-08-RUNTIME-005`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`. RUNTIME-004 left the set after independent review; RUNTIME-005 entered it. FEATURES-003 arose and was fixed within this addendum. This is neither progress under Plan 08-14 nor permission to erase its STOP. New focused continuation plans must name these exact causes and preserve all original round numbers and gate requirements.
+The original STOP's seven-ID snapshot remains in its machine record. At the start of this separately authorized continuation, the forward-open set had seven IDs: `CR-08-DEVICE-002`, `CR-08-RUNTIME-001`, `CR-08-RUNTIME-002`, `CR-08-RUNTIME-003`, `CR-08-RUNTIME-005`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`. RUNTIME-004 left the set after independent review; RUNTIME-005 entered it. FEATURES-003 arose and was fixed within this addendum. This is neither progress under Plan 08-14 nor permission to erase its STOP. The current set after RUNTIME round 1 is recorded below.
+
+## RUNTIME continuation correction round 1
+
+Plan 08-16 repaired four distinct causes in separate active RED and GREEN sequences. Each final active regression failed on unchanged production with an intended assertion; each exact RED record passed `tdd-red-evidence --raw` and was committed alone before its source/test fix. Preliminary RED records for 001, 002, and 005 were superseded by V2 records after the final test patch changed; the earlier records remain visible. [The bug ledger](08-BUG-LEDGER.md#phase-8) gives each source, V2 evidence, and GREEN commit. Focused owner and adjacent suites, static checks, and isolated 100% line/function/branch direct coverage passed for every changed source pair. Normal commit hooks passed.
+
+The combined `TEST_CONCURRENCY=1 npm run check` at clean revision `6ba036f92b526887ac04ba80256de5d7e2ed210b` on Node `v26.12.1` exited 0: 130/130 Cucumber scenarios, 1401/1401 steps, and 43 isolated direct coverage pairs. No executable input changed between that gate and the independent review.
+
+Independent reviewer `/root/phase8_runtime_continuation_review` read every changed current file completely at `6ba036f92b526887ac04ba80256de5d7e2ed210b`:
+
+| Path | Full blob | Complete lines and contiguous reads | Result |
+| --- | --- | --- | --- |
+| `src/runtime/accountRuntime.ts` | `2f21725db1d718ce8a9b69653b04de4a6607f59d` | 1-1346; 1-300, 301-650, 651-1000, 901-1200, 1201-1346 | 001 and 005 fixed; new 006 traced |
+| `test/runtime/accountRuntime.test.ts` | `9aa0a99a18eea2d18022497bec2f2cedcda01b58` | 1-9672; 1-1000, 1001-2000 (1468-1500 reread at 1460-1505), then adjacent 500-line spans through 9500, 9501-9672 | 001 and 005 regressions; 006 ordering gap |
+| `src/runtime/arrivalAnchors.ts` | `024b729789a271be9c90cb65e0885b5ba5c4cfd6` | 1-218 | 002 fixed |
+| `test/runtime/arrivalAnchors.test.ts` | `34d9f112497ea5dafc728609bf676b31f0ac528d` | 1-457; 1-126, 127-367, 368-457 | 002 regression |
+| `src/runtime/failureLog.ts` | `ce344523252d659f811cfdab41d349096f7f900c` | 1-95 | 003 fixed |
+| `test/runtime/failureLog.test.ts` | `ec7d605191eedb14e83a47e705e0a323970a3561` | 1-361 | 003 regression |
+
+The reviewer also traced bounded `src/device/state.ts`, `src/runtime/monitoringHealth.ts`, and shadow delivery. Four opening IDs (001, 002, 003, 005) were fixed, none rejected or reopened, and one distinct BLOCKER, **CR-08-RUNTIME-006**, was found. The arithmetic is **4 opening − 4 fixed − 0 rejected + 1 new + 0 reopened = 1 closing**. Round 1 progressed; the continuation STOP predicate did not fire. The whole forward-open set now has four IDs: `CR-08-DEVICE-002`, `CR-08-RUNTIME-006`, `CR-08-FEATURES-001`, and `CR-08-FEATURES-002`.
+
+RUNTIME-006 arises after a still-open shadow connection falls silent. `src/device/state.ts:404-408` clears its version watermark on source release, so an older duplicate can be accepted at `:349-360`, replace a newer REST flood observation at `:263-274`, and renew runtime liveness at `src/runtime/accountRuntime.ts:892-900`. The existing 005 test sends duplicates before release. A read-only inline reproduction against the already-built state module applied version 7 normal, released shadow, applied REST flood level 3, then replayed version 7 normal. It yielded `afterRest.waterLevel=3` and `afterReplay.waterLevel=2`, with `accepted=true`. This confirms the store-side transition; a named end-to-end RED and focused repair remain due. The reviewer judged this a new source-release/version-fence cause, not a return of 005's stamp-before-rejection cause. Vendor replay frequency is unknown. A focused round-2 plan must precede DEVICE work; the historical STOP and its round counts remain unchanged.
 
 ## Threat Flags
 
-RUNTIME-005 can keep stale safety readings marked trustworthy. It remains open for active RED, a cause repair, and independent complete-file review. The original STOP remains visible and active in its historical record.
+RUNTIME-006 can replace a newer REST flood reading with an older shadow normal reading after silence release. It remains open for active RED, a cause repair, and independent complete-file review. The original STOP remains visible and active in its historical record.

@@ -4,7 +4,7 @@
   "phase": "08-final-sweep-and-gate",
   "historicalStopRecord": "08-CORRECTION-ROUNDS.json",
   "historicalStopPreserved": true,
-  "correctionRoundsAdded": 0,
+  "correctionRoundsAdded": 1,
   "authorization": "Maintainer authorized a bounded GSD debug and replan for the seven open findings after DEVICE round 1 STOP.",
   "debugFix": {
     "id": "CR-08-RUNTIME-004",
@@ -24,12 +24,80 @@
   },
   "forwardOpenIds": [
     "CR-08-DEVICE-002",
-    "CR-08-RUNTIME-001",
-    "CR-08-RUNTIME-002",
-    "CR-08-RUNTIME-003",
-    "CR-08-RUNTIME-005",
+    "CR-08-RUNTIME-006",
     "CR-08-FEATURES-001",
     "CR-08-FEATURES-002"
   ],
-  "state": "replan-required"
+  "continuationRounds": {
+    "RUNTIME": [
+      {
+        "round": 1,
+        "reviewer": "/root/phase8_runtime_continuation_review",
+        "revision": "6ba036f92b526887ac04ba80256de5d7e2ed210b",
+        "openingIds": ["CR-08-RUNTIME-001", "CR-08-RUNTIME-002", "CR-08-RUNTIME-003", "CR-08-RUNTIME-005"],
+        "fixedIds": ["CR-08-RUNTIME-001", "CR-08-RUNTIME-002", "CR-08-RUNTIME-003", "CR-08-RUNTIME-005"],
+        "rejectedIds": [],
+        "newIds": ["CR-08-RUNTIME-006"],
+        "reopenedIds": [],
+        "closingIds": ["CR-08-RUNTIME-006"],
+        "reviewedFiles": [
+          {
+            "path": "src/runtime/accountRuntime.ts",
+            "blob": "2f21725db1d718ce8a9b69653b04de4a6607f59d",
+            "completeLines": "1-1346",
+            "readSpans": ["1-300", "301-650", "651-1000", "901-1200", "1201-1346"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          },
+          {
+            "path": "test/runtime/accountRuntime.test.ts",
+            "blob": "9aa0a99a18eea2d18022497bec2f2cedcda01b58",
+            "completeLines": "1-9672",
+            "readSpans": ["1-1000", "1001-2000", "1460-1505", "2001-2500", "2501-3000", "3001-3500", "3501-4000", "4001-4500", "4501-5000", "5001-5500", "5501-6000", "6001-6500", "6501-7000", "7001-7500", "7501-8000", "8001-8500", "8501-9000", "9001-9500", "9501-9672"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          },
+          {
+            "path": "src/runtime/arrivalAnchors.ts",
+            "blob": "024b729789a271be9c90cb65e0885b5ba5c4cfd6",
+            "completeLines": "1-218",
+            "readSpans": ["1-218"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          },
+          {
+            "path": "test/runtime/arrivalAnchors.test.ts",
+            "blob": "34d9f112497ea5dafc728609bf676b31f0ac528d",
+            "completeLines": "1-457",
+            "readSpans": ["1-126", "127-367", "368-457"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          },
+          {
+            "path": "src/runtime/failureLog.ts",
+            "blob": "ce344523252d659f811cfdab41d349096f7f900c",
+            "completeLines": "1-95",
+            "readSpans": ["1-95"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          },
+          {
+            "path": "test/runtime/failureLog.test.ts",
+            "blob": "ec7d605191eedb14e83a47e705e0a323970a3561",
+            "completeLines": "1-361",
+            "readSpans": ["1-361"],
+            "reviewer": "/root/phase8_runtime_continuation_review"
+          }
+        ],
+        "combinedGate": {
+          "command": "TEST_CONCURRENCY=1 npm run check",
+          "nodeVersion": "v26.12.1",
+          "exitCode": 0,
+          "scenarios": "130/130",
+          "steps": "1401/1401",
+          "directCoveragePairs": 43,
+          "revision": "6ba036f92b526887ac04ba80256de5d7e2ed210b",
+          "executableInputsClean": true
+        },
+        "stopReason": null
+      }
+    ]
+  },
+  "continuationStop": { "active": false, "reason": null },
+  "state": "in-progress"
 }
