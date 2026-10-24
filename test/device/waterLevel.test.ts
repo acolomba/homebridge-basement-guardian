@@ -39,9 +39,17 @@ describe('waterLevelPercentage', () => {
     test(`SAFE-01 refuses to invent a level for the illegal code ${String(code)}`, () => {
       // arrange
       const waterLevelCode = code;
+      const expectedMessage = `waterLevelPercentage() has no level for water_level ${String(code)}; validate() must reject this snapshot first`;
 
       // act & assert
-      assert.throws(() => waterLevelPercentage(waterLevelCode), TypeError);
+      assert.throws(
+        () => waterLevelPercentage(waterLevelCode),
+        (error: unknown) => {
+          assert.ok(error instanceof TypeError);
+          assert.strictEqual(error.message, expectedMessage);
+          return true;
+        },
+      );
     });
   }
 });

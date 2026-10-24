@@ -56,8 +56,6 @@ describe('createFamilyRegistry', () => {
 
     // assert
     assert.deepStrictEqual(outcome, { kind: 'unsupported', deviceTypeId: 'wayneWaterHalo', displayName: 'Wayne Water HALO' });
-    assert.notStrictEqual(outcome.kind, 'implemented');
-    assert.notStrictEqual(outcome.kind, 'unknown');
   });
 
   test('resolves the three outcomes to exactly one kind each, with no overlap', () => {

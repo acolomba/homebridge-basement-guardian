@@ -378,17 +378,22 @@ for (const { described, entry } of [
 }
 
 // D-17 refuses the whole configuration over one typo, so the refusal is the administrator's only
-// route back. Each removable sensor is checked on its own, against a name this module owns.
-for (const sensorName of REMOVABLE_SENSOR_NAMES) {
-  test(`CONF-06 names ${sensorName} in the refusal for an unrecognised removable sensor`, () => {
-    // act
-    const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
+// route back. The expected reason spells every removable sensor out rather than joining the list.
+test('CONF-06 names every removable sensor in the refusal for an unrecognised removable sensor', () => {
+  // arrange
+  const expectedRefusal: ConfigRefused = {
+    ok: false,
+    reason:
+      'ignoredFaults must name only backup-pump-running, mains-power-lost, primary-pump-fault, backup-pump-fault, ' +
+      'water-sensor-fault, pump-controller-link-lost, basement-guardian-offline, but it contains an invalid entry.',
+  };
 
-    // assert
-    assert.ok(!configResult.ok);
-    assert.ok(configResult.reason.includes(sensorName));
-  });
-}
+  // act
+  const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
+
+  // assert
+  assert.deepStrictEqual(configResult, expectedRefusal);
+});
 
 test('CONF-06 omits an unrecognised entry from the refusal', () => {
   // act
@@ -454,8 +459,7 @@ test('CONF-06 refuses an unrecognised removable sensor without quoting the accou
   const configResult = validateConfig(accountConfig({ ignoredFaults: ['mains-power-lst'] }));
 
   // assert
-  assert.ok(!configResult.ok);
-  assert.strictEqual(configResult.reason.includes('@'), false);
+  assert.deepStrictEqual(configResult, { ok: false, reason: UNKNOWN_SENSOR_REFUSAL });
 });
 
 test('keeps a private value out of a poll interval refusal', () => {
