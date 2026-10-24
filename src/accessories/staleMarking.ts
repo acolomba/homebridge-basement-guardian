@@ -69,12 +69,12 @@ export interface ServicePassCounts {
   failed: number;
 }
 
-// The one walk all three passes make: every restored service carrying the
-// characteristic that decides the pass applies to it, acted on and counted.
+// The one walk all three passes make: every service on the accessory carrying
+// the characteristic that decides the pass applies to it, acted on and counted.
 //
 // It is extracted rather than written out three times because the passes differ
-// only in that guard and that act, and a guard tightened in one copy and not
-// the other would silently change which services a pass reaches. A failed
+// only in that guard and that act, and a guard tightened in one pass and not
+// the others would silently change which services a pass reaches. A failed
 // service is counted and does not prevent a later one from being prepared.
 //
 // The guard stays `testCharacteristic` for every pass. A service that never
