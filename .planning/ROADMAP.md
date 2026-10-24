@@ -31,3 +31,14 @@ The implementation and release-candidate work is in [the v1.0 roadmap](milestone
 The full phase details are in [the archived roadmap](milestones/code-review-sweep-ROADMAP.md). The [milestone audit](milestones/code-review-sweep-MILESTONE-AUDIT.md) records the passing checks and accepted limits.
 
 </details>
+
+## Backlog
+
+### Phase 999.1: Reuse an abandoned token grant that succeeded (BACKLOG)
+
+**Goal:** [Captured for future planning] When the last waiter abandons a shared grant in `src/cloud/auth.ts` after the vendor already answered, `grantAndCache` throws on abort after it writes the token cache. The token never reaches the in-memory `cached`, and `cacheRead` is memoized, so the next caller sends a fresh password grant. Rework `grantAndCache` so an aborted attempt still hands back the token it wrote. Today this costs one extra grant in a rare race against a throttling tenant (D-22). Found in the PR #23 review.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
