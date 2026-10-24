@@ -50,7 +50,7 @@ export interface ArrivalAnchorsOptions {
   storagePath: string;
   log: Logging;
   /** Trusted adapter dependency supplying a complete temporary path; uses native naming when absent. */
-  temporaryPath?: (target: string) => string;
+  createTemporaryPath?: (target: string) => string;
 }
 
 /**
@@ -203,7 +203,7 @@ export function createArrivalAnchors(options: ArrivalAnchorsOptions): ArrivalAnc
 
       const writing = pendingWrite.then(async () => {
         try {
-          await storeAnchors((options.temporaryPath ?? temporaryPath)(target), target, JSON.stringify(snapshot));
+          await storeAnchors((options.createTemporaryPath ?? temporaryPath)(target), target, JSON.stringify(snapshot));
         } catch {
           // A stale anchor is the safe direction -- the clamp can only ever report
           // silence sooner, never later -- so a write that did not land costs

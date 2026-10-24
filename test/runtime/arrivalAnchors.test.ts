@@ -260,9 +260,9 @@ test('D-07 keeps serving and orphans no temporary file when the anchors cannot b
 test('persists and restores complete anchors using the supplied temporary path', async (t) => {
   // arrange
   const storagePath = await createStoragePath(t);
-  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
-  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'arrival-write.tmp'));
-  const writer = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  const createTemporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => createTemporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'arrival-write.tmp'));
+  const writer = createArrivalAnchors({ storagePath, log: recordingLog([]), createTemporaryPath });
   writer.record(DEVICE_ID, ANCHOR);
   writer.record(OTHER_DEVICE_ID, 0);
 
@@ -286,7 +286,7 @@ test('persists and restores complete anchors using the supplied temporary path',
       entries: ['.basement-guardian-arrivals.json'],
     },
   );
-  verify(temporaryPath);
+  verify(createTemporaryPath);
 });
 
 test('serializes overlapping persist calls so the newer snapshot stays durable', async (t) => {
@@ -316,7 +316,7 @@ test('serializes overlapping persist calls so the newer snapshot stays durable',
   const writer = createArrivalAnchors({
     storagePath,
     log: recordingLog([]),
-    temporaryPath: () => {
+    createTemporaryPath: () => {
       temporaryWrites += 1;
 
       return temporaryWrites === 1 ? olderTemporary : newerTemporary;
@@ -366,9 +366,9 @@ test('preserves an occupied temporary file and prior durable anchors after exclu
   const storagePath = await createStoragePath(t);
   await writeFile(join(storagePath, 'occupied.tmp'), 'another writer');
   await writeFile(join(storagePath, '.basement-guardian-arrivals.json'), '{"placeholder-device":0}');
-  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
-  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'occupied.tmp'));
-  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  const createTemporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => createTemporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'occupied.tmp'));
+  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), createTemporaryPath });
   anchors.record(DEVICE_ID, ANCHOR);
   anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
 
@@ -386,7 +386,7 @@ test('preserves an occupied temporary file and prior durable anchors after exclu
     },
     { temporary: 'another writer', durable: '{"placeholder-device":0}', anchor: ANCHOR, otherAnchor: OTHER_ANCHOR },
   );
-  verify(temporaryPath);
+  verify(createTemporaryPath);
 });
 
 test('removes its supplied temporary file after rename fails and retains memory and the target', async (t) => {
@@ -394,9 +394,9 @@ test('removes its supplied temporary file after rename fails and retains memory 
   const storagePath = await createStoragePath(t);
   await mkdir(join(storagePath, '.basement-guardian-arrivals.json'));
   await writeFile(join(storagePath, '.basement-guardian-arrivals.json', 'retained'), 'target contents');
-  const temporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
-  when(() => temporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'owned.tmp'));
-  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), temporaryPath });
+  const createTemporaryPath = mock<(target: string) => string>({ exactParams: true, name: 'temporary path' });
+  when(() => createTemporaryPath(join(storagePath, '.basement-guardian-arrivals.json'))).thenReturn(join(storagePath, 'owned.tmp'));
+  const anchors = createArrivalAnchors({ storagePath, log: recordingLog([]), createTemporaryPath });
   anchors.record(DEVICE_ID, ANCHOR);
   anchors.record(OTHER_DEVICE_ID, OTHER_ANCHOR);
 
@@ -420,7 +420,7 @@ test('removes its supplied temporary file after rename fails and retains memory 
       retained: 'target contents',
     },
   );
-  verify(temporaryPath);
+  verify(createTemporaryPath);
 });
 
 test('retains memory and durable bytes when the temporary path supplier throws', async (t) => {
@@ -430,7 +430,7 @@ test('retains memory and durable bytes when the temporary path supplier throws',
   const anchors = createArrivalAnchors({
     storagePath,
     log: recordingLog([]),
-    temporaryPath: () => {
+    createTemporaryPath: () => {
       throw new Error('temporary path unavailable');
     },
   });
