@@ -339,7 +339,7 @@ async function deleteCachedToken(options: AuthClientOptions): Promise<void> {
   try {
     await rm(cachePath(options), { force: true });
   } catch {
-    options.log.debug(CACHE_NOT_DELETED);
+    options.log.warn(CACHE_NOT_DELETED);
   }
 }
 

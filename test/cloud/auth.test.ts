@@ -1146,7 +1146,7 @@ test('D-13 preserves the terminal refusal when the cache path is a directory', a
   assert.deepStrictEqual(messages, [
     'debug The cached token could not be read; authenticating again.',
     `error ${REJECTION_LOG}`,
-    'debug The token cache could not be deleted; authentication remains stopped.',
+    'warn The token cache could not be deleted; authentication remains stopped.',
   ]);
 });
 
