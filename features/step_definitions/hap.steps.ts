@@ -17,12 +17,13 @@
 
 import assert from 'node:assert/strict';
 
-import { Then } from '@cucumber/cucumber';
+import { Given, Then, When } from '@cucumber/cucumber';
 
 import { createFakeHap } from '../lib/hap.js';
 import { createFakeAccessory } from '../lib/homebridgeApi.js';
 
 import type { FakeHapCharacteristic, FakeHapService } from '../lib/hap.js';
+import type { BasementGuardianWorld } from '../support/world.js';
 
 const HAP = createFakeHap();
 
@@ -32,6 +33,12 @@ const ACCESSORY_NAME = 'Sump System';
 const ACCESSORY_UUID = 'placeholder-accessory-uuid';
 
 const SCRATCH_CHARACTERISTIC_MINIMUM = 3;
+
+const FIRST_LEAK_CHARACTERISTIC = 'first leak detected characteristic';
+const SECOND_LEAK_CHARACTERISTIC = 'second leak detected characteristic';
+
+// The properties a fresh Leak Detected characteristic carries, as the real HAP declares them.
+const LEAK_DETECTED_PROPS = { format: 'uint8', perms: ['ev', 'pr'], validValues: [0, 1] };
 
 // A plugin declares its own HomeKit types by subclassing the injected namespace, so both bases must
 // be constructible through the real argument orders. These two stand for a production type; nothing
@@ -108,6 +115,53 @@ function assertStandardIdentifiers(): void {
   );
 }
 
+function recalledCharacteristic(world: BasementGuardianWorld, name: string): FakeHapCharacteristic {
+  const characteristic = world.recall(name);
+
+  if (!(characteristic instanceof HAP.Characteristic)) {
+    throw new Error(`the ${name} is not a hap characteristic`);
+  }
+
+  return characteristic;
+}
+
+function leakDetectedPropsOf(characteristic: FakeHapCharacteristic): unknown {
+  const { format, perms, validValues } = characteristic.props;
+
+  return { format, perms, validValues };
+}
+
+Given('two leak detected characteristics', function (this: BasementGuardianWorld): void {
+  const first = new HAP.Characteristic.LeakDetected();
+  const second = new HAP.Characteristic.LeakDetected();
+
+  assert.deepStrictEqual([leakDetectedPropsOf(first), leakDetectedPropsOf(second)], [LEAK_DETECTED_PROPS, LEAK_DETECTED_PROPS]);
+  this.remember(FIRST_LEAK_CHARACTERISTIC, first);
+  this.remember(SECOND_LEAK_CHARACTERISTIC, second);
+});
+
+When('a plugin changes the format, perms, and valid values of the first one', function (this: BasementGuardianWorld): void {
+  const first = recalledCharacteristic(this, FIRST_LEAK_CHARACTERISTIC);
+  const originalFormat = first.props.format;
+  // The public props are readonly; this step mutates them to check that instances do not share arrays.
+  // Keep each array reference so the release can restore shared data in place if they are shared.
+  const mutablePerms = first.props.perms as string[];
+  const mutableValidValues = (first.props.validValues ?? []) as number[];
+  const originalPerms = [...mutablePerms];
+  const originalValidValues = [...mutableValidValues];
+
+  this.onRelease(() => {
+    first.props.format = originalFormat;
+    mutablePerms.splice(0, mutablePerms.length, ...originalPerms);
+    mutableValidValues.splice(0, mutableValidValues.length, ...originalValidValues);
+
+    return Promise.resolve();
+  });
+  first.props.format = HAP.Formats.STRING;
+  mutablePerms.pop();
+  mutableValidValues.pop();
+});
+
 Then('the hap stand-in carries the standard service and characteristic identifiers', () => {
   assertStandardIdentifiers();
 });
@@ -172,32 +226,8 @@ Then('a plugin type extends the hap service and the hap characteristic', () => {
   assertScratchTypeConstructs();
 });
 
-Then('two fake hap characteristics keep separate properties', () => {
-  const first = new HAP.Characteristic.LeakDetected();
-  const second = new HAP.Characteristic.LeakDetected();
-  const originalFormat = first.props.format;
-  assert.ok(first.props.validValues);
-  // The public props are readonly; this test mutates them to check that instances do not share arrays.
-  // Keep each array reference so a failing assertion can restore shared data in place.
-  const mutablePerms = first.props.perms as string[];
-  const mutableValidValues = first.props.validValues as number[];
-  const originalPerms = [...mutablePerms];
-  const originalValidValues = [...mutableValidValues];
-
-  try {
-    first.props.format = HAP.Formats.STRING;
-    mutablePerms.pop();
-    mutableValidValues.pop();
-
-    assert.deepStrictEqual(
-      { format: second.props.format, perms: second.props.perms, validValues: second.props.validValues },
-      { format: HAP.Formats.UINT8, perms: [HAP.Perms.NOTIFY, HAP.Perms.PAIRED_READ], validValues: [0, 1] },
-    );
-  } finally {
-    first.props.format = originalFormat;
-    mutablePerms.splice(0, mutablePerms.length, ...originalPerms);
-    mutableValidValues.splice(0, mutableValidValues.length, ...originalValidValues);
-  }
+Then('the second one keeps its own format, perms, and valid values', function (this: BasementGuardianWorld): void {
+  assert.deepStrictEqual(leakDetectedPropsOf(recalledCharacteristic(this, SECOND_LEAK_CHARACTERISTIC)), LEAK_DETECTED_PROPS);
 });
 
 function characteristicStateOf(characteristic: FakeHapCharacteristic): { value: unknown; pushed: boolean; statusCode: number } {

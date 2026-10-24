@@ -141,7 +141,9 @@ Feature: Harness fakes
     Then a plugin type extends the hap service and the hap characteristic
 
   Scenario: Fake hap characteristics keep separate properties
-    Then two fake hap characteristics keep separate properties
+    Given two leak detected characteristics
+    When a plugin changes the format, perms, and valid values of the first one
+    Then the second one keeps its own format, perms, and valid values
 
   Scenario: Fresh hap characteristics have the real format defaults
     Then fresh hap characteristics read at their format defaults
