@@ -126,7 +126,7 @@ export interface DeviceStateStore {
    * Preserves observed values and receipt time, and notifies no listener.
    * An unknown device is a no-op; repeated releases leave observations unchanged.
    */
-  releaseShadowSource(deviceId: string, reason?: 'silence' | 'disconnect'): void;
+  releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect'): void;
 }
 
 const NO_LISTENERS: ReadonlySet<DeviceSnapshotListener> = new Set();
@@ -419,7 +419,7 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
     // keeps its last accepted version, so only newer telemetry can take
     // ownership back from REST. Repeated silent polls keep that fence;
     // disconnect and removal start a fresh version epoch.
-    releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect' = 'disconnect'): void {
+    releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect'): void {
       const snapshot = snapshots.get(deviceId);
 
       if (reason === 'disconnect') {

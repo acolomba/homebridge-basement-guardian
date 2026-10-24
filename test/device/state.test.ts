@@ -748,8 +748,8 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
-    store.releaseShadowSource(SECOND_DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
+    store.releaseShadowSource(SECOND_DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -778,7 +778,7 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     const snapshot = store.applyDiscovery(geminiDevice());
 
     // assert
@@ -789,7 +789,7 @@ describe('releaseShadowSource', () => {
     // arrange
     const store = versionedStore();
     store.applyReportedPatch(DEVICE_ID, { data: { primary_pump_running: true }, state: undefined, version: 90 });
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     store.applyDiscovery(geminiDevice());
 
     // act
@@ -806,7 +806,7 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(notifications, []);
@@ -828,9 +828,9 @@ describe('releaseShadowSource', () => {
 
     // act
     currentTime = SECOND_RECEIPT;
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     currentTime = SECOND_RECEIPT + 1_000;
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
@@ -850,7 +850,7 @@ describe('releaseShadowSource', () => {
     const store = versionedStore();
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     const snapshot = store.snapshot(DEVICE_ID);
 
     // assert
@@ -879,7 +879,7 @@ describe('releaseShadowSource', () => {
     store.applyReportedPatch(SECOND_DEVICE_ID, { data: { water_level: 5 }, state: undefined, version: 91 });
 
     // act
-    store.releaseShadowSource(DEVICE_ID);
+    store.releaseShadowSource(DEVICE_ID, 'disconnect');
     store.applyDiscovery(geminiDevice());
     store.applyDiscovery({ ...geminiDevice(), deviceId: SECOND_DEVICE_ID, serialNumber: 'serial-2' });
 
@@ -904,7 +904,7 @@ describe('releaseShadowSource', () => {
     store.subscribe(DEVICE_ID, recordInto(notifications));
 
     // act
-    store.releaseShadowSource(SECOND_DEVICE_ID);
+    store.releaseShadowSource(SECOND_DEVICE_ID, 'disconnect');
 
     // assert
     assert.deepStrictEqual(store.snapshot(DEVICE_ID), {
