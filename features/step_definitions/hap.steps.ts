@@ -204,16 +204,29 @@ function characteristicStateOf(characteristic: FakeHapCharacteristic): { value: 
   return { value: characteristic.value, pushed: characteristic.pushed, statusCode: characteristic.statusCode };
 }
 
+interface StandardServiceInstances {
+  leakSensor: FakeHapService;
+  contactSensor: FakeHapService;
+  battery: FakeHapService;
+  switchService: FakeHapService;
+}
+
+function standardServiceInstances(): StandardServiceInstances {
+  return {
+    leakSensor: new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood'),
+    contactSensor: new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost'),
+    battery: new HAP.Service.Battery('Backup Battery Level', 'backup-battery'),
+    switchService: new HAP.Service.Switch('System Self-Test', 'system-self-test'),
+  };
+}
+
 // The real HAP creates each characteristic at its format default, and for this plugin those
 // defaults are the good-news values: a sensor published before the first valid decode would read
 // "no leak", "contact detected", and "battery normal". `StatusActive` defaults to false, the one
 // default that is honest. The accessory never relies on that: it adds no service until its row has
 // a value to vouch for, and pushes `StatusActive` on every service it does add (D-05, D-014).
 function assertFormatDefaults(): void {
-  const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
-  const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
-  const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
-  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
+  const { leakSensor, contactSensor, battery, switchService } = standardServiceInstances();
 
   assert.deepStrictEqual(
     {
@@ -287,10 +300,7 @@ function optionalUuidsOf(service: FakeHapService): string[] {
 // declares neither, which keeps the declaring branch reachable here.
 function assertStandardOptionalDeclarations(): void {
   const accessoryInformation = new HAP.Service.AccessoryInformation('Sump System');
-  const leakSensor = new HAP.Service.LeakSensor('Sump Pit Flood', 'sump-pit-flood');
-  const contactSensor = new HAP.Service.ContactSensor('Mains Power Lost', 'mains-power-lost');
-  const battery = new HAP.Service.Battery('Backup Battery Level', 'backup-battery');
-  const switchService = new HAP.Service.Switch('System Self-Test', 'system-self-test');
+  const { leakSensor, contactSensor, battery, switchService } = standardServiceInstances();
 
   assert.deepStrictEqual(
     {
