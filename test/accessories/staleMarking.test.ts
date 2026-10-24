@@ -246,6 +246,29 @@ describe('markRestoredServicesStale', () => {
     );
   });
 
+  test('makes the trust report unreadable on a restored service whose stale mark is rejected, and keeps its value', async (t) => {
+    // arrange
+    const accessory = restoredAccessory();
+    const flood = floodSensorReporting(accessory, true);
+    const updateSpy = t.mock.method(flood, 'updateCharacteristic');
+    updateSpy.mock.mockImplementationOnce(() => {
+      throw new Error('synthetic restored marking failure');
+    });
+
+    // act
+    const result = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+
+    // assert
+    assert.deepStrictEqual(
+      { result, flood: await readOf(flood, HAP.Characteristic.StatusActive), leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected) },
+      {
+        result: { reached: 0, failed: 1 },
+        flood: { value: true, threw: HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
+        leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
+      },
+    );
+  });
+
   test('counts every restored service that already reports whether the plugin vouches for it', () => {
     // arrange
     const accessory = restoredAccessory();

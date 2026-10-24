@@ -107,10 +107,24 @@ function overServicesCarrying(accessory: PlatformAccessory, guard: Characteristi
  * control's `On` the latter routes through the write path and becomes a command
  * this plugin issued to the device, and the accessories tier carries one write
  * verb precisely so that cannot happen by accident.
+ *
+ * When that push throws, the trust report is made unreadable instead, and the
+ * service still counts as failed. Otherwise the cached `true` would stay
+ * readable, and the service would keep vouching for its cached readings: the
+ * false normal this pass exists to prevent. HAP stores the status and returns
+ * before it validates the value or notifies a listener, so this push succeeds
+ * where the ordinary push failed. The first ordinary push after a successful
+ * poll clears the status, so the tile does not stay unreadable (D-014).
  */
 export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): { reached: number; failed: number } {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
-    publishValue(service, hap.Characteristic.StatusActive, false);
+    try {
+      publishValue(service, hap.Characteristic.StatusActive, false);
+    } catch (error: unknown) {
+      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+
+      throw error;
+    }
   });
 }
 
