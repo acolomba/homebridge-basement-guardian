@@ -250,19 +250,19 @@ describe('markRestoredServicesStale', () => {
     // arrange
     const accessory = restoredAccessory();
     const flood = floodSensorReporting(accessory, true);
-    const updateSpy = t.mock.method(flood, 'updateCharacteristic');
-    updateSpy.mock.mockImplementationOnce(() => {
+    const updateCharacteristicSpy = t.mock.method(flood, 'updateCharacteristic');
+    updateCharacteristicSpy.mock.mockImplementationOnce(() => {
       throw new Error('synthetic restored marking failure');
     });
 
     // act
-    const result = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+    const marking = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
 
     // assert
     assert.deepStrictEqual(
-      { result, flood: await readOf(flood, HAP.Characteristic.StatusActive), leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected) },
+      { marking, flood: await readOf(flood, HAP.Characteristic.StatusActive), leakDetected: await readOf(flood, HAP.Characteristic.LeakDetected) },
       {
-        result: { reached: 0, failed: 1 },
+        marking: { reached: 0, failed: 1 },
         flood: { value: true, threw: HAP.HAPStatus.SERVICE_COMMUNICATION_FAILURE },
         leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },
       },
