@@ -376,9 +376,11 @@ export function createAccountRuntime(options: AccountRuntimeOptions): AccountRun
   // Homebridge process (D-20).
   async function waitFor(delayMs: number): Promise<boolean> {
     try {
-      while (delayMs > MAX_TIMEOUT_DELAY_MS) {
+      // Node caps one timer at 2^31 - 1 ms, so a longer wait runs as a chain.
+      if (delayMs > MAX_TIMEOUT_DELAY_MS) {
         await timers.setTimeout(MAX_TIMEOUT_DELAY_MS, undefined, { signal: root.signal });
-        delayMs -= MAX_TIMEOUT_DELAY_MS;
+
+        return await waitFor(delayMs - MAX_TIMEOUT_DELAY_MS);
       }
 
       await timers.setTimeout(delayMs, undefined, { signal: root.signal });

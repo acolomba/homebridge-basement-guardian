@@ -537,11 +537,13 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   // attempt, unless the client stopped meanwhile. The abort belongs to the
   // callers that left, so it never becomes this caller's rejection.
   async function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
-    while (inFlight?.controller.signal.aborted === true) {
+    if (inFlight?.controller.signal.aborted === true) {
       // Only the settling matters here; the outcome belongs to the callers
       // that left.
       const abandoned = inFlight.token.catch(() => undefined);
       await waitFor(abandoned, signal);
+
+      return sharedGrant(signal);
     }
 
     // The abandoned attempt may have ended in a refusal, so the halt is checked
