@@ -111,8 +111,8 @@ interface CachedToken {
 }
 
 interface GrantAttempt {
-  controller: AbortController;
-  token: Promise<CachedToken>;
+  readonly controller: AbortController;
+  readonly token: Promise<CachedToken>;
   waiters: number;
 }
 
@@ -530,7 +530,20 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   // block it may already be under (WR-04, D-22). The attempt is forgotten once
   // it settles, so a later lapse, or a retry after a transient failure, starts
   // a fresh one.
-  function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
+  //
+  // An abandoned attempt stays in its slot until its request and cache work
+  // settle, so no caller can open a second grant beside it. A caller that
+  // arrives in that window waits for it to settle and then starts a fresh
+  // attempt. The abort belongs to the callers that left, so it never becomes
+  // this caller's rejection.
+  async function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
+    while (inFlight?.controller.signal.aborted === true) {
+      // Only the settling matters here; the outcome belongs to the callers
+      // that left.
+      const abandoned = inFlight.token.catch(() => undefined);
+      await waitFor(abandoned, signal);
+    }
+
     if (inFlight === undefined) {
       const controller = new AbortController();
       const token = grantAndCache(options, policy, controller.signal).finally(() => {
@@ -540,9 +553,6 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
     }
 
     const attempt = inFlight;
-    // Keep an abandoned attempt in its slot until its request and cache work
-    // settle, so a caller during teardown cannot open a duplicate grant.
-    attempt.controller.signal.throwIfAborted();
     attempt.waiters += 1;
 
     return waitFor(attempt.token, signal, (cancelled) => {

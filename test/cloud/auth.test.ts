@@ -598,9 +598,7 @@ for (const { description, createCallers } of [
     first.abort(firstReason);
     joined.abort(joinedReason);
     await Promise.all([firstRejected, joinedRejected]);
-    const teardownRejected = assert.rejects(authClient.idToken(new AbortController().signal), expectAbortReason(transport.reason));
     grant.response.reject(transport.reason);
-    await teardownRejected;
 
     // assert
     assert.strictEqual(transport.aborted, true);
@@ -610,6 +608,42 @@ for (const { description, createCallers } of [
     assert.deepStrictEqual(getEventListeners(joined.signal, 'abort'), []);
   });
 }
+
+test('grants a later caller a fresh token only after an abandoned grant settles', async (t) => {
+  // arrange
+  const storagePath = await createStoragePath(t);
+  const abandonedStarted = deferred<AbortSignal>();
+  const abandonedResponse = deferred<Response>();
+  const transports: AbortSignal[] = [];
+  const httpFetch: AuthClientOptions['httpFetch'] = (_input, init) => {
+    const signal = init?.signal;
+    assert.ok(signal instanceof AbortSignal);
+    transports.push(signal);
+    abandonedStarted.resolve(signal);
+
+    return transports.length === 1 ? abandonedResponse.promise : Promise.resolve(grantResponse('id-token-2'));
+  };
+
+  const first = new AbortController();
+  const firstReason = new Error('First caller cancelled.');
+  const authClient = createAuthClient(authOptions(storagePath, { httpFetch }));
+  const firstRejected = assert.rejects(authClient.idToken(first.signal), expectAbortReason(firstReason));
+  const abandonedTransport = await abandonedStarted.promise;
+  first.abort(firstReason);
+  await firstRejected;
+
+  // act
+  const laterToken = authClient.idToken(new AbortController().signal);
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  const grantsWhileSettling = transports.length;
+  abandonedResponse.reject(abandonedTransport.reason);
+
+  // assert
+  assert.strictEqual(await laterToken, 'id-token-2');
+  assert.deepStrictEqual({ grantsWhileSettling, grants: transports.length }, { grantsWhileSettling: 1, grants: 2 });
+});
 
 test('starts no grant for an already aborted caller', async (t) => {
   // arrange
