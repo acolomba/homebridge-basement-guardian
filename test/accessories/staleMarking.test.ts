@@ -217,18 +217,18 @@ describe('markRestoredServicesStale', () => {
     });
 
     // act
-    const result = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
+    const passCounts = markRestoredServicesStale(asPlatformAccessory(accessory), HAP_NAMESPACE);
 
     // assert
     assert.deepStrictEqual(
       {
-        result,
+        passCounts,
         flood: flood.getCharacteristic(HAP.Characteristic.StatusActive).value,
         battery: battery.getCharacteristic(HAP.Characteristic.StatusActive).value,
         leakDetected: flood.getCharacteristic(HAP.Characteristic.LeakDetected).value,
         batteryLevel: battery.getCharacteristic(HAP.Characteristic.BatteryLevel).value,
       },
-      { result: { reached: 1, failed: 1 }, flood: true, battery: false, leakDetected: 1, batteryLevel: 80 },
+      { passCounts: { reached: 1, failed: 1 }, flood: true, battery: false, leakDetected: 1, batteryLevel: 80 },
     );
   });
 
@@ -500,16 +500,16 @@ describe('refuseRestoredControls', () => {
     });
 
     // act
-    const result = refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, silentLog(), heldTimers());
+    const passCounts = refuseRestoredControls(asPlatformAccessory(accessory), HAP_NAMESPACE, silentLog(), heldTimers());
 
     // assert
     assert.deepStrictEqual(
       {
-        result,
+        passCounts,
         laterPress: await pressOutcomeOf(later),
         laterOn: later.getCharacteristic(HAP.Characteristic.On).value,
       },
-      { result: { reached: 1, failed: 1 }, laterPress: NOT_ALLOWED_IN_CURRENT_STATE, laterOn: false },
+      { passCounts: { reached: 1, failed: 1 }, laterPress: NOT_ALLOWED_IN_CURRENT_STATE, laterOn: false },
     );
   });
 

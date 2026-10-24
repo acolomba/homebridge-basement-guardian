@@ -1269,13 +1269,13 @@ describe('BasementGuardianPlatform', () => {
     // Preserve the service receiver while observing its real publication.
     const updateCharacteristic = offlineService.updateCharacteristic.bind(offlineService);
     t.mock.method(offlineService, 'updateCharacteristic', (characteristic: FakeCharacteristicClass, value: unknown) => {
-      const result = updateCharacteristic(characteristic, value);
+      const updatedService = updateCharacteristic(characteristic, value);
 
       if (characteristic.UUID === HAP.Characteristic.StatusActive.UUID && value === false) {
         announceOfflineWithdrawal();
       }
 
-      return result;
+      return updatedService;
     });
 
     // act
