@@ -34,6 +34,7 @@ import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime
 import { PLATFORM_NAME } from '../../src/settings.js';
 import { createFakeAuth0 } from '../lib/auth0.js';
 import { createFakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import { ScenarioMemory } from '../lib/scenarioMemory.js';
 import { createFakeShadowBroker } from '../lib/shadowBroker.js';
 import { createFakeTimers } from '../lib/timers.js';
 import { createFakeRestApi } from '../lib/vendorRestApi.js';
@@ -212,7 +213,7 @@ export class BasementGuardianWorld extends World {
   private readonly watchedDeviceIds = new Set<string>();
 
   // Scenario values a step saves for a later step, including readings and setup paths.
-  private readonly remembered = new Map<string, unknown>();
+  private readonly remembered = new ScenarioMemory();
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
 
@@ -518,16 +519,12 @@ export class BasementGuardianWorld extends World {
    * published after. Harness steps also use this map to retain a storage path created during setup.
    */
   remember(name: string, value: unknown): void {
-    this.remembered.set(name, value);
+    this.remembered.remember(name, value);
   }
 
   /** The scenario value a step saved under that name. */
   recall(name: string): unknown {
-    if (!this.remembered.has(name)) {
-      throw new Error(`no step has read ${name} yet`);
-    }
-
-    return this.remembered.get(name);
+    return this.remembered.recall(name);
   }
 
   /** Records how a controller write ended: the HAP status that refused it, or nothing when it was accepted. */

@@ -25,6 +25,7 @@ import { PROTOCOL } from '../../../src/protocol.js';
 import { createAccountRuntimeFromConfig } from '../../../src/runtime/accountRuntime.js';
 import { systemClock } from '../../../src/runtime/clock.js';
 import { systemMonotonicClock } from '../../../src/runtime/monotonicClock.js';
+import { ScenarioMemory } from '../../lib/scenarioMemory.js';
 
 import type { DeviceSnapshot } from '../../../src/device/state.js';
 import type { RedactingLogger } from '../../../src/logging.js';
@@ -114,7 +115,7 @@ export class RealPumpWorld extends World {
 
   private readonly loggedLines: string[] = [];
 
-  private readonly remembered = new Map<string, unknown>();
+  private readonly remembered = new ScenarioMemory();
 
   private readonly rejectedReasons: string[] = [];
 
@@ -162,16 +163,12 @@ export class RealPumpWorld extends World {
 
   /** Remembers a value a step read, under a name a later step names it by. */
   remember(name: string, value: unknown): void {
-    this.remembered.set(name, value);
+    this.remembered.remember(name, value);
   }
 
   /** Returns a value remembered by an earlier step in the scenario. */
   recall(name: string): unknown {
-    if (!this.remembered.has(name)) {
-      throw new Error(`no step has remembered ${name} yet`);
-    }
-
-    return this.remembered.get(name);
+    return this.remembered.recall(name);
   }
 
   /**
