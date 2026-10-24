@@ -139,8 +139,7 @@ function mergeRecord(base: Readonly<Record<string, unknown>>, patch: Readonly<Re
 }
 
 // Shadow delivery can arrive out of order or twice, so a patch may only move
-// the version forward. A patch carrying no version is applied while no silence
-// fence holds the still-open connection to a newer observation.
+// the version forward.
 function isStalePatch(applied: number | undefined, incoming: number | undefined): boolean {
   return applied !== undefined && incoming !== undefined && incoming <= applied;
 }
@@ -358,6 +357,9 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       const previous = snapshots.get(deviceId);
       const silenceVersion = silenceVersions.get(deviceId);
 
+      // While a silence fence holds, the store refuses a patch at or below the
+      // fenced version, and a versionless patch that carries a telemetry
+      // reading. A versionless patch that carries only metadata still applies.
       if (
         previous === undefined ||
         (silenceVersions.has(deviceId) &&
@@ -391,30 +393,32 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       silenceVersions.delete(deviceId);
     },
 
-    // Nobody is notified: clearing the watermark moves no telemetry key, and a
-    // listener filtering on the change report would be handed a change that
-    // did not happen.
-    // Clearing that device's ownership watermark hands its telemetry back to
-    // the poll. A disconnect also clears its version fence so a reconnect's
-    // complete shadow can start a new stream (SYNC-03). A caller handing back
-    // a whole fleet loops, which is
-    // what keeps a fact about one controller from being spent on its neighbours:
-    // a healthy pump released alongside a silent one has every poll overwrite the
-    // fresher readings its own live path just delivered. A `deviceId` the store
-    // does not hold changes nothing.
+    // Hands one device's telemetry back to the poll by clearing its ownership
+    // watermark. Nobody is notified: clearing the watermark moves no telemetry
+    // key, and a listener filtering on the change report would be handed a
+    // change that did not happen. A `deviceId` the store does not hold changes
+    // nothing.
     //
-    // Two conditions call for it. A connection that ended is one, and that one is
-    // genuinely fleet-wide, because the connection carried every device. A device
-    // the monitoring-trust projection reports silent, with its socket still open,
-    // is the other, and it is the one an owner meets: silence is not a
-    // disconnection, it belongs to one controller, and a poll that cannot refresh
-    // that controller's telemetry leaves a flooding pit unreported (D-13). It is
-    // therefore reachable on every poll of a silence that can last hours, which
-    // it is written to cost nothing.
+    // The release is per device, so a caller handing back a whole fleet loops.
+    // That keeps a fact about one controller from being spent on its
+    // neighbours: a healthy pump released alongside a silent one would have
+    // every poll overwrite the fresher readings its own live path just
+    // delivered.
     //
-    // A still-open silent connection keeps its last accepted version, so only
-    // newer telemetry can take ownership back from REST. Repeated silent polls
-    // keep that fence; disconnect and removal start a fresh version epoch.
+    // Two conditions call for it. A connection that ended is one, and that one
+    // is genuinely fleet-wide, because the connection carried every device. A
+    // device the monitoring-trust projection reports silent, with its socket
+    // still open, is the other, and it is the one an owner meets: silence is not
+    // a disconnection, it belongs to one controller, and a poll that cannot
+    // refresh that controller's telemetry leaves a flooding pit unreported
+    // (D-13). It therefore runs on every poll of a silence that can last hours,
+    // so it is written to cost nothing.
+    //
+    // A disconnect also clears the version fence, so a reconnect's complete
+    // shadow can start a new stream (SYNC-03). A still-open silent connection
+    // keeps its last accepted version, so only newer telemetry can take
+    // ownership back from REST. Repeated silent polls keep that fence;
+    // disconnect and removal start a fresh version epoch.
     releaseShadowSource(deviceId: string, reason: 'silence' | 'disconnect' = 'disconnect'): void {
       const snapshot = snapshots.get(deviceId);
 
