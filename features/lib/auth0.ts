@@ -1,0 +1,155 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Loopback stand-in for the vendor Auth0 tenant.
+ *
+ * The tenant answers the password-realm grant, records every grant it received, and can be armed
+ * to answer the next request with a failure. A scenario asserts what the plugin sent rather than
+ * how it sent it, so this fake survives a change of HTTP client.
+ */
+
+import { readBody, respondJson, startLoopbackServer } from './loopbackServer.js';
+
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
+const TOKEN_PATH = '/oauth/token';
+
+/** The identity token the tenant issues unless a scenario replaces it. */
+export const DEFAULT_ID_TOKEN = 'fake-id-token';
+
+// The tenant reports the observed 30-day identity-token lifetime unless a scenario shortens it.
+const DEFAULT_EXPIRES_IN_SECONDS = 2592000;
+
+/** One password-realm grant, with every field and value type the tenant received. */
+export type FakeAuth0TokenRequest = Record<string, unknown>;
+
+/** One HTTP request that reached the fake tenant, including its unparsed body. */
+export interface FakeAuth0ReceivedRequest {
+  method: string;
+  path: string;
+  body: string;
+}
+
+/** A loopback Auth0 tenant that a scenario can arm and then inspect. */
+export interface FakeAuth0 {
+  readonly origin: string;
+  readonly requests: readonly FakeAuth0TokenRequest[];
+  readonly receivedRequests: readonly FakeAuth0ReceivedRequest[];
+
+  /** Sets the identity token and lifetime the tenant answers with from now on. */
+  issueToken(idToken: string, expiresInSeconds: number): void;
+
+  /**
+   * Shortens the lifetime the tenant states, leaving the token value it issues unchanged.
+   *
+   * The client renews a token that expires inside its renewal margin, so a lifetime a little over
+   * that margin is what lets a scenario force a re-grant from a running plugin rather than
+   * restarting it.
+   */
+  expireTokenIn(seconds: number): void;
+
+  /** Arms the next token response to carry this status and this error code. */
+  failWith(status: number, error: string): void;
+
+  /** Stops the tenant and resolves once every open connection is destroyed. */
+  close(): Promise<void>;
+}
+
+interface IssuedToken {
+  idToken: string;
+  expiresInSeconds: number;
+}
+
+interface ArmedFailure {
+  status: number;
+  error: string;
+}
+
+interface TenantState {
+  readonly requests: FakeAuth0TokenRequest[];
+  readonly receivedRequests: FakeAuth0ReceivedRequest[];
+  issued: IssuedToken;
+  armedFailure?: ArmedFailure;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseGrant(body: string): FakeAuth0TokenRequest | undefined {
+  try {
+    const parsed: unknown = body === '' ? {} : JSON.parse(body);
+
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return undefined;
+  }
+}
+
+async function route(state: TenantState, request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const body = await readBody(request);
+  state.receivedRequests.push({ method: request.method ?? '', path: request.url ?? '', body });
+
+  if (request.method !== 'POST' || request.url !== TOKEN_PATH) {
+    respondJson(response, 404, { error: 'unknown_route' });
+
+    return;
+  }
+
+  const grant = parseGrant(body);
+
+  if (grant === undefined) {
+    respondJson(response, 400, { error: 'invalid_json' });
+
+    return;
+  }
+
+  state.requests.push(grant);
+  const failure = state.armedFailure;
+  delete state.armedFailure;
+
+  if (failure !== undefined) {
+    respondJson(response, failure.status, { error: failure.error, error_description: 'the scenario armed this failure' });
+
+    return;
+  }
+
+  respondJson(response, 200, { id_token: state.issued.idToken, expires_in: state.issued.expiresInSeconds, token_type: 'Bearer' });
+}
+
+/**
+ * Starts a fake Auth0 tenant on an ephemeral loopback port.
+ *
+ * The promise resolves only once the port is known, so a caller can read `origin` immediately.
+ */
+export async function createFakeAuth0(): Promise<FakeAuth0> {
+  const state: TenantState = {
+    requests: [],
+    receivedRequests: [],
+    issued: { idToken: DEFAULT_ID_TOKEN, expiresInSeconds: DEFAULT_EXPIRES_IN_SECONDS },
+  };
+
+  const server = await startLoopbackServer((request, response) => route(state, request, response));
+
+  return {
+    origin: server.baseUrl,
+    requests: state.requests,
+    receivedRequests: state.receivedRequests,
+    issueToken(idToken: string, expiresInSeconds: number): void {
+      state.issued = { idToken, expiresInSeconds };
+    },
+    expireTokenIn(seconds: number): void {
+      state.issued = { ...state.issued, expiresInSeconds: seconds };
+    },
+    failWith(status: number, error: string): void {
+      state.armedFailure = { status, error };
+    },
+    close(): Promise<void> {
+      return server.close();
+    },
+  };
+}

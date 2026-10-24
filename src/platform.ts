@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Coordinates Homebridge lifecycle, discovery and monitoring updates.
+ */
+
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -7,6 +16,7 @@ import { connect } from 'mqtt';
 import { createBasementGuardianAccessory } from './accessories/basementGuardian.js';
 import { markRestoredServicesStale, markTrustReportsUnreadable, refuseRestoredControls } from './accessories/staleMarking.js';
 import { httpFetch } from './cloud/httpDispatcher.js';
+import { isRecord } from './cloud/types.js';
 import { validateConfig } from './config.js';
 import { createFamilyRegistry } from './device/registry.js';
 import { createRedactingLogger } from './logging.js';
@@ -90,6 +100,14 @@ export interface DiscoveryContext {
   commands: CommandPort;
 }
 
+// Contexts are rebuilt for each callback, but this map belongs to one platform
+// run. Disappearance cannot make an uncertain registration safe to repeat.
+const uncertainRegistrations = new WeakMap<DiscoveryContext['accessories'], Set<string>>();
+
+// A failed cache write leaves the already-mutated accessory awaiting a later
+// inventory, even when that inventory reports the same metadata and services.
+const pendingAccessoryPersistence = new WeakSet<BasementGuardianPlatformAccessory>();
+
 // A HALO or unknown outcome never becomes an accessory (DEV-01), so the
 // explanation is the only trace it leaves. Distinct wording for each kind is
 // what lets a reader tell "recognized but unsupported" apart from "never
@@ -152,6 +170,7 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
         }
 
         context.api.updatePlatformAccessories([accessory]);
+        pendingAccessoryPersistence.delete(accessory);
       },
     },
     commands: context.commands,
@@ -163,8 +182,9 @@ function createBasementGuardianAccessoryFor(context: DiscoveryContext, accessory
 // is about fifteen minutes, so an activation would almost never be observed
 // at all; canonical state that changes between polls has to reach HomeKit on
 // the store's own change notification instead (SAFE-03, SAFE-07). The store
-// notifies only when a telemetry value actually moved, and it contains a
-// failing listener itself, so nothing here filters or guards again.
+// also notifies for an accepted heartbeat with unchanged telemetry, so the
+// accessory can refresh trust time. The store contains listener failures,
+// so nothing here filters or guards again.
 //
 // No unsubscribe handle is kept: `store.remove(deviceId)`, which
 // `removeDiscoveredDevice` already calls, drops this device's whole listener
@@ -267,11 +287,16 @@ function updateDiscoveredDevice(
       services: basementGuardianAccessory.services,
     };
 
-    // A context mutation Homebridge does not know about is invisible on disk
-    // until the next full register/unregister cycle, so only a real change
-    // earns the call rather than persisting an identical value on every poll.
+    // A failed write still owes Homebridge the already-mutated metadata or
+    // service set. Keep that obligation until this or another cache write
+    // succeeds, even when the next inventory is unchanged.
     if (!isDeepStrictEqual(previousState, nextState)) {
+      pendingAccessoryPersistence.add(accessory);
+    }
+
+    if (pendingAccessoryPersistence.has(accessory)) {
       context.api.updatePlatformAccessories([accessory]);
+      pendingAccessoryPersistence.delete(accessory);
     }
   }
 }
@@ -295,6 +320,17 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
     return;
   }
 
+  let uncertain = uncertainRegistrations.get(context.accessories);
+
+  if (uncertain === undefined) {
+    uncertain = new Set<string>();
+    uncertainRegistrations.set(context.accessories, uncertain);
+  }
+
+  if (uncertain.has(uuid)) {
+    return;
+  }
+
   const outcome = context.registry.lookup(snapshot.identity.deviceTypeId);
 
   if (outcome.kind !== 'implemented') {
@@ -314,25 +350,25 @@ function dispatchDiscoveredDevice(context: DiscoveryContext, deviceId: string, s
 
   const basementGuardianAccessory = createBasementGuardianAccessoryFor(context, accessory);
 
-  // The device publishes before anything records it, and nothing between the
-  // four statements below can throw, so a first update that raises leaves no
-  // cached instance, no live subscription, and no registration at all: the next
-  // inventory rebuilds the device from scratch.
-  //
-  // Caching first and registering last left exactly the orphan that costs an
-  // owner their monitoring. The cached instance stayed bound to a
-  // `PlatformAccessory` Homebridge was never handed, `context.accessories` was
-  // still empty, so every later inventory took this same new-device path,
-  // published all fifteen services onto that orphan, and registered a fresh
-  // accessory carrying none. The home then showed a Basement Guardian with no
-  // flood sensor, no pump, and no offline sensor for as long as the plugin ran,
-  // while the plugin's own state reported fifteen healthy services.
+  // Preparation publishes only onto the candidate. A failure here precedes any
+  // registration side effect, so the next inventory may safely rebuild it.
+  // A normal registration return earns local ownership and a live listener.
+  // Any registration throw suspends reattempts for this platform run because
+  // bridge acceptance is uncertain.
   basementGuardianAccessory.update(snapshot, 'poll');
+
+  try {
+    context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+  } catch {
+    uncertain.add(uuid);
+    context.log.error('Accessory registration outcome is uncertain. Restart Homebridge before this device can be registered again.');
+
+    return;
+  }
 
   context.basementGuardianAccessories.set(uuid, basementGuardianAccessory);
   subscribeToLiveState(basementGuardianAccessory, deviceId, store);
   context.accessories.set(uuid, accessory);
-  context.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
 }
 
 /**
@@ -400,7 +436,11 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
     // supplied and `markMonitoring` compares all four (D-02).
     const trust = byDevice.get(basementGuardianAccessory.deviceId) ?? { ...account, shadowSilent: true };
 
-    basementGuardianAccessory.markMonitoring(trust);
+    try {
+      basementGuardianAccessory.markMonitoring(trust);
+    } catch {
+      context.log.error('Unable to publish monitoring trust for an accessory.');
+    }
   }
 
   if (!account.credentialsRejected) {
@@ -425,7 +465,16 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
   let marked = 0;
 
   for (const accessory of context.accessories.values()) {
-    marked += markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    try {
+      const result = markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      marked += result.marked;
+
+      if (result.failed > 0) {
+        context.log.error('Unable to mark cached monitoring trust unreadable.');
+      }
+    } catch {
+      context.log.error('Unable to mark cached monitoring trust unreadable.');
+    }
   }
 
   // Zero is worth a line and a non-zero total is not. A pass that marked
@@ -457,7 +506,7 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
  * Unregisters a confirmed-absent accessory from HomeKit and drops its stored
  * canonical state.
  *
- * A `deviceId` with no cached accessory is a no-op: it was never registered,
+ * A `deviceId` with no cached accessory is a no-op: this run does not own it,
  * or an earlier removal already unregistered it. The UUID is derived the
  * same way discovery derives it, so the same physical device always resolves
  * to the same accessory (DEV-05, D-029). Dropping the cached
@@ -530,16 +579,10 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     readonly api: API,
     deps: PlatformDeps = DEFAULT_PLATFORM_DEPS,
   ) {
-    // Installed before anything else can log, so no secret reaches the
-    // delegate unredacted. The refusal below quotes no configured value: it is
-    // logged before any secret is registered, and an account email is an
-    // account identifier the Privacy constraint keeps out of the log (WR-01).
-    // Registering the configured email as a secret first was considered and
-    // rejected, because it would hold the raw identifier in the secret list
-    // for the life of the process and still leave a marker where a value was.
-    // Recording an exception to the Privacy constraint was considered and
-    // rejected too: it would weaken a constraint to keep one diagnostic that
-    // the settings form's own email format already gives.
+    // Install redaction before any diagnostic reaches the delegate. Configuration
+    // refusals precede secret registration, so the email-format refusal omits the
+    // account email. This keeps that account identifier out of both the diagnostic
+    // and the logger's retained secret list (WR-01, AUTH-02, D-024).
     this.log = createRedactingLogger({ delegate: log, secrets: [] });
 
     const validated = validateConfig(this.config);
@@ -605,7 +648,17 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
     // their promise: neither start nor stop rejects, so nothing floats and no
     // exception escapes into Homebridge.
     this.api.on('didFinishLaunching', () => {
-      void runtime.start();
+      const knownDeviceIds = new Set<string>();
+
+      for (const accessory of this.accessories.values()) {
+        const device: unknown = accessory.context.device;
+
+        if (isRecord(device) && typeof device.deviceId === 'string' && device.deviceId.length > 0) {
+          knownDeviceIds.add(device.deviceId);
+        }
+      }
+
+      void runtime.start([...knownDeviceIds]);
     });
 
     this.api.on('shutdown', () => {
@@ -614,9 +667,9 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * Records an accessory that Homebridge restored from its cache, after
-   * withdrawing trust from every service that already reports it and refusing
-   * a press on every control it carries.
+   * Records an accessory that Homebridge restored from its cache, then
+   * withdraws trust from every service that already reports it and refuses a
+   * press on every control it carries.
    *
    * This is the only code that runs while a restored accessory exists and no
    * fresh data does. HAP serves the cached values from the moment the bridge
@@ -626,19 +679,22 @@ export class BasementGuardianPlatform implements DynamicPlatformPlugin {
    * without the marking a tile reads as vouched for, and without the refusal a
    * press reports success for a command that never left (RES-04, D-06, D-07).
    *
-   * One log line covers both passes. They report on the same accessory at the
-   * same moment, and a second line would read as a second event.
+   * One summary line covers both passes. A failed service also produces one
+   * fixed diagnostic with no cached accessory or device details.
    */
   configureAccessory(accessory: PlatformAccessory): void {
+    this.accessories.set(accessory.UUID, accessory);
     const { hap } = this.api;
     const marked = markRestoredServicesStale(accessory, hap);
     const refusing = refuseRestoredControls(accessory, hap, this.log, systemTimers);
 
+    if (marked.failed + refusing.failed > 0) {
+      this.log.error('Unable to prepare every restored accessory service.');
+    }
+
     this.log.info(
       'Loading accessory from cache:',
-      accessory.displayName,
-      `(${String(marked)} services no longer vouched for, ${String(refusing)} controls refusing presses)`,
+      `(${String(marked.reached)} services no longer vouched for, ${String(refusing.reached)} controls refusing presses)`,
     );
-    this.accessories.set(accessory.UUID, accessory);
   }
 }

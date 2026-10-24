@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Schedules capped retries with one pending abortable wait.
+ */
+
 // The default import is deliberate: the named ESM export of a builtin is a
 // snapshot binding, which the test runner's timer mocks cannot replace, so the
 // wait would be untestable without awaiting a real timer.

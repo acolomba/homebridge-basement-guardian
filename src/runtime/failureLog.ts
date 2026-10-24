@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: MIT
-import type { Clock } from './clock.js';
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Reports transient failures, reminders and recovery independently for each failure kind.
+ */
+
+import type { MonotonicClock } from './monotonicClock.js';
 import type { Logging } from 'homebridge';
 
 /** How long a kind may keep failing before one more warning is emitted. */
@@ -7,7 +16,7 @@ export const FAILURE_REMINDER_MS = 900_000;
 
 /** Everything the failure log needs, by injection. */
 export interface FailureLogOptions {
-  clock: Clock;
+  monotonic: MonotonicClock;
   log: Logging;
   /** The reminder cadence. Production supplies `FAILURE_REMINDER_MS`. */
   reminderIntervalMs: number;
@@ -51,14 +60,14 @@ export interface FailureLog {
  * matter of advancing the injected clock.
  */
 export function createFailureLog(options: FailureLogOptions): FailureLog {
-  // Each failing kind maps to the clock value of the warning it last produced.
+  // Each failing kind maps to the elapsed time of the warning it last produced.
   // A kind absent from the map is not currently failing, which is also what
   // makes the next failure of a recovered kind warn again.
   const warnedAt = new Map<string, number>();
 
   return {
     recordFailure(kind: string, reason: string): void {
-      const now = options.clock.now();
+      const now = options.monotonic.now();
       const lastWarnedAt = warnedAt.get(kind);
 
       if (lastWarnedAt === undefined || now - lastWarnedAt >= options.reminderIntervalMs) {

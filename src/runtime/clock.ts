@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Supplies current wall time in epoch milliseconds.
+ */
+
 /**
  * Source of the current time.
  *

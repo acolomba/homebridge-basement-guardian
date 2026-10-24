@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: MIT
+
 /**
- * @fileoverview CTRL-01: what this plugin watched each pump do, and nothing the device reported.
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview CTRL-01: each pump's activations as this plugin observed them,
+ * plus backup activations that the device's own timestamp shows the plugin missed.
  *
  * The cloud reports a pump's live running state and one timestamp for the
  * backup pump. It reports no activation count and no lifetime history, so the
- * only count that can exist is the one built here, out of what the plugin saw
- * while it was running. That is why every record carries the moment observation
- * began beside its count: the number means nothing without it (D-020).
+ * only count that can exist is the one built here: the activations the plugin
+ * watched while it was running, plus the backup activations whose device
+ * timestamp shows that the plugin missed them. That is why every record carries
+ * the moment observation began beside its count: the number means nothing
+ * without it (D-020).
  *
  * Three things can go quietly wrong in a record of this shape, and each has a
  * rule of its own below. A run already in progress at the first observation
@@ -17,23 +25,28 @@
  * would be counted twice, because the device publishes that timestamp only
  * after the pump stops (D-010).
  *
- * There is exactly one count per pump and every observed run is in it,
- * self-tests included. Whether the last activation was self-test activity is a
+ * There is exactly one count per pump, and a self-test run is counted in it
+ * like any other run. Whether the last activation was self-test activity is a
  * label on the record and nothing more: it never delays or suppresses a live
- * activation, and it is left unwritten rather than set to `false` when the
- * inputs it needs did not decode (D-013, C-001).
+ * activation. It describes the last counted backup activation only, so each
+ * newly counted backup activation removes it. It stays unwritten, rather than
+ * set to `false`, until the record holds a device timestamp that it takes as
+ * that activation's own and the inputs it needs decode (D-013, C-001). The
+ * record can take a timestamp older than the run in this way; the backup
+ * timestamp rule below states when and why.
  *
  * Nothing here defers and nothing here reads a clock. Every time it uses
- * arrives on the observation, and the only write to disk is one `persist()` per
- * observation that actually changed something.
+ * arrives on the observation. A failed write stays pending for the next
+ * observation, even when that observation changes no record value.
  */
 
 import type { ActivationWatermarks, PumpObservation } from '../persistence/accessoryContext.js';
 import type { AccessoryStore } from '../runtime/accessoryStore.js';
 import type { Logging } from 'homebridge';
 
-/** What one second of a device timestamp is worth in the milliseconds every stored time is in. */
+/** What one second of a device timestamp is worth in milliseconds. */
 const MILLISECONDS_PER_SECOND = 1000;
+const MAX_DATE_MILLISECONDS = 8_640_000_000_000_000;
 
 /** One decoded snapshot, in the only shape this module reads one. */
 export interface PumpRecordsObservation {
@@ -53,7 +66,11 @@ export interface PumpRecordValues {
   /** Milliseconds, local, at which observation of this pump began. */
   observationStartedAt: number;
   activationCount: number;
-  /** Milliseconds, local, of the last observed activation, or absent when none has been observed. */
+  /**
+   * Milliseconds of the last observed activation: the plugin's receipt time for
+   * a watched edge, or the device's converted timestamp for a recovered one;
+   * absent when none has been observed.
+   */
   lastActivationAt: number | undefined;
   /** Absent until the plugin has earned the label, which is a different thing from `false`. */
   lastActivationWasTestActivity: boolean | undefined;
@@ -79,7 +96,7 @@ export interface PumpRecords {
    * Records one decoded snapshot.
    *
    * It schedules nothing, awaits nothing, and reads no clock, and it asks for
-   * one write to disk when a stored value actually changed and none otherwise.
+   * one write when a stored value changed or an earlier write failed.
    */
   observe(observation: PumpRecordsObservation): void;
   readonly primary: PumpRecordValues;
@@ -100,8 +117,16 @@ interface PreviousDeviceTimes {
   testedAt: number | undefined;
 }
 
-function isNumberOrAbsent(value: unknown): boolean {
-  return value === undefined || typeof value === 'number';
+function isDateMilliseconds(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= MAX_DATE_MILLISECONDS;
+}
+
+function isDateMillisecondsOrAbsent(value: unknown): boolean {
+  return value === undefined || isDateMilliseconds(value);
+}
+
+function isDeviceSecondsOrAbsent(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && isDateMilliseconds(value * MILLISECONDS_PER_SECOND));
 }
 
 // A record restored from the Homebridge cache is whatever JSON was on disk, whatever its declared
@@ -116,9 +141,11 @@ function isPumpObservation(value: unknown): value is PumpObservation {
   const label = candidate.lastActivationWasTestActivity;
 
   return (
-    typeof candidate.observationStartedAt === 'number' &&
+    isDateMilliseconds(candidate.observationStartedAt) &&
     typeof candidate.activationCount === 'number' &&
-    isNumberOrAbsent(candidate.lastActivationAt) &&
+    Number.isSafeInteger(candidate.activationCount) &&
+    candidate.activationCount >= 0 &&
+    isDateMillisecondsOrAbsent(candidate.lastActivationAt) &&
     (label === undefined || typeof label === 'boolean')
   );
 }
@@ -129,8 +156,13 @@ function isActivationWatermarks(value: unknown): value is ActivationWatermarks {
   }
 
   const candidate = value as Partial<ActivationWatermarks>;
+  const awaiting = candidate.backupEdgeAwaitingTimestamp;
 
-  return isNumberOrAbsent(candidate.backupPumpTimestamp) && isNumberOrAbsent(candidate.testTimestamp);
+  return (
+    isDeviceSecondsOrAbsent(candidate.backupPumpTimestamp) &&
+    isDeviceSecondsOrAbsent(candidate.testTimestamp) &&
+    (awaiting === undefined || typeof awaiting === 'boolean')
+  );
 }
 
 // An activation is a `false` this module saw become a `true`. A run already in progress at the
@@ -148,18 +180,20 @@ function rememberedRunning(previousRunning: boolean | undefined, reportedRunning
   return reportedRunning ?? previousRunning;
 }
 
-// The device evidences an activation the plugin never watched when it reports a timestamp past the
-// one already accounted for. The comparison is strictly greater-than, so the same timestamp
-// arriving again on every later payload recovers nothing (D-010).
+// A device timestamp past the one already accounted for can evidence an activation the plugin never
+// watched; the caller rules out the baseline and a timestamp it takes as a counted run's own. The
+// comparison is strictly greater-than, so the same timestamp arriving again on every later payload
+// recovers nothing (D-010).
 function evidencesAMissedActivation(watermark: number | undefined, reportedAt: number | undefined): reportedAt is number {
   return reportedAt !== undefined && (watermark === undefined || reportedAt > watermark);
 }
 
-// The device's timestamps are its own Unix seconds and every stored time is milliseconds, so the
-// one conversion happens here and nowhere else. The rule forbidding arithmetic on a device
-// timestamp is about comparing it against local time, whose measured offset from the device is a
-// few seconds; a unit conversion compares nothing. Left unconverted, the published characteristic
-// renders a date in 1970 (D-011).
+// The device's timestamps are its own Unix seconds and a stored activation time is milliseconds,
+// so a recovered activation's time is converted here and nowhere else in this module. The
+// watermarks stay in device seconds. The rule forbidding arithmetic on a device timestamp is about
+// comparing it against local time, whose measured offset from the device is a few seconds; a unit
+// conversion compares nothing. Left unconverted, the published characteristic renders a date in
+// 1970 (D-011).
 function millisecondsOf(deviceSeconds: number): number {
   return deviceSeconds * MILLISECONDS_PER_SECOND;
 }
@@ -206,13 +240,20 @@ function countWatchedActivation(pump: PumpObservation, receivedAt: number): void
   pump.lastActivationAt = receivedAt;
 }
 
+// A newly counted backup activation is one that the stored label does not describe, so the label
+// goes. The member is removed rather than set to `undefined`, because the stored shape declares it
+// optional.
+function dropTestActivityLabel(pump: PumpObservation): void {
+  delete pump.lastActivationWasTestActivity;
+}
+
 /**
  * Creates the pump records over one accessory's stored context.
  *
- * Creating them touches nothing outside itself: nothing is read from disk,
- * nothing is scheduled, and no value is written until the first observation
- * arrives. A context carrying a readable record is resumed as it stands and
- * asks for no write of its own.
+ * Creating them reads nothing from disk, schedules nothing, and writes no
+ * value until the first observation arrives. An unreadable stored record is
+ * reported with one warning, at creation. A context carrying a readable record
+ * is resumed as it stands and asks for no write of its own.
  */
 export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   const { context, store, log } = options;
@@ -220,7 +261,6 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   let previousPrimaryRunning: boolean | undefined = undefined;
   let previousBackupRunning: boolean | undefined = undefined;
   let previousDeviceTimes: PreviousDeviceTimes = { backupActivatedAt: undefined, testedAt: undefined };
-  let backupEdgeAwaitingItsTimestamp = false;
 
   // The stored record is resumed whole or not at all. A context carrying two readable pumps beside
   // an unreadable watermark pair cannot be repaired into a coherent record, and a half-read count
@@ -242,6 +282,7 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
   }
 
   let record = resumedRecord();
+  let pendingPersist = false;
 
   // Observation began at the first snapshot, so the epoch is that snapshot's own receipt time
   // rather than a clock reading. Taking it from the observation introduces no second time source
@@ -261,11 +302,15 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
     return seeded;
   }
 
-  // The device publishes a new backup-pump timestamp only after the pump stops, so the first
-  // advance following a watched backup edge describes the run that edge already counted. Absorbing
-  // it -- moving the watermark without counting and without moving the last activation -- is what
-  // keeps one physical run from being reported as two, and leaves that run's record written from
-  // one clock rather than two (D-010).
+  // The device publishes a new backup-pump timestamp only after the pump stops, so the record takes
+  // the first advance in a later observation than a watched backup edge as the run that edge
+  // already counted. An advance in the observation of the edge itself belongs to an earlier run,
+  // which is why `observe` reconciles it before it marks the edge. Absorbing an advance -- moving
+  // the watermark without counting and without moving the last activation -- is what keeps one
+  // physical run from being reported as two, and leaves that run's record written from one clock
+  // rather than two (D-010). The mark that an edge awaits its timestamp is stored with the
+  // watermarks, so a record resumed after a restart still counts nothing for the next new backup
+  // timestamp.
   function reconcileBackupTimestamp(stored: StoredRecord, reportedAt: number | undefined): boolean {
     if (!evidencesAMissedActivation(stored.watermarks.backupPumpTimestamp, reportedAt)) {
       return false;
@@ -275,33 +320,48 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
 
     stored.watermarks.backupPumpTimestamp = reportedAt;
 
-    // The first timestamp this record ever sees establishes the baseline; it is not a recovered
-    // activation. The device times it from before the observation start that the same first
-    // observation seeded, so counting it would report a run from before the plugin was watching --
-    // a number an owner reads describing something nobody observed. Any edge already awaiting its
-    // timestamp is accounted for by the same seed, so the flag clears here too rather than leaking
-    // into the next advance.
+    // The first timestamp this record ever sees establishes the baseline and is never counted,
+    // whichever observation brings it. The plugin cannot tell whether the device timed it before
+    // observation began, and comparing it with local time is forbidden, so the count abstains.
+    //
+    // The record also takes this first timestamp as the own timestamp of any watched run that
+    // awaits one, so the awaiting mark clears here and no later advance is absorbed for it. This is an
+    // assumption: without that same comparison, the record cannot tell an older timestamp from the
+    // run's own. If the timestamp is older, the run's own timestamp counts that run a second time,
+    // and an older settled self-test pair that arrives with it can label the run a self-test.
+    // Keeping the mark instead would absorb the next advance when this timestamp is the run's own,
+    // and a missed run would go uncounted. The mark is removed rather than set to `false`, because
+    // the stored shape uses its absence to say that no run waits, so a record with no waiting run
+    // is stored like one that never had a mark.
     if (seedingTheFirstWatermark) {
-      backupEdgeAwaitingItsTimestamp = false;
+      delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
       return true;
     }
 
-    if (backupEdgeAwaitingItsTimestamp) {
-      backupEdgeAwaitingItsTimestamp = false;
+    if (stored.watermarks.backupEdgeAwaitingTimestamp === true) {
+      delete stored.watermarks.backupEdgeAwaitingTimestamp;
 
       return true;
     }
 
     stored.backupPump.activationCount += 1;
     stored.backupPump.lastActivationAt = millisecondsOf(reportedAt);
+    dropTestActivityLabel(stored.backupPump);
 
     return true;
   }
 
   // Classification labels the record and touches nothing else: no count, no last activation, and no
-  // watermark but the self-test one it consumed.
+  // watermark but the self-test one it consumed. It runs only when the record holds a backup
+  // activation and the awaiting mark is clear, which it is once the record holds a device timestamp
+  // that it takes as that activation's own. Before then, the settled self-test values describe an
+  // earlier run or no run at all, so a label from them would be a claim about the wrong activation.
   function reconcileClassification(stored: StoredRecord, observation: PumpRecordsObservation): boolean {
+    if (stored.watermarks.backupEdgeAwaitingTimestamp === true || stored.backupPump.lastActivationAt === undefined) {
+      return false;
+    }
+
     const classified = classifiedAsTestActivity(observation, previousDeviceTimes);
 
     if (classified === undefined) {
@@ -330,23 +390,31 @@ export function createPumpRecords(options: PumpRecordsOptions): PumpRecords {
         changed = true;
       }
 
+      // The backup timestamp is reconciled before the backup edge is marked, so an advance that
+      // arrives with the edge is read as an earlier run's and the run of this edge still awaits its
+      // own timestamp (D-010).
+      changed = reconcileBackupTimestamp(stored, observation.backupActivatedAt) || changed;
+
       if (watchedAnActivation(previousBackupRunning, observation.backupRunning)) {
         countWatchedActivation(stored.backupPump, observation.receivedAt);
-        backupEdgeAwaitingItsTimestamp = true;
+        dropTestActivityLabel(stored.backupPump);
+        stored.watermarks.backupEdgeAwaitingTimestamp = true;
         changed = true;
       }
 
-      changed = reconcileBackupTimestamp(stored, observation.backupActivatedAt) || changed;
       changed = reconcileClassification(stored, observation) || changed;
 
       previousPrimaryRunning = rememberedRunning(previousPrimaryRunning, observation.primaryRunning);
       previousBackupRunning = rememberedRunning(previousBackupRunning, observation.backupRunning);
       previousDeviceTimes = { backupActivatedAt: observation.backupActivatedAt, testedAt: observation.testedAt };
 
-      // A context mutation Homebridge does not know about is invisible on disk, so only a real
-      // change earns the call rather than persisting an identical record on every poll (D-010).
-      if (changed) {
+      // A failed write still owes Homebridge the already-mutated context. Retry it on the next
+      // observation, even when no new activation is counted; clear the debt only after success.
+      pendingPersist = pendingPersist || changed;
+
+      if (pendingPersist) {
         store.persist();
+        pendingPersist = false;
       }
     },
 

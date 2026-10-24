@@ -1,10 +1,15 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The per-scenario world.
  *
  * Every scenario gets a fresh world. The world owns the lifetime of each fake it hands out, keeps
- * the scenario clock and the observation log, and tears everything down in reverse order once the
- * scenario ends, so no scenario leaks a listening socket, an open connection, or a temporary
- * directory into the next one.
+ * the scenario clock and the observation log, and runs registered releases in reverse order when
+ * the scenario ends. It reports startup and release failures after attempting every release.
  *
  * The world also builds the plugin's own account runtime against those fakes, through the single
  * composition seam the runtime publishes. The protocol constants are an ordinary injected
@@ -17,7 +22,7 @@
 
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { After, setWorldConstructor, World } from '@cucumber/cucumber';
+import { After, Before, setWorldConstructor, World } from '@cucumber/cucumber';
 import { connect, connectAsync } from 'mqtt';
 
 import { markRestoredServicesStale, refuseRestoredControls } from '../../src/accessories/staleMarking.js';
@@ -27,17 +32,12 @@ import { createRedactingLogger } from '../../src/logging.js';
 import { applyMonitoringHealth, BasementGuardianPlatform, registerDiscoveredDevices, removeDiscoveredDevice } from '../../src/platform.js';
 import { createAccountRuntimeFromConfig } from '../../src/runtime/accountRuntime.js';
 import { PLATFORM_NAME } from '../../src/settings.js';
+import { createFakeAuth0 } from '../lib/auth0.js';
+import { createFakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import { createFakeShadowBroker } from '../lib/shadowBroker.js';
+import { createFakeTimers } from '../lib/timers.js';
+import { createFakeRestApi } from '../lib/vendorRestApi.js';
 
-import { createFakeAuth0 } from './fakeAuth0.js';
-import { createFakeHomebridgeApi } from './fakeHomebridgeApi.js';
-import { createFakeRestApi } from './fakeRestApi.js';
-import { createFakeShadowBroker } from './fakeShadowBroker.js';
-import { createFakeTimers } from './fakeTimers.js';
-
-import type { FakeAuth0 } from './fakeAuth0.js';
-import type { FakeHomebridgeApi } from './fakeHomebridgeApi.js';
-import type { ApiDevice, FakeRestApi } from './fakeRestApi.js';
-import type { FakeShadowBroker } from './fakeShadowBroker.js';
 import type { BasementGuardianAccessory } from '../../src/accessories/basementGuardian.js';
 import type { NotificationServiceKind } from '../../src/accessories/services.js';
 import type { AwsCredentialsResponse } from '../../src/cloud/types.js';
@@ -49,7 +49,10 @@ import type { ProtocolConstants } from '../../src/protocol.js';
 import type { AccountRuntime } from '../../src/runtime/accountRuntime.js';
 import type { CommandPort } from '../../src/runtime/commandPort.js';
 import type { MonitoringTrust } from '../../src/runtime/monitoringHealth.js';
-import type { IWorldOptions } from '@cucumber/cucumber';
+import type { FakeAuth0 } from '../lib/auth0.js';
+import type { FakeHomebridgeApi } from '../lib/homebridgeApi.js';
+import type { FakeShadowBroker } from '../lib/shadowBroker.js';
+import type { ApiDevice, FakeRestApi } from '../lib/vendorRestApi.js';
 import type { API, LogLevel, Logging, PlatformConfig } from 'homebridge';
 import type { MqttClient } from 'mqtt';
 
@@ -208,7 +211,7 @@ export class BasementGuardianWorld extends World {
 
   private readonly watchedDeviceIds = new Set<string>();
 
-  // Published values a step read, so a later step can assert the same value came back.
+  // Scenario values a step saves for a later step, including readings and setup paths.
   private readonly remembered = new Map<string, unknown>();
 
   private lastResponse: { status: number; body: unknown } | undefined = undefined;
@@ -226,10 +229,10 @@ export class BasementGuardianWorld extends World {
     this.rejections.push(String(reason));
   };
 
-  constructor(readonly options: IWorldOptions) {
-    super(options);
+  /** Watches for unhandled rejections during an executing scenario. */
+  watchUnhandledRejections(): void {
     process.on('unhandledRejection', this.recordRejection);
-    this.own(() => {
+    this.onRelease(() => {
       process.off('unhandledRejection', this.recordRejection);
 
       return Promise.resolve();
@@ -283,7 +286,7 @@ export class BasementGuardianWorld extends World {
   }
 
   /** Registers a teardown step. The world runs registered steps in reverse order. */
-  own(cleanup: () => Promise<void>): void {
+  onRelease(cleanup: () => Promise<void>): void {
     this.cleanups.push(cleanup);
   }
 
@@ -291,7 +294,7 @@ export class BasementGuardianWorld extends World {
   async auth0(): Promise<FakeAuth0> {
     if (this.auth0Tenant === undefined) {
       const tenant = await createFakeAuth0();
-      this.own(() => tenant.close());
+      this.onRelease(() => tenant.close());
       this.auth0Tenant = tenant;
     }
 
@@ -302,7 +305,7 @@ export class BasementGuardianWorld extends World {
   async restApi(): Promise<FakeRestApi> {
     if (this.restService === undefined) {
       const service = await createFakeRestApi();
-      this.own(() => service.close());
+      this.onRelease(() => service.close());
       service.onCommandAccepted((deviceId, desiredData) => {
         this.reactToAcceptedCommand(deviceId, desiredData);
       });
@@ -316,7 +319,7 @@ export class BasementGuardianWorld extends World {
   async broker(): Promise<FakeShadowBroker> {
     if (this.shadowBroker === undefined) {
       const broker = await createFakeShadowBroker();
-      this.own(() => broker.close());
+      this.onRelease(() => broker.close());
       this.shadowBroker = broker;
     }
 
@@ -327,7 +330,7 @@ export class BasementGuardianWorld extends World {
   async homebridge(): Promise<FakeHomebridgeApi> {
     if (this.homebridgeApi === undefined) {
       const homebridge = await createFakeHomebridgeApi();
-      this.own(() => homebridge.cleanup());
+      this.onRelease(() => homebridge.cleanup());
       this.homebridgeApi = homebridge;
     }
 
@@ -403,7 +406,7 @@ export class BasementGuardianWorld extends World {
     this.starting = this.launch();
   }
 
-  /** Resolves once the launch attempt has finished, however it finished. */
+  /** Waits for launch to finish and rejects if launch fails. */
   async awaitStart(): Promise<void> {
     await this.starting;
   }
@@ -509,17 +512,16 @@ export class BasementGuardianWorld extends World {
   }
 
   /**
-   * Remembers a published value a step read, under a name a later step names it by.
+   * Remembers a scenario value under a name a later step uses.
    *
-   * A record assertion across a restart compares what the plugin published before with what it
-   * published after, rather than recomputing the expected value: a scenario that recomputed one
-   * would assert its own arithmetic instead of the record that came back.
+   * A record assertion across a restart can compare what the plugin published before with what it
+   * published after. Harness steps also use this map to retain a storage path created during setup.
    */
   remember(name: string, value: unknown): void {
     this.remembered.set(name, value);
   }
 
-  /** The value a step read under that name earlier in the scenario. */
+  /** The scenario value a step saved under that name. */
   recall(name: string): unknown {
     if (!this.remembered.has(name)) {
       throw new Error(`no step has read ${name} yet`);
@@ -542,14 +544,31 @@ export class BasementGuardianWorld extends World {
     return this.lastWrite.status;
   }
 
-  /** Runs every registered teardown step in reverse order. */
+  /**
+   * Waits for startup, then runs every registered teardown step in reverse order.
+   * Collects startup and release failures and reports them together after every release runs.
+   */
   async cleanUp(): Promise<void> {
-    await this.starting;
+    const failures: unknown[] = [];
+
+    try {
+      await this.starting;
+    } catch (error) {
+      failures.push(error);
+    }
 
     const cleanups = this.cleanups.splice(0).reverse();
 
     for (const cleanup of cleanups) {
-      await cleanup();
+      try {
+        await cleanup();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'scenario release failed');
     }
   }
 
@@ -700,7 +719,7 @@ export class BasementGuardianWorld extends World {
     });
 
     this.accountRuntime = runtime;
-    this.own(() => runtime.stop());
+    this.onRelease(() => runtime.stop());
     await runtime.start();
     this.watchDevices(runtime);
   }
@@ -750,7 +769,7 @@ export class BasementGuardianWorld extends World {
         this.changes.push(`${deviceId} ${changedKeys.join(' ')}`);
       });
 
-      this.own(() => {
+      this.onRelease(() => {
         unsubscribe();
 
         return Promise.resolve();
@@ -771,7 +790,7 @@ export class BasementGuardianWorld extends World {
         this.subscriberClosed = true;
       });
 
-      this.own(() => subscriber.endAsync(true));
+      this.onRelease(() => subscriber.endAsync(true));
       this.subscriber = subscriber;
     }
 
@@ -781,6 +800,28 @@ export class BasementGuardianWorld extends World {
 
 setWorldConstructor(BasementGuardianWorld);
 
+Before(function (this: BasementGuardianWorld) {
+  this.watchUnhandledRejections();
+});
+
 After(async function (this: BasementGuardianWorld) {
-  await this.cleanUp();
+  const failures: unknown[] = [];
+
+  try {
+    await this.cleanUp();
+  } catch (error) {
+    failures.push(error);
+  }
+
+  if (this.rejections.length > 0) {
+    failures.push(new Error('scenario reported an unhandled rejection'));
+  }
+
+  if (failures.length === 1) {
+    throw failures[0];
+  }
+
+  if (failures.length > 1) {
+    throw new AggregateError(failures, 'scenario teardown failed');
+  }
 });

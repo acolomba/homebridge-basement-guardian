@@ -1,7 +1,24 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Verifies account polling trust and per-device silence.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { createMonitoringHealth, HEARTBEAT_INTERVAL_MS, MISSED_HEARTBEATS_BEFORE_SILENT, REST_FAILURE_THRESHOLD } from '../../src/runtime/monitoringHealth.js';
+
+import {
+  ARRIVAL_ANCHOR_MEMORY_CASES,
+  ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS,
+  assertArrivalAnchorMemoryContract,
+  exerciseArrivalAnchorMemoryContract,
+} from './arrivalAnchorMemoryContract.js';
 
 import type { ArrivalAnchors } from '../../src/runtime/arrivalAnchors.js';
 import type { Clock } from '../../src/runtime/clock.js';
@@ -127,12 +144,65 @@ function healthWithTwoAdmittedDevices(clock: Clock, monotonic: MonotonicClock, a
   return health;
 }
 
-test('publishes the thresholds it measures against', () => {
+for (const contractCase of ARRIVAL_ANCHOR_MEMORY_CASES) {
+  test(`${ARRIVAL_ANCHOR_MEMORY_PARTICIPANTS.monitoring.factoryName} ${contractCase}`, () => {
+    // arrange
+    const anchors = recordingAnchors();
+
+    // act
+    const observation = exerciseArrivalAnchorMemoryContract(anchors, contractCase);
+
+    // assert
+    assertArrivalAnchorMemoryContract(observation, contractCase);
+  });
+}
+
+test('rejects an arrival-anchor participant that loses a recorded zero', () => {
+  // arrange
+  const stored = new Map<string, number>();
+  const anchors: Pick<ArrivalAnchors, 'get' | 'record'> = {
+    get: (deviceId: string): number | undefined => {
+      const anchor = stored.get(deviceId);
+
+      return anchor === 0 ? undefined : anchor;
+    },
+    record: (deviceId: string, at: number): void => {
+      stored.set(deviceId, at);
+    },
+  };
+
+  // act
+  const observation = exerciseArrivalAnchorMemoryContract(anchors, 'retains a zero anchor');
+
   // act & assert
-  assert.deepStrictEqual(
-    { restFailures: REST_FAILURE_THRESHOLD, heartbeatMs: HEARTBEAT_INTERVAL_MS, missedHeartbeats: MISSED_HEARTBEATS_BEFORE_SILENT },
-    { restFailures: 2, heartbeatMs: 898_000, missedHeartbeats: 2 },
+  assert.throws(
+    () => {
+      assertArrivalAnchorMemoryContract(observation, 'retains a zero anchor');
+    },
+    (error: unknown) => {
+      assert.ok(error instanceof assert.AssertionError);
+      assert.deepStrictEqual(
+        { actual: error.actual, expected: error.expected, operator: error.operator },
+        {
+          actual: { anchor: undefined, otherAnchor: undefined },
+          expected: { anchor: 0, otherAnchor: undefined },
+          operator: 'deepStrictEqual',
+        },
+      );
+      return true;
+    },
   );
+});
+
+test('publishes the thresholds it measures against', () => {
+  // arrange
+  const expectedThresholds = { restFailures: 2, heartbeatMs: 898_000, missedHeartbeats: 2 };
+
+  // act
+  const thresholds = { restFailures: REST_FAILURE_THRESHOLD, heartbeatMs: HEARTBEAT_INTERVAL_MS, missedHeartbeats: MISSED_HEARTBEATS_BEFORE_SILENT };
+
+  // assert
+  assert.deepStrictEqual(thresholds, expectedThresholds);
 });
 
 for (const { failures, degraded } of [
@@ -152,7 +222,7 @@ for (const { failures, degraded } of [
     }
 
     // assert
-    assert.strictEqual(health.trustNow().restDegraded, degraded);
+    assert.deepStrictEqual(health.trustNow(), { restDegraded: degraded });
   });
 }
 
@@ -168,7 +238,7 @@ test('clears the polling degradation on the first successful poll after three fa
   health.recordRestSuccess();
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, false);
+  assert.deepStrictEqual(health.trustNow(), { restDegraded: false });
 });
 
 test('starts a fresh run after a success, so one later failure does not degrade again', () => {
@@ -183,7 +253,7 @@ test('starts a fresh run after a success, so one later failure does not degrade 
   health.recordRestFailure();
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, false);
+  assert.deepStrictEqual(health.trustNow(), { restDegraded: false });
 });
 
 for (const { elapsedMs, silent } of [
@@ -202,7 +272,7 @@ for (const { elapsedMs, silent } of [
     moveTo(START_TIME + elapsedMs);
 
     // assert
-    assert.strictEqual(health.silentDevices().includes(DEVICE_ID), silent);
+    assert.deepStrictEqual(health.silentDevices(), silent ? [DEVICE_ID] : []);
   });
 }
 
@@ -296,20 +366,29 @@ test('leaves the polling path degraded when a shadow message arrives, because a 
   health.recordShadowMessage(DEVICE_ID);
 
   // assert
-  assert.strictEqual(health.trustNow().restDegraded, true);
+  assert.deepStrictEqual({ account: health.trustNow(), silent: health.silentDevices() }, { account: { restDegraded: true }, silent: [] });
 });
 
 test('leaves the silence window where it was when a poll fails, because a failed request observed no message', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
   const health = healthWithAMessageAtStart(clock, monotonic);
-  moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS - 1);
+  moveTo(START_TIME + 1_795_999);
+  const beforeFailure = { silent: health.silentDevices(), account: health.trustNow() };
 
   // act
   health.recordRestFailure();
+  moveTo(START_TIME + 1_796_000);
+  const atOriginalDeadline = { silent: health.silentDevices(), account: health.trustNow() };
 
   // assert
-  assert.deepStrictEqual(health.silentDevices(), []);
+  assert.deepStrictEqual(
+    { beforeFailure, atOriginalDeadline },
+    {
+      beforeFailure: { silent: [], account: { restDegraded: false } },
+      atOriginalDeadline: { silent: [DEVICE_ID], account: { restDegraded: false } },
+    },
+  );
 });
 
 test('answers both facts together, so one degradation never reports the other', () => {
@@ -363,15 +442,26 @@ test('names only the pump that stopped speaking when the pump beside it is still
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
   const health = healthWithTwoAdmittedDevices(clock, monotonic);
+  health.recordRestFailure();
+  health.recordRestFailure();
   health.recordShadowMessage(DEVICE_ID);
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
 
   // act
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
+  const whileOneIsQuiet = { account: health.trustNow(), silent: health.silentDevices() };
+  health.recordShadowMessage(OTHER_DEVICE_ID);
+  const afterNeighbourSpeaks = { account: health.trustNow(), silent: health.silentDevices() };
 
   // assert
-  assert.deepStrictEqual(health.silentDevices(), [DEVICE_ID]);
+  assert.deepStrictEqual(
+    { whileOneIsQuiet, afterNeighbourSpeaks },
+    {
+      whileOneIsQuiet: { account: { restDegraded: true }, silent: [DEVICE_ID] },
+      afterNeighbourSpeaks: { account: { restDegraded: true }, silent: [DEVICE_ID] },
+    },
+  );
 });
 
 // The recovery, read on the same account the case above reads the withdrawal
@@ -385,13 +475,19 @@ test('stops naming the quiet pump the moment it speaks, while the pump beside it
   moveTo(START_TIME + ONE_MISSED_HEARTBEAT_MS);
   health.recordShadowMessage(OTHER_DEVICE_ID);
   moveTo(START_TIME + TWO_MISSED_HEARTBEATS_MS);
-  const whileOneIsQuiet = health.silentDevices();
+  const whileOneIsQuiet = { account: health.trustNow(), silent: health.silentDevices() };
 
   // act
   health.recordShadowMessage(DEVICE_ID);
 
   // assert
-  assert.deepStrictEqual({ whileOneIsQuiet, afterItSpeaks: health.silentDevices() }, { whileOneIsQuiet: [DEVICE_ID], afterItSpeaks: [] });
+  assert.deepStrictEqual(
+    { whileOneIsQuiet, afterItSpeaks: { account: health.trustNow(), silent: health.silentDevices() } },
+    {
+      whileOneIsQuiet: { account: { restDegraded: false }, silent: [DEVICE_ID] },
+      afterItSpeaks: { account: { restDegraded: false }, silent: [] },
+    },
+  );
 });
 
 // Nothing is watched before discovery admits it, so a projection told about no
@@ -464,8 +560,7 @@ test('holds a pump silent across a restart, when the stored anchor is older than
 
 // An install carrying no anchor invents nothing: the absence is not read as
 // a recent arrival, and it is not read as silence either. The device is judged
-// from its admission, on the forward-only term alone, exactly as it was before
-// any anchor existed.
+// from its admission, on the forward-only term alone.
 test('rests on the forward-only term alone when the store holds no anchor, rather than reading the absence as a recent arrival', () => {
   // arrange
   const { clock, monotonic, moveTo } = movableClock();
@@ -538,5 +633,5 @@ test('answers the one account-wide fact and nothing about silence or the command
   const trust = health.trustNow();
 
   // assert
-  assert.deepStrictEqual(Object.keys(trust), ['restDegraded']);
+  assert.deepStrictEqual(trust, { restDegraded: false });
 });

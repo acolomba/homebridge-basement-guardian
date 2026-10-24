@@ -150,6 +150,7 @@ dist
 /.gsd
 /.gsd-capabilities.json
 /.planning/research/.cache/
+/.planning/state.json
 /.claude/.gsd-profile
 /.claude/agents/gsd-*
 /.claude/commands/gsd-*

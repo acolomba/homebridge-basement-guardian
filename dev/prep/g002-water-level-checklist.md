@@ -36,7 +36,7 @@ test: Observe a natural transition into `water_level = 0` (no sensor wet) -- for
 
 expected: A confirmed real-world pit condition matching `water_level = 0`, and confirmation that the plugin reports `WaterLevel = 0` and raises no fault (`waterLevel.ts` deliberately treats `0` as a level, not a failure -- this item confirms that reading matches reality).
 
-why_human: No fake can answer what a real, physically empty sump pit reports. The fake harness's `fakeShadowBroker.ts` sends whatever value a scenario tells it to send; it cannot be evidence for what a real Gemini reports at zero.
+why_human: No fake can answer what a real, physically empty sump pit reports. The fake harness's `features/lib/shadowBroker.ts` sends whatever value a scenario tells it to send; it cannot be evidence for what a real Gemini reports at zero.
 
 status: pending
 

@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview DEV-05: the two-consecutive-trustworthy-absence removal
  * state machine.
  *
- * `observe` takes a caller-verified-trustworthy inventory response -- the
- * full deviceId set one poll reported, after the caller has already
- * confirmed the response was HTTP 200 and schema-valid (D-02: a valid
- * empty list is a trustworthy response too). This module makes no such
- * judgment itself: its sole input is a deviceId list, so a failed,
- * non-2xx, or schema-invalid response can never reach it and can never
- * advance or reset a count (D-029).
+ * Its inputs are deviceIds only. `observe` takes the full list one
+ * inventory response reported, after the caller has confirmed that the
+ * response was successful (2xx) and schema-valid (D-02: a valid empty list
+ * is a trustworthy response too). `present` and `forget` each take one
+ * deviceId, which the caller records as present or stops tracking. This
+ * module makes no trustworthiness judgment itself (D-029).
  *
  * Tracking is by `deviceId` alone (D-003), so this module composes with
  * any current or future device family without change.
  */
 
-import type { Clock } from '../runtime/clock.js';
 import type { Logging } from 'homebridge';
 
 /** How many consecutive trustworthy responses must omit a deviceId before it counts as confirmed absent (D-029). */
@@ -36,13 +39,14 @@ export interface Reconciliation {
    * poll without extra state.
    */
   observe(deviceIds: readonly string[]): readonly string[];
+  /** Records `deviceId` as present and eligible for future absence confirmation without changing other device counts. */
+  present(deviceId: string): void;
   /** Stops tracking `deviceId`, as if this module had never seen it. */
   forget(deviceId: string): void;
 }
 
-/** Everything the reconciliation state machine needs, by injection. */
+/** The injected log, which gets one debug line each time `observe` reports a deviceId confirmed absent. */
 export interface ReconciliationOptions {
-  clock: Clock;
   log: Logging;
 }
 
@@ -94,6 +98,10 @@ export function createReconciliation(options: ReconciliationOptions): Reconcilia
       }
 
       return confirmedAbsent;
+    },
+
+    present(deviceId: string): void {
+      absenceCounts.set(deviceId, 0);
     },
 
     forget(deviceId: string): void {

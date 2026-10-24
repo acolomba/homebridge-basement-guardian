@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Redacts secrets from Homebridge log messages and parameters.
+ */
+
 import type { LogLevel, Logging } from 'homebridge';
 
 /** Stands in for every value the wrapper substitutes. */
@@ -8,20 +17,28 @@ const REDACTED = '[redacted]';
 const UNSERIALIZABLE = '[unserializable object]';
 
 // Credential material the plugin never holds as a registered string. Each
-// pattern keeps the naming part of its match, so the log still says which
-// credential was present, and replaces only the value that follows it.
+// pattern keeps the credential name. An unquoted authentication value has no
+// reliable comma boundary, so its pattern redacts the remaining unquoted text,
+// including possible later fields, to avoid exposing a password suffix.
 const AWS_SESSION_CREDENTIAL_FIELDS = 'AccessKeyId|SecretAccessKey|SessionToken';
 const PRESIGNED_URL_PARAMETERS = 'X-Amz-Credential|X-Amz-Security-Token|X-Amz-Signature';
 const AUTHENTICATION_BODY_FIELDS = 'password|username';
 
 // A token carries dots, so the class holds one, but the match may not end on a
 // dot: a token at the end of a sentence would otherwise swallow the full stop.
-const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=-](?:[\w.+/=-]*[\w+/=-])?/g;
+const AUTHORIZATION_PATTERN = /(Bearer\s+)[\w+/=~-](?:[\w.+/=~-]*[\w+/=~-])?/gi;
 const AWS_SESSION_CREDENTIAL_PATTERN = new RegExp(String.raw`("?(?:${AWS_SESSION_CREDENTIAL_FIELDS})"?\s*[:=]\s*"?)[^",\s}]+`, 'g');
 const PRESIGNED_URL_PATTERN = new RegExp(String.raw`((?:${PRESIGNED_URL_PARAMETERS})=)[^&\s"]+`, 'g');
-const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*"?)[^",}]+`, 'gi');
+const AUTHENTICATION_QUOTED_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*")(?:\\.|[^"\\])+`, 'gi');
+const AUTHENTICATION_BODY_PATTERN = new RegExp(String.raw`("?(?:${AUTHENTICATION_BODY_FIELDS})"?\s*[:=]\s*)([^"\s][\s\S]*)`, 'gi');
 
-const CREDENTIAL_PATTERNS: readonly RegExp[] = [AUTHORIZATION_PATTERN, AWS_SESSION_CREDENTIAL_PATTERN, PRESIGNED_URL_PATTERN, AUTHENTICATION_BODY_PATTERN];
+const CREDENTIAL_PATTERNS: readonly RegExp[] = [
+  AUTHORIZATION_PATTERN,
+  AWS_SESSION_CREDENTIAL_PATTERN,
+  PRESIGNED_URL_PATTERN,
+  AUTHENTICATION_QUOTED_BODY_PATTERN,
+  AUTHENTICATION_BODY_PATTERN,
+];
 
 /** The delegate to write through, and the secret values known at build time. */
 export interface RedactingLoggerOptions {
@@ -53,17 +70,45 @@ export interface RedactingLogger extends Logging {
 type LevelledMember = 'debug' | 'error' | 'info' | 'success' | 'warn';
 
 function redactText(text: string, secrets: readonly string[]): string {
-  let redacted = text;
-
-  for (const secret of secrets) {
-    redacted = redacted.split(secret).join(REDACTED);
-  }
+  const spans: { start: number; end: number }[] = [];
 
   for (const pattern of CREDENTIAL_PATTERNS) {
-    redacted = redacted.replace(pattern, `$1${REDACTED}`);
+    for (const match of text.matchAll(pattern)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Every credential pattern captures group 1.
+      const prefix = match[1]!;
+      spans.push({ start: match.index + prefix.length, end: match.index + match[0].length });
+    }
   }
 
-  return redacted;
+  for (const secret of secrets) {
+    for (const candidate of [secret, JSON.stringify(secret).slice(1, -1)]) {
+      let start = text.indexOf(candidate);
+
+      while (start !== -1) {
+        spans.push({ start, end: start + candidate.length });
+        start = text.indexOf(candidate, start + 1);
+      }
+    }
+  }
+
+  spans.sort((left, right) => left.start - right.start || right.end - left.end);
+
+  let redacted = '';
+  let end = 0;
+
+  for (const span of spans) {
+    if (span.end <= end) {
+      continue;
+    }
+
+    if (span.start >= end) {
+      redacted += text.slice(end, span.start) + REDACTED;
+    }
+
+    end = span.end;
+  }
+
+  return redacted + text.slice(end);
 }
 
 // An object can carry a secret in any field and its graph can be circular, so
@@ -73,7 +118,9 @@ function redactText(text: string, secrets: readonly string[]): string {
 // inside catch blocks and message handlers (WR-10).
 function describeObject(value: object): string {
   try {
-    return JSON.stringify(value);
+    const description: unknown = JSON.stringify(value);
+
+    return typeof description === 'string' ? description : UNSERIALIZABLE;
   } catch {
     return UNSERIALIZABLE;
   }
@@ -87,7 +134,7 @@ function redactParameter(parameter: unknown, secrets: readonly string[]): unknow
   }
 
   if (parameter instanceof Error) {
-    return `${parameter.constructor.name}: ${redactText(parameter.message, secrets)}`;
+    return redactText(`${parameter.constructor.name}: ${parameter.message}`, secrets);
   }
 
   if (typeof parameter === 'object' && parameter !== null) {
@@ -134,7 +181,7 @@ export function createRedactingLogger(options: RedactingLoggerOptions): Redactin
   // predecessor rather than joining it. Nothing is evicted by age or by count:
   // guessing which held value has expired is how a password stops being
   // redacted.
-  const registerSecret = (secret: string, role?: SecretRole): void => {
+  function registerSecret(secret: string, role?: SecretRole): void {
     // An empty or whitespace-only value would match everywhere, so it is not a
     // secret this wrapper can act on.
     if (secret.trim().length === 0) {
@@ -155,15 +202,15 @@ export function createRedactingLogger(options: RedactingLoggerOptions): Redactin
     } else {
       secrets[held] = secret;
     }
-  };
+  }
 
   for (const secret of options.secrets) {
     registerSecret(secret);
   }
 
-  const write = (message: string, ...parameters: unknown[]): void => {
+  function write(message: string, ...parameters: unknown[]): void {
     options.delegate(redactText(message, secrets), ...redactParameters(parameters, secrets));
-  };
+  }
 
   return Object.assign(write, {
     prefix: options.delegate.prefix,

@@ -3,8 +3,7 @@
  *
  * This project ships exactly two production dependencies, `mqtt` and `undici`. `REL-03`
  * requires that set stay named and deliberate, so a future `npm install <new-runtime-dep>`
- * fails this test by name instead of silently widening the shipped dependency tree the way
- * `test/packageManifest.test.ts` already catches an `engines` drift.
+ * fails this test by name instead of silently widening the shipped dependency tree.
  *
  * `undici` was added so the vendor HTTP transport could route through userland undici's own
  * `fetch` and `Agent` end to end, rather than through Node's built-in global `fetch`: Node's

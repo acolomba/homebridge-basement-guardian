@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview The three passes over an accessory the plugin cannot vouch for,
  * none of which constructs a `BasementGuardianAccessory`.
@@ -33,21 +38,16 @@
  * is the false normal on the control surface, which is why the second restart
  * pass exists (RES-04, D-07).
  *
- * The passes therefore run where Homebridge hands each cached accessory back
- * rather than on the first update: `configureAccessory` is the only code that
- * runs while a restored accessory exists and no fresh data does, and every
- * publishing path is downstream of an inventory that may never arrive (D-06).
+ * The two restart passes therefore run where Homebridge hands each cached
+ * accessory back rather than on the first update: `configureAccessory` is the
+ * only code that runs while a restored accessory exists and no fresh data does,
+ * and every publishing path is downstream of an inventory that may never arrive
+ * (D-06).
  *
- * They construct no `BasementGuardianAccessory` and read nothing from the
- * accessory context. That constructor throws when the context carries no
- * device, which is exactly what a cache written before that context existed
- * carries, so constructing here would fail on the upgrade path this behaviour
- * protects.
- *
- * The passes are exported rather than written inside the platform method
- * because the Cucumber harness stands in for `configureAccessory` and calls
- * these same functions. A copy inside the platform would leave the harness
- * asserting against its own copy of the behaviour (D-12).
+ * The two restart passes are exported rather than written inside the platform
+ * method because the Cucumber harness stands in for `configureAccessory` and
+ * calls these same functions. A copy inside the platform would leave the
+ * harness asserting against its own copy of the behaviour (D-12).
  */
 
 import { bindRestoredControlRefusal } from './controls.js';
@@ -57,36 +57,40 @@ import type { CharacteristicClass } from './customCharacteristics.js';
 import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
-// The one walk all three passes make: every restored service carrying the
+// The one walk both restart passes make: every restored service carrying the
 // characteristic that decides the pass applies to it, acted on and counted.
 //
-// It is extracted rather than written out three times because the three differ
+// It is extracted rather than written out twice because the passes differ
 // only in that guard and that act, and a guard tightened in one copy and not
-// the others would silently change which services a pass reaches. The health
-// gate fails a build on a third near-identical block as well, so keeping the
-// copies was not an option either.
+// the other would silently change which services a pass reaches. A failed
+// service is counted and does not prevent a later one from being prepared.
 //
 // The guard stays `testCharacteristic` for every pass. A service that never
 // carried the characteristic does not gain one, because adding a characteristic
 // on upgrade changes a published identity a user's automations may already
 // attach to, and a cache an older release wrote is exactly the input these
 // passes exist to handle.
-function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): number {
+function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): { reached: number; failed: number } {
   let reached = 0;
+  let failed = 0;
 
   for (const service of accessory.services) {
-    if (service.testCharacteristic(guard)) {
-      act(service);
-      reached += 1;
+    try {
+      if (service.testCharacteristic(guard)) {
+        act(service);
+        reached += 1;
+      }
+    } catch {
+      failed += 1;
     }
   }
 
-  return reached;
+  return { reached, failed };
 }
 
 /**
  * Withdraws trust from every restored service that already reports it, and
- * answers how many it withdrew.
+ * answers how many it withdrew or could not mark.
  *
  * The count is the assertable evidence that the pass did work. A pass that
  * walked an empty service list and a pass that marked every service report the
@@ -104,7 +108,7 @@ function overServicesCarrying(accessory: PlatformAccessory, guard: Characteristi
  * this plugin issued to the device, and the accessories tier carries one write
  * verb precisely so that cannot happen by accident.
  */
-export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): number {
+export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): { reached: number; failed: number } {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
     publishValue(service, hap.Characteristic.StatusActive, false);
   });
@@ -112,7 +116,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
 
 /**
  * Refuses a press on every restored control, and answers how many controls it
- * armed.
+ * armed or could not arm.
  *
  * The guard is the control write surface itself, so the pass reaches exactly
  * the services a controller can act on and leaves every sensor alone. A sensor
@@ -127,7 +131,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
  * refusal, its status table and its clearing push, so a restored control and a
  * live one cannot answer one condition two ways (D-07, D-08).
  */
-export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): number {
+export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): { reached: number; failed: number } {
   return overServicesCarrying(accessory, hap.Characteristic.On, (service) => {
     bindRestoredControlRefusal({ hap, log, timers, service, accessoryName: accessory.displayName });
   });
@@ -135,25 +139,23 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
 
 /**
  * Makes the trust report on every service that carries one unreadable under a
- * named status, and answers how many it marked.
+ * named status, and answers how many it marked or could not mark.
  *
  * It reaches the trust report and nothing else. Every other characteristic on
  * a marked service still answers, and a service that carries no trust report is
  * not touched at all. The name says so, because "unreadable service" would
- * describe a pass that greys out the whole tile and this one does not.
+ * describe a pass that makes every characteristic of the service fail its read,
+ * and this one makes only the trust report fail.
  *
  * A refused credential is account-wide: one account, one authentication, one
- * poll loop. Marking a single service would imply the others are fine, so every
- * service that reports whether the plugin vouches for it is made unreadable
- * together (D-10).
+ * poll loop. Marking a single service would imply the others are fine, so the
+ * trust report of every service that carries one is made unreadable together
+ * (D-10).
  *
- * The pass lives here, beside the restart pass, for the same two reasons that
- * one does. It walks the accessory's own services and constructs no
- * `BasementGuardianAccessory`: a run whose first grant the vendor refused never
- * reaches discovery, so none exists to walk, and building one would throw on a
- * context that names no device anyway. And it is exported rather than written
- * inside the platform, so the Cucumber harness drives this code rather than a
- * copy of it (D-12).
+ * Like the restart passes, it walks the accessory's own services and constructs
+ * no `BasementGuardianAccessory`: a run whose first grant the vendor refused
+ * never reaches discovery, so none exists to walk, and building one would throw
+ * on a context that names no device anyway.
  *
  * `testCharacteristic` guards each push exactly as it does above, so an upgrade
  * over a cache an older release wrote adds no characteristic to a service that
@@ -167,8 +169,22 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * keeps answering, and the caller is the only place the silence can be named
  * (WR-08).
  */
-export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): number {
-  return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
-    publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
-  });
+export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): { marked: number; failed: number } {
+  let marked = 0;
+  let failed = 0;
+
+  for (const service of accessory.services) {
+    try {
+      if (!service.testCharacteristic(hap.Characteristic.StatusActive)) {
+        continue;
+      }
+
+      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
+      marked += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  return { marked, failed };
 }

@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
 /**
  * @fileoverview What Homebridge stores alongside one restored accessory.
  *
  * Homebridge writes this record to disk in plain text and keeps it in backups,
  * so it holds no credential, no token, no temporary AWS credential, and no raw
- * vendor response. It does hold the vendor `deviceId`, which embeds the
- * account identifier; that value is non-sensitive, and only public artifacts
- * (fixtures, committed samples, and anything published) still keep it out
- * (D-01, D-027).
+ * vendor response. Under the approved privacy policy, the vendor `deviceId`
+ * is treated as non-sensitive in accessory context and runtime logs.
+ * It embeds the account identifier; the opaque-key assumption remains
+ * unconfirmed against a real inventory response. Real identifiers stay out of
+ * public files and committed planning artifacts (D-027).
  *
  * It also holds no telemetry snapshot and no timer. A stored snapshot would be
  * a second source of safety state that nothing refreshes, and it would read as
@@ -16,12 +22,11 @@
  * when it last ran, plus the vendor name last adopted for the display name
  * (D-030).
  *
- * Every observation member below is new in this release, so the only migration
- * that exists is absent to seeded: there is no earlier record shape to read,
- * convert, or version. That is why each is optional rather than defaulted --
- * an installation restored from before this release carries the device
- * identity and the vendor name and nothing else, and the plugin must be able
- * to tell "never observed" from "observed nothing" (D-08, D-020).
+ * Observation records are absent until the first observation seeds them.
+ * The reducer resumes a readable stored record without changing its epoch.
+ * An unreadable stored record causes a warning and a new observation epoch
+ * at the next observation. Optional record members distinguish "never observed"
+ * from "observed nothing" (D-08, D-020).
  */
 
 /** What the plugin has observed about one pump since it started watching it. */
@@ -30,8 +35,9 @@ export interface PumpObservation {
    * Milliseconds, local, at which the plugin began observing this pump.
    *
    * The count below is meaningless without it: the plugin cannot see
-   * activations from before it ran, so it reports what it watched rather than
-   * a lifetime total the device never supplied.
+   * activations from before it began observing, so it reports what it
+   * watched, plus backup runs it recovered from the device timestamp, rather
+   * than a lifetime total the device never supplied.
    */
   observationStartedAt: number;
   /** Activations observed since `observationStartedAt`. */
@@ -58,28 +64,41 @@ export interface PumpObservation {
    * test, and asserting that from inputs which did not decode is a claim the
    * plugin cannot make. The label is computed only once the test is reported
    * finished and both device timestamps have been stable across two
-   * observations; anything else leaves the previous label where it was
-   * (D-13, D-014).
+   * observations. A newly counted backup activation removes the label. An
+   * observation that neither counts an activation nor computes a label leaves
+   * the previous label where it was (D-13, D-014).
    */
   lastActivationWasTestActivity?: boolean;
 }
 
 /**
- * The highest device timestamp already turned into an activation record.
+ * The device timestamps already accounted for, and whether a counted backup
+ * run still awaits a device timestamp.
  *
  * A device timestamp can recover an activation that fell between polls, and
  * the same timestamp arrives again on every later payload. Keeping the
  * watermark per field is what stops one activation from being counted twice.
  *
- * Both members hold the device's own Unix seconds, exactly as the device sent
- * them and unconverted. A watermark is compared only against a later value
- * from the same device clock, and the two are compared only with each other --
- * never against local time, whose measured offset from the device is a few
- * seconds, and on which no exact-second logic may be built (D-11, D-13).
+ * Both timestamp members hold the device's own Unix seconds, exactly as the
+ * device sent them and unconverted. A watermark is compared only against a
+ * later value from the same device clock, and the two are compared only with
+ * each other -- never against local time, whose measured offset from the
+ * device is a few seconds, and on which no exact-second logic may be built
+ * (D-11, D-13).
  */
 export interface ActivationWatermarks {
   backupPumpTimestamp: number | undefined;
   testTimestamp: number | undefined;
+  /**
+   * Whether a watched backup run is counted and its device timestamp has not
+   * arrived yet.
+   *
+   * When `true`, the next backup timestamp past the watermark is taken as that
+   * same run's own, so it moves the watermark and counts nothing. It is stored
+   * because a restart can fall inside that window. Absent means no counted run
+   * waits for its timestamp (D-010).
+   */
+  backupEdgeAwaitingTimestamp?: boolean;
 }
 
 /** Everything Homebridge persists for one accessory. */
@@ -93,10 +112,9 @@ export interface AccessoryContext {
    * What the plugin observed about the primary pump, absent until it has
    * observed anything.
    *
-   * Absent is the ordinary first-run state rather than an error: an
-   * installation restored from before this release carries no observation at
-   * all, so there is nothing to migrate from and the seeding path is the only
-   * one that has ever existed.
+   * Absent is the ordinary first-run state. The first observation seeds the
+   * records; readable stored records resume their existing epoch. An unreadable
+   * stored record starts a new epoch at the next observation (D-020).
    */
   primaryPump?: PumpObservation;
   /** What the plugin observed about the backup pump, absent on a first run for the same reason. */

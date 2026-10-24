@@ -1,4 +1,13 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Defines and validates cloud wire records and opaque telemetry.
+ */
+
 // The vendor answers with untrusted, untyped JSON. Every response is typed
 // `unknown` and narrowed by a hand-written predicate: assertion syntax is banned
 // and a malformed payload must be rejected rather than admitted to the store

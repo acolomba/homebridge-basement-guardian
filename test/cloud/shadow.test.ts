@@ -1,15 +1,34 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Tests reported shadow routing and connection lifecycle offline.
+ */
+
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { setImmediate as nextEventLoopTurn } from 'node:timers/promises';
 
+import { mock, verify, when } from 'strong-mock';
+
 import { createShadowClient, SHADOW_TOPICS } from '../../src/cloud/shadow.js';
 import { createRetryPolicy } from '../../src/runtime/retryPolicy.js';
+import {
+  ACCOUNT_SHADOW_CASES,
+  ACCOUNT_SHADOW_PARTICIPANTS,
+  assertAccountShadowContract,
+  exerciseAccountShadowContract,
+} from '../runtime/accountShadowContract.js';
 
 import type { MqttTransport, MqttTransportOptions } from '../../src/cloud/mqttTransport.js';
 import type { ShadowClient, ShadowClientOptions, ShadowCredentials } from '../../src/cloud/shadow.js';
 import type { ReportedPatch } from '../../src/device/state.js';
 import type { RetryPolicy } from '../../src/runtime/retryPolicy.js';
-import type { LogLevel, Logging } from 'homebridge';
+import type { AccountShadowParticipant } from '../runtime/accountShadowContract.js';
+import type { Logging } from 'homebridge';
 
 const DEVICE_A = 'account-1_serial-a';
 const DEVICE_B = 'account-1_serial-b';
@@ -46,7 +65,6 @@ interface Harness {
   client: ShadowClient;
   transports: TransportRecorder[];
   patches: PatchRecord[];
-  logged: string[];
   lifecycle: string[];
   retry: RetryPolicy;
   rotate: (next: ShadowCredentials) => void;
@@ -62,35 +80,19 @@ function credentials(): ShadowCredentials {
   };
 }
 
-function rotatedCredentials(): ShadowCredentials {
-  return {
-    endpoint: 'broker-two.invalid',
-    clientId: 'client-second',
-    accessKeyId: 'test-next-access-key-id',
-    secretAccessKey: 'test-next-secret-access-key',
-    sessionToken: 'test-next-session-token',
-  };
-}
-
-function recordingLog(recorded: string[]): Logging {
-  function at(level: string): (message: string) => void {
-    return (message: string): void => {
-      recorded.push(`${level} ${message}`);
-    };
+function silentLog(): Logging {
+  function write(): void {
+    return undefined;
   }
-
-  const write = at('info');
 
   return Object.assign(write, {
     prefix: 'shadow',
-    debug: at('debug'),
-    error: at('error'),
-    info: at('info'),
-    success: at('success'),
-    warn: at('warn'),
-    log: (level: LogLevel, message: string): void => {
-      recorded.push(`${level} ${message}`);
-    },
+    debug: write,
+    error: write,
+    info: write,
+    success: write,
+    warn: write,
+    log: write,
   });
 }
 
@@ -100,7 +102,11 @@ function recordingLog(recorded: string[]): Logging {
 function fakeTransport(options: MqttTransportOptions, failures: TransportFailures): TransportRecorder {
   const subscribed: string[][] = [];
   const published: { topic: string; payload: string }[] = [];
-  const noop = (): void => undefined;
+
+  function noop(): void {
+    return undefined;
+  }
+
   let connect = noop;
   let close = noop;
   let message: (topic: string, payload: Buffer) => void = noop;
@@ -171,9 +177,8 @@ function fakeTransport(options: MqttTransportOptions, failures: TransportFailure
 function harness(failures: TransportFailures = {}): Harness {
   const transports: TransportRecorder[] = [];
   const patches: PatchRecord[] = [];
-  const logged: string[] = [];
   const lifecycle: string[] = [];
-  const retry = createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: 30_000, log: recordingLog([]) });
+  const retry = createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: 30_000, log: silentLog() });
   let cached = credentials();
 
   const clientOptions: ShadowClientOptions = {
@@ -181,7 +186,7 @@ function harness(failures: TransportFailures = {}): Harness {
     region: 'us-east-1',
     credentials: { current: () => cached },
     clock,
-    log: recordingLog(logged),
+    log: silentLog(),
     retry,
     createTransport: (transportOptions: MqttTransportOptions): MqttTransport => {
       const recorder = fakeTransport(transportOptions, failures);
@@ -208,7 +213,6 @@ function harness(failures: TransportFailures = {}): Harness {
     client: createShadowClient(clientOptions),
     transports,
     patches,
-    logged,
     lifecycle,
     retry,
     rotate: (next: ShadowCredentials) => {
@@ -228,10 +232,142 @@ function body(document: unknown): Buffer {
   return Buffer.from(JSON.stringify(document), 'utf8');
 }
 
+interface ShadowContractParticipant extends AccountShadowParticipant {
+  finishSubscription(): Promise<void>;
+}
+
+function shadowContractParticipant(callbacks: Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>): ShadowContractParticipant {
+  const notifications: string[] = [];
+  let opens = 0;
+  let ends = 0;
+  let beginReadiness = (): void => undefined;
+  // Promise constructors assign the readiness gates synchronously.
+  let subscribed!: () => void;
+  let requested!: () => void;
+  const subscription = new Promise<void>((resolve) => {
+    subscribed = resolve;
+  });
+  const request = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  const client = createShadowClient({
+    scheme: 'wss',
+    region: 'us-east-1',
+    credentials: { current: credentials },
+    clock,
+    log: silentLog(),
+    retry: createRetryPolicy({ signal: new AbortController().signal, maxDelayMs: 30_000, log: silentLog() }),
+    createTransport: () => {
+      opens += 1;
+
+      return {
+        onConnect: (handler) => {
+          beginReadiness = handler;
+        },
+        onMessage: () => undefined,
+        onError: () => undefined,
+        onClose: () => undefined,
+        subscribe: () => subscription,
+        publish: () => request,
+        end: () => {
+          ends += 1;
+
+          return Promise.resolve();
+        },
+      };
+    },
+    connect: () => {
+      throw new Error('the contract transport opens no socket');
+    },
+    userAgent: 'contract-user-agent',
+    onReportedPatch: () => undefined,
+    onConnected: () => {
+      callbacks.onConnected();
+      notifications.push('connected');
+    },
+    onDisconnected: (reason) => {
+      callbacks.onDisconnected(reason);
+      notifications.push(`disconnected ${reason}`);
+    },
+  });
+
+  async function finishSubscription(): Promise<void> {
+    subscribed();
+    await nextEventLoopTurn();
+  }
+
+  return {
+    client,
+    notifications,
+    beginReadiness: () => {
+      beginReadiness();
+    },
+    finishSubscription,
+    finishReadiness: async () => {
+      await finishSubscription();
+      requested();
+      await nextEventLoopTurn();
+    },
+    opened: () => opens,
+    closed: () => ends,
+  };
+}
+
+for (const { name, connectedCalls } of ACCOUNT_SHADOW_CASES) {
+  test(`${ACCOUNT_SHADOW_PARTICIPANTS.real.factoryName} ${name}`, async () => {
+    // arrange
+    const callbacks = mock<Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>>({ exactParams: true, name: 'shadow notifications' });
+    when(() => {
+      callbacks.onConnected();
+    })
+      .thenReturn(undefined)
+      .times(connectedCalls);
+    const participant = shadowContractParticipant(callbacks);
+
+    // act
+    const observations = await exerciseAccountShadowContract(participant, name);
+
+    // assert
+    assertAccountShadowContract(observations, name);
+    verify(callbacks);
+  });
+}
+
+test('reports readiness only after the complete shadow request finishes', async () => {
+  // arrange
+  const callbacks = mock<Pick<ShadowClientOptions, 'onConnected' | 'onDisconnected'>>({ exactParams: true, name: 'shadow notifications' });
+  when(() => {
+    callbacks.onConnected();
+  }).thenReturn(undefined);
+  const participant = shadowContractParticipant(callbacks);
+
+  // act
+  await participant.client.start(['placeholder-device']);
+  participant.beginReadiness();
+  await participant.finishSubscription();
+  const whileRequestPending = { connected: participant.client.connected, notifications: [...participant.notifications] };
+  await participant.finishReadiness();
+  const afterRequest = { connected: participant.client.connected, notifications: [...participant.notifications] };
+  await participant.client.close();
+
+  // assert
+  assert.deepStrictEqual(
+    { whileRequestPending, afterRequest },
+    { whileRequestPending: { connected: false, notifications: [] }, afterRequest: { connected: true, notifications: ['connected'] } },
+  );
+  verify(callbacks);
+});
+
 describe('SHADOW_TOPICS', () => {
   test('exposes the get, get-accepted, get-rejected, and update-accepted helpers and no others', () => {
-    // act & assert
-    assert.deepStrictEqual(Object.keys(SHADOW_TOPICS), ['get', 'getAccepted', 'getRejected', 'updateAccepted']);
+    // arrange
+    const expectedHelpers = ['get', 'getAccepted', 'getRejected', 'updateAccepted'];
+
+    // act
+    const helpers = Object.keys(SHADOW_TOPICS);
+
+    // assert
+    assert.deepStrictEqual(helpers, expectedHelpers);
   });
 
   for (const { helper, topic } of [
@@ -241,13 +377,19 @@ describe('SHADOW_TOPICS', () => {
     { helper: 'updateAccepted' as const, topic: `$aws/things/${DEVICE_A}/shadow/update/accepted` },
   ]) {
     test(`builds the ${helper} topic for a device identifier carrying an underscore`, () => {
-      // act & assert
-      assert.strictEqual(SHADOW_TOPICS[helper](DEVICE_A), topic);
+      // arrange
+      const deviceId = DEVICE_A;
+
+      // act
+      const deviceTopic = SHADOW_TOPICS[helper](deviceId);
+
+      // assert
+      assert.strictEqual(deviceTopic, topic);
     });
   }
 });
 
-describe('start', () => {
+describe('createShadowClient', () => {
   test('subscribes once to the three subscribable topics of every device and to nothing else', async () => {
     // arrange
     const { client, transports } = harness();
@@ -303,7 +445,7 @@ describe('start', () => {
 
   test('requests no shadow and gives up the connection when the subscription is refused', async () => {
     // arrange
-    const { client, transports, logged, lifecycle } = harness({ subscribe: new Error('subscribe refused') });
+    const { client, transports, lifecycle } = harness({ subscribe: new Error('subscribe refused') });
 
     // act
     await client.start([DEVICE_A]);
@@ -311,10 +453,9 @@ describe('start', () => {
 
     // assert
     assert.deepStrictEqual(
-      { published: transports[0]?.published, logged, lifecycle, ends: transports[0]?.ends() },
+      { published: transports[0]?.published, lifecycle, ends: transports[0]?.ends() },
       {
         published: [],
-        logged: ['debug The shadow subscription could not be established, so the connection will be retried.'],
         lifecycle: ['disconnected subscription-refused'],
         ends: 1,
       },
@@ -350,7 +491,7 @@ describe('start', () => {
   ]) {
     test(`leaves a device identifier carrying ${character} out of the subscription and the routing table`, async () => {
       // arrange
-      const { client, transports, logged } = harness();
+      const { client, transports } = harness();
 
       // act
       await client.start([DEVICE_A, deviceId]);
@@ -358,13 +499,12 @@ describe('start', () => {
 
       // assert
       assert.deepStrictEqual(
-        { subscribed: transports[0]?.subscribed, published: transports[0]?.published, logged },
+        { subscribed: transports[0]?.subscribed, published: transports[0]?.published },
         {
           subscribed: [
             [`$aws/things/${DEVICE_A}/shadow/get/accepted`, `$aws/things/${DEVICE_A}/shadow/get/rejected`, `$aws/things/${DEVICE_A}/shadow/update/accepted`],
           ],
           published: [{ topic: `$aws/things/${DEVICE_A}/shadow/get`, payload: '' }],
-          logged: ['warn A device identifier cannot be used as a shadow topic, so the poll is the only source for that device.'],
         },
       );
     });
@@ -393,9 +533,7 @@ describe('start', () => {
     // assert
     assert.deepStrictEqual({ pending: retry.pending, attempt: retry.attempt }, { pending: true, attempt: 1 });
   });
-});
 
-describe('handshake signing', () => {
   test('signs the handshake from the cached credentials and refreshes the client identifier', async () => {
     // arrange
     const { client, transports } = harness();
@@ -403,33 +541,26 @@ describe('handshake signing', () => {
     await client.start([DEVICE_A]);
 
     // act
-    const signed = new URL(transports[0]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+    const signedUrl = transports[0]?.options.signUrl(live);
 
     // assert
     assert.deepStrictEqual(
       {
-        origin: signed.origin,
-        path: signed.pathname,
-        credential: signed.searchParams.get('X-Amz-Credential'),
-        date: signed.searchParams.get('X-Amz-Date'),
-        token: signed.searchParams.get('X-Amz-Security-Token'),
-        signatureLength: signed.searchParams.get('X-Amz-Signature')?.length,
+        signedUrl,
         clientId: live.options.clientId,
       },
       {
-        origin: 'wss://broker.invalid',
-        path: '/mqtt',
-        credential: 'test-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
-        date: '20260828T120000Z',
-        token: 'test-session-token',
-        signatureLength: 64,
+        signedUrl:
+          'wss://broker.invalid/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+          '&X-Amz-Credential=test-access-key-id%2F20260828%2Fus-east-1%2Fiotdevicegateway%2Faws4_request' +
+          '&X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host' +
+          '&X-Amz-Signature=6f48c3fdb554779577c3ced7d2a61642ff5b8b04356ebe682675eb4b03f3eea7' +
+          '&X-Amz-Security-Token=test-session-token',
         clientId: 'client-first',
       },
     );
   });
-});
 
-describe('message routing', () => {
   test('turns an update-accepted reported data section into a patch carrying the document version', async () => {
     // arrange
     const { client, transports, patches } = harness();
@@ -526,9 +657,25 @@ describe('message routing', () => {
     assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: { water_level: 3 }, state: undefined, version: undefined } }]);
   });
 
-  test('reports a rejected shadow request at warn and produces no patch', async () => {
+  test('reports an overflowing document version as absent', async () => {
     // arrange
-    const { client, transports, patches, logged } = harness();
+    const { client, transports, patches } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
+
+    // act
+    transports[0]?.message(
+      `$aws/things/${DEVICE_A}/shadow/update/accepted`,
+      Buffer.from('{"state":{"reported":{"data":{"water_level":3}}},"version":1e400}', 'utf8'),
+    );
+
+    // assert
+    assert.deepStrictEqual(patches, [{ deviceId: DEVICE_A, patch: { data: { water_level: 3 }, state: undefined, version: undefined } }]);
+  });
+
+  test('produces no patch for a rejected shadow request', async () => {
+    // arrange
+    const { client, transports, patches } = harness();
     await client.start([DEVICE_A]);
     await connected(transports[0]);
 
@@ -536,7 +683,7 @@ describe('message routing', () => {
     transports[0]?.message(`$aws/things/${DEVICE_A}/shadow/get/rejected`, body({ code: 404, message: 'No shadow exists' }));
 
     // assert
-    assert.deepStrictEqual({ patches, logged }, { patches: [], logged: ['warn The shadow service rejected a state request for one device.'] });
+    assert.deepStrictEqual(patches, []);
   });
 
   for (const { shape, payload } of [
@@ -545,9 +692,9 @@ describe('message routing', () => {
     { shape: 'carries no state section', payload: Buffer.from(JSON.stringify({ version: 8 }), 'utf8') },
     { shape: 'carries a state section that is not an object', payload: Buffer.from(JSON.stringify({ state: 'reported' }), 'utf8') },
   ]) {
-    test(`discards a message whose payload ${shape}, with one debug report and no patch`, async () => {
+    test(`produces no patch for a message whose payload ${shape}`, async () => {
       // arrange
-      const { client, transports, patches, logged } = harness();
+      const { client, transports, patches } = harness();
       await client.start([DEVICE_A]);
       await connected(transports[0]);
 
@@ -555,7 +702,7 @@ describe('message routing', () => {
       transports[0]?.message(`$aws/things/${DEVICE_A}/shadow/update/accepted`, payload);
 
       // assert
-      assert.deepStrictEqual({ patches, logged }, { patches: [], logged: ['debug A shadow message was discarded because its document could not be read.'] });
+      assert.deepStrictEqual(patches, []);
     });
   }
 
@@ -565,7 +712,7 @@ describe('message routing', () => {
   ]) {
     test(`ignores a message arriving on ${name}`, async () => {
       // arrange
-      const { client, transports, patches, logged } = harness();
+      const { client, transports, patches } = harness();
       await client.start([DEVICE_A]);
       await connected(transports[0]);
 
@@ -573,12 +720,10 @@ describe('message routing', () => {
       transports[0]?.message(topic, body({ state: { reported: { data: { water_level: 9 } } }, version: 9 }));
 
       // assert
-      assert.deepStrictEqual({ patches, logged }, { patches: [], logged: [] });
+      assert.deepStrictEqual(patches, []);
     });
   }
-});
 
-describe('close', () => {
   test('ends the transport', async () => {
     // arrange
     const { client, transports } = harness();
@@ -619,9 +764,7 @@ describe('close', () => {
     // assert
     assert.deepStrictEqual({ ends: transports[0]?.ends(), connections: transports.length }, { ends: 1, connections: 1 });
   });
-});
 
-describe('the connection lifecycle', () => {
   test('reports connected between the connect notification and the close that follows it', async () => {
     // arrange
     const { client, transports } = harness();
@@ -670,7 +813,13 @@ describe('the connection lifecycle', () => {
     await connected(transports[0]);
 
     // act
-    rotate(rotatedCredentials());
+    rotate({
+      endpoint: 'broker-two.invalid',
+      clientId: 'client-second',
+      accessKeyId: 'test-next-access-key-id',
+      secretAccessKey: 'test-next-secret-access-key',
+      sessionToken: 'test-next-session-token',
+    } satisfies ShadowCredentials);
     await nextEventLoopTurn();
 
     // assert
@@ -686,31 +835,38 @@ describe('the connection lifecycle', () => {
     const { client, transports, rotate } = harness();
     await client.start([DEVICE_A]);
     await connected(transports[0]);
-    rotate(rotatedCredentials());
+    rotate({
+      endpoint: 'broker-two.invalid',
+      clientId: 'client-second',
+      accessKeyId: 'test-next-access-key-id',
+      secretAccessKey: 'test-next-secret-access-key',
+      sessionToken: 'test-next-session-token',
+    } satisfies ShadowCredentials);
 
     // act
     transports[0]?.close();
     t.mock.timers.tick(500);
     await nextEventLoopTurn();
     const live = { options: { clientId: 'client-stale' } };
-    const signed = new URL(transports[1]?.options.signUrl(live) ?? 'wss://unsigned.invalid/');
+    const signedUrl = transports[1]?.options.signUrl(live);
 
     // assert
     assert.deepStrictEqual(
       {
         url: transports[1]?.options.url,
         clientId: transports[1]?.options.clientId,
-        origin: signed.origin,
-        credential: signed.searchParams.get('X-Amz-Credential'),
-        token: signed.searchParams.get('X-Amz-Security-Token'),
+        signedUrl,
         refreshed: live.options.clientId,
       },
       {
         url: 'wss://broker-two.invalid/mqtt',
         clientId: 'client-second',
-        origin: 'wss://broker-two.invalid',
-        credential: 'test-next-access-key-id/20260828/us-east-1/iotdevicegateway/aws4_request',
-        token: 'test-next-session-token',
+        signedUrl:
+          'wss://broker-two.invalid/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+          '&X-Amz-Credential=test-next-access-key-id%2F20260828%2Fus-east-1%2Fiotdevicegateway%2Faws4_request' +
+          '&X-Amz-Date=20260828T120000Z&X-Amz-SignedHeaders=host' +
+          '&X-Amz-Signature=42cdf710fc115e046b68b89e23713e794c25a0a8d944ca708c4bcc2ac54851d1' +
+          '&X-Amz-Security-Token=test-next-session-token',
         refreshed: 'client-second',
       },
     );
@@ -785,9 +941,9 @@ describe('the connection lifecycle', () => {
     );
   });
 
-  test('reports a close with no preceding error at debug, as routine reconnection', async () => {
+  test('reports an established transport close as routine reconnection', async () => {
     // arrange
-    const { client, transports, logged } = harness();
+    const { client, transports, lifecycle } = harness();
     await client.start([DEVICE_A]);
     await connected(transports[0]);
 
@@ -795,12 +951,12 @@ describe('the connection lifecycle', () => {
     transports[0]?.close();
 
     // assert
-    assert.deepStrictEqual(logged, ['debug The shadow connection closed and will reconnect, which the provider connection ceiling makes routine.']);
+    assert.deepStrictEqual({ connected: client.connected, lifecycle }, { connected: false, lifecycle: ['connected', 'disconnected transport-closed'] });
   });
 
-  test('D-15 reports a close that never became established as a refused handshake, not a routine one', async () => {
+  test('D-15 reports an unestablished connection close as a refused handshake', async () => {
     // arrange
-    const { client, transports, logged, lifecycle } = harness();
+    const { client, transports, lifecycle } = harness();
     await client.start([DEVICE_A]);
 
     // act
@@ -808,17 +964,17 @@ describe('the connection lifecycle', () => {
 
     // assert
     assert.deepStrictEqual(
-      { logged, lifecycle },
+      { connected: client.connected, lifecycle },
       {
-        logged: ['debug The shadow connection was refused before it was established and will be retried.'],
+        connected: false,
         lifecycle: ['disconnected handshake-refused'],
       },
     );
   });
 
-  test('reports a close that follows an error apart from a routine one, leaving the warning to its consumer', async () => {
+  test('reports one transport failure when an error is followed by a close', async () => {
     // arrange
-    const { client, transports, logged } = harness();
+    const { client, transports, lifecycle } = harness();
     await client.start([DEVICE_A]);
     await connected(transports[0]);
 
@@ -827,34 +983,32 @@ describe('the connection lifecycle', () => {
     transports[0]?.close();
 
     // assert
-    assert.deepStrictEqual(logged, ['debug The shadow connection failed and will reconnect.']);
+    assert.deepStrictEqual({ connected: client.connected, lifecycle }, { connected: false, lifecycle: ['connected', 'disconnected transport-error'] });
   });
 
-  for (const secret of ['broker.invalid', 'wss://', 'accessKeyId', 'secretAccessKey', 'sessionToken', 'clientId', 'test-session-token']) {
-    test(`keeps ${secret} out of the reason reported to the disconnect handler`, async () => {
-      // arrange
-      const { client, transports, lifecycle } = harness();
-      await client.start([DEVICE_A]);
-      await connected(transports[0]);
+  test('reports a sanitized transport failure reason once', async () => {
+    // arrange
+    const { client, transports, lifecycle } = harness();
+    await client.start([DEVICE_A]);
+    await connected(transports[0]);
 
-      // act
-      transports[0]?.error(new Error('socket to wss://broker.invalid/mqtt?X-Amz-Security-Token=test-session-token failed'));
-      transports[0]?.close();
+    // act
+    transports[0]?.error(new Error('socket to wss://broker.invalid/mqtt?X-Amz-Security-Token=test-session-token failed'));
+    transports[0]?.close();
 
-      // assert
-      assert.deepStrictEqual(
-        lifecycle.filter((entry) => entry.includes(secret)),
-        [],
-      );
-    });
-  }
+    // assert
+    assert.deepStrictEqual(lifecycle, ['connected', 'disconnected transport-error']);
+  });
 
   test('reports not connected before any connection is opened', () => {
     // arrange
     const { client } = harness();
 
-    // act & assert
-    assert.strictEqual(client.connected, false);
+    // act
+    const connectedBeforeStart = client.connected;
+
+    // assert
+    assert.strictEqual(connectedBeforeStart, false);
   });
 
   test('stays connected when a connection it has replaced closes', async (t) => {

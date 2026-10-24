@@ -24,11 +24,9 @@ Read only the pages that apply to the task. Compare current documentation with t
 - NEVER commit to the main branch.
 - Branch names: `main`, `features/*`, `releases/*`. New feature branches use `features/<name>`.
 - Worktrees are preferred for new feature work; create them under `.worktrees/`.
-- Git commit messages and PR titles: Follow the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/#specification). Titles must be at least 5 characters and no more than 72 characters. Body lines must be no more than 80 characters. Avoid GSD milestone/phases mentions.
-- Run `SKIP=npm-check pre-commit run --files <changed files>` before committing. Fix and restage until clean, then run `git commit` in the foreground; its hook runs `npm run check:commit`. A failed hook means no commit happened: fix, restage, and commit again, without `--amend`.
-- NEVER use `--no-verify` to skip the hooks.
+- Commit as `.agents/skills/committing/SKILL.md` describes: its message format also applies to PR titles. NEVER use `--no-verify` to skip the hooks.
 - NEVER rebase, never rewrite history. Update branches by merging.
-- The secret hook scans staged file paths in filesystem mode, including linked worktrees. Outside the pre-commit step above, run all hooks without `SKIP` overrides.
+- The secret hook scans staged file paths in filesystem mode, including linked worktrees. Outside the committing skill's pre-commit step, run all hooks without `SKIP` overrides.
 - When writing PR descriptions, use the `simple-english` skill in Plain mode and the `humanizer` skill, if available.
 - Always use `--squash` when merging PRs (`gh pr merge --squash`). The repository does not allow merge commits or rebase merges.
 - Before merging a PR that ships a GSD milestone, audit and close the milestone (`/gsd-audit-milestone`, then `/gsd-complete-milestone`) on the PR branch, so the archive lands in the same squash.
@@ -44,19 +42,9 @@ Read only the pages that apply to the task. Compare current documentation with t
 None -- no security-relevant surface outside the plan's `<threat_model>` was introduced.
 ```
 
-### TypeScript
-
-Rules for TypeScript live under `skills/` and are not registered with any runtime; read the ones that apply before editing (skip any your prompt already carries under `<agent_skills>`):
-
-- `skills/typescript-google-style-review/SKILL.md` and `skills/typescript-comments/SKILL.md` for every `.ts` file
-- `skills/typescript-unit-testing/SKILL.md` (write) and `skills/typescript-unit-testing-review/SKILL.md` (check) for `test/**/*.ts`
-- `skills/cucumber-behavioral-testing/SKILL.md` for `features/**`
-
-Preserve `.js` imports and the compiled test layout.
-
 ### Build verification
 
-Read `skills/local-verification/SKILL.md` when planning or running checks. Commit hooks run incremental `check:commit` checks on build inputs. Full `npm run check` remains required for post-merge wave, phase, and merge gates, quick tasks after executor worktree merges, and final PR/release handoff. A passing commit hook does not replace a full gate. Reuse evidence only for unchanged inputs as defined in the skill. The complete gate includes Cucumber and isolated coverage for every source module.
+Read `.agents/skills/local-verification/SKILL.md` when planning or running checks. Commit hooks run incremental `check:commit` checks on build inputs. Full `npm run check` remains required for post-merge wave, phase, and merge gates, quick tasks after executor worktree merges, and final PR/release handoff. A passing commit hook does not replace a full gate. Reuse evidence only for unchanged inputs as defined in the skill. The complete gate includes Cucumber and isolated coverage for every source module.
 
 ### Versioning
 

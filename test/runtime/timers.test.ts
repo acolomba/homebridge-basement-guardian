@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+/**
+ * Copyright (c) 2026 Alessandro Colomba
+ */
+
+/**
+ * @fileoverview Checks process timer scheduling and cancellation.
+ */
+
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -18,7 +28,7 @@ void ({
 // @ts-expect-error a stand-in answers every member, so a module cannot defer through one it omits
 void ({ setTimeout: () => undefined, clearTimeout: () => undefined } satisfies Timers);
 
-test('runs a scheduled handler once its delay elapses', (t) => {
+test('runs a scheduled handler only once after its delay elapses', (t) => {
   // arrange
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const runs: string[] = [];
@@ -28,9 +38,12 @@ test('runs a scheduled handler once its delay elapses', (t) => {
     runs.push('ran');
   }, 1_000);
   t.mock.timers.tick(1_000);
+  const atDeadline = [...runs];
+  t.mock.timers.tick(1_000);
+  const afterAnotherDelay = [...runs];
 
   // assert
-  assert.deepStrictEqual(runs, ['ran']);
+  assert.deepStrictEqual({ atDeadline, afterAnotherDelay }, { atDeadline: ['ran'], afterAnotherDelay: ['ran'] });
 });
 
 test('runs no scheduled handler before its delay elapses', (t) => {
