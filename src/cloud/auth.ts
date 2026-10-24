@@ -534,8 +534,8 @@ export function createAuthClient(options: AuthClientOptions): AuthClient {
   // An abandoned attempt stays in its slot until its request and cache work
   // settle, so no caller can open a second grant beside it. A caller that
   // arrives in that window waits for it to settle and then starts a fresh
-  // attempt, unless the client stopped meanwhile. The abort belongs to the callers that left, so it never becomes
-  // this caller's rejection.
+  // attempt, unless the client stopped meanwhile. The abort belongs to the
+  // callers that left, so it never becomes this caller's rejection.
   async function sharedGrant(signal: AbortSignal): Promise<CachedToken> {
     while (inFlight?.controller.signal.aborted === true) {
       // Only the settling matters here; the outcome belongs to the callers

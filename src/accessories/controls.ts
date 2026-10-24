@@ -450,7 +450,8 @@ function nothingToRepublish(): void {
  * characteristic and answers it to later reads, which Apple Home draws as
  * "No Response" for the whole accessory -- the presentation this project
  * reserves for a refused credential, which never clears itself and which an
- * automatic retry makes worse. A restart with the cloud down clears itself the
+ * automatic retry makes worse, and for a trust report whose inactive marking
+ * failed to publish (D-039). A restart with the cloud down clears itself the
  * moment a poll succeeds, so it must not borrow that presentation. The push
  * carries the value the characteristic is already serving, because there is no
  * reported value to restore, and a push of that value still returns the stored

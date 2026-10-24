@@ -18,9 +18,12 @@
  *
  * They differ in what they leave behind. The two restart passes withdraw trust
  * and refuse a press while leaving the tile readable, because a restart recovers
- * by itself once a poll succeeds. The credential pass makes the tile unreadable,
- * because a refused credential never recovers by itself and an automatic retry
- * extends the vendor's thirty-day block rather than merely failing (D-10).
+ * by itself once a poll succeeds. The one exception is a service whose inactive
+ * marking fails to publish: its trust report becomes unreadable until the next
+ * ordinary push, so it cannot keep vouching for cached readings (D-039). The
+ * credential pass makes the tile unreadable, because a refused credential never
+ * recovers by itself and an automatic retry extends the vendor's thirty-day
+ * block rather than merely failing (D-10).
  *
  * HAP serializes each characteristic's value into the Homebridge accessory
  * cache and serves it from the moment the bridge publishes. This plugin

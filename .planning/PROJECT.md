@@ -169,6 +169,7 @@ The following blocks preserve all 40 locked decisions from the [ingested decisio
 - **D-036 — Main or child bridge:** Work on either Homebridge bridge mode, recommend but do not guarantee a child bridge, and do not implement a parallel bridge mechanism.
 - **D-037 — Complete writes after API acceptance:** Keep reported state authoritative, track a 30-second pending request, clear on rejection/report/expiry, and never copy requested control state into safety data.
 - **D-038 — 2.5-second API deadline:** Return an operation timeout after 2.5 seconds, retain uncertain pending state, and never automatically retry a potentially delivered command.
+- **D-039 — Unreadable trust after a failed marking:** Present a self-clearing degradation as unreadable only when its ordinary inactive marking failed to publish; mark only that service's trust report, keep its stored value, clear it on the next ordinary push, and treat this as a narrow extension of the D-10 credential exception to D-05.
 
 </decisions>
 
