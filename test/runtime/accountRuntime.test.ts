@@ -2452,6 +2452,7 @@ describe('createAccountRuntime', () => {
     t.after(async () => {
       await runtime.stop();
       t.mock.timers.reset();
+      await anchors.persist();
       await rm(storagePath, { recursive: true, force: true });
     });
     const expectedSnapshot: DeviceSnapshot = {
