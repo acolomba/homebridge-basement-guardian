@@ -3574,20 +3574,27 @@ test('marks later services inactive after one trust write fails and retries the 
   const accessory = accessoryStandIn();
   const basementGuardianAccessory = geminiAccessory(accessory, {});
   const flood = serviceOf(accessory, 'Sump Pit Flood');
+  const publicationFailure = new Error('failed publication');
   const updateCharacteristicSpy = t.mock.method(flood, 'updateCharacteristic');
   updateCharacteristicSpy.mock.mockImplementationOnce(() => {
-    throw new Error('failed publication');
+    throw publicationFailure;
   }, 1);
+  let markingFailure: unknown;
 
   // act
-  assert.throws(() => {
+  try {
     basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
-  }, Error);
+  } catch (error: unknown) {
+    markingFailure = error;
+  }
+
   const afterFailure = PUBLISHED_SERVICES.map(({ name }) => statusActiveOf(accessory, name));
   basementGuardianAccessory.markMonitoring(SHADOW_SILENT);
   const afterRetry = PUBLISHED_SERVICES.map(({ name }) => statusActiveOf(accessory, name));
 
   // assert
+  assert.ok(markingFailure instanceof AggregateError);
+  assert.deepStrictEqual(markingFailure.errors, [publicationFailure]);
   assert.deepStrictEqual(
     afterFailure,
     PUBLISHED_SCOPES.map((scope, index) => index === 0 || scope === 'connectivity'),
