@@ -204,7 +204,7 @@ Given('a listener on each lifecycle event', async function (this: BasementGuardi
   });
 });
 
-When('the harness requests an identity token', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client requests an identity token', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   await record(this, `${tenant.origin}/oauth/token`, {
@@ -214,7 +214,7 @@ When('the harness requests an identity token', async function (this: BasementGua
   });
 });
 
-When('the harness requests an identity token with an extra credential and a numeric scope', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client requests an identity token with an extra credential and a numeric scope', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   await record(this, `${tenant.origin}/oauth/token`, {
@@ -224,7 +224,7 @@ When('the harness requests an identity token with an extra credential and a nume
   });
 });
 
-When('the harness requests an unknown tenant route', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client requests an unknown tenant route', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   await record(this, `${tenant.origin}/unknown`, {
@@ -234,7 +234,7 @@ When('the harness requests an unknown tenant route', async function (this: Basem
   });
 });
 
-When('the harness sends malformed grant json', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client sends malformed grant json', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   await record(this, `${tenant.origin}/oauth/token`, {
@@ -244,13 +244,13 @@ When('the harness sends malformed grant json', async function (this: BasementGua
   });
 });
 
-When('the harness requests the device list', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client requests the device list', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   await record(this, `${service.baseUrl}/devices`, { headers: { authorization: AUTHORIZATION_HEADER } });
 });
 
-When('the harness requests the device with id {string}', async function (this: BasementGuardianWorld, deviceId: string): Promise<void> {
+When('a client requests the device with id {string}', async function (this: BasementGuardianWorld, deviceId: string): Promise<void> {
   const service = await this.restApi();
 
   await record(this, `${service.baseUrl}/devices/${encodeURIComponent(deviceId)}`, {
@@ -258,13 +258,13 @@ When('the harness requests the device with id {string}', async function (this: B
   });
 });
 
-When('the harness requests the temporary credentials', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client requests the temporary credentials', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   await record(this, `${service.baseUrl}/credentials/aws`, { headers: { authorization: AUTHORIZATION_HEADER } });
 });
 
-When('the harness sends malformed command json', async function (this: BasementGuardianWorld): Promise<void> {
+When('a client sends malformed command json', async function (this: BasementGuardianWorld): Promise<void> {
   const service = await this.restApi();
 
   await record(this, `${service.baseUrl}/devices/${DEVICE_ID}/data`, {
@@ -375,7 +375,7 @@ When('startup fails after a scenario release is registered', async function (thi
   this.observations.push(...scratch.observations);
 });
 
-Then('the world reports both failures after running every release', function (this: BasementGuardianWorld): void {
+Then('the scenario teardown reports both failures after running every release', function (this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, [
     'first failed release',
     'second failed release',
@@ -384,17 +384,17 @@ Then('the world reports both failures after running every release', function (th
   ]);
 });
 
-Then('the world runs the release and reports the startup failure', function (this: BasementGuardianWorld): void {
+Then('the scenario teardown runs the release and reports the startup failure', function (this: BasementGuardianWorld): void {
   assert.deepStrictEqual(this.observations, ['startup release ran', 'release ran', 'Error: startup failed']);
 });
 
-Then('the tenant holds the grant the harness sent', async function (this: BasementGuardianWorld): Promise<void> {
+Then('the tenant holds the grant the client sent', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   assert.deepEqual(tenant.requests, [GRANT]);
 });
 
-Then('the tenant holds the exact grant the harness sent', async function (this: BasementGuardianWorld): Promise<void> {
+Then('the tenant holds the exact grant the client sent', async function (this: BasementGuardianWorld): Promise<void> {
   const tenant = await this.auth0();
 
   assert.deepStrictEqual(tenant.requests, [{ ...GRANT, client_secret: 'unexpected-credential', scope: 7 }]);
@@ -430,7 +430,7 @@ Then('the fake service records no accepted command', function (this: BasementGua
   assert.deepStrictEqual(this.observations, []);
 });
 
-Then('the harness observes no unhandled rejection', async function (this: BasementGuardianWorld): Promise<void> {
+Then('no rejection goes unhandled', async function (this: BasementGuardianWorld): Promise<void> {
   await nextTurn();
   assert.deepStrictEqual(this.rejections, []);
 });
@@ -520,7 +520,7 @@ Then('the lifecycle listeners observe "shut down"', function (this: BasementGuar
   assert.deepStrictEqual(this.observations, ['launched', 'shut down']);
 });
 
-Then('the storage paths are distinct empty temporary directories', async function (this: BasementGuardianWorld): Promise<void> {
+Then('each api keeps its storage in its own empty system scratch directory', async function (this: BasementGuardianWorld): Promise<void> {
   const homebridge = await this.homebridge();
   const otherStoragePath = this.recall(OTHER_HOMEBRIDGE_STORAGE_PATH);
 

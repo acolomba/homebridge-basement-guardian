@@ -494,7 +494,7 @@ async function assertStatusForms(): Promise<void> {
   );
 }
 
-Then('the fake hap answers the real status for each error form', async () => {
+Then('the hap stand-in answers the real status for each error form', async () => {
   await assertStatusForms();
 });
 

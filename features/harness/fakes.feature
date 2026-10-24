@@ -6,36 +6,36 @@ Feature: Harness fakes
 
   Scenario: The fake tenant records the grant it receives
     Given the fake auth0 tenant
-    When the harness requests an identity token
-    Then the tenant holds the grant the harness sent
+    When a client requests an identity token
+    Then the tenant holds the grant the client sent
 
   Scenario: The fake tenant preserves extra fields and value types in a grant
     Given the fake auth0 tenant
-    When the harness requests an identity token with an extra credential and a numeric scope
-    Then the tenant holds the exact grant the harness sent
+    When a client requests an identity token with an extra credential and a numeric scope
+    Then the tenant holds the exact grant the client sent
 
   Scenario: The fake tenant recovers after one armed failure
     Given the fake auth0 tenant
     Given the tenant fails the next grant with status 403 and error "invalid_grant"
-    When the harness requests an identity token
+    When a client requests an identity token
     Then the response carries status 403
     Then the response contains only the error "invalid_grant" and its description
-    When the harness requests an identity token
+    When a client requests an identity token
     Then the response carries status 200
     Then the response carries the issued identity token
 
   Scenario: The fake tenant records a request to an unknown route
     Given the fake auth0 tenant
-    When the harness requests an unknown tenant route
+    When a client requests an unknown tenant route
     Then the response carries status 404
     Then the tenant records the unknown route request
 
   Scenario: The fake tenant refuses malformed grant json without losing the request
     Given the fake auth0 tenant
-    When the harness sends malformed grant json
+    When a client sends malformed grant json
     Then the response carries status 400
     Then the tenant records the malformed grant request
-    Then the harness observes no unhandled rejection
+    Then no rejection goes unhandled
 
   Scenario: The fake service answers the device list
     Given the fake rest service
@@ -43,7 +43,7 @@ Feature: Harness fakes
       | device id          | name          |
       | placeholder-gemini | Sump Guardian |
       | placeholder-backup | Backup System |
-    When the harness requests the device list
+    When a client requests the device list
     Then the response carries status 200
     Then the device list holds the devices the scenario sets
     Then the service records only the authorized device-list request
@@ -54,14 +54,14 @@ Feature: Harness fakes
       | device id          | name          |
       | placeholder-first  | First System  |
       | placeholder gemini | Sump Guardian |
-    When the harness requests the device with id "placeholder gemini"
+    When a client requests the device with id "placeholder gemini"
     Then the response carries status 200
     Then the device answer holds the device with id "placeholder gemini"
 
   Scenario: The fake service answers the temporary credentials
     Given the fake rest service
     Given the temporary credentials
-    When the harness requests the temporary credentials
+    When a client requests the temporary credentials
     Then the response carries status 200
     Then the credentials response carries the endpoint, client identifier, and temporary aws credentials
 
@@ -72,19 +72,19 @@ Feature: Harness fakes
       | placeholder-gemini | Sump Guardian |
       | placeholder-backup | Backup System |
     Given the service fails the next request with status 503
-    When the harness requests the device list
+    When a client requests the device list
     Then the response carries status 503
-    When the harness requests the device list
+    When a client requests the device list
     Then the response carries status 200
     Then the device list holds the devices the scenario sets
 
   Scenario: The fake service refuses malformed command JSON
     Given the fake rest service
     Given the fake service records accepted commands
-    When the harness sends malformed command json
+    When a client sends malformed command json
     Then the response carries status 400
     Then the fake service records no accepted command
-    Then the harness observes no unhandled rejection
+    Then no rejection goes unhandled
 
   Scenario: The fake broker delivers a reported patch
     Given the fake shadow broker
@@ -122,11 +122,11 @@ Feature: Harness fakes
 
   Scenario: Every release runs after earlier releases fail
     When scenario releases fail before another release runs
-    Then the world reports both failures after running every release
+    Then the scenario teardown reports both failures after running every release
 
   Scenario: A failed startup still releases scenario resources
     When startup fails after a scenario release is registered
-    Then the world runs the release and reports the startup failure
+    Then the scenario teardown runs the release and reports the startup failure
 
   Scenario: The fake hap namespace carries the standard identifiers
     Then the hap stand-in carries the standard service and characteristic identifiers
@@ -161,7 +161,7 @@ Feature: Harness fakes
     Then the service appends an optional characteristic on every call
 
   Scenario: The fake hap normalizes error statuses
-    Then the fake hap answers the real status for each error form
+    Then the hap stand-in answers the real status for each error form
 
   Scenario: The fake hap refuses a duplicate characteristic
     Then the service refuses a duplicate characteristic
@@ -199,7 +199,7 @@ Feature: Harness fakes
   Scenario: The fake homebridge api gives the scenario temporary storage
     Given the fake homebridge api
     Given another fake homebridge api
-    Then the storage paths are distinct empty temporary directories
+    Then each api keeps its storage in its own empty system scratch directory
 
   Scenario: The fake homebridge api exposes its hap namespace
     Given the fake homebridge api
