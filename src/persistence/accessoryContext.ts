@@ -98,7 +98,7 @@ export interface ActivationWatermarks {
    * because a restart can fall inside that window. Absent means no counted run
    * waits for its timestamp (D-010).
    */
-  backupEdgeAwaitingTimestamp?: boolean;
+  backupEdgeAwaitingTimestamp?: true;
 }
 
 /** Everything Homebridge persists for one accessory. */

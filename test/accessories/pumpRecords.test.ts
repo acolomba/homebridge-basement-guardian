@@ -920,11 +920,19 @@ const DAMAGED_RECORDS: readonly DamagedRecordRow[] = [
     }),
   },
   {
-    cause: 'a mark of a backup run awaiting its timestamp that is not a boolean',
+    cause: 'a mark of a backup run awaiting its timestamp that is a string',
     stored: () => ({
       primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
       watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS, backupEdgeAwaitingTimestamp: 'yes' },
+    }),
+  },
+  {
+    cause: 'a mark of a backup run awaiting its timestamp that is false',
+    stored: () => ({
+      primaryPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
+      backupPump: { observationStartedAt: OBSERVED_AT, activationCount: 4 },
+      watermarks: { backupPumpTimestamp: PRIOR_BACKUP_SECONDS, testTimestamp: PRIOR_TEST_SECONDS, backupEdgeAwaitingTimestamp: false },
     }),
   },
 ];

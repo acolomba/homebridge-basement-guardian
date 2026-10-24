@@ -156,12 +156,11 @@ function isActivationWatermarks(value: unknown): value is ActivationWatermarks {
   }
 
   const candidate = value as Partial<ActivationWatermarks>;
-  const awaiting = candidate.backupEdgeAwaitingTimestamp;
+  // Read as unknown: the cast above has not checked this field yet.
+  const awaiting: unknown = candidate.backupEdgeAwaitingTimestamp;
 
   return (
-    isDeviceSecondsOrAbsent(candidate.backupPumpTimestamp) &&
-    isDeviceSecondsOrAbsent(candidate.testTimestamp) &&
-    (awaiting === undefined || typeof awaiting === 'boolean')
+    isDeviceSecondsOrAbsent(candidate.backupPumpTimestamp) && isDeviceSecondsOrAbsent(candidate.testTimestamp) && (awaiting === undefined || awaiting === true)
   );
 }
 
