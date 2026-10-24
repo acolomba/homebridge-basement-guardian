@@ -514,7 +514,7 @@ export function applyMonitoringHealth(context: DiscoveryContext, account: Monito
   for (const accessory of context.accessories.values()) {
     try {
       const result = markTrustReportsUnreadable(accessory, context.api.hap, context.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-      marked += result.marked;
+      marked += result.reached;
 
       if (result.failed > 0) {
         context.log.error('Unable to mark cached monitoring trust unreadable.');

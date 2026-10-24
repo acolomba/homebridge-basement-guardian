@@ -192,7 +192,7 @@ function markStale(accessory: HarnessPlatformAccessory): number {
 }
 
 function markUnreadable(accessory: HarnessPlatformAccessory): number {
-  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY).marked;
+  return markTrustReportsUnreadable(asPlatformAccessory(accessory), HAP_NAMESPACE, RESOURCE_BUSY).reached;
 }
 
 function refuseControls(accessory: HarnessPlatformAccessory): number {
@@ -400,7 +400,7 @@ describe('markTrustReportsUnreadable', () => {
         batteryLevel: await readOf(battery, HAP.Characteristic.BatteryLevel),
       },
       {
-        marks: { marked: 1, failed: 1 },
+        marks: { reached: 1, failed: 1 },
         flood: { value: true, threw: undefined },
         battery: { value: true, threw: RESOURCE_BUSY },
         leakDetected: { value: HAP.Characteristic.LeakDetected.LEAK_DETECTED, threw: undefined },

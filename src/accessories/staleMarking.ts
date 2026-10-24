@@ -60,10 +60,19 @@ import type { CharacteristicClass } from './customCharacteristics.js';
 import type { Timers } from '../runtime/timers.js';
 import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 
-// The one walk both restart passes make: every restored service carrying the
+/**
+ * How many services one pass over an accessory reached, and how many it could
+ * not prepare.
+ */
+export interface ServicePassCounts {
+  reached: number;
+  failed: number;
+}
+
+// The one walk all three passes make: every restored service carrying the
 // characteristic that decides the pass applies to it, acted on and counted.
 //
-// It is extracted rather than written out twice because the passes differ
+// It is extracted rather than written out three times because the passes differ
 // only in that guard and that act, and a guard tightened in one copy and not
 // the other would silently change which services a pass reaches. A failed
 // service is counted and does not prevent a later one from being prepared.
@@ -73,7 +82,7 @@ import type { API, Logging, PlatformAccessory, Service } from 'homebridge';
 // on upgrade changes a published identity a user's automations may already
 // attach to, and a cache an older release wrote is exactly the input these
 // passes exist to handle.
-function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): { reached: number; failed: number } {
+function overServicesCarrying(accessory: PlatformAccessory, guard: CharacteristicClass, act: (service: Service) => void): ServicePassCounts {
   let reached = 0;
   let failed = 0;
 
@@ -119,7 +128,7 @@ function overServicesCarrying(accessory: PlatformAccessory, guard: Characteristi
  * where the ordinary push failed. The first ordinary push after a successful
  * poll clears the status, so the tile does not stay unreadable (D-014).
  */
-export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): { reached: number; failed: number } {
+export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API['hap']): ServicePassCounts {
   return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
     try {
       publishValue(service, hap.Characteristic.StatusActive, false);
@@ -148,7 +157,7 @@ export function markRestoredServicesStale(accessory: PlatformAccessory, hap: API
  * refusal, its status table and its clearing push, so a restored control and a
  * live one cannot answer one condition two ways (D-07, D-08).
  */
-export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): { reached: number; failed: number } {
+export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['hap'], log: Logging, timers: Timers): ServicePassCounts {
   return overServicesCarrying(accessory, hap.Characteristic.On, (service) => {
     bindRestoredControlRefusal({ hap, log, timers, service, accessoryName: accessory.displayName });
   });
@@ -186,22 +195,8 @@ export function refuseRestoredControls(accessory: PlatformAccessory, hap: API['h
  * keeps answering, and the caller is the only place the silence can be named
  * (WR-08).
  */
-export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): { marked: number; failed: number } {
-  let marked = 0;
-  let failed = 0;
-
-  for (const service of accessory.services) {
-    try {
-      if (!service.testCharacteristic(hap.Characteristic.StatusActive)) {
-        continue;
-      }
-
-      publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
-      marked += 1;
-    } catch {
-      failed += 1;
-    }
-  }
-
-  return { marked, failed };
+export function markTrustReportsUnreadable(accessory: PlatformAccessory, hap: API['hap'], status: number): ServicePassCounts {
+  return overServicesCarrying(accessory, hap.Characteristic.StatusActive, (service) => {
+    publishPersistentFailure(hap, service, hap.Characteristic.StatusActive, status);
+  });
 }
