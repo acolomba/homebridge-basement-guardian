@@ -227,6 +227,29 @@ function carriesObservation(patch: ReportedPatch): boolean {
   return hasTelemetryReading(patch) || patch.state !== undefined;
 }
 
+// A silence fence on one device. A device with no entry in the fence map is not
+// fenced. A fence with no `version` was set while the device held no shadow
+// version, so it refuses only versionless telemetry; a fence with a `version`
+// also refuses any patch at or below that version.
+interface SilenceFence {
+  version?: number;
+}
+
+// While a silence fence holds, the store refuses a patch at or below the
+// fenced version, and a versionless patch that carries a telemetry reading. A
+// versionless patch that carries only metadata still applies.
+function isFencedOut(fence: SilenceFence | undefined, patch: ReportedPatch): boolean {
+  if (fence === undefined) {
+    return false;
+  }
+
+  if (patch.version === undefined) {
+    return hasTelemetryReading(patch);
+  }
+
+  return fence.version !== undefined && patch.version <= fence.version;
+}
+
 // A watermark is ordering information, so a document that observed nothing is
 // still evidence about ordering and may advance one that already exists. It may
 // never establish one: a defined watermark says the shadow owns telemetry, so a
@@ -333,7 +356,7 @@ function notify(
 export function createDeviceStateStore(options: DeviceStateStoreOptions): DeviceStateStore {
   const snapshots = new Map<string, DeviceSnapshot>();
   const listeners = new Map<string, Set<DeviceSnapshotListener>>();
-  const silenceVersions = new Map<string, number | null>();
+  const silenceFences = new Map<string, SilenceFence>();
 
   return {
     snapshot(deviceId: string): DeviceSnapshot | undefined {
@@ -355,28 +378,18 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
 
     applyReportedPatch(deviceId: string, patch: ReportedPatch): DeviceSnapshot | undefined {
       const previous = snapshots.get(deviceId);
-      const silenceVersion = silenceVersions.get(deviceId);
 
-      // While a silence fence holds, the store refuses a patch at or below the
-      // fenced version, and a versionless patch that carries a telemetry
-      // reading. A versionless patch that carries only metadata still applies.
-      if (
-        previous === undefined ||
-        (silenceVersions.has(deviceId) &&
-          ((patch.version !== undefined && silenceVersion !== undefined && silenceVersion !== null && patch.version <= silenceVersion) ||
-            (patch.version === undefined && hasTelemetryReading(patch)))) ||
-        isStalePatch(previous.shadowVersion, patch.version)
-      ) {
+      if (previous === undefined || isFencedOut(silenceFences.get(deviceId), patch) || isStalePatch(previous.shadowVersion, patch.version)) {
         return previous;
       }
 
       const snapshot = nextSnapshot(previous, patch, options.clock.now());
       snapshots.set(deviceId, snapshot);
-      if (silenceVersions.has(deviceId) && patch.version !== undefined) {
+      if (silenceFences.has(deviceId) && patch.version !== undefined) {
         if (snapshot.shadowVersion === undefined) {
-          silenceVersions.set(deviceId, patch.version);
+          silenceFences.set(deviceId, { version: patch.version });
         } else {
-          silenceVersions.delete(deviceId);
+          silenceFences.delete(deviceId);
         }
       }
 
@@ -390,7 +403,7 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       // toSnapshot and starts a fresh observation epoch (D-020).
       snapshots.delete(deviceId);
       listeners.delete(deviceId);
-      silenceVersions.delete(deviceId);
+      silenceFences.delete(deviceId);
     },
 
     // Hands one device's telemetry back to the poll by clearing its ownership
@@ -423,12 +436,12 @@ export function createDeviceStateStore(options: DeviceStateStoreOptions): Device
       const snapshot = snapshots.get(deviceId);
 
       if (reason === 'disconnect') {
-        silenceVersions.delete(deviceId);
+        silenceFences.delete(deviceId);
       }
 
       if (snapshot !== undefined) {
-        if (reason === 'silence' && !silenceVersions.has(deviceId)) {
-          silenceVersions.set(deviceId, snapshot.shadowVersion ?? null);
+        if (reason === 'silence' && !silenceFences.has(deviceId)) {
+          silenceFences.set(deviceId, snapshot.shadowVersion === undefined ? {} : { version: snapshot.shadowVersion });
         }
 
         snapshots.set(deviceId, freeze({ ...snapshot, shadowVersion: undefined }));
