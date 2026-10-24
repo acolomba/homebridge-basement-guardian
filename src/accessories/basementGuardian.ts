@@ -268,7 +268,7 @@ function firmwareRevisionOf(metadata: Record<string, unknown>): string {
   return typeof mcuFirmwareVersion === 'string' ? mcuFirmwareVersion : UNKNOWN_FIRMWARE;
 }
 
-// A violation whose scope is `undefined` names a field no published service
+// A violation whose scope is `metadata` names a field no published service
 // reads, so this function withdraws no scope for it (D-04).
 function violatedScopesOf(validation: FamilyValidation): ReadonlySet<TrustScope> {
   const scopes = new Set<TrustScope>();
@@ -278,7 +278,7 @@ function violatedScopesOf(validation: FamilyValidation): ReadonlySet<TrustScope>
   }
 
   for (const violation of validation.violations) {
-    if (violation.scope !== undefined) {
+    if (violation.scope !== 'metadata') {
       scopes.add(violation.scope);
     }
   }

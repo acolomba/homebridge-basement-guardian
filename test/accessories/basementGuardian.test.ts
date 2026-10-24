@@ -1492,7 +1492,7 @@ test('reports the fault scope with no last trusted time when its own fields neve
 test('records a violation on a field no service reads without deactivating any scope', () => {
   // arrange
   const family = fakeFamily({
-    validate: () => ({ valid: false, violations: [{ field: 'alarm_audio_muted', reason: 'missing', scope: undefined }] }),
+    validate: () => ({ valid: false, violations: [{ field: 'alarm_audio_muted', reason: 'missing', scope: 'metadata' }] }),
     decode: () => decodedState(true),
   });
   const accessory = accessoryStandIn();

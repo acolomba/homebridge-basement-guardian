@@ -26,6 +26,15 @@ export type DeviceCapability = 'self-test' | 'alarm-mute';
 /** How one field failed its family's contract. */
 export type FieldViolationReason = 'missing' | 'wrong-type' | 'out-of-domain';
 
+/**
+ * The scope a field violation costs: a safety trust scope, or `metadata` for a
+ * field that no safety trust scope owns.
+ *
+ * Firmware metadata feeds AccessoryInformation, but a violation on it records
+ * the invalid field without deactivating a safety scope.
+ */
+export type FieldScope = TrustScope | 'metadata';
+
 /** One field a snapshot did not supply in the form the family requires. */
 export interface FieldViolation {
   field: string;
@@ -34,11 +43,9 @@ export interface FieldViolation {
    * The scope that stops being trustworthy while this field is invalid.
    *
    * One bad field deactivates one scope, never the whole device (D-014).
-   * `undefined` marks metadata that no safety trust scope owns. Firmware
-   * metadata feeds AccessoryInformation, but a violation records the invalid
-   * field without deactivating a safety scope.
+   * `metadata` deactivates no safety scope.
    */
-  scope: TrustScope | undefined;
+  scope: FieldScope;
 }
 
 /** A snapshot whose family fields all satisfy their contracts. */

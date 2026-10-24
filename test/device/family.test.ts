@@ -18,6 +18,7 @@ import type {
   FamilyCommand,
   FamilyValidation,
   FaultState,
+  FieldScope,
   FieldViolation,
   FieldViolationReason,
   PowerState,
@@ -45,9 +46,10 @@ const geminiAdapter = {
 
 void ('self-test' satisfies DeviceCapability);
 void ('out-of-domain' satisfies FieldViolationReason);
+void ('metadata' satisfies FieldScope);
 void ({ field: 'water_level', reason: 'out-of-domain', scope: 'water' } satisfies FieldViolation);
 void ({ field: 'test_running', reason: 'wrong-type', scope: 'self-test' } satisfies FieldViolation);
-void ({ field: 'mcu_firmware_version', reason: 'wrong-type', scope: undefined } satisfies FieldViolation);
+void ({ field: 'mcu_firmware_version', reason: 'wrong-type', scope: 'metadata' } satisfies FieldViolation);
 void ({ valid: true } satisfies FamilyValidation);
 void ({ valid: false, violations: [{ field: 'water_level', reason: 'missing', scope: 'water' }] } satisfies FamilyValidation);
 void ({ desiredData: { test_running: true } } satisfies FamilyCommand);

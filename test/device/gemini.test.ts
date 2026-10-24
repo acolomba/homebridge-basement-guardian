@@ -169,7 +169,7 @@ describe('validate', () => {
       const validation = geminiFamily.validate(snapshot);
 
       // assert
-      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'wrong-type', scope: undefined }] });
+      assert.deepStrictEqual(validation, { valid: false, violations: [{ field, reason: 'wrong-type', scope: 'metadata' }] });
     });
   }
 
